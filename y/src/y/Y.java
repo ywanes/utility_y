@@ -48,7 +48,7 @@ cat buffer.log
     public void go(String[] args){
         String version="0.1.0";
         String env="TOKEN_Y";
-        String [] programas=new String[]{"y banco","y token","y gettoken","y gzip","y gunzip","y echo","y cat","y md5","y sha1","y sha256","y grep","y wc -l","y help"};
+        String [] programas=new String[]{"y banco","y token","y gettoken","y gzip","y gunzip","y echo","y cat","y md5","y sha1","y sha256","y grep","y wc -l","dev_null","y help"};
         if ( args.length == 0 ){
             System.out.println(apresentacao(programas));
             return;
@@ -218,10 +218,6 @@ cat buffer.log
             System.out.println(value);
             return;
         }
-        if ( args[0].equals("gettoken") ){
-            System.out.println(1);
-            return;
-        }
         if ( args[0].equals("gzip") ){
             gzip();
             return;
@@ -262,6 +258,10 @@ cat buffer.log
             wc_l();
             return;
         }        
+        if ( args[0].equals("dev_null") ){
+            dev_null();
+            return;
+        }
 
         //Comando inválido
         System.out.print("Comando inválido: [y");
@@ -1173,6 +1173,15 @@ cat buffer.log
         }
     }
 
+    public void dev_null()
+    {
+        try{
+            int BUFFER_SIZE = 512;
+            byte[] buf = new byte[BUFFER_SIZE];
+            while(System.in.read(buf) > -1){}
+        }catch(Exception e){}
+    }
+    
 }
 
 
