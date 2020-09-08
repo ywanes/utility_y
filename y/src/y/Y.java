@@ -48,7 +48,7 @@ cat buffer.log
     public void go(String[] args){
         String version="0.1.0";
         String env="TOKEN_Y";
-        String [] programas=new String[]{"y banco","y token","y gettoken","y gzip","y gunzip","y echo","y cat","y md5","y sha1","y sha256","y grep","y wc -l","dev_null","y help"};
+        String [] programas=new String[]{"y banco","y token","y gettoken","y gzip","y gunzip","y echo","y cat","y md5","y sha1","y sha256","y grep","y wc -l","y sed","y awk print","y dev_null","y help"};
         if ( args.length == 0 ){
             System.out.println(apresentacao(programas));
             return;
@@ -258,6 +258,14 @@ cat buffer.log
             wc_l();
             return;
         }        
+        if ( args[0].equals("sed") && args.length == 3 ){
+            sed(args[1],args[2]);
+            return;
+        }
+        if ( args.length >= 3 && args[0].equals("awk") && args[1].equals("print") ){
+            awk(args);
+            return;
+        }
         if ( args[0].equals("dev_null") ){
             dev_null();
             return;
@@ -1142,7 +1150,7 @@ cat buffer.log
             String line=null;
             java.util.Scanner scanner = new java.util.Scanner(System.in);
             scanner.useDelimiter("\n");
-            while ( (line=scanner.next()) != null ) {
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
                 if ( ! first && ! tail && line.contains(grep) ){
                     System.out.println(line);
                     continue;
@@ -1173,6 +1181,23 @@ cat buffer.log
         }
     }
 
+    public void sed(String sedA,String sedB)
+    {
+        try {
+            String line=null;
+            java.util.Scanner scanner = new java.util.Scanner(System.in);
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+                System.out.println(line.replaceAll(sedA, sedB));
+            }
+        }catch(Exception e){}
+    }
+        
+    public void awk(String [] args)
+    {
+        // pendente
+    }
+    
     public void dev_null()
     {
         try{
