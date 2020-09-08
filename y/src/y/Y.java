@@ -1,5 +1,3 @@
-// utilitario Y
-
 package y;
 
 import java.io.File;
@@ -236,8 +234,8 @@ cat buffer.log
             echo(args);
             return;
         }        
-        if ( args[0].equals("cat") && args.length == 2 ){
-            cat(args[1]);
+        if ( args[0].equals("cat") && args.length >= 2 ){
+            cat(args);
             return;
         }        
         if ( args[0].equals("md5") ){
@@ -1080,17 +1078,27 @@ cat buffer.log
         System.out.println("");
     }
 
-    public void cat(String caminho)
+    public void cat(String [] caminhos)
     {
-        if ( ! new File(caminho).exists() )
-            System.out.println("Erro, este arquivo não existe: "+caminho);
+        
         try{
-            int BUFFER_SIZE = 512;
-            byte[] buf = new byte[BUFFER_SIZE];            
-            FileInputStream fis = new FileInputStream(caminho);
-            int len;
-            while ((len = fis.read(buf)) > -1)
-                System.out.write(buf, 0, len);            
+            for ( int i=1;i<caminhos.length;i++ )
+            {
+                if ( ! new File(caminhos[i]).exists() ){
+                    System.out.println("Erro, este arquivo não existe: "+caminhos[i]);
+                    return;
+                }
+            }
+            for ( int i=1;i<caminhos.length;i++ )
+            {
+                int BUFFER_SIZE = 512;
+                byte[] buf = new byte[BUFFER_SIZE];            
+                FileInputStream fis = new FileInputStream(caminhos[i]);
+                int len;
+                while ((len = fis.read(buf)) > -1)
+                    System.out.write(buf, 0, len);            
+                fis.close();
+            }
         }catch(Exception e){
             System.out.println("Erro, "+e.toString());
         }
