@@ -41,6 +41,7 @@ cat buffer.log
 
         
 */
+        //args=new String[]{"awk","print","3,2","1"}; // saida: 3A 2A1A
         new Y().go(args);
     }
 
@@ -1225,6 +1226,7 @@ cat buffer.log
             String line=null;
             java.util.Scanner scanner = new java.util.Scanner(System.in);
             scanner.useDelimiter("\n");
+            
             while ( scanner.hasNext() && (line=scanner.next()) != null ) {
                 partes=line.replaceAll("\t"," ").replaceAll("\r"," ").split(" ");
                 for ( int i=0;i<elem.length;i++ ){
@@ -1243,7 +1245,7 @@ cat buffer.log
                         continue;
                     }
                     if ( elem[i] > partes.length ) continue;
-                    System.out.print(partes[elem[i]]);
+                    System.out.print(partes[elem[i]-1]);
                 }
                 System.out.println("");                
             }
