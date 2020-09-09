@@ -41,7 +41,6 @@ cat buffer.log
 
         
 */
-        //args=new String[]{"awk","print","3,2","1"}; // saida: 3A 2A1A
         new Y().go(args);
     }
 
@@ -1191,9 +1190,6 @@ cat buffer.log
         
     public void awk(String [] args)
     {
-        // pendente
-        // echo "1A 2A 3A" | y awk print 3,2 1
-        // saida: 3A 2A1A
         ArrayList<Integer> lista=new ArrayList<>();
         int [] elem;
         String [] partes;
@@ -1250,7 +1246,6 @@ cat buffer.log
                 System.out.println("");                
             }
         }catch(Exception e){}
-        
     }
     
     public void dev_null()
