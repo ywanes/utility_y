@@ -171,12 +171,7 @@ cat buffer.log
                 return;
             }
             
-            //Comando inválido
-            System.out.print("Comando inválido: [y");
-            for ( int i=0;i<args.length;i++ )
-                System.out.print(" "+args[i]);
-            System.out.println("]");
-
+            comando_invalido(args);
             return;
         }
         if ( args[0].equals("token") ){
@@ -1206,18 +1201,21 @@ cat buffer.log
         try{
             for ( int i=2;i<args.length;i++ ){
                 partes=args[i].split(",");
-                for ( int j=0;i<partes.length;j++ ){
+                for ( int j=0;j<partes.length;j++ ){
                     if ( j != 0 )
                         lista.add(-1);
                     p=Integer.parseInt(partes[j]);
                     if ( p < 0 ){
-                        System.out.println("Erro, parametro inválido: "+p);
+                        comando_invalido(args);
                         return;
                     }                    
                     lista.add(p);
                 }
             }
-        }catch(Exception e){}
+        }catch(Exception e){
+            comando_invalido(args);
+            return;
+        }
         
         elem=new int[lista.size()];
         for ( int i=0;i<lista.size();i++ )
@@ -1260,6 +1258,14 @@ cat buffer.log
             byte[] buf = new byte[BUFFER_SIZE];
             while(System.in.read(buf) > -1){}
         }catch(Exception e){}
+    }
+
+    private void comando_invalido(String[] args) {
+        //Comando inválido
+        System.out.print("Comando inválido: [y");
+        for ( int i=0;i<args.length;i++ )
+            System.out.print(" "+args[i]);
+        System.out.println("]");
     }
     
 }
