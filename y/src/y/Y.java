@@ -1196,6 +1196,61 @@ cat buffer.log
     public void awk(String [] args)
     {
         // pendente
+        // echo "1A 2A 3A" | y awk print 3,2 1
+        // saida: 3A 2A1A
+        ArrayList<Integer> lista=new ArrayList<>();
+        int [] elem;
+        String [] partes;
+        int p;
+        
+        try{
+            for ( int i=2;i<args.length;i++ ){
+                partes=args[i].split(",");
+                for ( int j=0;i<partes.length;j++ ){
+                    if ( j != 0 )
+                        lista.add(-1);
+                    p=Integer.parseInt(partes[j]);
+                    if ( p < 0 ){
+                        System.out.println("Erro, parametro inválido: "+p);
+                        return;
+                    }                    
+                    lista.add(p);
+                }
+            }
+        }catch(Exception e){}
+        
+        elem=new int[lista.size()];
+        for ( int i=0;i<lista.size();i++ )
+            elem[i]=lista.get(i);
+        
+        try {
+            String line=null;
+            java.util.Scanner scanner = new java.util.Scanner(System.in);
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+                partes=line.replaceAll("\t"," ").replaceAll("\r"," ").split(" ");
+                for ( int i=0;i<elem.length;i++ ){
+                    if ( elem[i] == 0 )
+                    {
+                        for ( int j=0;j<partes.length;j++ ){
+                            if ( j != 0 )
+                                System.out.print(" ");
+                            System.out.print(partes[j]);
+                        }
+                        continue;
+                    }
+                    if ( elem[i] == -1 )
+                    {
+                        System.out.print(" ");
+                        continue;
+                    }
+                    if ( elem[i] > partes.length ) continue;
+                    System.out.print(partes[elem[i]]);
+                }
+                System.out.println("");                
+            }
+        }catch(Exception e){}
+        
     }
     
     public void dev_null()
