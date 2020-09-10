@@ -42,12 +42,6 @@ cat buffer.log
         
 */
         new Y().go(args);
-        
-        // opcao 1
-        // while ( scanner.hasNextLine() && (line=scanner.nextLine()) != null ) {
-        // opcao 2
-        // scanner.useDelimiter("\n");
-        // while ( scanner.hasNext && (line=scanner.next) != null ) {
     }
 
     
@@ -831,11 +825,12 @@ cat buffer.log
             new Thread() {
                 public void run() {
                     java.util.Scanner scanner = new java.util.Scanner(System.in);
+                    scanner.useDelimiter("\n");
                     while( true ){
                         if ( lista.size() < n_lines_buffer )
                         {
-                            if ( scanner.hasNextLine()){
-                                lista.add(scanner.nextLine());
+                            if ( scanner.hasNext()){
+                                lista.add(scanner.next());
                             }else{
                                 finishIn[0]=true;
                                 break;
@@ -1079,10 +1074,11 @@ cat buffer.log
     public String read(){
         try{
             if ( scanner_pipe == null ){
-                scanner_pipe=new java.util.Scanner(System.in);                
+                scanner_pipe=new java.util.Scanner(System.in);  
+                scanner_pipe.useDelimiter("\n");
             }
-            if ( scanner_pipe.hasNextLine() )
-                return scanner_pipe.nextLine();
+            if ( scanner_pipe.hasNext() )
+                return scanner_pipe.next();
             else
                 return null;
         }catch(java.util.NoSuchElementException no) {
@@ -1190,7 +1186,8 @@ cat buffer.log
         try {
             String line=null;
             java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            while ( scanner.hasNextLine()&& (line=scanner.nextLine()) != null ) {
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
                 if ( ! first && ! tail && line.contains(grep) ){
                     System.out.println(line);
                     continue;
@@ -1211,8 +1208,9 @@ cat buffer.log
         try {
             long count=0;
             java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            while ( scanner.hasNextLine() ){
-                scanner.nextLine();
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() ){
+                scanner.next();
                 count++;
             }
             System.out.println(count);
@@ -1238,11 +1236,12 @@ cat buffer.log
         
         try {
             java.util.Scanner scanner = new java.util.Scanner(System.in);
-            while ( scanner.hasNextLine() && (line=scanner.nextLine()) != null ) {
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
                 if ( ++count <= p )
                     System.out.println(line);
                 else{
-                    while ( scanner.hasNextLine() && scanner.nextLine() != null ) {}
+                    while ( scanner.hasNext() && scanner.next() != null ) {}
                 }
             }
         }catch(Exception e){}
@@ -1266,7 +1265,8 @@ cat buffer.log
         
         try {
             java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            while ( scanner.hasNextLine() && (line=scanner.nextLine()) != null ) {
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
                 lista.add(line);
                 if ( lista.size() > p )
                     lista.remove(0);
@@ -1282,7 +1282,8 @@ cat buffer.log
         try {
             String line=null;
             java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            while ( scanner.hasNextLine() && (line=scanner.nextLine()) != null ) {
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
                 System.out.println(line.replaceAll(sedA, sedB));
             }
         }catch(Exception e){}
@@ -1321,7 +1322,8 @@ cat buffer.log
         try {
             String line=null;
             java.util.Scanner scanner = new java.util.Scanner(System.in);
-            while ( scanner.hasNextLine() && (line=scanner.nextLine()) != null ) {
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
                 partes=line.replaceAll("\t"," ").replaceAll("\r"," ").split(" ");
                 for ( int i=0;i<elem.length;i++ ){
                     if ( elem[i] == 0 )
