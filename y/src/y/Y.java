@@ -1287,22 +1287,22 @@ cat buffer.log
                 if ( 
                     partes[i].startsWith("-") 
                     && ! partes[i].endsWith("-") 
-                    && partes[i].split("-").length == 1 
-                    && Integer.parseInt(partes[i].split("-")[0]) >= 1
+                    && ! partes[i].substring(1).contains("-")
+                    && Integer.parseInt(partes[i].substring(1)) >= 1
                 )
                 {
                     elem[count++]=-1;
-                    elem[count++]=Integer.parseInt(partes[i].split("-")[0]);
+                    elem[count++]=Integer.parseInt(partes[i].substring(1));
                     continue;
                 }
                 if ( 
                     ! partes[i].startsWith("-") 
                     && partes[i].endsWith("-") 
-                    && partes[i].split("-").length == 1 
-                    && Integer.parseInt(partes[i].split("-")[0]) >= 1
+                    && ! partes[i].substring(0,partes[i].length()-2).contains("-")
+                    && Integer.parseInt(partes[i].substring(0,partes[i].length()-2)) >= 1
                 )
                 {
-                    elem[count++]=Integer.parseInt(partes[i].split("-")[0]);
+                    elem[count++]=Integer.parseInt(partes[i].substring(0,partes[i].length()-2));
                     elem[count++]=-1;
                     continue;
                 }
