@@ -278,10 +278,7 @@ cat buffer.log
                 || ( args.length == 2 && args[1].startsWith("-") && args[1].length() > 1 )
             ) 
         ){
-            if ( args.length == 2 )
-                head(args);
-            else
-                head(null);
+            head(args);
             return;
         }
         if ( args[0].equals("tail") 
@@ -290,10 +287,7 @@ cat buffer.log
                 || ( args.length == 2 && args[1].startsWith("-") && args[1].length() > 1 )
             ) 
         ){
-            if ( args.length == 2 )
-                tail(args);
-            else
-                tail(null);
+            tail(args);
             return;
         }
         if ( args[0].equals("sed") && args.length == 3 ){
@@ -1364,7 +1358,6 @@ cat buffer.log
             System.out.print(" "+args[i]);
         System.out.println("]");
     }
-    
 }
 
 
