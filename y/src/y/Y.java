@@ -48,7 +48,26 @@ cat buffer.log
     public void go(String[] args){
         String version="0.1.0";
         String env="TOKEN_Y";
-        String [] programas=new String[]{"y banco","y token","y gettoken","y gzip","y gunzip","y echo","y cat","y md5","y sha1","y sha256","y grep","y wc -l","y sed","y awk print","y dev_null","y help"};
+        String [] programas=new String[]{
+            "y banco"
+            ,"y token"
+            ,"y gettoken"
+            ,"y gzip"
+            ,"y gunzip"
+            ,"y echo"
+            ,"y cat"
+            ,"y md5"
+            ,"y sha1"
+            ,"y sha256"
+            ,"y grep"
+            ,"y wc -l"
+            ,"y head"
+            ,"y tail"
+            ,"y sed"
+            ,"y awk print"
+            ,"y dev_null"
+            ,"y help"
+        };
         if ( args.length == 0 ){
             System.out.println(apresentacao(programas));
             return;
@@ -252,7 +271,19 @@ cat buffer.log
         if ( args.length == 2 && args[0].equals("wc") && args[1].equals("-l") ){
             wc_l();
             return;
-        }        
+        }       
+        if ( args[0].equals("head") 
+            && (
+                args.length == 1 
+                || ( args.length == 2 && args[1].startsWith("-") && args[1].length() > 1 )
+            ) 
+        ){
+            if ( args.length == 2 )
+                head(args);
+            else
+                head(null);
+            return;
+        }
         if ( args[0].equals("sed") && args.length == 3 ){
             sed(args[1],args[2]);
             return;
@@ -1175,7 +1206,67 @@ cat buffer.log
         }catch(Exception e){
         }
     }
-
+    
+    public void head(String [] args)
+    {
+        int p;
+        String line;
+        long count=0;
+        
+        try{
+            if ( args.length == 1 )
+                p=10;
+            else
+                p=Integer.parseInt(args[1].substring(1));
+        }catch(Exception e){
+            comando_invalido(args);
+            return;
+        }
+        
+        try {
+            java.util.Scanner scanner = new java.util.Scanner(System.in);
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+                if ( ++count <= p )
+                    System.out.println(line);
+                else{
+                    while ( scanner.hasNext() && scanner.next() != null ) {}
+                }
+            }
+        }catch(Exception e){}
+    }
+            
+    public void tail(String [] args)
+    {
+        int p;
+        String line;
+        long count=0;
+        ArrayList<String> lista=new ArrayList<String>();
+        
+        try{
+            if ( args.length == 1 )
+                p=10;
+            else
+                p=Integer.parseInt(args[1].substring(1));
+        }catch(Exception e){
+            comando_invalido(args);
+            return;
+        }
+        
+        try {
+            java.util.Scanner scanner = new java.util.Scanner(System.in);
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+                lista.add(line);
+                if ( lista.size() > p )
+                    lista.remove(0);
+            }
+            for ( int i=0;i<lista.size();i++ )
+                System.out.println(lista.get(i));
+            lista=null;
+        }catch(Exception e){}
+    }
+            
     public void sed(String sedA,String sedB)
     {
         try {
