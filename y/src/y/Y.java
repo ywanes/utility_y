@@ -1,5 +1,6 @@
 package y;
 
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -8,6 +9,7 @@ import java.io.FileWriter;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -16,6 +18,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -59,6 +62,7 @@ cat buffer.log
             ,"y md5"
             ,"y sha1"
             ,"y sha256"
+            ,"y base64"
             ,"y grep"
             ,"y wc -l"
             ,"y head"
@@ -261,10 +265,20 @@ cat buffer.log
             digest("SHA-256");
             return;
         }        
-        if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
-            System.out.println("Utilitário Y versão:"+version+"\n"+apresentacao(programas));
+
+        if ( args[0].equals("base64") 
+            && ( 
+                args.length == 1 
+                || ( args.length == 2 && args[1].equals("-d") )
+            )    
+        ){
+            if ( args.length == 1 )
+                base64(true);
+            else
+                base64(false);
             return;
         }
+        
         if ( args[0].equals("grep") && args.length == 2 ){
             grep(args[1]);
             return;
@@ -308,6 +322,11 @@ cat buffer.log
             return;
         }
 
+        if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
+            System.out.println("Utilitário Y versão:"+version+"\n"+apresentacao(programas));
+            return;
+        }
+        
         //Comando inválido
         System.out.print("Comando inválido: [y");
         for ( int i=0;i<args.length;i++ )
@@ -1185,7 +1204,7 @@ cat buffer.log
         try {
             String line=null;
             java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            scanner.useDelimiter("\n");
+            scanner.useDelimiter("\n");            
             while ( scanner.hasNext() && (line=scanner.next()) != null ) {
                 if ( ! first && ! tail && line.contains(grep) ){
                     System.out.println(line);
@@ -1449,6 +1468,42 @@ cat buffer.log
             while(System.in.read(buf) > -1){}
         }catch(Exception e){}
     }
+
+    public void base64(boolean encoding){
+        int BUFFER_SIZE = 1;
+        byte[] buf = new byte[BUFFER_SIZE];                   
+        ArrayList<Byte> lista=new ArrayList<>();
+        byte [] bytes=null;
+        
+        try {
+            while( System.in.read(buf, 0, BUFFER_SIZE) > -1 ){
+                if ( encoding 
+                    || ( (int)buf[0] != 10 && (int)buf[0] != 13 ) // remove \r and \n
+                ){
+                    lista.add(buf[0]);
+                }
+            }
+            bytes=new byte[lista.size()];
+            for ( int i=0;i<lista.size();i++ )
+                bytes[i]=lista.get(i);
+            if ( encoding )
+                System.out.print(
+                    new String(
+                        Base64.getEncoder().encode(bytes)
+                    )
+                );
+            else
+                System.out.print(
+                    new String(
+                        Base64.getDecoder().decode(bytes)
+                    )
+                );
+        } catch (Exception ex) {
+            System.out.println("Erro, "+ex.toString());
+            System.out.println(new String(bytes));
+        }
+    }
+   
 
     private void comando_invalido(String[] args) {
         //Comando inválido
