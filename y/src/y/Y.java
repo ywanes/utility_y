@@ -63,6 +63,7 @@ cat buffer.log
             ,"y wc -l"
             ,"y head"
             ,"y tail"
+            ,"y cut"
             ,"y sed"
             ,"y awk print"
             ,"y dev_null"
@@ -288,6 +289,10 @@ cat buffer.log
             ) 
         ){
             tail(args);
+            return;
+        }
+        if ( args[0].equals("cut") && args.length == 2 && args[1].startsWith("-c") && args[1].length() > 2 ){
+            cut(args);
             return;
         }
         if ( args[0].equals("sed") && args.length == 3 ){
@@ -1269,6 +1274,97 @@ cat buffer.log
                 System.out.println(lista.get(i));
             }
             lista=null;
+        }catch(Exception e){}
+    }
+           
+    public void cut(String [] args){
+        String [] partes=args[1].substring(2).split(",");
+        int [] elem=new int[partes.length*2];
+        int count=0;
+        try{
+            for ( int i=0;i<partes.length;i++ )
+            {
+                if ( 
+                    partes[i].startsWith("-") 
+                    && ! partes[i].endsWith("-") 
+                    && partes[i].split("-").length == 1 
+                    && Integer.parseInt(partes[i].split("-")[0]) >= 1
+                )
+                {
+                    elem[count++]=-1;
+                    elem[count++]=Integer.parseInt(partes[i].split("-")[0]);
+                    continue;
+                }
+                if ( 
+                    ! partes[i].startsWith("-") 
+                    && partes[i].endsWith("-") 
+                    && partes[i].split("-").length == 1 
+                    && Integer.parseInt(partes[i].split("-")[0]) >= 1
+                )
+                {
+                    elem[count++]=Integer.parseInt(partes[i].split("-")[0]);
+                    elem[count++]=-1;
+                    continue;
+                }
+                if ( 
+                    ! partes[i].startsWith("-") 
+                    && ! partes[i].endsWith("-") 
+                    && partes[i].split("-").length == 2 
+                    && Integer.parseInt(partes[i].split("-")[0]) >= 1 
+                    && Integer.parseInt(partes[i].split("-")[1]) >= 1 
+                    && Integer.parseInt(partes[i].split("-")[0]) <= Integer.parseInt(partes[i].split("-")[1])
+                )
+                {
+                    elem[count++]=Integer.parseInt(partes[i].split("-")[0]);
+                    elem[count++]=Integer.parseInt(partes[i].split("-")[0]);
+                    continue;
+                }
+                if ( 
+                    ! partes[i].contains("-") 
+                    && Integer.parseInt(partes[i]) >= 1 
+                )
+                {
+                    elem[count++]=Integer.parseInt(partes[i]);
+                    elem[count++]=Integer.parseInt(partes[i]);
+                    continue;
+                }
+            }
+        }catch(Exception e){
+            comando_invalido(args);
+            return;
+        }
+        
+        try {
+            String line=null;
+            java.util.Scanner scanner = new java.util.Scanner(System.in);
+            scanner.useDelimiter("\n");
+            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+                for ( int i=0;i<elem.length;i+=2 ){
+                    if ( elem[i] == -1 ){
+                        if ( line.length() < elem[i+1] )
+                            System.out.print(line);
+                        else
+                            System.out.print(line.substring(0,elem[i+1]));
+                        continue;
+                    }
+                    if ( elem[i+1] == -1 ){
+                        if ( line.length() < elem[i] )
+                            System.out.print("");
+                        else
+                            System.out.print(line.substring(elem[i]-1));
+                        continue;
+                    }
+                    if ( line.length() < elem[i] )
+                        System.out.print("");
+                    else
+                        if ( line.length() < elem[i+1] )
+                            System.out.print(line.substring(elem[i]-1));
+                        else
+                            System.out.print(line.substring(elem[i]-1,elem[i+1]));
+                    continue;
+                }
+                System.out.println("");                
+            }
         }catch(Exception e){}
     }
             
