@@ -1,15 +1,17 @@
 package y;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
-import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.ByteArrayInputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
-import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -94,6 +96,7 @@ cat buffer.log
             + "\n  [y banco buffer -n_lines 500]"
             + "\n  [y banco buffer -log buffer.log]"
             + "\n  [y banco buffer -n_line 500 -log buffer.log]"
+            + "\n  [y banco createjobcarga]"
             + "\n  Ex: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\""
             + "\n  Ex2: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\""
             + "\n  Obs: entrada de dados pode ser feito por |"
@@ -109,77 +112,91 @@ cat buffer.log
             String app="";
             String parm="";
 
-            // comandos iniciados com conn, ou -conn
-            if ( 
-                args[1].equals("-conn") 
-                || ( args[1].startsWith("conn,") && ! args[1].equals("conn,") ) 
-            ){
-                // PREPARAÇÂO
-                // pegando conn com os parametros args[1] e args[1][2]
-                if ( args[1].equals("-conn") )
-                {
-                    if ( args.length == 4 || args.length == 5 ){
-                        if ( args.length == 4 ){
-                            conn=args[2];
-                            app=args[3];                    
-                        }
-                        if ( args.length == 5 ){
-                            conn=args[2];
-                            app=args[3];
-                            parm=args[4];
-                        }
-                    }else{
-                        System.out.println(msg_usage);
-                        return;
-                    }
-                }
-
-                // PREPARAÇÂO
-                // pegando conn com o parametro args[1]
-                if ( args[1].startsWith("conn,") && ! args[1].equals("conn,") )
-                {
-                    if ( args.length == 3 || args.length == 4 ){
-                        if ( args.length == 3 ){
-                            app=args[2];                    
-                        }
-                        if ( args.length == 4 ){
-                            app=args[2];
-                            parm=args[3];
-                        }
-                    }else{
-                        System.out.println(msg_usage);
-                        return;
-                    }
-                    String value=gettoken(args[1].split(",")[1]);
-                    if ( value == null )
+            if ( args[0].equals("banco") )
+            {                
+                if ( 
+                    args[1].equals("-conn") 
+                    || ( args[1].startsWith("conn,") && ! args[1].equals("conn,") ) 
+                ){
+                    // PREPARAÇÂO
+                    // pegando conn com os parametros args[1] e args[1][2]
+                    if ( args[1].equals("-conn") )
                     {
-                        System.out.println("Não foi possível encontrar o token "+args[1].split(",")[1]);
+                        if ( args.length == 4 || args.length == 5 ){
+                            if ( args.length == 4 ){
+                                conn=args[2];
+                                app=args[3];                    
+                            }
+                            if ( args.length == 5 ){
+                                conn=args[2];
+                                app=args[3];
+                                parm=args[4];
+                            }
+                        }else{
+                            System.out.println(msg_usage);
+                            return;
+                        }
+                    }
+
+                    // PREPARAÇÂO
+                    // pegando conn com o parametro args[1]
+                    if ( args[1].startsWith("conn,") && ! args[1].equals("conn,") )
+                    {
+                        if ( args.length == 3 || args.length == 4 ){
+                            if ( args.length == 3 ){
+                                app=args[2];                    
+                            }
+                            if ( args.length == 4 ){
+                                app=args[2];
+                                parm=args[3];
+                            }
+                        }else{
+                            System.out.println(msg_usage);
+                            return;
+                        }
+                        String value=gettoken(args[1].split(",")[1]);
+                        if ( value == null )
+                        {
+                            System.out.println("Não foi possível encontrar o token "+args[1].split(",")[1]);
+                            return;
+                        }
+                        conn=value;
+                    }
+
+                    // comandos app
+                    if ( app.equals("select") ){
+                        select(conn,parm);
                         return;
                     }
-                    conn=value;
+                    if ( app.equals("selectInsert") ){
+                        selectInsert(conn,parm);
+                        return;
+                    }
+                    if ( app.equals("selectCSV") ){
+                        selectCSV(conn,parm);
+                        return;
+                    }
+                    if ( app.equals("insert") ){
+                        insert(conn);
+                        return;
+                    }
+                    if ( app.equals("execute") ){
+                        execute(conn,parm);
+                        return;
+                    }                    
                 }
-
-                // comandos app
-                if ( app.equals("select") ){
-                    select(conn,parm);
+                if ( 
+                    args[1].equals("createjobcarga") 
+                    // ....
+                    // em desenvolvimento
+                ){
+                    base64(
+                        new ByteArrayInputStream("a\nb\nc\n".getBytes())
+                        ,true
+                    );
                     return;
                 }
-                if ( app.equals("selectInsert") ){
-                    selectInsert(conn,parm);
-                    return;
-                }
-                if ( app.equals("selectCSV") ){
-                    selectCSV(conn,parm);
-                    return;
-                }
-                if ( app.equals("insert") ){
-                    insert(conn);
-                    return;
-                }
-                if ( app.equals("execute") ){
-                    execute(conn,parm);
-                    return;
-                }
+                comando_invalido(args);
             }
             
             // buffer
@@ -273,9 +290,9 @@ cat buffer.log
             )    
         ){
             if ( args.length == 1 )
-                base64(true);
+                base64(System.in,true);
             else
-                base64(false);
+                base64(System.in,false);
             return;
         }
         
@@ -1469,14 +1486,14 @@ cat buffer.log
         }catch(Exception e){}
     }
 
-    public void base64(boolean encoding){
+    public void base64(InputStream in,boolean encoding){
         int BUFFER_SIZE = 1;
         byte[] buf = new byte[BUFFER_SIZE];                   
         ArrayList<Byte> lista=new ArrayList<>();
         byte [] bytes=null;
         
         try {
-            while( System.in.read(buf, 0, BUFFER_SIZE) > -1 ){
+            while( in.read(buf, 0, BUFFER_SIZE) > -1 ){
                 if ( encoding 
                     || ( (int)buf[0] != 10 && (int)buf[0] != 13 ) // remove \r and \n
                 ){
@@ -1487,7 +1504,7 @@ cat buffer.log
             for ( int i=0;i<lista.size();i++ )
                 bytes[i]=lista.get(i);
             if ( encoding )
-                System.out.print(
+                System.out.println(
                     new String(
                         Base64.getEncoder().encode(bytes)
                     )
