@@ -284,6 +284,18 @@ cat buffer.log
                 head(null);
             return;
         }
+        if ( args[0].equals("tail") 
+            && (
+                args.length == 1 
+                || ( args.length == 2 && args[1].startsWith("-") && args[1].length() > 1 )
+            ) 
+        ){
+            if ( args.length == 2 )
+                tail(args);
+            else
+                tail(null);
+            return;
+        }
         if ( args[0].equals("sed") && args.length == 3 ){
             sed(args[1],args[2]);
             return;
@@ -1226,7 +1238,7 @@ cat buffer.log
         try {
             java.util.Scanner scanner = new java.util.Scanner(System.in);
             scanner.useDelimiter("\n");
-            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+            while ( scanner.hasNextLine() && (line=scanner.nextLine()) != null ) {
                 if ( ++count <= p )
                     System.out.println(line);
                 else{
@@ -1240,7 +1252,6 @@ cat buffer.log
     {
         int p;
         String line;
-        long count=0;
         ArrayList<String> lista=new ArrayList<String>();
         
         try{
