@@ -1237,7 +1237,7 @@ cat buffer.log
         
         try {
             java.util.Scanner scanner = new java.util.Scanner(System.in);
-            scanner.useDelimiter("\n");
+            //scanner.useDelimiter("\n");
             while ( scanner.hasNextLine() && (line=scanner.nextLine()) != null ) {
                 if ( ++count <= p )
                     System.out.println(line);
