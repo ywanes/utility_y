@@ -41,7 +41,6 @@ cat buffer.log
 
         
 */
-        //args=new String[]{"tail"};
         new Y().go(args);
     }
 
@@ -1258,25 +1257,18 @@ cat buffer.log
             return;
         }
         
-System.out.println(1);
         try {
             java.util.Scanner scanner = new java.util.Scanner(System.in);            
             scanner.useDelimiter("\n");
             while ( scanner.hasNext() && (line=scanner.next()) != null ) {
-System.out.println(".."+line);                             
                 lista.add(line);
                 if ( lista.size() > p )
                     lista.remove(0);
             }
-System.out.println(1);
             for ( int i=0;i<lista.size();i++ ){
-System.out.println(3);                
                 System.out.println(lista.get(i));
-System.out.println(4);                                
             }
-System.out.println(5);                                            
             lista=null;
-System.out.println(6);                                                        
         }catch(Exception e){}
     }
             
