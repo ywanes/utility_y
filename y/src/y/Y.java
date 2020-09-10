@@ -41,7 +41,7 @@ cat buffer.log
 
         
 */
-        args=new String[]{"tail"};
+        //args=new String[]{"tail"};
         new Y().go(args);
     }
 
