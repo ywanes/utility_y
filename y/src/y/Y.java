@@ -41,7 +41,6 @@ cat buffer.log
 
         
 */
-        args=new String[]{"cut","-c2-"};
         new Y().go(args);
     }
 
