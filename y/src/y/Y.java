@@ -1328,6 +1328,8 @@ cat buffer.log
                     elem[count++]=Integer.parseInt(partes[i]);
                     continue;
                 }
+                comando_invalido(args);
+                return;
             }
         }catch(Exception e){
             comando_invalido(args);
