@@ -89,14 +89,18 @@ cat buffer.log
             + "\n  [y banco conn,hash selectInsert select..]"
             + "\n  [y banco conn,hash selectCSV]"
             + "\n  [y banco conn,hash selectCSV select..]"
-            + "\n  [y banco conn,hash insert]"
+            + "\n  [y banco conn,hash executeInsert]"
             + "\n  [y banco conn,hash execute]"
             + "\n  [y banco conn,hash execute execute..]"
+            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA carga]"
+            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]"
+            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]"
+            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]"
+            + "\n  [y banco executejob]"
             + "\n  [y banco buffer]"
             + "\n  [y banco buffer -n_lines 500]"
             + "\n  [y banco buffer -log buffer.log]"
-            + "\n  [y banco buffer -n_line 500 -log buffer.log]"
-            + "\n  [y banco createjobcarga]"
+            + "\n  [y banco buffer -n_line 500 -log buffer.log]"            
             + "\n  Ex: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\""
             + "\n  Ex2: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\""
             + "\n  Obs: entrada de dados pode ser feito por |"
@@ -113,13 +117,23 @@ cat buffer.log
             String parm="";
 
             if ( args[0].equals("banco") )
-            {                
+            {    
+                // -conn ou conn,
                 if ( 
                     args[1].equals("-conn") 
                     || ( args[1].startsWith("conn,") && ! args[1].equals("conn,") ) 
                 ){
                     // PREPARAÇÂO
                     // pegando conn com os parametros args[1] e args[1][2]
+                    //[y banco -conn ... select]
+                    //[y banco -conn ... select select..]
+                    //[y banco -conn ... selectInsert]
+                    //[y banco -conn ... selectInsert select..]
+                    //[y banco -conn ... selectCSV]
+                    //[y banco -conn ... selectCSV select..]
+                    //[y banco -conn ... executeInsert]
+                    //[y banco -conn ... execute]
+                    //[y banco -conn ... execute execute..]
                     if ( args[1].equals("-conn") )
                     {
                         if ( args.length == 4 || args.length == 5 ){
@@ -140,6 +154,15 @@ cat buffer.log
 
                     // PREPARAÇÂO
                     // pegando conn com o parametro args[1]
+                    //[y banco conn,hash select]
+                    //[y banco conn,hash select select..]
+                    //[y banco conn,hash selectInsert]
+                    //[y banco conn,hash selectInsert select..]
+                    //[y banco conn,hash selectCSV]
+                    //[y banco conn,hash selectCSV select..]
+                    //[y banco conn,hash executeInsert]
+                    //[y banco conn,hash execute]
+                    //[y banco conn,hash execute execute..]
                     if ( args[1].startsWith("conn,") && ! args[1].equals("conn,") )
                     {
                         if ( args.length == 3 || args.length == 4 ){
@@ -176,8 +199,8 @@ cat buffer.log
                         selectCSV(conn,parm);
                         return;
                     }
-                    if ( app.equals("insert") ){
-                        insert(conn);
+                    if ( app.equals("executeInsert") ){
+                        executeInsert(conn);
                         return;
                     }
                     if ( app.equals("execute") ){
@@ -185,11 +208,17 @@ cat buffer.log
                         return;
                     }                    
                 }
-                if ( 
-                    args[1].equals("createjobcarga") 
+                // -connIn ou connIn,
+                if (                         
+                    args.length > 1 && args[1].equals("createjobcarga") 
                     // ....
                     // em desenvolvimento
                 ){
+                    //[y banco connIn,hash connOut,hash outTable,tabelaA carga]
+                    //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
+                    //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
+                    //[y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]
+                    
                     base64(
                         new ByteArrayInputStream("a\nb\nc\n".getBytes())
                         ,true
@@ -354,19 +383,21 @@ cat buffer.log
     }
 
     public void select(String conn,String parm){
+        String parm_=parm;
+        
         try{            
             Connection con = getcon(conn);
             if ( con == null ){
                 System.out.println("Não foi possível se conectar!!" );
                 return;
             }
-
+            
             if ( parm.equals("") ){
                 String linha;
                 while( (linha=read()) != null )
-                    parm+="\n"+linha;
-                parm=removePontoEVirgual(parm);
+                    parm+="\n"+linha;                
             }
+            parm=removePontoEVirgual(parm);
 
             Statement stmt = con.createStatement();
             ResultSet rs=null;
@@ -376,11 +407,10 @@ cat buffer.log
             StringBuilder sb=null;
             String tmp="";
             String table="";
-            String parmTratado=removePontoEVirgual(parm);
 
-            rs=stmt.executeQuery(parmTratado);
+            rs=stmt.executeQuery(parm);
             rsmd=rs.getMetaData();
-            table=getTableByParm(parmTratado);
+            table=getTableByParm(parm);
 
             for ( int i=1;i<=rsmd.getColumnCount();i++ )
             {
@@ -428,11 +458,13 @@ cat buffer.log
         }
         catch(Exception e)
         {
-            System.out.println("Erro: "+e.toString()+" -> "+parm);
+            System.out.println("Erro: "+e.toString()+" -> "+parm_);
         }        
     }
 
     public void selectInsert(String conn,String parm){
+        String parm_=parm;
+        
         int countCommit=0;
         try{
             Connection con = getcon(conn);
@@ -444,9 +476,9 @@ cat buffer.log
             if ( parm.equals("") ){
                 String linha;
                 while( (linha=read()) != null )
-                    parm+="\n"+linha;
-                parm=removePontoEVirgual(parm);
+                    parm+="\n"+linha;                
             }
+            parm=removePontoEVirgual(parm);
 
             Statement stmt = con.createStatement();
             ResultSet rs=null;
@@ -456,11 +488,10 @@ cat buffer.log
             StringBuilder sb=null;
             String tmp="";
             String table="";
-            String parmTratado=removePontoEVirgual(parm);
 
-            rs=stmt.executeQuery(parmTratado);
+            rs=stmt.executeQuery(parm);
             rsmd=rs.getMetaData();
-            table=getTableByParm(parmTratado);
+            table=getTableByParm(parm);
 
             for ( int i=1;i<=rsmd.getColumnCount();i++ )
             {
@@ -515,11 +546,13 @@ cat buffer.log
         }
         catch(Exception e)
         {
-            System.out.println("Erro: "+e.toString()+" -> "+parm);
+            System.out.println("Erro: "+e.toString()+" -> "+parm_);
         }        
     }
 
     public void selectCSV(String conn,String parm){
+        String parm_=parm;
+        
         try{
             Connection con = getcon(conn);
             if ( con == null ){
@@ -530,9 +563,9 @@ cat buffer.log
             if ( parm.equals("") ){
                 String linha;
                 while( (linha=read()) != null )
-                    parm+="\n"+linha;
-                parm=removePontoEVirgual(parm);
+                    parm+="\n"+linha;                
             }
+            parm=removePontoEVirgual(parm);
 
             Statement stmt = con.createStatement();
             ResultSet rs=null;
@@ -542,14 +575,13 @@ cat buffer.log
             StringBuilder sb=null;
             String tmp="";
             String table="";
-            String parmTratado=removePontoEVirgual(parm);
             String header="";
             String first_detail="";
             boolean first=true;
 
-            rs=stmt.executeQuery(parmTratado);
+            rs=stmt.executeQuery(parm);
             rsmd=rs.getMetaData();
-            table=getTableByParm(parmTratado);
+            table=getTableByParm(parm);
 
             for ( int i=1;i<=rsmd.getColumnCount();i++ )
             {
@@ -609,15 +641,11 @@ cat buffer.log
             con.close();
         }
         catch(Exception e){
-            System.out.println("Erro: "+e.toString()+" -> "+parm);
+            System.out.println("Erro: "+e.toString()+" -> "+parm_);
         }        
     }
 
-    public void insert(String conn){        
-        // status
-        // 1 - lendo uma sequencia de linhas
-        // 2 - NÃO lendo uma sequencia de linhas
-        boolean reading=false;
+    public void executeInsert(String conn){        
         boolean par=true;
         String linha="";
         StringBuilder sb=null;
