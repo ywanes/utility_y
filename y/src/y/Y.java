@@ -107,85 +107,26 @@ cat buffer.log
             + "\n  Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;"
             + "\n  Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*";
             
-            
             if ( args.length == 1 ){
                 System.out.println(msg_usage);
                 return;
             }
-            String conn=null;
-            String app="";
-            String parm="";
 
             if ( args[0].equals("banco") )
-            {    
-                // -conn ou conn,
-                if ( 
-                    args[1].equals("-conn") 
-                    || ( args[1].startsWith("conn,") && ! args[1].equals("conn,") ) 
-                ){
-                    // PREPARAÇÂO
-                    // pegando conn com os parametros args[1] e args[1][2]
-                    //[y banco -conn ... select]
-                    //[y banco -conn ... select select..]
-                    //[y banco -conn ... selectInsert]
-                    //[y banco -conn ... selectInsert select..]
-                    //[y banco -conn ... selectCSV]
-                    //[y banco -conn ... selectCSV select..]
-                    //[y banco -conn ... executeInsert]
-                    //[y banco -conn ... execute]
-                    //[y banco -conn ... execute execute..]
-                    if ( args[1].equals("-conn") )
-                    {
-                        if ( args.length == 4 || args.length == 5 ){
-                            if ( args.length == 4 ){
-                                conn=args[2];
-                                app=args[3];                    
-                            }
-                            if ( args.length == 5 ){
-                                conn=args[2];
-                                app=args[3];
-                                parm=args[4];
-                            }
-                        }else{
-                            System.out.println(msg_usage);
-                            return;
-                        }
+            {   
+                // conn
+                if ( args[1].equals("-conn") || ( args[1].startsWith("conn,") ) ){
+                    String [] ConnParmApp=getConnParmApp(args);
+                    
+                    if ( ConnParmApp == null ){
+                        comando_invalido(args);
+                        return;
                     }
-
-                    // PREPARAÇÂO
-                    // pegando conn com o parametro args[1]
-                    //[y banco conn,hash select]
-                    //[y banco conn,hash select select..]
-                    //[y banco conn,hash selectInsert]
-                    //[y banco conn,hash selectInsert select..]
-                    //[y banco conn,hash selectCSV]
-                    //[y banco conn,hash selectCSV select..]
-                    //[y banco conn,hash executeInsert]
-                    //[y banco conn,hash execute]
-                    //[y banco conn,hash execute execute..]
-                    if ( args[1].startsWith("conn,") && ! args[1].equals("conn,") )
-                    {
-                        if ( args.length == 3 || args.length == 4 ){
-                            if ( args.length == 3 ){
-                                app=args[2];                    
-                            }
-                            if ( args.length == 4 ){
-                                app=args[2];
-                                parm=args[3];
-                            }
-                        }else{
-                            System.out.println(msg_usage);
-                            return;
-                        }
-                        String value=gettoken(args[1].split(",")[1]);
-                        if ( value == null )
-                        {
-                            System.out.println("Não foi possível encontrar o token "+args[1].split(",")[1]);
-                            return;
-                        }
-                        conn=value;
-                    }
-
+                    
+                    String conn=ConnParmApp[0];
+                    String parm=ConnParmApp[1];
+                    String app=ConnParmApp[2];
+                    
                     // comandos app
                     if ( app.equals("select") ){
                         select(conn,parm);
@@ -208,12 +149,21 @@ cat buffer.log
                         return;
                     }                    
                 }
-                // -connIn ou connIn,
-                if (                         
-                    args.length > 1 && args[1].equals("createjobcarga") 
-                    // ....
-                    // em desenvolvimento
-                ){
+                // connIn
+                if ( args[1].equals("-connIn") || ( args[1].startsWith("connIn,") ) ){
+                    String [] get_connIn_connOut_outTable_trunc_app=get_connIn_connOut_outTable_trunc_app(args);
+                    
+                    if ( get_connIn_connOut_outTable_trunc_app == null ){
+                        comando_invalido(args);
+                        return;
+                    }
+                    
+                    String connIn=get_connIn_connOut_outTable_trunc_app[0];
+                    String connOut=get_connIn_connOut_outTable_trunc_app[1];
+                    String outTable=get_connIn_connOut_outTable_trunc_app[2];
+                    String trunc=get_connIn_connOut_outTable_trunc_app[3];
+                    String app=get_connIn_connOut_outTable_trunc_app[4];
+                    
                     //[y banco connIn,hash connOut,hash outTable,tabelaA carga]
                     //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
                     //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
@@ -382,6 +332,83 @@ cat buffer.log
         return;
     }
 
+    public String [] getConnParmApp(String [] args){
+        String conn="";
+        String parm="";
+        String app="";
+        
+        // PREPARAÇÂO
+        // pegando conn com os parametros args[1] e args[1][2]
+        //[y banco -conn ... select]
+        //[y banco -conn ... select select..]
+        //[y banco -conn ... selectInsert]
+        //[y banco -conn ... selectInsert select..]
+        //[y banco -conn ... selectCSV]
+        //[y banco -conn ... selectCSV select..]
+        //[y banco -conn ... executeInsert]
+        //[y banco -conn ... execute]
+        //[y banco -conn ... execute execute..]
+        if ( args[1].equals("-conn") )
+        {
+            if ( args.length == 4 || args.length == 5 ){
+                if ( args.length == 4 ){
+                    conn=args[2];
+                    app=args[3];                    
+                }
+                if ( args.length == 5 ){
+                    conn=args[2];
+                    app=args[3];
+                    parm=args[4];
+                }
+            }else{
+                return null;
+            }
+        }
+
+        // PREPARAÇÂO
+        // pegando conn com o parametro args[1]
+        //[y banco conn,hash select]
+        //[y banco conn,hash select select..]
+        //[y banco conn,hash selectInsert]
+        //[y banco conn,hash selectInsert select..]
+        //[y banco conn,hash selectCSV]
+        //[y banco conn,hash selectCSV select..]
+        //[y banco conn,hash executeInsert]
+        //[y banco conn,hash execute]
+        //[y banco conn,hash execute execute..]
+        if ( args[1].startsWith("conn,") && ! args[1].equals("conn,") )
+        {
+            if ( args.length == 3 || args.length == 4 ){
+                if ( args.length == 3 ){
+                    app=args[2];                    
+                }
+                if ( args.length == 4 ){
+                    app=args[2];
+                    parm=args[3];
+                }
+            }else{
+                return null;
+            }
+            String value=gettoken(args[1].split(",")[1]);
+            if ( value == null )
+            {
+                System.out.println("Não foi possível encontrar o token "+args[1].split(",")[1]);
+                return null;
+            }
+            conn=value;
+        }        
+        return new String[]{conn,parm,app};
+    }
+    
+    public String [] get_connIn_connOut_outTable_trunc_app(String [] args){
+        //[y banco connIn,hash connOut,hash outTable,tabelaA carga]
+        //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
+        //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
+        //[y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]
+        
+        return null;
+    }
+            
     public void select(String conn,String parm){
         String parm_=parm;
         
