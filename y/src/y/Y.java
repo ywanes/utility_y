@@ -683,7 +683,7 @@ cat buffer.log
                         continue;
                     }
                     throw new Exception("tipo desconhecido:"+tipos.get(i) + " -> " + rs.getString(campos.get(i)) );
-                }
+                }                
                 if ( out == null )
                     System.out.println("insert into "+table+" values("+ sb.toString()+");");
                 else
