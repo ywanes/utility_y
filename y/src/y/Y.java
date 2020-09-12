@@ -10,7 +10,10 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PipedInputStream;
+import java.io.PipedOutputStream;
 import java.io.PrintWriter;
 import java.security.MessageDigest;
 import java.sql.Connection;
@@ -155,7 +158,7 @@ cat buffer.log
                         return;
                     }
                     if ( app.equals("selectInsert") ){
-                        selectInsert(conn,parm);
+                        selectInsert(conn,parm,null,"");
                         return;
                     }
                     if ( app.equals("selectCSV") ){
@@ -163,7 +166,7 @@ cat buffer.log
                         return;
                     }
                     if ( app.equals("executeInsert") ){
-                        executeInsert(conn);
+                        executeInsert(conn,System.in);
                         return;
                     }
                     if ( app.equals("execute") ){
@@ -208,8 +211,11 @@ cat buffer.log
                     }
                     if ( app.equals("carga") )
                     {
-                        System.out.println("Nao implementado");
-                        //carga(connIn,connOut,outTable,trunc,app);
+                        String SQL="";
+                        String line;
+                        while( (line=read()) != null )
+                            SQL+=line+"\n";
+                        carga(connIn,connOut,outTable,trunc,app,SQL);
                         return;
                     }
                 }
@@ -540,9 +546,9 @@ cat buffer.log
             }
             
             if ( parm.equals("") ){
-                String linha;
-                while( (linha=read()) != null )
-                    parm+="\n"+linha;                
+                String line;
+                while( (line=read()) != null )
+                    parm+=line+"\n";
             }
             parm=removePontoEVirgual(parm);
 
@@ -609,7 +615,7 @@ cat buffer.log
         }        
     }
 
-    public void selectInsert(String conn,String parm){
+    public void selectInsert(String conn,String parm, PipedOutputStream out,String table){ // table opcional
         String parm_=parm;
         
         int countCommit=0;
@@ -621,9 +627,9 @@ cat buffer.log
             }
 
             if ( parm.equals("") ){
-                String linha;
-                while( (linha=read()) != null )
-                    parm+="\n"+linha;                
+                String line;
+                while( (line=read()) != null )
+                    parm+=line+"\n";                
             }
             parm=removePontoEVirgual(parm);
 
@@ -633,12 +639,12 @@ cat buffer.log
             ArrayList<String> campos=new ArrayList<String>();
             ArrayList<Integer> tipos=new ArrayList<Integer>();
             StringBuilder sb=null;
-            String tmp="";
-            String table="";
+            String tmp="";            
 
             rs=stmt.executeQuery(parm);
             rsmd=rs.getMetaData();
-            table=getTableByParm(parm);
+            if ( table.equals("") )
+                table=getTableByParm(parm);
 
             for ( int i=1;i<=rsmd.getColumnCount();i++ )
             {
@@ -681,9 +687,16 @@ cat buffer.log
                     }
                     throw new Exception("tipo desconhecido:"+tipos.get(i) + " -> " + rs.getString(campos.get(i)) );
                 }
-                System.out.println("insert into "+table+" values("+ sb.toString()+");");
+                
+                if ( out == null )
+                    System.out.println("insert into "+table+" values("+ sb.toString()+");");
+                else
+                    out.write( ("insert into "+table+" values("+ sb.toString()+");").getBytes() );
                 if ( countCommit++ >= 10000 ){
-                    System.out.println("commit;");
+                    if ( out == null )
+                        System.out.println("commit;");
+                    else
+                        out.write("commit;".getBytes());
                     countCommit=0;
                 }
             }
@@ -708,9 +721,9 @@ cat buffer.log
             }
 
             if ( parm.equals("") ){
-                String linha;
-                while( (linha=read()) != null )
-                    parm+="\n"+linha;                
+                String line;
+                while( (line=read()) != null )
+                    parm+=line+"\n";                
             }
             parm=removePontoEVirgual(parm);
 
@@ -792,7 +805,7 @@ cat buffer.log
         }        
     }
 
-    public void executeInsert(String conn){        
+    public void executeInsert(String conn, InputStream in){        
         boolean par=true;
         String linha="";
         StringBuilder sb=null;
@@ -803,6 +816,11 @@ cat buffer.log
         
         String ii;
         StringBuilder all=new StringBuilder(" insert all");
+        
+        if ( scanner_pipe == null ){
+            scanner_pipe=new java.util.Scanner(in);  
+            scanner_pipe.useDelimiter("\n");
+        }
         
         try{
             Connection con = getcon(conn);
@@ -946,9 +964,9 @@ cat buffer.log
             }
 
             if ( parm.equals("") ){
-                String linha;
-                while( (linha=read()) != null )
-                    parm+="\n"+linha;
+                String line;
+                while( (line=read()) != null )
+                    parm+=line+"\n";
                 parm=removePontoEVirgual(parm);
             }
 
@@ -1696,7 +1714,7 @@ cat buffer.log
         return retorno;
     }
 
-    private void createjobexecute(String conn) {
+    public void createjobexecute(String conn) {
         String line;
         String SQL="";
         while ( (line=read()) != null )
@@ -1714,7 +1732,6 @@ cat buffer.log
             )
             ,true
         );
-        return;        
     }
 
     public void createjobcarga(String connIn, String connOut, String outTable, String trunc, String app) {
@@ -1742,7 +1759,38 @@ cat buffer.log
             )
             ,true
         );
-        return;        
+    }
+
+    public void carga(String connIn, String connOut, String outTable, String trunc, String app, String SQL){
+        try{
+            final PipedInputStream pipedInputStream=new PipedInputStream();
+            final PipedOutputStream pipedOutputStream=new PipedOutputStream();
+
+            pipedInputStream.connect(pipedOutputStream);
+
+            Thread pipeWriter=new Thread(new Runnable() {
+                public void run() {
+                    selectInsert(connIn, "", pipedOutputStream,outTable);
+                }
+            });
+
+            Thread pipeReader=new Thread(new Runnable() {
+                public void run() {
+                    executeInsert(connOut, pipedInputStream);
+                }
+            });
+
+            pipeWriter.start();
+            pipeReader.start();
+
+            pipeWriter.join();
+            pipeReader.join();
+
+            pipedOutputStream.close();
+            pipedInputStream.close();        
+        }catch(Exception e){
+            System.out.println("Erro, "+e.toString());
+        }
     }
 }
 
