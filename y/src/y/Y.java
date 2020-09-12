@@ -200,6 +200,18 @@ cat buffer.log
                         createjobcarga(connIn,connOut,outTable,trunc,app);
                         return;
                     }
+                    if ( app.equals("createjobexecute") )
+                    {
+                        System.out.println("Nao implementado");
+                        //createjobexecute(connIn,connOut,outTable,trunc,app);
+                        return;
+                    }
+                    if ( app.equals("carga") )
+                    {
+                        System.out.println("Nao implementado");
+                        //carga(connIn,connOut,outTable,trunc,app);
+                        return;
+                    }
                 }
                 // executejob
                 if ( args[1].equals("executejob") && args.length == 2 ){
@@ -1732,7 +1744,6 @@ cat buffer.log
         );
         return;        
     }
-
 }
 
 
