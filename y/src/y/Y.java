@@ -151,29 +151,53 @@ cat buffer.log
                 }
                 // connIn
                 if ( args[1].equals("-connIn") || ( args[1].startsWith("connIn,") ) ){
-                    String [] get_connIn_connOut_outTable_trunc_app=get_connIn_connOut_outTable_trunc_app(args);
+                    String [] connIn_connOut_outTable_trunc_app=get_connIn_connOut_outTable_trunc_app(args);
                     
-                    if ( get_connIn_connOut_outTable_trunc_app == null ){
+                    if ( connIn_connOut_outTable_trunc_app == null ){
                         comando_invalido(args);
                         return;
                     }
                     
-                    String connIn=get_connIn_connOut_outTable_trunc_app[0];
-                    String connOut=get_connIn_connOut_outTable_trunc_app[1];
-                    String outTable=get_connIn_connOut_outTable_trunc_app[2];
-                    String trunc=get_connIn_connOut_outTable_trunc_app[3];
-                    String app=get_connIn_connOut_outTable_trunc_app[4];
+                    String connIn=connIn_connOut_outTable_trunc_app[0];
+                    String connOut=connIn_connOut_outTable_trunc_app[1];
+                    String outTable=connIn_connOut_outTable_trunc_app[2];
+                    String trunc=connIn_connOut_outTable_trunc_app[3];
+                    String app=connIn_connOut_outTable_trunc_app[4];
+                    
+                    String line;
+                    String SQL="";
                     
                     //[y banco connIn,hash connOut,hash outTable,tabelaA carga]
                     //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
                     //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
                     //[y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]
                     
-                    base64(
-                        new ByteArrayInputStream("a\nb\nc\n".getBytes())
-                        ,true
-                    );
-                    return;
+                    while ( (line=read()) != null )
+                        SQL+=line+"\n";
+                    
+                    if ( app.equals("createjobcarga") )
+                    {
+                        System.out.print(outTable+" ");
+                        base64(
+                            new ByteArrayInputStream(
+                                (
+                                "jobcarga\n"
+                                + "-connIn\n"
+                                + connIn+"\n"
+                                + "-connOut\n"
+                                + connOut+"\n"
+                                + "-outTable\n"
+                                + outTable+"\n"
+                                + "trunc\n"
+                                + trunc+"\n"
+                                + "SQL\n"
+                                + SQL
+                                ).getBytes()
+                            )
+                            ,true
+                        );
+                        return;
+                    }
                 }
                 comando_invalido(args);
             }
@@ -405,8 +429,85 @@ cat buffer.log
         //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
         //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
         //[y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]
+        String value_=""; // tmp
         
-        return null;
+        String connIn="";
+        String connOut="";
+        String outTable="";
+        String trunc="N";
+        String app="";
+        
+        
+        
+        if ( args.length > 0 && args[0].equals("banco") )
+            args=sliceParm(1,args);
+        
+        if ( args.length > 0 && args[0].startsWith("connIn,") )
+        {
+            value_=gettoken(args[0].split(",")[1]);
+            if ( value_ == null )
+            {
+                System.out.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
+                return null;
+            }
+            connIn=value_;
+            args=sliceParm(1,args);
+        }
+        
+        if ( connIn.equals("") && args.length > 1 && args[0].equals("-connIn") )
+        {
+            connIn=args[1];
+            args=sliceParm(2,args);
+        }
+        
+        if ( args.length > 0 && args[0].startsWith("connOut,") )
+        {
+            value_=gettoken(args[0].split(",")[1]);
+            if ( value_ == null )
+            {
+                System.out.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
+                return null;
+            }
+            connOut=value_;
+            args=sliceParm(1,args);
+        }
+        
+        if ( connOut.equals("") && args.length > 1 && args[0].equals("-connOut") )
+        {
+            connOut=args[1];
+            args=sliceParm(2,args);
+        }
+        
+        if ( args.length > 0 && args[0].startsWith("outTable,") )
+        {
+            value_=gettoken(args[0].split(",")[1]);
+            if ( value_ == null )
+            {
+                System.out.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
+                return null;
+            }
+            outTable=value_;
+            args=sliceParm(1,args);
+        }
+        
+        if ( outTable.equals("") && args.length > 1 && args[0].equals("-outTable") )
+        {
+            outTable=args[1];
+            args=sliceParm(2,args);
+        }
+        
+        if ( args.length > 0 && args[0].equals("trunc") ){
+            trunc="S";
+            args=sliceParm(1,args);
+        }
+        
+        if ( args.length == 1 )
+            app=args[0];
+        
+        if ( connIn.equals("") || connOut.equals("") || outTable.equals("") || trunc.equals("") || app.equals("") )
+            return null;
+        
+        return new String[]{connIn,connOut,outTable,trunc,app};
     }
             
     public void select(String conn,String parm){
@@ -914,6 +1015,7 @@ cat buffer.log
             // thread in
             new Thread() {
                 public void run() {
+                    // novo scanner in thread
                     java.util.Scanner scanner = new java.util.Scanner(System.in);
                     scanner.useDelimiter("\n");
                     while( true ){
@@ -1275,9 +1377,7 @@ cat buffer.log
         }        
         try {
             String line=null;
-            java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            scanner.useDelimiter("\n");            
-            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+            while ( (line=read()) != null ) {
                 if ( ! first && ! tail && line.contains(grep) ){
                     System.out.println(line);
                     continue;
@@ -1297,12 +1397,8 @@ cat buffer.log
     {
         try {
             long count=0;
-            java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            scanner.useDelimiter("\n");
-            while ( scanner.hasNext() ){
-                scanner.next();
+            while ( (read()) != null )
                 count++;
-            }
             System.out.println(count);
         }catch(Exception e){
         }
@@ -1325,13 +1421,11 @@ cat buffer.log
         }
         
         try {
-            java.util.Scanner scanner = new java.util.Scanner(System.in);
-            scanner.useDelimiter("\n");
-            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+            while ( (line=read()) != null ) {
                 if ( ++count <= p )
                     System.out.println(line);
                 else{
-                    while ( scanner.hasNext() && scanner.next() != null ) {}
+                    while ( (read()) != null ) {}
                 }
             }
         }catch(Exception e){}
@@ -1354,9 +1448,7 @@ cat buffer.log
         }
         
         try {
-            java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            scanner.useDelimiter("\n");
-            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+            while ( (line=read()) != null ) {
                 lista.add(line);
                 if ( lista.size() > p )
                     lista.remove(0);
@@ -1429,9 +1521,7 @@ cat buffer.log
         
         try {
             String line=null;
-            java.util.Scanner scanner = new java.util.Scanner(System.in);
-            scanner.useDelimiter("\n");
-            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+            while ( (line=read()) != null ) {
                 for ( int i=0;i<elem.length;i+=2 ){
                     if ( elem[i] == -1 ){
                         if ( line.length() < elem[i+1] )
@@ -1465,11 +1555,8 @@ cat buffer.log
     {
         try {
             String line=null;
-            java.util.Scanner scanner = new java.util.Scanner(System.in);            
-            scanner.useDelimiter("\n");
-            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+            while ( (line=read()) != null )
                 System.out.println(line.replaceAll(sedA, sedB));
-            }
         }catch(Exception e){}
     }
         
@@ -1505,9 +1592,7 @@ cat buffer.log
         
         try {
             String line=null;
-            java.util.Scanner scanner = new java.util.Scanner(System.in);
-            scanner.useDelimiter("\n");
-            while ( scanner.hasNext() && (line=scanner.next()) != null ) {
+            while ( (line=read()) != null ) {            
                 partes=line.replaceAll("\t"," ").replaceAll("\r"," ").split(" ");
                 for ( int i=0;i<elem.length;i++ ){
                     if ( elem[i] == 0 )
@@ -1583,6 +1668,13 @@ cat buffer.log
         for ( int i=0;i<args.length;i++ )
             System.out.print(" "+args[i]);
         System.out.println("]");
+    }
+
+    private String[] sliceParm(int n, String[] args) {
+        String [] retorno=new String[args.length-n];
+        for ( int i=n;i<args.length;i++ )
+            retorno[i-n]=args[i];
+        return retorno;
     }
 }
 
