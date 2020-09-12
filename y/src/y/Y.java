@@ -211,11 +211,7 @@ cat buffer.log
                     }
                     if ( app.equals("carga") )
                     {
-                        String SQL="";
-                        String line;
-                        while( (line=read()) != null )
-                            SQL+=line+"\n";
-                        carga(connIn,connOut,outTable,trunc,app,SQL);
+                        carga(connIn,connOut,outTable,trunc,app);
                         return;
                     }
                 }
@@ -629,8 +625,9 @@ cat buffer.log
             if ( parm.equals("") ){
                 String line;
                 while( (line=read()) != null )
-                    parm+=line+"\n";                
+                    parm+=line+"\n";
             }
+            
             parm=removePontoEVirgual(parm);
 
             Statement stmt = con.createStatement();
@@ -687,16 +684,15 @@ cat buffer.log
                     }
                     throw new Exception("tipo desconhecido:"+tipos.get(i) + " -> " + rs.getString(campos.get(i)) );
                 }
-                
                 if ( out == null )
                     System.out.println("insert into "+table+" values("+ sb.toString()+");");
                 else
-                    out.write( ("insert into "+table+" values("+ sb.toString()+");").getBytes() );
+                    out.write( ("insert into "+table+" values("+ sb.toString()+");\n").getBytes() );
                 if ( countCommit++ >= 10000 ){
                     if ( out == null )
                         System.out.println("commit;");
                     else
-                        out.write("commit;".getBytes());
+                        out.write("commit;\n".getBytes());
                     countCommit=0;
                 }
             }
@@ -807,7 +803,7 @@ cat buffer.log
 
     public void executeInsert(String conn, InputStream in){        
         boolean par=true;
-        String linha="";
+        String line="";
         StringBuilder sb=null;
         boolean ok=true;
         
@@ -816,11 +812,10 @@ cat buffer.log
         
         String ii;
         StringBuilder all=new StringBuilder(" insert all");
-        
-        if ( scanner_pipe == null ){
-            scanner_pipe=new java.util.Scanner(in);  
-            scanner_pipe.useDelimiter("\n");
-        }
+
+        // nao apagar esse scanner para usar o global, tem que ser esse aq
+        java.util.Scanner scanner=new java.util.Scanner(in);  
+        scanner.useDelimiter("\n");
         
         try{
             Connection con = getcon(conn);
@@ -829,17 +824,16 @@ cat buffer.log
                 return;
             }
             con.setAutoCommit(false);
-            
             Statement stmt = con.createStatement();
-            
-            while ( (linha=read()) != null ){
-                if ( par && linha.trim().equals("") )
+
+            while( scanner.hasNext() && (line=scanner.next()) != null ){
+                if ( par && line.trim().equals("") )
                     continue;
                 if ( par ){
-                    if ( linha.trim().startsWith("commit") || linha.trim().startsWith("COMMIT") )
+                    if ( line.trim().startsWith("commit") || line.trim().startsWith("COMMIT") )
                     {
                         try{  
-                            ii=removePontoEVirgual(linha);
+                            ii=removePontoEVirgual(line);
                             stmt.execute(ii);
                             /*
                             if ( ++agulha >= limiteAgulha )
@@ -852,16 +846,16 @@ cat buffer.log
                             }
                             */
                         }catch(Exception e){
-                            System.out.println("Erro: "+e.toString()+" -> "+linha);
+                            System.out.println("Erro: "+e.toString()+" -> "+line);
                             ok=false;
                         }
                         continue;
                     }
-                    if ( startingInsert(linha) )
+                    if ( startingInsert(line) )
                     {
-                        if ( par=countParAspeta(par,linha) ){
+                        if ( par=countParAspeta(par,line) ){
                             try{
-                                ii=removePontoEVirgual(linha);                                
+                                ii=removePontoEVirgual(line);                                
                                 /*
                                 if ( ++agulha >= limiteAgulha )
                                 {
@@ -884,22 +878,22 @@ cat buffer.log
                                 }
                                 
                             }catch(Exception e){
-                                System.out.println("Erro: "+e.toString()+" -> "+linha);
+                                System.out.println("Erro: "+e.toString()+" -> "+line);
                                 ok=false;
                             }
                             continue;
                         }else{
                             sb=null;// forçando limpeza de memoria
-                            sb=new StringBuilder(linha);
+                            sb=new StringBuilder(line);
                         }
                         continue;
                     }
-                    throw new Exception("Erro, linha inesperada:" +linha);
+                    throw new Exception("Erro, linha inesperada:" +line);
                 }else{
-                    if ( par=countParAspeta(par,linha) ){
+                    if ( par=countParAspeta(par,line) ){
                         try{
                             sb.append("\n");
-                            sb.append(removePontoEVirgual(linha));
+                            sb.append(removePontoEVirgual(line));
                             ii=sb.toString();
                             /*
                             if ( ++agulha >= limiteAgulha )
@@ -923,13 +917,13 @@ cat buffer.log
                             }
                             
                         }catch(Exception e){
-                            System.out.println("Erro: "+e.toString()+" -> "+linha);
+                            System.out.println("Erro: "+e.toString()+" -> "+line);
                             ok=false;
                         }
                         continue;
                     }else{
                         sb.append("\n");
-                        sb.append(linha);
+                        sb.append(line);
                     }
                 }
             }
@@ -955,12 +949,12 @@ cat buffer.log
             System.out.println("OK");
     }
 
-    public void execute(String conn,String parm){
+    public boolean execute(String conn,String parm){
         try{
             Connection con = getcon(conn);
             if ( con == null ){
                 System.out.println("Não foi possível se conectar!!" );
-                return;
+                return false;
             }
 
             if ( parm.equals("") ){
@@ -978,7 +972,9 @@ cat buffer.log
         catch(Exception e)
         {
             System.out.println("Erro: "+e.toString()+" -> "+parm);
+            return false;
         }        
+        return true;
     }
 
     public void buffer(String [] args){
@@ -1761,7 +1757,18 @@ cat buffer.log
         );
     }
 
-    public void carga(String connIn, String connOut, String outTable, String trunc, String app, String SQL){
+    public void carga(String connIn, String connOut, String outTable, String trunc, String app){
+        if ( outTable.trim().equals("") )
+        {
+            System.out.println("Erro, outTable não preenchido!");
+            return;
+        }
+        if ( ! trunc.equals("S") && ! trunc.equals("N") )
+        {
+            System.out.println("Erro, inesperado!");
+            return;
+        }
+            
         try{
             final PipedInputStream pipedInputStream=new PipedInputStream();
             final PipedOutputStream pipedOutputStream=new PipedOutputStream();
@@ -1770,10 +1777,13 @@ cat buffer.log
 
             Thread pipeWriter=new Thread(new Runnable() {
                 public void run() {
-                    selectInsert(connIn, "", pipedOutputStream,outTable);
+                    selectInsert(connIn,"",pipedOutputStream,outTable);
                 }
             });
 
+            if ( trunc.equals("S") && ! execute(connOut, "truncate table "+outTable) )
+                return;
+            
             Thread pipeReader=new Thread(new Runnable() {
                 public void run() {
                     executeInsert(connOut, pipedInputStream);
@@ -1782,10 +1792,10 @@ cat buffer.log
 
             pipeWriter.start();
             pipeReader.start();
-
+            
             pipeWriter.join();
             pipeReader.join();
-
+            
             pipedOutputStream.close();
             pipedInputStream.close();        
         }catch(Exception e){
