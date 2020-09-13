@@ -1,7 +1,5 @@
 package y;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -10,8 +8,6 @@ import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
@@ -150,7 +146,7 @@ cat buffer.log
                     //[y banco conn,hash executeInsert]
                     //[y banco conn,hash execute]
                     //[y banco conn,hash execute execute..]
-                    //[y banco -conn ... createjobexecute]
+                    //[y banco conn,hash createjobexecute]
                     
                     // comandos app
                     if ( app.equals("select") ){
@@ -198,26 +194,20 @@ cat buffer.log
                     //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
                     //[y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]
                     
+                    if ( app.equals("carga") )
+                    {
+                        carga(connIn,connOut,outTable,trunc);
+                        return;
+                    }
                     if ( app.equals("createjobcarga") )
                     {
                         createjobcarga(connIn,connOut,outTable,trunc,app);
                         return;
                     }
-                    if ( app.equals("createjobexecute") )
-                    {
-                        System.out.println("Nao implementado");
-                        //createjobexecute(connIn,connOut,outTable,trunc,app);
-                        return;
-                    }
-                    if ( app.equals("carga") )
-                    {
-                        carga(connIn,connOut,outTable,trunc,app);
-                        return;
-                    }
                 }
                 // executejob
                 if ( args[1].equals("executejob") && args.length == 2 ){
-                    System.out.println("Nao implementado");
+                    executejob();
                     return;
                 }
                 comando_invalido(args);
@@ -314,9 +304,13 @@ cat buffer.log
             )    
         ){
             if ( args.length == 1 )
-                base64(System.in,true);
+                System.out.println(
+                    base64(System.in,true)
+                );
             else
-                base64(System.in,false);
+                System.out.print(
+                    base64(System.in,false)
+                );
             return;
         }
         
@@ -1659,7 +1653,7 @@ cat buffer.log
         }catch(Exception e){}
     }
 
-    public void base64(InputStream in,boolean encoding){
+    public String base64(InputStream in,boolean encoding){
         int BUFFER_SIZE = 1;
         byte[] buf = new byte[BUFFER_SIZE];                   
         ArrayList<Byte> lista=new ArrayList<>();
@@ -1677,21 +1671,14 @@ cat buffer.log
             for ( int i=0;i<lista.size();i++ )
                 bytes[i]=lista.get(i);
             if ( encoding )
-                System.out.println(
-                    new String(
-                        Base64.getEncoder().encode(bytes)
-                    )
-                );
+                return new String( Base64.getEncoder().encode(bytes) );
             else
-                System.out.print(
-                    new String(
-                        Base64.getDecoder().decode(bytes)
-                    )
-                );
+                return new String( Base64.getDecoder().decode(bytes) );
         } catch (Exception ex) {
             System.out.println("Erro, "+ex.toString());
             System.out.println(new String(bytes));
         }
+        return null;
     }
    
 
@@ -1716,17 +1703,20 @@ cat buffer.log
         while ( (line=read()) != null )
             SQL+=line+"\n";
         
-        base64(
-            new ByteArrayInputStream(
-                (
-                "jobexecute\n"
-                + "-conn\n"
-                + conn+"\n"
-                + "SQL\n"
-                + SQL
-                ).getBytes()
+        System.out.print("jobexecute "); // funciona como orientador, não tem função prática
+        System.out.println( 
+            base64(
+                new ByteArrayInputStream(
+                    (
+                        "jobexecute\n"
+                        + "-conn\n"
+                        + conn+"\n"
+                        + "SQL\n"
+                        + SQL
+                    ).getBytes()
+                )
+                ,true
             )
-            ,true
         );
     }
 
@@ -1736,28 +1726,30 @@ cat buffer.log
         while ( (line=read()) != null )
             SQL+=line+"\n";
         
-        System.out.print(outTable+" "); // funciona como orientador, não tem função prática
-        base64(
-            new ByteArrayInputStream(
-                (
-                "jobcarga\n"
-                + "-connIn\n"
-                + connIn+"\n"
-                + "-connOut\n"
-                + connOut+"\n"
-                + "-outTable\n"
-                + outTable+"\n"
-                + "trunc\n"
-                + trunc+"\n"
-                + "SQL\n"
-                + SQL
-                ).getBytes()
+        System.out.print("jobcarga "+outTable+" "); // funciona como orientador, não tem função prática
+        System.out.println(
+            base64(
+                new ByteArrayInputStream(
+                    (
+                        "jobcarga\n"
+                        + "-connIn\n"
+                        + connIn+"\n"
+                        + "-connOut\n"
+                        + connOut+"\n"
+                        + "-outTable\n"
+                        + outTable+"\n"
+                        + "trunc\n"
+                        + trunc+"\n"
+                        + "SQL\n"
+                        + SQL
+                    ).getBytes()
+                )
+                ,true
             )
-            ,true
         );
     }
 
-    public void carga(String connIn, String connOut, String outTable, String trunc, String app){
+    public void carga(String connIn, String connOut, String outTable, String trunc){
         if ( outTable.trim().equals("") )
         {
             System.out.println("Erro, outTable não preenchido!");
@@ -1798,6 +1790,144 @@ cat buffer.log
             
             pipedOutputStream.close();
             pipedInputStream.close();        
+        }catch(Exception e){
+            System.out.println("Erro, "+e.toString());
+        }
+    }
+
+    public void executejob() {
+        try{
+            String line;
+            String hash="";
+            String [] partes;
+            ArrayList<Thread> threads = new ArrayList<Thread>();
+            String value_="";
+            String [] sub_linesjob;
+
+            while ( (line=read()) != null ){
+                line=line.trim();
+                if ( line.equals("") ) continue;
+                if ( line.contains(" ") ){
+                    partes=line.split(" ");
+
+
+                    // jobcarga
+                    if ( partes.length == 3 && partes[0].equals("jobcarga") )
+                        hash=partes[2];
+                    // jobexecute
+                    if ( hash.equals("") && partes.length == 2 && partes[0].equals("jobexecute") )
+                        hash=partes[1];
+
+                    if ( hash.equals("") )
+                    {
+                        System.out.println("Erro, comando inválido:" + line);
+                        return;
+                    }
+
+                    value_=base64(
+                        new ByteArrayInputStream(
+                            hash.getBytes()
+                        )
+                        ,false
+                    );
+
+                    if ( value_ == null )
+                    {
+                        System.out.println("Erro, comando inválido:" + line);
+                        return;
+                    }
+
+                    ArrayList<String> instrucoes = new ArrayList<String>();
+                    String SQL="";
+                    sub_linesjob=value_.split("\n");
+
+                    for ( int i=0;i<sub_linesjob.length; )
+                    {
+                        if ( sub_linesjob[i].equals("SQL") ){
+                            instrucoes.add(sub_linesjob[i]);
+                            i++;
+                            for ( ;i<sub_linesjob.length; ){
+                                SQL+=sub_linesjob[i]+"\n";
+                                i++;
+                            }
+                            instrucoes.add(SQL);
+                        }else{
+                            instrucoes.add(sub_linesjob[i]);
+                        }
+                        i++;
+                    }
+
+                    /*
+                    "jobcarga\n"
+                    + "-connIn\n"
+                    + connIn+"\n"
+                    + "-connOut\n"
+                    + connOut+"\n"
+                    + "-outTable\n"
+                    + outTable+"\n"
+                    + "trunc\n"
+                    + trunc+"\n"
+                    + "SQL\n"
+                    + SQL
+                    */                        
+
+                    if ( instrucoes.size() == 11
+                        && instrucoes.get(0).equals("jobcarga")
+                        && instrucoes.get(1).equals("-connIn")
+                        && instrucoes.get(3).equals("-connOut")
+                        && instrucoes.get(5).equals("-outTable")
+                        && instrucoes.get(7).equals("trunc")
+                        && instrucoes.get(9).equals("SQL")
+                        && ! instrucoes.get(10).equals("")
+                    ){
+                        threads.add(
+                            new Thread(new Runnable() {
+                                public void run() {
+                                    carga(
+                                        instrucoes.get(2)
+                                        ,instrucoes.get(4)
+                                        ,instrucoes.get(6)
+                                        ,instrucoes.get(8)
+                                    );
+                                }
+                            })
+                        );
+                        continue;
+                    }
+
+                    /*
+                    "jobexecute\n"
+                    + "-conn\n"
+                    + conn+"\n"
+                    + "SQL\n"
+                    + SQL
+                    */                        
+                    if ( instrucoes.size() == 5
+                        && instrucoes.get(0).equals("jobexecute")
+                        && instrucoes.get(1).equals("-conn")
+                        && instrucoes.get(3).equals("SQL")
+                        && ! instrucoes.get(4).equals("")
+                    ){
+                        threads.add(
+                            new Thread(new Runnable() {
+                                public void run() {
+                                    execute(
+                                        instrucoes.get(2)
+                                        ,instrucoes.get(4)
+                                    );
+                                }
+                            })
+                        );
+                        continue;
+                    }
+                    System.out.println("Erro, comando inválido:" + line);
+                    return;
+                }
+                for ( int i=0;i<threads.size();i++ )
+                    threads.get(i).start();
+                for ( int i=0;i<threads.size();i++ )
+                    threads.get(i).join();
+            }
         }catch(Exception e){
             System.out.println("Erro, "+e.toString());
         }
