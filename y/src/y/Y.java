@@ -825,11 +825,12 @@ cat buffer.log
         StringBuilder sb=null;
         boolean ok=true;
         
-        int agulha=0;
-        int limiteAgulha=1000; // 53k linhas/s
+        int limiteAgulha=50000; // all.length();
+        String initial_sb=" insert all";
+        String final_sb=" select * from dual";
         
         String ii;
-        StringBuilder all=new StringBuilder(" insert all");
+        StringBuilder all=new StringBuilder(initial_sb);
 
         // nao apagar esse scanner para usar o global, tem que ser esse aq
         java.util.Scanner scanner=new java.util.Scanner(in);  
@@ -853,16 +854,6 @@ cat buffer.log
                         try{  
                             ii=removePontoEVirgual(line);
                             stmt.execute(ii);
-                            /*
-                            if ( ++agulha >= limiteAgulha )
-                            {
-                                stmt.addBatch(ii);
-                                stmt.executeBatch();
-                                agulha=0;
-                            }else{
-                                stmt.addBatch(ii);                                
-                            }
-                            */
                         }catch(Exception e){
                             System.out.println("Erro: "+e.toString()+" -> "+line);
                             ok=false;
@@ -874,23 +865,12 @@ cat buffer.log
                         if ( par=countParAspeta(par,line) ){
                             try{
                                 ii=removePontoEVirgual(line);                                
-                                /*
-                                if ( ++agulha >= limiteAgulha )
-                                {
-                                    stmt.addBatch(ii);
-                                    stmt.executeBatch();
-                                    agulha=0;
-                                }else{
-                                    stmt.addBatch(ii);                                
-                                }
-                                */
-                                if ( ++agulha >= limiteAgulha ){
+                                if ( all.length() >= limiteAgulha ){
                                     all.append(ii.substring(6));
-                                    all.append(" select * from dual");
+                                    all.append(final_sb);
                                     stmt.execute(all.toString());
                                     all=null;
-                                    all=new StringBuilder(" insert all");
-                                    agulha=0;
+                                    all=new StringBuilder(initial_sb);
                                 }else{
                                     all.append(ii.substring(6));
                                 }
@@ -913,23 +893,12 @@ cat buffer.log
                             sb.append("\n");
                             sb.append(removePontoEVirgual(line));
                             ii=sb.toString();
-                            /*
-                            if ( ++agulha >= limiteAgulha )
-                            {
-                                stmt.addBatch(ii);
-                                stmt.executeBatch();
-                                agulha=0;
-                            }else{
-                                stmt.addBatch(ii);                                
-                            }
-                            */
-                            if ( ++agulha >= limiteAgulha ){
+                            if ( all.length() >= limiteAgulha ){
                                 all.append(ii.substring(6));
-                                all.append(" select * from dual");
+                                all.append(final_sb);
                                 stmt.execute(all.toString());
                                 all=null;
-                                all=new StringBuilder(" insert all");
-                                agulha=0;
+                                all=new StringBuilder(initial_sb);
                             }else{
                                 all.append(ii.substring(6));
                             }
@@ -945,17 +914,10 @@ cat buffer.log
                     }
                 }
             }
-            /*
-            if ( agulha > 0 ){
-                stmt.executeBatch();
-                agulha=0;
-            }
-            */
-            if ( agulha > 0 ){
-                all.append(" select * from dual");
+            if ( ! all.toString().equals(initial_sb) ){
+                all.append(final_sb);
                 stmt.execute(all.toString());
                 all=null;
-                agulha=0;
             }
             stmt.close();
             con.close();
