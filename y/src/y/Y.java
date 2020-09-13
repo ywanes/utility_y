@@ -35,13 +35,43 @@ public class Y {
 
 /*
 
-# 34k linhas/s                
+# criando tabela a com 400k registros
+y banco conn,hash execute "drop table a"
+y banco conn,hash execute "create table a ( C1 varchar2(3000), C2 varchar2(3000), C3 varchar2(3000) )"
+y banco conn,hash execute "insert into a values('123456789','123456789','123456789')"
+y echo "select a.* from a,(select level from dual connect by level <= 399999)" | y banco connIn,hash connOut,hash -outTable a carga
+y banco conn,hash select "select count(1) from a"
+
+
+# 34k linhas/s - table to table
 # y banco $conn execute "create table a ( C1 varchar2(3000), C2 varchar2(3000), C3 varchar2(3000) )"
 y banco conn,desktop execute "drop table b"
 y banco conn,desktop execute "create table b as select * from a where rownum <= 1"
-y banco conn,desktop selectInsert "select b.* from b,(select level from dual connect by level <= 160000)" | y banco buffer -n_line 500 -log buffer.log | y banco conn,desktop insert
+y banco conn,desktop selectInsert "select b.* from b,(select level from dual connect by level <= 160000)" | y banco buffer -n_line 500 -log buffer.log | y banco conn,desktop executeInsert
 cat buffer.log
 # y banco conn,desktop select "select count(1) from b"
+
+
+# 65k linhas/s - lendo arquivo
+y cat a a a | y banco buffer -n_line 500 -log buffer.log | y dev_null
+cat buffer.log
+
+
+# 4k linhas/s - gravando arquivo
+y cat a | y banco buffer -n_line 500 -log buffer.log > aa
+cat buffer.log
+
+
+# 34k linhas/s - table to null               
+y banco conn,desktop selectInsert "select * from a" | y banco buffer -n_line 500 -log buffer.log | y dev_null
+cat buffer.log
+
+
+# 59k linhas/s - file to table
+y banco conn,desktop execute "drop table b"
+y banco conn,desktop execute "create table b as select * from a where rownum <= 1"
+y cat b | y banco buffer -n_line 500 -log buffer.log | y banco conn,desktop executeInsert
+cat buffer.log
 
         
 */
@@ -112,107 +142,102 @@ cat buffer.log
                 return;
             }
 
-            if ( args[0].equals("banco") )
-            {   
-                // conn
-                if ( args[1].equals("-conn") || ( args[1].startsWith("conn,") ) ){
-                    String [] ConnAppParm=getConnAppParm(args);
-                    
-                    if ( ConnAppParm == null ){
-                        comando_invalido(args);
-                        return;
-                    }
-                    
-                    String conn=ConnAppParm[0];
-                    String app=ConnAppParm[1];
-                    String parm=ConnAppParm[2];
-                    
-                    //[y banco -conn ... select]
-                    //[y banco -conn ... select select..]
-                    //[y banco -conn ... selectInsert]
-                    //[y banco -conn ... selectInsert select..]
-                    //[y banco -conn ... selectCSV]
-                    //[y banco -conn ... selectCSV select..]
-                    //[y banco -conn ... executeInsert]
-                    //[y banco -conn ... execute]
-                    //[y banco -conn ... execute execute..]
-                    //[y banco -conn ... createjobexecute]
-                    //[y banco conn,hash select]
-                    //[y banco conn,hash select select..]
-                    //[y banco conn,hash selectInsert]
-                    //[y banco conn,hash selectInsert select..]
-                    //[y banco conn,hash selectCSV]
-                    //[y banco conn,hash selectCSV select..]
-                    //[y banco conn,hash executeInsert]
-                    //[y banco conn,hash execute]
-                    //[y banco conn,hash execute execute..]
-                    //[y banco conn,hash createjobexecute]
-                    
-                    // comandos app
-                    if ( app.equals("select") ){
-                        select(conn,parm);
-                        return;
-                    }
-                    if ( app.equals("selectInsert") ){
-                        selectInsert(conn,parm,null,"");
-                        return;
-                    }
-                    if ( app.equals("selectCSV") ){
-                        selectCSV(conn,parm);
-                        return;
-                    }
-                    if ( app.equals("executeInsert") ){
-                        executeInsert(conn,System.in);
-                        return;
-                    }
-                    if ( app.equals("execute") ){
-                        execute(conn,parm);
-                        return;
-                    }       
-                    if ( app.equals("createjobexecute") ){
-                        createjobexecute(conn);
-                        return;
-                    }
-                }
-                // connIn
-                if ( args[1].equals("-connIn") || ( args[1].startsWith("connIn,") ) ){
-                    String [] connIn_connOut_outTable_trunc_app=get_connIn_connOut_outTable_trunc_app(args);
-                    
-                    if ( connIn_connOut_outTable_trunc_app == null ){
-                        comando_invalido(args);
-                        return;
-                    }
-                    
-                    String connIn=connIn_connOut_outTable_trunc_app[0];
-                    String connOut=connIn_connOut_outTable_trunc_app[1];
-                    String outTable=connIn_connOut_outTable_trunc_app[2];
-                    String trunc=connIn_connOut_outTable_trunc_app[3];
-                    String app=connIn_connOut_outTable_trunc_app[4];
-                    
-                    //[y banco connIn,hash connOut,hash outTable,tabelaA carga]
-                    //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
-                    //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
-                    //[y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]
-                    
-                    if ( app.equals("carga") )
-                    {
-                        carga(connIn,connOut,outTable,trunc);
-                        return;
-                    }
-                    if ( app.equals("createjobcarga") )
-                    {
-                        createjobcarga(connIn,connOut,outTable,trunc,app);
-                        return;
-                    }
-                }
-                // executejob
-                if ( args[1].equals("executejob") && args.length == 2 ){
-                    executejob();
+            // conn
+            if ( args[1].equals("-conn") || ( args[1].startsWith("conn,") ) ){
+                String [] ConnAppParm=getConnAppParm(args);
+
+                if ( ConnAppParm == null ){
+                    comando_invalido(args);
                     return;
                 }
-                comando_invalido(args);
+
+                String conn=ConnAppParm[0];
+                String app=ConnAppParm[1];
+                String parm=ConnAppParm[2];
+
+                //[y banco -conn ... select]
+                //[y banco -conn ... select select..]
+                //[y banco -conn ... selectInsert]
+                //[y banco -conn ... selectInsert select..]
+                //[y banco -conn ... selectCSV]
+                //[y banco -conn ... selectCSV select..]
+                //[y banco -conn ... executeInsert]
+                //[y banco -conn ... execute]
+                //[y banco -conn ... execute execute..]
+                //[y banco -conn ... createjobexecute]
+                //[y banco conn,hash select]
+                //[y banco conn,hash select select..]
+                //[y banco conn,hash selectInsert]
+                //[y banco conn,hash selectInsert select..]
+                //[y banco conn,hash selectCSV]
+                //[y banco conn,hash selectCSV select..]
+                //[y banco conn,hash executeInsert]
+                //[y banco conn,hash execute]
+                //[y banco conn,hash execute execute..]
+                //[y banco conn,hash createjobexecute]
+
+                // comandos app
+                if ( app.equals("select") ){
+                    select(conn,parm);
+                    return;
+                }
+                if ( app.equals("selectInsert") ){
+                    selectInsert(conn,parm,null,"");
+                    return;
+                }
+                if ( app.equals("selectCSV") ){
+                    selectCSV(conn,parm);
+                    return;
+                }
+                if ( app.equals("executeInsert") ){
+                    executeInsert(conn,System.in);
+                    return;
+                }
+                if ( app.equals("execute") ){
+                    execute(conn,parm);
+                    return;
+                }       
+                if ( app.equals("createjobexecute") ){
+                    createjobexecute(conn);
+                    return;
+                }
             }
-            
+            // connIn
+            if ( args[1].equals("-connIn") || ( args[1].startsWith("connIn,") ) ){
+                String [] connIn_connOut_outTable_trunc_app=get_connIn_connOut_outTable_trunc_app(args);
+
+                if ( connIn_connOut_outTable_trunc_app == null ){
+                    comando_invalido(args);
+                    return;
+                }
+
+                String connIn=connIn_connOut_outTable_trunc_app[0];
+                String connOut=connIn_connOut_outTable_trunc_app[1];
+                String outTable=connIn_connOut_outTable_trunc_app[2];
+                String trunc=connIn_connOut_outTable_trunc_app[3];
+                String app=connIn_connOut_outTable_trunc_app[4];
+
+                //[y banco connIn,hash connOut,hash outTable,tabelaA carga]
+                //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
+                //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
+                //[y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]
+
+                if ( app.equals("carga") )
+                {
+                    carga(connIn,connOut,outTable,trunc);
+                    return;
+                }
+                if ( app.equals("createjobcarga") )
+                {
+                    createjobcarga(connIn,connOut,outTable,trunc,app);
+                    return;
+                }
+            }
+            // executejob
+            if ( args[1].equals("executejob") && args.length == 2 ){
+                executejob();
+                return;
+            }
             // buffer
             if ( args[1].equals("buffer") 
                 && (
@@ -225,7 +250,7 @@ cat buffer.log
                 buffer(args);
                 return;
             }
-            
+
             comando_invalido(args);
             return;
         }
@@ -362,12 +387,7 @@ cat buffer.log
             return;
         }
         
-        //Comando inválido
-        System.out.print("Comando inválido: [y");
-        for ( int i=0;i<args.length;i++ )
-            System.out.print(" "+args[i]);
-        System.out.println("]");
-
+        comando_invalido(args);
         return;
     }
 
@@ -974,15 +994,19 @@ cat buffer.log
     public void buffer(String [] args){
         if ( args.length == 2 ){
             buffer(n_lines_buffer_DEFAULT,null);
+            return;
         }
         if ( args.length == 4 && args[2].equals("-n_lines") ){
             buffer(tryConvertNumberPositiveByString(n_lines_buffer_DEFAULT,args[3]),null);
+            return;
         }
         if ( args.length == 4 && args[2].equals("-log") ){
             buffer(n_lines_buffer_DEFAULT,args[3]);
+            return;
         }
         if ( args.length == 6 && args[2].equals("-n_line") && args[4].equals("-log") ){
             buffer(tryConvertNumberPositiveByString(n_lines_buffer_DEFAULT,args[3]),args[5]);
+            return;
         }
     }
             
