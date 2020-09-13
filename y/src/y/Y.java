@@ -25,11 +25,25 @@ import java.util.Date;
 import java.util.List;
 
 public class Y {    
-    //public static String env=null;
-    public static String env="c:\\tmp";
+    //public static String local_env=null;
+    public static String local_env="c:\\tmp";
 
     public static java.util.Scanner scanner_pipe=null;
     public static int n_lines_buffer_DEFAULT=500;    
+    public static String [] ORAs=new String[]{
+        "ORA-00911"
+        ,"ORA-00913"
+        ,"ORA-00917"
+        ,"ORA-00928"
+        ,"ORA-00933"
+        ,"ORA-00936"
+        ,"ORA-00947"
+        ,"ORA-00972"
+        ,"ORA-01756"
+        ,"ORA-01742"
+        ,"ORA-01747"
+        ,"ORA-01438"        
+    };
     
     public static void main(String[] args) {
 
@@ -75,13 +89,15 @@ cat buffer.log
 
         
 */
+        
         new Y().go(args);
     }
 
     
     public void go(String[] args){
         String version="0.1.0";
-        String env="TOKEN_Y";
+        try_load_ORAs();
+        
         String [] programas=new String[]{
             "y banco"
             ,"y token"
@@ -135,8 +151,9 @@ cat buffer.log
             + "\n  Ex: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\""
             + "\n  Ex2: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\""
             + "\n  Obs: entrada de dados pode ser feito por |"
-            + "\n  Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;"
-            + "\n  Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*";
+            + "\n  Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;"            
+            + "\n  Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*"
+            + "\n  Dica3: vendo warnnings ORA: cat $ORAs_Y";
             
             if ( args.length == 1 ){
                 System.out.println(msg_usage);
@@ -833,6 +850,9 @@ cat buffer.log
         StringBuilder all=new StringBuilder(initial_sb);
         ArrayList<String> cover=new ArrayList<String>();
 
+        String command="";
+        boolean achou=false;
+        
         // nao apagar esse scanner para usar o global, tem que ser esse aq
         java.util.Scanner scanner=new java.util.Scanner(in);  
         scanner.useDelimiter("\n");
@@ -874,8 +894,25 @@ cat buffer.log
                                         stmt.execute(all.toString());
                                     }catch(Exception e){
                                         // repescagem
-                                        for(String iii : cover)
-                                            stmt.execute(iii);
+                                        for(String iii : cover){
+                                            try{
+                                                stmt.execute(iii);
+                                            }catch(Exception ee){
+                                                achou=false;
+                                                for ( String ora : ORAs ){
+                                                    if ( ee.toString().contains(ora) ){
+                                                        System.out.println("Warnning: "+iii);
+                                                        ok=false;
+                                                        achou=true;
+                                                        break;
+                                                    }
+                                                }
+                                                if ( ! achou ){
+                                                    command=iii;
+                                                    throw ee;
+                                                }
+                                            }                                            
+                                        }
                                     }
                                     
                                     all=null;                                    
@@ -914,8 +951,25 @@ cat buffer.log
                                     stmt.execute(all.toString());
                                 }catch(Exception e){
                                     // repescagem
-                                    for(String iii : cover)
-                                        stmt.execute(iii);
+                                    for(String iii : cover){
+                                        try{
+                                            stmt.execute(iii);
+                                        }catch(Exception ee){
+                                            achou=false;
+                                            for ( String ora : ORAs ){
+                                                if ( ee.toString().contains(ora) ){
+                                                    System.out.println("Warnning: "+iii);
+                                                    ok=false;
+                                                    achou=true;
+                                                    break;
+                                                }
+                                            }
+                                            if ( ! achou ){
+                                                command=iii;
+                                                throw ee;
+                                            }
+                                        }                                            
+                                    }
                                 }
                                     
                                 all=null;                                
@@ -945,8 +999,25 @@ cat buffer.log
                     stmt.execute(all.toString());
                 }catch(Exception e){
                     // repescagem
-                    for(String iii : cover)
-                        stmt.execute(iii);
+                    for(String iii : cover){
+                        try{
+                            stmt.execute(iii);
+                        }catch(Exception ee){
+                            achou=false;
+                            for ( String ora : ORAs ){
+                                if ( ee.toString().contains(ora) ){
+                                    System.out.println("Warnning: "+iii);
+                                    ok=false;
+                                    achou=true;
+                                    break;
+                                }
+                            }
+                            if ( ! achou ){
+                                command=iii;
+                                throw ee;
+                            }
+                        }                                            
+                    }
                 }
 
                 all=null;
@@ -955,7 +1026,7 @@ cat buffer.log
             stmt.close();
             con.close();
         }catch(Exception e){
-            System.out.println("Erro: "+e.toString());
+            System.out.println("Erro: "+e.toString()+" "+command);
             ok=false;
         }   
         if ( ok )
@@ -1192,10 +1263,31 @@ cat buffer.log
                 else
                     result+="\n"+strLine;
             }
+            in.close();
         }catch (Exception e){}
         return result;
     }
 
+    public static void try_load_ORAs() {
+        String caminho=System.getenv("ORAs_Y");
+        if ( ! new File(caminho).exists() ) return;
+        ArrayList<String> lista=new ArrayList<String>();
+        String line;
+        
+        try{
+            BufferedReader in=new BufferedReader(new FileReader(caminho));
+            while ((line = in.readLine()) != null)
+                lista.add(line);
+            in.close();
+        }catch (Exception e){}
+        if ( lista.size() > 0 )
+        {
+            ORAs=new String[lista.size()];
+            for ( int i=0;i<lista.size();i++ )
+                ORAs[i]=lista.get(i);
+        }
+    }
+    
     public String fix_caminho(String caminho){
         if ( ! caminho.endsWith("/") && caminho.contains("/") )
             return caminho+"/";
@@ -1204,8 +1296,8 @@ cat buffer.log
         return caminho;
     }
     public String getenv(){
-        if ( env != null && new File(env).exists() )
-            return env;
+        if ( local_env != null && new File(local_env).exists() )
+            return local_env;
         return System.getenv("TOKEN_Y");
     }
 
