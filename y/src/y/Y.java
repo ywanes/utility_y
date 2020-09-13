@@ -102,6 +102,7 @@ cat buffer.log
             ,"y sed"
             ,"y awk print"
             ,"y dev_null"
+            ,"y dev_in"
             ,"y help"
         };
         if ( args.length == 0 ){
@@ -381,7 +382,10 @@ cat buffer.log
             dev_null();
             return;
         }
-
+        if ( args[0].equals("dev_in") ){
+            dev_in();
+            return;
+        }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             System.out.println("Utilitário Y versão:"+version+"\n"+apresentacao(programas));
             return;
@@ -1675,6 +1679,12 @@ cat buffer.log
             byte[] buf = new byte[BUFFER_SIZE];
             while(System.in.read(buf) > -1){}
         }catch(Exception e){}
+    }
+
+    public void dev_in()
+    {
+        while(true)
+            System.out.println(0);
     }
 
     public String base64(InputStream in,boolean encoding){
