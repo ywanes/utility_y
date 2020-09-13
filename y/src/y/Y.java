@@ -831,6 +831,7 @@ cat buffer.log
         
         String ii;
         StringBuilder all=new StringBuilder(initial_sb);
+        ArrayList<String> cover=new ArrayList<String>();
 
         // nao apagar esse scanner para usar o global, tem que ser esse aq
         java.util.Scanner scanner=new java.util.Scanner(in);  
@@ -867,12 +868,23 @@ cat buffer.log
                                 ii=removePontoEVirgual(line);                                
                                 if ( all.length() >= limiteAgulha ){
                                     all.append(ii.substring(6));
+                                    cover.add(ii);
                                     all.append(final_sb);
-                                    stmt.execute(all.toString());
-                                    all=null;
+                                    try{
+                                        stmt.execute(all.toString());
+                                    }catch(Exception e){
+                                        // repescagem
+                                        for(String iii : cover)
+                                            stmt.execute(iii);
+                                    }
+                                    
+                                    all=null;                                    
                                     all=new StringBuilder(initial_sb);
+                                    cover=null;
+                                    cover=new ArrayList<String>();
                                 }else{
                                     all.append(ii.substring(6));
+                                    cover.add(ii);
                                 }
                                 
                             }catch(Exception e){
@@ -895,12 +907,24 @@ cat buffer.log
                             ii=sb.toString();
                             if ( all.length() >= limiteAgulha ){
                                 all.append(ii.substring(6));
+                                cover.add(ii);
                                 all.append(final_sb);
-                                stmt.execute(all.toString());
-                                all=null;
+                                
+                                try{
+                                    stmt.execute(all.toString());
+                                }catch(Exception e){
+                                    // repescagem
+                                    for(String iii : cover)
+                                        stmt.execute(iii);
+                                }
+                                    
+                                all=null;                                
                                 all=new StringBuilder(initial_sb);
+                                cover=null;
+                                cover=new ArrayList<String>();
                             }else{
                                 all.append(ii.substring(6));
+                                cover.add(ii);
                             }
                             
                         }catch(Exception e){
@@ -916,8 +940,17 @@ cat buffer.log
             }
             if ( ! all.toString().equals(initial_sb) ){
                 all.append(final_sb);
-                stmt.execute(all.toString());
+                
+                try{
+                    stmt.execute(all.toString());
+                }catch(Exception e){
+                    // repescagem
+                    for(String iii : cover)
+                        stmt.execute(iii);
+                }
+
                 all=null;
+                cover=null;
             }
             stmt.close();
             con.close();
