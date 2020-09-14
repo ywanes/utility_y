@@ -647,8 +647,6 @@ cat buffer.log
     }
 
     public void selectInsert(String conn,String parm, PipedOutputStream out,String table){ // table opcional
-        String parm_=parm;
-        
         int countCommit=0;
         try{
             Connection con = getcon(conn);
@@ -737,7 +735,8 @@ cat buffer.log
         }
         catch(Exception e)
         {
-            System.out.println("Erro: "+e.toString()+" -> "+parm_);
+            System.out.println("Erro: "+e.toString()+" -> "+parm);
+            System.exit(1);
         }        
     }
 
@@ -1027,7 +1026,7 @@ cat buffer.log
             con.close();
         }catch(Exception e){
             if ( ! command.equals(""))
-                System.out.println("Erro: "+e.toString().replace("\n","")+" "+command);                
+                System.out.println("Erro: "+e.toString().replace("\n","")+" -> "+command);                
             else
                 System.out.println("Erro: "+e.toString());
             ok=false;
