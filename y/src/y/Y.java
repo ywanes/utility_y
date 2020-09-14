@@ -703,16 +703,15 @@ cat buffer.log
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
-                        tmp=tmp.replace("'","''");
-                        if ( i == campos.size()-1 ){
+                        if ( tmp.length() <= 4000 ){
                             sb.append("'");
-                            sb.append(tmp);
+                            sb.append(tmp.replace("'","''"));
                             sb.append("'");
                         }else{
-                            sb.append("'");
-                            sb.append(tmp);
-                            sb.append("',");
+                            tmp=formatacaoInsertClobComAspetas(tmp);
                         }
+                        if ( i != campos.size()-1 )
+                            sb.append(",");
                         continue;
                     }
                     throw new Exception("tipo desconhecido:"+tipos.get(i) + " -> " + rs.getString(campos.get(i)) );
@@ -2057,6 +2056,29 @@ cat buffer.log
             System.out.println("Erro, "+e.toString());
         }
     }
+    
+    public static String formatacaoInsertClobComAspetas(String _text)
+    {
+        String retorno = "";
+        int len = 0;
+        while (_text.length() > 0 )
+        {
+            if (_text.length() > 3000)
+                len = 3000;
+            else
+                len = _text.length();
+
+            retorno +=
+                (retorno.equals("") ? "" : " || ")
+                + " to_clob('" + _text.substring(0, len).replace("'", "''") + "') ";
+            if (_text.length() <= 3000)
+                _text = "";
+            else
+                _text = _text.substring(len);
+        }
+        return retorno;
+    }    
+
 }
 
 
