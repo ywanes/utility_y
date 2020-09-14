@@ -1026,7 +1026,10 @@ cat buffer.log
             stmt.close();
             con.close();
         }catch(Exception e){
-            System.out.println("Erro: "+e.toString()+" "+command);
+            if ( ! command.equals(""))
+                System.out.println("Erro: "+e.toString().replace("\n","")+" "+command);                
+            else
+                System.out.println("Erro: "+e.toString());
             ok=false;
         }   
         if ( ok )
@@ -1269,23 +1272,25 @@ cat buffer.log
     }
 
     public static void try_load_ORAs() {
-        String caminho=System.getenv("ORAs_Y");
-        if ( ! new File(caminho).exists() ) return;
-        ArrayList<String> lista=new ArrayList<String>();
-        String line;
-        
         try{
-            BufferedReader in=new BufferedReader(new FileReader(caminho));
-            while ((line = in.readLine()) != null)
-                lista.add(line);
-            in.close();
+            String caminho=System.getenv("ORAs_Y");
+            if ( ! new File(caminho).exists() ) return;
+            ArrayList<String> lista=new ArrayList<String>();
+            String line;
+
+
+                BufferedReader in=new BufferedReader(new FileReader(caminho));
+                while ((line = in.readLine()) != null)
+                    lista.add(line);
+                in.close();
+
+            if ( lista.size() > 0 )
+            {
+                ORAs=new String[lista.size()];
+                for ( int i=0;i<lista.size();i++ )
+                    ORAs[i]=lista.get(i);
+            }
         }catch (Exception e){}
-        if ( lista.size() > 0 )
-        {
-            ORAs=new String[lista.size()];
-            for ( int i=0;i<lista.size();i++ )
-                ORAs[i]=lista.get(i);
-        }
     }
     
     public String fix_caminho(String caminho){
