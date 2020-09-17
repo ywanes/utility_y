@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PipedInputStream;
@@ -116,6 +117,7 @@ cat buffer.log
             ,"y tail"
             ,"y cut"
             ,"y sed"
+            ,"y tee"
             ,"y awk print"
             ,"y dev_null"
             ,"y dev_in"
@@ -389,6 +391,10 @@ cat buffer.log
         }
         if ( args[0].equals("sed") && args.length == 3 ){
             sed(args[1],args[2]);
+            return;
+        }
+        if ( args[0].equals("tee") && args.length == 2 ){
+            tee(args[1]);
             return;
         }
         if ( args.length >= 3 && args[0].equals("awk") && args[1].equals("print") ){
@@ -1703,6 +1709,23 @@ cat buffer.log
             while ( (line=read()) != null )
                 System.out.println(line.replaceAll(sedA, sedB));
         }catch(Exception e){}
+    }
+        
+    public void tee(String caminho)
+    {
+        try{
+            FileOutputStream out=new FileOutputStream(caminho);            
+            int BUFFER_SIZE = 512;
+            int len;
+            byte[] buf = new byte[BUFFER_SIZE];
+            while( (len=System.in.read(buf)) > -1){
+                out.write(buf, 0, len);
+                System.out.write(buf, 0, len);
+            }
+            out.close();
+        }catch(Exception e){
+            System.out.println("Erro, "+e.toString());
+        }
     }
         
     public void awk(String [] args)
