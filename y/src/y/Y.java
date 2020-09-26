@@ -68,24 +68,24 @@ cat buffer.log
 
 
 # 65k linhas/s - lendo arquivo
-y cat a a a | y banco buffer -n_line 500 -log buffer.log | y dev_null
+y cat a a a | y banco buffer -n_lines 500 -log buffer.log | y dev_null
 cat buffer.log
 
 
 # 4k linhas/s - gravando arquivo
-y cat a | y banco buffer -n_line 500 -log buffer.log > aa
+y cat a | y banco buffer -n_lines 500 -log buffer.log > aa
 cat buffer.log
 
 
 # 34k linhas/s - table to null               
-y banco conn,desktop selectInsert "select * from a" | y banco buffer -n_line 500 -log buffer.log | y dev_null
+y banco conn,desktop selectInsert "select * from a" | y banco buffer -n_lines 500 -log buffer.log | y dev_null
 cat buffer.log
 
 
 # 59k linhas/s - file to table
 y banco conn,desktop execute "drop table b"
 y banco conn,desktop execute "create table b as select * from a where rownum <= 1"
-y cat b | y banco buffer -n_line 500 -log buffer.log | y banco conn,desktop executeInsert
+y cat b | y banco buffer -n_lines 500 -log buffer.log | y banco conn,desktop executeInsert
 cat buffer.log
 
         
@@ -149,7 +149,7 @@ cat buffer.log
             + "\n  [y banco buffer]"
             + "\n  [y banco buffer -n_lines 500]"
             + "\n  [y banco buffer -log buffer.log]"
-            + "\n  [y banco buffer -n_line 500 -log buffer.log]"            
+            + "\n  [y banco buffer -n_lines 500 -log buffer.log]"            
             + "\n  Ex: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\""
             + "\n  Ex2: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\""
             + "\n  Obs: entrada de dados pode ser feito por |"
@@ -264,7 +264,7 @@ cat buffer.log
                     ( args.length == 2 )
                     || ( args.length == 4 && args[2].equals("-n_lines") )
                     || ( args.length == 4 && args[2].equals("-log") )
-                    || ( args.length == 6 && args[2].equals("-n_line") && args[4].equals("-log") )
+                    || ( args.length == 6 && args[2].equals("-n_lines") && args[4].equals("-log") )
                 )
             ){
                 buffer(args);
