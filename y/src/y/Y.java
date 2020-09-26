@@ -1081,7 +1081,7 @@ cat buffer.log
             buffer(n_lines_buffer_DEFAULT,args[3]);
             return;
         }
-        if ( args.length == 6 && args[2].equals("-n_line") && args[4].equals("-log") ){
+        if ( args.length == 6 && args[2].equals("-n_lines") && args[4].equals("-log") ){
             buffer(tryConvertNumberPositiveByString(n_lines_buffer_DEFAULT,args[3]),args[5]);
             return;
         }
@@ -1092,10 +1092,14 @@ cat buffer.log
             List<String> lista=Collections.synchronizedList(new ArrayList<String>());
             
             boolean [] finishIn=new boolean[]{false};
-            long [] countLinhas=new long []{0,0,0};
+            long [] countLinhasIn=new long []{0,0,0}; // 0-> contador;1-> contador informado; 2-> contador desligado
+            long [] countLinhasOut=new long []{0,0,0}; // 0-> contador;1-> contador informado; 2-> contador desligado
+            int sizeMaskSpeedCount=6;
+            int sizeMaskBufferCount=(n_lines_buffer+"").length();
             String [] caminhoLog=new String[]{caminhoLog_};
             PrintWriter [] out=new PrintWriter[1];
-
+            SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");  
+            
             // abrindo arquivo
             if ( caminhoLog[0] != null )
             {
@@ -1113,22 +1117,33 @@ cat buffer.log
                     public void run() {
                         try{
                             long time1=System.currentTimeMillis();                        
-                            long time2=time1;
-                            SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");  
-                            long count;
+                            long time2=time1;                            
+                            long countIn;
+                            long countOut;
 
                             out[0].println(formatter.format(new Date()) + " - start");
                             out[0].flush();
                             while(true)
                             {
                                 time2=System.currentTimeMillis();
-                                if ( countLinhas[2] == 1 )
+                                if ( countLinhasIn[2] == 1 && countLinhasOut[2] == 1 ){ // fim
                                     break;
-                                if ( time2 >= time1+1000 && countLinhas[1] == 0 ){
-                                    time1=time2;
-                                    count=countLinhas[0];
-                                    countLinhas[1]=count;
-                                    out[0].println( formatter.format(new Date()) + " - linhas por segundo: "+count+" buffer: "+lista.size());
+                                }
+                                if ( time2 >= time1+1000 )
+                                {
+                                    time1=time2;                                    
+                                    countIn=0;
+                                    countOut=0;
+                                    
+                                    if ( countLinhasIn[1] == 0 ){
+                                        countIn=countLinhasIn[0];
+                                        countLinhasIn[1]=countIn;
+                                    }
+                                    if ( countLinhasOut[1] == 0 ){
+                                        countOut=countLinhasOut[0];
+                                        countLinhasOut[1]=countOut;
+                                    }
+                                    out[0].println( formatter.format(new Date()) + " - linhas/s[in]: " + lpad(countIn,sizeMaskSpeedCount," ") + " - linhas/s[out]: " + lpad(countOut,sizeMaskSpeedCount," ") + " - buffer: " + lpad(lista.size(),sizeMaskBufferCount," ") );
                                     out[0].flush();
                                 }
                                 Thread.sleep(100);
@@ -1151,12 +1166,15 @@ cat buffer.log
                         {
                             if ( scanner.hasNext()){
                                 lista.add(scanner.next());
+                                if ( caminhoLog[0] != null )
+                                    contabiliza(countLinhasIn);
                             }else{
                                 finishIn[0]=true;
                                 break;
                             }
                         }
                     }
+                    countLinhasIn[2]=1;
                 }
             }.start();        
             
@@ -1167,16 +1185,16 @@ cat buffer.log
                         System.out.println(lista.get(0));
                         lista.remove(0);
                         if ( caminhoLog[0] != null )
-                            contabiliza(countLinhas);
+                            contabiliza(countLinhasOut);
                     }
-                    countLinhas[2]=1;
+                    countLinhasOut[2]=1;
                     break;
                 }
                 if (lista.size() > 0){
                     System.out.println(lista.get(0));
                     lista.remove(0);
                     if ( caminhoLog[0] != null )
-                        contabiliza(countLinhas);
+                        contabiliza(countLinhasOut);
                 }  
             }
 
@@ -1184,6 +1202,7 @@ cat buffer.log
             if ( caminhoLog[0] != null )
             {
                 try{
+                    out[0].println(formatter.format(new Date()) + " - end");
                     out[0].close();                    
                 }catch(Exception e){}
             }
@@ -1202,6 +1221,23 @@ cat buffer.log
         countLinhas[0]++;
     }
     
+    public String lpad(long inputLong, int length,String append) {
+        return lpad(inputLong+"",length,append);
+    }
+    
+    public String lpad(String inputString, int length,String append) {
+        if (inputString.length() >= length) {
+            return inputString;
+        }
+        StringBuilder sb = new StringBuilder();
+        while (sb.length() < length - inputString.length()) {
+            sb.append(append);
+        }
+        sb.append(inputString);
+
+        return sb.toString();
+    }
+
     public String gettoken(String hash){
         String dir_token=getenv();
         if ( ! env_ok(dir_token) )
