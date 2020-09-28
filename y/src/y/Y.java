@@ -1766,7 +1766,7 @@ cat buffer.log
         
     public void awk(String [] args)
     {
-        ArrayList<Integer> lista=new ArrayList<>();
+        ArrayList<Integer> lista=new ArrayList<Integer>();
         int [] elem;
         String [] partes;
         int p;
@@ -1839,7 +1839,7 @@ cat buffer.log
     public String base64(InputStream in,boolean encoding){
         int BUFFER_SIZE = 1;
         byte[] buf = new byte[BUFFER_SIZE];                   
-        ArrayList<Byte> lista=new ArrayList<>();
+        ArrayList<Byte> lista=new ArrayList<Byte>();
         byte [] bytes=null;
         
         try {
