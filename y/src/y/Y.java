@@ -596,11 +596,9 @@ cat buffer.log
             ArrayList<Integer> tipos=new ArrayList<Integer>();
             StringBuilder sb=null;
             String tmp="";
-            String table="";
 
             rs=stmt.executeQuery(parm);
             rsmd=rs.getMetaData();
-            table=getTableByParm(parm);
 
             for ( int i=1;i<=rsmd.getColumnCount();i++ )
             {
