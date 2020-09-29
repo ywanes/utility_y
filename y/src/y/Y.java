@@ -1027,7 +1027,7 @@ cat buffer.log
                 all=null;
                 cover=null;
             }
-            stmt.close();
+            stmt.close();            
             con.close();
         }catch(Exception e){
             if ( ! command.equals(""))
