@@ -124,7 +124,7 @@ cat buffer.log
             ,"y help"
         };
         if ( args.length == 0 ){
-            System.out.println(apresentacao(programas));
+            System.err.println(apresentacao(programas));
             return;
         }
         if ( args[0].equals("banco") ){
@@ -158,7 +158,7 @@ cat buffer.log
             + "\n  Dica3: vendo warnnings ORA: cat $ORAs_Y";
             
             if ( args.length == 1 ){
-                System.out.println(msg_usage);
+                System.err.println(msg_usage);
                 return;
             }
 
@@ -276,7 +276,7 @@ cat buffer.log
         }
         if ( args[0].equals("token") ){
             if ( args.length == 1 ){
-                System.out.println("usage:"
+                System.err.println("usage:"
                 + "\n  [y token value]"
                 + "\n  return hash"
                 + "\n  [y gettoken hash]"
@@ -289,7 +289,7 @@ cat buffer.log
             String value=args[1];
             String hash=gravado_token(dir_token,value);
             if ( hash == null ){
-                System.out.println("Não foi possível utilizar a pasta "+dir_token);
+                System.err.println("Não foi possível utilizar a pasta "+dir_token);
                 return;
             }
             System.out.println(hash);
@@ -297,7 +297,7 @@ cat buffer.log
         }
         if ( args[0].equals("gettoken") ){
             if ( args.length == 1 ){
-                System.out.println("usage:"
+                System.err.println("usage:"
                 + "\n  [y token value]"
                 + "\n  return hash"
                 + "\n  [y gettoken hash]"
@@ -307,7 +307,7 @@ cat buffer.log
             String value=gettoken(args[1]);
             if ( value == null )
             {
-                System.out.println("Não foi possível encontrar o token "+args[1]);
+                System.err.println("Não foi possível encontrar o token "+args[1]);
                 return;
             }
             System.out.println(value);
@@ -410,7 +410,7 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
-            System.out.println("Utilitário Y versão:"+version+"\n"+apresentacao(programas));
+            System.err.println("Utilitário Y versão:"+version+"\n"+apresentacao(programas));
             return;
         }
         
@@ -453,7 +453,7 @@ cat buffer.log
             value_=gettoken(args[0].split(",")[1]);
             if ( value_ == null )
             {
-                System.out.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
+                System.err.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
                 return null;
             }
             conn=value_;
@@ -507,7 +507,7 @@ cat buffer.log
             value_=gettoken(args[0].split(",")[1]);
             if ( value_ == null )
             {
-                System.out.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
+                System.err.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
                 return null;
             }
             connIn=value_;
@@ -525,7 +525,7 @@ cat buffer.log
             value_=gettoken(args[0].split(",")[1]);
             if ( value_ == null )
             {
-                System.out.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
+                System.err.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
                 return null;
             }
             connOut=value_;
@@ -543,7 +543,7 @@ cat buffer.log
             value_=gettoken(args[0].split(",")[1]);
             if ( value_ == null )
             {
-                System.out.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
+                System.err.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
                 return null;
             }
             outTable=value_;
@@ -578,7 +578,7 @@ cat buffer.log
         try{            
             Connection con = getcon(conn);
             if ( con == null ){
-                System.out.println("Não foi possível se conectar!!" );
+                System.err.println("Não foi possível se conectar!!" );
                 return;
             }
             
@@ -646,7 +646,7 @@ cat buffer.log
         }
         catch(Exception e)
         {
-            System.out.println("Erro: "+e.toString()+" -> "+parm_);
+            System.err.println("Erro: "+e.toString()+" -> "+parm_);
         }        
     }
 
@@ -655,7 +655,7 @@ cat buffer.log
         try{
             Connection con = getcon(conn);
             if ( con == null ){
-                System.out.println("Não foi possível se conectar!!" );
+                System.err.println("Não foi possível se conectar!!" );
                 return;
             }
 
@@ -738,7 +738,7 @@ cat buffer.log
         }
         catch(Exception e)
         {
-            System.out.println("Erro: "+e.toString()+" -> "+parm);
+            System.err.println("Erro: "+e.toString()+" -> "+parm);
             System.exit(1);
         }        
     }
@@ -749,7 +749,7 @@ cat buffer.log
         try{
             Connection con = getcon(conn);
             if ( con == null ){
-                System.out.println("Não foi possível se conectar!!" );
+                System.err.println("Não foi possível se conectar!!" );
                 return;
             }
 
@@ -834,7 +834,7 @@ cat buffer.log
             con.close();
         }
         catch(Exception e){
-            System.out.println("Erro: "+e.toString()+" -> "+parm_);
+            System.err.println("Erro: "+e.toString()+" -> "+parm_);
         }        
     }
 
@@ -862,7 +862,7 @@ cat buffer.log
         try{
             Connection con = getcon(conn);
             if ( con == null ){
-                System.out.println("Não foi possível se conectar!!" );
+                System.err.println("Não foi possível se conectar!!" );
                 return;
             }
             con.setAutoCommit(false);
@@ -878,7 +878,7 @@ cat buffer.log
                             ii=removePontoEVirgual(line);
                             stmt.execute(ii);
                         }catch(Exception e){
-                            System.out.println("Erro: "+e.toString()+" -> "+line);
+                            System.err.println("Erro: "+e.toString()+" -> "+line);
                             ok=false;
                         }
                         continue;
@@ -927,7 +927,7 @@ cat buffer.log
                                 }
                                 
                             }catch(Exception e){
-                                System.out.println("Erro: "+e.toString()+" -> "+line);
+                                System.err.println("Erro: "+e.toString()+" -> "+line);
                                 ok=false;
                             }
                             continue;
@@ -984,7 +984,7 @@ cat buffer.log
                             }
                             
                         }catch(Exception e){
-                            System.out.println("Erro: "+e.toString()+" -> "+line);
+                            System.err.println("Erro: "+e.toString()+" -> "+line);
                             ok=false;
                         }
                         continue;
@@ -1029,9 +1029,9 @@ cat buffer.log
             con.close();
         }catch(Exception e){
             if ( ! command.equals(""))
-                System.out.println("Erro: "+e.toString().replace("\n","")+" -> "+command);                
+                System.err.println("Erro: "+e.toString().replace("\n","")+" -> "+command);                
             else
-                System.out.println("Erro: "+e.toString());
+                System.err.println("Erro: "+e.toString());
             ok=false;
         }   
         if ( ok )
@@ -1042,7 +1042,7 @@ cat buffer.log
         try{
             Connection con = getcon(conn);
             if ( con == null ){
-                System.out.println("Não foi possível se conectar!!" );
+                System.err.println("Não foi possível se conectar!!" );
                 return false;
             }
 
@@ -1060,7 +1060,7 @@ cat buffer.log
         }
         catch(Exception e)
         {
-            System.out.println("Erro: "+e.toString()+" -> "+parm);
+            System.err.println("Erro: "+e.toString()+" -> "+parm);
             return false;
         }        
         return true;
@@ -1202,10 +1202,14 @@ cat buffer.log
                 try{
                     out[0].println(formatter.format(new Date()) + " - end");
                     out[0].close();                    
-                }catch(Exception e){}
+                }catch(Exception e){
+                    System.out.println(e.toString());
+                }
             }
             
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
     
     public void contabiliza(long [] countLinhas){
@@ -1253,18 +1257,18 @@ cat buffer.log
     public boolean env_ok(String dir_token)
     {
         if ( dir_token == null ){
-            System.out.println("Para usar o token é necessário ter a variável de ambiente TOKEN_Y definida, ex export TOKEN_Y=/home/user/.token_y");
+            System.err.println("Para usar o token é necessário ter a variável de ambiente TOKEN_Y definida, ex export TOKEN_Y=/home/user/.token_y");
             return false;
         }
         File f = new File(dir_token);
         if ( ! f.exists() ){
             if ( ! f.mkdir() ){
-                System.out.println("Não foi possível utilizar/criar a pasta "+dir_token);
+                System.err.println("Não foi possível utilizar/criar a pasta "+dir_token);
                 return false;
             }
         }
         if ( ! f.isDirectory() ){
-            System.out.println("O caminho "+dir_token+" não é um diretório");
+            System.err.println("O caminho "+dir_token+" não é um diretório");
             return false;
 
         }
@@ -1289,7 +1293,9 @@ cat buffer.log
             out.write(texto);
             out.close();
             return true;
-        }catch(Exception e){}        
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }        
         return false; 
     }
 
@@ -1305,7 +1311,9 @@ cat buffer.log
                     result+="\n"+strLine;
             }
             in.close();
-        }catch (Exception e){}
+        }catch (Exception e){
+            System.out.println(e.toString());
+        }
         return result;
     }
 
@@ -1328,7 +1336,9 @@ cat buffer.log
                 for ( int i=0;i<lista.size();i++ )
                     ORAs[i]=lista.get(i);
             }
-        }catch (Exception e){}
+        }catch (Exception e){
+            System.out.println(e.toString());
+        }
     }
     
     public String fix_caminho(String caminho){
@@ -1407,7 +1417,9 @@ cat buffer.log
             }
             md5=new String(encodeHex(digest.digest()));
             data.close();
-        } catch (Exception ex) {}
+        } catch (Exception e) {
+            System.out.println(e.toString());
+        }
         return md5;
     }
 
@@ -1416,7 +1428,9 @@ cat buffer.log
             byte[] bytesOfMessage = txt.getBytes("UTF-8");
             MessageDigest md = MessageDigest.getInstance("MD5");            
             return new String(encodeHex(md.digest(bytesOfMessage)));                
-        } catch (Exception ex) {}
+        } catch (Exception e) {
+            System.out.println(e.toString());
+        }
         return null;
     }
 
@@ -1433,7 +1447,7 @@ cat buffer.log
 
     public Connection getcon(String stringcon){
         if ( stringcon.split("\\|").length != 3){
-            System.out.println("Erro na conexão: Login e senha não encontrado!");
+            System.err.println("Erro na conexão: Login e senha não encontrado!");
             return null;
         }else{
             String par = stringcon.split("\\|")[0];
@@ -1442,7 +1456,7 @@ cat buffer.log
             try {
                 return DriverManager.getConnection(par, user, pass);
             } catch (Exception x) {
-                System.out.println("Erro na conexão:"+x.toString());
+                System.err.println("Erro na conexão:"+x.toString());
             }
         }
         return null;
@@ -1461,7 +1475,7 @@ cat buffer.log
         }catch(java.util.NoSuchElementException no) {
             return null;
         }catch(Exception e){
-            System.out.println("NOK: "+e.toString());
+            System.err.println("NOK: "+e.toString());
         }
         return null;
     }
@@ -1476,7 +1490,9 @@ cat buffer.log
             while ((len = System.in.read(buf)) > -1)
                 out.write(buf, 0, len);
             out.finish();        
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
     
     public void gunzip()
@@ -1488,7 +1504,9 @@ cat buffer.log
             int len;
             while ((len = out.read(buf)) > -1)
                 System.out.write(buf, 0, len);            
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
 
     public void echo(String [] args)
@@ -1507,7 +1525,7 @@ cat buffer.log
             for ( int i=1;i<caminhos.length;i++ )
             {
                 if ( ! new File(caminhos[i]).exists() ){
-                    System.out.println("Erro, este arquivo não existe: "+caminhos[i]);
+                    System.err.println("Erro, este arquivo não existe: "+caminhos[i]);
                     return;
                 }
             }
@@ -1522,7 +1540,7 @@ cat buffer.log
                 fis.close();
             }
         }catch(Exception e){
-            System.out.println("Erro, "+e.toString());
+            System.err.println("Erro, "+e.toString());
         }
     }
 
@@ -1535,7 +1553,9 @@ cat buffer.log
             while( (len=System.in.read(buf, 0, BUFFER_SIZE)) > -1 )
                 digest.update(buf, 0, len);
             System.out.println(new String(encodeHex(digest.digest())));
-        } catch (Exception ex) {}
+        } catch (Exception ex) {
+            System.err.println("Erro: "+ex.toString());
+        }
     }
 
     public int tryConvertNumberPositiveByString(int n_lines_buffer,String value){
@@ -1543,7 +1563,9 @@ cat buffer.log
             int tmp=Integer.parseInt(value);
             if ( tmp >= 0 )
                 return tmp;
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
         return n_lines_buffer;
     }
     
@@ -1576,7 +1598,9 @@ cat buffer.log
                     continue;
                 }
             }
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
     public void wc_l()
     {
@@ -1613,7 +1637,9 @@ cat buffer.log
                     while ( (read()) != null ) {}
                 }
             }
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
             
     public void tail(String [] args)
@@ -1642,7 +1668,9 @@ cat buffer.log
                 System.out.println(lista.get(i));
             }
             lista=null;
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
            
     public void cut(String [] args){
@@ -1733,7 +1761,9 @@ cat buffer.log
                 }
                 System.out.println("");                
             }
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
             
     public void sed(String sedA,String sedB)
@@ -1742,7 +1772,9 @@ cat buffer.log
             String line=null;
             while ( (line=read()) != null )
                 System.out.println(line.replaceAll(sedA, sedB));
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
         
     public void tee(String caminho)
@@ -1758,7 +1790,7 @@ cat buffer.log
             }
             out.close();
         }catch(Exception e){
-            System.out.println("Erro, "+e.toString());
+            System.err.println("Erro, "+e.toString());
         }
     }
         
@@ -1816,7 +1848,9 @@ cat buffer.log
                 }
                 System.out.println("");                
             }
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
     
     public void dev_null()
@@ -1825,7 +1859,9 @@ cat buffer.log
             int BUFFER_SIZE = 512;
             byte[] buf = new byte[BUFFER_SIZE];
             while(System.in.read(buf) > -1){}
-        }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
     }
 
     public void dev_in()
@@ -1856,8 +1892,8 @@ cat buffer.log
             else
                 return new String( Base64.getDecoder().decode(bytes) );
         } catch (Exception ex) {
-            System.out.println("Erro, "+ex.toString());
-            System.out.println(new String(bytes));
+            System.err.println("Erro, "+ex.toString());
+            System.err.println(new String(bytes));
         }
         return null;
     }
@@ -1865,10 +1901,10 @@ cat buffer.log
 
     public void comando_invalido(String[] args) {
         //Comando inválido
-        System.out.print("Comando inválido: [y");
+        System.err.print("Comando inválido: [y");
         for ( int i=0;i<args.length;i++ )
-            System.out.print(" "+args[i]);
-        System.out.println("]");
+            System.err.print(" "+args[i]);
+        System.err.println("]");
     }
 
     public String[] sliceParm(int n, String[] args) {
@@ -1933,12 +1969,12 @@ cat buffer.log
     public void carga(String connIn, String connOut, String outTable, String trunc){
         if ( outTable.trim().equals("") )
         {
-            System.out.println("Erro, outTable não preenchido!");
+            System.err.println("Erro, outTable não preenchido!");
             return;
         }
         if ( ! trunc.equals("S") && ! trunc.equals("N") )
         {
-            System.out.println("Erro, inesperado!");
+            System.err.println("Erro, inesperado!");
             return;
         }
             
@@ -1972,7 +2008,7 @@ cat buffer.log
             pipedOutputStream.close();
             pipedInputStream.close();        
         }catch(Exception e){
-            System.out.println("Erro, "+e.toString());
+            System.err.println("Erro, "+e.toString());
         }
     }
 
@@ -2001,7 +2037,7 @@ cat buffer.log
 
                     if ( hash.equals("") )
                     {
-                        System.out.println("Erro, comando inválido:" + line);
+                        System.err.println("Erro, comando inválido:" + line);
                         return;
                     }
 
@@ -2014,7 +2050,7 @@ cat buffer.log
 
                     if ( value_ == null )
                     {
-                        System.out.println("Erro, comando inválido:" + line);
+                        System.err.println("Erro, comando inválido:" + line);
                         return;
                     }
 
@@ -2101,7 +2137,7 @@ cat buffer.log
                         );
                         continue;
                     }
-                    System.out.println("Erro, comando inválido:" + line);
+                    System.err.println("Erro, comando inválido:" + line);
                     return;
                 }
                 for ( int i=0;i<threads.size();i++ )
@@ -2110,7 +2146,7 @@ cat buffer.log
                     threads.get(i).join();
             }
         }catch(Exception e){
-            System.out.println("Erro, "+e.toString());
+            System.err.println("Erro, "+e.toString());
         }
     }
     
