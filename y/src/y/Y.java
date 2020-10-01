@@ -1337,7 +1337,7 @@ cat buffer.log
                     ORAs[i]=lista.get(i);
             }
         }catch (Exception e){
-            System.out.println(e.toString());
+            //try_load_ORAs
         }
     }
     
