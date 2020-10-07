@@ -397,9 +397,17 @@ cat buffer.log
             tee(args[1]);
             return;
         }
-        if ( args.length >= 3 && args[0].equals("awk") && args[1].equals("print") ){
-            awk(args);
-            return;
+        if ( args[0].equals("awk") )
+        {
+            if ( args.length >= 3 && args[1].equals("print") )
+            {
+                awk_print(args);
+                return;
+            }
+            if ( args.length == 5 && args[1].equals("start") && args[3].equals("end") ){
+                awk_start_end(args);
+                return;
+            }
         }
         if ( args[0].equals("dev_null") ){
             dev_null();
@@ -1597,6 +1605,11 @@ cat buffer.log
                     System.out.println(line);
                     continue;
                 }
+                if ( first && tail && line.startsWith(grep) && line.endsWith(grep) ){
+                    System.out.println(line);
+                    continue;
+                }
+                
             }
         }catch(Exception e){
             System.out.println(e.toString());
@@ -1794,7 +1807,7 @@ cat buffer.log
         }
     }
         
-    public void awk(String [] args)
+    public void awk_print(String [] args)
     {
         ArrayList<Integer> lista=new ArrayList<Integer>();
         int [] elem;
@@ -1853,6 +1866,29 @@ cat buffer.log
         }
     }
     
+    public void awk_start_end(String [] args)
+    {
+        String start=args[2];
+        String end=args[4];
+        int status=0; // 0 -> fora, 1 -> dentro do range
+        
+        try {
+            String line=null;
+            while ( (line=read()) != null ) {
+                if ( status == 0 && line.contains(start) )
+                    status=1;
+                
+                if ( status == 1 )
+                    System.out.println(line);
+                
+                if ( status == 1 && line.contains(end) )
+                    status=0;                
+            }
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
+    }
+            
     public void dev_null()
     {
         try{
