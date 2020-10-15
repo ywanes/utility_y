@@ -169,8 +169,10 @@ cat buffer.log
             + "\n  [y banco conn,hash createjobexecute]"
             + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA carga]"
             + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]"
+            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA createTable carga]"
             + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]"
             + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]"
+            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA createTable createjobcarga]"
             + "\n  [y banco executejob]"
             + "\n  [y banco buffer]"
             + "\n  [y banco buffer -n_lines 500]"
@@ -528,7 +530,8 @@ cat buffer.log
         String connIn="";
         String connOut="";
         String outTable="";
-        String trunc="N";
+        String trunc="";
+        String createTable=""; // o valor irá para trunc
         String app="";
         
         
@@ -595,13 +598,22 @@ cat buffer.log
             args=sliceParm(1,args);
         }
         
+        if ( args.length > 0 && args[0].equals("createTable") ){
+            createTable="CREATETABLE";
+            args=sliceParm(1,args);
+        }
+        
         if ( args.length == 1 ){
             app=args[0];
             args=sliceParm(1,args);
         }
         
+        if ( ! trunc.equals("") && ! createTable.equals("") )
+            return null;
         if ( connIn.equals("") || connOut.equals("") || outTable.equals("") || trunc.equals("") || app.equals("") )
             return null;
+        if ( ! createTable.equals("") )
+            trunc=createTable;
         
         return new String[]{connIn,connOut,outTable,trunc,app};
     }
@@ -1391,11 +1403,11 @@ cat buffer.log
     public String getTableByParm(String parm){
         String retorno="";
         try{
-            retorno=parm.toUpperCase().replace(")"," ").replace("\n"," ").replace(","," ").split("FROM ")[1].split(" ")[0].trim();
+            retorno=parm.toUpperCase().replace(")"," ").replace("\n"," ").replace(","," ").replace("*"," ").split("FROM ")[1].split(" ")[0].trim();
             if ( retorno.length() == 0 )
-                return "DUAL";
+                return "";
         }catch(Exception e){
-            return "DUAL";
+            return "";
         }
         return retorno;
     }
@@ -2034,7 +2046,7 @@ cat buffer.log
             System.err.println("Erro, outTable não preenchido!");
             return;
         }
-        if ( ! trunc.equals("S") && ! trunc.equals("N") )
+        if ( ! trunc.equals("S") && ! trunc.equals("N") && ! trunc.equals("CREATETABLE") )
         {
             System.err.println("Erro, inesperado!");
             return;
@@ -2043,17 +2055,40 @@ cat buffer.log
         try{
             final PipedInputStream pipedInputStream=new PipedInputStream();
             final PipedOutputStream pipedOutputStream=new PipedOutputStream();
-
+            
+            // construção da variavel select
+            String select_="";            
+            String line;
+            while( (line=read()) != null )
+                select_+=line+"\n";
+            select_=removePontoEVirgual(select_);            
+            final String select=select_;
+            
             pipedInputStream.connect(pipedOutputStream);
-
-            Thread pipeWriter=new Thread(new Runnable() {
-                public void run() {
-                    selectInsert(connIn,"",pipedOutputStream,outTable);
-                }
-            });
 
             if ( trunc.equals("S") && ! execute(connOut, "truncate table "+outTable) )
                 return;
+            if ( trunc.equals("CREATETABLE") )
+            {
+                String tabela=getTableByParm(select);
+                if ( tabela.equals("") ){
+                    System.err.println("Erro, não foi possível encontrar o nome da tabela");
+                    System.exit(1);
+                }
+                String create=getcreate(connIn,tabela,outTable);
+                if ( create.equals("") ){
+                    System.err.println("Erro, não foi possível pegar o metadata a partir de "+tabela);
+                    System.exit(1);
+                }
+                if ( ! execute(connOut, create) )
+                    return;
+            }
+            
+            Thread pipeWriter=new Thread(new Runnable() {
+                public void run() {
+                    selectInsert(connIn,select,pipedOutputStream,outTable);
+                }
+            });
             
             Thread pipeReader=new Thread(new Runnable() {
                 public void run() {
@@ -2234,6 +2269,89 @@ cat buffer.log
         return retorno;
     }    
 
+    private String getcreate(String connIn, String tabela, String outTable) {
+        String schema="";
+        
+        if ( tabela.contains(".") ){
+            schema=tabela.split("\\.")[0];
+            tabela=tabela.split("\\.")[1];
+        }
+        
+        String SQL="with"
+        +"FUNCTION func_fix_create_table(p_campo CLOB) RETURN CLOB AS "
+        +"  vCampo     CLOB;"
+        +"  vResultado CLOB;"
+        +"  vC         VARCHAR2(2);"
+        +"  vStart     VARCHAR2(1);"
+        +"  vContador  number;"
+        +"  "
+        +"BEGIN"
+        +"  vCampo := p_campo;"
+        +"  vStart := 'N';"
+        +"  vResultado := '';"
+        +"  vContador := 0;"
+        +""
+        +"  FOR i IN 1..LENGTH(vCampo)"
+        +"  LOOP    "
+        +"    vC := substr(vCampo,i,1);"
+        +"    "
+        +"    IF ( vC = '(' OR vC = 'C' OR vC = 'c' ) THEN"
+        +"      vStart := 'S';"
+        +"    END IF;"
+        +"    "
+        +"    IF ( vC = '(' ) THEN"
+        +"      vContador := vContador + 1;"
+        +"    END IF;"
+        +"    "
+        +"    IF ( vStart = 'S' ) THEN"
+        +"      vResultado := vResultado || vC;"
+        +"    END IF;"
+        +"    "
+        +"    IF ( vC = ')' ) THEN"
+        +"      vContador := vContador - 1;"
+        +"      IF ( vContador = 0 ) THEN          "
+        +"        EXIT;"
+        +"      END IF;"
+        +"    END IF;"
+        +"  END LOOP;"
+        +"  "
+        +"  return vResultado || ';';"
+        +"  "
+        +"END func_fix_create_table;"
+        +"select func_fix_create_table(dbms_metadata.get_ddl('TABLE',UPPER('"+tabela+"'),UPPER('"+schema+"'))) TXT from dual";
+
+        try{    
+            String retorno="";
+            Connection con = getcon(connIn);
+            if ( con == null ){
+                System.err.println("Não foi possível se conectar!!" );
+                return "";
+            }
+            Statement stmt = con.createStatement();
+            ResultSet rs=null;
+            rs=stmt.executeQuery(SQL);
+            if ( rs.next() ){
+                retorno=rs.getString("TXT");
+            }        
+            rs.close();
+            stmt.close();
+            con.close();
+            if ( ! retorno.equals("") ){
+                retorno=removePontoEVirgual(retorno);
+                retorno=retorno.trim();                
+                String [] partes=retorno.split("\n");
+                retorno="CREATE TABLE "+outTable+"\n";
+                for ( int i=1;i<partes.length;i++ )
+                    retorno+=partes[i]+"\n";
+                return retorno;
+            }
+        }
+        catch(Exception e)
+        {
+            return "";
+        }        
+        return "";
+    }
 }
 
 
