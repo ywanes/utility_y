@@ -253,12 +253,10 @@ cat buffer.log
             // connIn
             if ( args[1].equals("-connIn") || ( args[1].startsWith("connIn,") ) ){
                 String [] connIn_connOut_outTable_trunc_app=get_connIn_connOut_outTable_trunc_app(args);
-
                 if ( connIn_connOut_outTable_trunc_app == null ){
                     comando_invalido(args);
                     return;
                 }
-
                 String connIn=connIn_connOut_outTable_trunc_app[0];
                 String connOut=connIn_connOut_outTable_trunc_app[1];
                 String outTable=connIn_connOut_outTable_trunc_app[2];
@@ -610,11 +608,12 @@ cat buffer.log
         
         if ( ! trunc.equals("") && ! createTable.equals("") )
             return null;
-        if ( connIn.equals("") || connOut.equals("") || outTable.equals("") || trunc.equals("") || app.equals("") )
-            return null;
         if ( ! createTable.equals("") )
             trunc=createTable;
-        
+        if ( trunc.equals("") )
+            trunc="N";
+        if ( connIn.equals("") || connOut.equals("") || outTable.equals("") || trunc.equals("") || app.equals("") )
+            return null;
         return new String[]{connIn,connOut,outTable,trunc,app};
     }
             
@@ -2076,6 +2075,11 @@ cat buffer.log
                     System.exit(1);
                 }
                 String create=getcreate(connIn,tabela,outTable);
+                if ( create.contains("USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS") )
+                {
+                    System.err.println("Erro, não foi possível pegar o metadata a partir de "+tabela+" segue comando: "+create);
+                    System.exit(1);
+                }
                 if ( create.equals("") ){
                     System.err.println("Erro, não foi possível pegar o metadata a partir de "+tabela);
                     System.exit(1);
@@ -2271,6 +2275,7 @@ cat buffer.log
 
     private String getcreate(String connIn, String tabela, String outTable) {
         String schema="";
+        String tabela_=tabela;
         
         if ( tabela.contains(".") ){
             schema=tabela.split("\\.")[0];
@@ -2278,47 +2283,47 @@ cat buffer.log
         }
         
         String SQL="with"
-        +"FUNCTION func_fix_create_table(p_campo CLOB) RETURN CLOB AS "
-        +"  vCampo     CLOB;"
-        +"  vResultado CLOB;"
-        +"  vC         VARCHAR2(2);"
-        +"  vStart     VARCHAR2(1);"
-        +"  vContador  number;"
-        +"  "
-        +"BEGIN"
-        +"  vCampo := p_campo;"
-        +"  vStart := 'N';"
-        +"  vResultado := '';"
-        +"  vContador := 0;"
-        +""
-        +"  FOR i IN 1..LENGTH(vCampo)"
-        +"  LOOP    "
-        +"    vC := substr(vCampo,i,1);"
-        +"    "
-        +"    IF ( vC = '(' OR vC = 'C' OR vC = 'c' ) THEN"
-        +"      vStart := 'S';"
-        +"    END IF;"
-        +"    "
-        +"    IF ( vC = '(' ) THEN"
-        +"      vContador := vContador + 1;"
-        +"    END IF;"
-        +"    "
-        +"    IF ( vStart = 'S' ) THEN"
-        +"      vResultado := vResultado || vC;"
-        +"    END IF;"
-        +"    "
-        +"    IF ( vC = ')' ) THEN"
-        +"      vContador := vContador - 1;"
-        +"      IF ( vContador = 0 ) THEN          "
-        +"        EXIT;"
-        +"      END IF;"
-        +"    END IF;"
-        +"  END LOOP;"
-        +"  "
-        +"  return vResultado || ';';"
-        +"  "
-        +"END func_fix_create_table;"
-        +"select func_fix_create_table(dbms_metadata.get_ddl('TABLE',UPPER('"+tabela+"'),UPPER('"+schema+"'))) TXT from dual";
+        +" FUNCTION func_fix_create_table(p_campo CLOB) RETURN CLOB AS "
+        +"   vCampo     CLOB;"
+        +"   vResultado CLOB;"
+        +"   vC         VARCHAR2(2);"
+        +"   vStart     VARCHAR2(1);"
+        +"   vContador  number;"
+        +"   "
+        +" BEGIN"
+        +"   vCampo := p_campo;"
+        +"   vStart := 'N';"
+        +"   vResultado := '';"
+        +"   vContador := 0;"
+        +" "
+        +"   FOR i IN 1..LENGTH(vCampo)"
+        +"   LOOP    "
+        +"     vC := substr(vCampo,i,1);"
+        +"     "
+        +"     IF ( vC = '(' OR vC = 'C' OR vC = 'c' ) THEN"
+        +"       vStart := 'S';"
+        +"     END IF;"
+        +"     "
+        +"     IF ( vC = '(' ) THEN"
+        +"       vContador := vContador + 1;"
+        +"     END IF;"
+        +"     "
+        +"     IF ( vStart = 'S' ) THEN"
+        +"       vResultado := vResultado || vC;"
+        +"     END IF;"
+        +"     "
+        +"     IF ( vC = ')' ) THEN"
+        +"       vContador := vContador - 1;"
+        +"       IF ( vContador = 0 ) THEN          "
+        +"         EXIT;"
+        +"       END IF;"
+        +"     END IF;"
+        +"   END LOOP;"
+        +"   "
+        +"   return vResultado || ';';"
+        +"   "
+        +" END func_fix_create_table;"
+        +" select func_fix_create_table(dbms_metadata.get_ddl('TABLE',UPPER('"+tabela+"'),UPPER('"+schema+"'))) TXT from dual";
 
         try{    
             String retorno="";
@@ -2343,14 +2348,37 @@ cat buffer.log
                 retorno="CREATE TABLE "+outTable+"\n";
                 for ( int i=1;i<partes.length;i++ )
                     retorno+=partes[i]+"\n";
+                if ( retorno.contains("USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS") )
+                    return tryFixCreate(retorno);
                 return retorno;
             }
         }
         catch(Exception e)
         {
+            if ( e.toString().contains("ORA-31603") )
+            {
+                System.err.println("Erro, a tabela "+tabela_+" não foi encontrada!");
+                System.exit(1);
+            }
             return "";
         }        
         return "";
+    }
+
+    private String tryFixCreate(String txt) {
+        String retorno="";
+        String [] partes=txt.split("\n");
+        retorno=partes[0]+"\n";
+        retorno+=partes[1]+"\n";
+        for ( int i=2;i<partes.length;i++ )
+        {
+            if ( ! partes[i].trim().startsWith("\"") )
+                break;
+            retorno+=partes[i]+"\n";
+        }
+        retorno=retorno.trim();
+        retorno=retorno.substring(0,retorno.length()-1)+")";
+        return retorno;
     }
 }
 
