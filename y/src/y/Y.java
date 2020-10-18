@@ -620,8 +620,12 @@ cat buffer.log
     public void select(String conn,String parm){
         String parm_=parm;
         
+        Connection con=null;
+        Statement stmt=null;
+        ResultSet rs=null;
+        
         try{            
-            Connection con = getcon(conn);
+            con = getcon(conn);
             if ( con == null ){
                 System.err.println("Não foi possível se conectar!!" );
                 return;
@@ -634,8 +638,8 @@ cat buffer.log
             }
             parm=removePontoEVirgual(parm);
 
-            Statement stmt = con.createStatement();
-            ResultSet rs=null;
+            stmt = con.createStatement();
+            rs=null;
             ResultSetMetaData rsmd;
             ArrayList<String> campos=new ArrayList<String>();
             ArrayList<Integer> tipos=new ArrayList<Integer>();
@@ -681,24 +685,27 @@ cat buffer.log
                         }
                         continue;
                     }
+                    close(rs,stmt,con);
                     throw new Exception("tipo desconhecido:"+tipos.get(i) + " -> " + rs.getString(campos.get(i)) );
                 }
                 System.out.println(sb.toString());
-            }        
-            rs.close();
-            stmt.close();
-            con.close();
+            }                 
         }
         catch(Exception e)
-        {
+        {            
             System.err.println("Erro: "+e.toString()+" -> "+parm_);
-        }        
+        }
+        close(rs,stmt,con);
     }
 
     public void selectInsert(String conn,String parm, PipedOutputStream out,String table){ // table opcional
+        Connection con=null;
+        Statement stmt=null;
+        ResultSet rs=null;
+        
         int countCommit=0;
         try{
-            Connection con = getcon(conn);
+            con = getcon(conn);
             if ( con == null ){
                 System.err.println("Não foi possível se conectar!!" );
                 return;
@@ -712,8 +719,8 @@ cat buffer.log
             
             parm=removePontoEVirgual(parm);
 
-            Statement stmt = con.createStatement();
-            ResultSet rs=null;
+            stmt = con.createStatement();
+            rs=null;
             ResultSetMetaData rsmd;
             ArrayList<String> campos=new ArrayList<String>();
             ArrayList<Integer> tipos=new ArrayList<Integer>();
@@ -763,6 +770,7 @@ cat buffer.log
                             sb.append(",");
                         continue;
                     }
+                    close(rs,stmt,con);
                     throw new Exception("tipo desconhecido:"+tipos.get(i) + " -> " + rs.getString(campos.get(i)) );
                 }                
                 if ( out == null )
@@ -777,22 +785,25 @@ cat buffer.log
                     countCommit=0;
                 }
             }
-            rs.close();
-            stmt.close();
-            con.close();
         }
         catch(Exception e)
         {
             System.err.println("Erro: "+e.toString()+" -> "+parm);
+            close(rs,stmt,con);
             System.exit(1);
         }        
+        close(rs,stmt,con);
     }
 
     public void selectCSV(String conn,String parm){
+        Connection con=null;
+        Statement stmt=null;
+        ResultSet rs=null;
+        
         String parm_=parm;
         
         try{
-            Connection con = getcon(conn);
+            con = getcon(conn);
             if ( con == null ){
                 System.err.println("Não foi possível se conectar!!" );
                 return;
@@ -805,8 +816,8 @@ cat buffer.log
             }
             parm=removePontoEVirgual(parm);
 
-            Statement stmt = con.createStatement();
-            ResultSet rs=null;
+            stmt = con.createStatement();
+            rs=null;
             ResultSetMetaData rsmd;
             ArrayList<String> campos=new ArrayList<String>();
             ArrayList<Integer> tipos=new ArrayList<Integer>();
@@ -862,6 +873,7 @@ cat buffer.log
 
                         continue;
                     }
+                    close(rs,stmt,con);
                     throw new Exception("tipo desconhecido:"+tipos.get(i) + " -> " + rs.getString(campos.get(i)) );
                 }
 
@@ -874,16 +886,20 @@ cat buffer.log
 
                 System.out.println(sb.toString());                
             }        
-            rs.close();
-            stmt.close();
-            con.close();
         }
         catch(Exception e){
             System.err.println("Erro: "+e.toString()+" -> "+parm_);
-        }        
+            close(rs,stmt,con);
+            System.exit(1);
+        }   
+        close(rs,stmt,con);
     }
 
     public void executeInsert(String conn, InputStream in){        
+        Connection con=null;
+        Statement stmt=null;
+        ResultSet rs=null;
+        
         boolean par=true;
         String line="";
         StringBuilder sb=null;
@@ -905,13 +921,13 @@ cat buffer.log
         scanner.useDelimiter("\n");
         
         try{
-            Connection con = getcon(conn);
+            con = getcon(conn);
             if ( con == null ){
                 System.err.println("Não foi possível se conectar!!" );
                 return;
             }
             con.setAutoCommit(false);
-            Statement stmt = con.createStatement();
+            stmt = con.createStatement();
 
             while( scanner.hasNext() && (line=scanner.next()) != null ){
                 if ( par && line.trim().equals("") )
@@ -924,7 +940,8 @@ cat buffer.log
                             stmt.execute(ii);
                         }catch(Exception e){
                             System.err.println("Erro: "+e.toString()+" -> "+line);
-                            ok=false;
+                            close(rs,stmt,con);
+                            System.exit(1);
                         }
                         continue;
                     }
@@ -973,7 +990,8 @@ cat buffer.log
                                 
                             }catch(Exception e){
                                 System.err.println("Erro: "+e.toString()+" -> "+line);
-                                ok=false;
+                                close(rs,stmt,con);
+                                System.exit(1);
                             }
                             continue;
                         }else{
@@ -982,6 +1000,7 @@ cat buffer.log
                         }
                         continue;
                     }
+                    close(rs,stmt,con);
                     throw new Exception("Erro, linha inesperada:" +line);
                 }else{
                     if ( par=countParAspeta(par,line) ){
@@ -1030,7 +1049,8 @@ cat buffer.log
                             
                         }catch(Exception e){
                             System.err.println("Erro: "+e.toString()+" -> "+line);
-                            ok=false;
+                            close(rs,stmt,con);
+                            System.exit(1);
                         }
                         continue;
                     }else{
@@ -1061,6 +1081,7 @@ cat buffer.log
                             }
                             if ( ! achou ){
                                 command=iii;
+                                close(rs,stmt,con);
                                 throw ee;
                             }
                         }                                            
@@ -1070,22 +1091,27 @@ cat buffer.log
                 all=null;
                 cover=null;
             }
-            stmt.close();            
-            con.close();
+            close(rs,stmt,con);
         }catch(Exception e){
             if ( ! command.equals(""))
                 System.err.println("Erro: "+e.toString().replace("\n","")+" -> "+command);                
             else
                 System.err.println("Erro: "+e.toString());
-            ok=false;
+            close(rs,stmt,con);
+            System.exit(1);
         }   
         if ( ok )
             System.out.println("OK");
+        close(rs,stmt,con);
     }
 
     public boolean execute(String conn,String parm){
+        Connection con=null;
+        Statement stmt=null;
+        ResultSet rs=null;
+        
         try{
-            Connection con = getcon(conn);
+            con = getcon(conn);
             if ( con == null ){
                 System.err.println("Não foi possível se conectar!!" );
                 return false;
@@ -1100,16 +1126,16 @@ cat buffer.log
             if ( ! parm.trim().toUpperCase().startsWith("DECLARE") )
                 parm=removePontoEVirgual(parm);
             
-            Statement stmt = con.createStatement();
+            stmt = con.createStatement();
             stmt.execute(parm);
-            stmt.close();
-            con.close();
         }
         catch(Exception e)
         {
             System.err.println("Erro: "+e.toString()+" -> "+parm);
+            close(rs,stmt,con);
             return false;
         }        
+        close(rs,stmt,con);
         return true;
     }
 
@@ -2276,6 +2302,10 @@ cat buffer.log
     }    
 
     private String getcreate(String connIn, String tabela, String outTable) {
+        Connection con=null;
+        Statement stmt=null;
+        ResultSet rs=null;
+        
         String schema="";
         String tabela_=tabela;
         
@@ -2329,20 +2359,19 @@ cat buffer.log
 
         try{    
             String retorno="";
-            Connection con = getcon(connIn);
+            con = getcon(connIn);
             if ( con == null ){
                 System.err.println("Não foi possível se conectar!!" );
                 return "";
             }
-            Statement stmt = con.createStatement();
-            ResultSet rs=null;
+            stmt = con.createStatement();
+            rs=null;
             rs=stmt.executeQuery(SQL);
             if ( rs.next() ){
                 retorno=rs.getString("TXT");
-            }        
-            rs.close();
-            stmt.close();
-            con.close();
+            }    
+            close(rs,stmt,con);
+            
             if ( ! retorno.equals("") ){
                 retorno=removePontoEVirgual(retorno);
                 retorno=retorno.trim();                
@@ -2360,10 +2389,13 @@ cat buffer.log
             if ( e.toString().contains("ORA-31603") )
             {
                 System.err.println("Erro, a tabela "+tabela_+" não foi encontrada!");
+                close(rs,stmt,con);
                 System.exit(1);
             }
+            close(rs,stmt,con);
             return "";
         }        
+        close(rs,stmt,con);
         return "";
     }
 
@@ -2381,6 +2413,18 @@ cat buffer.log
         retorno=retorno.trim();
         retorno=retorno.substring(0,retorno.length()-1)+")";
         return retorno;
+    }
+
+    private void close(ResultSet rs, Statement stmt, Connection con) {
+        try{ 
+            rs.close();
+        }catch(Exception e){}
+        try{ 
+            stmt.close();
+        }catch(Exception e){}
+        try{ 
+            con.close();
+        }catch(Exception e){}
     }
 }
 
