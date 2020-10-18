@@ -1094,12 +1094,14 @@ cat buffer.log
             if ( parm.equals("") ){
                 String line;
                 while( (line=read()) != null )
-                    parm+=line+"\n";
-                parm=removePontoEVirgual(parm);
+                    parm+=line+"\n";                
             }
 
+            if ( ! parm.trim().toUpperCase().startsWith("DECLARE") )
+                parm=removePontoEVirgual(parm);
+            
             Statement stmt = con.createStatement();
-            stmt.execute(removePontoEVirgual(parm));
+            stmt.execute(parm);
             stmt.close();
             con.close();
         }
@@ -2348,7 +2350,7 @@ cat buffer.log
                 retorno="CREATE TABLE "+outTable+"\n";
                 for ( int i=1;i<partes.length;i++ )
                     retorno+=partes[i]+"\n";
-                if ( retorno.contains("USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS") )
+                if ( retorno.contains("USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS") )
                     return tryFixCreate(retorno);
                 return retorno;
             }
