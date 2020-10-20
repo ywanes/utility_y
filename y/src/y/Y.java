@@ -415,8 +415,8 @@ cat buffer.log
             cut(args);
             return;
         }
-        if ( args[0].equals("sed") && args.length == 3 ){
-            sed(args[1],args[2]);
+        if ( args[0].equals("sed") && args.length >= 3 && args.length % 2 == 1 ){
+            sed(args);
             return;
         }
         if ( args[0].equals("tee") && args.length == 2 ){
@@ -1844,12 +1844,15 @@ cat buffer.log
         }
     }
             
-    public void sed(String sedA,String sedB)
+    public void sed(String [] args)
     {
         try {
             String line=null;
-            while ( (line=read()) != null )
-                System.out.println(line.replaceAll(sedA, sedB));
+            while ( (line=read()) != null ){
+                for ( int i=1;i<args.length;i+=2 )
+                    line=line.replaceAll(args[i], args[i+1]);
+                System.out.println(line);
+            }
         }catch(Exception e){
             System.out.println(e.toString());
         }
