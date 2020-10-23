@@ -2438,10 +2438,10 @@ cat buffer.log
         String caminho_status_fim=System.getenv("STATUS_FIM_Y");
         String caminho_count=System.getenv("COUNT_Y");
         if ( caminho_status_fim != null && ! caminho_status_fim.equals("") ){
-            salvando_file("FIM",new File(caminho_status_fim));
+            salvando_file("FIM\n",new File(caminho_status_fim));
         }
         if ( caminho_count != null && ! caminho_count.equals("") ){
-            salvando_file(count+"",new File(caminho_count));
+            salvando_file(count+"\n",new File(caminho_count));
         }
     }
 }
