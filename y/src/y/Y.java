@@ -799,7 +799,7 @@ cat buffer.log
         Connection con=null;
         Statement stmt=null;
         ResultSet rs=null;
-        
+        long count=0;
         String parm_=parm;
         
         try{
@@ -881,10 +881,12 @@ cat buffer.log
                     first=false;
                     System.out.println(header);
                     System.out.println(first_detail);
+                    count++;
                     continue;
                 }
 
                 System.out.println(sb.toString());                
+                count++;
             }        
         }
         catch(Exception e){
@@ -893,6 +895,7 @@ cat buffer.log
             System.exit(1);
         }   
         close(rs,stmt,con);
+        try_finish_and_count(count);
     }
 
     public void executeInsert(String conn, InputStream in){        
@@ -1367,7 +1370,7 @@ cat buffer.log
             out.close();
             return true;
         }catch(Exception e){
-            System.out.println(e.toString());
+            System.err.println(e.toString());
         }        
         return false; 
     }
@@ -2428,6 +2431,18 @@ cat buffer.log
         try{ 
             con.close();
         }catch(Exception e){}
+    }
+
+    private void try_finish_and_count(long count) {
+        // grava em arquivo uma sinalização de sim e count
+        String caminho_status_fim=System.getenv("STATUS_FIM_Y");
+        String caminho_count=System.getenv("COUNT_Y");
+        if ( caminho_status_fim != null && ! caminho_status_fim.equals("") ){
+            salvando_file("FIM",new File(caminho_status_fim));
+        }
+        if ( caminho_count != null && ! caminho_count.equals("") ){
+            salvando_file(count+"",new File(caminho_count));
+        }
     }
 }
 
