@@ -860,7 +860,8 @@ cat buffer.log
                         if ( tipos.get(i) == 93 ) // DATA
                             tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
                         tmp=tmp.replace("\"","").replace("\n","");
-
+                        tmp=tmp.trim();
+                        
                         if ( first )
                         {
                             header+="\""+campos.get(i)+"\";";
