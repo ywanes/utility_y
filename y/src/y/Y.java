@@ -779,6 +779,7 @@ cat buffer.log
     }
     
     public void pipeSelectInsertCSV(String conn,String fileCSV,String parm, PipedOutputStream out,String table,String nemVouExplicar){ // table opcional        
+        
         /*
         Estrutura CSV padrao:
         
@@ -2081,7 +2082,7 @@ cat buffer.log
     }
 
     public void carga(final String connIn,final String fileCSV,final String connOut,final String outTable,final String trunc){
-        final String nemVouExplicar=connOut;
+        final String nemVouExplicar=trunc.equals("CREATETABLE")?connOut:"";
         if ( outTable.trim().equals("") )
         {
             System.err.println("Erro, outTable não preenchido!");
@@ -2098,11 +2099,14 @@ cat buffer.log
             final PipedOutputStream pipedOutputStream=new PipedOutputStream();
             
             // construção da variavel select(o select pode ser customizado)
-            String select_="";            
-            String line;
-            while( (line=read()) != null )
-                select_+=line+"\n";
-            select_=removePontoEVirgual(select_);            
+            // em CSV nao tem select
+            String select_="";  
+            if ( !connIn.equals("") ){
+                String line;
+                while( (line=read()) != null )
+                    select_+=line+"\n";
+                select_=removePontoEVirgual(select_);            
+            }
             final String select=select_;
             
             pipedInputStream.connect(pipedOutputStream);
