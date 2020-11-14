@@ -159,29 +159,14 @@ cat buffer.log
         }
         if ( args[0].equals("banco") ){
             String msg_usage="usage: "
-            + "\n  [y banco -conn ... select]"
-            + "\n  [y banco -conn ... select select..]"
-            + "\n  [y banco conn,hash select]"
-            + "\n  [y banco conn,hash select select..]"
-            + "\n  [y banco conn,hash selectInsert]"
-            + "\n  [y banco conn,hash selectInsert select..]"
-            + "\n  [y banco conn,hash selectCSV]"
-            + "\n  [y banco conn,hash selectCSV select..]"
+            + "\n  [y banco -fromCSV [select|selectInsert]]"
+            + "\n  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]"
             + "\n  [y banco conn,hash executeInsert]"
-            + "\n  [y banco conn,hash execute]"
-            + "\n  [y banco conn,hash execute execute..]"
+            + "\n  [y banco conn,hash execute [|execute..]]"
             + "\n  [y banco conn,hash createjobexecute]"
-            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA carga]"
-            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]"
-            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA createTable carga]"
-            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]"
-            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA trunc createjobcarga]"
-            + "\n  [y banco connIn,hash connOut,hash outTable,tabelaA createTable createjobcarga]"
+            + "\n  [y banco [connIn,hash|fileCSV,file] connOut,hash outTable,tabelaA [|trunc|createTable] [carga|createjobcarga]]"
             + "\n  [y banco executejob]"
-            + "\n  [y banco buffer]"
-            + "\n  [y banco buffer -n_lines 500]"
-            + "\n  [y banco buffer -log buffer.log]"
-            + "\n  [y banco buffer -n_lines 500 -log buffer.log]"            
+            + "\n  [y banco buffer [|-n_lines 500] [|-log buffer.log]]"
             + "\n  Ex: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\""
             + "\n  Ex2: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\""
             + "\n  Obs: entrada de dados pode ser feito por |"
@@ -194,6 +179,13 @@ cat buffer.log
                 return;
             }
 
+            // -fromCSV
+            if ( args[1].equals("-conn") )
+            {
+                System.err.println("Comando nao implementado");
+                return;
+            }
+            
             // conn
             if ( args[1].equals("-conn") || ( args[1].startsWith("conn,") ) ){
                 String [] ConnAppParm=getConnAppParm(args);
@@ -234,7 +226,7 @@ cat buffer.log
                     return;
                 }
                 if ( app.equals("selectInsert") ){
-                    selectInsert(conn,parm,null,"");
+                    selectInsert(conn,"",parm,null,"","");
                     return;
                 }
                 if ( app.equals("selectCSV") ){
@@ -254,18 +246,19 @@ cat buffer.log
                     return;
                 }
             }
-            // connIn
-            if ( args[1].equals("-connIn") || ( args[1].startsWith("connIn,") ) ){
-                String [] connIn_connOut_outTable_trunc_app=get_connIn_connOut_outTable_trunc_app(args);
-                if ( connIn_connOut_outTable_trunc_app == null ){
+            // connIn/fileCSV
+            if ( args[1].equals("-connIn") || args[1].startsWith("connIn,") || args[1].startsWith("-fileCSV") || args[1].startsWith("fileCSV,") ){
+                String [] connIn_fileCSV_connOut_outTable_trunc_app=get_connIn_fileCSV_connOut_outTable_trunc_app(args);
+                if ( connIn_fileCSV_connOut_outTable_trunc_app == null ){
                     comando_invalido(args);
                     return;
                 }
-                String connIn=connIn_connOut_outTable_trunc_app[0];
-                String connOut=connIn_connOut_outTable_trunc_app[1];
-                String outTable=connIn_connOut_outTable_trunc_app[2];
-                String trunc=connIn_connOut_outTable_trunc_app[3];
-                String app=connIn_connOut_outTable_trunc_app[4];
+                String connIn=connIn_fileCSV_connOut_outTable_trunc_app[0];
+                String fileCSV=connIn_fileCSV_connOut_outTable_trunc_app[1];
+                String connOut=connIn_fileCSV_connOut_outTable_trunc_app[2];
+                String outTable=connIn_fileCSV_connOut_outTable_trunc_app[3];
+                String trunc=connIn_fileCSV_connOut_outTable_trunc_app[4];
+                String app=connIn_fileCSV_connOut_outTable_trunc_app[5];
 
                 //[y banco connIn,hash connOut,hash outTable,tabelaA carga]
                 //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
@@ -274,12 +267,12 @@ cat buffer.log
 
                 if ( app.equals("carga") )
                 {
-                    carga(connIn,connOut,outTable,trunc);
+                    carga(connIn,fileCSV,connOut,outTable,trunc);
                     return;
                 }
                 if ( app.equals("createjobcarga") )
                 {
-                    createjobcarga(connIn,connOut,outTable,trunc,app);
+                    createjobcarga(connIn,fileCSV,connOut,outTable,trunc,app);
                     return;
                 }
             }
@@ -522,7 +515,7 @@ cat buffer.log
         return new String[]{conn,app,parm};
     }
     
-    public String [] get_connIn_connOut_outTable_trunc_app(String [] args){
+    public String [] get_connIn_fileCSV_connOut_outTable_trunc_app(String [] args){
         //[y banco connIn,hash connOut,hash outTable,tabelaA carga]
         //[y banco connIn,hash connOut,hash outTable,tabelaA trunc carga]
         //[y banco connIn,hash connOut,hash outTable,tabelaA createjobcarga]
@@ -530,6 +523,7 @@ cat buffer.log
         String value_=""; // tmp
         
         String connIn="";
+        String fileCSV="";
         String connOut="";
         String outTable="";
         String trunc="";
@@ -556,6 +550,24 @@ cat buffer.log
         if ( connIn.equals("") && args.length > 1 && args[0].equals("-connIn") )
         {
             connIn=args[1];
+            args=sliceParm(2,args);
+        }
+        
+        if ( args.length > 0 && args[0].startsWith("fileCSV,") )
+        {
+            value_=gettoken(args[0].split(",")[1]);
+            if ( value_ == null )
+            {
+                System.err.println("Não foi possível encontrar o token "+args[0].split(",")[1]);
+                return null;
+            }
+            fileCSV=value_;
+            args=sliceParm(1,args);
+        }
+        
+        if ( connIn.equals("") && args.length > 1 && args[0].equals("-fileCSV") )
+        {
+            fileCSV=args[1];
             args=sliceParm(2,args);
         }
         
@@ -616,9 +628,11 @@ cat buffer.log
             trunc=createTable;
         if ( trunc.equals("") )
             trunc="N";
-        if ( connIn.equals("") || connOut.equals("") || outTable.equals("") || trunc.equals("") || app.equals("") )
+        if ( (connIn.equals("") && fileCSV.equals("")) || (!connIn.equals("") && !fileCSV.equals("")) )
             return null;
-        return new String[]{connIn,connOut,outTable,trunc,app};
+        if ( connOut.equals("") || outTable.equals("") || trunc.equals("") || app.equals("") )
+            return null;
+        return new String[]{connIn,fileCSV,connOut,outTable,trunc,app};
     }
             
     public void select(String conn,String parm){
@@ -702,7 +716,16 @@ cat buffer.log
         close(rs,stmt,con);
     }
 
-    public void selectInsert(String conn,String parm, PipedOutputStream out,String table){ // table opcional
+    public void selectInsert(String conn,String fileCSV,String parm, PipedOutputStream out,String table,String nemVouExplicar){ // table opcional
+        if ( ! conn.equals("") )
+        {
+            pipeSelectInsertConn(conn,fileCSV,parm, out,table,nemVouExplicar);            
+        }else{
+            pipeSelectInsertCSV(conn,fileCSV,parm, out,table,nemVouExplicar);
+        }        
+    }
+    
+    public void pipeSelectInsertConn(String conn,String fileCSV,String parm, PipedOutputStream out,String table,String nemVouExplicar){ // table opcional
         Connection con=null;
         Statement stmt=null;
         ResultSet rs=null;
@@ -796,8 +819,14 @@ cat buffer.log
             close(rs,stmt,con);
             System.exit(1);
         }        
-        close(rs,stmt,con);
+        close(rs,stmt,con);        
     }
+    
+    public void pipeSelectInsertCSV(String conn,String fileCSV,String parm, PipedOutputStream out,String table,String nemVouExplicar){ // table opcional
+        System.err.println("Comando nao implementado");
+        return;
+    }
+    
 
     public void selectCSV(String conn,String parm){
         Connection con=null;
@@ -2049,7 +2078,7 @@ cat buffer.log
         );
     }
 
-    public void createjobcarga(String connIn, String connOut, String outTable, String trunc, String app) {
+    public void createjobcarga(String connIn, String fileCSV, String connOut, String outTable, String trunc, String app) {
         String line;
         String SQL="";
         while ( (line=read()) != null )
@@ -2063,6 +2092,8 @@ cat buffer.log
                         "jobcarga\n"
                         + "-connIn\n"
                         + connIn+"\n"
+                        + "-fileCSV\n"
+                        + fileCSV+"\n"
                         + "-connOut\n"
                         + connOut+"\n"
                         + "-outTable\n"
@@ -2078,7 +2109,8 @@ cat buffer.log
         );
     }
 
-    public void carga(final String connIn,final String connOut,final String outTable,final String trunc){
+    public void carga(final String connIn,final String fileCSV,final String connOut,final String outTable,final String trunc){
+        final String nemVouExplicar=connOut;
         if ( outTable.trim().equals("") )
         {
             System.err.println("Erro, outTable não preenchido!");
@@ -2094,7 +2126,7 @@ cat buffer.log
             final PipedInputStream pipedInputStream=new PipedInputStream();
             final PipedOutputStream pipedOutputStream=new PipedOutputStream();
             
-            // construção da variavel select
+            // construção da variavel select(o select pode ser customizado)
             String select_="";            
             String line;
             while( (line=read()) != null )
@@ -2123,13 +2155,18 @@ cat buffer.log
                     System.err.println("Erro, não foi possível pegar o metadata a partir de "+tabela);
                     System.exit(1);
                 }
-                if ( ! execute(connOut, create) )
-                    return;
+                if ( !connIn.equals("") )
+                {
+                    if ( ! execute(connOut, create) )
+                        return;                    
+                }else{
+                    // será feito pelo nemVouExplicar
+                }
             }
             
             Thread pipeWriter=new Thread(new Runnable() {
                 public void run() {
-                    selectInsert(connIn,select,pipedOutputStream,outTable);
+                    selectInsert(connIn,fileCSV,select,pipedOutputStream,outTable,nemVouExplicar);
                 }
             });
             
@@ -2231,11 +2268,12 @@ cat buffer.log
                     if ( instrucoes.size() == 11
                         && instrucoes.get(0).equals("jobcarga")
                         && instrucoes.get(1).equals("-connIn")
-                        && instrucoes.get(3).equals("-connOut")
-                        && instrucoes.get(5).equals("-outTable")
-                        && instrucoes.get(7).equals("trunc")
-                        && instrucoes.get(9).equals("SQL")
-                        && ! instrucoes.get(10).equals("")
+                        && instrucoes.get(3).equals("-fileCSV")
+                        && instrucoes.get(5).equals("-connOut")
+                        && instrucoes.get(7).equals("-outTable")
+                        && instrucoes.get(9).equals("trunc")
+                        && instrucoes.get(11).equals("SQL")
+                        && ! instrucoes.get(12).equals("")
                     ){
                         threads.add(
                             new Thread(new Runnable() {
@@ -2245,6 +2283,7 @@ cat buffer.log
                                         ,instrucoes.get(4)
                                         ,instrucoes.get(6)
                                         ,instrucoes.get(8)
+                                        ,instrucoes.get(10)
                                     );
                                 }
                             })
