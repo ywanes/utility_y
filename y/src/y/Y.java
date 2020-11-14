@@ -133,7 +133,7 @@ cat buffer.log
             }
 
             // -fromCSV
-            if ( args[1].equals("-conn") )
+            if ( args[1].equals("-fromCSV") )
             {
                 System.err.println("Comando nao implementado");
                 return;
@@ -778,7 +778,22 @@ cat buffer.log
         close(rs,stmt,con);        
     }
     
-    public void pipeSelectInsertCSV(String conn,String fileCSV,String parm, PipedOutputStream out,String table,String nemVouExplicar){ // table opcional
+    public void pipeSelectInsertCSV(String conn,String fileCSV,String parm, PipedOutputStream out,String table,String nemVouExplicar){ // table opcional        
+        /*
+        Estrutura CSV padrao:
+        
+        HEADER_CAMPO1;BB;CC;3;4;5;
+        11;;";;""""""11';;";55;55;55
+        11;;";;""""""11';;";55;55;55
+        11;;";;""""""11';;";55;55;55;
+        33;44
+        33;44
+        33;44;44;44;44;44;44;44;44;44;44;44;44;44;44;44
+        33;44;44;44;44;44;44;44;44;44;44;44;44;44;44;44
+
+        obs: campos além do headr nao serão considerados
+        */
+        
         System.err.println("Comando nao implementado");
         return;
     }
