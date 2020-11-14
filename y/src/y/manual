@@ -61,7 +61,7 @@ Exemplos...
     (
         echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc createjobcarga
         echo "select * from TABELA_CCC" | y banco connIn,hash connOut,hash -outTable TABELA_CCC trunc createjobcarga
-    ) | executejob
+    ) | y banco executejob
 [y banco buffer [|-n_lines 500] [|-log buffer.log]]    
     echo "select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 500 -log buffer.log | y banco conn,hash executeInsert
 [y token]

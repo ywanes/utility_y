@@ -62,6 +62,7 @@ public class Y {
     public static String local_env="c:\\tmp";
 
     public static java.util.Scanner scanner_pipe=null;
+    public static java.util.Scanner scanner_pipe2=null;
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
     
@@ -113,21 +114,20 @@ cat buffer.log
         
         new Y().go(args);
     }
-
-    
+        
     public void go(String[] args){        
         try_load_ORAs();
 
         if ( args.length == 0 ){
-            System.err.println(
-                lendo_arquivo_pacote(getClass().getResourceAsStream("/y/manual_mini"))
-            );            
+            System.err.println(      
+                lendo_arquivo_pacote("/y/manual_mini")
+            );
             return;
         }
         if ( args[0].equals("banco") ){            
             if ( args.length == 1 ){
                 System.err.println(
-                    lendo_arquivo_pacote(getClass().getResourceAsStream("/y/manual"))
+                    lendo_arquivo_pacote("/y/manual")
                 );            
                 return;
             }
@@ -395,8 +395,8 @@ cat buffer.log
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             System.err.println(
-                "Utilitário Y versão:" + lendo_arquivo_pacote(getClass().getResourceAsStream("/y/versao")) + "\n"
-                + lendo_arquivo_pacote(getClass().getResourceAsStream("/y/manual"))
+                "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
+                + lendo_arquivo_pacote("/y/manual")
             );
             return;
         }
@@ -924,9 +924,7 @@ cat buffer.log
         String command="";
         boolean achou=false;
         
-        // nao apagar esse scanner para usar o global, tem que ser esse aq
-        java.util.Scanner scanner=new java.util.Scanner(in);  
-        scanner.useDelimiter("\n");
+        read2(in);
         
         try{
             con = getcon(conn);
@@ -937,7 +935,7 @@ cat buffer.log
             con.setAutoCommit(false);
             stmt = con.createStatement();
 
-            while( scanner.hasNext() && (line=scanner.next()) != null ){
+            while( (line=read2()) != null ){
                 if ( par && line.trim().equals("") )
                     continue;
                 if ( par ){
@@ -1234,6 +1232,9 @@ cat buffer.log
                 }.start();  
             }
 
+            
+            // testando remoção desse bloco
+            /*
             // thread in
             new Thread() {
                 public void run() {
@@ -1245,6 +1246,29 @@ cat buffer.log
                         {
                             if ( scanner.hasNext()){
                                 lista.add(scanner.next());
+                                if ( caminhoLog[0] != null )
+                                    contabiliza(countLinhasIn);
+                            }else{
+                                finishIn[0]=true;
+                                break;
+                            }
+                        }
+                    }
+                    countLinhasIn[2]=1;
+                }
+            }.start();        
+            */
+
+            // thread in
+            new Thread() {
+                public void run() {
+                    String line;
+                    while( true ){
+                        if ( lista.size() < n_lines_buffer )
+                        {
+                            if ( (line=read()) != null )
+                            {
+                                lista.add(line);
                                 if ( caminhoLog[0] != null )
                                     contabiliza(countLinhasIn);
                             }else{
@@ -1399,7 +1423,7 @@ cat buffer.log
     }
 
     public void try_load_ORAs() {        
-        ORAs=lendo_arquivo_pacote(getClass().getResourceAsStream("/y/ORAs")).split("\n");
+        ORAs=lendo_arquivo_pacote("/y/ORAs").split("\n");
         
         try{
             String caminho=System.getenv("ORAs_Y");
@@ -1544,14 +1568,39 @@ cat buffer.log
         return null;
     }
 
+    public void read(InputStream in){
+        scanner_pipe=new java.util.Scanner(in);
+        scanner_pipe.useDelimiter("\n");
+    }
+    
     public String read(){
         try{
-            if ( scanner_pipe == null ){
-                scanner_pipe=new java.util.Scanner(System.in);  
-                scanner_pipe.useDelimiter("\n");
-            }
+            if ( scanner_pipe == null )
+                read(System.in);
             if ( scanner_pipe.hasNext() )
                 return scanner_pipe.next();
+            else
+                return null;
+        }catch(java.util.NoSuchElementException no) {
+            return null;
+        }catch(Exception e){
+            System.err.println("NOK: "+e.toString());
+        }
+        return null;
+    }
+    
+    public void read2(InputStream in){
+        scanner_pipe2=new java.util.Scanner(in);
+        scanner_pipe2.useDelimiter("\n");
+    }
+    
+    // usando para comandos combinados por exemplo carga(read/scanner_pipe) que chama executeInsert(read2/scanner_pipe2).
+    public String read2(){        
+        try{
+            if ( scanner_pipe2 == null )
+                read2(System.in);
+            if ( scanner_pipe2.hasNext() )
+                return scanner_pipe2.next();
             else
                 return null;
         }catch(java.util.NoSuchElementException no) {
@@ -1984,6 +2033,8 @@ cat buffer.log
     }
 
     public String base64(InputStream in,boolean encoding){
+        // java 11 depreciated sun.misc.BASE64Encoder
+        // tem que usar esse codigo zuado mesmo
         int BUFFER_SIZE = 1;
         byte[] buf = new byte[BUFFER_SIZE];                   
         ArrayList<Byte> lista=new ArrayList<Byte>();
@@ -2010,7 +2061,6 @@ cat buffer.log
         }
         return null;
     }
-   
 
     public void comando_invalido(String[] args) {
         //Comando inválido
@@ -2339,7 +2389,7 @@ cat buffer.log
             tabela=tabela.split("\\.")[1];
         }
         
-        String SQL=lendo_arquivo_pacote(getClass().getResourceAsStream("/y/sql_get_ddl_createtable")).replace("[TABELA]",tabela).replace("[SCHEMA]",schema);
+        String SQL=lendo_arquivo_pacote("/y/sql_get_ddl_createtable").replace("[TABELA]",tabela).replace("[SCHEMA]",schema);
 
         try{    
             String retorno="";
@@ -2422,9 +2472,12 @@ cat buffer.log
             salvando_file(count+"\n",new File(caminho_count));
         }
     }
-    
-    public String lendo_arquivo_pacote(InputStream fstream){
-        //System.out.println(lendo_arquivo_pacote(getClass().getResourceAsStream("/dis/biblioteca")));
+
+    public String lendo_arquivo_pacote(String caminho){
+        InputStream fstream=getClass().getResourceAsStream(caminho);
+        // System.out.println(
+        //   lendo_arquivo_pacote("/y/manual_mini")
+        // );
         String result="";
         try{
             DataInputStream in = new DataInputStream(fstream);
@@ -2433,8 +2486,9 @@ cat buffer.log
             while ((strLine = br.readLine()) != null)
                 result+=strLine+"\n";
             in.close();
+            return result;
         }catch (Exception e){}
-        return result;
+        return new Arquivos().lendo_arquivo_pacote(caminho);
     }
 
     public void MetodoGaranteAPermanenciaDeAlgunsImportsJava()
@@ -2448,3 +2502,227 @@ cat buffer.log
         Comparator g;
     }
 }
+
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    class Arquivos{
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */        public String lendo_arquivo_pacote(String caminho){
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/manual") )
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                return ""
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "usage:\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco -fromCSV [select|selectInsert]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco conn,hash executeInsert]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco conn,hash execute [|execute..]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco conn,hash createjobexecute]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash outTable,tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco executejob]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco buffer [|-n_lines 500] [|-log buffer.log]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y token]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y gettoken]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y gzip]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y gunzip]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y echo]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y cat]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y md5]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y sha1]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y sha256]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y base64]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y grep]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y wc -l]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y head]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y tail]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y cut]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y sed]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y tee]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y awk print]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y dev_null]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y dev_in]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y help]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplos...\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco -fromCSV [select|selectInsert]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo.csv | y banco -fromCSV select\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo.csv | y banco -fromCSV selectInsert\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select 1 from dual\" | y banco conn,hash select\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco conn,hash select \"select 1 from dual\"\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from tabela1\" | y banco conn,hash selectInsert\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat select.sql | y banco conn,hash selectCSV\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco -conn conn.. selectInsert\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco conn,hash executeInsert]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat listaDeInsert.sql | y banco conn,hash executeInsert\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"insert into tabela1 values(1,2,3)\" | y banco conn,hash executeInsert\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"insert into tabela1 values(1,2,3);\" | y banco conn,hash executeInsert\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco conn,hash execute [|execute..]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"truncate table tabela1\" | y banco conn,hash execute\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco conn,hash execute \"drop table tabela1\"\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat blocoAnonimo | y banco conn,hash execute\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco conn,hash createjobexecute]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"truncate table tabela1\" | y banco conn,hash createjobexecute\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco [connIn,hash|fileCSV,file] connOut,hash outTable,tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB carga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc carga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createtable carga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC carga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC trunc carga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC createtable carga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco executejob]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    (\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc createjobcarga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        echo \"select * from TABELA_CCC\" | y banco connIn,hash connOut,hash -outTable TABELA_CCC trunc createjobcarga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    ) | y banco executejob\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco buffer [|-n_lines 500] [|-log buffer.log]]    \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 500 -log buffer.log | y banco conn,hash executeInsert\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y token]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y token value\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y gettoken]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y gettoken hash\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y gzip]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y gzip > arquivo.gz\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y gunzip]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo.gz | y gunzip > arquivo\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y echo]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo a b c\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"a b c\"\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y cat]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y cat arquivo\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y md5]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y md5\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y sha1]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y sha1\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y sha256]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y sha256\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y base64]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y base64\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y grep]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y grep ^Texto$\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y grep AB\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y wc -l]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y wc -l\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y head]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y head\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y head -30\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y tail]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y tail\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y tail -30\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y cut]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y cut -c-10\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y cut -c5-10\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y cut -c5-\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y cut -c5\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y cut -c5-10,15-17\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y sed]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y sed A B\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y sed A1 A2 B1 B2\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y tee]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y tee saida.txt\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y awk print]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y awk print 1 3 5,6\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y awk start AAA end BBB    \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y dev_null]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo | y banco buffer -n_lines 500 -log buffer.log | y dev_null\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y dev_in]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y dev_in | y banco buffer -n_lines 500 -log buffer.log | y dev_null\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Observações:\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "entrada de dados pode ser feito por |\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmação de fim de processamento de selectCSV\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Dica3: vendo warnnings ORA: cat $ORAs_Y";
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/manual_mini") )
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                return ""
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "usage:\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y token]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y gettoken]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y gzip]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y gunzip]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y echo]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y cat]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y md5]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y sha1]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y sha256]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y base64]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y grep]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y wc -l]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y head]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y tail]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y cut]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y sed]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y tee]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y awk print]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y dev_null]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y dev_in]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y help]";
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/ORAs") )
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                return ""
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-00911\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-00913\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-00917\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-00928\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-00933\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-00936\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-00947\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-00972\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-01756\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-01742\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-01747\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "ORA-01438";
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/sql_get_ddl_createtable") )
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                return ""
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + " with\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + " FUNCTION func_fix_create_table(p_campo CLOB) RETURN CLOB AS \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vCampo     CLOB;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vResultado CLOB;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vC         VARCHAR2(2);\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vStart     VARCHAR2(1);\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vContador  number;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + " BEGIN\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vCampo := p_campo;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vStart := 'N';\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vResultado := '';\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   vContador := 0;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + " \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   FOR i IN 1..LENGTH(vCampo)\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   LOOP    \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     vC := substr(vCampo,i,1);\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     IF ( vC = '(' OR vC = 'C' OR vC = 'c' ) THEN\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "       vStart := 'S';\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     END IF;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     IF ( vC = '(' ) THEN\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "       vContador := vContador + 1;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     END IF;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     IF ( vStart = 'S' ) THEN\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "       vResultado := vResultado || vC;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     END IF;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     IF ( vC = ')' ) THEN\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "       vContador := vContador - 1;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "       IF ( vContador = 0 ) THEN          \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "         EXIT;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "       END IF;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "     END IF;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   END LOOP;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   return vResultado || ';';\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "   \n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + " END func_fix_create_table;\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + " select func_fix_create_table(dbms_metadata.get_ddl('TABLE',UPPER('[TABELA]'),UPPER('[SCHEMA]'))) TXT from dual";
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/versao") )
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                return ""
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "0.1.0";
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            return "";
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */        }
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    }
+
+
