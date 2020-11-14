@@ -10,11 +10,13 @@ import java.io.InputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
@@ -60,21 +62,9 @@ public class Y {
     public static String local_env="c:\\tmp";
 
     public static java.util.Scanner scanner_pipe=null;
-    public static int n_lines_buffer_DEFAULT=500;    
-    public static String [] ORAs=new String[]{
-        "ORA-00911"
-        ,"ORA-00913"
-        ,"ORA-00917"
-        ,"ORA-00928"
-        ,"ORA-00933"
-        ,"ORA-00936"
-        ,"ORA-00947"
-        ,"ORA-00972"
-        ,"ORA-01756"
-        ,"ORA-01742"
-        ,"ORA-01747"
-        ,"ORA-01438"        
-    };
+    public static int n_lines_buffer_DEFAULT=500;        
+    public String [] ORAs=new String[]{};
+    
     
     public static void main(String[] args) {
 
@@ -125,57 +115,20 @@ cat buffer.log
     }
 
     
-    public void go(String[] args){
-        String version="0.1.0";
+    public void go(String[] args){        
         try_load_ORAs();
-        
-        String [] programas=new String[]{
-            "y banco"
-            ,"y token"
-            ,"y gettoken"
-            ,"y gzip"
-            ,"y gunzip"
-            ,"y echo"
-            ,"y cat"
-            ,"y md5"
-            ,"y sha1"
-            ,"y sha256"
-            ,"y base64"
-            ,"y grep"
-            ,"y wc -l"
-            ,"y head"
-            ,"y tail"
-            ,"y cut"
-            ,"y sed"
-            ,"y tee"
-            ,"y awk print"
-            ,"y dev_null"
-            ,"y dev_in"
-            ,"y help"
-        };
+
         if ( args.length == 0 ){
-            System.err.println(apresentacao(programas));
+            System.err.println(
+                lendo_arquivo_pacote(getClass().getResourceAsStream("/y/manual_mini"))
+            );            
             return;
         }
-        if ( args[0].equals("banco") ){
-            String msg_usage="usage: "
-            + "\n  [y banco -fromCSV [select|selectInsert]]"
-            + "\n  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]"
-            + "\n  [y banco conn,hash executeInsert]"
-            + "\n  [y banco conn,hash execute [|execute..]]"
-            + "\n  [y banco conn,hash createjobexecute]"
-            + "\n  [y banco [connIn,hash|fileCSV,file] connOut,hash outTable,tabelaA [|trunc|createTable] [carga|createjobcarga]]"
-            + "\n  [y banco executejob]"
-            + "\n  [y banco buffer [|-n_lines 500] [|-log buffer.log]]"
-            + "\n  Ex: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\""
-            + "\n  Ex2: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\""
-            + "\n  Obs: entrada de dados pode ser feito por |"
-            + "\n  Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;"            
-            + "\n  Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*"
-            + "\n  Dica3: vendo warnnings ORA: cat $ORAs_Y";
-            
+        if ( args[0].equals("banco") ){            
             if ( args.length == 1 ){
-                System.err.println(msg_usage);
+                System.err.println(
+                    lendo_arquivo_pacote(getClass().getResourceAsStream("/y/manual"))
+                );            
                 return;
             }
 
@@ -441,7 +394,10 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
-            System.err.println("Utilitário Y versão:"+version+"\n"+apresentacao(programas));
+            System.err.println(
+                "Utilitário Y versão:" + lendo_arquivo_pacote(getClass().getResourceAsStream("/y/versao")) + "\n"
+                + lendo_arquivo_pacote(getClass().getResourceAsStream("/y/manual"))
+            );
             return;
         }
         
@@ -826,7 +782,6 @@ cat buffer.log
         System.err.println("Comando nao implementado");
         return;
     }
-    
 
     public void selectCSV(String conn,String parm){
         Connection con=null;
@@ -1427,18 +1382,19 @@ cat buffer.log
         return result;
     }
 
-    public static void try_load_ORAs() {
+    public void try_load_ORAs() {        
+        ORAs=lendo_arquivo_pacote(getClass().getResourceAsStream("/y/ORAs")).split("\n");
+        
         try{
             String caminho=System.getenv("ORAs_Y");
             if ( ! new File(caminho).exists() ) return;
             ArrayList<String> lista=new ArrayList<String>();
             String line;
 
-
-                BufferedReader in=new BufferedReader(new FileReader(caminho));
-                while ((line = in.readLine()) != null)
-                    lista.add(line);
-                in.close();
+            BufferedReader in=new BufferedReader(new FileReader(caminho));
+            while ((line = in.readLine()) != null)
+                lista.add(line);
+            in.close();
 
             if ( lista.size() > 0 )
             {
@@ -2488,8 +2444,19 @@ cat buffer.log
             salvando_file(count+"\n",new File(caminho_count));
         }
     }
+    
+    public String lendo_arquivo_pacote(InputStream fstream){
+        //System.out.println(lendo_arquivo_pacote(getClass().getResourceAsStream("/dis/biblioteca")));
+        String result="";
+        try{
+            DataInputStream in = new DataInputStream(fstream);
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            String strLine;
+            while ((strLine = br.readLine()) != null)
+                result+=strLine+"\n";
+            in.close();
+        }catch (Exception e){}
+        return result;
+    }
+    
 }
-
-
-
-
