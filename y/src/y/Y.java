@@ -817,6 +817,8 @@ cat buffer.log
                     }
                     continue;
                 }
+                if ( line.trim().equals("") && qntCamposCSV > 1 )
+                    break;
                 sb=new StringBuilder();
                 readColunaCSV(line); // init linhaCSV                
                 for ( int i=0;i<qntCamposCSV;i++ ){                    
@@ -828,7 +830,7 @@ cat buffer.log
                     if ( valorColuna == null )
                         sb.append("''");
                     else
-                        sb.append("'"+valorColuna.replace("'","''")+"'");
+                        sb.append("'"+valorColuna.replace("'","''").replace("\"\"","\"")+"'");
                     if ( i != qntCamposCSV-1 )
                         sb.append(",");                        
                 }                
@@ -2618,7 +2620,7 @@ cat buffer.log
                 System.err.println("Erro: CSV inválido, linha inconsistente: "+linhaCSV);
                 System.exit(1);
             }
-            if ( linhaCSV.indexOf("\"",pos_+1) == 0 ){
+            if ( linhaCSV.indexOf("\"",pos_+1) == pos_+1 ){
                 pos=pos_+2;
                 continue;
             }
@@ -2630,6 +2632,12 @@ cat buffer.log
     }
     
     private String readColunaCSVSimples() {
+        if ( linhaCSV.indexOf(";",ponteiroLinhaCSV) == ponteiroLinhaCSV )
+        {
+            ponteiroLinhaCSV++;
+            return "";
+        }
+        
         int pos=linhaCSV.indexOf(";",ponteiroLinhaCSV+1);
         int ini=ponteiroLinhaCSV;
         int fim=-1;
