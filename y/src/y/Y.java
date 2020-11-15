@@ -113,6 +113,7 @@ cat buffer.log
 
         
 */
+        //args=new String[]{"banco","-fileCSV","a","connOut,hash","-outTable","TABELA_CCC","createtable","carga"};
         new Y().go(args);
     }
         
@@ -200,7 +201,7 @@ cat buffer.log
                 }
             }
             // connIn/fileCSV
-            if ( args[1].equals("-connIn") || args[1].startsWith("connIn,") || args[1].startsWith("-fileCSV") || args[1].startsWith("fileCSV,") ){
+            if ( args[1].equals("-connIn") || args[1].startsWith("connIn,") || args[1].equals("-fileCSV") || args[1].startsWith("fileCSV,") ){
                 String [] connIn_fileCSV_connOut_outTable_trunc_app=get_connIn_fileCSV_connOut_outTable_trunc_app(args);
                 if ( connIn_fileCSV_connOut_outTable_trunc_app == null ){
                     comando_invalido(args);
@@ -484,9 +485,7 @@ cat buffer.log
         String outTable="";
         String trunc="";
         String createTable=""; // o valor irá para trunc
-        String app="";
-        
-        
+        String app="";       
         
         if ( args.length > 0 && args[0].equals("banco") )
             args=sliceParm(1,args);
@@ -539,7 +538,7 @@ cat buffer.log
             args=sliceParm(1,args);
         }
         
-        if ( connOut.equals("") && args.length > 1 && args[0].equals("-connOut") )
+        if ( args.length > 1 && connOut.equals("") && args[0].equals("-connOut") )
         {
             connOut=args[1];
             args=sliceParm(2,args);
@@ -588,6 +587,7 @@ cat buffer.log
             return null;
         if ( connOut.equals("") || outTable.equals("") || trunc.equals("") || app.equals("") )
             return null;
+
         return new String[]{connIn,fileCSV,connOut,outTable,trunc,app};
     }
             
@@ -1198,6 +1198,7 @@ cat buffer.log
         {
             System.err.println("Erro: "+e.toString()+" -> "+parm);
             close(rs,stmt,con);
+            System.exit(1);
             return false;
         }        
         close(rs,stmt,con);
@@ -2222,7 +2223,7 @@ cat buffer.log
 
             if ( trunc.equals("S") && ! execute(connOut, "truncate table "+outTable) )
                 return;
-            if ( trunc.equals("CREATETABLE") )
+            if ( trunc.equals("CREATETABLE") && !connIn.equals("") )
             {
                 String tabela=getTableByParm(select);
                 if ( tabela.equals("") ){
@@ -2653,10 +2654,10 @@ cat buffer.log
     }
 
     private String getCreateByCamposCSV(String[] camposCSV, String table) {
-        String result="create table "+table+" (";
+        String result="CREATE TABLE "+table+" (";
         for ( int i=0;i<camposCSV.length;i++ ){
-            result+="\""+camposCSV[i].toUpperCase()+"\" varchar2(4000)";
-            if ( i == camposCSV.length-1 )
+            result+=" \""+camposCSV[i].toUpperCase()+"\" varchar2(4000)";
+            if ( i != camposCSV.length-1 )
                 result+=",";
         }
         result+=")";
@@ -2724,10 +2725,10 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB carga\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc carga\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createtable carga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createTable carga\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC carga\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC trunc carga\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC createtable carga\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC createTable carga\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco executejob]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    (\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc createjobcarga\n"
@@ -2886,5 +2887,4 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            return "";
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */        }
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    }
-
 

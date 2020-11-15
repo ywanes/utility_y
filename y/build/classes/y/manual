@@ -52,10 +52,10 @@ Exemplos...
 [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]
     echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB carga
     echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc carga
-    echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createtable carga
+    echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createTable carga
     y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC carga
     y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC trunc carga
-    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC createtable carga
+    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC createTable carga
 [y banco executejob]
     (
         echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc createjobcarga
