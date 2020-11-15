@@ -810,9 +810,11 @@ cat buffer.log
                 {
                     camposCSV=getCamposCSV(line);
                     qntCamposCSV=camposCSV.length;
-                    String create=getCreateByCamposCSV(camposCSV,table);
-                    if ( ! execute(nemVouExplicar, create) )
-                        return;                                        
+                    if ( ! nemVouExplicar.equals("") ){
+                        String create=getCreateByCamposCSV(camposCSV,table);
+                        if ( ! execute(nemVouExplicar, create) )
+                            return;                                        
+                    }
                     continue;
                 }
                 sb=new StringBuilder();
