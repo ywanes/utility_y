@@ -41,7 +41,7 @@ import java.util.List;
 // java 8
 import java.util.Base64;
 
-// implementando java 8 na mão(para poder rodar no java 6)
+// copia da classe Base64 do java8 para rodar no java6
 //class Base64 {      private Base64() {}      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#basic">Basic</a> type base64 encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getEncoder() {          return Encoder.RFC4648;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#url">URL and Filename safe</a> type base64      * encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getUrlEncoder() {          return Encoder.RFC4648_URLSAFE;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#mime">MIME</a> type base64 encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getMimeEncoder() {         return Encoder.RFC2045;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#mime">MIME</a> type base64 encoding scheme      * with specified line length and line separators.      *      * @param   lineLength      *          the length of each output line (rounded down to nearest multiple      *          of 4). If {@code lineLength <= 0} the output will not be separated      *          in lines      * @param   lineSeparator      *          the line separator for each output line      *      * @return  A Base64 encoder.      *      * @throws  IllegalArgumentException if {@code lineSeparator} includes any      *          character of "The Base64 Alphabet" as specified in Table 1 of      *          RFC 2045.      */     public static Encoder getMimeEncoder(int lineLength, byte[] lineSeparator) {          Objects.requireNonNull(lineSeparator);          int[] base64 = Decoder.fromBase64;          for (byte b : lineSeparator) {              if (base64[b & 0xff] != -1)                  throw new IllegalArgumentException(                      "Illegal base64 line separator character 0x" + Integer.toString(b, 16));          }          if (lineLength <= 0) {              return Encoder.RFC4648;          }          return new Encoder(false, lineSeparator, lineLength >> 2 << 2, true);     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#basic">Basic</a> type base64 encoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getDecoder() {          return Decoder.RFC4648;     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#url">URL and Filename safe</a> type base64      * encoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getUrlDecoder() {          return Decoder.RFC4648_URLSAFE;     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#mime">MIME</a> type base64 decoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getMimeDecoder() {          return Decoder.RFC2045;     }      /**      * This class implements an encoder for encoding byte data using      * the Base64 encoding scheme as specified in RFC 4648 and RFC 2045.      *      * <p> Instances of {@link Encoder} class are safe for use by      * multiple concurrent threads.      *      * <p> Unless otherwise noted, passing a {@code null} argument to      * a method of this class will cause a      * {@link java.lang.NullPointerException NullPointerException} to      * be thrown.      *      * @see     Decoder      * @since   1.8      */     public static class Encoder {          private final byte[] newline;         private final int linemax;         private final boolean isURL;         private final boolean doPadding;          private Encoder(boolean isURL, byte[] newline, int linemax, boolean doPadding) {             this.isURL = isURL;             this.newline = newline;             this.linemax = linemax;             this.doPadding = doPadding;         }          
 //	/**          * This array is a lookup table that translates 6-bit positive integer          * index values into their "Base64 Alphabet" equivalents as specified          * in "Table 1: The Base64 Alphabet" of RFC 2045 (and RFC 4648).          */         private static final char[] toBase64 = {             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',             'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',             'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',             'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'         };          /**          * It's the lookup table for "URL and Filename safe Base64" as specified          * in Table 2 of the RFC 4648, with the '+' and '/' changed to '-' and          * '_'. This table is used when BASE64_URL is specified.          */         private static final char[] toBase64URL = {             'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',             'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',             'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',             'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '-', '_'         };          private static final int MIMELINEMAX = 76;         private static final byte[] CRLF = new byte[] {'\r', '\n'};          static final Encoder RFC4648 = new Encoder(false, null, -1, true);         static final Encoder RFC4648_URLSAFE = new Encoder(true, null, -1, true);         static final Encoder RFC2045 = new Encoder(false, CRLF, MIMELINEMAX, true);          private final int outLength(int srclen) {             int len = 0;             if (doPadding) {                 len = 4 * ((srclen + 2) / 3);             } else {                 int n = srclen % 3;                 len = 4 * (srclen / 3) + (n == 0 ? 0 : n + 1);             }             if (linemax > 0)                                                   len += (len - 1) / linemax * newline.length;             return len;         }          /**          * Encodes all bytes from the specified byte array into a newly-allocated          * byte array using the {@link Base64} encoding scheme. The returned byte          * array is of the length of the resulting bytes.          *          * @param   src          *          the byte array to encode          * @return  A newly-allocated byte array containing the resulting          *          encoded bytes.          */         public byte[] encode(byte[] src) {             int len = outLength(src.length);                       byte[] dst = new byte[len];             int ret = encode0(src, 0, src.length, dst);             if (ret != dst.length)                  return Arrays.copyOf(dst, ret);             return dst;         }          /**          * Encodes all bytes from the specified byte array using the          * {@link Base64} encoding scheme, writing the resulting bytes to the          * given output byte array, starting at offset 0.          *          * <p> It is the responsibility of the invoker of this method to make          * sure the output byte array {@code dst} has enough space for encoding          * all bytes from the input byte array. No bytes will be written to the          * output byte array if the output byte array is not big enough.          *          * @param   src          *          the byte array to encode          * @param   dst          *          the output byte array          * @return  The number of bytes written to the output byte array          *          * @throws  IllegalArgumentException if {@code dst} does not have enough          *          space for encoding all input bytes.          */         public int encode(byte[] src, byte[] dst) {
 //	int len = outLength(src.length);                      if (dst.length < len)                 throw new IllegalArgumentException(                     "Output byte array is too small for encoding all input bytes");             return encode0(src, 0, src.length, dst);         }          /**          * Encodes the specified byte array into a String using the {@link Base64}          * encoding scheme.          *          * <p> This method first encodes all input bytes into a base64 encoded          * byte array and then constructs a new String by using the encoded byte          * array and the {@link java.nio.charset.StandardCharsets#ISO_8859_1          * ISO-8859-1} charset.          *          * <p> In other words, an invocation of this method has exactly the same          * effect as invoking          * {@code new String(encode(src), StandardCharsets.ISO_8859_1)}.          *          * @param   src          *          the byte array to encode          * @return  A String containing the resulting Base64 encoded characters          */         @SuppressWarnings("deprecation")         public String encodeToString(byte[] src) {             byte[] encoded = encode(src);             return new String(encoded, 0, 0, encoded.length);         }          /**          * Encodes all remaining bytes from the specified byte buffer into          * a newly-allocated ByteBuffer using the {@link Base64} encoding          * scheme.          *          * Upon return, the source buffer's position will be updated to          * its limit; its limit will not have been changed. The returned          * output buffer's position will be zero and its limit will be the          * number of resulting encoded bytes.          *          * @param   buffer          *          the source ByteBuffer to encode          * @return  A newly-allocated byte buffer containing the encoded bytes.          */         public ByteBuffer encode(ByteBuffer buffer) {             int len = outLength(buffer.remaining());             byte[] dst = new byte[len];             int ret = 0;             if (buffer.hasArray()) {                 ret = encode0(buffer.array(),                               buffer.arrayOffset() + buffer.position(),                               buffer.arrayOffset() + buffer.limit(),                               dst);                 buffer.position(buffer.limit());             } else {                 byte[] src = new byte[buffer.remaining()];                 buffer.get(src);                 ret = encode0(src, 0, src.length, dst);             }             if (ret != dst.length)                  dst = Arrays.copyOf(dst, ret);             return ByteBuffer.wrap(dst);         }          /**          * Wraps an output stream for encoding byte data using the {@link Base64}          * encoding scheme.          *          * <p> It is recommended to promptly close the returned output stream after          * use, during which it will flush all possible leftover bytes to the underlying          * output stream. Closing the returned output stream will close the underlying          * output stream.          *          * @param   os          *          the output stream.          * @return  the output stream for encoding the byte data into the          *          specified Base64 encoded format          */         public OutputStream wrap(OutputStream os) {             Objects.requireNonNull(os);             return new EncOutputStream(os, isURL ? toBase64URL : toBase64,                                        newline, linemax, doPadding);         }          
@@ -63,6 +63,8 @@ public class Y {
 
     public static java.util.Scanner scanner_pipe=null;
     public static java.util.Scanner scanner_pipe2=null;
+    public static String linhaCSV=null;
+    public static int ponteiroLinhaCSV=0;    
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
     
@@ -111,7 +113,6 @@ cat buffer.log
 
         
 */
-        
         new Y().go(args);
     }
         
@@ -132,10 +133,9 @@ cat buffer.log
                 return;
             }
 
-            // -fromCSV
-            if ( args[1].equals("-fromCSV") )
-            {
-                System.err.println("Comando nao implementado");
+            // fromCSV
+            if ( args.length == 5 && args[1].equals("fromCSV") && args[2].equals("-outTable") && args[4].equals("selectInsert") ){
+                selectInsert("","","",null,args[3],"");
                 return;
             }
             
@@ -795,8 +795,63 @@ cat buffer.log
         obs: campos além do headr nao serão considerados
         */
         
-        System.err.println("Comando nao implementado");
-        return;
+        int countCommit=0;
+        try{
+            if ( ! fileCSV.equals("") )
+                read(new FileInputStream(new File(fileCSV)));
+            String line;
+            String [] camposCSV=null;
+            int qntCamposCSV=0;
+            String valorColuna=null;
+            StringBuilder sb=null;
+            
+            while ( (line=read()) != null ){
+                if ( qntCamposCSV == 0 )
+                {
+                    camposCSV=getCamposCSV(line);
+                    qntCamposCSV=camposCSV.length;
+                    String create=getCreateByCamposCSV(camposCSV,table);
+                    if ( ! execute(nemVouExplicar, create) )
+                        return;                                        
+                    continue;
+                }
+                sb=new StringBuilder();
+                readColunaCSV(line); // init linhaCSV                
+                for ( int i=0;i<qntCamposCSV;i++ ){                    
+                    if ( linhaCSV != null ){
+                        valorColuna=readColunaCSV();
+                        if ( valorColuna == null )
+                            linhaCSV=null; // nao precisar ler mais nada    
+                    }
+                    if ( valorColuna == null )
+                        sb.append("''");
+                    else
+                        sb.append("'"+valorColuna.replace("'","''")+"'");
+                    if ( i != qntCamposCSV-1 )
+                        sb.append(",");                        
+                }                
+                if ( out == null )
+                    System.out.println("insert into "+table+" values("+ sb.toString()+");");
+                else
+                    out.write( ("insert into "+table+" values("+ sb.toString()+");\n").getBytes() );
+                if ( countCommit++ >= 10000 ){
+                    if ( out == null )
+                        System.out.println("commit;");
+                    else
+                        out.write("commit;\n".getBytes());
+                    countCommit=0;
+                }
+            }
+        }
+        catch(Exception e)
+        {
+            if ( ! fileCSV.equals("") )
+                System.err.println("Erro: "+e.toString());
+            else
+                System.err.println("Erro: "+e.toString()+" file:"+fileCSV);
+            System.exit(1);
+        }        
+        
     }
 
     public void selectCSV(String conn,String parm){
@@ -2501,19 +2556,117 @@ cat buffer.log
         Arrays f;
         Comparator g;
     }
+
+    private String [] getCamposCSV(String txt) {
+        // modelos
+        // HEADER_CAMPO1;BB;CC;3;4;5;
+        // HEADER_CAMPO1;BB;CC;3;4;5
+        txt=txt.trim();
+        if ( txt.endsWith(";") )
+            txt=txt.substring(0, txt.length()-1);
+        return txt.replace("\"","").split(";");
+    }
+
+    
+    private void readColunaCSV(String line) {
+        ponteiroLinhaCSV=0;
+        linhaCSV=line;
+    }
+    
+    private String readColunaCSV() {
+        if ( linhaCSV.length() == 0 )
+            return null;
+        if ( ponteiroLinhaCSV == -1 )
+            return null;
+        if ( ponteiroLinhaCSV >= linhaCSV.length() )
+            return null;
+        if ( linhaCSV.substring(ponteiroLinhaCSV, ponteiroLinhaCSV+1).equals("\"") )
+        {
+            return readColunaCSVComplexa();
+        }else{
+            return readColunaCSVSimples();
+        }
+        
+        // linhaCSV
+        /*
+        HEADER_CAMPO1;BB;CC;3;4;5;
+        11;;";;""""""11';;";55;55;55
+        11;;";;""""""11';;";55;55;55
+        11;;";;""""""11';;";55;55;55;
+        33;44
+        33;44
+        33;44;44;44;44;44;44;44;44;44;44;44;44;44;44;44
+        33;44;44;44;44;44;44;44;44;44;44;44;44;44;44;44        
+        */
+        
+    }
+    
+    private String readColunaCSVComplexa() { // exmeplo ";;""""""11';;"        
+        if ( ponteiroLinhaCSV >= linhaCSV.length()-2 )
+            return null;
+        int ini=ponteiroLinhaCSV+1;
+        int fim=-1;
+        int pos=ponteiroLinhaCSV+1; // olhando adiantado
+        int pos_=-1;
+        while(true)
+        {            
+            pos_=linhaCSV.indexOf("\"",pos);
+            if ( pos_ == -1 )
+            {
+                System.err.println("Erro: CSV inválido, linha inconsistente: "+linhaCSV);
+                System.exit(1);
+            }
+            if ( linhaCSV.indexOf("\"",pos_+1) == 0 ){
+                pos=pos_+2;
+                continue;
+            }
+            fim=pos_;
+            ponteiroLinhaCSV=pos_+2;
+            break;
+        }
+        return linhaCSV.substring(ini,fim);
+    }
+    
+    private String readColunaCSVSimples() {
+        int pos=linhaCSV.indexOf(";",ponteiroLinhaCSV+1);
+        int ini=ponteiroLinhaCSV;
+        int fim=-1;
+        if ( pos == -1 )
+        {
+            fim=linhaCSV.length();
+            ponteiroLinhaCSV=-1;
+        }else{
+            fim=pos;
+            ponteiroLinhaCSV=pos+1;
+        }
+        return linhaCSV.substring(ini,fim);
+    }
+
+    private String getCreateByCamposCSV(String[] camposCSV, String table) {
+        String result="create table "+table+" (";
+        for ( int i=0;i<camposCSV.length;i++ ){
+            result+="\""+camposCSV[i].toUpperCase()+"\" varchar2(4000)";
+            if ( i == camposCSV.length-1 )
+                result+=",";
+        }
+        result+=")";
+        return result;
+    }
+    
 }
+
 
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    class Arquivos{
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */        public String lendo_arquivo_pacote(String caminho){
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/manual") )
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                return ""
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "usage:\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco -fromCSV [select|selectInsert]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco fromCSV -outTable tabelaA selectInsert]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco conn,hash executeInsert]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco conn,hash execute [|execute..]]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco conn,hash createjobexecute]\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash outTable,tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco executejob]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y banco buffer [|-n_lines 500] [|-log buffer.log]]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y token]\n"
@@ -2540,9 +2693,8 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplos...\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco -fromCSV [select|selectInsert]]\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo.csv | y banco -fromCSV select\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo.csv | y banco -fromCSV selectInsert\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco fromCSV -outTable tabelaA selectInsert]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select 1 from dual\" | y banco conn,hash select\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y banco conn,hash select \"select 1 from dual\"\n"
@@ -2559,7 +2711,7 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    cat blocoAnonimo | y banco conn,hash execute\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco conn,hash createjobexecute]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"truncate table tabela1\" | y banco conn,hash createjobexecute\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco [connIn,hash|fileCSV,file] connOut,hash outTable,tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB carga\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc carga\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createtable carga\n"

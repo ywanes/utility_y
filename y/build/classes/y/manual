@@ -1,10 +1,10 @@
 usage:
-  [y banco -fromCSV [select|selectInsert]]
+  [y banco fromCSV -outTable tabelaA selectInsert]
   [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]
   [y banco conn,hash executeInsert]
   [y banco conn,hash execute [|execute..]]
   [y banco conn,hash createjobexecute]
-  [y banco [connIn,hash|fileCSV,file] connOut,hash outTable,tabelaA [|trunc|createTable] [carga|createjobcarga]]
+  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]
   [y banco executejob]
   [y banco buffer [|-n_lines 500] [|-log buffer.log]]
   [y token]
@@ -31,9 +31,8 @@ usage:
 
 Exemplos...
 
-[y banco -fromCSV [select|selectInsert]]
-    cat arquivo.csv | y banco -fromCSV select
-    cat arquivo.csv | y banco -fromCSV selectInsert
+[y banco fromCSV -outTable tabelaA selectInsert]
+    cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert
 [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]
     echo "select 1 from dual" | y banco conn,hash select
     y banco conn,hash select "select 1 from dual"
@@ -50,7 +49,7 @@ Exemplos...
     cat blocoAnonimo | y banco conn,hash execute
 [y banco conn,hash createjobexecute]
     echo "truncate table tabela1" | y banco conn,hash createjobexecute
-[y banco [connIn,hash|fileCSV,file] connOut,hash outTable,tabelaA [|trunc|createTable] [carga|createjobcarga]]
+[y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]
     echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB carga
     echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc carga
     echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createtable carga
