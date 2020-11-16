@@ -1,6 +1,6 @@
 
 //
-// https://github.com/ywanes/utility_y/blob/master/y/src/y/Y.java
+// https://github.com/ywanes/utility_y/blob/master/y/src/Y.java
 //
 
 import ComplementoJsch.ScpFrom;
