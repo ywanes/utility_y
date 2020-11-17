@@ -17,12 +17,13 @@ public class GeraTextoClasseArquivos {
         String prefixo="/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    ";
         System.out.println(prefixo+"class Arquivos{");
         System.out.println(prefixo+"    public String lendo_arquivo_pacote(String caminho){");
-        for ( String item : getResourceFiles("/y") )
+        for ( String item : getResourceFiles("/") )
         {
             if ( item.contains(".") ) continue;
+            if ( item.equals("y") ) continue;
             System.out.println(prefixo+"        if ( caminho.equals(\"/y/"+item+"\") )");
             System.out.println(prefixo+"            return \"\"");
-            String [] linhas=lendo_arquivo_pacote("/y/"+item).split("\n");
+            String [] linhas=lendo_arquivo_pacote("/"+item).split("\n");
             for ( int i=0;i<linhas.length;i++ )
                 if ( i == linhas.length -1 )
                     System.out.println(prefixo+"            + \""+linhas[i].replace("\"","\\\"")+"\";");

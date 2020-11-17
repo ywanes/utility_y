@@ -3,8 +3,10 @@
 // https://github.com/ywanes/utility_y/blob/master/y/src/Y.java
 //
 
+import ComplementoJsch.Exec;
 import ComplementoJsch.ScpFrom;
 import ComplementoJsch.ScpTo;
+import ComplementoJsch.Shell;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -113,6 +115,7 @@ cat buffer.log
 
         
 */
+        
         //args=new String[]{"banco","-fileCSV","a","connOut,hash","-outTable","TABELA_CCC","createtable","carga"};
         new Y().go(args);
     }
@@ -375,6 +378,14 @@ cat buffer.log
         }
         if ( args[0].equals("scp") ){
             scp(args);
+            return;
+        }        
+        if ( args[0].equals("execSsh") ){
+            execSsh(args);
+            return;
+        }        
+        if ( args[0].equals("ssh") ){
+            ssh(args);
             return;
         }        
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
@@ -2647,7 +2658,9 @@ cat buffer.log
         return result;
     }
 
-    private void scp(String[] args) {
+    private void scp(String[] args) {        
+        // créditos
+        // https://github.com/is/jsch/tree/master/examples
         if ( args.length != 3)
         {
             comando_invalido(args);
@@ -2670,8 +2683,32 @@ cat buffer.log
         System.exit(0);
     }
     
-}
+    private void execSsh(String[] args) {        
+        // créditos
+        // https://github.com/is/jsch/tree/master/examples
+        if ( args.length != 3)
+        {
+            comando_invalido(args);
+            return;
+        }
+        Exec.custom(new String[]{args[1],args[2]});
+        System.exit(0);
+    }
+    
+    private void ssh(String[] args) {        
+        // créditos
+        // https://github.com/is/jsch/tree/master/examples
+        if ( args.length != 2)
+        {
+            comando_invalido(args);
+            return;
+        }
+        Shell.custom(new String[]{args[1]});
+        System.exit(0);
+    }
 
+
+}
 
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    class Arquivos{
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */        public String lendo_arquivo_pacote(String caminho){
@@ -2707,6 +2744,8 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y dev_null]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y dev_in]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y scp]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y execSsh]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y ssh]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y help]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplos...\n"
@@ -2796,6 +2835,10 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y scp]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y scp file1 user,pass@servidor:file2\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y scp user,pass@servidor:file1 file2\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y execSsh]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y execSsh user,pass@servidor command\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y ssh]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y ssh user,pass@servidor\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
@@ -2833,6 +2876,8 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y dev_null]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y dev_in]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y scp]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y execSsh]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y ssh]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y help]  ";
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/ORAs") )
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                return ""
@@ -2898,5 +2943,4 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            return "";
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */        }
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    }
-
 

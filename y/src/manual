@@ -28,6 +28,8 @@ usage:
   [y dev_null]
   [y dev_in]
   [y scp]
+  [y execSsh]
+  [y ssh]
   [y help]
 
 Exemplos...
@@ -117,6 +119,10 @@ Exemplos...
 [y scp]
     y scp file1 user,pass@servidor:file2
     y scp user,pass@servidor:file1 file2
+[y execSsh]
+    y execSsh user,pass@servidor command
+[y ssh]
+    y ssh user,pass@servidor
 
 Exemplo de conn: -conn "jdbc:oracle:thin:@//host_name:1521/service_name|login|senha"
 Exemplo de conn: -conn "jdbc:oracle:thin:@host_name:1566:sid_name|login|senha"

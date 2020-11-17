@@ -19,7 +19,7 @@ public class ScpFrom{
 
   public static void custom(String[] arg){
     if(arg.length!=2 || !arg[0].contains(",") || !arg[0].contains("@")){
-      System.err.println("usage: java ScpFrom user,pass@remotehost:file1 file2");
+      System.err.println("usage: y scp user,pass@remotehost:file1 file2");
       System.exit(-1);
     }      
     

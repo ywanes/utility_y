@@ -21,4 +21,6 @@ usage:
   [y dev_null]
   [y dev_in]
   [y scp]
+  [y execSsh]
+  [y ssh]
   [y help]  
