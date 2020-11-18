@@ -2707,11 +2707,7 @@ cat buffer.log
         System.exit(0);
     }
 
-
 }
-
-
-
 
 
 
@@ -2848,9 +2844,9 @@ cat buffer.log
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Observações:\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Observacoes:\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "entrada de dados pode ser feito por |\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmação de fim de processamento de selectCSV\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmacao de fim de processamento de selectCSV\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;\n"
