@@ -136,3 +136,12 @@ Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492
 Dica2: vendo os tokens: grep ":" $TOKEN_Y/*
 Dica3: vendo warnnings ORA: cat $ORAs_Y
 
+alias no windows(set_alias_windows.reg):
+Windows Registry Editor Version 5.00
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Command Processor]
+"AutoRun"="DOSKEY y=java -cp c:\\y;c:\\y\\jsch-0.1.54E.jar;c:\\y\\ojdbc6.jar Y $*"
+
+alias no linux:
+alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.54E.jar Y'
+
+o alias windows funciona nesse comando "y echo a" mas nao nesse "y echo a | y wc -l"
