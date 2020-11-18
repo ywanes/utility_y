@@ -26,9 +26,9 @@ public class GeraTextoClasseArquivos {
             String [] linhas=lendo_arquivo_pacote("/"+item).split("\n");
             for ( int i=0;i<linhas.length;i++ )
                 if ( i == linhas.length -1 )
-                    System.out.println(prefixo+"            + \""+linhas[i].replace("\"","\\\"")+"\";");
+                    System.out.println(prefixo+"            + \""+linhas[i].replace("\\","\\\\").replace("\"","\\\"")+"\";");
                 else
-                    System.out.println(prefixo+"            + \""+linhas[i].replace("\"","\\\"")+"\\n\"");
+                    System.out.println(prefixo+"            + \""+linhas[i].replace("\\","\\\\").replace("\"","\\\"")+"\\n\"");
         }
         
         System.out.println(prefixo+"        return \"\";");
