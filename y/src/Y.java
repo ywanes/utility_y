@@ -7,6 +7,7 @@ import ComplementoJsch.Exec;
 import ComplementoJsch.ScpFrom;
 import ComplementoJsch.ScpTo;
 import ComplementoJsch.Shell;
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -24,6 +25,9 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -2706,7 +2710,195 @@ cat buffer.log
         Shell.custom(new String[]{args[1]});
         System.exit(0);
     }
+}
 
+class Ponte {
+    public static void main(String[] args)
+    {       
+        // exemplo ponte
+        //new Ponte().ponte(8080,"localhost",9090);
+
+        // exemplo server
+        //new Ponte().server("9090");        
+        // exemplo client
+        //new Ponte().client("localhost","8080");
+    }
+
+    // expoem port0 and conect host1/port1
+    private void ponte(int port0, String host1, int port1) {
+        Destino destino=new Destino(host1,port1);
+        Origem origem=new Origem(port0);
+        origem.referencia(destino);
+        destino.referencia(origem);
+        origem.start(); // destino é startado no meio do start da origem;
+    }
+
+    private class Destino {
+        OutputStream os=null;
+        Origem origem=null;
+        String host1;
+        int port1;        
+        private Destino(String host1, int port1) {
+            this.host1=host1;
+            this.port1=port1;
+        }
+        private void referencia(Origem origem) {
+            this.origem=origem;
+        }
+        private void start() {
+            try {
+                Socket socket=new Socket(host1, port1);                                                
+                InputStream is=socket.getInputStream();                        
+                os=socket.getOutputStream();
+                new Thread(){
+                    public void run(){
+                        int len=0;
+                        byte[] buffer = new byte[2048];
+                        try{
+                            while( (len=is.read(buffer)) != -1 )
+                                origem.volta(buffer);
+                        }catch(Exception e){
+                            new FIM("desconectado");
+                        }
+                    }
+                }.start();                        
+            } catch (Exception ex) {
+                System.out.println("Não foi possível se conectar "+ex.toString());
+            }
+        }
+
+        private void ida(byte[] buffer) {
+            try {
+                os.write(buffer);
+            } catch (Exception ex) {
+                new FIM("desconectado");
+            }
+        }
+    }
+
+    private class Origem {        
+        OutputStream os=null;
+        Destino destino=null;
+        int port0;
+        private Origem(int port0) {
+            this.port0=port0;
+        }
+        private void referencia(Destino destino) {
+            this.destino=destino;
+        }
+
+        private void start() {
+            try {
+                ServerSocket serverSocket = new ServerSocket(port0, 1,InetAddress.getByName("localhost"));
+                try {
+                    Socket socket=serverSocket.accept();
+                    
+                    // start destino
+                    destino.start();
+                    
+                    int len=0;
+                    byte[] buffer = new byte[2048];            
+                    InputStream is=null;
+                    OutputStream os=null;
+                    BufferedInputStream bis=null;                            
+                    try{
+                        is = socket.getInputStream();
+                        os = socket.getOutputStream();
+                        bis=new BufferedInputStream(is);            
+                        System.out.println("obs: Esta ponte só permite uma conexão, e funciona somente uma vez, depois tem que rodar o programa novamente!");
+                        System.out.println("obs2: A ponte só estabelece conexão com o destino quando detectar o início da origem");
+                        System.out.println("iniciando ponte");
+                        while( (len=bis.read(buffer)) != -1 )
+                            destino.ida(buffer);
+                        System.out.println("terminando ponte");                        
+                        new FIM("");
+                    }catch(Exception e){
+                        new FIM("Desconect.. "+e.toString());
+                    }
+                    try{ bis.close(); }catch(Exception e){}
+                    try{ is.close(); }catch(Exception e){}
+                    
+                } catch (Exception e) {
+                    new FIM("Erro ao executar servidor:" + e.toString());
+                }
+            } catch (Exception e) {
+                new FIM("erro na inicialização: "+e.toString());
+                System.exit(1);
+            }
+        }
+
+        private void volta(byte[] buffer) {
+            try {
+                os.write(buffer);
+            } catch (Exception ex) {
+                new FIM("desconectado");
+            }
+        }
+    }
+
+    // preparando para receber varias conexoes
+    private void server(String port) {
+        try {
+            ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port), 1,InetAddress.getByName("localhost"));
+            while (true) {
+                try {
+                    Socket socket=serverSocket.accept();
+                    System.out.println("recebendo conexao..");
+                    new Thread(){
+                        public void run(){
+                            server0(socket);
+                        }
+                    }.start();
+                } catch (Exception e) {
+                    System.out.println("Erro ao executar servidor:" + e.toString());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("erro na inicialização: "+e.toString());
+            System.exit(1);
+        }
+    }
+    
+    // operando uma unica comunicação
+    private void server0(Socket socket){
+        int len=0;
+        byte[] buffer = new byte[2048];            
+        InputStream is=null;
+        BufferedInputStream bis=null;
+        try{
+            is = socket.getInputStream();
+            bis=new BufferedInputStream(is);            
+            while( (len=bis.read (buffer)) != -1 )
+            {
+                System.out.println(
+                    new String(buffer)
+                );
+            }
+        }catch(Exception e){
+            System.out.println("Desconect.. "+e.toString());
+        }
+        try{ bis.close(); }catch(Exception e){}
+        try{ is.close(); }catch(Exception e){}
+    }
+
+    private void client(String host, String port) {
+        OutputStream os=null;
+        try {
+            Socket socket=new Socket(host, Integer.parseInt(port));
+            os=socket.getOutputStream();
+            os.write(new byte[]{1,2,3,70});
+        } catch (Exception ex) {
+            System.out.println("Não foi possível se conectar "+ex.toString());
+        }
+        try{ os.close(); }catch(Exception e){}
+    }
+
+    private class FIM {
+        public FIM(String txt) {
+            System.out.println(txt);
+            System.exit(1);
+        }
+    }
 }
 
 
