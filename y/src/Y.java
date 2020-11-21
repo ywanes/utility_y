@@ -46,6 +46,7 @@ import java.util.List;
 
 // java 8
 import java.util.Base64;
+import java.util.Random;
 
 // copia da classe Base64 do java8 para rodar no java6
 //class Base64 {      private Base64() {}      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#basic">Basic</a> type base64 encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getEncoder() {          return Encoder.RFC4648;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#url">URL and Filename safe</a> type base64      * encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getUrlEncoder() {          return Encoder.RFC4648_URLSAFE;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#mime">MIME</a> type base64 encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getMimeEncoder() {         return Encoder.RFC2045;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#mime">MIME</a> type base64 encoding scheme      * with specified line length and line separators.      *      * @param   lineLength      *          the length of each output line (rounded down to nearest multiple      *          of 4). If {@code lineLength <= 0} the output will not be separated      *          in lines      * @param   lineSeparator      *          the line separator for each output line      *      * @return  A Base64 encoder.      *      * @throws  IllegalArgumentException if {@code lineSeparator} includes any      *          character of "The Base64 Alphabet" as specified in Table 1 of      *          RFC 2045.      */     public static Encoder getMimeEncoder(int lineLength, byte[] lineSeparator) {          Objects.requireNonNull(lineSeparator);          int[] base64 = Decoder.fromBase64;          for (byte b : lineSeparator) {              if (base64[b & 0xff] != -1)                  throw new IllegalArgumentException(                      "Illegal base64 line separator character 0x" + Integer.toString(b, 16));          }          if (lineLength <= 0) {              return Encoder.RFC4648;          }          return new Encoder(false, lineSeparator, lineLength >> 2 << 2, true);     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#basic">Basic</a> type base64 encoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getDecoder() {          return Decoder.RFC4648;     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#url">URL and Filename safe</a> type base64      * encoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getUrlDecoder() {          return Decoder.RFC4648_URLSAFE;     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#mime">MIME</a> type base64 decoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getMimeDecoder() {          return Decoder.RFC2045;     }      /**      * This class implements an encoder for encoding byte data using      * the Base64 encoding scheme as specified in RFC 4648 and RFC 2045.      *      * <p> Instances of {@link Encoder} class are safe for use by      * multiple concurrent threads.      *      * <p> Unless otherwise noted, passing a {@code null} argument to      * a method of this class will cause a      * {@link java.lang.NullPointerException NullPointerException} to      * be thrown.      *      * @see     Decoder      * @since   1.8      */     public static class Encoder {          private final byte[] newline;         private final int linemax;         private final boolean isURL;         private final boolean doPadding;          private Encoder(boolean isURL, byte[] newline, int linemax, boolean doPadding) {             this.isURL = isURL;             this.newline = newline;             this.linemax = linemax;             this.doPadding = doPadding;         }          
@@ -2713,24 +2714,53 @@ cat buffer.log
 }
 
 class Ponte {
-    public static void main(String[] args)
-    {       
-        // exemplo ponte
-        //new Ponte().ponte(8080,"localhost",9090);
+    //exemplo
+    //new Ponte().serverRouter(8080,"localhost",9090);                
+    // teste server
+    //new Ponte().TESTEserver("9090");                        
+    // teste client
+    //new Ponte().TESTEclient("localhost","8080");
 
-        // exemplo server
-        //new Ponte().server("9090");        
-        // exemplo client
-        //new Ponte().client("localhost","8080");
+    private void serverRouter(int port0, String host1, int port1){
+        Ambiente ambiente=null;
+        try{
+            ambiente=new Ambiente(port0);
+        }catch(Exception e){
+            System.out.println("Nao foi possível utilizar a porta "+port0+" - "+e.toString());
+            System.exit(1);
+        }     
+        System.out.println("ServerRouter criado.");
+        System.out.println("obs: A ponte só estabelece conexão com o destino quando detectar o início da origem");
+        while(true){
+            try{
+                Socket credencialSocket=ambiente.getCredencialSocket();
+                new Thread(){
+                    public void run(){
+                        ponte0(credencialSocket,host1,port1);
+                    }
+                }.start();   
+            }catch(Exception e){
+                System.out.println("FIM");
+                break;
+            }
+        }
     }
 
-    // expoem port0 and conect host1/port1
-    private void ponte(int port0, String host1, int port1) {
-        Destino destino=new Destino(host1,port1);
-        Origem origem=new Origem(port0);
-        origem.referencia(destino);
-        destino.referencia(origem);
-        origem.start(); // destino é startado no meio do start da origem;
+    private void ponte0(Socket credencialSocket, String host1, int port1) {
+        int id=new Random().nextInt(100000);
+        System.out.println("iniciando ponte id "+id);
+        Origem origem=null;
+        try{
+            Destino destino=new Destino(host1,port1);                    
+            origem=new Origem(credencialSocket,id);
+            origem.referencia(destino);
+            destino.referencia(origem);
+            origem.start(); // destino é startado no meio do start da origem;
+        }catch(Exception e){
+            System.out.println("termino inexperado de ponte id "+id+" - "+e.toString());
+            origem.destroy();
+        }
+        System.out.println("finalizando ponte id "+id);
     }
 
     private class Destino {
@@ -2745,161 +2775,150 @@ class Ponte {
         private void referencia(Origem origem) {
             this.origem=origem;
         }
-        private void start() {
-            try {
-                Socket socket=new Socket(host1, port1);                                                
-                InputStream is=socket.getInputStream();                        
-                os=socket.getOutputStream();
-                new Thread(){
-                    public void run(){
-                        int len=0;
-                        byte[] buffer = new byte[2048];
-                        try{
-                            while( (len=is.read(buffer)) != -1 )
-                                origem.volta(buffer);
-                        }catch(Exception e){
-                            new FIM("desconectado");
-                        }
+        private void start() throws Exception {
+            Socket socket=new Socket(host1, port1);                                                
+            InputStream is=socket.getInputStream();                        
+            os=socket.getOutputStream();
+            new Thread(){
+                public void run(){
+                    int len=0;
+                    byte[] buffer = new byte[2048];
+                    try{
+                        while( (len=is.read(buffer)) != -1 )
+                            origem.volta(buffer);
+                    }catch(Exception e){
+                        //new FIM("desconectado1 "+e.toString());                                
+                        System.out.println("desconectou destino");
                     }
-                }.start();                        
-            } catch (Exception ex) {
-                System.out.println("Não foi possível se conectar "+ex.toString());
-            }
+                }
+            }.start();                        
         }
 
-        private void ida(byte[] buffer) {
-            try {
-                os.write(buffer);
-            } catch (Exception ex) {
-                new FIM("desconectado");
-            }
+        private void ida(byte[] buffer) throws Exception {
+            os.write(buffer);
         }
     }
 
-    private class Origem {        
+    private class Origem {    
+        int ponteID=0;
+        Socket socket=null;
         OutputStream os=null;
         Destino destino=null;
         int port0;
-        private Origem(int port0) {
-            this.port0=port0;
+        private Origem(Socket credencialSocket,int ponteID) {
+            socket=credencialSocket;
+            this.ponteID=ponteID;
         }
         private void referencia(Destino destino) {
             this.destino=destino;
         }
 
-        private void start() {
-            try {
-                ServerSocket serverSocket = new ServerSocket(port0, 1,InetAddress.getByName("localhost"));
-                try {
-                    Socket socket=serverSocket.accept();
-                    
-                    // start destino
-                    destino.start();
-                    
-                    int len=0;
-                    byte[] buffer = new byte[2048];            
-                    InputStream is=null;
-                    OutputStream os=null;
-                    BufferedInputStream bis=null;                            
-                    try{
-                        is = socket.getInputStream();
-                        os = socket.getOutputStream();
-                        bis=new BufferedInputStream(is);            
-                        System.out.println("obs: Esta ponte só permite uma conexão, e funciona somente uma vez, depois tem que rodar o programa novamente!");
-                        System.out.println("obs2: A ponte só estabelece conexão com o destino quando detectar o início da origem");
-                        System.out.println("iniciando ponte");
-                        while( (len=bis.read(buffer)) != -1 )
-                            destino.ida(buffer);
-                        System.out.println("terminando ponte");                        
-                        new FIM("");
-                    }catch(Exception e){
-                        new FIM("Desconect.. "+e.toString());
-                    }
-                    try{ bis.close(); }catch(Exception e){}
-                    try{ is.close(); }catch(Exception e){}
-                    
-                } catch (Exception e) {
-                    new FIM("Erro ao executar servidor:" + e.toString());
-                }
-            } catch (Exception e) {
-                new FIM("erro na inicialização: "+e.toString());
-                System.exit(1);
-            }
+        private void start() throws Exception {
+            // start destino
+            destino.start();
+
+            int len=0;
+            byte[] buffer = new byte[2048];            
+            InputStream is=null;
+            OutputStream os=null;
+            BufferedInputStream bis=null;                            
+            is = socket.getInputStream();
+            os = socket.getOutputStream();
+            bis=new BufferedInputStream(is);                            
+            while( (len=bis.read(buffer)) != -1 )
+                destino.ida(buffer);                
+
+            try{ bis.close(); }catch(Exception e){}
+            try{ is.close(); }catch(Exception e){}
         }
 
-        private void volta(byte[] buffer) {
-            try {
-                os.write(buffer);
-            } catch (Exception ex) {
-                new FIM("desconectado");
-            }
+        private void volta(byte[] buffer) throws Exception {
+            os.write(buffer);
         }
+
+        private void destroy() {
+            try{
+                socket.close();
+            }catch(Exception e){}
+        }
+
     }
 
     // preparando para receber varias conexoes
-    private void server(String port) {
-        try {
-            ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port), 1,InetAddress.getByName("localhost"));
-            while (true) {
-                try {
-                    Socket socket=serverSocket.accept();
-                    System.out.println("recebendo conexao..");
-                    new Thread(){
-                        public void run(){
-                            server0(socket);
-                        }
-                    }.start();
-                } catch (Exception e) {
-                    System.out.println("Erro ao executar servidor:" + e.toString());
+    private void TESTEserver(String port) throws Exception {
+        ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port), 1,InetAddress.getByName("localhost"));
+        System.out.println("servidor porta "+port+" criado.");
+        while (true) {
+            Socket socket=serverSocket.accept();
+            System.out.println("recebendo conexao..");
+            new Thread(){
+                public void run(){
+                    try {
+                        TESTEserver0(socket);
+                    } catch (Exception e) {
+                        System.out.println("Erro ao executar servidor:" + e.toString());
+                    }
+                    System.out.println("finalizando conexao..");
                 }
-            }
-        } catch (Exception e) {
-            System.err.println("erro na inicialização: "+e.toString());
-            System.exit(1);
+            }.start();
         }
     }
-    
+
     // operando uma unica comunicação
-    private void server0(Socket socket){
+    private void TESTEserver0(Socket socket) throws Exception{
         int len=0;
         byte[] buffer = new byte[2048];            
         InputStream is=null;
         BufferedInputStream bis=null;
-        try{
-            is = socket.getInputStream();
-            bis=new BufferedInputStream(is);            
-            while( (len=bis.read (buffer)) != -1 )
-            {
-                System.out.println(
-                    new String(buffer)
-                );
-            }
-        }catch(Exception e){
-            System.out.println("Desconect.. "+e.toString());
+        is = socket.getInputStream();
+        bis=new BufferedInputStream(is);            
+        while( (len=bis.read (buffer)) != -1 )
+        {
+            System.out.println(
+                new String(buffer)
+            );
         }
         try{ bis.close(); }catch(Exception e){}
         try{ is.close(); }catch(Exception e){}
     }
 
-    private void client(String host, String port) {
+    private void TESTEclient(String host, String port) throws Exception {
+        System.out.println("cliente iniciado.");
         OutputStream os=null;
-        try {
-            Socket socket=new Socket(host, Integer.parseInt(port));
-            os=socket.getOutputStream();
-            os.write(new byte[]{1,2,3,70});
-        } catch (Exception ex) {
-            System.out.println("Não foi possível se conectar "+ex.toString());
-        }
+
+        Socket socket=new Socket(host, Integer.parseInt(port));
+        os=socket.getOutputStream();
+        os.write(new byte[]{1,2,3,70});
+        try {Thread.sleep(3000);}catch (Exception e) { }        
+        os.write(new byte[]{1,2,3,70});
+        try {Thread.sleep(3000);}catch (Exception e) { }        
+        os.write(new byte[]{1,2,3,70});
+        try {Thread.sleep(3000);}catch (Exception e) { }        
+        os.write(new byte[]{1,2,3,70});
+        try {Thread.sleep(3000);}catch (Exception e) { }        
+        os.write(new byte[]{1,2,3,70});
+        try {Thread.sleep(3000);}catch (Exception e) { }        
         try{ os.close(); }catch(Exception e){}
     }
 
     private class FIM {
-        public FIM(String txt) {
-            System.out.println(txt);
-            System.exit(1);
+        public FIM(String txt) throws Exception {
+            throw new Exception(txt);
         }
     }
-}
+    
+    class Ambiente {
+        ServerSocket serverSocket=null;
+        private Ambiente(int port0) throws Exception {
+            serverSocket = new ServerSocket(port0, 1,InetAddress.getByName("localhost"));
+        }
+        private Socket getCredencialSocket() throws Exception {
+            return serverSocket.accept();
+        }
+    }
+
+}  
+
 
 
 
