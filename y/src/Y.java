@@ -393,6 +393,36 @@ cat buffer.log
             ssh(args);
             return;
         }        
+/*        
+[y serverRouter]
+    y serverRouter 8080 localhost 9090
+    y serverRouter 8080 localhost 9090 show
+    y serverRouter 8080 localhost 9090 showOnlySend
+    y serverRouter 8080 localhost 9090 showOnlyReceive
+    obs:
+        8080 -> porta para conectar no router
+        localhost -> local que o serverRouter conecta
+        9090 -> porta que o serverRouter conecta
+[y TESTEserver]
+    y TESTEserver 9090
+[y TESTEclient]
+    y TESTEclient localhost 8080
+*/        
+        if ( args[0].equals("serverRouter"))
+        {
+            serverRouter(args);
+            return;            
+        }
+        if ( args[0].equals("TESTEserver"))
+        {
+            TESTEserver(args);
+            return;            
+        }
+        if ( args[0].equals("TESTEclient"))
+        {
+            TESTEclient(args);
+            return;            
+        }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             System.err.println(
                 "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
@@ -2711,17 +2741,52 @@ cat buffer.log
         Shell.custom(new String[]{args[1]});
         System.exit(0);
     }
+
+    private void serverRouter(String[] args) {
+        if ( args.length == 4 ){
+            new Ponte().serverRouter(Integer.parseInt(args[1]),args[2],Integer.parseInt(args[3]),"");
+            return;
+        }
+        if ( args.length == 5 && ( args[4].equals("show") || args[4].equals("showOnlySend") || args[4].equals("showOnlyReceive") ) ){
+            new Ponte().serverRouter(Integer.parseInt(args[1]),args[2],Integer.parseInt(args[3]),args[4]);
+            return;
+        }
+        comando_invalido(args);
+        System.exit(0);
+    }
+
+    private void TESTEserver(String[] args) {
+        if ( args.length == 2 ){
+            new Ponte().TESTEserver(Integer.parseInt(args[1]));
+            return;
+        }
+        comando_invalido(args);
+        System.exit(0);
+    }
+
+    private void TESTEclient(String[] args) {
+        if ( args.length == 3 ){
+            new Ponte().TESTEclient(args[1],Integer.parseInt(args[2]));
+            return;
+        }
+        comando_invalido(args);
+        System.exit(0);
+    }
 }
 
 class Ponte {
     //exemplo
-    //new Ponte().serverRouter(8080,"localhost",9090);                
+    //new Ponte().serverRouter(8080,"localhost",9090,"");                
+    //new Ponte().serverRouter(8080,"localhost",9090,"show");                
+    //new Ponte().serverRouter(8080,"localhost",9090,"showOnlySend");                
+    //new Ponte().serverRouter(8080,"localhost",9090,"showOnlyReceive");                
+    
     // teste server
     //new Ponte().TESTEserver("9090");                        
     // teste client
     //new Ponte().TESTEclient("localhost","8080");
 
-    private void serverRouter(int port0, String host1, int port1){
+    public void serverRouter(int port0, String host1, int port1,String typeShow){
         Ambiente ambiente=null;
         try{
             ambiente=new Ambiente(port0);
@@ -2736,7 +2801,7 @@ class Ponte {
                 Socket credencialSocket=ambiente.getCredencialSocket();
                 new Thread(){
                     public void run(){
-                        ponte0(credencialSocket,host1,port1);
+                        ponte0(credencialSocket,host1,port1,typeShow);
                     }
                 }.start();   
             }catch(Exception e){
@@ -2746,13 +2811,13 @@ class Ponte {
         }
     }
 
-    private void ponte0(Socket credencialSocket, String host1, int port1) {
+    private void ponte0(Socket credencialSocket, String host1, int port1,String typeShow) {
         int id=new Random().nextInt(100000);
         System.out.println("iniciando ponte id "+id);
         Origem origem=null;
         try{
             Destino destino=new Destino(host1,port1);                    
-            origem=new Origem(credencialSocket,id);
+            origem=new Origem(credencialSocket,id,typeShow);
             origem.referencia(destino);
             destino.referencia(origem);
             origem.start(); // destino é startado no meio do start da origem;
@@ -2787,7 +2852,6 @@ class Ponte {
                         while( (len=is.read(buffer)) != -1 )
                             origem.volta(buffer);
                     }catch(Exception e){
-                        //new FIM("desconectado1 "+e.toString());                                
                         System.out.println("desconectou destino");
                     }
                 }
@@ -2804,10 +2868,16 @@ class Ponte {
         Socket socket=null;
         OutputStream os=null;
         Destino destino=null;
+        boolean displayIda=false;
+        boolean displayVolta=false;
         int port0;
-        private Origem(Socket credencialSocket,int ponteID) {
+        private Origem(Socket credencialSocket,int ponteID,String typeShow) {
             socket=credencialSocket;
             this.ponteID=ponteID;
+            if ( typeShow.equals("show") || typeShow.equals("showOnlySend"))
+                displayIda=true;
+            if ( typeShow.equals("show") || typeShow.equals("showOnlyReceive"))
+                displayVolta=true;
         }
         private void referencia(Destino destino) {
             this.destino=destino;
@@ -2825,14 +2895,23 @@ class Ponte {
             is = socket.getInputStream();
             os = socket.getOutputStream();
             bis=new BufferedInputStream(is);                            
-            while( (len=bis.read(buffer)) != -1 )
-                destino.ida(buffer);                
+            while( (len=bis.read(buffer)) != -1 ){
+                if ( displayIda ){
+                    System.out.println("->("+ponteID+"):");
+                    System.out.println(buffer);
+                }
+                destino.ida(buffer);              
+            }
 
             try{ bis.close(); }catch(Exception e){}
             try{ is.close(); }catch(Exception e){}
         }
 
         private void volta(byte[] buffer) throws Exception {
+            if ( displayVolta ){
+                System.out.println("<-("+ponteID+"):");
+                System.out.println(buffer);
+            }
             os.write(buffer);
         }
 
@@ -2845,22 +2924,26 @@ class Ponte {
     }
 
     // preparando para receber varias conexoes
-    private void TESTEserver(String port) throws Exception {
-        ServerSocket serverSocket = new ServerSocket(Integer.parseInt(port), 1,InetAddress.getByName("localhost"));
-        System.out.println("servidor porta "+port+" criado.");
-        while (true) {
-            Socket socket=serverSocket.accept();
-            System.out.println("recebendo conexao..");
-            new Thread(){
-                public void run(){
-                    try {
-                        TESTEserver0(socket);
-                    } catch (Exception e) {
-                        System.out.println("Erro ao executar servidor:" + e.toString());
+    public void TESTEserver(int port){
+        try{
+            ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName("localhost"));
+            System.out.println("servidor porta "+port+" criado.");
+            while (true) {
+                Socket socket=serverSocket.accept();
+                System.out.println("recebendo conexao..");
+                new Thread(){
+                    public void run(){
+                        try {
+                            TESTEserver0(socket);
+                        } catch (Exception e) {
+                            System.out.println("Erro ao executar servidor:" + e.toString());
+                        }
+                        System.out.println("finalizando conexao..");
                     }
-                    System.out.println("finalizando conexao..");
-                }
-            }.start();
+                }.start();
+            }
+        }catch(Exception e){
+            System.out.println(e.toString());
         }
     }
 
@@ -2882,31 +2965,29 @@ class Ponte {
         try{ is.close(); }catch(Exception e){}
     }
 
-    private void TESTEclient(String host, String port) throws Exception {
-        System.out.println("cliente iniciado.");
-        OutputStream os=null;
+    public void TESTEclient(String host, int port){
+        try{
+            System.out.println("cliente iniciado.");
+            OutputStream os=null;
 
-        Socket socket=new Socket(host, Integer.parseInt(port));
-        os=socket.getOutputStream();
-        os.write(new byte[]{1,2,3,70});
-        try {Thread.sleep(3000);}catch (Exception e) { }        
-        os.write(new byte[]{1,2,3,70});
-        try {Thread.sleep(3000);}catch (Exception e) { }        
-        os.write(new byte[]{1,2,3,70});
-        try {Thread.sleep(3000);}catch (Exception e) { }        
-        os.write(new byte[]{1,2,3,70});
-        try {Thread.sleep(3000);}catch (Exception e) { }        
-        os.write(new byte[]{1,2,3,70});
-        try {Thread.sleep(3000);}catch (Exception e) { }        
-        try{ os.close(); }catch(Exception e){}
-    }
-
-    private class FIM {
-        public FIM(String txt) throws Exception {
-            throw new Exception(txt);
+            Socket socket=new Socket(host, port);
+            os=socket.getOutputStream();
+            os.write(new byte[]{1,2,3,70});
+            try {Thread.sleep(3000);}catch (Exception e) { }        
+            os.write(new byte[]{1,2,3,70});
+            try {Thread.sleep(3000);}catch (Exception e) { }        
+            os.write(new byte[]{1,2,3,70});
+            try {Thread.sleep(3000);}catch (Exception e) { }        
+            os.write(new byte[]{1,2,3,70});
+            try {Thread.sleep(3000);}catch (Exception e) { }        
+            os.write(new byte[]{1,2,3,70});
+            try {Thread.sleep(3000);}catch (Exception e) { }        
+            try{ os.close(); }catch(Exception e){}
+        }catch(Exception e){
+            System.out.println(e.toString());
         }
     }
-    
+
     class Ambiente {
         ServerSocket serverSocket=null;
         private Ambiente(int port0) throws Exception {
@@ -2916,10 +2997,7 @@ class Ponte {
             return serverSocket.accept();
         }
     }
-
 }  
-
-
 
 
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    class Arquivos{
@@ -3051,6 +3129,20 @@ class Ponte {
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y execSsh user,pass@servidor command\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y ssh]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y ssh user,pass@servidor\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y serverRouter]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 8080 localhost 9090\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 8080 localhost 9090 show\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 8080 localhost 9090 showOnlySend\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 8080 localhost 9090 showOnlyReceive\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    obs:\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        8080 -> porta para conectar no router\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        localhost -> local que o serverRouter conecta\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        9090 -> porta que o serverRouter conecta\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y TESTEserver]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y TESTEserver 9090\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y TESTEclient]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y TESTEclient localhost 8080\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
@@ -3100,6 +3192,7 @@ class Ponte {
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y scp]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y execSsh]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y ssh]\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y serverRouter]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "  [y help]  ";
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/ORAs") )
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                return ""

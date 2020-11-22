@@ -123,6 +123,20 @@ Exemplos...
     y execSsh user,pass@servidor command
 [y ssh]
     y ssh user,pass@servidor
+[y serverRouter]
+    y serverRouter 8080 localhost 9090
+    y serverRouter 8080 localhost 9090 show
+    y serverRouter 8080 localhost 9090 showOnlySend
+    y serverRouter 8080 localhost 9090 showOnlyReceive
+    obs:
+        8080 -> porta para conectar no router
+        localhost -> local que o serverRouter conecta
+        9090 -> porta que o serverRouter conecta
+[y TESTEserver]
+    y TESTEserver 9090
+[y TESTEclient]
+    y TESTEclient localhost 8080
+
 
 Exemplo de conn: -conn "jdbc:oracle:thin:@//host_name:1521/service_name|login|senha"
 Exemplo de conn: -conn "jdbc:oracle:thin:@host_name:1566:sid_name|login|senha"

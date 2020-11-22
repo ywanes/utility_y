@@ -23,4 +23,5 @@ usage:
   [y scp]
   [y execSsh]
   [y ssh]
+  [y serverRouter]
   [y help]  
