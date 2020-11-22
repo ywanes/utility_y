@@ -6,6 +6,7 @@
 import ComplementoJsch.Exec;
 import ComplementoJsch.ScpFrom;
 import ComplementoJsch.ScpTo;
+import ComplementoJsch.Sftp;
 import ComplementoJsch.Shell;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
@@ -368,10 +369,8 @@ cat buffer.log
                 awk_print(args);
                 return;
             }
-            if ( args.length == 5 && args[1].equals("start") && args[3].equals("end") ){
-                awk_start_end(args);
-                return;
-            }
+            awk_start_end(args);
+            return;
         }
         if ( args[0].equals("dev_null") ){
             dev_null();
@@ -393,21 +392,10 @@ cat buffer.log
             ssh(args);
             return;
         }        
-/*        
-[y serverRouter]
-    y serverRouter 8080 localhost 9090
-    y serverRouter 8080 localhost 9090 show
-    y serverRouter 8080 localhost 9090 showOnlySend
-    y serverRouter 8080 localhost 9090 showOnlyReceive
-    obs:
-        8080 -> porta para conectar no router
-        localhost -> local que o serverRouter conecta
-        9090 -> porta que o serverRouter conecta
-[y TESTEserver]
-    y TESTEserver 9090
-[y TESTEclient]
-    y TESTEclient localhost 8080
-*/        
+        if ( args[0].equals("sftp") ){
+            sftp(args);
+            return;
+        }        
         if ( args[0].equals("serverRouter"))
         {
             serverRouter(args);
@@ -619,7 +607,43 @@ cat buffer.log
 
         return new String[]{connIn,fileCSV,connOut,outTable,trunc,app};
     }
-            
+        
+    private String[] getNegativaStartEnd(String[] args) {
+        String negativa="N";        
+        String start=null;
+        String end=null;
+        
+        if ( args.length > 0 && args[0].equals("awk") )
+            args=sliceParm(1,args);
+        
+        if ( args.length > 0 && args[0].equals("-v") ){
+            negativa="S";        
+            args=sliceParm(1,args);
+        }
+
+        if ( args.length > 1 && args[0].equals("start") )
+        {
+            start=args[1];
+            args=sliceParm(2,args);
+        }
+        
+        if ( args.length > 1 && args[0].equals("end") )
+        {
+            end=args[1];
+            args=sliceParm(2,args);
+        }
+
+        if ( args.length == 0 ){
+            return null;
+        }
+        
+        if ( start == null && end == null ){
+            return null;
+        }
+        
+        return new String[]{negativa,start,end};        
+    }
+    
     public void select(String conn,String parm){
         String parm_=parm;
         
@@ -2083,20 +2107,31 @@ cat buffer.log
     
     public void awk_start_end(String [] args)
     {
-        String start=args[2];
-        String end=args[4];
+        String [] negativaStartEnd=getNegativaStartEnd(args);
+        if ( negativaStartEnd == null )
+        {
+            comando_invalido(args);
+            return;
+        }
+        String negativa=args[0]; // S/N
+        String start=args[1]; // ".." ou null
+        String end=args[2]; // ".." ou null
+        
         int status=0; // 0 -> fora, 1 -> dentro do range
         
         try {
             String line=null;
             while ( (line=read()) != null ) {
-                if ( status == 0 && line.contains(start) )
+                if ( start != null && status == 0 && line.contains(start) )
                     status=1;
                 
-                if ( status == 1 )
+                if ( 
+                    (negativa.equals("S") && status == 0)
+                    || (negativa.equals("N") && status == 1)
+                )
                     System.out.println(line);
                 
-                if ( status == 1 && line.contains(end) )
+                if ( end != null && status == 1 && line.contains(end) )
                     status=0;                
             }
         }catch(Exception e){
@@ -2701,14 +2736,18 @@ cat buffer.log
             comando_invalido(args);
             return;
         }
-        if ( args[1].contains("@") && args[2].contains("@") )
-        {
+        if ( 
+            ( args[1].contains("@") && args[2].contains("@") )
+            || ( !args[1].contains("@") && !args[2].contains("@") )
+        ){
             comando_invalido(args);
             return;
         }
-        if ( !args[1].contains("@") && !args[2].contains("@") )
-        {
-            comando_invalido(args);
+        if ( 
+            ( args[1].contains("@") && senhaComArroba(args[1]) )
+            || ( args[2].contains("@") && senhaComArroba(args[2]) )
+        ){
+            System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
             return;
         }
         if ( args[1].contains("@") )
@@ -2726,6 +2765,15 @@ cat buffer.log
             comando_invalido(args);
             return;
         }
+        if ( !args[1].contains("@") )
+        {
+            comando_invalido(args);
+            return;
+        }
+        if ( senhaComArroba(args[1]) ){
+            System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
+            return;
+        }
         Exec.custom(new String[]{args[1],args[2]});
         System.exit(0);
     }
@@ -2738,10 +2786,43 @@ cat buffer.log
             comando_invalido(args);
             return;
         }
+        if ( !args[1].contains("@") )
+        {
+            comando_invalido(args);
+            return;
+        }
+        if ( senhaComArroba(args[1]) ){
+            System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
+            return;
+        }
         Shell.custom(new String[]{args[1]});
         System.exit(0);
     }
 
+    private void sftp(String[] args) {
+        // créditos
+        // https://github.com/is/jsch/tree/master/examples
+        if ( args.length != 2 && args.length != 3 )
+        {
+            comando_invalido(args);
+            return;
+        }
+        if ( !args[1].contains("@") )
+        {
+            comando_invalido(args);
+            return;
+        }
+        if ( senhaComArroba(args[1]) ){
+            System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
+            return;
+        }
+        if ( args.length == 2 )
+            Sftp.custom(new String[]{args[1]});
+        else
+            Sftp.custom(new String[]{args[1],args[2]});
+        System.exit(0);
+    }
+    
     private void serverRouter(String[] args) {
         if ( args.length == 4 ){
             new Ponte().serverRouter(Integer.parseInt(args[1]),args[2],Integer.parseInt(args[3]),"");
@@ -2772,6 +2853,13 @@ cat buffer.log
         comando_invalido(args);
         System.exit(0);
     }
+
+    private boolean senhaComArroba(String txt) {
+        // verifica se txt tem uma quantidade de @ diferente de 1
+        return txt.length() != (txt.replace("@","").length()+1);
+    }
+
+
 }
 
 class Ponte {
