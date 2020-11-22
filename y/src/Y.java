@@ -44,10 +44,11 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Random;
+
 
 // java 8
 import java.util.Base64;
-import java.util.Random;
 
 // copia da classe Base64 do java8 para rodar no java6
 //class Base64 {      private Base64() {}      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#basic">Basic</a> type base64 encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getEncoder() {          return Encoder.RFC4648;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#url">URL and Filename safe</a> type base64      * encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getUrlEncoder() {          return Encoder.RFC4648_URLSAFE;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#mime">MIME</a> type base64 encoding scheme.      *      * @return  A Base64 encoder.      */     public static Encoder getMimeEncoder() {         return Encoder.RFC2045;     }      /**      * Returns a {@link Encoder} that encodes using the      * <a href="#mime">MIME</a> type base64 encoding scheme      * with specified line length and line separators.      *      * @param   lineLength      *          the length of each output line (rounded down to nearest multiple      *          of 4). If {@code lineLength <= 0} the output will not be separated      *          in lines      * @param   lineSeparator      *          the line separator for each output line      *      * @return  A Base64 encoder.      *      * @throws  IllegalArgumentException if {@code lineSeparator} includes any      *          character of "The Base64 Alphabet" as specified in Table 1 of      *          RFC 2045.      */     public static Encoder getMimeEncoder(int lineLength, byte[] lineSeparator) {          Objects.requireNonNull(lineSeparator);          int[] base64 = Decoder.fromBase64;          for (byte b : lineSeparator) {              if (base64[b & 0xff] != -1)                  throw new IllegalArgumentException(                      "Illegal base64 line separator character 0x" + Integer.toString(b, 16));          }          if (lineLength <= 0) {              return Encoder.RFC4648;          }          return new Encoder(false, lineSeparator, lineLength >> 2 << 2, true);     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#basic">Basic</a> type base64 encoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getDecoder() {          return Decoder.RFC4648;     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#url">URL and Filename safe</a> type base64      * encoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getUrlDecoder() {          return Decoder.RFC4648_URLSAFE;     }      /**      * Returns a {@link Decoder} that decodes using the      * <a href="#mime">MIME</a> type base64 decoding scheme.      *      * @return  A Base64 decoder.      */     public static Decoder getMimeDecoder() {          return Decoder.RFC2045;     }      /**      * This class implements an encoder for encoding byte data using      * the Base64 encoding scheme as specified in RFC 4648 and RFC 2045.      *      * <p> Instances of {@link Encoder} class are safe for use by      * multiple concurrent threads.      *      * <p> Unless otherwise noted, passing a {@code null} argument to      * a method of this class will cause a      * {@link java.lang.NullPointerException NullPointerException} to      * be thrown.      *      * @see     Decoder      * @since   1.8      */     public static class Encoder {          private final byte[] newline;         private final int linemax;         private final boolean isURL;         private final boolean doPadding;          private Encoder(boolean isURL, byte[] newline, int linemax, boolean doPadding) {             this.isURL = isURL;             this.newline = newline;             this.linemax = linemax;             this.doPadding = doPadding;         }          
@@ -2985,8 +2986,8 @@ class Ponte {
             bis=new BufferedInputStream(is);                            
             while( (len=bis.read(buffer)) != -1 ){
                 if ( displayIda ){
-                    System.out.println("->("+ponteID+"):");
-                    System.out.println(buffer);
+                    System.out.println("->(id "+ponteID+"):");
+                    System.out.println(new String(buffer));
                 }
                 destino.ida(buffer);              
             }
@@ -2997,8 +2998,8 @@ class Ponte {
 
         private void volta(byte[] buffer) throws Exception {
             if ( displayVolta ){
-                System.out.println("<-("+ponteID+"):");
-                System.out.println(buffer);
+                System.out.println("<-(id "+ponteID+"):");
+                System.out.println(new String(buffer));
             }
             os.write(buffer);
         }
