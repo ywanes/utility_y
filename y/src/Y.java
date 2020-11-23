@@ -800,13 +800,18 @@ cat buffer.log
                         if ( tipos.get(i) == 2 && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
-                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
+                            tmp="to_date('"+tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19)+"','DD/MM/YYYY HH24:MI:SS')";
                         if ( tmp.length() <= 4000 ){
-                            sb.append("'");
-                            sb.append(tmp.replace("'","''"));
-                            sb.append("'");
+                            if ( tipos.get(i) == 93 ){ // DATA
+                                sb.append(tmp);
+                            }else{
+                                sb.append("'");
+                                sb.append(tmp.replace("'","''"));
+                                sb.append("'");
+                            }
                         }else{
                             tmp=formatacaoInsertClobComAspetas(tmp);
+                            sb.append(tmp);
                         }
                         if ( i != campos.size()-1 )
                             sb.append(",");
