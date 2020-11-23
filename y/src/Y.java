@@ -7,11 +7,6 @@
 // alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.54E.jar Y'
 //
 
-import ComplementoJsch.Exec;
-import ComplementoJsch.ScpFrom;
-import ComplementoJsch.ScpTo;
-import ComplementoJsch.Sftp;
-import ComplementoJsch.Shell;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -2762,9 +2757,9 @@ cat buffer.log
             return;
         }
         if ( args[1].contains("@") )
-            ScpFrom.custom(new String[]{args[1],args[2]});                    
+            JSch.ScpFrom(new String[]{args[1],args[2]});                    
         else
-            ScpTo.custom(new String[]{args[1],args[2]});                    
+            JSch.ScpTo(new String[]{args[1],args[2]});                    
         System.exit(0);
     }
     
@@ -2785,7 +2780,7 @@ cat buffer.log
             System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
             return;
         }
-        Exec.custom(new String[]{args[1],args[2]});
+        JSch.Exec(new String[]{args[1],args[2]});
         System.exit(0);
     }
     
@@ -2806,7 +2801,7 @@ cat buffer.log
             System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
             return;
         }
-        Shell.custom(new String[]{args[1]});
+        JSch.Shell(new String[]{args[1]});
         System.exit(0);
     }
 
@@ -2828,9 +2823,9 @@ cat buffer.log
             return;
         }
         if ( args.length == 2 )
-            Sftp.custom(new String[]{args[1]});
+            JSch.Sftp(new String[]{args[1]});
         else
-            Sftp.custom(new String[]{args[1],args[2]});
+            JSch.Sftp(new String[]{args[1],args[2]});
         System.exit(0);
     }
     
@@ -2885,7 +2880,7 @@ class Ponte {
     // teste client
     //new Ponte().TESTEclient("localhost","8080");
 
-    public void serverRouter(int port0, String host1, int port1,String typeShow){
+    public void serverRouter(final int port0,final String host1,final  int port1,final String typeShow){
         Ambiente ambiente=null;
         try{
             ambiente=new Ambiente(port0);
@@ -2897,7 +2892,7 @@ class Ponte {
         System.out.println("obs: A ponte só estabelece conexão com o destino quando detectar o início da origem");
         while(true){
             try{
-                Socket credencialSocket=ambiente.getCredencialSocket();
+                final Socket credencialSocket=ambiente.getCredencialSocket();
                 new Thread(){
                     public void run(){
                         ponte0(credencialSocket,host1,port1,typeShow);
@@ -2941,7 +2936,7 @@ class Ponte {
         }
         private void start() throws Exception {
             Socket socket=new Socket(host1, port1);                                                
-            InputStream is=socket.getInputStream();                        
+            final InputStream is=socket.getInputStream();                        
             os=socket.getOutputStream();
             new Thread(){
                 public void run(){
@@ -3028,7 +3023,7 @@ class Ponte {
             ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName("localhost"));
             System.out.println("servidor porta "+port+" criado.");
             while (true) {
-                Socket socket=serverSocket.accept();
+                final Socket socket=serverSocket.accept();
                 System.out.println("recebendo conexao..");
                 new Thread(){
                     public void run(){
