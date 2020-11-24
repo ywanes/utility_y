@@ -3093,6 +3093,7 @@ class Ponte {
 }  
 
 
+
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    class Arquivos{
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */        public String lendo_arquivo_pacote(String caminho){
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/manual") )
@@ -3262,10 +3263,10 @@ class Ponte {
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "alias no windows(set_alias_windows.reg):\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "Windows Registry Editor Version 5.00\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Command Processor]\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\"AutoRun\"=\"DOSKEY y=java -cp c:\\\\y;c:\\\\y\\\\jsch-0.1.54E.jar;c:\\\\y\\\\ojdbc6.jar Y $*\"\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\"AutoRun\"=\"DOSKEY y=java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar Y $*\"\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "alias no linux:\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.54E.jar Y'\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "alias y='java -cp /y:/y/ojdbc6.jar Y'\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "o alias windows funciona nesse comando \"y echo a\" mas nao nesse \"y echo a | y wc -l\"";
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            if ( caminho.equals("/y/manual_mini") )
