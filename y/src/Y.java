@@ -2,8 +2,8 @@
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/ojdbc6.jar > ojdbc6.jar
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/JSch.java > JSch.java
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-// javac -cp .:ojdbc6.jar:jsch-0.1.54E.jar Y.java
-// alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.54E.jar Y'
+// javac -cp .:ojdbc6.jar Y.java
+// alias y='java -cp /y:/y/ojdbc6.jar Y'
 //
 
 import java.io.BufferedInputStream;
