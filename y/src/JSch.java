@@ -15,6 +15,7 @@ import java.io.StringReader;
 import java.math.BigInteger;
 import java.net.*;
 import java.net.Socket;
+import java.security.SecureRandom;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Date;
@@ -30,7 +31,6 @@ public class JSch{
 
   static java.util.Hashtable config=new java.util.Hashtable();
   static{
-      /*
     config.put("kex", "ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1");
     config.put("server_host_key", "ssh-rsa,ssh-dss,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521");
     config.put("cipher.s2c",
@@ -89,7 +89,8 @@ public class JSch{
     config.put("keypairgen.dsa",   "com.jcraft.jsch.jce.KeyPairGenDSA");
     config.put("keypairgen.rsa",   "com.jcraft.jsch.jce.KeyPairGenRSA");
     config.put("keypairgen.ecdsa", "com.jcraft.jsch.jce.KeyPairGenECDSA");
-    config.put("random",        "com.jcraft.jsch.jce.Random");
+    //config.put("random",        "com.jcraft.jsch.jce.Random");
+    config.put("random",        "Random2");
 
     config.put("none",           "com.jcraft.jsch.CipherNone");
 
@@ -128,7 +129,6 @@ public class JSch{
 
     config.put("MaxAuthTries", "6");
     config.put("ClearAllForwardings", "no");
-      */
   }
 
     static void ScpFrom(String[] args) {
@@ -20998,5 +20998,55 @@ class Util{
       if(fis!=null)
         fis.close();
     }
+  }
+}
+
+
+class Random2 implements Random{
+  private byte[] tmp=new byte[16];
+  private SecureRandom random=null;
+  public Random2(){
+
+    // We hope that 'new SecureRandom()' will use NativePRNG algorithm
+    // on Sun's Java5 for GNU/Linux and Solaris.
+    // It seems NativePRNG refers to /dev/urandom and it must not be blocked,
+    // but NativePRNG is slower than SHA1PRNG ;-<
+    // TIPS: By adding option '-Djava.security.egd=file:/dev/./urandom'
+    //       SHA1PRNG will be used instead of NativePRNG.
+    // On MacOSX, 'new SecureRandom()' will use NativePRNG algorithm and
+    // it is also slower than SHA1PRNG.
+    // On Windows, 'new SecureRandom()' will use SHA1PRNG algorithm.
+    random=new SecureRandom();
+
+    /*
+    try{ 
+      random=SecureRandom.getInstance("SHA1PRNG"); 
+      return;
+    }
+    catch(java.security.NoSuchAlgorithmException e){ 
+      // System.err.println(e); 
+    }
+
+    // The following code is for IBM's JCE
+    try{ 
+      random=SecureRandom.getInstance("IBMSecureRandom"); 
+      return;
+    }
+    catch(java.security.NoSuchAlgorithmException ee){ 
+      //System.err.println(ee); 
+    }
+    */
+  }
+  public void fill(byte[] foo, int start, int len){
+    /*
+    // This case will not become true in our usage.
+    if(start==0 && foo.length==len){
+      random.nextBytes(foo);
+      return;
+    }
+    */
+    if(len>tmp.length){ tmp=new byte[len]; }
+    random.nextBytes(tmp);
+    System.arraycopy(tmp, 0, foo, start, len);
   }
 }

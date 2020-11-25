@@ -122,7 +122,7 @@ cat buffer.log
         
 */
         
-        //args=new String[]{"scp","user,senha@servidor:/aa","aa"};
+        //args=new String[]{"ssh","user,senha@servidor"};
         new Y().go(args);
     }
         
