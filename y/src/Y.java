@@ -78,7 +78,6 @@ public class Y {
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
     
-    
     public static void main(String[] args) {
 
 /*
@@ -124,7 +123,8 @@ cat buffer.log
         
 */
         
-        //args=new String[]{"ssh","user,senha@servidor"};
+        //args=new String[]{"serverRouter","192.168.0.100","8888","192.168.0.200","1521","show"};
+        //args=new String[]{"serverRouter","localhost","8888","servidor","1521","show"};
         new Y().go(args);
     }
         
@@ -2831,12 +2831,12 @@ cat buffer.log
     }
     
     private void serverRouter(String[] args) {
-        if ( args.length == 4 ){
-            new Ponte().serverRouter(Integer.parseInt(args[1]),args[2],Integer.parseInt(args[3]),"");
+        if ( args.length == 5 ){
+            new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),"");
             return;
         }
-        if ( args.length == 5 && ( args[4].equals("show") || args[4].equals("showOnlySend") || args[4].equals("showOnlyReceive") ) ){
-            new Ponte().serverRouter(Integer.parseInt(args[1]),args[2],Integer.parseInt(args[3]),args[4]);
+        if ( args.length == 6 && ( args[5].equals("show") || args[5].equals("showOnlySend") || args[5].equals("showOnlyReceive") ) ){
+            new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),args[5]);
             return;
         }
         comando_invalido(args);
@@ -2845,7 +2845,11 @@ cat buffer.log
 
     private void TESTEserver(String[] args) {
         if ( args.length == 2 ){
-            new Ponte().TESTEserver(Integer.parseInt(args[1]));
+            new Ponte().TESTEserver(null,Integer.parseInt(args[1]));
+            return;
+        }
+        if ( args.length == 3 ){
+            new Ponte().TESTEserver(args[1],Integer.parseInt(args[2]));
             return;
         }
         comando_invalido(args);
@@ -2871,20 +2875,20 @@ cat buffer.log
 
 class Ponte {
     //exemplo
-    //new Ponte().serverRouter(8080,"localhost",9090,"");                
-    //new Ponte().serverRouter(8080,"localhost",9090,"show");                
-    //new Ponte().serverRouter(8080,"localhost",9090,"showOnlySend");                
-    //new Ponte().serverRouter(8080,"localhost",9090,"showOnlyReceive");                
+    //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"");                
+    //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"show");                
+    //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"showOnlySend");                
+    //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"showOnlyReceive");                
     
     // teste server
     //new Ponte().TESTEserver("9090");                        
     // teste client
     //new Ponte().TESTEclient("localhost","8080");
 
-    public void serverRouter(final int port0,final String host1,final  int port1,final String typeShow){
+    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow){
         Ambiente ambiente=null;
         try{
-            ambiente=new Ambiente(port0);
+            ambiente=new Ambiente(host0,port0);
         }catch(Exception e){
             System.out.println("Nao foi possível utilizar a porta "+port0+" - "+e.toString());
             System.exit(1);
@@ -2941,20 +2945,20 @@ class Ponte {
             os=socket.getOutputStream();
             new Thread(){
                 public void run(){
-                    int len=0;
+                    int len=0;   
                     byte[] buffer = new byte[2048];
                     try{
-                        while( (len=is.read(buffer)) != -1 )
-                            origem.volta(buffer);
+                        while( (len=is.read(buffer)) > -1 )
+                            origem.volta(len,buffer);
                     }catch(Exception e){
-                        System.out.println("desconectou destino");
+                        System.out.println("desconectou destino "+e.toString());
                     }
                 }
-            }.start();                        
+            }.start();                                    
         }
 
-        private void ida(byte[] buffer) throws Exception {
-            os.write(buffer);
+        private void ida(byte[] buffer,int len) throws Exception {
+            os.write(buffer,0,len);
         }
     }
 
@@ -2981,29 +2985,27 @@ class Ponte {
         private void start() throws Exception {
             // start destino
             destino.start();
-
             int len=0;
             byte[] buffer = new byte[2048];            
             InputStream is=null;
-            OutputStream os=null;
+            os=null;
             BufferedInputStream bis=null;                            
             is = socket.getInputStream();
             os = socket.getOutputStream();
             bis=new BufferedInputStream(is);                            
             while( (len=bis.read(buffer)) != -1 ){
                 if (displayIda)
-                    mostra("->",ponteID,buffer);
-                destino.ida(buffer);              
+                    mostra(len,"->",ponteID,buffer);
+                destino.ida(buffer,len);              
             }
-
             try{ bis.close(); }catch(Exception e){}
             try{ is.close(); }catch(Exception e){}
         }
 
-        private void volta(byte[] buffer) throws Exception {
+        private void volta(int len,byte[] buffer) throws Exception {
             if (displayVolta)
-                mostra("<-",ponteID,buffer);
-            os.write(buffer);
+                mostra(len,"<-",ponteID,buffer);
+            os.write(buffer,0,len);
         }
 
         private void destroy() {
@@ -3012,13 +3014,15 @@ class Ponte {
             }catch(Exception e){}
         }
 
-        private void mostra(String direcao, String ponteID, byte[] buffer) {
+        private void mostra(int len,String direcao, String ponteID, byte[] buffer) {
+            int count=0;
+            
             // HEX
             System.out.print(direcao+"(id "+ponteID+" hex):");
             for (byte b : buffer){
-                if (b == 0)
-                    break;
                 System.out.print(String.format("%02X",b));
+                if ( ++count >= len )
+                    break;
             }
             System.out.print("\n");
 
@@ -3030,8 +3034,17 @@ class Ponte {
     }
 
     // preparando para receber varias conexoes
-    public void TESTEserver(int port){
+    public void TESTEserver(String host,int port){
         try{
+            
+            // exemplo host0 -> "192.168.0.100"
+            if ( host == null || host.equals("localhost") )
+            {
+                System.out.println("warning: procurando ip ...");
+                host=getListaIPs().get(0);
+                System.out.println("warning: ip localizado -> "+host);
+            }
+            
             ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName("localhost"));
             System.out.println("servidor porta "+port+" criado.");
             while (true) {
@@ -3096,12 +3109,48 @@ class Ponte {
 
     class Ambiente {
         ServerSocket serverSocket=null;
-        private Ambiente(int port0) throws Exception {
-            serverSocket = new ServerSocket(port0, 1,InetAddress.getByName("localhost"));
+        private Ambiente(String host0,int port0) throws Exception {
+            // exemplo host0 -> "192.168.0.100"
+            if ( host0.equals("localhost") )
+            {
+                System.out.println("warning: evite utilizar a palavra localhost...");
+                System.out.println("warning: procurando ip correto para localhost....");
+                host0=getListaIPs().get(0);
+                System.out.println("warning: ip localizado -> "+host0);
+            }
+            serverSocket = new ServerSocket(port0, 1,InetAddress.getByName(host0));
         }
         private Socket getCredencialSocket() throws Exception {
             return serverSocket.accept();
         }
+
+    }
+
+    public static ArrayList<String> getListaIPs()
+    {     
+        ArrayList<String> lista=new ArrayList<String>();
+        ArrayList<String> lista2=new ArrayList<String>();
+
+        try {
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp())
+                    continue;
+                java.util.Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while(addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    if ( addr.getHostAddress().startsWith("192.168.0.") || addr.getHostAddress().startsWith("192.168.1.") )
+                        lista.add(addr.getHostAddress());                       
+                    else
+                        lista2.add(addr.getHostAddress());                       
+                }
+            }
+        } catch (java.net.SocketException e) {
+            throw new RuntimeException(e);
+        } 
+        lista.addAll(lista2);        
+        return lista;
     }
     
     public String padLeftZeros(String inputString, int length) {
@@ -3118,7 +3167,6 @@ class Ponte {
     }
 
 }  
-
 
 
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    class Arquivos{
@@ -3261,16 +3309,23 @@ class Ponte {
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y sftp user,pass@servidor\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y sftp user,pass@servidor 22\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y serverRouter]\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 8080 localhost 9090\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 8080 localhost 9090 show\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 8080 localhost 9090 showOnlySend\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 8080 localhost 9090 showOnlyReceive\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 192.168.0.100 8080 localhost 9090\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 show\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter localhost 8080 localhost 9090\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter localhost 8080 localhost 9090 show\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter localhost 8080 localhost 9090 showOnlySend\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y serverRouter localhost 8080 localhost 9090 showOnlyReceive\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    obs:\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        192.168.0.100 -> ip a se conectar(se colocar localhost ele vai tentar pegar o ip correto)\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        8080 -> porta para conectar no router\n"
-/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        localhost -> local que o serverRouter conecta\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        localhost -> local que o serverRouter conecta(use nome da maquina ou ip)\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "        9090 -> porta que o serverRouter conecta\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y TESTEserver]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y TESTEserver 9090\n"
+/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y TESTEserver 192.168.0.100 9090\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "[y TESTEclient]\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "    y TESTEclient localhost 8080\n"
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */                + "\n"
@@ -3390,5 +3445,6 @@ class Ponte {
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */            return "";
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */        }
 /* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    }
+
 
 

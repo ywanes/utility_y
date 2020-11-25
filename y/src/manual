@@ -134,16 +134,23 @@ Exemplos...
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22
 [y serverRouter]
-    y serverRouter 8080 localhost 9090
-    y serverRouter 8080 localhost 9090 show
-    y serverRouter 8080 localhost 9090 showOnlySend
-    y serverRouter 8080 localhost 9090 showOnlyReceive
+    y serverRouter 192.168.0.100 8080 localhost 9090
+    y serverRouter 192.168.0.100 8080 localhost 9090 show
+    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend
+    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive
+
+    y serverRouter localhost 8080 localhost 9090
+    y serverRouter localhost 8080 localhost 9090 show
+    y serverRouter localhost 8080 localhost 9090 showOnlySend
+    y serverRouter localhost 8080 localhost 9090 showOnlyReceive
     obs:
+        192.168.0.100 -> ip a se conectar(se colocar localhost ele vai tentar pegar o ip correto)
         8080 -> porta para conectar no router
-        localhost -> local que o serverRouter conecta
+        localhost -> local que o serverRouter conecta(use nome da maquina ou ip)
         9090 -> porta que o serverRouter conecta
 [y TESTEserver]
     y TESTEserver 9090
+    y TESTEserver 192.168.0.100 9090
 [y TESTEclient]
     y TESTEclient localhost 8080
 
