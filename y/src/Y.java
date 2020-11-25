@@ -1,9 +1,11 @@
 //
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/ojdbc6.jar > ojdbc6.jar
-// curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/JSch.java > JSch.java
+// curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/jsch-0.1.55.jar > jsch-0.1.55.jar
+// curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/JSchCustom.java > JSchCustom.java
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 // javac -cp .:ojdbc6.jar Y.java
 // alias y='java -cp /y:/y/ojdbc6.jar Y'
+// crétidos https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar
 //
 
 import java.io.BufferedInputStream;
@@ -2756,9 +2758,9 @@ cat buffer.log
             return;
         }
         if ( args[1].contains("@") )
-            JSch.ScpFrom(new String[]{args[1],args[2]});                    
+            new JSchCustom().ScpFrom(new String[]{args[1],args[2]});                    
         else
-            JSch.ScpTo(new String[]{args[1],args[2]});                    
+            new JSchCustom().ScpTo(new String[]{args[1],args[2]});                    
         System.exit(0);
     }
     
@@ -2779,7 +2781,7 @@ cat buffer.log
             System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
             return;
         }
-        JSch.Exec(new String[]{args[1],args[2]});
+        new JSchCustom().Exec(new String[]{args[1],args[2]});
         System.exit(0);
     }
     
@@ -2800,7 +2802,7 @@ cat buffer.log
             System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
             return;
         }
-        JSch.Shell(new String[]{args[1]});
+        new JSchCustom().Shell(new String[]{args[1]});
         System.exit(0);
     }
 
@@ -2822,9 +2824,9 @@ cat buffer.log
             return;
         }
         if ( args.length == 2 )
-            JSch.Sftp(new String[]{args[1]});
+            new JSchCustom().Sftp(new String[]{args[1]});
         else
-            JSch.Sftp(new String[]{args[1],args[2]});
+            new JSchCustom().Sftp(new String[]{args[1],args[2]});
         System.exit(0);
     }
     
