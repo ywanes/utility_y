@@ -2907,7 +2907,7 @@ class Ponte {
     }
 
     private void ponte0(Socket credencialSocket, String host1, int port1,String typeShow) {
-        int id=new Random().nextInt(100000);
+        String id=padLeftZeros(new Random().nextInt(100000)+"",6);
         System.out.println("iniciando ponte id "+id);
         Origem origem=null;
         try{
@@ -2959,14 +2959,14 @@ class Ponte {
     }
 
     private class Origem {    
-        int ponteID=0;
+        String ponteID="";
         Socket socket=null;
         OutputStream os=null;
         Destino destino=null;
         boolean displayIda=false;
         boolean displayVolta=false;
         int port0;
-        private Origem(Socket credencialSocket,int ponteID,String typeShow) {
+        private Origem(Socket credencialSocket,String ponteID,String typeShow) {
             socket=credencialSocket;
             this.ponteID=ponteID;
             if ( typeShow.equals("show") || typeShow.equals("showOnlySend"))
@@ -2991,10 +2991,8 @@ class Ponte {
             os = socket.getOutputStream();
             bis=new BufferedInputStream(is);                            
             while( (len=bis.read(buffer)) != -1 ){
-                if ( displayIda ){
-                    System.out.println("->(id "+ponteID+"):");
-                    System.out.println(new String(buffer));
-                }
+                if (displayIda)
+                    mostra("->",ponteID,buffer);
                 destino.ida(buffer);              
             }
 
@@ -3003,10 +3001,8 @@ class Ponte {
         }
 
         private void volta(byte[] buffer) throws Exception {
-            if ( displayVolta ){
-                System.out.println("<-(id "+ponteID+"):");
-                System.out.println(new String(buffer));
-            }
+            if (displayVolta)
+                mostra("<-",ponteID,buffer);
             os.write(buffer);
         }
 
@@ -3014,6 +3010,21 @@ class Ponte {
             try{
                 socket.close();
             }catch(Exception e){}
+        }
+
+        private void mostra(String direcao, String ponteID, byte[] buffer) {
+            // HEX
+            System.out.print(direcao+"(id "+ponteID+" hex):");
+            for (byte b : buffer){
+                if (b == 0)
+                    break;
+                System.out.print(String.format("%02X",b));
+            }
+            System.out.print("\n");
+
+            // STR
+            for (String parte : new String(buffer).split("\n") )
+                System.out.println(direcao+"(id "+ponteID+" str):"+parte);
         }
 
     }
@@ -3092,6 +3103,20 @@ class Ponte {
             return serverSocket.accept();
         }
     }
+    
+    public String padLeftZeros(String inputString, int length) {
+        if (inputString.length() >= length) {
+            return inputString;
+        }
+        StringBuilder sb = new StringBuilder();
+        while (sb.length() < length - inputString.length()) {
+            sb.append('0');
+        }
+        sb.append(inputString);
+
+        return sb.toString();
+    }
+
 }  
 
 

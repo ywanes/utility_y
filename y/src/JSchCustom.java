@@ -643,7 +643,7 @@ class Sftp{
         System.exit(-1);
       }
     
-      String senha=arg[1].split("@")[0].split(",")[1];
+      String senha=arg[0].split("@")[0].split(",")[1];
       // tirando senha de arg
       arg=new String[]{arg[0].split("@")[0].split(",")[0]+"@"+arg[0].split("@")[1]};
       
@@ -1172,8 +1172,4 @@ class Sftp{
         return null;
     }
   }
-
-  
-  
-
 }
