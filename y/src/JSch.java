@@ -30,6 +30,7 @@ public class JSch{
 
   static java.util.Hashtable config=new java.util.Hashtable();
   static{
+      /*
     config.put("kex", "ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,diffie-hellman-group1-sha1");
     config.put("server_host_key", "ssh-rsa,ssh-dss,ecdsa-sha2-nistp256,ecdsa-sha2-nistp384,ecdsa-sha2-nistp521");
     config.put("cipher.s2c",
@@ -127,6 +128,7 @@ public class JSch{
 
     config.put("MaxAuthTries", "6");
     config.put("ClearAllForwardings", "no");
+      */
   }
 
     static void ScpFrom(String[] args) {
@@ -18421,7 +18423,7 @@ class Sftp{
         System.exit(-1);
       }
 
-      String senha=arg[1].split("@")[0].split(",")[1];
+      String senha=arg[0].split("@")[0].split(",")[1];
       // tirando senha de arg
       arg=new String[]{arg[0].split("@")[0].split(",")[0]+"@"+arg[0].split("@")[1]};
 

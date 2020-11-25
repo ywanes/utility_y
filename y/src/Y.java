@@ -122,7 +122,7 @@ cat buffer.log
         
 */
         
-        //args=new String[]{"banco","-fileCSV","a","connOut,hash","-outTable","TABELA_CCC","createtable","carga"};
+        //args=new String[]{"scp","user,senha@servidor:/aa","aa"};
         new Y().go(args);
     }
         
