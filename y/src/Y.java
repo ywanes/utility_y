@@ -1753,7 +1753,7 @@ cat buffer.log
     {
         try{
             int BUFFER_SIZE = 512;
-            byte[] buf = new byte[BUFFER_SIZE];
+            byte[] buf = new byte[BUFFER_SIZE];            
             java.util.zip.GZIPOutputStream out = new java.util.zip.GZIPOutputStream(System.out);
             int len;
             while ((len = System.in.read(buf)) > -1)
