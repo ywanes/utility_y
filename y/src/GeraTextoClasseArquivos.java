@@ -1,5 +1,4 @@
 
-
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.InputStream;
@@ -13,9 +12,8 @@ public class GeraTextoClasseArquivos {
         new GeraTextoClasseArquivos().go();
     }
     
-    public void go()
-    {
-        String prefixo="/* NAO EDITAR AQUI - TEXTO GERATO AUTOMATICAMENTE */    ";
+    public void go(){
+        String prefixo="/* CRIADO AUTOMATICAMENTE - class Arquivos */    ";
         System.out.println(prefixo+"class Arquivos{");
         System.out.println(prefixo+"    public String lendo_arquivo_pacote(String caminho){");
         for ( String item : getResourceFiles("/") )
@@ -61,7 +59,7 @@ public class GeraTextoClasseArquivos {
         return in == null ? getClass().getResourceAsStream(resource) : in;
     }
     
-    private ClassLoader getContextClassLoader() {
+    private ClassLoader getContextClassLoader(){
         return Thread.currentThread().getContextClassLoader();
     }
     
@@ -84,9 +82,8 @@ public class GeraTextoClasseArquivos {
         return result;
     }
     
-    public static String removerAcentos(String str) {
+    public static String removerAcentos(String str){
         return Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
     }
-    
     
 }

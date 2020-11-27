@@ -30,6 +30,8 @@ usage:
   [y scp]
   [y execSsh]
   [y ssh]
+  [y sftp]
+  [y serverRouter]
   [y help]
 
 Exemplos...
@@ -176,3 +178,4 @@ alias no linux:
 alias y='java -cp /y:/y/ojdbc6.jar Y'
 
 o alias windows funciona nesse comando "y echo a" mas nao nesse "y echo a | y wc -l"
+
