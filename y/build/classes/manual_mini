@@ -32,4 +32,5 @@ usage:
   [y ssh]
   [y sftp]
   [y serverRouter]
+  [y httpServer]
   [y help]
