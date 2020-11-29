@@ -3214,6 +3214,8 @@ class Ponte {
 /* class HttpServer */ +"#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" +"background-color:#555555;}\n" +"#content{margin:0 0 0 2%;position:relative;}\n" +".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" +"-->\n" +"</style>\n" +"</head>\n" +"<body>\n" +"<div id=\"header\"><h1>Server Error</h1></div>\n" +"<div id=\"content\">\n" +" <div class=\"content-container\"><fieldset>\n" +"  <h2>404 - File or directory not found.</h2>\n" +"  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" +" </fieldset></div>\n" +"</div>\n" +"</body>\n" +"</html>"}){sb.append(line);System.out.println("    |---> " + line.replace("\r\n",""));}System.out.println("   |    ");output.write(sb.toString().getBytes());}private String getContentType(String caminho) {if ( caminho.endsWith(".html") || caminho.endsWith(".htm") )return "text/html";if ( caminho.endsWith(".css") )return "text/css";if ( caminho.endsWith(".png") || caminho.endsWith(".ico") || caminho.endsWith(".jpg") )return "image/png";return "application/octet-stream";}public byte[] lendo_arquivo(String caminho) throws Exception {FileInputStream fis=null;File file = new File(caminho);byte[] bFile = new byte[(int) file.length()];fis = new FileInputStream(file);fis.read(bFile);fis.close();return bFile;}public ArrayList<String> lendo_arquivo_display(String caminho) throws Exception {ArrayList<String> result=new ArrayList<String>();String strLine;try{FileReader rf=new FileReader(caminho);BufferedReader in=new BufferedReader(rf);while ((strLine = in.readLine()) != null)result.add(strLine);in.close();rf.close();}catch (Exception e){throw new Exception("nao foi possivel encontrar o arquivo "+caminho);}return result;}private void transf_bytes(OutputStream output, String nav) throws Exception {int count;DataInputStream dis=new DataInputStream(new FileInputStream(nav));byte[] buffer = new byte[8192];while ((count = dis.read(buffer)) > 0)output.write(buffer, 0, count);}private boolean endsWith_OK(String url,String ends){if ( ends.equals("") ) return true;String [] partes = ends.split(",");for ( int i=0;i<partes.length;i++ )if ( url.endsWith("."+partes[i]) )return true;return false;}}
 
 
+
+
 /* CRIADO AUTOMATICAMENTE - class Arquivos */    class Arquivos{
 /* CRIADO AUTOMATICAMENTE - class Arquivos */        public String lendo_arquivo_pacote(String caminho){
 /* CRIADO AUTOMATICAMENTE - class Arquivos */            if ( caminho.equals("/y/manual") )
@@ -3252,6 +3254,7 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y ssh]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y sftp]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y serverRouter]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y HttpServer]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y help]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "Exemplos...\n"
@@ -3375,7 +3378,9 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y TESTEserver 192.168.0.100 9090\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y TESTEclient]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y TESTEclient localhost 8080\n"
-/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y httpServer]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    localhost pagina_toke_zzz111 \"Lista de arquivos\" 8888 \"/dir\" \"\" \"\"\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    parametros: host(pode ser \"\"), titulo_url, titulo, port, dir, endsWiths(ex: \"\",\".jar,.zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
@@ -3434,6 +3439,7 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y ssh]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y sftp]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y serverRouter]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y httpServer]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y help]";
 /* CRIADO AUTOMATICAMENTE - class Arquivos */            if ( caminho.equals("/y/ORAs") )
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                return ""
@@ -3499,4 +3505,5 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */            return "";
 /* CRIADO AUTOMATICAMENTE - class Arquivos */        }
 /* CRIADO AUTOMATICAMENTE - class Arquivos */    }
+
 
