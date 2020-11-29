@@ -3052,12 +3052,16 @@ class Ponte {
             // exemplo host0 -> "192.168.0.100"
             if ( host == null || host.equals("localhost") )
             {
-                System.out.println("warning: procurando ip ...");
-                host=getListaIPs().get(0);
-                System.out.println("warning: ip localizado -> "+host);
+                try{
+                    host=InetAddress.getLocalHost().getHostName();
+                }catch(Exception e){
+                    System.out.println("warning: procurando ip ...");
+                    host=getListaIPs().get(0);
+                    System.out.println("warning: ip localizado -> "+host);
+                }                    
             }
             
-            ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName("localhost"));
+            ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName(host));
             System.out.println("servidor porta "+port+" criado.");
             while (true) {
                 final Socket socket=serverSocket.accept();
@@ -3123,13 +3127,17 @@ class Ponte {
         ServerSocket serverSocket=null;
         private Ambiente(String host0,int port0) throws Exception {
             // exemplo host0 -> "192.168.0.100"
-            if ( host0.equals("localhost") )
+            if ( host0 == null || host0.equals("localhost") )
             {
-                System.out.println("warning: evite utilizar a palavra localhost...");
-                System.out.println("warning: procurando ip correto para localhost....");
-                host0=getListaIPs().get(0);
-                System.out.println("warning: ip localizado -> "+host0);
+                try{
+                    host0=InetAddress.getLocalHost().getHostName();
+                }catch(Exception e){
+                    System.out.println("warning: procurando ip ...");
+                    host0=getListaIPs().get(0);
+                    System.out.println("warning: ip localizado -> "+host0);
+                }                    
             }
+            
             serverSocket = new ServerSocket(port0, 1,InetAddress.getByName(host0));
         }
         private Socket getCredencialSocket() throws Exception {
