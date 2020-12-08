@@ -91,6 +91,7 @@ public class Y {
     public static java.util.Scanner scanner_pipe2=null;
     public static String linhaCSV=null;
     public static int ponteiroLinhaCSV=0;    
+    public static String sepCSV=";";
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
     
@@ -875,6 +876,10 @@ cat buffer.log
         obs: campos além do headr nao serão considerados
         */
         
+        String sep=System.getenv("CSV_SEP_Y");
+        if ( sep == null || sep.trim().equals("") )
+            sep=";";
+        
         int countCommit=0;
         try{
             if ( ! fileCSV.equals("") )
@@ -884,6 +889,8 @@ cat buffer.log
             int qntCamposCSV=0;
             String valorColuna=null;
             StringBuilder sb=null;
+            
+            readColunaCSV(new String[]{sep});// init parmCSV sep, usando a assinatura array String para diferenciar de String
             
             while ( (line=read()) != null ){
                 if ( qntCamposCSV == 0 )
@@ -939,6 +946,15 @@ cat buffer.log
     }
 
     public void selectCSV(String conn,String parm){
+        
+        String sep=System.getenv("CSV_SEP_Y");
+        if ( sep == null || sep.trim().equals("") )
+            sep=";";
+        boolean onlychar=false;
+        String onlychar_=System.getenv("CSV_ONLYCHAR_Y");
+        if ( onlychar_ != null && onlychar_.equals("S") )
+            onlychar=true;
+        
         Connection con=null;
         Statement stmt=null;
         ResultSet rs=null;
@@ -989,16 +1005,18 @@ cat buffer.log
                     if ( tmp == null  ){
                         if ( first )
                         {
-                            header+="\""+campos.get(i)+"\";";
-                            first_detail+="\"\";";
-                        }else
-                            sb.append("\"\";");
+                            header+="\""+campos.get(i)+"\""+sep;
+                            first_detail+="\"\""+sep;
+                        }else{
+                            sb.append("\"\"");
+                            sb.append(sep);
+                        }
                         continue;
                     }
                     if ( tipos.get(i) == -3 || tipos.get(i) == 2 || tipos.get(i) == 12 || tipos.get(i) == -9
                         || tipos.get(i) == 1 || tipos.get(i) == 2005 || tipos.get(i) == -1 || tipos.get(i) == 93 )
                     {
-                        if ( tipos.get(i) == 2 && tmp.startsWith("."))
+                        if ( tipos.get(i) == 2 && tmp.startsWith(".") )
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
@@ -1007,12 +1025,16 @@ cat buffer.log
                         
                         if ( first )
                         {
-                            header+="\""+campos.get(i)+"\";";
-                            first_detail+="\""+tmp+"\";";
+                            header+="\""+campos.get(i)+"\""+sep;
+                            first_detail+="\""+tmp+"\""+sep;
                         }else{
-                            sb.append("\"");
+                            // nao imprime delimitador em onlychar e tipos.get(i) == 2
+                            if ( !onlychar || tipos.get(i) != 2 )
+                                sb.append("\"");
                             sb.append(tmp);
-                            sb.append("\";");
+                            if ( !onlychar || tipos.get(i) != 2 )
+                                sb.append("\"");
+                            sb.append(sep);
                         }
 
                         continue;
@@ -2663,6 +2685,9 @@ cat buffer.log
         return txt.replace("\"","").split(";");
     }
 
+    private void readColunaCSV(String [] parm) {
+        sepCSV=parm[0];
+    }
     
     private void readColunaCSV(String line) {
         ponteiroLinhaCSV=0;
@@ -2724,13 +2749,13 @@ cat buffer.log
     }
     
     private String readColunaCSVSimples() {
-        if ( linhaCSV.indexOf(";",ponteiroLinhaCSV) == ponteiroLinhaCSV )
+        if ( linhaCSV.indexOf(sepCSV,ponteiroLinhaCSV) == ponteiroLinhaCSV )
         {
             ponteiroLinhaCSV++;
             return "";
         }
         
-        int pos=linhaCSV.indexOf(";",ponteiroLinhaCSV+1);
+        int pos=linhaCSV.indexOf(sepCSV,ponteiroLinhaCSV+1);
         int ini=ponteiroLinhaCSV;
         int fim=-1;
         if ( pos == -1 )
@@ -3387,6 +3412,8 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "entrada de dados pode ser feito por |\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmacao de fim de processamento de selectCSV\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravacao\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravacao de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*\n"
