@@ -2977,17 +2977,11 @@ class Ponte {
         public static int VOLTA=2;
     }
 
-    public class OutputStreamCustom extends OutputStream{ // WRAPPER
-        public int IDA=1;
-        public int VOLTA=2;
-        
-        public void write(int b) throws IOException {
-            throw new UnsupportedOperationException("Not supported yet.");
-        }
-        public void writeCustom(int sentido_, byte[] buffer, int ini, int len) throws IOException {
+    public abstract class OutputStreamCustom extends OutputStream{ // WRAPPER
+        public void writeCustom(int sentido_, byte[] buffer, int off, int len) throws IOException {
             //if ( sentido_ == sentido.IDA )                
             //if ( sentido_ == sentido.VOLTA )                
-            super.write(buffer, ini, len);
+            super.write(buffer, off, len);
         }
     }
 
