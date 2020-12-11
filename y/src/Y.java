@@ -2978,7 +2978,8 @@ class Ponte {
     }
 
     public abstract class OutputStreamCustom extends OutputStream{ // WRAPPER
-        public void writeCustom(int sentido_, byte[] buffer, int off, int len) throws IOException {
+        public void write(int sentido_, byte[] buffer, int off, int len) throws IOException {
+            /////////
             //if ( sentido_ == sentido.IDA )                
             //if ( sentido_ == sentido.VOLTA )                
             super.write(buffer, off, len);
@@ -3016,7 +3017,7 @@ class Ponte {
         }
 
         private void ida(byte[] buffer,int len) throws Exception {            
-            os.writeCustom(sentido.IDA,buffer,0,len);
+            os.write(sentido.IDA,buffer,0,len);
         }
     }
 
@@ -3063,7 +3064,7 @@ class Ponte {
         private void volta(int len,byte[] buffer) throws Exception {
             if (displayVolta)
                 mostra(len,"<-",ponteID,buffer);
-            os.writeCustom(sentido.VOLTA,buffer,0,len);
+            os.write(sentido.VOLTA,buffer,0,len);
         }
 
         private void destroy() {
