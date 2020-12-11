@@ -139,7 +139,10 @@ cat buffer.log
 
         
 */
-        
+        //teste
+        //y serverRouter 192.168.0.100 8080 localhost 9090 show        
+        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
+        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};        
         
         new Y().go(args);
     }
@@ -2972,17 +2975,20 @@ class Ponte {
         System.out.println("finalizando ponte id "+id);
     }
 
-    private static class sentido {
-        private static int IDA=1;
+    public static class OutputStreamCustom{ 
+        public static int IDA=1;
         public static int VOLTA=2;
-    }
 
-    public abstract class OutputStreamCustom extends OutputStream{ // WRAPPER
+        private OutputStream os=null;
+        private OutputStreamCustom(OutputStream os) {
+            this.os=os;
+        }
+        
         public void write(int sentido_, byte[] buffer, int off, int len) throws IOException {
             /////////
             //if ( sentido_ == sentido.IDA )                
             //if ( sentido_ == sentido.VOLTA )                
-            super.write(buffer, off, len);
+            os.write(buffer, off, len);
         }
     }
 
@@ -3001,7 +3007,7 @@ class Ponte {
         private void start() throws Exception {
             Socket socket=new Socket(host1, port1);                                                
             final InputStream is=socket.getInputStream();                        
-            os=(OutputStreamCustom)socket.getOutputStream();
+            os=new OutputStreamCustom(socket.getOutputStream());
             new Thread(){
                 public void run(){
                     int len=0;   
@@ -3017,7 +3023,7 @@ class Ponte {
         }
 
         private void ida(byte[] buffer,int len) throws Exception {            
-            os.write(sentido.IDA,buffer,0,len);
+            os.write(OutputStreamCustom.IDA,buffer,0,len);
         }
     }
 
@@ -3050,7 +3056,7 @@ class Ponte {
             os=null;
             BufferedInputStream bis=null;                            
             is=socket.getInputStream();
-            os=(OutputStreamCustom)socket.getOutputStream();
+            os=new OutputStreamCustom(socket.getOutputStream());            
             bis=new BufferedInputStream(is);                            
             while( (len=bis.read(buffer)) != -1 ){
                 if (displayIda)
@@ -3064,7 +3070,7 @@ class Ponte {
         private void volta(int len,byte[] buffer) throws Exception {
             if (displayVolta)
                 mostra(len,"<-",ponteID,buffer);
-            os.write(sentido.VOLTA,buffer,0,len);
+            os.write(OutputStreamCustom.VOLTA,buffer,0,len);
         }
 
         private void destroy() {
