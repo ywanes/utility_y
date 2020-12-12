@@ -142,8 +142,7 @@ cat buffer.log
         //teste
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
-        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};        
-        
+        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                
         new Y().go(args);
     }
         
@@ -3061,7 +3060,7 @@ class Ponte {
             while( (len=bis.read(buffer)) != -1 ){
                 if (displayIda)
                     mostra(len,"->",ponteID,buffer);
-                destino.ida(buffer,len);              
+                destino.ida(buffer,len);
             }
             try{ bis.close(); }catch(Exception e){}
             try{ is.close(); }catch(Exception e){}
@@ -3071,6 +3070,7 @@ class Ponte {
             if (displayVolta)
                 mostra(len,"<-",ponteID,buffer);
             os.write(OutputStreamCustom.VOLTA,buffer,0,len);
+            
         }
 
         private void destroy() {
@@ -3080,20 +3080,29 @@ class Ponte {
         }
 
         private void mostra(int len,String direcao, String ponteID, byte[] buffer) {
-            int count=0;
-            
+            String hex=getHex(buffer,len);
+
             // HEX
-            System.out.print(direcao+"(id "+ponteID+" hex):");
+            System.out.println(
+                direcao+"(id "+ponteID+" hex):"
+                +hex
+            );
+            
+            // STR
+            for (String parte : new String(buffer).split("\n") )
+                System.out.println(direcao+"(id "+ponteID+" str):"+parte);            
+                    
+        }
+
+        private String getHex(byte[] buffer,int len) {            
+            int count=0;
+            StringBuilder sb=new StringBuilder();
             for (byte b : buffer){
-                System.out.print(String.format("%02X",b));
+                sb.append(String.format("%02X",b));
                 if ( ++count >= len )
                     break;
             }
-            System.out.print("\n");
-
-            // STR
-            for (String parte : new String(buffer).split("\n") )
-                System.out.println(direcao+"(id "+ponteID+" str):"+parte);
+            return sb.toString();
         }
 
     }
