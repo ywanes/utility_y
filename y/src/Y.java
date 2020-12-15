@@ -141,7 +141,7 @@ cat buffer.log
 */
         //teste
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
-        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
+        args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                
         new Y().go(args);
     }
@@ -3070,7 +3070,6 @@ class Ponte {
             if (displayVolta)
                 mostra(len,"<-",ponteID,buffer);
             os.write(OutputStreamCustom.VOLTA,buffer,0,len);
-            
         }
 
         private void destroy() {
@@ -3087,11 +3086,10 @@ class Ponte {
                 direcao+"(id "+ponteID+" hex):"
                 +hex
             );
-            
+             
             // STR
-            for (String parte : new String(buffer).split("\n") )
+            for (String parte : new String(buffer,0,len).split("\n") )                
                 System.out.println(direcao+"(id "+ponteID+" str):"+parte);            
-                    
         }
 
         private String getHex(byte[] buffer,int len) {            
