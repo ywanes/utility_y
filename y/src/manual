@@ -128,11 +128,15 @@ Exemplos...
     y dev_in | y banco buffer -n_lines 500 -log buffer.log | y dev_null
 [y scp]
     y scp file1 user,pass@servidor:file2
+    y scp file1 user,pass@servidor:file2 22
     y scp user,pass@servidor:file1 file2
+    y scp user,pass@servidor:file1 file2 22
 [y execSsh]
     y execSsh user,pass@servidor command
+    y execSsh user,pass@servidor command 22
 [y ssh]
     y ssh user,pass@servidor
+    y ssh user,pass@servidor 22
 [y sftp]
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22

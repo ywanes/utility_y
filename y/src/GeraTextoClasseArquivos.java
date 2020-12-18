@@ -7,11 +7,13 @@ import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class GeraTextoClasseArquivos {
     public static void main(String[] args) {
         new GeraTextoClasseArquivos().go();
     }
-    
+
+    // metodo feito para gerar texto de manual para colocar no final de Y.java
     public void go(){
         String prefixo="/* CRIADO AUTOMATICAMENTE - class Arquivos */    ";
         System.out.println(prefixo+"class Arquivos{");
