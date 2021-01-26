@@ -110,6 +110,12 @@ Exemplos...
 [y sed]
     cat arquivo | y sed A B
     cat arquivo | y sed A1 A2 B1 B2
+[y n]
+    cat arquivo | y n
+    obs: modifica arquivo \r\n para \n(se ja tiver \n nao tem problema)
+[y rn]
+    cat arquivo | y rn
+    obs: modifica arquivo \n para \r\n(se ja tiver \r\n nao tem problema)
 [y tee]
     cat arquivo | y tee saida.txt
 [y awk]

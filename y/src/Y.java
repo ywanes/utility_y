@@ -347,6 +347,14 @@ cat buffer.log
             sed(args);
             return;
         }
+        if ( args[0].equals("n") ){
+            n();
+            return;
+        }
+        if ( args[0].equals("rn") ){
+            rn();
+            return;
+        }
         if ( args[0].equals("tee") && args.length == 2 ){
             tee(args[1]);
             return;
@@ -1701,17 +1709,17 @@ cat buffer.log
         return null;
     }
 
-    public void read(InputStream in){
+    public void read(InputStream in){        
         scanner_pipe=new java.util.Scanner(in);
         scanner_pipe.useDelimiter("\n");
     }
     
     public String read(){
-        try{
+        try{            
             if ( scanner_pipe == null )
                 read(System.in);
             if ( scanner_pipe.hasNext() )
-                return scanner_pipe.next();
+                return scanner_pipe.next();                        
             else
                 return null;
         }catch(java.util.NoSuchElementException no) {
@@ -1721,6 +1729,73 @@ cat buffer.log
         }
         return null;
     }
+
+/*    public void readByteInt(InputStream in){        
+        scanner_pipe=new java.util.Scanner(in);        
+    }
+    
+    public Byte readByteInt(){
+        try{
+            if ( scanner_pipe == null )
+                readByteInt(System.in);             
+            if ( scanner_pipe.hasNextByte() )            
+                return scanner_pipe.nextByte();
+            else
+                return null;
+        }catch(Exception e){
+            System.err.println("NOK: "+e.toString());
+        }      
+        return null;
+    }
+*/
+        
+    byte[] read1ByteBuff = new byte[512];
+    int read1Byte_n=-1;
+    int read1Byte_len=-1;
+    public boolean read1Byte(byte [] b){
+        if ( read1Byte_n == -1 || read1Byte_n >= read1Byte_len ){
+            read1Byte_n=0;
+            read1Byte_len=readBytes(read1ByteBuff);            
+        }        
+        if ( read1Byte_n < read1Byte_len ){
+            b[0]=read1ByteBuff[read1Byte_n];
+            read1Byte_n++;
+            return true;
+        }
+        return false;
+    }
+    
+    public int readBytes(byte[] buf){
+        try{
+            int retorno=-1;
+            while( (retorno=System.in.read(buf)) == 0 ){}
+            return retorno;
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+            System.exit(1);
+        }
+        return -1;
+    }
+    
+    // write1Byte
+    byte[] write1ByteBuff = new byte[512];
+    int write1Byte_n=0;
+    public void write1Byte(byte [] b){
+        if ( write1Byte_n >= 512 ){
+            System.out.write(write1ByteBuff, 0, 512);
+            write1Byte_n=0;            
+        }
+        write1ByteBuff[write1Byte_n]=b[0];
+        write1Byte_n++;
+    }
+    
+    public void write1Byte(int b){
+        write1Byte(new byte[]{(byte)b});
+    }
+
+    public void write1ByteFlush(){
+        System.out.write(write1ByteBuff, 0, write1Byte_n);
+    }    
     
     public void read2(InputStream in){
         scanner_pipe2=new java.util.Scanner(in);
@@ -2034,7 +2109,7 @@ cat buffer.log
             System.out.println(e.toString());
         }
     }
-            
+         
     public void sed(String [] args)
     {
         try {
@@ -2048,7 +2123,76 @@ cat buffer.log
             System.out.println(e.toString());
         }
     }
-        
+    
+    int BARRA_R=13; // \r
+    int BARRA_N=10; // \n
+    public void n() // \n
+    {
+        // modifica arquivo \r\n para \n(se ja tiver \n nao tem problema)
+        try {
+            boolean tail_use=false;            
+            byte tail=0;
+            byte[] entrada_ = new byte[1];
+            byte entrada=0;
+            while ( read1Byte(entrada_) ){
+                entrada=entrada_[0];
+                if ( ! tail_use ){
+                    tail_use=true;
+                    tail=entrada;
+                    continue;
+                }
+                if ( entrada == BARRA_N && tail == BARRA_R ){
+                    tail=entrada;
+                    continue;
+                }
+                write1Byte(tail);
+                tail=entrada;
+            }
+            if ( tail_use )
+                write1Byte(tail);
+            write1ByteFlush();
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
+    }
+    
+    public void rn() // \n\r
+    {
+        // modifica arquivo \n para \r\n(se ja tiver \r\n nao tem problema)
+        try {
+            boolean tail_use=false;            
+            byte tail=0;
+            byte[] entrada_ = new byte[1];
+            byte entrada=0;
+            while ( read1Byte(entrada_) ){
+                entrada=entrada_[0];
+                if ( ! tail_use ){
+                    tail_use=true;
+                    tail=entrada;
+                    continue;
+                }
+                if ( entrada == BARRA_N && tail == BARRA_R ){
+                    write1Byte(tail);
+                    tail=entrada;
+                    continue;
+                }
+                if ( entrada == BARRA_N && tail != BARRA_R ){
+                    write1Byte(tail);
+                    write1Byte(BARRA_R);
+                    tail=entrada;
+                    continue;
+                }                
+                write1Byte(tail);
+                tail=entrada;
+            }
+            if ( tail_use )
+                write1Byte(tail);
+            write1ByteFlush();
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }
+    }
+    
     public void tee(String caminho)
     {
         try{
@@ -3377,6 +3521,12 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y sed]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    cat arquivo | y sed A B\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    cat arquivo | y sed A1 A2 B1 B2\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y n]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    cat arquivo | y n\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs: modifica arquivo \\r\\n para \\n(se ja tiver \\n nao tem problema)\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y rn]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    cat arquivo | y rn\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs: modifica arquivo \\n para \\r\\n(se ja tiver \\r\\n nao tem problema)\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y tee]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    cat arquivo | y tee saida.txt\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y awk]\n"
@@ -3481,6 +3631,8 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y tail]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y cut]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y sed]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y n]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y rn]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y tee]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y awk print]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y dev_null]\n"
@@ -3556,5 +3708,4 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */            return "";
 /* CRIADO AUTOMATICAMENTE - class Arquivos */        }
 /* CRIADO AUTOMATICAMENTE - class Arquivos */    }
-
 

@@ -23,6 +23,8 @@ usage:
   [y tail]
   [y cut]
   [y sed]
+  [y n]
+  [y rn]
   [y tee]
   [y awk print]
   [y dev_null]
