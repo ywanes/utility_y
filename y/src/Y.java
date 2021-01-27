@@ -3609,9 +3609,7 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "alias no linux:\n"
-/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.55.jar Y'\n"
-/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\n"
-/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "o alias windows funciona nesse comando \"y echo a\" mas nao nesse \"y echo a | y wc -l\"";
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.55.jar Y'";
 /* CRIADO AUTOMATICAMENTE - class Arquivos */            if ( caminho.equals("/y/manual_mini") )
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                return ""
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "usage:\n"
