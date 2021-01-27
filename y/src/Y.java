@@ -3413,6 +3413,7 @@ class Ponte {
 
 
 
+
 /* CRIADO AUTOMATICAMENTE - class Arquivos */    class Arquivos{
 /* CRIADO AUTOMATICAMENTE - class Arquivos */        public String lendo_arquivo_pacote(String caminho){
 /* CRIADO AUTOMATICAMENTE - class Arquivos */            if ( caminho.equals("/y/manual") )
@@ -3603,10 +3604,9 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "Dica3: vendo warnnings ORA: cat $ORAs_Y\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\n"
-/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "alias no windows(set_alias_windows.reg):\n"
-/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "Windows Registry Editor Version 5.00\n"
-/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Command Processor]\n"
-/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\"AutoRun\"=\"DOSKEY y=java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\jsch-0.1.55.jar Y $*\"\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "alias no windows(criar arquivo c:\\Windows\\System32\\y.bat com o conteudo abaixo):\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "@echo off\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "alias no linux:\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.55.jar Y'\n"
@@ -3716,4 +3716,5 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */            return "";
 /* CRIADO AUTOMATICAMENTE - class Arquivos */        }
 /* CRIADO AUTOMATICAMENTE - class Arquivos */    }
+
 
