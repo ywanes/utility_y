@@ -705,7 +705,7 @@ cat buffer.log
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
-                        tmp=tmp.replace("'","''");
+                        //tmp=tmp.replace("'","''");
                         if ( i == campos.size()-1 ){
                             sb.append(tmp);
                         }else{
@@ -999,6 +999,7 @@ cat buffer.log
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
+                        // o csv suporta ".."".." mas para ficar mais simples o comando abaixo tira o "
                         tmp=tmp.replace("\"","").replace("\n","");
                         tmp=tmp.trim();
                         
@@ -1274,6 +1275,7 @@ cat buffer.log
             
             stmt = con.createStatement();
             stmt.execute(parm);
+            System.out.println("OK");
         }
         catch(Exception e)
         {
@@ -2790,14 +2792,20 @@ cat buffer.log
         Comparator g;
     }
 
+    
     private String [] getCamposCSV(String txt) {
         // modelos
         // HEADER_CAMPO1;BB;CC;3;4;5;
         // HEADER_CAMPO1;BB;CC;3;4;5
+        
+        String sep=System.getenv("CSV_SEP_Y");
+        if ( sep == null || sep.trim().equals("") )
+            sep=";";
+        
         txt=txt.trim();
-        if ( txt.endsWith(";") )
+        if ( txt.endsWith(sep) )
             txt=txt.substring(0, txt.length()-1);
-        return txt.replace("\"","").split(";");
+        return txt.replace("\"","").split( sep.equals("|")?"\\|":sep ); // split nao funciona com |, tem que usar \\|
     }
 
     private void readColunaCSV(String [] parm) {
@@ -2818,9 +2826,9 @@ cat buffer.log
             return null;
         if ( linhaCSV.substring(ponteiroLinhaCSV, ponteiroLinhaCSV+1).equals("\"") )
         {
-            return readColunaCSVComplexa();
+            return readColunaCSVComplexa().replace("\r","").replace("\n","");
         }else{
-            return readColunaCSVSimples();
+            return readColunaCSVSimples().replace("\r","").replace("\n","");
         }
         
         // linhaCSV
