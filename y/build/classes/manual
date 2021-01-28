@@ -28,6 +28,7 @@ usage:
   [y bytesToInts]
   [y intsToBytes]
   [y od]
+  [y touch]
   [y tee]
   [y awk print]
   [y dev_null]
@@ -135,6 +136,14 @@ Exemplos...
     cat arquivo | od -bc
     cat arquivo | od -bcr
     obs: -r mostra numero bytes
+[y touch]
+    y touch fileA
+    y touch fileA -3600
+    y touch fileA 60
+    y touch fileA 20210128235959
+    obs: 60(60 segundos a frente)
+    obs2: -3600(3600 segundos atrás)
+    obs3: 20210128235959(setando em 28/01/2021 23:59:59)
 [y tee]
     cat arquivo | y tee saida.txt
 [y awk]
@@ -156,15 +165,19 @@ Exemplos...
     y scp file1 user,pass@servidor:file2 22
     y scp user,pass@servidor:file1 file2
     y scp user,pass@servidor:file1 file2 22
+    obs: user,pass ou user
 [y execSsh]
     y execSsh user,pass@servidor command
     y execSsh user,pass@servidor command 22
+    obs: user,pass ou user
 [y ssh]
     y ssh user,pass@servidor
     y ssh user,pass@servidor 22
+    obs: user,pass ou user
 [y sftp]
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22
+    obs: user,pass ou user
 [y serverRouter]
     y serverRouter 192.168.0.100 8080 localhost 9090
     y serverRouter 192.168.0.100 8080 localhost 9090 show

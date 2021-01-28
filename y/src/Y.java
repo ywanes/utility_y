@@ -385,15 +385,7 @@ cat buffer.log
             return;
         }          
         if ( args[0].equals("touch") && (args.length == 2 || args.length == 3) ){
-            long dif=0;
-            try {
-                if ( args.length == 3 )
-                    dif=Long.parseLong(args[2]);
-                touch(new File(args[1]),dif);
-            } catch (Exception ex) {
-                System.out.println(ex.toString());
-                System.exit(1);
-            }
+            touch(args);
             return;
         }
         if ( args[0].equals("tee") && args.length == 2 ){
@@ -2373,11 +2365,37 @@ cat buffer.log
         }        
     }
     
-    public void touch(File file, long dif) throws Exception{
-        long timestamp=System.currentTimeMillis();
+    public void touch(String [] args){
+        long dif_segundos=0;
+        long current_milisegundos=System.currentTimeMillis();
+        SimpleDateFormat format=new SimpleDateFormat("yyyyMMddHHmmss");  
+        Date dataCurrent=null;
+        try {
+            if ( args.length == 2 ){
+                touch(new File(args[1]),current_milisegundos,0);
+                return;
+            }
+            if ( args.length == 3 ){
+                if ( args[2].length() == 14 ){ //data 20210128235959
+                    dataCurrent=format.parse(args[2]);  
+                    current_milisegundos=dataCurrent.getTime();
+                }else{
+                    dif_segundos=Long.parseLong(args[2]); // 3600
+                }
+                touch(new File(args[1]),current_milisegundos,dif_segundos);                                    
+                return;
+            }
+        } catch (Exception ex) {
+            System.out.println(ex.toString());
+            System.exit(1);
+        }
+        return;
+    }
+    
+    public void touch(File file, long current_milisegundos, long dif_segundos) throws Exception{        
         if (!file.exists())
            new FileOutputStream(file).close();
-        file.setLastModified(timestamp+dif);
+        file.setLastModified(current_milisegundos + (dif_segundos*1000) );
     }
 
     public void tee(String caminho)
@@ -3633,6 +3651,7 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y bytesToInts]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y intsToBytes]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y od]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y touch]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y tee]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y awk print]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y dev_null]\n"
@@ -3740,6 +3759,14 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    cat arquivo | od -bc\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    cat arquivo | od -bcr\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs: -r mostra numero bytes\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y touch]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y touch fileA\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y touch fileA -3600\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y touch fileA 60\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y touch fileA 20210128235959\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs: 60(60 segundos a frente)\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs2: -3600(3600 segundos atras)\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs3: 20210128235959(setando em 28/01/2021 23:59:59)\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y tee]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    cat arquivo | y tee saida.txt\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y awk]\n"
@@ -3761,15 +3788,19 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y scp file1 user,pass@servidor:file2 22\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y scp user,pass@servidor:file1 file2\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y scp user,pass@servidor:file1 file2 22\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs: user,pass ou user\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y execSsh]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y execSsh user,pass@servidor command\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y execSsh user,pass@servidor command 22\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs: user,pass ou user\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y ssh]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y ssh user,pass@servidor\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y ssh user,pass@servidor 22\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs: user,pass ou user\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y sftp]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y sftp user,pass@servidor\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y sftp user,pass@servidor 22\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    obs: user,pass ou user\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "[y serverRouter]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y serverRouter 192.168.0.100 8080 localhost 9090\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 show\n"
@@ -3846,6 +3877,7 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y bytesToInts]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y intsToBytes]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y od]\n"
+/* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y touch]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y tee]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y awk print]\n"
 /* CRIADO AUTOMATICAMENTE - class Arquivos */                + "  [y dev_null]\n"
@@ -3921,5 +3953,4 @@ class Ponte {
 /* CRIADO AUTOMATICAMENTE - class Arquivos */            return "";
 /* CRIADO AUTOMATICAMENTE - class Arquivos */        }
 /* CRIADO AUTOMATICAMENTE - class Arquivos */    }
-
 

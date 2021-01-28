@@ -28,6 +28,7 @@ usage:
   [y bytesToInts]
   [y intsToBytes]
   [y od]
+  [y touch]
   [y tee]
   [y awk print]
   [y dev_null]
