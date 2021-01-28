@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
+import java.util.logging.Level;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
@@ -382,7 +383,19 @@ cat buffer.log
             else
                 od(args[1].substring(1));
             return;
-        }            
+        }          
+        if ( args[0].equals("touch") && (args.length == 2 || args.length == 3) ){
+            long dif=0;
+            try {
+                if ( args.length == 3 )
+                    dif=Long.parseLong(args[2]);
+                touch(new File(args[1]),dif);
+            } catch (Exception ex) {
+                System.out.println(ex.toString());
+                System.exit(1);
+            }
+            return;
+        }
         if ( args[0].equals("tee") && args.length == 2 ){
             tee(args[1]);
             return;
@@ -2360,6 +2373,13 @@ cat buffer.log
         }        
     }
     
+    public void touch(File file, long dif) throws Exception{
+        long timestamp=System.currentTimeMillis();
+        if (!file.exists())
+           new FileOutputStream(file).close();
+        file.setLastModified(timestamp+dif);
+    }
+
     public void tee(String caminho)
     {
         try{
