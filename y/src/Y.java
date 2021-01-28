@@ -377,7 +377,7 @@ cat buffer.log
             if ( args.length == 1 )
                 od("");
             else
-                od(args[1]);
+                od(args[1].substring(1));
             return;
         }            
         if ( args[0].equals("tee") && args.length == 2 ){
@@ -2261,11 +2261,13 @@ cat buffer.log
             parm_od="r";
         }
     }
-    
+        
     StringBuilder sb_b=new StringBuilder();
     StringBuilder sb_c=new StringBuilder();
     StringBuilder sb_r=new StringBuilder();
-    int count_od=0;
+    StringBuilder sb_compare=new StringBuilder();
+    int count_all_od=0;
+    int count_16_od=0;
     public void write1od(int i)
     {
         if ( od_b ){
@@ -2280,35 +2282,72 @@ cat buffer.log
             sb_r.append(" ");
             sb_r.append(lpad(i,3," "));
         }
-        count_od++;
-        if ( count_od >= 16){
-            count_od=0;
+        sb_compare.append(" ");
+        sb_compare.append(lpad(i,3," "));
+        
+        count_16_od++;
+        count_all_od++;
+        if ( count_16_od >= 16){            
             writeOd();
             sb_b=new StringBuilder();
             sb_c=new StringBuilder();
-            sb_r=new StringBuilder();            
+            sb_r=new StringBuilder();      
+            sb_compare=new StringBuilder();      
+            count_16_od=0;
         }
     }
         
+    String tail_od="";
+    boolean isPrintedRepeat=false;
     public void writeOd()
     {
+        // trata repetição
+        if ( sb_compare.toString().equals(tail_od) ){
+            if ( ! isPrintedRepeat ){
+                isPrintedRepeat=true;
+                System.out.println("*");                
+            }
+            return;
+        }else{
+            tail_od=sb_compare.toString();
+            isPrintedRepeat=false;
+        }
+        
         for ( int i=0;i<parm_od.length();i++ ){
-            if ( parm_od.substring(i,i+1).equals("b") )
-                System.out.println(sb_b.toString());                
-            if ( parm_od.substring(i,i+1).equals("c") )
-                System.out.println(sb_c.toString());                
-            if ( parm_od.substring(i,i+1).equals("r") )
-                System.out.println(sb_r.toString());                            
+            writeCarroOd(i==0?true:false);
+            if ( parm_od.substring(i,i+1).equals("b") ){
+                System.out.println(sb_b.toString());
+                continue;
+            }
+            if ( parm_od.substring(i,i+1).equals("c") ){
+                System.out.println(sb_c.toString());
+                continue;
+            }
+            if ( parm_od.substring(i,i+1).equals("r") ){
+                System.out.println(sb_r.toString());
+                continue;
+            }
+            System.out.println("Erro, parametro nao tratado: "+parm_od);
+            System.exit(1);
+        }
+    }
+    
+    public void writeCarroOd(boolean isPrint)
+    {
+        if ( isPrint ){            
+            System.out.print( lpad( Integer.toOctalString(count_all_od-count_16_od).trim() ,7,"0") );        
+        }else{
+            System.out.print("       ");
         }
     }
     
     public void write1odFlush()
     {
-        if ( count_od == 0 ){
-            //
-        }else{
+        if ( count_16_od > 0 )
             writeOd();
-        }
+        count_16_od=0;
+        writeCarroOd(true);
+        System.out.println();
     }
     
     public void od(String parm)
