@@ -25,8 +25,8 @@ usage:
   [y sed]
   [y n]
   [y rn]
-  [y bytesToInts]
-  [y intsToBytes]
+  [y [bytesToInts|bi]]
+  [y [intsToBytes|ib]]
   [y od]
   [y touch]
   [y tee]
@@ -122,16 +122,22 @@ Exemplos...
 [y rn]
     cat arquivo | y rn
     obs: modifica arquivo \n para \r\n(se ja tiver \r\n nao tem problema)
-[y bytesToInts]
+[y [bytesToInts|bi]]
     cat arquivo | y bytesToInts
+    cat arquivo | y bi
     obs entrada: arquivo binario
     obs saida: lista de numeros bytes(0..255)
-[y intsToBytes]
+    obs2 bi == bytesToInts
+[y [intsToBytes|ib]]
     echo 55 | y intsToBytes
     cat arquivo | y intsToBytes
+    cat arquivo | y ib
+    y intsToBytes 20 20
+    y ib 20 20
     obs entrada: lista de numeros bytes(0..255)
     obs saida: arquivo binario
     obs2 por conceito, os bytes variam entre -128..127, mas aqui usaremos 0..255
+    obs3 ib == intsToBytes
 [y od]
     cat arquivo | od
     cat arquivo | od -bc

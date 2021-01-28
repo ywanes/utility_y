@@ -364,12 +364,12 @@ cat buffer.log
             rn();
             return;
         }
-        if ( args[0].equals("bytesToInts")){
+        if ( args[0].equals("bytesToInts") || args[0].equals("bi") ){
             bytesToInts();
             return;
         }       
-        if ( args[0].equals("intsToBytes") ){
-            intsToBytes();
+        if ( args[0].equals("intsToBytes") || args[0].equals("ib") ){
+            intsToBytes(args);
             return;
         }    
         if ( args[0].equals("od") 
@@ -2243,19 +2243,31 @@ cat buffer.log
         }        
     }
         
-    public void intsToBytes()
+    public void intsToBytes(String [] args)
     {
         String line=null;
-        int i=0;
-        while ( (line=read()) != null ) {
-            try{
-                i=Integer.parseInt(line)-128;
-            }catch(Exception ex){
-                System.out.println("\nErro, valor invalido: "+line);
-                System.exit(1);
-            }
-            write1Byte(i);            
-        }        
+        int valor=0;        
+        if ( args.length == 1 ){ // stdin
+            while ( (line=read()) != null ) {
+                try{
+                    valor=Integer.parseInt(line)-128;
+                }catch(Exception ex){
+                    System.out.println("\nErro, valor invalido: "+line);
+                    System.exit(1);
+                }
+                write1Byte(valor);            
+            }        
+        }else{ // parametros
+            for ( int i=1;i<args.length;i++ ){
+                try{
+                    valor=Integer.parseInt(args[i])-128;
+                }catch(Exception ex){
+                    System.out.println("\nErro, valor invalido: "+line);
+                    System.exit(valor);
+                }
+                write1Byte(valor);            
+            }                    
+        }
         write1ByteFlush();
     }
 
@@ -3652,8 +3664,8 @@ class Ponte {
 /* class by manual */                + "  [y sed]\n"
 /* class by manual */                + "  [y n]\n"
 /* class by manual */                + "  [y rn]\n"
-/* class by manual */                + "  [y bytesToInts]\n"
-/* class by manual */                + "  [y intsToBytes]\n"
+/* class by manual */                + "  [y [bytesToInts|bi]]\n"
+/* class by manual */                + "  [y [intsToBytes|ib]]\n"
 /* class by manual */                + "  [y od]\n"
 /* class by manual */                + "  [y touch]\n"
 /* class by manual */                + "  [y tee]\n"
@@ -3749,16 +3761,22 @@ class Ponte {
 /* class by manual */                + "[y rn]\n"
 /* class by manual */                + "    cat arquivo | y rn\n"
 /* class by manual */                + "    obs: modifica arquivo \\n para \\r\\n(se ja tiver \\r\\n nao tem problema)\n"
-/* class by manual */                + "[y bytesToInts]\n"
+/* class by manual */                + "[y [bytesToInts|bi]]\n"
 /* class by manual */                + "    cat arquivo | y bytesToInts\n"
+/* class by manual */                + "    cat arquivo | y bi\n"
 /* class by manual */                + "    obs entrada: arquivo binario\n"
 /* class by manual */                + "    obs saida: lista de numeros bytes(0..255)\n"
-/* class by manual */                + "[y intsToBytes]\n"
+/* class by manual */                + "    obs2 bi == bytesToInts\n"
+/* class by manual */                + "[y [intsToBytes|ib]]\n"
 /* class by manual */                + "    echo 55 | y intsToBytes\n"
 /* class by manual */                + "    cat arquivo | y intsToBytes\n"
+/* class by manual */                + "    cat arquivo | y ib\n"
+/* class by manual */                + "    y intsToBytes 20 20\n"
+/* class by manual */                + "    y ib 20 20\n"
 /* class by manual */                + "    obs entrada: lista de numeros bytes(0..255)\n"
 /* class by manual */                + "    obs saida: arquivo binario\n"
 /* class by manual */                + "    obs2 por conceito, os bytes variam entre -128..127, mas aqui usaremos 0..255\n"
+/* class by manual */                + "    obs3 ib == intsToBytes\n"
 /* class by manual */                + "[y od]\n"
 /* class by manual */                + "    cat arquivo | od\n"
 /* class by manual */                + "    cat arquivo | od -bc\n"
@@ -3879,8 +3897,8 @@ class Ponte {
 /* class by manual */                + "  [y sed]\n"
 /* class by manual */                + "  [y n]\n"
 /* class by manual */                + "  [y rn]\n"
-/* class by manual */                + "  [y bytesToInts]\n"
-/* class by manual */                + "  [y intsToBytes]\n"
+/* class by manual */                + "  [y [bytesToInts|bi]]\n"
+/* class by manual */                + "  [y [intsToBytes|ib]]\n"
 /* class by manual */                + "  [y od]\n"
 /* class by manual */                + "  [y touch]\n"
 /* class by manual */                + "  [y tee]\n"
