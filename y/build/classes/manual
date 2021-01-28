@@ -23,6 +23,11 @@ usage:
   [y tail]
   [y cut]
   [y sed]
+  [y n]
+  [y rn]
+  [y bytesToInts]
+  [y intsToBytes]
+  [y od]
   [y tee]
   [y awk print]
   [y dev_null]
@@ -116,6 +121,20 @@ Exemplos...
 [y rn]
     cat arquivo | y rn
     obs: modifica arquivo \n para \r\n(se ja tiver \r\n nao tem problema)
+[y bytesToInts]
+    cat arquivo | y bytesToInts
+    obs entrada: arquivo binario
+    obs saida: lista de numeros bytes(0..255)
+[y intsToBytes]
+    echo 55 | y intsToBytes
+    cat arquivo | y intsToBytes
+    obs entrada: lista de numeros bytes(0..255)
+    obs saida: arquivo binario
+[y od]
+    cat arquivo | od
+    cat arquivo | od -bc
+    cat arquivo | od -bcr
+    obs: -r mostra numero bytes
 [y tee]
     cat arquivo | y tee saida.txt
 [y awk]
