@@ -15,7 +15,7 @@ public class GeraTextoClasseArquivos {
 
     // metodo feito para gerar texto de manual para colocar no final de Y.java
     public void go(){
-        String prefixo="/* CRIADO AUTOMATICAMENTE - class Arquivos */    ";
+        String prefixo="/* class by manual */    ";
         System.out.println(prefixo+"class Arquivos{");
         System.out.println(prefixo+"    public String lendo_arquivo_pacote(String caminho){");
         for ( String item : getResourceFiles("/") )

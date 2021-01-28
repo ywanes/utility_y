@@ -131,6 +131,7 @@ Exemplos...
     cat arquivo | y intsToBytes
     obs entrada: lista de numeros bytes(0..255)
     obs saida: arquivo binario
+    obs2 por conceito, os bytes variam entre -128..127, mas aqui usaremos 0..255
 [y od]
     cat arquivo | od
     cat arquivo | od -bc
