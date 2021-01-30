@@ -2483,6 +2483,10 @@ cat buffer.log
                     tail=entrada;
                     continue;
                 }
+                if ( (tail == 66 || tail == 67) && entrada >= 64 ){
+                    System.out.println("Erro, sequencia ilegal!");
+                    System.exit(1);
+                }
                 if ( tail == 66 ){
                     write1Byte(entrada-delta);
                     tail_use=false;
