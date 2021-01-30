@@ -29,6 +29,7 @@ usage:
   [y [intsToBytes|ib]]
   [y od]
   [y touch]
+  [y iconv]
   [y tee]
   [y awk print]
   [y dev_null]

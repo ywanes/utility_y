@@ -29,6 +29,7 @@ usage:
   [y [intsToBytes|ib]]
   [y od]
   [y touch]
+  [y iconv]
   [y tee]
   [y awk print]
   [y dev_null]
@@ -151,6 +152,10 @@ Exemplos...
     obs: 60(60 segundos a frente)
     obs2: -3600(3600 segundos atrás)
     obs3: 20210128235959(setando em 28/01/2021 23:59:59)
+[y iconv]
+    y iconv -f UTF-8 -t ISO-8859-1 file
+    cat file | y iconv -f UTF-8 -t ISO-8859-1 
+    obs: convert ISO-8859-1(windows) para UTF-8
 [y tee]
     cat arquivo | y tee saida.txt
 [y awk]

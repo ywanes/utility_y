@@ -59,13 +59,16 @@ public class Y {
     //public static String local_env=null;
     public static String local_env="c:\\tmp";
 
+    public static int BUFFER_SIZE=1024;
     public static java.util.Scanner scanner_pipe=null;
-    public static java.util.Scanner scanner_pipe2=null;
+    public static java.util.Scanner scanner_pipeB=null;
+    public static InputStream inputStream_pipe=null;
     public static String linhaCSV=null;
     public static int ponteiroLinhaCSV=0;    
     public static String sepCSV=";";
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
+    public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8"};
         
     // octal bytes
     public static String [] OD_BC_B=new String[]{" 200"," 201"," 202"," 203"," 204"," 205"," 206"," 207"," 210"," 211"," 212"," 213"," 214"," 215"," 216"," 217"," 220"," 221"," 222"," 223"," 224"," 225"," 226"," 227"," 230"," 231"," 232"," 233"," 234"," 235"," 236"," 237"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 250"," 251"," 252"," 253"," 254"," 255"," 256"," 257"," 260"," 261"," 262"," 263"," 264"," 265"," 266"," 267"," 270"," 271"," 272"," 273"," 274"," 275"," 276"," 277"," 300"," 301"," 302"," 303"," 304"," 305"," 306"," 307"," 310"," 311"," 312"," 313"," 314"," 315"," 316"," 317"," 320"," 321"," 322"," 323"," 324"," 325"," 326"," 327"," 330"," 331"," 332"," 333"," 334"," 335"," 336"," 337"," 340"," 341"," 342"," 343"," 344"," 345"," 346"," 347"," 350"," 351"," 352"," 353"," 354"," 355"," 356"," 357"," 360"," 361"," 362"," 363"," 364"," 365"," 366"," 367"," 370"," 371"," 372"," 373"," 374"," 375"," 376"," 377"," 000"," 001"," 002"," 003"," 004"," 005"," 006"," 007"," 010"," 011"," 012"," 013"," 014"," 015"," 016"," 017"," 020"," 021"," 022"," 023"," 024"," 025"," 026"," 027"," 030"," 031"," 032"," 033"," 034"," 035"," 036"," 037"," 040"," 041"," 042"," 043"," 044"," 045"," 046"," 047"," 050"," 051"," 052"," 053"," 054"," 055"," 056"," 057"," 060"," 061"," 062"," 063"," 064"," 065"," 066"," 067"," 070"," 071"," 072"," 073"," 074"," 075"," 076"," 077"," 100"," 101"," 102"," 103"," 104"," 105"," 106"," 107"," 110"," 111"," 112"," 113"," 114"," 115"," 116"," 117"," 120"," 121"," 122"," 123"," 124"," 125"," 126"," 127"," 130"," 131"," 132"," 133"," 134"," 135"," 136"," 137"," 140"," 141"," 142"," 143"," 144"," 145"," 146"," 147"," 150"," 151"," 152"," 153"," 154"," 155"," 156"," 157"," 160"," 161"," 162"," 163"," 164"," 165"," 166"," 167"," 170"," 171"," 172"," 173"," 174"," 175"," 176"," 177"};
@@ -388,6 +391,23 @@ cat buffer.log
             touch(args);
             return;
         }
+        if ( 
+            args[0].equals("iconv") 
+            && ( args.length == 5 || args.length == 6 )
+            && args[1].equals("-f") && args[3].equals("-t") 
+            && isSuportIconv(args[2]) && isSuportIconv(args[4]) && ! args[2].equals(args[4])
+        ){
+            if ( args.length == 6 ){
+                if ( ! new File(args[5]).exists() ){
+                    System.err.println("Erro, este arquivo não existe: "+args[5]);
+                    System.exit(1);
+                }                
+                iconv(args[2],args[4],args[5]);
+                return;
+            }
+            iconv(args[2],args[4],null);
+            return;
+        }        
         if ( args[0].equals("tee") && args.length == 2 ){
             tee(args[1]);
             return;
@@ -695,8 +715,9 @@ cat buffer.log
             
             if ( parm.equals("") ){
                 String line;
-                while( (line=read()) != null )
+                while( (line=readLine()) != null )
                     parm+=line+"\n";
+                closeLine();
             }
             parm=removePontoEVirgual(parm);
 
@@ -784,8 +805,9 @@ cat buffer.log
 
             if ( parm.equals("") ){
                 String line;
-                while( (line=read()) != null )
+                while( (line=readLine()) != null )
                     parm+=line+"\n";
+                closeLine();
             }
             
             parm=removePontoEVirgual(parm);
@@ -895,7 +917,7 @@ cat buffer.log
         int countCommit=0;
         try{
             if ( ! fileCSV.equals("") )
-                read(new FileInputStream(new File(fileCSV)));
+                readLine(fileCSV);
             String line;
             String [] camposCSV=null;
             int qntCamposCSV=0;
@@ -904,7 +926,7 @@ cat buffer.log
             
             readColunaCSV(new String[]{sep});// init parmCSV sep, usando a assinatura array String para diferenciar de String
             
-            while ( (line=read()) != null ){
+            while ( (line=readLine()) != null ){
                 if ( qntCamposCSV == 0 )
                 {
                     camposCSV=getCamposCSV(line);
@@ -945,6 +967,7 @@ cat buffer.log
                     countCommit=0;
                 }
             }
+            closeLine();
         }
         catch(Exception e)
         {
@@ -982,8 +1005,9 @@ cat buffer.log
 
             if ( parm.equals("") ){
                 String line;
-                while( (line=read()) != null )
+                while( (line=readLine()) != null )
                     parm+=line+"\n";                
+                closeLine();
             }
             parm=removePontoEVirgual(parm);
 
@@ -1077,7 +1101,7 @@ cat buffer.log
         try_finish_and_count(count);
     }
 
-    public void executeInsert(String conn, InputStream in){        
+    public void executeInsert(String conn, InputStream pipe){        
         Connection con=null;
         Statement stmt=null;
         ResultSet rs=null;
@@ -1098,7 +1122,7 @@ cat buffer.log
         String command="";
         boolean achou=false;
         
-        read2(in);
+        readLineB(pipe);
         
         try{
             con = getcon(conn);
@@ -1109,7 +1133,7 @@ cat buffer.log
             con.setAutoCommit(false);
             stmt = con.createStatement();
 
-            while( (line=read2()) != null ){
+            while( (line=readlineB()) != null ){
                 if ( par && line.trim().equals("") )
                     continue;
                 if ( par ){
@@ -1283,6 +1307,7 @@ cat buffer.log
         if ( ok )
             System.out.println("OK");
         close(rs,stmt,con);
+        closeLineB();                
     }
 
     public boolean execute(String conn,String parm){
@@ -1299,8 +1324,9 @@ cat buffer.log
 
             if ( parm.equals("") ){
                 String line;
-                while( (line=read()) != null )
-                    parm+=line+"\n";                
+                while( (line=readLine()) != null )
+                    parm+=line+"\n";   
+                closeLine();
             }
 
             if ( ! parm.trim().toUpperCase().startsWith("DECLARE") )
@@ -1408,33 +1434,6 @@ cat buffer.log
                 }.start();  
             }
 
-            
-            // testando remoção desse bloco
-            /*
-            // thread in
-            new Thread() {
-                public void run() {
-                    // novo scanner in thread
-                    java.util.Scanner scanner = new java.util.Scanner(System.in);
-                    scanner.useDelimiter("\n");
-                    while( true ){
-                        if ( lista.size() < n_lines_buffer )
-                        {
-                            if ( scanner.hasNext()){
-                                lista.add(scanner.next());
-                                if ( caminhoLog[0] != null )
-                                    contabiliza(countLinhasIn);
-                            }else{
-                                finishIn[0]=true;
-                                break;
-                            }
-                        }
-                    }
-                    countLinhasIn[2]=1;
-                }
-            }.start();        
-            */
-
             // thread in
             new Thread() {
                 public void run() {
@@ -1442,7 +1441,7 @@ cat buffer.log
                     while( true ){
                         if ( lista.size() < n_lines_buffer )
                         {
-                            if ( (line=read()) != null )
+                            if ( (line=readLine()) != null )
                             {
                                 lista.add(line);
                                 if ( caminhoLog[0] != null )
@@ -1453,6 +1452,7 @@ cat buffer.log
                             }
                         }
                     }
+                    closeLine();
                     countLinhasIn[2]=1;
                 }
             }.start();        
@@ -1557,7 +1557,7 @@ cat buffer.log
     }
     public String gravado_token(String dir_token,String value){
         dir_token=fix_caminho(dir_token);
-        String md5=getMD5_SHA1_FILE(value,"MD5");
+        String md5=digest_text(value,"MD5");
         if(salvando_file(value+"\n",new File(dir_token+md5)))
             return md5;
         return null;
@@ -1568,7 +1568,7 @@ cat buffer.log
             return null;
         return lendo_arquivo(dir_token+md5);
     }
-    public static boolean salvando_file(String texto, File arquivo) {
+    public boolean salvando_file(String texto, File arquivo) {
         try{
             BufferedWriter out = new BufferedWriter(new FileWriter(arquivo));
             out.write(texto);
@@ -1580,18 +1580,18 @@ cat buffer.log
         return false; 
     }
 
-    public static String lendo_arquivo(String caminho) {
+    public String lendo_arquivo(String caminho) {
         String result="";
         String strLine;
         try{
-            BufferedReader in=new BufferedReader(new FileReader(caminho));
-            while ((strLine = in.readLine()) != null)   {
+            readLine(caminho);
+            while ((strLine = readLine()) != null)   {
                 if ( result.equals("") )
                     result+=strLine;
                 else
                     result+="\n"+strLine;
             }
-            in.close();
+            closeLine();
         }catch (Exception e){
             System.out.println(e.toString());
         }
@@ -1607,10 +1607,10 @@ cat buffer.log
             ArrayList<String> lista=new ArrayList<String>();
             String line;
 
-            BufferedReader in=new BufferedReader(new FileReader(caminho));
-            while ((line = in.readLine()) != null)
+            readLine(caminho);
+            while ((line = readLine()) != null)
                 lista.add(line);
-            in.close();
+            closeLine();
 
             if ( lista.size() > 0 )
             {
@@ -1684,38 +1684,6 @@ cat buffer.log
         return txt.replaceAll("\\s+$","");
     }
 
-    public String getMD5_SHA1_FILE(File file,String tipo){
-        InputStream data=null;
-        String md5="";
-        int STREAM_BUFFER_LENGTH = 1024;
-        try {
-            data=new FileInputStream(file);
-            MessageDigest digest=MessageDigest.getInstance(tipo);
-            byte[] buffer = new byte[STREAM_BUFFER_LENGTH];
-            int read = data.read(buffer, 0, STREAM_BUFFER_LENGTH);
-            while (read > -1) {
-                digest.update(buffer, 0, read);
-                read = data.read(buffer, 0, STREAM_BUFFER_LENGTH);
-            }
-            md5=new String(encodeHex(digest.digest()));
-            data.close();
-        } catch (Exception e) {
-            System.out.println(e.toString());
-        }
-        return md5;
-    }
-
-    public String getMD5_SHA1_FILE(String txt,String tipo){
-        try {
-            byte[] bytesOfMessage = txt.getBytes("UTF-8");
-            MessageDigest md = MessageDigest.getInstance("MD5");            
-            return new String(encodeHex(md.digest(bytesOfMessage)));                
-        } catch (Exception e) {
-            System.out.println(e.toString());
-        }
-        return null;
-    }
-
     public char[] encodeHex(byte[] data) {
         char[] toDigits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
         int l = data.length;
@@ -1744,17 +1712,52 @@ cat buffer.log
         return null;
     }
 
-    public void read(InputStream in){        
-        scanner_pipe=new java.util.Scanner(in);
-        scanner_pipe.useDelimiter("\n");
+    public void readLine(String caminho) throws Exception{
+        readLine(new FileInputStream(new File(caminho)));
     }
     
-    public String read(){
+    public void readLine(InputStream in){        
+        scanner_pipe=new java.util.Scanner(in);
+        scanner_pipe.useDelimiter("\n");
+    }    
+    
+    public String readLine(){
         try{            
             if ( scanner_pipe == null )
-                read(System.in);
+                readLine(System.in);
             if ( scanner_pipe.hasNext() )
                 return scanner_pipe.next();                        
+            else
+                return null;            
+        }catch(java.util.NoSuchElementException no) {
+            return null;
+        }catch(Exception e){
+            System.err.println("NOK: "+e.toString());
+        }
+        return null;
+    }
+
+    public void closeLine(){
+        try{
+            scanner_pipe.close();
+        }catch(Exception e){}
+    }
+    
+    public void readLineB(String caminho) throws Exception{
+        readLineB(new FileInputStream(new File(caminho)));
+    }
+    
+    public void readLineB(InputStream in){
+        scanner_pipeB=new java.util.Scanner(in);
+        scanner_pipeB.useDelimiter("\n");
+    }
+        
+    public String readlineB(){        
+        try{
+            if ( scanner_pipeB == null )
+                readLineB(System.in);
+            if ( scanner_pipeB.hasNext() )
+                return scanner_pipeB.next();
             else
                 return null;
         }catch(java.util.NoSuchElementException no) {
@@ -1764,27 +1767,39 @@ cat buffer.log
         }
         return null;
     }
-
-/*    public void readByteInt(InputStream in){        
-        scanner_pipe=new java.util.Scanner(in);        
+    
+    public void closeLineB(){
+        try{
+            scanner_pipeB.close();
+        }catch(Exception e){}
     }
     
-    public Byte readByteInt(){
-        try{
-            if ( scanner_pipe == null )
-                readByteInt(System.in);             
-            if ( scanner_pipe.hasNextByte() )            
-                return scanner_pipe.nextByte();
-            else
-                return null;
-        }catch(Exception e){
-            System.err.println("NOK: "+e.toString());
-        }      
-        return null;
+    public void readBytes(String caminho) throws Exception{
+        readBytes(new File(caminho));
     }
-*/
-        
-    byte[] read1ByteBuff = new byte[512];
+    public void readBytes(File file) throws Exception{
+        inputStream_pipe=new FileInputStream(file);
+    }
+    
+    public int readBytes(byte[] buf){
+        return readBytes(buf,0,BUFFER_SIZE);
+    }
+    
+    public int readBytes(byte[] buf,int off,int len){
+        try{
+            if ( inputStream_pipe == null )
+                inputStream_pipe=System.in;
+            int retorno=-1;
+            while( (retorno=inputStream_pipe.read(buf,off,len)) == 0 ){}
+            return retorno;
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+            System.exit(1);
+        }
+        return -1;
+    }
+    
+    byte[] read1ByteBuff = new byte[BUFFER_SIZE];
     int read1Byte_n=-1;
     int read1Byte_len=-1;
     public boolean read1Byte(byte [] b){
@@ -1800,70 +1815,42 @@ cat buffer.log
         return false;
     }
     
-    public int readBytes(byte[] buf){
+    public void closeBytes(){
         try{
-            int retorno=-1;
-            while( (retorno=System.in.read(buf)) == 0 ){}
-            return retorno;
-        }catch(Exception e){
-            System.err.println("Erro, "+e.toString());
-            System.exit(1);
-        }
-        return -1;
-    }
-    
-    // write1Byte
-    byte[] write1ByteBuff = new byte[512];
-    int write1Byte_n=0;
-    public void write1Byte(byte [] b){
-        if ( write1Byte_n >= 512 ){
-            System.out.write(write1ByteBuff, 0, 512);
-            write1Byte_n=0;            
-        }
-        write1ByteBuff[write1Byte_n]=b[0];
-        write1Byte_n++;
+            inputStream_pipe.close();
+        }catch(Exception e){}
     }
     
     public void write1Byte(int b){
         write1Byte(new byte[]{(byte)b});
     }
 
+    // write1Byte
+    byte[] write1ByteBuff = new byte[BUFFER_SIZE];
+    int write1Byte_n=0;
+    public void write1Byte(byte [] b){
+        if ( write1Byte_n >= BUFFER_SIZE ){
+            System.out.write(write1ByteBuff, 0, BUFFER_SIZE);
+            write1Byte_n=0;            
+        }
+        write1ByteBuff[write1Byte_n]=b[0];
+        write1Byte_n++;
+    }
+    
     public void write1ByteFlush(){
         System.out.write(write1ByteBuff, 0, write1Byte_n);
     }    
     
-    public void read2(InputStream in){
-        scanner_pipe2=new java.util.Scanner(in);
-        scanner_pipe2.useDelimiter("\n");
-    }
-    
-    // usando para comandos combinados por exemplo carga(read/scanner_pipe) que chama executeInsert(read2/scanner_pipe2).
-    public String read2(){        
-        try{
-            if ( scanner_pipe2 == null )
-                read2(System.in);
-            if ( scanner_pipe2.hasNext() )
-                return scanner_pipe2.next();
-            else
-                return null;
-        }catch(java.util.NoSuchElementException no) {
-            return null;
-        }catch(Exception e){
-            System.err.println("NOK: "+e.toString());
-        }
-        return null;
-    }
-    
     public void gzip()
     {
-        try{
-            int BUFFER_SIZE = 512;
+        try{            
             byte[] buf = new byte[BUFFER_SIZE];            
             java.util.zip.GZIPOutputStream out = new java.util.zip.GZIPOutputStream(System.out);
             int len;
-            while ((len = System.in.read(buf)) > -1)
+            while ((len = readBytes(buf)) > -1)
                 out.write(buf, 0, len);
-            out.finish();        
+            out.finish();  
+            closeBytes();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -1871,8 +1858,7 @@ cat buffer.log
     
     public void gunzip()
     {
-        try{
-            int BUFFER_SIZE = 512;
+        try{            
             byte[] buf = new byte[BUFFER_SIZE];
             java.util.zip.GZIPInputStream out = new java.util.zip.GZIPInputStream(System.in);
             int len;
@@ -1904,8 +1890,7 @@ cat buffer.log
                 }
             }
             for ( int i=1;i<caminhos.length;i++ )
-            {
-                int BUFFER_SIZE = 512;
+            {                
                 byte[] buf = new byte[BUFFER_SIZE];            
                 FileInputStream fis = new FileInputStream(caminhos[i]);
                 int len;
@@ -1920,18 +1905,29 @@ cat buffer.log
 
     public void digest(String tipo){        
         try {
-            MessageDigest digest=MessageDigest.getInstance(tipo);
-            int BUFFER_SIZE = 1024;
+            MessageDigest digest=MessageDigest.getInstance(tipo);            
             byte[] buf = new byte[BUFFER_SIZE];            
             int len;
-            while( (len=System.in.read(buf, 0, BUFFER_SIZE)) > -1 )
+            while( (len=readBytes(buf)) > -1 )
                 digest.update(buf, 0, len);
+            closeBytes();
             System.out.println(new String(encodeHex(digest.digest())));
         } catch (Exception ex) {
             System.err.println("Erro: "+ex.toString());
         }
     }
 
+    public String digest_text(String txt,String tipo){
+        try {
+            byte[] bytesOfMessage = txt.getBytes("UTF-8");
+            MessageDigest md = MessageDigest.getInstance(tipo);            
+            return new String(encodeHex(md.digest(bytesOfMessage)));                
+        } catch (Exception e) {
+            System.out.println(e.toString());
+        }
+        return null;
+    }
+    
     public int tryConvertNumberPositiveByString(int n_lines_buffer,String value){
         try{
             int tmp=Integer.parseInt(value);
@@ -1958,7 +1954,7 @@ cat buffer.log
         }        
         try {
             String line=null;
-            while ( (line=read()) != null ) {
+            while ( (line=readLine()) != null ) {
                 if ( ! first && ! tail && line.contains(grep) ){
                     System.out.println(line);
                     continue;
@@ -1974,9 +1970,9 @@ cat buffer.log
                 if ( first && tail && line.startsWith(grep) && line.endsWith(grep) ){
                     System.out.println(line);
                     continue;
-                }
-                
+                }                
             }
+            closeLine();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -1985,8 +1981,9 @@ cat buffer.log
     {
         try {
             long count=0;
-            while ( (read()) != null )
+            while ( (readLine()) != null )
                 count++;
+            closeLine();
             System.out.println(count);
         }catch(Exception e){
         }
@@ -1994,7 +1991,7 @@ cat buffer.log
     
     public void head(String [] args)
     {
-        int p;
+        long p;
         String line;
         long count=0;
         
@@ -2002,20 +1999,22 @@ cat buffer.log
             if ( args.length == 1 )
                 p=10;
             else
-                p=Integer.parseInt(args[1].substring(1));
+                p=Long.parseLong(args[1].substring(1));
         }catch(Exception e){
             comando_invalido(args);
             return;
         }
         
         try {
-            while ( (line=read()) != null ) {
+            while ( (line=readLine()) != null ) {
                 if ( ++count <= p )
                     System.out.println(line);
                 else{
-                    while ( (read()) != null ) {}
+                    closeLine();
+                    break;
                 }
             }
+            closeLine();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -2038,11 +2037,12 @@ cat buffer.log
         }
         
         try {
-            while ( (line=read()) != null ) {
+            while ( (line=readLine()) != null ) {
                 lista.add(line);
                 if ( lista.size() > p )
                     lista.remove(0);
             }
+            closeLine();
             for ( int i=0;i<lista.size();i++ ){
                 System.out.println(lista.get(i));
             }
@@ -2113,7 +2113,7 @@ cat buffer.log
         
         try {
             String line=null;
-            while ( (line=read()) != null ) {
+            while ( (line=readLine()) != null ) {
                 for ( int i=0;i<elem.length;i+=2 ){
                     if ( elem[i] == -1 ){
                         if ( line.length() < elem[i+1] )
@@ -2140,6 +2140,7 @@ cat buffer.log
                 }
                 System.out.println("");                
             }
+            closeLine();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -2149,11 +2150,12 @@ cat buffer.log
     {
         try {
             String line=null;
-            while ( (line=read()) != null ){
+            while ( (line=readLine()) != null ){
                 for ( int i=1;i<args.length;i+=2 )
                     line=line.replaceAll(args[i], args[i+1]);
                 System.out.println(line);
             }
+            closeLine();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -2248,7 +2250,7 @@ cat buffer.log
         String line=null;
         int valor=0;        
         if ( args.length == 1 ){ // stdin
-            while ( (line=read()) != null ) {
+            while ( (line=readLine()) != null ) {
                 try{
                     valor=Integer.parseInt(line)-128;
                 }catch(Exception ex){
@@ -2256,7 +2258,8 @@ cat buffer.log
                     System.exit(1);
                 }
                 write1Byte(valor);            
-            }        
+            } 
+            closeLine();
         }else{ // parametros
             for ( int i=1;i<args.length;i++ ){
                 try{
@@ -2414,19 +2417,107 @@ cat buffer.log
            new FileOutputStream(file).close();
         file.setLastModified(current_milisegundos + (dif_segundos*1000) );
     }
+    
+    private boolean isSuportIconv(String a) {
+        for ( int i=0;i<suportIconv.length;i++ )
+            if ( a.equals(suportIconv[i]))
+                return true;
+        return false;
+    }
 
+    private void iconv(String tipoDestino, String tipoOrigem, String caminho) {
+        if ( tipoOrigem.equals("UTF-8") && tipoDestino.equals("ISO-8859-1") ){
+            iconvUTF8ToWindows(caminho);
+            return;
+        }
+        if ( tipoOrigem.equals("ISO-8859-1") && tipoDestino.equals("UTF-8") ){
+            iconvWindowsToUTF8(caminho);           
+            return;
+        }
+        System.out.println("Erro, encode nao suportado: "+tipoDestino+"/"+tipoOrigem);
+        System.exit(1);
+    }
+    
+    private void iconvUTF8ToWindows(String caminho) {
+        try {
+            byte[] entrada_ = new byte[1];
+            int entrada=0;
+            int delta=128; // delta é para poder manipular entre 0..255 ao invés de -128..127
+            if ( caminho != null && ! caminho.equals("") )
+                readBytes(caminho);
+            while ( read1Byte(entrada_) ){
+                entrada=entrada_[0]+delta;
+                if ( entrada < 64 ){
+                    write1Byte(66-delta);
+                    write1Byte(entrada-delta);
+                    continue;
+                }
+                if ( entrada < 128 ){
+                    write1Byte(67-delta);
+                    write1Byte(entrada-64-delta);
+                    continue;
+                }
+                write1Byte(entrada-delta);                
+            }
+            write1ByteFlush();
+            closeBytes();
+        }catch(Exception e){
+            System.out.println(e.toString());
+            System.exit(1);
+        }
+    }
+    
+    private void iconvWindowsToUTF8(String caminho) {
+        try {
+            boolean tail_use=false;            
+            int tail=0;
+            byte[] entrada_ = new byte[1];
+            int entrada=0;
+            int delta=128; // delta é para poder manipular entre 0..255 ao invés de -128..127
+            if ( caminho != null && ! caminho.equals("") )
+                readBytes(caminho);
+            while ( read1Byte(entrada_) ){
+                entrada=entrada_[0]+delta;
+                if ( ! tail_use ){
+                    tail_use=true;
+                    tail=entrada;
+                    continue;
+                }
+                if ( tail == 66 ){
+                    write1Byte(entrada-delta);
+                    tail_use=false;
+                    continue;
+                }
+                if ( tail == 67 ){
+                    write1Byte(entrada+64-delta);                    
+                    tail_use=false;
+                    continue;
+                }
+                write1Byte(tail-delta);
+                tail=entrada;
+            }
+            if ( tail_use )
+                write1Byte(tail-delta);
+            write1ByteFlush();
+            closeBytes();
+        }catch(Exception e){
+            System.out.println(e.toString());
+            System.exit(1);
+        }
+    }
+    
     public void tee(String caminho)
     {
         try{
-            FileOutputStream out=new FileOutputStream(caminho);            
-            int BUFFER_SIZE = 512;
+            FileOutputStream out=new FileOutputStream(caminho);                        
             int len;
             byte[] buf = new byte[BUFFER_SIZE];
-            while( (len=System.in.read(buf)) > -1){
+            while( (len=readBytes(buf)) > -1){
                 out.write(buf, 0, len);
                 System.out.write(buf, 0, len);
             }
             out.close();
+            closeBytes();
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
         }
@@ -2464,7 +2555,7 @@ cat buffer.log
         
         try {
             String line=null;
-            while ( (line=read()) != null ) {            
+            while ( (line=readLine()) != null ) {            
                 partes=line.replaceAll("\t"," ").replaceAll("\r"," ").split(" ");
                 for ( int i=0;i<elem.length;i++ ){
                     if ( elem[i] == 0 )
@@ -2486,6 +2577,7 @@ cat buffer.log
                 }
                 System.out.println("");                
             }
+            closeLine();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -2507,7 +2599,7 @@ cat buffer.log
         
         try {
             String line=null;
-            while ( (line=read()) != null ) {
+            while ( (line=readLine()) != null ) {
                 if ( start != null && status == 0 && line.contains(start) )
                     status=1;
                 
@@ -2520,6 +2612,7 @@ cat buffer.log
                 if ( end != null && status == 1 && line.contains(end) )
                     status=0;                
             }
+            closeLine();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -2527,10 +2620,10 @@ cat buffer.log
             
     public void dev_null()
     {
-        try{
-            int BUFFER_SIZE = 512;
+        try{            
             byte[] buf = new byte[BUFFER_SIZE];
-            while(System.in.read(buf) > -1){}
+            while(readBytes(buf) > -1){}
+            closeBytes();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -2542,16 +2635,17 @@ cat buffer.log
             System.out.println(0);
     }
 
-    public String base64(InputStream in,boolean encoding){
+    public String base64(InputStream pipe,boolean encoding){
         // java 11 depreciated sun.misc.BASE64Encoder
         // tem que usar esse codigo zuado mesmo
-        int BUFFER_SIZE = 1;
-        byte[] buf = new byte[BUFFER_SIZE];                   
+        /////////////////////
+        int BUFFER_SIZE_ = 1;
+        byte[] buf = new byte[BUFFER_SIZE_];                   
         ArrayList<Byte> lista=new ArrayList<Byte>();
         byte [] bytes=null;
         
         try {
-            while( in.read(buf, 0, BUFFER_SIZE) > -1 ){
+            while( pipe.read(buf, 0, BUFFER_SIZE_) > -1 ){
                 if ( encoding 
                     || ( (int)buf[0] != 10 && (int)buf[0] != 13 ) // remove \r and \n
                 ){
@@ -2590,8 +2684,9 @@ cat buffer.log
     public void createjobexecute(String conn) {
         String line;
         String SQL="";
-        while ( (line=read()) != null )
+        while ( (line=readLine()) != null )
             SQL+=line+"\n";
+        closeLine();
         
         System.out.print("jobexecute "); // funciona como orientador, não tem função prática
         System.out.println( 
@@ -2613,8 +2708,9 @@ cat buffer.log
     public void createjobcarga(String connIn, String fileCSV, String connOut, String outTable, String trunc, String app) {
         String line;
         String SQL="";
-        while ( (line=read()) != null )
+        while ( (line=readLine()) != null )
             SQL+=line+"\n";
+        closeLine();
         
         System.out.print("jobcarga "+outTable+" "); // funciona como orientador, não tem função prática
         System.out.println(
@@ -2663,8 +2759,10 @@ cat buffer.log
             String select_="";  
             if ( !connIn.equals("") ){
                 String line;
-                while( (line=read()) != null )
+                while( (line=readLine()) != null )
                     select_+=line+"\n";
+                closeLine();
+                
                 select_=removePontoEVirgual(select_);            
             }
             final String select=select_;
@@ -2733,7 +2831,7 @@ cat buffer.log
             String value_="";
             String [] sub_linesjob;
 
-            while ( (line=read()) != null ){
+            while ( (line=readLine()) != null ){
                 line=line.trim();
                 if ( line.equals("") ) continue;
                 if ( line.contains(" ") ){
@@ -2859,6 +2957,7 @@ cat buffer.log
                 for ( int i=0;i<threads.size();i++ )
                     threads.get(i).join();
             }
+            closeLine();
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
         }
@@ -2984,18 +3083,16 @@ cat buffer.log
     }
 
     public String lendo_arquivo_pacote(String caminho){
-        InputStream fstream=getClass().getResourceAsStream(caminho);
         // System.out.println(
         //   lendo_arquivo_pacote("/y/manual_mini")
         // );
         String result="";
         try{
-            DataInputStream in = new DataInputStream(fstream);
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            readLine(getClass().getResourceAsStream(caminho));
             String strLine;
-            while ((strLine = br.readLine()) != null)
+            while ((strLine = readLine()) != null)
                 result+=strLine+"\n";
-            in.close();
+            closeLine();
             return result;
         }catch (Exception e){}
         return new Arquivos().lendo_arquivo_pacote(caminho);
@@ -3284,6 +3381,8 @@ cat buffer.log
         // verifica se txt tem uma quantidade de @ diferente de 1
         return txt.length() != (txt.replace("@","").length()+1);
     }
+
+
 
 
 }
@@ -3677,6 +3776,7 @@ class Ponte {
 /* class by manual */                + "  [y [intsToBytes|ib]]\n"
 /* class by manual */                + "  [y od]\n"
 /* class by manual */                + "  [y touch]\n"
+/* class by manual */                + "  [y iconv]\n"
 /* class by manual */                + "  [y tee]\n"
 /* class by manual */                + "  [y awk print]\n"
 /* class by manual */                + "  [y dev_null]\n"
@@ -3799,6 +3899,10 @@ class Ponte {
 /* class by manual */                + "    obs: 60(60 segundos a frente)\n"
 /* class by manual */                + "    obs2: -3600(3600 segundos atras)\n"
 /* class by manual */                + "    obs3: 20210128235959(setando em 28/01/2021 23:59:59)\n"
+/* class by manual */                + "[y iconv]\n"
+/* class by manual */                + "    y iconv -f UTF-8 -t ISO-8859-1 file\n"
+/* class by manual */                + "    cat file | y iconv -f UTF-8 -t ISO-8859-1 \n"
+/* class by manual */                + "    obs: convert ISO-8859-1(windows) para UTF-8\n"
 /* class by manual */                + "[y tee]\n"
 /* class by manual */                + "    cat arquivo | y tee saida.txt\n"
 /* class by manual */                + "[y awk]\n"
@@ -3910,6 +4014,7 @@ class Ponte {
 /* class by manual */                + "  [y [intsToBytes|ib]]\n"
 /* class by manual */                + "  [y od]\n"
 /* class by manual */                + "  [y touch]\n"
+/* class by manual */                + "  [y iconv]\n"
 /* class by manual */                + "  [y tee]\n"
 /* class by manual */                + "  [y awk print]\n"
 /* class by manual */                + "  [y dev_null]\n"
