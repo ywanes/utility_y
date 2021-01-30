@@ -1739,8 +1739,9 @@ cat buffer.log
 
     public void closeLine(){
         try{
-            scanner_pipe.close();
+            scanner_pipe.close();            
         }catch(Exception e){}
+        scanner_pipe=null;
     }
     
     public void readLineB(String caminho) throws Exception{
@@ -1772,12 +1773,14 @@ cat buffer.log
         try{
             scanner_pipeB.close();
         }catch(Exception e){}
+        scanner_pipeB=null;
     }
     
     public void readBytes(String caminho) throws Exception{
         readBytes(new File(caminho));
     }
     public void readBytes(File file) throws Exception{
+        readBytesInit();
         inputStream_pipe=new FileInputStream(file);
     }
     
@@ -1785,10 +1788,19 @@ cat buffer.log
         return readBytes(buf,0,BUFFER_SIZE);
     }
     
+    int read1Byte_n=-1;
+    int read1Byte_len=-1;
+    public void readBytesInit(){
+        read1Byte_n=-1;
+        read1Byte_len=-1;
+    }
+    
     public int readBytes(byte[] buf,int off,int len){
         try{
-            if ( inputStream_pipe == null )
+            if ( inputStream_pipe == null ){
+                readBytesInit();
                 inputStream_pipe=System.in;
+            }
             int retorno=-1;
             while( (retorno=inputStream_pipe.read(buf,off,len)) == 0 ){}
             return retorno;
@@ -1800,8 +1812,6 @@ cat buffer.log
     }
     
     byte[] read1ByteBuff = new byte[BUFFER_SIZE];
-    int read1Byte_n=-1;
-    int read1Byte_len=-1;
     public boolean read1Byte(byte [] b){
         if ( read1Byte_n == -1 || read1Byte_n >= read1Byte_len ){
             read1Byte_n=0;
@@ -1817,8 +1827,9 @@ cat buffer.log
     
     public void closeBytes(){
         try{
-            inputStream_pipe.close();
+            inputStream_pipe.close();            
         }catch(Exception e){}
+        inputStream_pipe=null;
     }
     
     public void write1Byte(int b){
