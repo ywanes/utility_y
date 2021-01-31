@@ -155,7 +155,7 @@ Exemplos...
 [y iconv]
     y iconv -f UTF-8 -t ISO-8859-1 file
     cat file | y iconv -f UTF-8 -t ISO-8859-1 
-    obs: convert ISO-8859-1(windows) para UTF-8
+    obs: convert UTF-8 para ISO-8859-1(padrao windows, equivalente ao ANSI do notepad e equivalente ao windows-1252)
 [y tee]
     cat arquivo | y tee saida.txt
 [y awk]

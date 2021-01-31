@@ -68,12 +68,14 @@ public class Y {
     public static String sepCSV=";";
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
-    public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8"};
-        
+    public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8"}; // colocar "UCS-2LE"
+    public int [] BOM_UCS_2LE=new int[]{255,254};    
+    public int [] BOM_UTF_8=new int[]{239,187,191};    
+    
     // octal bytes
-    public static String [] OD_BC_B=new String[]{" 200"," 201"," 202"," 203"," 204"," 205"," 206"," 207"," 210"," 211"," 212"," 213"," 214"," 215"," 216"," 217"," 220"," 221"," 222"," 223"," 224"," 225"," 226"," 227"," 230"," 231"," 232"," 233"," 234"," 235"," 236"," 237"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 250"," 251"," 252"," 253"," 254"," 255"," 256"," 257"," 260"," 261"," 262"," 263"," 264"," 265"," 266"," 267"," 270"," 271"," 272"," 273"," 274"," 275"," 276"," 277"," 300"," 301"," 302"," 303"," 304"," 305"," 306"," 307"," 310"," 311"," 312"," 313"," 314"," 315"," 316"," 317"," 320"," 321"," 322"," 323"," 324"," 325"," 326"," 327"," 330"," 331"," 332"," 333"," 334"," 335"," 336"," 337"," 340"," 341"," 342"," 343"," 344"," 345"," 346"," 347"," 350"," 351"," 352"," 353"," 354"," 355"," 356"," 357"," 360"," 361"," 362"," 363"," 364"," 365"," 366"," 367"," 370"," 371"," 372"," 373"," 374"," 375"," 376"," 377"," 000"," 001"," 002"," 003"," 004"," 005"," 006"," 007"," 010"," 011"," 012"," 013"," 014"," 015"," 016"," 017"," 020"," 021"," 022"," 023"," 024"," 025"," 026"," 027"," 030"," 031"," 032"," 033"," 034"," 035"," 036"," 037"," 040"," 041"," 042"," 043"," 044"," 045"," 046"," 047"," 050"," 051"," 052"," 053"," 054"," 055"," 056"," 057"," 060"," 061"," 062"," 063"," 064"," 065"," 066"," 067"," 070"," 071"," 072"," 073"," 074"," 075"," 076"," 077"," 100"," 101"," 102"," 103"," 104"," 105"," 106"," 107"," 110"," 111"," 112"," 113"," 114"," 115"," 116"," 117"," 120"," 121"," 122"," 123"," 124"," 125"," 126"," 127"," 130"," 131"," 132"," 133"," 134"," 135"," 136"," 137"," 140"," 141"," 142"," 143"," 144"," 145"," 146"," 147"," 150"," 151"," 152"," 153"," 154"," 155"," 156"," 157"," 160"," 161"," 162"," 163"," 164"," 165"," 166"," 167"," 170"," 171"," 172"," 173"," 174"," 175"," 176"," 177"};
+    public static String [] OD_BC_B=new String[]{" 000"," 001"," 002"," 003"," 004"," 005"," 006"," 007"," 010"," 011"," 012"," 013"," 014"," 015"," 016"," 017"," 020"," 021"," 022"," 023"," 024"," 025"," 026"," 027"," 030"," 031"," 032"," 033"," 034"," 035"," 036"," 037"," 040"," 041"," 042"," 043"," 044"," 045"," 046"," 047"," 050"," 051"," 052"," 053"," 054"," 055"," 056"," 057"," 060"," 061"," 062"," 063"," 064"," 065"," 066"," 067"," 070"," 071"," 072"," 073"," 074"," 075"," 076"," 077"," 100"," 101"," 102"," 103"," 104"," 105"," 106"," 107"," 110"," 111"," 112"," 113"," 114"," 115"," 116"," 117"," 120"," 121"," 122"," 123"," 124"," 125"," 126"," 127"," 130"," 131"," 132"," 133"," 134"," 135"," 136"," 137"," 140"," 141"," 142"," 143"," 144"," 145"," 146"," 147"," 150"," 151"," 152"," 153"," 154"," 155"," 156"," 157"," 160"," 161"," 162"," 163"," 164"," 165"," 166"," 167"," 170"," 171"," 172"," 173"," 174"," 175"," 176"," 177"," 200"," 201"," 202"," 203"," 204"," 205"," 206"," 207"," 210"," 211"," 212"," 213"," 214"," 215"," 216"," 217"," 220"," 221"," 222"," 223"," 224"," 225"," 226"," 227"," 230"," 231"," 232"," 233"," 234"," 235"," 236"," 237"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 250"," 251"," 252"," 253"," 254"," 255"," 256"," 257"," 260"," 261"," 262"," 263"," 264"," 265"," 266"," 267"," 270"," 271"," 272"," 273"," 274"," 275"," 276"," 277"," 300"," 301"," 302"," 303"," 304"," 305"," 306"," 307"," 310"," 311"," 312"," 313"," 314"," 315"," 316"," 317"," 320"," 321"," 322"," 323"," 324"," 325"," 326"," 327"," 330"," 331"," 332"," 333"," 334"," 335"," 336"," 337"," 340"," 341"," 342"," 343"," 344"," 345"," 346"," 347"," 350"," 351"," 352"," 353"," 354"," 355"," 356"," 357"," 360"," 361"," 362"," 363"," 364"," 365"," 366"," 367"," 370"," 371"," 372"," 373"," 374"," 375"," 376"," 377"};
     // caracteres
-    public static String [] OD_BC_C=new String[]{" 200"," 201"," 202"," 203"," 204"," 205"," 206"," 207"," 210"," 211"," 212"," 213"," 214"," 215"," 216"," 217"," 220"," 221"," 222"," 223"," 224"," 225"," 226"," 227"," 230"," 231"," 232"," 233"," 234"," 235"," 236"," 237"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 250"," 251"," 252"," 253"," 254"," 255"," 256"," 257"," 260"," 261"," 262"," 263"," 264"," 265"," 266"," 267"," 270"," 271"," 272"," 273"," 274"," 275"," 276"," 277"," 300"," 301"," 302"," 303"," 304"," 305"," 306"," 307"," 310"," 311"," 312"," 313"," 314"," 315"," 316"," 317"," 320"," 321"," 322"," 323"," 324"," 325"," 326"," 327"," 330"," 331"," 332"," 333"," 334"," 335"," 336"," 337"," 340"," 341"," 342"," 343"," 344"," 345"," 346"," 347"," 350"," 351"," 352"," 353"," 354"," 355"," 356"," 357"," 360"," 361"," 362"," 363"," 364"," 365"," 366"," 367"," 370"," 371"," 372"," 373"," 374"," 375"," 376"," 377","  \\0"," 001"," 002"," 003"," 004"," 005"," 006","  \\a","  \\b","  \\t","  \\n","  \\v","  \\f","  \\r"," 016"," 017"," 020"," 021"," 022"," 023"," 024"," 025"," 026"," 027"," 030"," 031"," 032"," 033"," 034"," 035"," 036"," 037","    ","   !","   \"","   #","   $","   %","   &","   '","   (","   )","   *","   +","   ,","   -","   .","   /","   0","   1","   2","   3","   4","   5","   6","   7","   8","   9","   :","   ;","   <","   =","   >","   ?","   @","   A","   B","   C","   D","   E","   F","   G","   H","   I","   J","   K","   L","   M","   N","   O","   P","   Q","   R","   S","   T","   U","   V","   W","   X","   Y","   Z","   [","   \\","   ]","   ^","   _","   `","   a","   b","   c","   d","   e","   f","   g","   h","   i","   j","   k","   l","   m","   n","   o","   p","   q","   r","   s","   t","   u","   v","   w","   x","   y","   z","   {","   |","   }","   ~"," 177"};
+    public static String [] OD_BC_C=new String[]{"  \\0"," 001"," 002"," 003"," 004"," 005"," 006","  \\a","  \\b","  \\t","  \\n","  \\v","  \\f","  \\r"," 016"," 017"," 020"," 021"," 022"," 023"," 024"," 025"," 026"," 027"," 030"," 031"," 032"," 033"," 034"," 035"," 036"," 037","    ","   !","   \"","   #","   $","   %","   &","   '","   (","   )","   *","   +","   ,","   -","   .","   /","   0","   1","   2","   3","   4","   5","   6","   7","   8","   9","   :","   ;","   <","   =","   >","   ?","   @","   A","   B","   C","   D","   E","   F","   G","   H","   I","   J","   K","   L","   M","   N","   O","   P","   Q","   R","   S","   T","   U","   V","   W","   X","   Y","   Z","   [","   \\","   ]","   ^","   _","   `","   a","   b","   c","   d","   e","   f","   g","   h","   i","   j","   k","   l","   m","   n","   o","   p","   q","   r","   s","   t","   u","   v","   w","   x","   y","   z","   {","   |","   }","   ~"," 177"," 200"," 201"," 202"," 203"," 204"," 205"," 206"," 207"," 210"," 211"," 212"," 213"," 214"," 215"," 216"," 217"," 220"," 221"," 222"," 223"," 224"," 225"," 226"," 227"," 230"," 231"," 232"," 233"," 234"," 235"," 236"," 237"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 250"," 251"," 252"," 253"," 254"," 255"," 256"," 257"," 260"," 261"," 262"," 263"," 264"," 265"," 266"," 267"," 270"," 271"," 272"," 273"," 274"," 275"," 276"," 277"," 300"," 301"," 302"," 303"," 304"," 305"," 306"," 307"," 310"," 311"," 312"," 313"," 314"," 315"," 316"," 317"," 320"," 321"," 322"," 323"," 324"," 325"," 326"," 327"," 330"," 331"," 332"," 333"," 334"," 335"," 336"," 337"," 340"," 341"," 342"," 343"," 344"," 345"," 346"," 347"," 350"," 351"," 352"," 353"," 354"," 355"," 356"," 357"," 360"," 361"," 362"," 363"," 364"," 365"," 366"," 367"," 370"," 371"," 372"," 373"," 374"," 375"," 376"," 377"};
     // 0...256
     public static String [] OD_BC_R=new String[]{"   0","   1","   2","   3","   4","   5","   6","   7","   8","   9","  10","  11","  12","  13","  14","  15","  16","  17","  18","  19","  20","  21","  22","  23","  24","  25","  26","  27","  28","  29","  30","  31","  32","  33","  34","  35","  36","  37","  38","  39","  40","  41","  42","  43","  44","  45","  46","  47","  48","  49","  50","  51","  52","  53","  54","  55","  56","  57","  58","  59","  60","  61","  62","  63","  64","  65","  66","  67","  68","  69","  70","  71","  72","  73","  74","  75","  76","  77","  78","  79","  80","  81","  82","  83","  84","  85","  86","  87","  88","  89","  90","  91","  92","  93","  94","  95","  96","  97","  98","  99"," 100"," 101"," 102"," 103"," 104"," 105"," 106"," 107"," 108"," 109"," 110"," 111"," 112"," 113"," 114"," 115"," 116"," 117"," 118"," 119"," 120"," 121"," 122"," 123"," 124"," 125"," 126"," 127"," 128"," 129"," 130"," 131"," 132"," 133"," 134"," 135"," 136"," 137"," 138"," 139"," 140"," 141"," 142"," 143"," 144"," 145"," 146"," 147"," 148"," 149"," 150"," 151"," 152"," 153"," 154"," 155"," 156"," 157"," 158"," 159"," 160"," 161"," 162"," 163"," 164"," 165"," 166"," 167"," 168"," 169"," 170"," 171"," 172"," 173"," 174"," 175"," 176"," 177"," 178"," 179"," 180"," 181"," 182"," 183"," 184"," 185"," 186"," 187"," 188"," 189"," 190"," 191"," 192"," 193"," 194"," 195"," 196"," 197"," 198"," 199"," 200"," 201"," 202"," 203"," 204"," 205"," 206"," 207"," 208"," 209"," 210"," 211"," 212"," 213"," 214"," 215"," 216"," 217"," 218"," 219"," 220"," 221"," 222"," 223"," 224"," 225"," 226"," 227"," 228"," 229"," 230"," 231"," 232"," 233"," 234"," 235"," 236"," 237"," 238"," 239"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 248"," 249"," 250"," 251"," 252"," 253"," 254"," 255"};
     
@@ -124,6 +126,9 @@ cat buffer.log
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                        
+        //args=new String[]{"scp","ywanes@desktop:/tmp/aa","c:\\tmp\\a"};                        
+        // pendencias:
+        // permitir ssh sem informar senha inicialmente "user,pass", mas somente user@servidor
         new Y().go(args);
     }
         
@@ -394,18 +399,21 @@ cat buffer.log
         if ( 
             args[0].equals("iconv") 
             && ( args.length == 5 || args.length == 6 )
-            && args[1].equals("-f") && args[3].equals("-t") 
+            && ( (args[1].equals("-f") && args[3].equals("-t")) || (args[1].equals("-t") && args[3].equals("-f")) )
             && isSuportIconv(args[2]) && isSuportIconv(args[4]) && ! args[2].equals(args[4])
         ){
+            String file_=null;
             if ( args.length == 6 ){
                 if ( ! new File(args[5]).exists() ){
                     System.err.println("Erro, este arquivo não existe: "+args[5]);
                     System.exit(1);
-                }                
-                iconv(args[2],args[4],args[5]);
-                return;
+                }         
+                file_=args[5];
             }
-            iconv(args[2],args[4],null);
+            if ( args[1].equals("-f") && args[3].equals("-t") )
+                iconv(args[2],args[4],file_);
+            else
+                iconv(args[4],args[2],file_);
             return;
         }        
         if ( args[0].equals("tee") && args.length == 2 ){
@@ -1813,6 +1821,10 @@ cat buffer.log
     
     byte[] read1ByteBuff = new byte[BUFFER_SIZE];
     public boolean read1Byte(byte [] b){
+        if ( inputStream_pipe == null ){
+            readBytesInit();
+            inputStream_pipe=System.in;
+        }        
         if ( read1Byte_n == -1 || read1Byte_n >= read1Byte_len ){
             read1Byte_n=0;
             read1Byte_len=readBytes(read1ByteBuff);            
@@ -2244,12 +2256,9 @@ cat buffer.log
     public void bytesToInts()
     {      
         try {
-            int i=0;
             byte[] entrada_ = new byte[1];
             while ( read1Byte(entrada_) ){
-                i=entrada_[0];
-                i+=128;
-                System.out.println(i);
+                System.out.println( byte_to_int_java(entrada_[0]) );
             }
         }catch(Exception e){
             System.out.println(e.toString());
@@ -2263,7 +2272,7 @@ cat buffer.log
         if ( args.length == 1 ){ // stdin
             while ( (line=readLine()) != null ) {
                 try{
-                    valor=Integer.parseInt(line)-128;
+                    valor=Integer.parseInt(line);
                 }catch(Exception ex){
                     System.out.println("\nErro, valor invalido: "+line);
                     System.exit(1);
@@ -2274,7 +2283,7 @@ cat buffer.log
         }else{ // parametros
             for ( int i=1;i<args.length;i++ ){
                 try{
-                    valor=Integer.parseInt(args[i])-128;
+                    valor=Integer.parseInt(args[i]);
                 }catch(Exception ex){
                     System.out.println("\nErro, valor invalido: "+line);
                     System.exit(valor);
@@ -2312,6 +2321,7 @@ cat buffer.log
             sb_b.append(OD_BC_B[i]);
         if ( od_c )
             sb_c.append(OD_BC_C[i]);
+        
         sb_r.append(OD_BC_R[i]);
         
         count_16_od++;
@@ -2386,8 +2396,7 @@ cat buffer.log
             int i=0;
             byte[] entrada_ = new byte[1];
             while ( read1Byte(entrada_) ){
-                i=entrada_[0];
-                i+=128;
+                i=byte_to_int_java(entrada_[0]);
                 write1od(i);                
             }
             write1odFlush();
@@ -2436,13 +2445,13 @@ cat buffer.log
         return false;
     }
 
-    private void iconv(String tipoDestino, String tipoOrigem, String caminho) {
-        if ( tipoOrigem.equals("UTF-8") && tipoDestino.equals("ISO-8859-1") ){
-            iconvUTF8ToWindows(caminho);
-            return;
-        }
+    private void iconv(String tipoOrigem, String tipoDestino, String caminho) {
         if ( tipoOrigem.equals("ISO-8859-1") && tipoDestino.equals("UTF-8") ){
             iconvWindowsToUTF8(caminho);           
+            return;
+        }
+        if ( tipoOrigem.equals("UTF-8") && tipoDestino.equals("ISO-8859-1") ){
+            iconvUTF8ToWindows(caminho);
             return;
         }
         System.out.println("Erro, encode nao suportado: "+tipoDestino+"/"+tipoOrigem);
@@ -2451,25 +2460,38 @@ cat buffer.log
     
     private void iconvUTF8ToWindows(String caminho) {
         try {
+            boolean tail_use=false;            
+            int tail=0;
             byte[] entrada_ = new byte[1];
             int entrada=0;
-            int delta=128; // delta é para poder manipular entre 0..255 ao invés de -128..127
             if ( caminho != null && ! caminho.equals("") )
                 readBytes(caminho);
             while ( read1Byte(entrada_) ){
-                entrada=entrada_[0]+delta;
-                if ( entrada < 64 ){
-                    write1Byte(66-delta);
-                    write1Byte(entrada-delta);
+                entrada=byte_to_int_java(entrada_[0]);
+                if ( ! tail_use ){
+                    tail_use=true;
+                    tail=entrada;
                     continue;
                 }
-                if ( entrada < 128 ){
-                    write1Byte(67-delta);
-                    write1Byte(entrada-64-delta);
+                if ( (tail == 194 || tail == 195) && (entrada < 128 || entrada >= 192 ) ){
+                    System.out.println("Erro, sequencia ilegal!");
+                    System.exit(1);
+                }
+                if ( tail == 194 ){
+                    write1Byte(entrada);
+                    tail_use=false;
                     continue;
                 }
-                write1Byte(entrada-delta);                
+                if ( tail == 195 ){
+                    write1Byte(entrada+64);                    
+                    tail_use=false;
+                    continue;
+                }
+                write1Byte(tail);
+                tail=entrada;
             }
+            if ( tail_use )
+                write1Byte(tail);
             write1ByteFlush();
             closeBytes();
         }catch(Exception e){
@@ -2480,39 +2502,24 @@ cat buffer.log
     
     private void iconvWindowsToUTF8(String caminho) {
         try {
-            boolean tail_use=false;            
-            int tail=0;
             byte[] entrada_ = new byte[1];
             int entrada=0;
-            int delta=128; // delta é para poder manipular entre 0..255 ao invés de -128..127
             if ( caminho != null && ! caminho.equals("") )
                 readBytes(caminho);
             while ( read1Byte(entrada_) ){
-                entrada=entrada_[0]+delta;
-                if ( ! tail_use ){
-                    tail_use=true;
-                    tail=entrada;
+                entrada=byte_to_int_java(entrada_[0]);
+                if ( entrada >= 128 && entrada < 192 ){
+                    write1Byte(194);
+                    write1Byte(entrada);
                     continue;
                 }
-                if ( (tail == 66 || tail == 67) && entrada >= 64 ){
-                    System.out.println("Erro, sequencia ilegal!");
-                    System.exit(1);
-                }
-                if ( tail == 66 ){
-                    write1Byte(entrada-delta);
-                    tail_use=false;
+                if ( entrada >= 192 ){
+                    write1Byte(195);
+                    write1Byte(entrada-64);
                     continue;
                 }
-                if ( tail == 67 ){
-                    write1Byte(entrada+64-delta);                    
-                    tail_use=false;
-                    continue;
-                }
-                write1Byte(tail-delta);
-                tail=entrada;
+                write1Byte(entrada);                
             }
-            if ( tail_use )
-                write1Byte(tail-delta);
             write1ByteFlush();
             closeBytes();
         }catch(Exception e){
@@ -2653,7 +2660,6 @@ cat buffer.log
     public String base64(InputStream pipe,boolean encoding){
         // java 11 depreciated sun.misc.BASE64Encoder
         // tem que usar esse codigo zuado mesmo
-        /////////////////////
         int BUFFER_SIZE_ = 1;
         byte[] buf = new byte[BUFFER_SIZE_];                   
         ArrayList<Byte> lista=new ArrayList<Byte>();
@@ -3397,7 +3403,13 @@ cat buffer.log
         return txt.length() != (txt.replace("@","").length()+1);
     }
 
-
+    public static int byte_to_int_java(byte a) {
+        // os bytes em java vem 0..127 e -128..-1 totalizando 256
+        int i=(int)a;
+        if ( i < 0 )
+            i+=256;
+        return i;
+    }
 
 
 }
@@ -3576,7 +3588,7 @@ class Ponte {
             int count=0;
             StringBuilder sb=new StringBuilder();
             for (byte b : buffer){
-                sb.append(Y.OD_BC_R[b+128]);
+                sb.append(Y.OD_BC_R[Y.byte_to_int_java(b)]);
                 if ( ++count >= len )
                     break;
             }
@@ -3587,7 +3599,7 @@ class Ponte {
             int count=0;
             StringBuilder sb=new StringBuilder();
             for (byte b : buffer){
-                sb.append(String.format("%02X",b));
+                sb.append(String.format("%02X",Y.byte_to_int_java(b)));
                 if ( ++count >= len )
                     break;
             }
@@ -3917,7 +3929,7 @@ class Ponte {
 /* class by manual */                + "[y iconv]\n"
 /* class by manual */                + "    y iconv -f UTF-8 -t ISO-8859-1 file\n"
 /* class by manual */                + "    cat file | y iconv -f UTF-8 -t ISO-8859-1 \n"
-/* class by manual */                + "    obs: convert ISO-8859-1(windows) para UTF-8\n"
+/* class by manual */                + "    obs: convert UTF-8 para ISO-8859-1(padrao windows, equivalente ao ANSI do notepad e equivalente ao windows-1252)\n"
 /* class by manual */                + "[y tee]\n"
 /* class by manual */                + "    cat arquivo | y tee saida.txt\n"
 /* class by manual */                + "[y awk]\n"
