@@ -127,9 +127,6 @@ cat buffer.log
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                        
-        //args=new String[]{"scp","ywanes@desktop:/tmp/aa","c:\\tmp\\a"};                        
-        // pendencias:
-        // permitir ssh sem informar senha inicialmente "user,pass", mas somente user@servidor
         new Y().go(args);
     }
         
@@ -3526,6 +3523,7 @@ cat buffer.log
             System.err.print("Comando inválido: A aplicação não suporta senha com arroba!");
             return;
         }
+        pedeSenhaCasoNaoTenha(args);
         if ( args[1].contains("@") )
             new JSchCustom().scpFrom(new String[]{args[1],args[2]});                    
         else
@@ -3560,6 +3558,7 @@ cat buffer.log
                 return;
             }            
         }
+        pedeSenhaCasoNaoTenha(args);
         new JSchCustom().execSsh(new String[]{args[1],args[2]},port);
         System.exit(0);
     }
@@ -3591,6 +3590,7 @@ cat buffer.log
                 return;
             }            
         }
+        pedeSenhaCasoNaoTenha(args);
         new JSchCustom().ssh(new String[]{args[1]},port);
         System.exit(0);
     }
@@ -3622,8 +3622,45 @@ cat buffer.log
                 return;
             }            
         }        
+        pedeSenhaCasoNaoTenha(args);
         new JSchCustom().sftp(new String[]{args[1]},port);
         System.exit(0);
+    }
+    
+    public void pedeSenhaCasoNaoTenha(String [] args){
+        // ywanes@desktop's password:
+        // String password = new String(console.readPassword("Password: "));
+        for( int i=0;i<args.length;i++ ){
+            if( args[i].contains("@") ){                
+                if (  args[i].startsWith("@") || args[i].endsWith("@") ){
+                    System.out.println("Error command");
+                    System.exit(1);                    
+                }
+                if ( ! args[i].contains(",") ){
+                    java.io.Console console=console=System.console();
+                    if ( console == null ){
+                        System.out.println("Error, input não suportado nesse ambiente, rodando no netbeans?...");
+                        System.exit(1);
+                    }
+                    
+                    String user_server_print=args[i];
+                    if ( user_server_print.contains(":") )
+                        user_server_print=user_server_print.split(":")[0];
+                    
+                    String password=null;
+                    char [] passChar = System.console().readPassword(user_server_print+"'s password: ");
+                    if ( passChar != null )
+                        password = new String(passChar);
+                    
+                    if ( password == null || password.trim().equals("") ){
+                        System.out.println("Error, not input found");
+                        System.exit(1);
+                    }
+                    args[i]=args[i].split("@")[0]+","+password+"@"+args[i].split("@")[1];
+                }
+                break;
+            }
+        }
     }
     
     private void serverRouter(String[] args) {
