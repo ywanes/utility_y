@@ -68,7 +68,7 @@ public class Y {
     public static String sepCSV=";";
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
-    public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8"}; // colocar "UCS-2LE"
+    public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8"}; // colocar "UCS-2LE"(parecido com "ISO-8859-1" mas com um monte de 0 após cada byte)
     public int [] BOM_UCS_2LE=new int[]{255,254};    
     public int [] BOM_UTF_8=new int[]{239,187,191};    
     
