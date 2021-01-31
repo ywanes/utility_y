@@ -2621,12 +2621,12 @@ cat buffer.log
 
         // 11 -> remove BOM UTF-8
         if ( esteira == 11 ){
-            esteiraRemoveBOM(entrada,seqEsteira,BOM_UTF_8.length);
+            esteiraRemoveBOM(entrada,seqEsteira,BOM_UTF_8);
             return;
         }
         // 12 -> remove BOM UCS-2LE
         if ( esteira == 12 ){
-            esteiraRemoveBOM(entrada,seqEsteira,BOM_UCS_2LE.length);
+            esteiraRemoveBOM(entrada,seqEsteira,BOM_UCS_2LE);
             return;
         }
         // 21 -> decode UTF-8
@@ -2663,20 +2663,28 @@ cat buffer.log
         if ( esteira == 50 ){
             esteiraFinish(entrada,seqEsteira);
             return;
-        }
-        
+        }        
     }
     
-    int esteiraRemoveBOM_len=-1;
-    public void esteiraRemoveBOM(int entrada,int seqEsteira, int len){
+    int esteiraRemoveBOM_count=0;
+    int esteiraRemoveBOM_max=-1;
+    public void esteiraRemoveBOM(int entrada,int seqEsteira,int [] seqBOM){
         if ( entrada == -1 ){ // liberando o que sobrou na agulha(tail)
+            if ( esteiraRemoveBOM_count < esteiraRemoveBOM_max ){
+                System.out.println(erroSequenciaIlegal);
+                System.exit(1);                
+            }
             nextEsteira(entrada, seqEsteira); // liberando o que sobrou na agulha(tail) para os proximos
             return;
         }        
-        if ( esteiraRemoveBOM_len == -1 )
-            esteiraRemoveBOM_len=len;
-        if ( esteiraRemoveBOM_len > 0 ){
-            esteiraRemoveBOM_len--;
+        if ( esteiraRemoveBOM_max == -1 )
+            esteiraRemoveBOM_max=seqBOM.length;
+        if ( esteiraRemoveBOM_count < esteiraRemoveBOM_max ){
+            if ( entrada != seqBOM[esteiraRemoveBOM_count]){
+                System.out.println(erroSequenciaIlegal);
+                System.exit(1);                
+            }
+            esteiraRemoveBOM_count++;
             return;
         }
         nextEsteira(entrada, seqEsteira);
