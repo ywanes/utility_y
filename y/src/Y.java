@@ -68,9 +68,10 @@ public class Y {
     public static String sepCSV=";";
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
-    public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8"}; // colocar "UCS-2LE"(parecido com "ISO-8859-1" mas com um monte de 0 após cada byte)
-    public int [] BOM_UCS_2LE=new int[]{255,254};    
+    public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8","UTF-8BOM","UCS-2LE","UCS-2LEBOM"};
     public int [] BOM_UTF_8=new int[]{239,187,191};    
+    public int [] BOM_UCS_2LE=new int[]{255,254};        
+    public String erroSequenciaIlegal="Erro, sequencia ilegal!";
     
     // octal bytes
     public static String [] OD_BC_B=new String[]{" 000"," 001"," 002"," 003"," 004"," 005"," 006"," 007"," 010"," 011"," 012"," 013"," 014"," 015"," 016"," 017"," 020"," 021"," 022"," 023"," 024"," 025"," 026"," 027"," 030"," 031"," 032"," 033"," 034"," 035"," 036"," 037"," 040"," 041"," 042"," 043"," 044"," 045"," 046"," 047"," 050"," 051"," 052"," 053"," 054"," 055"," 056"," 057"," 060"," 061"," 062"," 063"," 064"," 065"," 066"," 067"," 070"," 071"," 072"," 073"," 074"," 075"," 076"," 077"," 100"," 101"," 102"," 103"," 104"," 105"," 106"," 107"," 110"," 111"," 112"," 113"," 114"," 115"," 116"," 117"," 120"," 121"," 122"," 123"," 124"," 125"," 126"," 127"," 130"," 131"," 132"," 133"," 134"," 135"," 136"," 137"," 140"," 141"," 142"," 143"," 144"," 145"," 146"," 147"," 150"," 151"," 152"," 153"," 154"," 155"," 156"," 157"," 160"," 161"," 162"," 163"," 164"," 165"," 166"," 167"," 170"," 171"," 172"," 173"," 174"," 175"," 176"," 177"," 200"," 201"," 202"," 203"," 204"," 205"," 206"," 207"," 210"," 211"," 212"," 213"," 214"," 215"," 216"," 217"," 220"," 221"," 222"," 223"," 224"," 225"," 226"," 227"," 230"," 231"," 232"," 233"," 234"," 235"," 236"," 237"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 250"," 251"," 252"," 253"," 254"," 255"," 256"," 257"," 260"," 261"," 262"," 263"," 264"," 265"," 266"," 267"," 270"," 271"," 272"," 273"," 274"," 275"," 276"," 277"," 300"," 301"," 302"," 303"," 304"," 305"," 306"," 307"," 310"," 311"," 312"," 313"," 314"," 315"," 316"," 317"," 320"," 321"," 322"," 323"," 324"," 325"," 326"," 327"," 330"," 331"," 332"," 333"," 334"," 335"," 336"," 337"," 340"," 341"," 342"," 343"," 344"," 345"," 346"," 347"," 350"," 351"," 352"," 353"," 354"," 355"," 356"," 357"," 360"," 361"," 362"," 363"," 364"," 365"," 366"," 367"," 370"," 371"," 372"," 373"," 374"," 375"," 376"," 377"};
@@ -396,26 +397,47 @@ cat buffer.log
             touch(args);
             return;
         }
-        if ( 
-            args[0].equals("iconv") 
-            && ( args.length == 5 || args.length == 6 )
-            && ( (args[1].equals("-f") && args[3].equals("-t")) || (args[1].equals("-t") && args[3].equals("-f")) )
-            && isSuportIconv(args[2]) && isSuportIconv(args[4]) && ! args[2].equals(args[4])
-        ){
-            String file_=null;
-            if ( args.length == 6 ){
-                if ( ! new File(args[5]).exists() ){
-                    System.err.println("Erro, este arquivo não existe: "+args[5]);
+        if ( args[0].equals("iconv") ){            
+            if ( args.length == 1 ){
+                System.out.println("Tipos suportados de iconv:");
+                for(int i=0;i<suportIconv.length;i++)
+                    System.out.println("  "+suportIconv[i]);
+                System.out.println("Ex:");
+                System.out.println("y iconv -f UTF-8 -t ISO-8859-1 file");
+                return;
+            }               
+            if ( 
+                ( args.length == 5 || args.length == 6 )
+                && ( (args[1].equals("-f") && args[3].equals("-t")) || (args[1].equals("-t") && args[3].equals("-f")) )
+                && isSuportIconv(args[2]) && isSuportIconv(args[4]) && ! args[2].equals(args[4])
+            ){
+                String file_=null;
+                if ( args.length == 6 ){
+                    if ( ! new File(args[5]).exists() ){
+                        System.err.println("Erro, este arquivo não existe: "+args[5]);
+                        System.exit(1);
+                    }         
+                    file_=args[5];
+                }
+                String tipoOrigem=args[2];
+                String tipoDestino=args[4];
+                if ( args[1].equals("-t") ){
+                    tipoOrigem=args[4];
+                    tipoDestino=args[2];
+                }
+                // tipo em BOM(puro)
+                String tipoOrigemPuro=tipoOrigem.endsWith("BOM")?tipoOrigem.substring(0, tipoOrigem.length()-3):tipoOrigem;
+                String tipoDestinoPuro=tipoDestino.endsWith("BOM")?tipoDestino.substring(0, tipoDestino.length()-3):tipoDestino;                    
+
+                try{
+                    iconv(tipoOrigem,tipoOrigemPuro,tipoDestino,tipoDestinoPuro,file_);
+                }catch(Exception e){
+                    System.out.println(e.toString());
                     System.exit(1);
-                }         
-                file_=args[5];
-            }
-            if ( args[1].equals("-f") && args[3].equals("-t") )
-                iconv(args[2],args[4],file_);
-            else
-                iconv(args[4],args[2],file_);
-            return;
-        }        
+                }            
+                return;
+            }        
+        }
         if ( args[0].equals("tee") && args.length == 2 ){
             tee(args[1]);
             return;
@@ -2445,7 +2467,7 @@ cat buffer.log
         return false;
     }
 
-    private void iconv(String tipoOrigem, String tipoDestino, String caminho) {
+    private void iconvOLD(String tipoOrigem, String tipoDestino, String caminho) {
         if ( tipoOrigem.equals("ISO-8859-1") && tipoDestino.equals("UTF-8") ){
             iconvWindowsToUTF8(caminho);           
             return;
@@ -2474,7 +2496,7 @@ cat buffer.log
                     continue;
                 }
                 if ( (tail == 194 || tail == 195) && (entrada < 128 || entrada >= 192 ) ){
-                    System.out.println("Erro, sequencia ilegal!");
+                    System.out.println(erroSequenciaIlegal);
                     System.exit(1);
                 }
                 if ( tail == 194 ){
@@ -2526,6 +2548,239 @@ cat buffer.log
             System.out.println(e.toString());
             System.exit(1);
         }
+    }
+    
+    /*
+    esteiras(normalização em "ISO-8859-1"):
+    
+      11 -> remove BOM UTF-8
+      12 -> remove BOM UCS-2LE
+    
+      21 -> normalizando ISO-8859-1 vindo de UTF-8
+      22 -> normalizando ISO-8859-1 vindo de UCS-2LE
+    
+      31 -> codificando para UTF-8
+      32 -> codificando para UCS-2LE
+    
+      41 -> colocando BOM UTF-8
+      42 -> colocando BOM UCS-2LE
+    
+      50 -> finalizando
+    */    
+    ArrayList<Integer> esteiras=new ArrayList<Integer>();
+    private void iconv(String tipoOrigem, String tipoOrigemPuro, String tipoDestino, String tipoDestinoPuro, String caminho) throws Exception {        
+        
+        if ( caminho != null && ! caminho.equals("") )
+            readBytes(caminho);
+        
+        // tirando BOM
+        if ( tipoOrigem.equals("UTF-8BOM"))
+            esteiras.add(11);
+        if ( tipoOrigem.equals("UCS-2LEBOM"))
+            esteiras.add(12);
+        
+        // decodificando e codificando
+        if ( ! tipoOrigemPuro.equals(tipoDestinoPuro) ){
+            if ( tipoOrigem.startsWith("UTF-8") && ! tipoDestino.startsWith("UTF-8") )
+                esteiras.add(21);
+            if ( tipoOrigem.startsWith("UCS-2LE") && ! tipoDestino.startsWith("UCS-2LE") )
+                esteiras.add(22);
+            if ( ! tipoOrigem.startsWith("UTF-8") && tipoDestino.startsWith("UTF-8") )
+                esteiras.add(31);
+            if ( ! tipoOrigem.startsWith("UCS-2LE") && tipoDestino.startsWith("UCS-2LE") )
+                esteiras.add(32);
+        }        
+        
+        // colocando BOM
+        if ( tipoDestino.equals("UTF-8BOM"))
+            esteiras.add(41);
+        if ( tipoDestino.equals("UCS-2LEBOM"))
+            esteiras.add(42);
+        
+        // finish
+        esteiras.add(50);
+        
+        byte[] entrada_ = new byte[1];
+        int entrada=0;
+        while ( read1Byte(entrada_) ){
+            entrada=byte_to_int_java(entrada_[0]);
+            nextEsteira(entrada,-1);
+        }
+        
+        nextEsteira(-1,-1);// comando para liberar os dados nas agulhas
+        
+        write1odFlush();
+        closeBytes();
+    }
+
+    public void nextEsteira(int entrada,int seqEsteira){
+        
+        // proxima esteira
+        seqEsteira++;        
+        int esteira=esteiras.get(seqEsteira);
+
+        // 11 -> remove BOM UTF-8
+        if ( esteira == 11 ){
+            esteiraRemoveBOM(entrada,seqEsteira,BOM_UTF_8.length);
+            return;
+        }
+        // 12 -> remove BOM UCS-2LE
+        if ( esteira == 12 ){
+            esteiraRemoveBOM(entrada,seqEsteira,BOM_UCS_2LE.length);
+            return;
+        }
+        // 21 -> decode UTF-8
+        if ( esteira == 21 ){
+            esteiraDecode_UTF_8(entrada,seqEsteira);
+            return;
+        }
+        // 22 -> decode UCS-2LE
+        if ( esteira == 22 ){
+            esteiraDecode_UCS_2LE(entrada,seqEsteira);
+            return;
+        }
+        // 31 -> encode UTF-8
+        if ( esteira == 31 ){
+            esteiraEncode_UTF_8(entrada,seqEsteira);
+            return;
+        }
+        // 32 -> encode UCS-2LE
+        if ( esteira == 32 ){
+            esteiraEncode_UCS_2LE(entrada,seqEsteira);
+            return;
+        }
+        // 41 -> add BOM UTF-8
+        if ( esteira == 41 ){
+            esteiraAddBOM(entrada,seqEsteira,BOM_UTF_8);
+            return;
+        }
+        // 42 -> add BOM UCS-2LE
+        if ( esteira == 42 ){
+            esteiraAddBOM(entrada,seqEsteira,BOM_UCS_2LE);
+            return;
+        }
+        // 50 -> finish
+        if ( esteira == 50 ){
+            esteiraFinish(entrada,seqEsteira);
+            return;
+        }
+        
+    }
+    
+    int esteiraRemoveBOM_len=-1;
+    public void esteiraRemoveBOM(int entrada,int seqEsteira, int len){
+        if ( entrada == -1 ){ // liberando o que sobrou na agulha(tail)
+            nextEsteira(entrada, seqEsteira); // liberando o que sobrou na agulha(tail) para os proximos
+            return;
+        }        
+        if ( esteiraRemoveBOM_len == -1 )
+            esteiraRemoveBOM_len=len;
+        if ( esteiraRemoveBOM_len > 0 ){
+            esteiraRemoveBOM_len--;
+            return;
+        }
+        nextEsteira(entrada, seqEsteira);
+    }
+    
+    boolean decode_UTF_8_tail_use=false;
+    int decode_UTF_8_tail=-1;
+    public void esteiraDecode_UTF_8(int entrada,int seqEsteira){
+        if ( entrada == -1 ){ // liberando o que sobrou na agulha(tail)
+            if ( decode_UTF_8_tail_use ){
+                nextEsteira(decode_UTF_8_tail, seqEsteira);
+                decode_UTF_8_tail_use=false;
+            }
+            nextEsteira(entrada, seqEsteira); // liberando o que sobrou na agulha(tail) para os proximos
+            return;
+        }
+        if ( ! decode_UTF_8_tail_use ){
+            decode_UTF_8_tail_use=true;
+            decode_UTF_8_tail=entrada;
+            return;
+        }
+        if ( (decode_UTF_8_tail == 194 || decode_UTF_8_tail == 195) && (entrada < 128 || entrada >= 192 ) ){
+            System.out.println(erroSequenciaIlegal);
+            System.exit(1);
+        }
+        if ( decode_UTF_8_tail == 194 ){
+            nextEsteira(entrada, seqEsteira);
+            decode_UTF_8_tail_use=false;
+            return;
+        }
+        if ( decode_UTF_8_tail == 195 ){
+            nextEsteira(entrada+64, seqEsteira);
+            decode_UTF_8_tail_use=false;
+            return;
+        }
+        nextEsteira(decode_UTF_8_tail, seqEsteira);
+        decode_UTF_8_tail=entrada;
+    }
+    
+    boolean decode_UCS_2LE_entrada_par=true;
+    public void esteiraDecode_UCS_2LE(int entrada,int seqEsteira){
+        if ( entrada == -1 ){ // liberando o que sobrou na agulha(tail)
+            if ( ! decode_UCS_2LE_entrada_par ){
+                System.out.println(erroSequenciaIlegal);
+                System.exit(1);
+            }
+            nextEsteira(entrada, seqEsteira); // liberando o que sobrou na agulha(tail) para os proximos
+            return;
+        }        
+        decode_UCS_2LE_entrada_par=!decode_UCS_2LE_entrada_par;
+        if ( decode_UCS_2LE_entrada_par ){
+            if ( entrada == 0 )
+                return;
+            System.out.println(erroSequenciaIlegal);
+            System.exit(1);
+        }
+    }
+            
+    public void esteiraEncode_UTF_8(int entrada,int seqEsteira){
+        if ( entrada == -1 ){ // liberando o que sobrou na agulha(tail)
+            nextEsteira(entrada, seqEsteira); // liberando o que sobrou na agulha(tail) para os proximos
+            return;
+        }        
+        if ( entrada >= 128 && entrada < 192 ){
+            nextEsteira(194, seqEsteira);
+            nextEsteira(entrada, seqEsteira);
+            return;
+        }
+        if ( entrada >= 192 ){
+            nextEsteira(195, seqEsteira);
+            nextEsteira(entrada-64, seqEsteira);
+            return;
+        }
+        write1Byte(entrada);                        
+    }
+    
+    public void esteiraEncode_UCS_2LE(int entrada,int seqEsteira){
+        if ( entrada == -1 ){ // liberando o que sobrou na agulha(tail)
+            nextEsteira(entrada, seqEsteira); // liberando o que sobrou na agulha(tail) para os proximos
+            return;
+        }        
+        nextEsteira(entrada, seqEsteira);
+        nextEsteira(0, seqEsteira);
+    }
+    
+    boolean esteiraAddBOM_isAdded=false;
+    public void esteiraAddBOM(int entrada,int seqEsteira,int [] seqBOM){
+        if ( entrada == -1 ){ // liberando o que sobrou na agulha(tail)
+            nextEsteira(entrada, seqEsteira); // liberando o que sobrou na agulha(tail) para os proximos
+            return;
+        }        
+        if ( ! esteiraAddBOM_isAdded ){
+            for(int i=0;i<seqBOM.length;i++)
+                nextEsteira(seqBOM[i], seqEsteira);
+            esteiraAddBOM_isAdded=true;
+        }
+        nextEsteira(entrada, seqEsteira);
+    }
+    
+    public void esteiraFinish(int entrada,int seqEsteira){
+        if ( entrada == -1 ){ // liberando o que sobrou na agulha(tail)
+            return;
+        }        
+        write1Byte(entrada);
     }
     
     public void tee(String caminho)
@@ -3405,6 +3660,7 @@ cat buffer.log
 
     public static int byte_to_int_java(byte a) {
         // os bytes em java vem 0..127 e -128..-1 totalizando 256
+        // implementacao manual de Byte.toUnsignedInt(a)
         int i=(int)a;
         if ( i < 0 )
             i+=256;
@@ -3768,6 +4024,7 @@ class Ponte {
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -3929,7 +4186,11 @@ class Ponte {
 /* class by manual */                + "[y iconv]\n"
 /* class by manual */                + "    y iconv -f UTF-8 -t ISO-8859-1 file\n"
 /* class by manual */                + "    cat file | y iconv -f UTF-8 -t ISO-8859-1 \n"
-/* class by manual */                + "    obs: convert UTF-8 para ISO-8859-1(padrao windows, equivalente ao ANSI do notepad e equivalente ao windows-1252)\n"
+/* class by manual */                + "    cat file | y iconv -f ISO-8859-1 -t UTF-8\n"
+/* class by manual */                + "    obs: tipos suportados: \"ISO-8859-1\",\"UTF-8\",\"UTF-8BOM\",\"UCS-2LE\",\"UCS-2LEBOM\"\n"
+/* class by manual */                + "    obs2: convert UTF-8 para ISO-8859-1(padrao windows, equivalente ao ANSI do notepad e equivalente ao windows-1252)\n"
+/* class by manual */                + "    obs3: BOM do UTF-8 em numerico => 239 187 191\n"
+/* class by manual */                + "    obs4: BOM do UCS-2LE em numerico => 255 254\n"
 /* class by manual */                + "[y tee]\n"
 /* class by manual */                + "    cat arquivo | y tee saida.txt\n"
 /* class by manual */                + "[y awk]\n"
