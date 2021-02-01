@@ -4,7 +4,8 @@
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 // javac -encoding UTF-8 -cp .:ojdbc6.jar:jsch-0.1.55.jar Y.java
 // alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.55.jar Y'
-// crétidos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar
+// crétidos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
+// crétidos https://github.com/is/jsch/tree/master/examples
 //
 
 import com.jcraft.jsch.*;
@@ -31,7 +32,6 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
-import java.util.logging.Level;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
@@ -2399,7 +2399,7 @@ cat buffer.log
         }
     }
     
-    public void write1odFlush()
+    public void writeodFlush()
     {
         if ( count_16_od > 0 )
             writeOd();
@@ -2418,7 +2418,7 @@ cat buffer.log
                 i=byte_to_int_java(entrada_[0]);
                 write1od(i);                
             }
-            write1odFlush();
+            writeodFlush();
         }catch(Exception e){
             System.out.println(e.toString());
         }        
@@ -2578,13 +2578,13 @@ cat buffer.log
         
         // decodificando e codificando
         if ( ! tipoOrigemPuro.equals(tipoDestinoPuro) ){
-            if ( tipoOrigem.startsWith("UTF-8") && ! tipoDestino.startsWith("UTF-8") )
+            if (tipoOrigemPuro.equals("UTF-8"))
                 esteiras.add(21);
-            if ( tipoOrigem.startsWith("UCS-2LE") && ! tipoDestino.startsWith("UCS-2LE") )
+            if (tipoOrigemPuro.equals("UCS-2LE"))
                 esteiras.add(22);
-            if ( ! tipoOrigem.startsWith("UTF-8") && tipoDestino.startsWith("UTF-8") )
+            if (tipoDestinoPuro.equals("UTF-8") )
                 esteiras.add(31);
-            if ( ! tipoOrigem.startsWith("UCS-2LE") && tipoDestino.startsWith("UCS-2LE") )
+            if (tipoDestinoPuro.equals("UCS-2LE") )
                 esteiras.add(32);
         }        
         
@@ -2606,7 +2606,7 @@ cat buffer.log
         
         nextEsteira(-1,-1);// comando para liberar os dados nas agulhas
         
-        write1odFlush();
+        write1ByteFlush();
         closeBytes();
     }
 
@@ -2738,6 +2738,7 @@ cat buffer.log
             System.out.println(erroSequenciaIlegal);
             System.exit(1);
         }
+        nextEsteira(entrada, seqEsteira);
     }
             
     public void esteiraEncode_UTF_8(int entrada,int seqEsteira){
@@ -2755,7 +2756,7 @@ cat buffer.log
             nextEsteira(entrada-64, seqEsteira);
             return;
         }
-        write1Byte(entrada);                        
+        nextEsteira(entrada, seqEsteira);
     }
     
     public void esteiraEncode_UCS_2LE(int entrada,int seqEsteira){
