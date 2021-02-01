@@ -3657,6 +3657,10 @@ cat buffer.log
                         System.out.println("Error, not input found");
                         System.exit(1);
                     }
+                    if ( password.contains("@") ){
+                        System.out.println("Comando inválido: A aplicação não suporta senha com arroba!");
+                        System.exit(1);
+                    }
                     args[i]=args[i].split("@")[0]+","+password+"@"+args[i].split("@")[1];
                 }
                 break;
