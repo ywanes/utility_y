@@ -127,6 +127,8 @@ cat buffer.log
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                        
+        
+        // testar base64 para Y.class
         new Y().go(args);
     }
         
@@ -2927,7 +2929,10 @@ cat buffer.log
         byte [] bytes=null;
         
         try {
-            while( pipe.read(buf, 0, BUFFER_SIZE_) > -1 ){
+            int len=0;
+            while( true ){
+                while( (len=pipe.read(buf, 0, BUFFER_SIZE_)) == 0 ){}
+                if ( len < 0 ) break;
                 if ( encoding 
                     || ( (int)buf[0] != 10 && (int)buf[0] != 13 ) // remove \r and \n
                 ){
@@ -4178,6 +4183,8 @@ class Ponte {
 /* class by manual */                + "    cat arquivo | y sha256\n"
 /* class by manual */                + "[y base64]\n"
 /* class by manual */                + "    cat arquivo | y base64\n"
+/* class by manual */                + "    cat arquivo | y base64 -d\n"
+/* class by manual */                + "    obs: -d para decode\n"
 /* class by manual */                + "[y grep]\n"
 /* class by manual */                + "    cat arquivo | y grep ^Texto$\n"
 /* class by manual */                + "    cat arquivo | y grep AB\n"
