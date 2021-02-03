@@ -98,7 +98,9 @@ Exemplos...
 [y base64]
     cat arquivo | y base64
     cat arquivo | y base64 -d
-    obs: -d para decode
+    y base64 -e "texto"
+    y base64 -d "YQ=="
+    obs: -e para encode e -d para decode
 [y grep]
     cat arquivo | y grep ^Texto$
     cat arquivo | y grep AB
