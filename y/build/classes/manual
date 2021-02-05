@@ -12,6 +12,7 @@ usage:
   [y gzip]
   [y gunzip]
   [y echo]
+  [y printf]
   [y cat]
   [y md5]
   [y sha1]
@@ -87,6 +88,10 @@ Exemplos...
 [y echo]
     echo a b c
     echo "a b c"
+[y printf]
+    echo a b c
+    echo "a b c"
+    obs: diferente do echo, o printf nao gera \n no final
 [y cat]
     y cat arquivo
 [y md5]
@@ -100,6 +105,7 @@ Exemplos...
     cat arquivo | y base64 -d
     y base64 -e "texto"
     y base64 -d "YQ=="
+    y printf "texto" | base64 -e 
     obs: -e para encode e -d para decode
 [y grep]
     cat arquivo | y grep ^Texto$
@@ -119,8 +125,7 @@ Exemplos...
     cat arquivo | y cut -c5
     cat arquivo | y cut -c5-10,15-17
 [y sed]
-    cat arquivo | y sed A B
-    cat arquivo | y sed A1 A2 B1 B2
+    cat arquivo | y sed A B    
 [y n]
     cat arquivo | y n
     obs: modifica arquivo \r\n para \n(se ja tiver \n nao tem problema)

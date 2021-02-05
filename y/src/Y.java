@@ -67,6 +67,26 @@ public class Y {
     // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
     public static String txtBase64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
     
+    int BARRA_R=13;     // \r
+    int CHAR_R=114;     // r
+    int BARRA_N=10;     // \n
+    int CHAR_N=110;     // n
+    
+    int BARRA_0=0;      // \0
+    int CHAR_0=48;      // 0
+    int BARRA_A=7;      // \a
+    int CHAR_A=97;      // a
+    int BARRA_B=8;      // \b
+    int CHAR_B=98;      // b
+    int BARRA_T=9;      // \t
+    int CHAR_T=116;     // t
+    int BARRA_V=11;     // \v
+    int CHAR_V=118;     // v
+    int BARRA_F=12;     // \f
+    int CHAR_F=102;     // f
+    int CHAR_BARRA=92; // \\ => \
+   
+    
     public static void main(String[] args) {
 
 /*
@@ -292,7 +312,11 @@ cat buffer.log
         if ( args[0].equals("echo") ){
             echo(args);
             return;
-        }        
+        }      
+        if ( args[0].equals("printf") ){
+            printf(args);
+            return;
+        }              
         if ( args[0].equals("cat") && args.length >= 2 ){
             cat(args);
             return;
@@ -374,7 +398,7 @@ cat buffer.log
             cut(args);
             return;
         }
-        if ( args[0].equals("sed") && args.length >= 3 && args.length % 2 == 1 ){
+        if ( args[0].equals("sed") && args.length == 3 && args[1].length() > 0 ){
             sed(args);
             return;
         }
@@ -1929,13 +1953,18 @@ cat buffer.log
 
     public void echo(String [] args)
     {
-        if ( args.length > 1 )
-            System.out.print(args[1]);
-        for ( int i=2;i<args.length;i++ )
-            System.out.print(" "+args[i]);
+        printf(args);
         System.out.println("");
     }
 
+    public void printf(String [] args)
+    {
+        if ( args.length > 1 )
+            System.out.print(args[1]);
+        for ( int i=2;i<args.length;i++ )
+            System.out.print(" "+args[i]);        
+    }
+    
     public void cat(String [] caminhos)
     {
         
@@ -2204,23 +2233,128 @@ cat buffer.log
         }
     }
          
+    ArrayList<Byte> sed_agulha1=new ArrayList<Byte>();
+    int sed_agulha1_count=0;
+    ArrayList<Byte> sed_agulha2=new ArrayList<Byte>(); // substituir in
+    int sed_agulha2_count=0;
+    ArrayList<Byte> sed_agulha3=new ArrayList<Byte>(); // substituir out
+    int sed_agulha3_count=0;
     public void sed(String [] args)
-    {
-        try {
-            String line=null;
-            while ( (line=readLine()) != null ){
-                for ( int i=1;i<args.length;i+=2 )
-                    line=line.replaceAll(args[i], args[i+1]);
-                System.out.println(line);
+    {     
+        
+        byte [] in_=args[1].getBytes();
+        for ( int i=0;i<in_.length;i++ )
+            sed_agulha2.add(in_[i]);   
+        sed_agulha2=codificacaoBarra(sed_agulha2);
+        sed_agulha2_count=sed_agulha2.size();
+        
+        byte [] out_=args[2].getBytes();
+        for ( int i=0;i<out_.length;i++ )
+            sed_agulha3.add(out_[i]);        
+        sed_agulha3=codificacaoBarra(sed_agulha3);
+        sed_agulha3_count=sed_agulha3.size();
+        
+        byte[] entrada_ = new byte[1];
+        while ( read1Byte(entrada_) ){
+            // insere lido depois trata!!            
+            sed_agulha1.add(entrada_[0]);
+            sed_agulha1_count++;
+            
+            if ( sed_agulha1_count < sed_agulha2_count )
+                continue;
+            
+            if ( sed_agulha1_count > sed_agulha2_count ){
+                write1Byte(sed_agulha1.get(0));
+                sed_agulha1.remove(0);
+                sed_agulha1_count--;
             }
-            closeLine();
-        }catch(Exception e){
-            System.out.println(e.toString());
+            
+            if ( sed_agulhas_iguais() ){
+                for ( int i=0;i<sed_agulha3_count;i++ )
+                    write1Byte(sed_agulha3.get(i));
+                sed_agulha1=new ArrayList<Byte>();
+                sed_agulha1_count=0;
+            }
         }
+        while( sed_agulha1_count>0 ){
+            write1Byte(sed_agulha1.get(0));
+            sed_agulha1.remove(0);
+            sed_agulha1_count--;            
+        }
+        write1ByteFlush();
     }
     
-    int BARRA_R=13; // \r
-    int BARRA_N=10; // \n
+    public ArrayList<Byte> codificacaoBarra(ArrayList<Byte> a)
+    {
+        // transforma 97(A)   92(\)   110(n)   97(A)
+        // em         97(A)   10(\n)   97(A)
+        
+        //    BARRA_R=13;     // \r
+        //    CHAR_R=114;     // r
+        //    BARRA_N=10;     // \n
+        //    CHAR_N=110;     // n
+        //    
+        //    BARRA_0=0;      // \0
+        //    CHAR_0=48;      // 0
+        //    BARRA_A=7;      // \a
+        //    CHAR_A=97;      // a
+        //    BARRA_B=8;      // \b
+        //    CHAR_B=98;      // b
+        //    BARRA_T=9;      // \t
+        //    CHAR_T=116;     // t
+        //    BARRA_V=11;     // \v
+        //    CHAR_V=118;     // v
+        //    BARRA_F=12;     // \f
+        //    CHAR_F=102;     // f
+        //    CHAR_BARRA=92; // \\ => \
+        
+        ArrayList<Byte> lista=new ArrayList<Byte>();        
+        int tail=-1;
+        int entrada=-1;
+        
+        for ( int i=0;i<a.size();i++ ){
+            entrada=byte_to_int_java(a.get(i));
+            if ( tail == -1 ){
+                tail=entrada;
+                continue;
+            }            
+            if ( tail == CHAR_BARRA && entrada == CHAR_R ){ lista.add( Byte.valueOf( (byte)BARRA_R ) ); tail=-1; continue; }
+            if ( tail == CHAR_BARRA && entrada == CHAR_N ){ lista.add( Byte.valueOf( (byte)BARRA_N ) ); tail=-1; continue; }
+            if ( tail == CHAR_BARRA && entrada == CHAR_0 ){ lista.add( Byte.valueOf( (byte)BARRA_0 ) ); tail=-1; continue; }
+            if ( tail == CHAR_BARRA && entrada == CHAR_A ){ lista.add( Byte.valueOf( (byte)BARRA_A ) ); tail=-1; continue; }
+            if ( tail == CHAR_BARRA && entrada == CHAR_B ){ lista.add( Byte.valueOf( (byte)BARRA_B ) ); tail=-1; continue; }
+            if ( tail == CHAR_BARRA && entrada == CHAR_T ){ lista.add( Byte.valueOf( (byte)BARRA_T ) ); tail=-1; continue; }
+            if ( tail == CHAR_BARRA && entrada == CHAR_V ){ lista.add( Byte.valueOf( (byte)BARRA_V ) ); tail=-1; continue; }
+            if ( tail == CHAR_BARRA && entrada == CHAR_F ){ lista.add( Byte.valueOf( (byte)BARRA_F ) ); tail=-1; continue; }
+            if ( tail == CHAR_BARRA && entrada == CHAR_BARRA ){ lista.add( Byte.valueOf( (byte)CHAR_BARRA ) ); tail=-1; continue; }
+            
+            lista.add( Byte.valueOf( (byte)tail ) );
+            tail=entrada;
+        }
+        if ( tail != -1 ){
+            // condição comentada por nao ser possivel atingir
+            // nao remover o comentario!!
+            //if ( tail == CHAR_BARRA ){
+            //    System.err.println("Erro, parametro inválido: "+a.toString());
+            //    System.exit(1);
+            //}
+            lista.add( Byte.valueOf( (byte)tail ) );
+        }
+        
+        return lista;
+    }
+    
+    public boolean sed_agulhas_iguais(){
+        if ( sed_agulha1_count != sed_agulha2_count ){
+            System.err.println("Erro inesperado!");
+            System.exit(1);
+        }
+        for(int i=0;i<sed_agulha1_count;i++)
+            if ( (int)sed_agulha1.get(i) != (int)sed_agulha2.get(i) )
+                return false;
+        return true;
+    }
+    
     public void n() // \n
     {
         // modifica arquivo \r\n para \n(se ja tiver \n nao tem problema)
@@ -4200,6 +4334,7 @@ class Ponte {
 /* class by manual */                + "  [y gzip]\n"
 /* class by manual */                + "  [y gunzip]\n"
 /* class by manual */                + "  [y echo]\n"
+/* class by manual */                + "  [y printf]\n"
 /* class by manual */                + "  [y cat]\n"
 /* class by manual */                + "  [y md5]\n"
 /* class by manual */                + "  [y sha1]\n"
@@ -4275,6 +4410,10 @@ class Ponte {
 /* class by manual */                + "[y echo]\n"
 /* class by manual */                + "    echo a b c\n"
 /* class by manual */                + "    echo \"a b c\"\n"
+/* class by manual */                + "[y printf]\n"
+/* class by manual */                + "    echo a b c\n"
+/* class by manual */                + "    echo \"a b c\"\n"
+/* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
 /* class by manual */                + "[y md5]\n"
@@ -4288,6 +4427,7 @@ class Ponte {
 /* class by manual */                + "    cat arquivo | y base64 -d\n"
 /* class by manual */                + "    y base64 -e \"texto\"\n"
 /* class by manual */                + "    y base64 -d \"YQ==\"\n"
+/* class by manual */                + "    y printf \"texto\" | base64 -e \n"
 /* class by manual */                + "    obs: -e para encode e -d para decode\n"
 /* class by manual */                + "[y grep]\n"
 /* class by manual */                + "    cat arquivo | y grep ^Texto$\n"
@@ -4307,8 +4447,7 @@ class Ponte {
 /* class by manual */                + "    cat arquivo | y cut -c5\n"
 /* class by manual */                + "    cat arquivo | y cut -c5-10,15-17\n"
 /* class by manual */                + "[y sed]\n"
-/* class by manual */                + "    cat arquivo | y sed A B\n"
-/* class by manual */                + "    cat arquivo | y sed A1 A2 B1 B2\n"
+/* class by manual */                + "    cat arquivo | y sed A B    \n"
 /* class by manual */                + "[y n]\n"
 /* class by manual */                + "    cat arquivo | y n\n"
 /* class by manual */                + "    obs: modifica arquivo \\r\\n para \\n(se ja tiver \\n nao tem problema)\n"
@@ -4446,6 +4585,7 @@ class Ponte {
 /* class by manual */                + "  [y gzip]\n"
 /* class by manual */                + "  [y gunzip]\n"
 /* class by manual */                + "  [y echo]\n"
+/* class by manual */                + "  [y printf]\n"
 /* class by manual */                + "  [y cat]\n"
 /* class by manual */                + "  [y md5]\n"
 /* class by manual */                + "  [y sha1]\n"

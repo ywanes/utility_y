@@ -12,6 +12,7 @@ usage:
   [y gzip]
   [y gunzip]
   [y echo]
+  [y printf]
   [y cat]
   [y md5]
   [y sha1]
