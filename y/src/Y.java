@@ -1549,6 +1549,7 @@ cat buffer.log
             {
                 try{
                     out[0].println(formatter.format(new Date()) + " - end");
+                    out[0].flush();
                     out[0].close();                    
                 }catch(Exception e){
                     System.out.println(e.toString());
@@ -1639,6 +1640,7 @@ cat buffer.log
         try{
             BufferedWriter out = new BufferedWriter(new FileWriter(arquivo));
             out.write(texto);
+            out.flush();
             out.close();
             return true;
         }catch(Exception e){
@@ -2949,7 +2951,9 @@ cat buffer.log
                 out.write(buf, 0, len);
                 System.out.write(buf, 0, len);
             }
+            out.flush();
             out.close();
+            System.out.flush();
             closeBytes();
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
@@ -3343,7 +3347,8 @@ cat buffer.log
             pipeWriter.join();
             pipeReader.join();
             
-            pipedOutputStream.close();
+            pipedOutputStream.flush();
+            pipedOutputStream.close();            
             pipedInputStream.close();        
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
@@ -4101,7 +4106,7 @@ class Ponte {
                 if (displayIda)
                     mostra(len,"->",ponteID,buffer);
                 destino.ida(buffer,len);
-            }
+            }            
             try{ bis.close(); }catch(Exception e){}
             try{ is.close(); }catch(Exception e){}
         }
@@ -4114,7 +4119,7 @@ class Ponte {
         }
 
         private void destroy() {
-            try{
+            try{                
                 socket.close();
             }catch(Exception e){}
         }
