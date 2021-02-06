@@ -43,9 +43,6 @@ public class Y {
     public static String local_env="c:\\tmp";
 
     public static int BUFFER_SIZE=1024;
-    public static java.util.Scanner scanner_pipe=null;
-    public static java.util.Scanner scanner_pipeB=null;
-    public static InputStream inputStream_pipe=null;
     public static String linhaCSV=null;
     public static int ponteiroLinhaCSV=0;    
     public static String sepCSV=";";
@@ -1785,6 +1782,7 @@ cat buffer.log
         readLine(new FileInputStream(new File(caminho)));
     }
     
+    public static java.util.Scanner scanner_pipe=null;
     public void readLine(InputStream in){        
         scanner_pipe=new java.util.Scanner(in);
         scanner_pipe.useDelimiter("\n");
@@ -1795,7 +1793,7 @@ cat buffer.log
             if ( scanner_pipe == null )
                 readLine(System.in);
             if ( scanner_pipe.hasNext() )
-                return scanner_pipe.next();                        
+                return scanner_pipe.next().replace("\r","");
             else
                 return null;            
         }catch(java.util.NoSuchElementException no) {
@@ -1813,6 +1811,7 @@ cat buffer.log
         scanner_pipe=null;
     }
     
+    public static java.util.Scanner scanner_pipeB=null;
     public void readLineB(String caminho) throws Exception{
         readLineB(new FileInputStream(new File(caminho)));
     }
@@ -1845,6 +1844,7 @@ cat buffer.log
         scanner_pipeB=null;
     }
     
+    public static InputStream inputStream_pipe=null;
     public void readBytes(String caminho) throws Exception{
         readBytes(new File(caminho));
     }
