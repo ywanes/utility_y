@@ -4686,3 +4686,472 @@ class Ponte {
 /* class by manual */    }
 
 
+
+
+
+//
+//import java.io.File;
+//import java.io.FileInputStream;
+//import java.io.InputStream;
+//import java.util.ArrayList;
+//import java.util.Enumeration;
+//import java.util.zip.ZipEntry;
+//import java.util.zip.ZipFile;
+//
+//import java.util.HashMap;
+//import java.util.List;
+//import java.util.zip.ZipInputStream;
+//
+//public class teste {    
+//    public static void main(String[] args) throws Exception {
+//        new teste().go();
+//    }    
+//
+//    private void go() throws Exception {
+//        ZipFile zipFile = new ZipFile("C:\\Users\\ywanes\\Documents\\teste.xlsx");
+//        Enumeration<? extends ZipEntry> entries = zipFile.entries();
+//        
+//        InputStream is=null;
+//        boolean mostraEstrutura=true;
+//        ArrayList<String> shared=new ArrayList<String>();
+//        ArrayList<String> nomes=new ArrayList<String>();
+//        String caminho="";
+//        XML xml=null;
+//        XML xmlShared=null;
+//        XML xmlNomes=null;
+//        int sheet_count=0;
+//        String atributo_t=null;
+//        
+//        String buscaSheet="A";
+//        
+//        while(entries.hasMoreElements()){
+//            ZipEntry entry = entries.nextElement();            
+//            caminho=entry.getName();            
+//            if ( caminho.equals("xl/sharedStrings.xml") || caminho.equals("xl/workbook.xml") || caminho.startsWith("xl/worksheets/") ){
+//                // xl/worksheets/sheet1.xml
+//                // xl/worksheets/sheet2.xml
+//                // xl/sharedStrings.xml
+//                // xl/worksheets/_rels/sheet2.xml.rels
+//                // xl/workbook.xml
+//                
+//                is = zipFile.getInputStream(entry);
+//                XML.loadIs(is,caminho,mostraEstrutura);
+//                is.close();
+//                
+//                if ( caminho.equals("xl/workbook.xml") ){
+//                    xmlNomes=XML.getXML();
+//                    for ( XML item1 : xmlNomes.getFilhos()){
+//                        if ( item1.getTag().equals("sheets") ){
+//                            for ( XML item2 : item1.getFilhos()){
+//                                nomes.add(item2.getAtributo("name"));
+//                            }
+//                        }
+//                    }
+//                }
+//                
+//                if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") ){
+//                    if ( nomes.size() == 0 )
+//                        XML.ErroFatal(99);                    
+//                    if ( buscaSheet.equals(nomes.get(sheet_count++)) ){
+//                        xml=XML.getXML();
+//                    }
+//                }
+//                
+//                if ( caminho.equals("xl/sharedStrings.xml") ){
+//                    xmlShared=XML.getXML();
+//                    for ( XML item1 : xmlShared.getFilhos()){
+//                        for ( XML item2 : item1.getFilhos()){
+//                            if(item2.getTag().equals("t")){
+//                                shared.add(item2.getValue());
+//                            }
+//                        }
+//                    }
+//                }
+//                
+//            }
+//        }
+//        
+//        if ( xml != null ){
+//            for ( XML item1 : xml.getFilhos()){
+//                if ( item1.getTag().equals("sheetData") ){
+//                    for ( XML item2 : item1.getFilhos()){
+//                        if ( item2.getTag().equals("row") ){
+//                            for ( XML item3 : item2.getFilhos()){
+//                                if ( item3.getTag().equals("c") ){
+//                                    for ( XML item4 : item3.getFilhos()){
+//                                        if ( item4.getTag().equals("v") ){
+//                                            atributo_t=item3.getAtributo("t");
+//                                            if ( atributo_t != null && atributo_t.equals("s") ){
+//                                                processaCelula(item3.getAtributo("r"),shared.get(Integer.parseInt(item4.getValue())));
+//                                            }else{
+//                                                processaCelula(item3.getAtributo("r"),item4.getValue());
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//                            }
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }    
+//
+//    private void processaCelula(String local, String valor) {
+//        System.out.println(local + " " + valor);
+//    }
+//}
+//
+//class Util{
+//    public static void readLine(String caminho) throws Exception{
+//        readLine(new FileInputStream(new File(caminho)));
+//    }
+//    
+//    public static java.util.Scanner scanner_pipe=null;
+//    public static void readLine(InputStream in){        
+//        scanner_pipe=new java.util.Scanner(in);
+//        scanner_pipe.useDelimiter("\n");
+//    }    
+//    
+//    public static String readLine(){
+//        try{            
+//            if ( scanner_pipe == null )
+//                readLine(System.in);
+//            if ( scanner_pipe.hasNext() )
+//                return scanner_pipe.next().replace("\r","");                        
+//            else
+//                return null;            
+//        }catch(java.util.NoSuchElementException no) {
+//            return null;
+//        }catch(Exception e){
+//            System.err.println("NOK: "+e.toString());
+//        }
+//        return null;
+//    }
+//
+//    public static void closeLine(){
+//        try{
+//            scanner_pipe.close();            
+//        }catch(Exception e){}
+//        scanner_pipe=null;
+//    }        
+//}
+//
+//class XML{
+//    private static void mostra(ArrayList<String> listaTxt, ArrayList<Integer> listaNivel,String caminho) {
+//        int len=listaTxt.size();
+//        int n=0;
+//        System.out.println();
+//        System.out.println("=> "+caminho);        
+//        for (int i=0;i<len;i++ ){
+//            //System.out.print(listaNivel.get(i));
+//            n=listaNivel.get(i)-1;
+//            for (int j=0;j<n;j++ )
+//                System.out.print("\t");
+//            System.out.println(listaTxt.get(i));
+//        }
+//    }
+//
+//
+//    private HashMap atributos=new HashMap();
+//    private String value=null;
+//    private ArrayList<XML> filhos=new ArrayList<XML>();
+//    private String tag=null;    
+//    
+//    private static ArrayList<String> listaTxt=null;
+//    private static ArrayList<Integer> listaNivel=null;
+//    public static void loadIs(InputStream is,String caminho,boolean mostraEstrutura) {
+//        listaTxt=new ArrayList<String>();
+//        listaNivel=new ArrayList<Integer>();
+//        
+//        Util.readLine(is);
+//        StringBuilder sb=new StringBuilder();
+//        String line="";
+//        String txt=null;
+//        boolean first=true;
+//        while ( (line=Util.readLine()) != null ){
+//            if ( first && line.startsWith("<?xml") ){
+//                first=false;
+//                continue;
+//            }
+//            sb.append(line);            
+//        }
+//        Util.closeLine();
+//        txt=sb.toString();
+//        
+//        String entrada=null;
+//        String tail=null;
+//        sb=new StringBuilder();
+//        int len=txt.length();
+//        int nivel=1;
+//        boolean tag_in=false;
+//        boolean tag_finish=false;
+//        boolean tag_value=false;
+//        boolean tail_tag_abertura=false; //
+//        
+//        // tag de abertura   <a>
+//        // tag de fechamento </a>
+//        // tag unica         <a/>
+//        
+//        for( int i=0;i<len;i++ ){
+//            entrada=txt.substring(i,i+1);
+//            if ( nivel < 1 ){
+//                ErroFatal(1);
+//            }     
+//            if ( tag_in && tag_value ){
+//                ErroFatal(2);
+//            }
+//            if ( tail == null ){
+//                tail=entrada;
+//                continue;
+//            }
+//            if( !tag_in && !tag_value && tail.equals("<") && entrada.equals("/") ){ // tag de fechamento
+//                sb.append(tail);
+//                sb.append(entrada);
+//                tail=null;
+//                tag_in=true;
+//                tag_finish=true;
+//                nivel--;
+//                continue;
+//            }
+//            if( !tag_in && !tag_value && tail.equals("<") ){ // tag de abertura ou tag unica
+//                sb.append(tail);                
+//                tail=entrada;
+//                tag_in=true;                
+//                continue;
+//            }
+//            if ( tag_in && tail.equals("/") && entrada.equals(">") ){ // tag unica            
+//                if ( tag_finish ){ // nao pode haver finish com tag unica
+//                    ErroFatal(3);
+//                }
+//                sb.append(tail);
+//                sb.append(entrada);
+//                tail=null;
+//                tag_in=false;
+//                tag_finish=false; // segurança
+//                listaTxt.add(sb.toString());
+//                listaNivel.add(nivel);
+//                sb=new StringBuilder();
+//                tail_tag_abertura=false;
+//                continue;                
+//            }
+//            if ( tag_in && entrada.equals(">") ){ // tag abertura ou tag fechamento
+//                sb.append(tail);
+//                sb.append(entrada);
+//                tail=null;
+//                tag_in=false;                
+//                listaTxt.add(sb.toString());
+//                listaNivel.add(nivel);
+//                sb=new StringBuilder();
+//                if ( tag_finish ){
+//                    //nivel--; foi decrementado em outro local
+//                    tail_tag_abertura=false;
+//                }else{
+//                    nivel++;
+//                    tail_tag_abertura=true;
+//                }
+//                tag_finish=false;
+//                continue;                
+//            }
+//            if ( !tag_in && !tag_value && entrada.equals("<") ){ // inicio e fim de value bem rapido ex: ...>5<...
+//                if ( ! tail_tag_abertura ){
+//                    // nao eh possivel iniciar value
+//                    tail=entrada;
+//                    continue;
+//                }
+//                tag_value=true;                
+//                sb.append(tail);                    
+//                tail=entrada;
+//                listaTxt.add(sb.toString());
+//                listaNivel.add(nivel);
+//                sb=new StringBuilder();
+//                tag_value=false;
+//                tail_tag_abertura=false;
+//                continue;
+//            }
+//            if ( !tag_in && !tag_value ){ // iniciando value
+//                if ( ! tail_tag_abertura ){
+//                    // nao eh possivel iniciar value
+//                    tail=entrada;
+//                    continue;
+//                }                
+//                tag_value=true;                
+//                sb.append(tail);                    
+//                tail=entrada;
+//                continue;
+//            }
+//            if( tag_value && entrada.equals("<") ){ // finalizando processamento de value
+//                tag_value=false;
+//                sb.append(tail);                    
+//                tail=entrada;
+//                listaTxt.add(sb.toString());
+//                listaNivel.add(nivel);
+//                sb=new StringBuilder();
+//                continue;            
+//            }
+//            sb.append(tail);                    
+//            tail=entrada;
+//            continue;            
+//        }
+//        if ( tail != null ){
+//            ErroFatal(4);
+//        }        
+//        if ( mostraEstrutura )
+//            mostra(listaTxt,listaNivel,caminho);
+//    }
+//    
+//    public static XML getXML(){
+//        return ((ArrayList<XML>)getXML(1,0,listaTxt.size()-1)).get(0);
+//    }    
+//    
+//    public static Object getXML(int nivel,int ini,int fim){
+//        // retorno pode ser ArrayList<XML> ou String
+//        // nivel inicia em 1
+//        // int inicia em 0        
+//        String tag="";
+//        String tipoTag=""; // inicio fim unica
+//        
+//        if ( ini == fim && !listaTxt.get(ini).startsWith("<") )
+//            return listaTxt.get(ini);        
+//            
+//        ArrayList<XML> lista=new ArrayList<XML>();
+//        XML xml=null;        
+//        int inicio_n=0;
+//        String inicio_tag="";
+//        for(int i=ini;i<=fim;i++ ){
+//            if ( listaNivel.get(i) == nivel && xml == null ){
+//                xml=new XML();
+//                tag=XML.getTagFromLine(listaTxt.get(i));
+//                tipoTag=XML.getTipoTagFromLine(listaTxt.get(i));
+//                if ( tipoTag.equals("fim") )
+//                    ErroFatal(8);
+//                xml.addAtributoAll(XML.getAtributosFromLine(listaTxt.get(i)));
+//                if ( tipoTag.equals("unica") ){
+//                    xml.setTag(tag);
+//                    lista.add(xml);
+//                    xml=null;                    
+//                }else{
+//                    inicio_n=i;
+//                    inicio_tag=tag;
+//                    xml.setTag(tag);
+//                }
+//                continue;
+//            }
+//            if ( listaNivel.get(i) == nivel && xml != null ){
+//                tag=XML.getTagFromLine(listaTxt.get(i));
+//                tipoTag=XML.getTipoTagFromLine(listaTxt.get(i));
+//                if ( !tipoTag.equals("fim") )
+//                    ErroFatal(9);                
+//                if ( ! tag.equals(inicio_tag) )
+//                    ErroFatal(10);
+//                if ( (i-inicio_n) > 1 ){
+//                    Object interno=getXML(nivel+1,inicio_n+1,i-1);
+//                    try{
+//                        xml.addFilhos((ArrayList<XML>)interno);
+//                    }catch(Exception e){
+//                        xml.value=(String)interno;
+//                    }
+//                }
+//                lista.add(xml);
+//                xml=null;                
+//            }
+//        }
+//        return lista;
+//    }
+//    
+//    private static String getTagFromLine(String line) {
+//        String tag=line.replace("<","").replace(">","").replace("/","").split(" ")[0];
+//        if ( tag.length() == 0 )
+//            ErroFatal(12);
+//        return tag;
+//    }
+//
+//    private static String getTipoTagFromLine(String line) {
+//        String tipoTag=null;        
+//        if ( line.startsWith("</") )
+//            tipoTag="fim";
+//        else{            
+//            if ( line.endsWith("/>") )
+//                tipoTag="unica";
+//            else{
+//                if ( !line.startsWith("<") || !line.endsWith(">") )
+//                    ErroFatal(11);
+//                tipoTag="inicio";
+//            }
+//        }
+//        return tipoTag;
+//    }
+//
+//    private static HashMap getAtributosFromLine(String a) {
+//        ArrayList<String> partes=new ArrayList<String>();
+//        a=a.replace("<","").replace(">","").replace("/","");
+//        int len=a.length();
+//        boolean aspas_in=false;
+//        String entrada="";
+//        StringBuilder sb=new StringBuilder();
+//        HashMap retorno=new HashMap();
+//        
+//        for ( int i=0;i<len;i++ ){
+//            entrada=a.substring(i,i+1);
+//            if(entrada.equals("\""))
+//                aspas_in=!aspas_in;
+//            if ( !aspas_in && entrada.equals(" ") ){
+//                partes.add(sb.toString());
+//                sb=new StringBuilder();
+//                continue;
+//            }
+//            sb.append(entrada);
+//        }
+//        if ( sb.toString().length() > 0 )
+//            partes.add(sb.toString());
+//        
+//        String k="";
+//        String v="";
+//        for(int i=1;i<partes.size();i++){
+//            try{
+//                k=partes.get(i).split("=")[0];
+//                v=partes.get(i).split("=")[1].replace("\"","");
+//                if ( k.length() > 0 && v.length() > 0 ){
+//                    retorno.put(k, v);
+//                }
+//            }catch(Exception e){}
+//        }
+//        return retorno;
+//    }
+//    
+//    public void setTag(String tag){
+//        this.tag=tag;
+//    }
+//    public String getTag(){
+//        return tag;
+//    }
+//    public String getAtributo(String a){
+//        return (String)atributos.get(a);
+//    }
+//    public void addAtributoAll(HashMap a) {
+//        atributos.putAll(a);
+//    }    
+//    public List<String> getAtributosNames() {
+//        return new ArrayList<String>(atributos.keySet());
+//    }
+//    public void setValue(String value){
+//        this.value=value;
+//    }
+//    public String getValue(){
+//        return value;
+//    }
+//    public void addFilhos(ArrayList<XML> a) {
+//        filhos.addAll(a);
+//    }
+//    public ArrayList<XML> getFilhos(){
+//        return filhos;
+//    }
+//    
+//    public static void ErroFatal(int n) {
+//        System.err.println("Erro Fatal! "+n);
+//        System.exit(1);
+//    }    
+//
+//}
+//
+//
