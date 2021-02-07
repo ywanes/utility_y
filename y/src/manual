@@ -7,6 +7,7 @@ usage:
   [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]
   [y banco executejob]
   [y banco buffer [|-n_lines 500] [|-log buffer.log]]
+  [y xlsxToCSV]
   [y token]
   [y gettoken]
   [y gzip]
@@ -40,7 +41,7 @@ usage:
   [y ssh]
   [y sftp]
   [y serverRouter]
-  [y HttpServer]
+  [y httpServer]
   [y help]
 
 Exemplos...
@@ -77,6 +78,11 @@ Exemplos...
     ) | y banco executejob
 [y banco buffer [|-n_lines 500] [|-log buffer.log]]    
     echo "select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 500 -log buffer.log | y banco conn,hash executeInsert
+[y xlsxToCSV]
+    xlsxToCSV arquivo.xlsx mostraEstrutura
+    xlsxToCSV arquivo.xlsx listaAbas
+    xlsxToCSV arquivo.xlsx numeroAba 1
+    xlsxToCSV arquivo.xlsx nomeAba Planilha1
 [y token]
     y token value
 [y gettoken]
