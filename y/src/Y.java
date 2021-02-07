@@ -49,7 +49,7 @@ public class Y {
     public static int BUFFER_SIZE=1024;
     public static String linhaCSV=null;
     public static int ponteiroLinhaCSV=0;    
-    public static String sepCSV=";";
+    public static String sepCSV=getSeparadorCSV(); // ";";
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
     public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8","UTF-8BOM","UCS-2LE","UCS-2LEBOM"};
@@ -67,6 +67,11 @@ public class Y {
     public static int [] indexBase64 = new int []{65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,43,47};
     // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
     public static String txtBase64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    
+    public static String linhasExcel="0123456789";    
+    public static int linhasExcel_len=linhasExcel.length();    
+    public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    public static int colunasExcel_len=colunasExcel.length();    
     
     int BARRA_R=13;     // \r
     int CHAR_R=114;     // r
@@ -135,12 +140,6 @@ cat buffer.log
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                        
-
-        //String tmp="C:\\Users\\ywanes\\Documents\\teste.xlsx";
-        //args=new String[]{"xlsxToCSV",tmp,"mostraEstrutura"};
-        //args=new String[]{"xlsxToCSV",tmp,"listaAbas"};
-        //args=new String[]{"xlsxToCSV",tmp,"numeroAba","1"};
-        //args=new String[]{"xlsxToCSV",tmp,"nomeAba","A"};
         new Y().go(args);
     }
         
@@ -268,6 +267,11 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("xlsxToCSV") && args.length >= 3 ){
+            //args=new String[]{"xlsxToCSV","teste.xlsx","mostraEstrutura"};
+            //args=new String[]{"xlsxToCSV","teste.xlsx","listaAbas"};
+            //args=new String[]{"xlsxToCSV","teste.xlsx","numeroAba","1"};
+            //args=new String[]{"xlsxToCSV","teste.xlsx","nomeAba","A"};
+            
             if ( new File(args[1]).exists() ){
                 if ( args.length == 3 && args[2].equals("mostraEstrutura") ){
                     xlsxToCSV(args[1],true,false,-1,"");
@@ -1004,10 +1008,6 @@ cat buffer.log
         obs: campos além do headr nao serão considerados
         */
         
-        String sep=System.getenv("CSV_SEP_Y");
-        if ( sep == null || sep.trim().equals("") )
-            sep=";";
-        
         int countCommit=0;
         try{
             if ( ! fileCSV.equals("") )
@@ -1017,8 +1017,6 @@ cat buffer.log
             int qntCamposCSV=0;
             String valorColuna=null;
             StringBuilder sb=null;
-            
-            readColunaCSV(new String[]{sep});// init parmCSV sep, usando a assinatura array String para diferenciar de String
             
             while ( (line=readLine()) != null ){
                 if ( qntCamposCSV == 0 )
@@ -1076,9 +1074,6 @@ cat buffer.log
 
     public void selectCSV(String conn,String parm){
         
-        String sep=System.getenv("CSV_SEP_Y");
-        if ( sep == null || sep.trim().equals("") )
-            sep=";";
         boolean onlychar=false;
         String onlychar_=System.getenv("CSV_ONLYCHAR_Y");
         if ( onlychar_ != null && onlychar_.equals("S") )
@@ -1135,11 +1130,11 @@ cat buffer.log
                     if ( tmp == null  ){
                         if ( first )
                         {
-                            header+="\""+campos.get(i)+"\""+sep;
-                            first_detail+="\"\""+sep;
+                            header+="\""+campos.get(i)+"\""+sepCSV;
+                            first_detail+="\"\""+sepCSV;
                         }else{
                             sb.append("\"\"");
-                            sb.append(sep);
+                            sb.append(sepCSV);
                         }
                         continue;
                     }
@@ -1156,8 +1151,8 @@ cat buffer.log
                         
                         if ( first )
                         {
-                            header+="\""+campos.get(i)+"\""+sep;
-                            first_detail+="\""+tmp+"\""+sep;
+                            header+="\""+campos.get(i)+"\""+sepCSV;
+                            first_detail+="\""+tmp+"\""+sepCSV;
                         }else{
                             // nao imprime delimitador em onlychar e tipos.get(i) == 2
                             if ( !onlychar || tipos.get(i) != 2 )
@@ -1165,7 +1160,7 @@ cat buffer.log
                             sb.append(tmp);
                             if ( !onlychar || tipos.get(i) != 2 )
                                 sb.append("\"");
-                            sb.append(sep);
+                            sb.append(sepCSV);
                         }
 
                         continue;
@@ -3667,26 +3662,24 @@ cat buffer.log
         Comparator g;
     }
 
+    private static String getSeparadorCSV(){
+        String sep_=System.getenv("CSV_SEP_Y");
+        if ( sep_ == null || sep_.trim().equals("") )
+            sep_=";";
+        return sep_;
+    }
     
     private String [] getCamposCSV(String txt) {
         // modelos
         // HEADER_CAMPO1;BB;CC;3;4;5;
         // HEADER_CAMPO1;BB;CC;3;4;5
         
-        String sep=System.getenv("CSV_SEP_Y");
-        if ( sep == null || sep.trim().equals("") )
-            sep=";";
-        
         txt=txt.trim();
-        if ( txt.endsWith(sep) )
+        if ( txt.endsWith(sepCSV) )
             txt=txt.substring(0, txt.length()-1);
-        return txt.replace("\"","").split( sep.equals("|")?"\\|":sep ); // split nao funciona com |, tem que usar \\|
+        return txt.replace("\"","").split( sepCSV.equals("|")?"\\|":sepCSV ); // split nao funciona com |, tem que usar \\|
     }
 
-    private void readColunaCSV(String [] parm) {
-        sepCSV=parm[0];
-    }
-    
     private void readColunaCSV(String line) {
         ponteiroLinhaCSV=0;
         linhaCSV=line;
@@ -4085,9 +4078,15 @@ cat buffer.log
                                                 if ( item4.getTag().equals("v") ){
                                                     atributo_t=item3.getAtributo("t");
                                                     if ( atributo_t != null && atributo_t.equals("s") ){
-                                                        processaCelula(item3.getAtributo("r"),shared.get(Integer.parseInt(item4.getValue())));
+                                                        processaCelula(
+                                                            item3.getAtributo("r")
+                                                            ,shared.get(Integer.parseInt(item4.getValue())).replace("&amp;","&").replace("&lt;","<").replace("&gt;",">").replace("\"","\"\"")
+                                                        );
                                                     }else{
-                                                        processaCelula(item3.getAtributo("r"),item4.getValue());
+                                                        processaCelula(
+                                                            item3.getAtributo("r")
+                                                            ,item4.getValue().replace("&amp;","&").replace("&lt;","<").replace("&gt;",">").replace("\"","\"\"")
+                                                        );
                                                     }
                                                 }
                                             }
@@ -4096,9 +4095,9 @@ cat buffer.log
                                 }
                             }
                         }
-                    }                    
+                    }  
+                    processaCelulaFlush();
                 }
-
             }
 
         }catch(Exception e){
@@ -4107,11 +4106,85 @@ cat buffer.log
         }
     }
 
+    private StringBuilder processaCelula_sb=new StringBuilder();
+    private int processaCelula_tail_linha=-1;
+    private int processaCelula_tail_coluna=-1;
+    private int processaCelula_max_tail_coluna=-1;
     private void processaCelula(String local, String valor) {
-        System.out.println(local + " " + valor);
+        //public static String linhasExcel="0123456789";    
+        //public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        int linha=0;
+        int linha_exp=0;
+        int coluna=0;
+        int coluna_exp=0;    
+        
+        int len=local.length();
+        String entrada="";
+        int pos=0;
+        
+        for ( int i=len-1;i>=0;i-- ){ // obs: no excel a primeira linha é 1. A primeira coluna é A(aqui representada com 0)
+            entrada=local.substring(i,i+1);
+            pos=linhasExcel.indexOf(entrada);
+            if ( pos != -1 ){ // linha
+                linha+=Math.pow(linhasExcel_len, linha_exp++)*pos;
+            }else{ // coluna
+                pos=colunasExcel.indexOf(entrada);
+                if ( pos != -1 ){ 
+                    coluna+=Math.pow(colunasExcel_len, coluna_exp++)*pos;
+                }else{
+                    XML.ErroFatal(15);
+                }
+            }
+        }
+        
+        if ( processaCelula_tail_linha == -1 ){
+            processaCelula_tail_linha=linha;
+            processaCelula_tail_coluna=-1;
+            if ( processaCelula_tail_coluna > processaCelula_max_tail_coluna )
+                processaCelula_max_tail_coluna=coluna;        
+        }else{
+            if ( processaCelula_tail_linha > linha ){
+                XML.ErroFatal(14);
+            }
+            while(processaCelula_tail_linha < linha){
+                while(processaCelula_tail_coluna<processaCelula_max_tail_coluna){
+                    processaCelula_sb.append("\"\"");
+                    processaCelula_sb.append(sepCSV);
+                    processaCelula_tail_coluna++;
+                }
+                processaCelula_tail_coluna=-1;
+                System.out.println(processaCelula_sb.toString());
+                processaCelula_sb=new StringBuilder();
+                processaCelula_tail_linha++;
+            }
+        }
+        while(processaCelula_tail_coluna<coluna-1){
+            processaCelula_sb.append("\"\"");
+            processaCelula_sb.append(sepCSV);
+            processaCelula_tail_coluna++;
+        }
+        
+        processaCelula_sb.append("\"");
+        processaCelula_sb.append(valor);
+        processaCelula_sb.append("\"");
+        processaCelula_sb.append(sepCSV);
+        
+        processaCelula_tail_linha=linha;
+        processaCelula_tail_coluna=coluna;
+        if ( processaCelula_tail_coluna > processaCelula_max_tail_coluna )
+            processaCelula_max_tail_coluna=coluna;        
     }
 
-
+    private void processaCelulaFlush(){
+        if ( processaCelula_sb.length() > 0 ){
+            while(processaCelula_tail_coluna<processaCelula_max_tail_coluna){
+                processaCelula_sb.append("\"\"");
+                processaCelula_sb.append(sepCSV);
+                processaCelula_tail_coluna++;
+            }
+            System.out.println(processaCelula_sb.toString());
+        }
+    }
 }
 
 class Ponte {
@@ -4805,6 +4878,7 @@ class XML{
 /* class by manual */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
 /* class by manual */                + "  [y banco executejob]\n"
 /* class by manual */                + "  [y banco buffer [|-n_lines 500] [|-log buffer.log]]\n"
+/* class by manual */                + "  [y xlsxToCSV]\n"
 /* class by manual */                + "  [y token]\n"
 /* class by manual */                + "  [y gettoken]\n"
 /* class by manual */                + "  [y gzip]\n"
@@ -4875,6 +4949,12 @@ class XML{
 /* class by manual */                + "    ) | y banco executejob\n"
 /* class by manual */                + "[y banco buffer [|-n_lines 500] [|-log buffer.log]]    \n"
 /* class by manual */                + "    echo \"select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 500 -log buffer.log | y banco conn,hash executeInsert\n"
+/* class by manual */                + "[y xlsxToCSV]\n"
+/* class by manual */                + "    xlsxToCSV arquivo.xlsx mostraEstrutura\n"
+/* class by manual */                + "    xlsxToCSV arquivo.xlsx listaAbas\n"
+/* class by manual */                + "    xlsxToCSV arquivo.xlsx numeroAba 1\n"
+/* class by manual */                + "    xlsxToCSV arquivo.xlsx nomeAba Planilha1\n"
+/* class by manual */                + "    obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1\n"
 /* class by manual */                + "[y token]\n"
 /* class by manual */                + "    y token value\n"
 /* class by manual */                + "[y gettoken]\n"
@@ -5056,6 +5136,7 @@ class XML{
 /* class by manual */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
 /* class by manual */                + "  [y banco executejob]\n"
 /* class by manual */                + "  [y banco buffer [|-n_lines 500] [|-log buffer.log]]\n"
+/* class by manual */                + "  [y xlsxToCSV]\n"
 /* class by manual */                + "  [y token]\n"
 /* class by manual */                + "  [y gettoken]\n"
 /* class by manual */                + "  [y gzip]\n"
@@ -5155,7 +5236,5 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
 
 
