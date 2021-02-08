@@ -4080,12 +4080,12 @@ cat buffer.log
                                                     if ( atributo_t != null && atributo_t.equals("s") ){
                                                         processaCelula(
                                                             item3.getAtributo("r")
-                                                            ,shared.get(Integer.parseInt(item4.getValue())).replace("&amp;","&").replace("&lt;","<").replace("&gt;",">").replace("\"","\"\"")
+                                                            ,shared.get(Integer.parseInt(item4.getValue())).replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("\"","\"\"")
                                                         );
                                                     }else{
                                                         processaCelula(
                                                             item3.getAtributo("r")
-                                                            ,item4.getValue().replace("&amp;","&").replace("&lt;","<").replace("&gt;",">").replace("\"","\"\"")
+                                                            ,item4.getValue().replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("\"","\"\"")
                                                         );
                                                     }
                                                 }
