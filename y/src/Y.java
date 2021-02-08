@@ -92,6 +92,16 @@ public class Y {
     int CHAR_F=102;     // f
     int CHAR_BARRA=92; // \\ => \
    
+    int V_0b00000011=3; // 0b00000011 (3)
+    int V_0b0000000011=3; // 0b0000000011 (3)
+    int V_0b0000001111=15; // 0b0000001111 (15)
+    int V_0b000000001111=15; // 0b000000001111 (15)
+    int V_0b000000111111=63; // 0b000000111111 (63)
+    int V_0b11111100=252; // 0b11111100 (252)
+    int V_0b1111110000=1008; // 0b1111110000 (1008)
+    int V_0b1111111100=1020; // 0b1111111100 (1020)
+    int V_0b111111000000=4032; // 0b111111000000 (4032)
+    int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
     public static void main(String[] args) {
 
@@ -2640,21 +2650,9 @@ cat buffer.log
                 return true;
         return false;
     }
-
-    private void iconvOLD(String tipoOrigem, String tipoDestino, String caminho) {
-        if ( tipoOrigem.equals("ISO-8859-1") && tipoDestino.equals("UTF-8") ){
-            iconvWindowsToUTF8(caminho);           
-            return;
-        }
-        if ( tipoOrigem.equals("UTF-8") && tipoDestino.equals("ISO-8859-1") ){
-            iconvUTF8ToWindows(caminho);
-            return;
-        }
-        System.out.println("Erro, encode nao suportado: "+tipoDestino+"/"+tipoOrigem);
-        System.exit(1);
-    }
     
     private void iconvUTF8ToWindows(String caminho) {
+        // existem sequencias irreversiveis que nao suprimidar na conversao padrao mas aqui nao, ex: 226 128 147
         try {
             boolean tail_use=false;            
             int tail=0;
@@ -3146,20 +3144,20 @@ cat buffer.log
                     continue;
                 }
                 if ( agulha_count == 8 ){
-                    pipe_out.write( indexBase64[ (agulha & 0b11111100)>>2 ] );
-                    agulha&=0b00000011;
+                    pipe_out.write( indexBase64[ (agulha & V_0b11111100)>>2 ] );
+                    agulha&=V_0b00000011;
                     agulha_count-=6;
                     continue;
                 }
                 if ( agulha_count == 10 ){
-                    pipe_out.write( indexBase64[ (agulha & 0b1111110000)>>4 ] );
-                    agulha&=0b0000001111;
+                    pipe_out.write( indexBase64[ (agulha & V_0b1111110000)>>4 ] );
+                    agulha&=V_0b0000001111;
                     agulha_count-=6;
                     continue;
                 }
                 if ( agulha_count == 12 ){
-                    pipe_out.write( indexBase64[ (agulha & 0b111111000000)>>6 ] );
-                    agulha&=0b000000111111;
+                    pipe_out.write( indexBase64[ (agulha & V_0b111111000000)>>6 ] );
+                    agulha&=V_0b000000111111;
                     agulha_count-=6;
                     continue;
                 }
@@ -3215,14 +3213,14 @@ cat buffer.log
                     continue;
                 }
                 if ( agulha_count == 10 ){
-                    pipe_out.write( (agulha & 0b1111111100)>>2 );
-                    agulha&=0b0000000011;
+                    pipe_out.write( (agulha & V_0b1111111100)>>2 );
+                    agulha&=V_0b0000000011;
                     agulha_count-=8;
                     continue;
                 }
                 if ( agulha_count == 12 ){
-                    pipe_out.write( (agulha & 0b111111110000)>>4 );
-                    agulha&=0b000000001111;
+                    pipe_out.write( (agulha & V_0b111111110000)>>4 );
+                    agulha&=V_0b000000001111;
                     agulha_count-=8;
                     continue;
                 }
