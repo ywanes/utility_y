@@ -475,6 +475,146 @@ cat buffer.log
             touch(args);
             return;
         }
+        if ( args[0].equals("M") )
+        {
+            if ( args.length == 1 ){
+                System.out.println("Parametro inválido!");
+                System.out.println("Modelo:");
+                System.out.println("y M ClassePrincipal Caminho Senha");
+                return;
+            }    
+            if ( args.length == 4 ){
+                String txt="";        
+                boolean principal_encontrado=false;
+                String classe="";
+                byte[] data=null;
+
+                //String senha=Utilonsole.getPasswordConsole("Digite a senha: ");
+                //if ( senha == null || senha.length() == 0 ){
+                //    System.out.println("Erro, nenhuma senha digitada!");
+                //    System.exit(1);
+                //}
+                //String principal=Utilonsole.getTextConsole("Digite o classe principal: ");
+                //if ( principal == null || principal.length() == 0 ){
+                //    System.out.println("Erro, nenhuma classe digitada!");
+                //    System.exit(1);
+                //}
+                //String dir=Utilonsole.getTextConsole("Digite o caminho(para o caminho digite enter): ");
+                //if ( dir != null && dir.length() > 0 && ! new java.io.File(dir).exists() ){
+                //    System.out.println("Erro, caminho inexistente!");
+                //    System.exit(1);
+                //}
+                
+                String principal=args[1];
+                String dir=args[2];
+                String senha=args[3];
+
+                // chamada principal
+                txt=","+principal;
+
+                if ( dir.equals("") ) dir=".";
+                java.io.File[] files=new java.io.File(dir).listFiles();
+                for ( int i=0;i<files.length;i++ ){
+                    if ( !files[i].isFile() ) continue;
+                    if ( !files[i].getAbsolutePath().endsWith(".class") ) continue;                        
+                    classe=files[i].getName().substring(0,files[i].getName().length()-6);
+                    if ( classe.equals(principal) )
+                        principal_encontrado=true;
+                    try{
+                        data=readAllBytes( files[i].getAbsolutePath() );
+                    }catch(Exception e){
+                        System.out.println("Erro na leitrua do arquivo: "+files[i].getAbsolutePath()+". "+e.toString());
+                        System.exit(1);
+                    }
+                    txt+=","+classe;
+                    try{
+                        txt+=","+base64_B_S(data,true);        
+                    }catch(Exception e){
+                        System.out.println("Erro interno!");
+                        System.exit(1);
+                    }
+                }
+
+                if ( !principal_encontrado ){
+                    System.out.println("Erro, classe principal nao encontrada!");
+                    System.exit(1);
+                }
+                try{
+                    txt=base64_B_S(new AES().encrypt(txt.getBytes(),senha) ,true);
+                }catch(Exception e){
+                    System.out.println("Erro interno!");
+                    System.exit(1);
+                }
+
+                System.out.println("");
+                System.out.println("");
+                System.out.println("");
+                System.out.println("");
+                System.out.println("public class M {");
+                System.out.println("    public static void main(String[] args) throws Exception {");
+                System.out.println("        String M=System.getenv(\"M\");");
+                System.out.println("        if ( M != null && M.length() > 0 ){");
+                System.out.println("            try{");
+                System.out.println("                M=new String( new M_AES().decrypt(M_Base64.base64(M, false),\"\") );");
+                System.out.println("                if ( M_Loader.loader(M,args) )");
+                System.out.println("                    return;");
+                System.out.println("            }catch(Exception e){");
+                System.out.println("                System.out.println(e.toString());");
+                System.out.println("            }");
+                System.out.println("            System.out.println(\"Acesso negado!\");");
+                System.out.println("        }");
+                System.out.println("        pedeSenha();");
+                System.out.println("    }");
+                System.out.println("    public static void pedeSenha(){");
+                System.out.println("        try{");
+                System.out.println("            String M=M_Utilonsole.getPasswordConsole(\"Digite a senha: \");");
+                System.out.println("            if ( M == null || M.length() == 0 ){");
+                System.out.println("                System.out.println(\"Erro, nenhuma senha digitada!\");");
+                System.out.println("                System.exit(1);");
+                System.out.println("            }");
+                System.out.println("            M=M_Base64.base64(new M_AES().encrypt(M.getBytes(),\"\"),true);");
+                System.out.println("            System.out.println(\"digite o comando export abaixo para ambientes nao windows:\");");
+                System.out.println("            System.out.println(\"export M=\"+M);            ");
+                System.out.println("            System.out.println(\"digite o comando export abaixo para ambientes windows:\");");
+                System.out.println("            System.out.println(\"set M=\"+M);");
+                System.out.println("        }catch(Exception e){");
+                System.out.println("            System.out.println(\"Erro interno!\");");
+                System.out.println("            System.exit(1);");
+                System.out.println("        }");
+                System.out.println("    }");
+                System.out.println("}");
+                System.out.println("// \"AES/CBC/PKCS5Padding\"");
+                System.out.println("// new M_AES().encrypt(bytes,password);");
+                System.out.println("// new M_AES().decrypt(bytes,password);");
+                System.out.println("class M_AES{ javax.crypto.spec.IvParameterSpec IVparm = new javax.crypto.spec.IvParameterSpec(\"AAAAAAAAAAAAAAAA\".getBytes()); public byte[] encrypt(byte[] data, String senha) throws Exception { javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance(\"AES/CBC/PKCS5Padding\");         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, getKeyByPass(senha),IVparm); return cipher.doFinal(data); } public byte[] decrypt(byte[] txt, String senha) throws Exception{ javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance(\"AES/CBC/PKCS5Padding\");         cipher.init(javax.crypto.Cipher.DECRYPT_MODE, getKeyByPass(senha),IVparm); return cipher.doFinal(txt); } public javax.crypto.spec.SecretKeySpec getKeyByPass(String senha){ if ( senha.length() == 0 ) senha=\"0\"; int count=0; while(senha.length() < 16){ senha+=senha.substring(count,count+1); count++; } return new javax.crypto.spec.SecretKeySpec(senha.getBytes(), \"AES\");}}");
+                System.out.println("// M_Base64.base64(bytes,true) // retorna string encriptado");
+                System.out.println("// M_Base64.base64(texto,false) // retorna bytes decriptado");
+                System.out.println("class M_Base64{ public static String erroSequenciaIlegal=\"Erro, sequencia ilegal!\"; public static int [] indexBase64 = new int []{65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,43,47}; public static String txtBase64=\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\"; public static byte[] base64(String txt,boolean encoding) throws Exception{        java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(txt.getBytes()); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); base64(bais,baos,encoding);         return baos.toByteArray(); } public static String base64(byte[] bytes,boolean encoding) throws Exception{        java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(bytes); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); base64(bais,baos,encoding);         return baos.toString(); } public static void base64(java.io.InputStream pipe_in,java.io.OutputStream pipe_out,boolean encoding) throws Exception{        if ( encoding ) base64encode(pipe_in,pipe_out); else base64decode(pipe_in,pipe_out);                    } public static void base64encode(java.io.InputStream pipe_in,java.io.OutputStream pipe_out) throws Exception{        int BUFFER_SIZE_ = 1; byte [] buf=new byte[BUFFER_SIZE_]; int len=-1; int entrada=-1; int agulha=0; int agulha_count=0; int indexPadding=61;  while(true){ while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){} if ( len == -1 ){ if ( agulha_count == 4 ){ pipe_out.write( indexBase64[ agulha<<2 ] ); pipe_out.write( indexPadding ); } if ( agulha_count == 2 ){ pipe_out.write( indexBase64[ agulha<<4 ] ); pipe_out.write( indexPadding ); pipe_out.write( indexPadding ); }  break; } entrada=byte_to_int_java(buf[0]); agulha=(agulha<<8)|entrada; agulha_count+=8; while(agulha_count>=6){ if ( agulha_count == 6 ){ pipe_out.write( indexBase64[ agulha ] ); agulha=0; agulha_count-=6; continue; } if ( agulha_count == 8 ){ pipe_out.write( indexBase64[ (agulha & 252)>>2 ] ); agulha&=3; agulha_count-=6; continue; } if ( agulha_count == 10 ){ pipe_out.write( indexBase64[ (agulha & 1008)>>4 ] ); agulha&=15; agulha_count-=6; continue; } if ( agulha_count == 12 ){ pipe_out.write( indexBase64[ (agulha & 4032)>>6 ] ); agulha&=63; agulha_count-=6; continue; } } }    pipe_out.flush(); } public static void base64decode(java.io.InputStream pipe_in,java.io.OutputStream pipe_out) throws Exception{        int BUFFER_SIZE_ = 1; byte [] buf=new byte[BUFFER_SIZE_]; int len=-1; int entrada=-1; int agulha=0; int agulha_count=0;        int padding_count=0; while(true){ while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){} if ( len == -1 ){ if ( agulha_count == 0 && padding_count == 0 && agulha == 0 ){ break; } if ( agulha_count == 4 && padding_count == 2 && agulha == 0 ){ break; } if ( agulha_count == 2 && padding_count == 1 && agulha == 0 ){ break; } throw new Exception(erroSequenciaIlegal); } entrada=byte_to_int_java(buf[0]); if ( entrada == 10 || entrada == 13 ) continue; entrada=txtBase64.indexOf((char)entrada); if ( entrada == -1 ){ System.err.println(erroSequenciaIlegal); System.exit(1); } if ( entrada == 64 ){ padding_count++; continue; }            agulha=(agulha<<6)|entrada; agulha_count+=6; while(agulha_count>=8){ if ( agulha_count == 8 ){ pipe_out.write( agulha ); agulha=0; agulha_count-=8; continue; } if ( agulha_count == 10 ){ pipe_out.write( (agulha & 1020)>>2 ); agulha&=3; agulha_count-=8; continue; } if ( agulha_count == 12 ){ pipe_out.write( (agulha & 4080)>>4 ); agulha&=15; agulha_count-=8; continue; } } }    pipe_out.flush();        } public static int byte_to_int_java(byte a) { int i=(int)a; if ( i < 0 ) i+=256; return i;}}");
+                System.out.println("// String senha=M_Utilonsole.getPasswordConsole(\"Digite a senha: \");");
+                System.out.println("// String texto=M_Utilonsole.getTextConsole(\"Digite o texto: \");");
+                System.out.println("class M_Utilonsole{ public static String getPasswordConsole(String txt) { String retorno=\"\"; java.io.Console console=System.console(); if ( console == null ){ System.out.println(\"Error, input não suportado nesse ambiente, rodando no netbeans?...\"); System.exit(1); } char [] passChar = System.console().readPassword(txt); if ( passChar != null ) retorno=new String(passChar); if ( retorno == null ){ System.out.println(\"Error, not input found\"); System.exit(1); } return retorno;}public static String getTextConsole(String txt) { String retorno=\"\"; java.io.Console console=System.console(); if ( console == null ){ System.out.println(\"Error, input não suportado nesse ambiente, rodando no netbeans?...\"); System.exit(1); } System.out.print(txt);retorno=System.console().readLine();if ( retorno == null ){ System.out.println(\"Error, not input found\"); System.exit(1); } return retorno;}}");
+                System.out.println("//M_Loader");
+                System.out.println("//[classe principal],[load classA]  ,[load classB] ");
+                System.out.println("//,classA           ,classA,dados...,classB,dados...");
+                System.out.println("class M_Loader{ public static boolean loader(String senha,String[] args) throws Exception { try{ java.util.HashMap classes=new java.util.HashMap(); String base=M_Dados.get(); String txt=new String( new M_AES().decrypt( M_Base64.base64(base,false) ,senha) ); if (!txt.startsWith(\",\")){ throw new Exception(\"Erro fatal!\"); }else{ txt=txt.substring(1); } String partes[]=txt.split(\",\"); String id=null; String principal=null; for ( int i=0;i<partes.length;i++ ){ if ( principal == null ){ principal=partes[i]; continue; } if ( id == null ){ id=partes[i]; continue; } classes.put(id,partes[i]); id=null; } ClassLoader classLoader=new ClassLoader() {            @Override protected Class<?> findClass(String name) throws ClassNotFoundException { if ( classes.containsKey(name) ){ try { byte[] data=M_Base64.base64((String)classes.get(name),false); return defineClass(name,data,0,data.length);        } catch (Exception e) { System.err.println(\"Erro no carregamento da classe \"+name); System.exit(1); } } return super.findClass(name); } }; Class c=classLoader.loadClass(principal); java.lang.reflect.Method method=c.getDeclaredMethod(\"main\", new Class[]{String[].class} ); method.invoke(null, new Object[]{ args } ); }catch(Exception e){ return false;} return true;} }");
+                
+                int len=txt.length();
+                System.out.println("//M_Dados");
+                System.out.println("class M_Dados {");
+                System.out.println("    public static String get() {");
+                System.out.println("        StringBuilder sb=new StringBuilder();");
+                for ( int i=0;i<len;i+=200 ){            
+                    if ( i+200 > len )
+                        System.out.println("        sb.append(\""+txt.substring(i,len)+"\");");
+                    else
+                        System.out.println("        sb.append(\""+txt.substring(i,i+200)+"\");");
+                }
+                System.out.println("        return sb.toString();");
+                System.out.println("    }");
+                System.out.println("}");
+                return;
+            }
+        }
         if ( args[0].equals("iconv") ){            
             if ( args.length == 1 ){
                 System.out.println("Tipos suportados de iconv:");
@@ -3095,12 +3235,27 @@ cat buffer.log
             System.out.println(0);
     }
 
-    
-    public String base64(String txt,boolean encoding) throws Exception{        
-        ByteArrayInputStream bais=new ByteArrayInputStream(txt.getBytes());
+    public byte[] base64_B_B(byte[] txt,boolean encoding) throws Exception{ // byte in byte out
+        ByteArrayInputStream bais=new ByteArrayInputStream(txt);
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
         base64(bais,baos,encoding);
-        return baos.toString();
+        return baos.toByteArray();
+    }
+    
+    public String base64_S_S(String txt,boolean encoding) throws Exception{ // String in String out
+        return new String(base64_B_B(txt.getBytes(),encoding));
+    }
+
+    public String base64_B_S(byte[] txt,boolean encoding) throws Exception{ // byte in String out
+        return new String(base64_B_B(txt,encoding));
+    }
+    
+    public byte[] base64_S_B(String txt,boolean encoding) throws Exception{ // String in byte out
+        return base64_B_B(txt.getBytes(),encoding);
+    }
+    
+    public String base64(String txt,boolean encoding) throws Exception{        
+        return base64_S_S(txt,encoding);
     }
     
     public void base64(InputStream pipe_in,OutputStream pipe_out,boolean encoding) throws Exception{        
@@ -3905,7 +4060,7 @@ cat buffer.log
                     System.exit(1);                    
                 }
                 if ( ! args[i].contains(",") ){
-                    java.io.Console console=console=System.console();
+                    java.io.Console console=System.console();
                     if ( console == null ){
                         System.out.println("Error, input não suportado nesse ambiente, rodando no netbeans?...");
                         System.exit(1);
@@ -4183,6 +4338,18 @@ cat buffer.log
             System.out.println(processaCelula_sb.toString());
         }
     }
+
+    public static byte[] readAllBytes(String path) throws IOException {
+        java.io.RandomAccessFile f = new java.io.RandomAccessFile(new File(path), "r");
+        if (f.length() > Integer.MAX_VALUE)
+            throw new IOException("File is too large");
+        byte[] b = new byte[(int)f.length()];
+        f.readFully(b);
+        if (f.getFilePointer() != f.length())
+            throw new IOException("File length changed while reading");
+        return b;
+    }    
+    
 }
 
 class Ponte {
@@ -4841,6 +5008,17 @@ class XML{
         System.exit(1);
     }    
 }
+
+/* class AES */ // nao suporta grandes arquivos
+/* class AES */ // "AES/CBC/PKCS5Padding"
+/* class AES */ // new AES().encrypt(bytes,password);
+/* class AES */ // new AES().decrypt(bytes,password);
+/* class AES */ class AES{ javax.crypto.spec.IvParameterSpec IVparm = new javax.crypto.spec.IvParameterSpec("AAAAAAAAAAAAAAAA".getBytes()); public byte[] encrypt(byte[] data, String senha) throws Exception { javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, getKeyByPass(senha),IVparm); return cipher.doFinal(data); } public byte[] decrypt(byte[] txt, String senha) throws Exception{ javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");         cipher.init(javax.crypto.Cipher.DECRYPT_MODE, getKeyByPass(senha),IVparm); return cipher.doFinal(txt); } public javax.crypto.spec.SecretKeySpec getKeyByPass(String senha){ if ( senha.length() == 0 ) senha="0"; int count=0; while(senha.length() < 16){ senha+=senha.substring(count,count+1); count++; } return new javax.crypto.spec.SecretKeySpec(senha.getBytes(), "AES");}}
+
+
+/* class Utilonsole */ // String senha=Utilonsole.getPasswordConsole("Digite a senha: ");
+/* class Utilonsole */ // String texto=Utilonsole.getTextConsole("Digite o texto: ");
+/* class Utilonsole */ class Utilonsole{ public static String getPasswordConsole(String txt) { String retorno=""; java.io.Console console=System.console(); if ( console == null ){ System.out.println("Error, input não suportado nesse ambiente, rodando no netbeans?..."); System.exit(1); } char [] passChar = System.console().readPassword(txt); if ( passChar != null ) retorno=new String(passChar); if ( retorno == null ){ System.out.println("Error, not input found"); System.exit(1); } return retorno;}public static String getTextConsole(String txt) { String retorno=""; java.io.Console console=System.console(); if ( console == null ){ System.out.println("Error, input não suportado nesse ambiente, rodando no netbeans?..."); System.exit(1); } System.out.print(txt);retorno=System.console().readLine();if ( retorno == null ){ System.out.println("Error, not input found"); System.exit(1); } return retorno;}}
 
 
 /* class JSchCustom */ class JSchCustom{void scpFrom(String[] args) {ScpFrom.custom(args);}void scpTo(String[] args) {     ScpTo.custom(args);     }      void execSsh(String[] args,int port) {         ExecSsh.custom(args,port);     }void ssh(String[] args,int port) {         Ssh.custom(args,port);     }      void sftp(String[] args,int port) {         Sftp.custom(args,port);     } }  class ScpFrom{    public static void custom(String[] arg){     if(arg.length!=2 || !arg[0].contains(",") || !arg[0].contains("@")){       System.err.println("usage: y scp user,pass@remotehost:file1 file2");       System.exit(-1);     }                FileOutputStream fos=null;     try{        String senha=arg[0].split("@")[0].split(",")[1];       arg=new String[]{arg[0].split("@")[0].split(",")[0]+"@"+arg[0].split("@")[1],arg[1]};                String user=arg[0].substring(0, arg[0].indexOf('@'));       arg[0]=arg[0].substring(arg[0].indexOf('@')+1);       String host=arg[0].substring(0, arg[0].indexOf(':'));       String rfile=arg[0].substring(arg[0].indexOf(':')+1);       String lfile=arg[1];        String prefix=null;       if(new File(lfile).isDirectory()){         prefix=lfile+File.separator;       }        JSch jsch=new JSch();       Session session=jsch.getSession(user, host, 22);        UserInfo ui=new MyUserInfo(senha);       session.setUserInfo(ui);       session.connect();        String command="scp -f "+rfile;       Channel channel=session.openChannel("exec");       ((ChannelExec)channel).setCommand(command);        OutputStream out=channel.getOutputStream();       InputStream in=channel.getInputStream();        channel.connect();        byte[] buf=new byte[1024];        buf[0]=0; out.write(buf, 0, 1); out.flush();        while(true){ 	int c=checkAck(in);         if(c!='C'){ 	  break; 	}          in.read(buf, 0, 5);          long filesize=0L;         while(true){           if(in.read(buf, 0, 1)<0){             break;            }           if(buf[0]==' ')break;           filesize=filesize*10L+(long)(buf[0]-'0');         }          String file=null;         for(int i=0;;i++){           in.read(buf, i, 1);           if(buf[i]==(byte)0x0a){             file=new String(buf, 0, i);             break;   	  }         }          buf[0]=0; out.write(buf, 0, 1); out.flush();          fos=new FileOutputStream(prefix==null ? lfile : prefix+file);         int foo;         while(true){           if(buf.length<filesize) foo=buf.length; 	  else foo=(int)filesize;           foo=in.read(buf, 0, foo);           if(foo<0){             break;           }           fos.write(buf, 0, foo);           filesize-=foo;           if(filesize==0L) break;         }         fos.close();         fos=null;  	if(checkAck(in)!=0){ 	  System.exit(0); 	}          buf[0]=0; out.write(buf, 0, 1); out.flush();       }        session.disconnect();        System.exit(0);     }     catch(Exception e){       System.out.println(e);       try{if(fos!=null)fos.close();}catch(Exception ee){}     }   }    static int checkAck(InputStream in) throws IOException{     int b=in.read();     if(b==0) return b;     if(b==-1) return b;      if(b==1 || b==2){       StringBuffer sb=new StringBuffer();       int c;       do { 	c=in.read(); 	sb.append((char)c);       }       while(c!='\n');       if(b==1){  	System.out.print(sb.toString());       }       if(b==2){  	System.out.print(sb.toString());       }     }     return b;   }      public static class MyUserInfo implements UserInfo, UIKeyboardInteractive{     String passwd;     String senha;              private MyUserInfo(String senha) {             this.senha=senha;         }              public String getPassword(){ return passwd;}public boolean promptYesNo(String str){return true;}JTextField passwordField=(JTextField)new JPasswordField(20);public String getPassphrase(){ return null; } 
