@@ -18,6 +18,7 @@ usage:
   [y md5]
   [y sha1]
   [y sha256]
+  [y aes]
   [y base64]
   [y grep]
   [y wc -l]

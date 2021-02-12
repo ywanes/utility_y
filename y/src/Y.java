@@ -374,7 +374,20 @@ cat buffer.log
             digest("SHA-256");
             return;
         }        
-
+        if ( args[0].equals("aes") ){
+            if ( args.length == 2 ){
+                aes(args[1],true);
+                return;
+            }
+            if ( args.length == 3 && args[1].equals("-e") ){
+                aes(args[2],true);
+                return;
+            }
+            if ( args.length == 3 && args[1].equals("-d") ){
+                aes(args[2],false);
+                return;
+            }
+        }        
         if ( args[0].equals("base64") 
             && ( 
                 args.length == 1 
@@ -583,10 +596,12 @@ cat buffer.log
                 System.out.println("        }");
                 System.out.println("    }");
                 System.out.println("}");
-                System.out.println("// \"AES/CBC/PKCS5Padding\"");
+                System.out.println("// openssl aes-256-cbc -base64 -pass pass:<secret> -md md5");
+                System.out.println("// ===> ATENCAO, só é compativel com o openssl com o parametro -md md5");
+                System.out.println("// creditos: https://github.com/chmduquesne/minibackup/blob/master/samples/OpensslAES.java");
                 System.out.println("// new M_AES().encrypt(bytes,password);");
-                System.out.println("// new M_AES().decrypt(bytes,password);");
-                System.out.println("class M_AES{ javax.crypto.spec.IvParameterSpec IVparm = new javax.crypto.spec.IvParameterSpec(\"AAAAAAAAAAAAAAAA\".getBytes()); public byte[] encrypt(byte[] data, String senha) throws Exception { javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance(\"AES/CBC/PKCS5Padding\");         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, getKeyByPass(senha),IVparm); return cipher.doFinal(data); } public byte[] decrypt(byte[] txt, String senha) throws Exception{ javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance(\"AES/CBC/PKCS5Padding\");         cipher.init(javax.crypto.Cipher.DECRYPT_MODE, getKeyByPass(senha),IVparm); return cipher.doFinal(txt); } public javax.crypto.spec.SecretKeySpec getKeyByPass(String senha){ if ( senha.length() == 0 ) senha=\"0\"; int count=0; while(senha.length() < 16){ senha+=senha.substring(count,count+1); count++; } return new javax.crypto.spec.SecretKeySpec(senha.getBytes(), \"AES\");}}");
+                System.out.println("// new M_AES().decrypt(bytes,password);");                
+                System.out.println("class M_AES{ byte [] deriveKeyAndIV(byte[] password, byte[] salt) throws Exception{ byte[] res = new byte[48]; final java.security.MessageDigest md5 = java.security.MessageDigest.getInstance(\"MD5\"); md5.update(password); md5.update(salt); byte[] hash1 = md5.digest(); md5.reset(); md5.update(hash1); md5.update(password); md5.update(salt); byte[] hash2 = md5.digest(); md5.reset(); md5.update(hash2); md5.update(password); md5.update(salt); byte[] hash3 = md5.digest(); System.arraycopy(hash1, 0, res, 0, 16); System.arraycopy(hash2, 0, res, 16, 16); System.arraycopy(hash3, 0, res, 32, 16); return res; } public void encrypt(java.io.InputStream pipe_in,java.io.OutputStream pipe_out,String senha) throws Exception { byte[] salt = new byte[8]; java.security.SecureRandom sr = new java.security.SecureRandom(); sr.nextBytes(salt); byte[] keyAndIV = deriveKeyAndIV(senha.getBytes(), salt); byte[] key = java.util.Arrays.copyOfRange(keyAndIV, 0, 32); byte[] iv = java.util.Arrays.copyOfRange(keyAndIV, 32, 48); javax.crypto.spec.SecretKeySpec skeySpec = new javax.crypto.spec.SecretKeySpec(key, \"AES\"); javax.crypto.spec.IvParameterSpec ivspec = new javax.crypto.spec.IvParameterSpec(iv); javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance(\"AES/CBC/PKCS5Padding\"); cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, skeySpec, ivspec); int BUFFER_SIZE=1024; byte[] buff=new byte[BUFFER_SIZE]; int len=0; pipe_out.write(\"Salted__\".getBytes()); pipe_out.write(salt); while ( (len=pipe_in.read(buff,0,BUFFER_SIZE)) > 0 ) pipe_out.write( cipher.update(buff,0,len) ); pipe_out.write(cipher.doFinal()); pipe_out.flush();         } public byte[] encrypt(byte[] data,String senha) throws Exception{ java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(data); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); encrypt(bais,baos,senha); return baos.toByteArray(); } public void decrypt(java.io.InputStream pipe_in,java.io.OutputStream pipe_out,String senha) throws Exception { int p=0; p=pipe_in.read(new byte[8]); if ( p != 8 ){ System.err.println(\"Erro fatal 0!\"); System.exit(1); } byte[] salt=new byte[8]; p=pipe_in.read(salt); if ( p != 8 ){ System.err.println(\"Erro fatal 0!\"); System.exit(1); }         byte[] keyAndIV=deriveKeyAndIV(senha.getBytes(), salt); byte[] key=java.util.Arrays.copyOfRange(keyAndIV, 0, 32); byte[] iv=java.util.Arrays.copyOfRange(keyAndIV, 32, 48); javax.crypto.spec.SecretKeySpec skeySpec = new javax.crypto.spec.SecretKeySpec(key, \"AES\"); javax.crypto.spec.IvParameterSpec ivspec = new javax.crypto.spec.IvParameterSpec(iv); javax.crypto.Cipher cipher; cipher=javax.crypto.Cipher.getInstance(\"AES/CBC/PKCS5Padding\"); cipher.init(javax.crypto.Cipher.DECRYPT_MODE, skeySpec, ivspec); int BUFFER_SIZE=1024; byte[] buff=new byte[BUFFER_SIZE]; int len=0; while ( (len=pipe_in.read(buff,0,BUFFER_SIZE)) > 0 ) pipe_out.write( cipher.update(buff,0,len) ); pipe_out.write(cipher.doFinal()); pipe_out.flush(); } public byte[] decrypt(byte[] data,String senha) throws Exception{ java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(data); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); decrypt(bais,baos,senha); return baos.toByteArray();}}");
                 System.out.println("// M_Base64.base64(bytes,true) // retorna string encriptado");
                 System.out.println("// M_Base64.base64(texto,false) // retorna bytes decriptado");
                 System.out.println("class M_Base64{ public static String erroSequenciaIlegal=\"Erro, sequencia ilegal!\"; public static int [] indexBase64 = new int []{65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,43,47}; public static String txtBase64=\"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=\"; public static byte[] base64(String txt,boolean encoding) throws Exception{        java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(txt.getBytes()); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); base64(bais,baos,encoding);         return baos.toByteArray(); } public static String base64(byte[] bytes,boolean encoding) throws Exception{        java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(bytes); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); base64(bais,baos,encoding);         return baos.toString(); } public static void base64(java.io.InputStream pipe_in,java.io.OutputStream pipe_out,boolean encoding) throws Exception{        if ( encoding ) base64encode(pipe_in,pipe_out); else base64decode(pipe_in,pipe_out);                    } public static void base64encode(java.io.InputStream pipe_in,java.io.OutputStream pipe_out) throws Exception{        int BUFFER_SIZE_ = 1; byte [] buf=new byte[BUFFER_SIZE_]; int len=-1; int entrada=-1; int agulha=0; int agulha_count=0; int indexPadding=61;  while(true){ while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){} if ( len == -1 ){ if ( agulha_count == 4 ){ pipe_out.write( indexBase64[ agulha<<2 ] ); pipe_out.write( indexPadding ); } if ( agulha_count == 2 ){ pipe_out.write( indexBase64[ agulha<<4 ] ); pipe_out.write( indexPadding ); pipe_out.write( indexPadding ); }  break; } entrada=byte_to_int_java(buf[0]); agulha=(agulha<<8)|entrada; agulha_count+=8; while(agulha_count>=6){ if ( agulha_count == 6 ){ pipe_out.write( indexBase64[ agulha ] ); agulha=0; agulha_count-=6; continue; } if ( agulha_count == 8 ){ pipe_out.write( indexBase64[ (agulha & 252)>>2 ] ); agulha&=3; agulha_count-=6; continue; } if ( agulha_count == 10 ){ pipe_out.write( indexBase64[ (agulha & 1008)>>4 ] ); agulha&=15; agulha_count-=6; continue; } if ( agulha_count == 12 ){ pipe_out.write( indexBase64[ (agulha & 4032)>>6 ] ); agulha&=63; agulha_count-=6; continue; } } }    pipe_out.flush(); } public static void base64decode(java.io.InputStream pipe_in,java.io.OutputStream pipe_out) throws Exception{        int BUFFER_SIZE_ = 1; byte [] buf=new byte[BUFFER_SIZE_]; int len=-1; int entrada=-1; int agulha=0; int agulha_count=0;        int padding_count=0; while(true){ while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){} if ( len == -1 ){ if ( agulha_count == 0 && padding_count == 0 && agulha == 0 ){ break; } if ( agulha_count == 4 && padding_count == 2 && agulha == 0 ){ break; } if ( agulha_count == 2 && padding_count == 1 && agulha == 0 ){ break; } throw new Exception(erroSequenciaIlegal); } entrada=byte_to_int_java(buf[0]); if ( entrada == 10 || entrada == 13 ) continue; entrada=txtBase64.indexOf((char)entrada); if ( entrada == -1 ){ System.err.println(erroSequenciaIlegal); System.exit(1); } if ( entrada == 64 ){ padding_count++; continue; }            agulha=(agulha<<6)|entrada; agulha_count+=6; while(agulha_count>=8){ if ( agulha_count == 8 ){ pipe_out.write( agulha ); agulha=0; agulha_count-=8; continue; } if ( agulha_count == 10 ){ pipe_out.write( (agulha & 1020)>>2 ); agulha&=3; agulha_count-=8; continue; } if ( agulha_count == 12 ){ pipe_out.write( (agulha & 4080)>>4 ); agulha&=15; agulha_count-=8; continue; } } }    pipe_out.flush();        } public static int byte_to_int_java(byte a) { int i=(int)a; if ( i < 0 ) i+=256; return i;}}");
@@ -3258,6 +3273,18 @@ cat buffer.log
         return base64_S_S(txt,encoding);
     }
     
+    public void aes(String senha,boolean encoding){
+        try{
+            if ( encoding )
+                new AES().encrypt(System.in,System.out,senha);
+            else
+                new AES().decrypt(System.in,System.out,senha);
+        }catch(Exception e){
+            System.err.println(erroSequenciaIlegal);
+            System.exit(1);
+        }
+    }
+    
     public void base64(InputStream pipe_in,OutputStream pipe_out,boolean encoding) throws Exception{        
         // ex: base64(System.in,System.out,true);
         if ( encoding )
@@ -5009,11 +5036,13 @@ class XML{
     }    
 }
 
-/* class AES */ // nao suporta grandes arquivos
-/* class AES */ // "AES/CBC/PKCS5Padding"
+/* class AES */ // echo TXT | openssl aes-256-cbc -base64 -pass pass:SENHA -md md5 -e
+/* class AES */ // y echo PPP | openssl aes-256-cbc -md md5 -k SENHA -e | y base64
+/* class AES */ // ===> ATENCAO, só é compativel com o openssl com o parametro -md md5
+/* class AES */ // creditos: https://github.com/chmduquesne/minibackup/blob/master/samples/OpensslAES.java
 /* class AES */ // new AES().encrypt(bytes,password);
 /* class AES */ // new AES().decrypt(bytes,password);
-/* class AES */ class AES{ javax.crypto.spec.IvParameterSpec IVparm = new javax.crypto.spec.IvParameterSpec("AAAAAAAAAAAAAAAA".getBytes()); public byte[] encrypt(byte[] data, String senha) throws Exception { javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");         cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, getKeyByPass(senha),IVparm); return cipher.doFinal(data); } public byte[] decrypt(byte[] txt, String senha) throws Exception{ javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding");         cipher.init(javax.crypto.Cipher.DECRYPT_MODE, getKeyByPass(senha),IVparm); return cipher.doFinal(txt); } public javax.crypto.spec.SecretKeySpec getKeyByPass(String senha){ if ( senha.length() == 0 ) senha="0"; int count=0; while(senha.length() < 16){ senha+=senha.substring(count,count+1); count++; } return new javax.crypto.spec.SecretKeySpec(senha.getBytes(), "AES");}}
+/* class AES */ class AES{ byte [] deriveKeyAndIV(byte[] password, byte[] salt) throws Exception{ byte[] res = new byte[48]; final java.security.MessageDigest md5 = java.security.MessageDigest.getInstance("MD5"); md5.update(password); md5.update(salt); byte[] hash1 = md5.digest(); md5.reset(); md5.update(hash1); md5.update(password); md5.update(salt); byte[] hash2 = md5.digest(); md5.reset(); md5.update(hash2); md5.update(password); md5.update(salt); byte[] hash3 = md5.digest(); System.arraycopy(hash1, 0, res, 0, 16); System.arraycopy(hash2, 0, res, 16, 16); System.arraycopy(hash3, 0, res, 32, 16); return res; } public void encrypt(java.io.InputStream pipe_in,java.io.OutputStream pipe_out,String senha) throws Exception { byte[] salt = new byte[8]; java.security.SecureRandom sr = new java.security.SecureRandom(); sr.nextBytes(salt); byte[] keyAndIV = deriveKeyAndIV(senha.getBytes(), salt); byte[] key = java.util.Arrays.copyOfRange(keyAndIV, 0, 32); byte[] iv = java.util.Arrays.copyOfRange(keyAndIV, 32, 48); javax.crypto.spec.SecretKeySpec skeySpec = new javax.crypto.spec.SecretKeySpec(key, "AES"); javax.crypto.spec.IvParameterSpec ivspec = new javax.crypto.spec.IvParameterSpec(iv); javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding"); cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, skeySpec, ivspec); int BUFFER_SIZE=1024; byte[] buff=new byte[BUFFER_SIZE]; int len=0; pipe_out.write("Salted__".getBytes()); pipe_out.write(salt); while ( (len=pipe_in.read(buff,0,BUFFER_SIZE)) > 0 ) pipe_out.write( cipher.update(buff,0,len) ); pipe_out.write(cipher.doFinal()); pipe_out.flush();         } public byte[] encrypt(byte[] data,String senha) throws Exception{ java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(data); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); encrypt(bais,baos,senha); return baos.toByteArray(); } public void decrypt(java.io.InputStream pipe_in,java.io.OutputStream pipe_out,String senha) throws Exception { int p=0; p=pipe_in.read(new byte[8]); if ( p != 8 ){ System.err.println("Erro fatal 0!"); System.exit(1); } byte[] salt=new byte[8]; p=pipe_in.read(salt); if ( p != 8 ){ System.err.println("Erro fatal 0!"); System.exit(1); }         byte[] keyAndIV=deriveKeyAndIV(senha.getBytes(), salt); byte[] key=java.util.Arrays.copyOfRange(keyAndIV, 0, 32); byte[] iv=java.util.Arrays.copyOfRange(keyAndIV, 32, 48); javax.crypto.spec.SecretKeySpec skeySpec = new javax.crypto.spec.SecretKeySpec(key, "AES"); javax.crypto.spec.IvParameterSpec ivspec = new javax.crypto.spec.IvParameterSpec(iv); javax.crypto.Cipher cipher; cipher=javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding"); cipher.init(javax.crypto.Cipher.DECRYPT_MODE, skeySpec, ivspec); int BUFFER_SIZE=1024; byte[] buff=new byte[BUFFER_SIZE]; int len=0; while ( (len=pipe_in.read(buff,0,BUFFER_SIZE)) > 0 ) pipe_out.write( cipher.update(buff,0,len) ); pipe_out.write(cipher.doFinal()); pipe_out.flush(); } public byte[] decrypt(byte[] data,String senha) throws Exception{ java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(data); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); decrypt(bais,baos,senha); return baos.toByteArray();}}
 
 
 /* class Utilonsole */ // String senha=Utilonsole.getPasswordConsole("Digite a senha: ");
@@ -5065,6 +5094,7 @@ class XML{
 /* class by manual */                + "  [y md5]\n"
 /* class by manual */                + "  [y sha1]\n"
 /* class by manual */                + "  [y sha256]\n"
+/* class by manual */                + "  [y aes]\n"
 /* class by manual */                + "  [y base64]\n"
 /* class by manual */                + "  [y grep]\n"
 /* class by manual */                + "  [y wc -l]\n"
@@ -5154,6 +5184,12 @@ class XML{
 /* class by manual */                + "    cat arquivo | y sha1\n"
 /* class by manual */                + "[y sha256]\n"
 /* class by manual */                + "    cat arquivo | y sha256\n"
+/* class by manual */                + "[y aes]\n"
+/* class by manual */                + "    cat arquivo | y aes SENHA | y base64\n"
+/* class by manual */                + "    cat arquivo | y aes -e SENHA | y base64\n"
+/* class by manual */                + "    cat arquivo | y aes -d SENHA | y base64\n"
+/* class by manual */                + "    obs: O comando \"y aes -e SENHA\" equivale a \"openssl aes-256-cbc -md md5 -k abc -e\"\n"
+/* class by manual */                + "    obs2: O tipo de aes e \"AES/CBC/PKCS5Padding\" -md md5\n"
 /* class by manual */                + "[y base64]\n"
 /* class by manual */                + "    cat arquivo | y base64\n"
 /* class by manual */                + "    cat arquivo | y base64 -d\n"
@@ -5323,6 +5359,7 @@ class XML{
 /* class by manual */                + "  [y md5]\n"
 /* class by manual */                + "  [y sha1]\n"
 /* class by manual */                + "  [y sha256]\n"
+/* class by manual */                + "  [y aes]\n"
 /* class by manual */                + "  [y base64]\n"
 /* class by manual */                + "  [y grep]\n"
 /* class by manual */                + "  [y wc -l]\n"

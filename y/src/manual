@@ -18,6 +18,7 @@ usage:
   [y md5]
   [y sha1]
   [y sha256]
+  [y aes]
   [y base64]
   [y grep]
   [y wc -l]
@@ -107,6 +108,12 @@ Exemplos...
     cat arquivo | y sha1
 [y sha256]
     cat arquivo | y sha256
+[y aes]
+    cat arquivo | y aes SENHA | y base64
+    cat arquivo | y aes -e SENHA | y base64
+    cat arquivo | y aes -d SENHA | y base64
+    obs: O comando "y aes -e SENHA" equivale à "openssl aes-256-cbc -md md5 -k abc -e"
+    obs2: O tipo de aes é "AES/CBC/PKCS5Padding" -md md5
 [y base64]
     cat arquivo | y base64
     cat arquivo | y base64 -d
