@@ -941,9 +941,9 @@ cat buffer.log
         }
         
         if ( args.length > 1 && args[0].equals("-md") ){            
-            if ( args[1].equals("MD5") || args[1].equals("SHA256") || args[1].equals("SHA-256") ){
+            if ( args[1].toUpperCase().equals("MD5") || args[1].toUpperCase().equals("SHA256") || args[1].toUpperCase().equals("SHA-256") ){
                 args=sliceParm(1,args);
-                md=args[0];
+                md=args[0].toUpperCase();
                 args=sliceParm(1,args);
                 if ( md.equals("SHA256") )
                     md="SHA-256";
@@ -3324,12 +3324,7 @@ cat buffer.log
         return base64_S_S(txt,encoding);
     }
     
-    public void aes(String senha,boolean encoding,String md,byte[] salt){
-        System.out.println("1 "+senha);
-        System.out.println("1 "+encoding);
-        System.out.println("1 "+md);
-        System.out.println("1 "+salt);
-        
+    public void aes(String senha,boolean encoding,String md,byte[] salt){        
         try{
             if ( encoding )
                 new AES().encrypt(System.in,System.out,senha,md,salt);
@@ -5263,8 +5258,12 @@ class XML{
 /* class by manual */                + "    cat arquivo | y aes SENHA | y base64\n"
 /* class by manual */                + "    cat arquivo | y aes -e SENHA | y base64\n"
 /* class by manual */                + "    cat arquivo | y aes -d SENHA | y base64\n"
-/* class by manual */                + "    obs: O comando \"y aes -e SENHA\" equivale a \"openssl aes-256-cbc -md md5 -k abc -e\"\n"
-/* class by manual */                + "    obs2: O tipo de aes e \"AES/CBC/PKCS5Padding\" -md md5\n"
+/* class by manual */                + "    cat arquivo | y aes -e SENHA -md MD5 | y base64\n"
+/* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA256 | y base64\n"
+/* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA-256 | y base64\n"
+/* class by manual */                + "    cat arquivo | y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA | y base64\n"
+/* class by manual */                + "    obs: O comando \"y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA\" equivale a \"openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA\"\n"
+/* class by manual */                + "    obs2: O valor de salt(-S) devera conter 16 hexas maiusculos, ex: AAAAAAAAAAAAAAAA\n"
 /* class by manual */                + "[y base64]\n"
 /* class by manual */                + "    cat arquivo | y base64\n"
 /* class by manual */                + "    cat arquivo | y base64 -d\n"
@@ -5524,5 +5523,4 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 

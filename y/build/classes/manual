@@ -112,8 +112,12 @@ Exemplos...
     cat arquivo | y aes SENHA | y base64
     cat arquivo | y aes -e SENHA | y base64
     cat arquivo | y aes -d SENHA | y base64
-    obs: O comando "y aes -e SENHA" equivale à "openssl aes-256-cbc -md md5 -k abc -e"
-    obs2: O tipo de aes é "AES/CBC/PKCS5Padding" -md md5
+    cat arquivo | y aes -e SENHA -md MD5 | y base64
+    cat arquivo | y aes -e SENHA -md SHA256 | y base64
+    cat arquivo | y aes -e SENHA -md SHA-256 | y base64
+    cat arquivo | y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA | y base64
+    obs: O comando "y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA" equivale à "openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA"
+    obs2: O valor de salt(-S) deverá contér 16 hexas maiúsculos, ex: AAAAAAAAAAAAAAAA
 [y base64]
     cat arquivo | y base64
     cat arquivo | y base64 -d
