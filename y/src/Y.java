@@ -342,6 +342,77 @@ cat buffer.log
             System.out.println(value);
             return;
         }
+        /*
+        y zip add File1.txt > saida.zip
+        cat File1.txt | y zip add > saida.zip
+        y zip add /pasta1 > saida.zip
+        y zip list arquivo.zip
+        cat arquivo.zip | y zip list
+        y zip extract entrada.zip
+        cat entrada.zip | y zip extract
+        y zip extract entrada.zip -out /destino
+        cat entrada.zip | y zip extract -out /destino
+        y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt -out /destino
+        cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
+        y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
+        cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
+        */
+        if ( args[0].equals("zip") ){
+            try{
+                if ( args.length == 2 && args[1].equals("add") ){
+                    zip_add(null);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("add") ){
+                    zip_add(args[2]);
+                    return;
+                }
+                if ( args.length == 2 && args[1].equals("list") ){
+                    zip_list(null);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("list") ){
+                    zip_list(args[2]);
+                    return;
+                }
+                
+                if ( args.length == 2 && args[1].equals("extract") ){
+                    zip_extract(null,null);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("extract") ){
+                    zip_extract(args[2],null);
+                    return;
+                }
+                if ( args.length == 4 && args[1].equals("extract") && args[2].equals("-out")){
+                    zip_extract(null,args[3]);
+                    return;
+                }
+                if ( args.length == 5 && args[1].equals("extract") && args[3].equals("-out")){
+                    zip_extract(args[2],args[4]);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("extractSelected") ){
+                    zip_extractSelected(null,args[2],null);
+                    return;
+                }
+                if ( args.length == 4 && args[1].equals("extractSelected") ){
+                    zip_extractSelected(args[2],args[3],null);
+                    return;
+                }
+                if ( args.length == 5 && args[1].equals("extractSelected") && args[3].equals("-out")){
+                    zip_extractSelected(null,args[2],args[4]);
+                    return;
+                }
+                if ( args.length == 6 && args[1].equals("extractSelected") && args[4].equals("-out")){
+                    zip_extractSelected(args[2],args[3],args[5]);
+                    return;
+                }
+            }catch(Exception e){
+                System.err.println(e.toString());
+                System.exit(1);
+            }
+        }
         if ( args[0].equals("gzip") ){
             gzip();
             return;
@@ -2165,6 +2236,114 @@ cat buffer.log
     public void write1ByteFlush(){
         System.out.write(write1ByteBuff, 0, write1Byte_n);
     }    
+    
+    /*
+    y zip add File1.txt > saida.zip
+    cat File1.txt | y zip add > saida.zip
+    y zip add /pasta1 > saida.zip
+    y zip list arquivo.zip
+    cat arquivo.zip | y zip list
+    y zip extract entrada.zip
+    cat entrada.zip | y zip extract
+    y zip extract entrada.zip -out /destino
+    cat entrada.zip | y zip extract -out /destino
+    y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
+    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
+    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
+    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
+    obs: o comando "cat File1.txt | y zip add > saida.zip" gera o arquivo saida.zip com o conteudo interno chamado dummy
+    */
+    ////////////
+    private void zip_add(String a) throws Exception {
+        if ( a != null ){
+            if ( ! new File(a).exists() ){
+                System.err.println("Erro, esse conteudo nao existe: "+a);
+                System.exit(1);
+            }
+            if ( a.equals(".") || a.equals("..") ){
+                System.err.println("Erro, esse tipo de diretório não é válido!: "+a);
+                System.exit(1);
+            }
+        }
+        zip_add(a,System.out);
+    }
+
+    private java.util.zip.ZipOutputStream zip_output=null;
+    private ArrayList<String> zip_elementos=null;
+    private void zip_add(String a, OutputStream os) throws Exception {
+        zip_output = new java.util.zip.ZipOutputStream(os);        
+        File elem=null;
+        if ( a!=null )
+            elem=new File(a);        
+        if ( elem==null || elem.isFile() ){            
+            java.util.zip.ZipEntry e=null;
+            if ( elem == null )
+                e=new java.util.zip.ZipEntry("dummy");
+            else
+                e=new java.util.zip.ZipEntry(elem.getName());
+            zip_output.putNextEntry(e);
+            if ( elem!=null )
+                readBytes(elem);
+            byte[] buf = new byte[BUFFER_SIZE];                                    
+            int len;
+            while ((len = readBytes(buf)) > -1)
+                zip_output.write(buf, 0, len);
+            closeBytes();
+        }else{
+            String path=elem.getAbsolutePath().replace("\\","/");
+            if ( ! path.endsWith("/") )
+                path+="/";
+            zip_elementos=new ArrayList<String>();
+            if ( !a.contains("/") && !a.contains("\\") ){
+                path+="../";
+                zip_elementos.add(a+"/");
+                zip_navega(elem,a+"/");
+            }else{
+                zip_navega(elem,"");
+            }
+            int lenB=zip_elementos.size();
+            for ( int i=0;i<lenB;i++ ){
+                java.util.zip.ZipEntry e=new java.util.zip.ZipEntry( zip_elementos.get(i) );
+                zip_output.putNextEntry(e);
+                if ( ! zip_elementos.get(i).endsWith("/") ){                    
+                    readBytes(path+zip_elementos.get(i));
+                    byte[] buf = new byte[BUFFER_SIZE];                        
+                    int len;
+                    while ((len = readBytes(buf)) > -1)
+                        zip_output.write(buf, 0, len);                
+                    closeBytes();            
+                }
+            }
+        }        
+        zip_output.closeEntry();
+        zip_output.flush();
+        zip_output.close();
+    }
+    
+    private void zip_navega(File a, String caminho) {
+        java.io.File[] filhos=a.listFiles();
+        for ( int i=0;i<filhos.length;i++ ){
+            if ( filhos[i].isFile() )
+                zip_elementos.add(caminho+filhos[i].getName());
+            if ( filhos[i].isDirectory() ){
+                zip_elementos.add(caminho+filhos[i].getName()+"/");
+                zip_navega(filhos[i],caminho+filhos[i].getName()+"/");
+            }
+        }
+    }
+    
+    
+    private void zip_list(String arg) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private void zip_extract(String arg, Object object) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+
+    private void zip_extractSelected(String entrada, String selected, String saida) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
     
     public void gzip()
     {
@@ -4446,6 +4625,7 @@ cat buffer.log
             throw new IOException("File length changed while reading");
         return b;
     }    
+
     
 }
 
@@ -5156,6 +5336,7 @@ class XML{
 /* class by manual */                + "  [y xlsxToCSV]\n"
 /* class by manual */                + "  [y token]\n"
 /* class by manual */                + "  [y gettoken]\n"
+/* class by manual */                + "  [y zip]\n"
 /* class by manual */                + "  [y gzip]\n"
 /* class by manual */                + "  [y gunzip]\n"
 /* class by manual */                + "  [y echo]\n"
@@ -5235,6 +5416,21 @@ class XML{
 /* class by manual */                + "    y token value\n"
 /* class by manual */                + "[y gettoken]\n"
 /* class by manual */                + "    y gettoken hash\n"
+/* class by manual */                + "[y zip]\n"
+/* class by manual */                + "    y zip add File1.txt > saida.zip\n"
+/* class by manual */                + "    cat File1.txt | y zip add > saida.zip\n"
+/* class by manual */                + "    y zip add /pasta1 > saida.zip\n"
+/* class by manual */                + "    y zip list arquivo.zip\n"
+/* class by manual */                + "    cat arquivo.zip | y zip list\n"
+/* class by manual */                + "    y zip extract entrada.zip\n"
+/* class by manual */                + "    cat entrada.zip | y zip extract\n"
+/* class by manual */                + "    y zip extract entrada.zip -out /destino\n"
+/* class by manual */                + "    cat entrada.zip | y zip extract -out /destino\n"
+/* class by manual */                + "    y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
+/* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
+/* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
+/* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
+/* class by manual */                + "    obs: o comando \"cat File1.txt | y zip add > saida.zip\" gera o arquivo saida.zip com o conteudo interno chamado dummy\n"
 /* class by manual */                + "[y gzip]\n"
 /* class by manual */                + "    cat arquivo | y gzip > arquivo.gz\n"
 /* class by manual */                + "[y gunzip]\n"
@@ -5425,6 +5621,7 @@ class XML{
 /* class by manual */                + "  [y xlsxToCSV]\n"
 /* class by manual */                + "  [y token]\n"
 /* class by manual */                + "  [y gettoken]\n"
+/* class by manual */                + "  [y zip]\n"
 /* class by manual */                + "  [y gzip]\n"
 /* class by manual */                + "  [y gunzip]\n"
 /* class by manual */                + "  [y echo]\n"
@@ -5523,4 +5720,5 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 

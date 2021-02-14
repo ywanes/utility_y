@@ -10,6 +10,7 @@ usage:
   [y xlsxToCSV]
   [y token]
   [y gettoken]
+  [y zip]
   [y gzip]
   [y gunzip]
   [y echo]
