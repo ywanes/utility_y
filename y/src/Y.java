@@ -344,7 +344,7 @@ cat buffer.log
         }
         /*
         y zip add File1.txt > saida.zip
-        cat File1.txt | y zip add > saida.zip
+        cat File1.txt | y zip add -name File1.txt > saida.zip
         y zip add /pasta1 > saida.zip
         y zip list arquivo.zip
         cat arquivo.zip | y zip list
@@ -360,11 +360,15 @@ cat buffer.log
         if ( args[0].equals("zip") ){
             try{
                 if ( args.length == 2 && args[1].equals("add") ){
-                    zip_add(null);
+                    zip_add(null,null);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("add") ){
-                    zip_add(args[2]);
+                    zip_add(args[2],null);
+                    return;
+                }
+                if ( args.length == 4 && args[1].equals("add") && args[2].equals("-name")){
+                    zip_add(null,args[3]);
                     return;
                 }
                 if ( args.length == 2 && args[1].equals("list") ){
@@ -2239,7 +2243,7 @@ cat buffer.log
     
     /*
     y zip add File1.txt > saida.zip
-    cat File1.txt | y zip add > saida.zip
+    cat File1.txt | y zip add -name File1.txt > saida.zip
     y zip add /pasta1 > saida.zip
     y zip list arquivo.zip
     cat arquivo.zip | y zip list
@@ -2254,7 +2258,7 @@ cat buffer.log
     obs: o comando "cat File1.txt | y zip add > saida.zip" gera o arquivo saida.zip com o conteudo interno chamado dummy
     */
     ////////////
-    private void zip_add(String a) throws Exception {
+    private void zip_add(String a,String dummy_name) throws Exception {
         if ( a != null ){
             if ( ! new File(a).exists() ){
                 System.err.println("Erro, esse conteudo nao existe: "+a);
@@ -2265,20 +2269,23 @@ cat buffer.log
                 System.exit(1);
             }
         }
-        zip_add(a,System.out);
+        zip_add(a,dummy_name,System.out);
     }
 
     private java.util.zip.ZipOutputStream zip_output=null;
     private ArrayList<String> zip_elementos=null;
-    private void zip_add(String a, OutputStream os) throws Exception {
+    private void zip_add(String a, String dummy_name, OutputStream os) throws Exception {
         zip_output = new java.util.zip.ZipOutputStream(os);        
         File elem=null;
+        String dummy="dummy";
+        if ( dummy_name != null && dummy_name.length() > 0 )
+            dummy=dummy_name;
         if ( a!=null )
             elem=new File(a);        
         if ( elem==null || elem.isFile() ){            
             java.util.zip.ZipEntry e=null;
             if ( elem == null )
-                e=new java.util.zip.ZipEntry("dummy");
+                e=new java.util.zip.ZipEntry(dummy);
             else
                 e=new java.util.zip.ZipEntry(elem.getName());
             zip_output.putNextEntry(e);
@@ -5418,7 +5425,7 @@ class XML{
 /* class by manual */                + "    y gettoken hash\n"
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
-/* class by manual */                + "    cat File1.txt | y zip add > saida.zip\n"
+/* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
 /* class by manual */                + "    y zip add /pasta1 > saida.zip\n"
 /* class by manual */                + "    y zip list arquivo.zip\n"
 /* class by manual */                + "    cat arquivo.zip | y zip list\n"
