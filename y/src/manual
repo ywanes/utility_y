@@ -100,11 +100,10 @@ Exemplos...
     cat entrada.zip | y zip extract
     y zip extract entrada.zip -out /destino
     cat entrada.zip | y zip extract -out /destino
-    y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
+    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt -out /destino
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
     y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
-    obs: o comando "cat File1.txt | y zip add > saida.zip" gera o arquivo saida.zip com o conteudo interno chamado dummy
 [y gzip]
     cat arquivo | y gzip > arquivo.gz
 [y gunzip]

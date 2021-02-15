@@ -382,35 +382,35 @@ cat buffer.log
                 }
                 
                 if ( args.length == 2 && args[1].equals("extract") ){
-                    zip_extract(null,null);
+                    zip_extract(null,null,null);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("extract") ){
-                    zip_extract(args[2],null);
+                    zip_extract(args[2],null,null);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("extract") && args[2].equals("-out")){
-                    zip_extract(null,args[3]);
+                    zip_extract(null,args[3],null);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("extract") && args[3].equals("-out")){
-                    zip_extract(args[2],args[4]);
+                    zip_extract(args[2],args[4],null);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("extractSelected") ){
-                    zip_extractSelected(null,args[2],null);
+                    zip_extract(null,null,args[2]);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("extractSelected") ){
-                    zip_extractSelected(args[2],args[3],null);
+                    zip_extract(args[2],null,args[3]);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("extractSelected") && args[3].equals("-out")){
-                    zip_extractSelected(null,args[2],args[4]);
+                    zip_extract(null,args[4],args[2]);
                     return;
                 }
                 if ( args.length == 6 && args[1].equals("extractSelected") && args[4].equals("-out")){
-                    zip_extractSelected(args[2],args[3],args[5]);
+                    zip_extract(args[2],args[5],args[3]);
                     return;
                 }
             }catch(Exception e){
@@ -2252,11 +2252,10 @@ cat buffer.log
     cat entrada.zip | y zip extract
     y zip extract entrada.zip -out /destino
     cat entrada.zip | y zip extract -out /destino
-    y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
+    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt -out /destino
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
     y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
-    obs: o comando "cat File1.txt | y zip add > saida.zip" gera o arquivo saida.zip com o conteudo interno chamado dummy
     */
     ////////////
     private void zip_add(String a,String dummy_name) throws Exception {
@@ -2362,28 +2361,34 @@ cat buffer.log
         }
     }
 
-    private void zip_extract(String a, String pasta) throws Exception {
-        // zipFile.getInputStream(entry);
-        if ( pasta != null ){
-            pasta=pasta.trim();
-            if ( pasta.length() == 0 ){
+    private int zip_extract_count_encontrados=0;
+    private void zip_extract(String a, String pre_dir, String filtro) throws Exception {
+        zip_extract_count_encontrados=0;
+        if ( filtro != null && filtro.endsWith("/") ){
+            System.err.println("Erro, o item selecionado não pode ser uma pasta!: "+filtro);
+            System.exit(1);
+        }
+        if ( pre_dir != null ){
+            pre_dir=pre_dir.trim();
+            if ( pre_dir.length() == 0 ){
                 System.err.println("Erro, preenchimento incorreto de pasta!");
                 System.exit(1);
             }
-            File pasta_=new File(pasta);
+            File pasta_=new File(pre_dir);
             if ( ! pasta_.exists() ){
-                System.err.println("Erro, a pasta "+pasta+ " não existe!");
+                System.err.println("Erro, a pasta "+pre_dir+ " não existe!");
                 System.exit(1);
             }else{
                 if ( ! pasta_.isDirectory() ){
-                    System.err.println("Erro, o caminho a seguir não é uma pasta: "+pasta);
+                    System.err.println("Erro, o caminho a seguir não é uma pasta: "+pre_dir);
                     System.exit(1);
                 }
             }
-            pasta=pasta.replace("\\","/");
-            if ( !pasta.endsWith("/") )
-                pasta+="/";
-        }
+            pre_dir=pre_dir.replace("\\","/");
+            if ( !pre_dir.endsWith("/") )
+                pre_dir+="/";
+        }else
+            pre_dir="";
         if ( a != null )
             valida_leitura_arquivo(a);
         if ( a == null ){
@@ -2391,9 +2396,9 @@ cat buffer.log
             ZipEntry entry=null;
             while( (entry=zis.getNextEntry()) != null ){                                
                 if ( entry.getName().endsWith("/") ){
-                    zip_extract_grava(pasta,entry.getName(),null);
+                    zip_extract_grava(pre_dir,entry.getName(),null,filtro);
                 }else{
-                    zip_extract_grava(pasta,entry.getName(),zis);
+                    zip_extract_grava(pre_dir,entry.getName(),zis,filtro);
                 }
             }
         }else{
@@ -2402,62 +2407,83 @@ cat buffer.log
             while(entries.hasMoreElements()){
                 ZipEntry entry = entries.nextElement();            
                 if ( entry.getName().endsWith("/") ){
-                    zip_extract_grava(pasta,entry.getName(),null);
+                    zip_extract_grava(pre_dir,entry.getName(),null,filtro);
                 }else{
-                    zip_extract_grava(pasta,entry.getName(),zipFile.getInputStream(entry));
+                    zip_extract_grava(pre_dir,entry.getName(),zipFile.getInputStream(entry),filtro);
                 }
             }                
         }
+        if ( filtro != null && zip_extract_count_encontrados == 0 ){
+            System.err.println("Erro, elemento "+filtro+" não encontrado!");
+            System.exit(1);
+        }
     }
 
-    private void zip_extract_grava(String pasta, String name, InputStream zis) throws Exception {
-        String entrada="";
-        if ( pasta != null )
-            entrada=pasta+name;
-        else
-            entrada=name;
-        String [] partes=entrada.split("/");
+    private void zip_extract_grava(String pre_dir, String name, InputStream is,String filtro) throws Exception {
+        String [] partes=name.split("/");
         String dir="";
         File tmp=null;
+        boolean out_console=false;
+        if ( filtro != null && pre_dir.equals("") )
+            out_console=true;
         for ( int i=0;i<partes.length;i++ ){
             if ( i == partes.length-1 ){
-                if ( zis == null ){
+                if ( is == null ){
                     dir+=partes[i]+"/";
-                    tmp=new File(dir);
+                    if ( filtro != null && filtro.indexOf(dir) == -1 )
+                        continue;
+                    if ( ! out_console ){
+                        tmp=new File(pre_dir+dir);
+                        if ( tmp.exists() ){
+                            if ( !tmp.isDirectory() ){
+                                System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+pre_dir+dir);
+                                System.exit(1);
+                            }
+                        }else
+                            tmp.mkdir();
+                    }
+                }else{
+                    dir+=partes[i];
+                    if ( filtro != null && filtro.indexOf(dir) == -1 )
+                        continue;
+                    if ( ! out_console ){
+                        tmp=new File(pre_dir+dir);
+                        if ( tmp.exists() ){
+                            if ( tmp.isDirectory() ){
+                                System.err.println("Erro, não é possível utilizar o caminho a seguir como arquivo: "+pre_dir+dir);
+                                System.exit(1);
+                            }
+                        }
+                    }
+                    if ( filtro == null ){
+                        copiaByStream(is,new FileOutputStream(new File(pre_dir+dir)));
+                    }else{
+                        if ( filtro.equals(dir) ){
+                            zip_extract_count_encontrados++;
+                            if ( out_console ){
+                                copiaByStream(is,System.out);
+                            }else{
+                                copiaByStream(is,new FileOutputStream(new File(pre_dir+dir)));
+                            }
+                        }
+                    }
+                }
+            }else{
+                dir+=partes[i]+"/";
+                if ( filtro != null && filtro.indexOf(dir) == -1 )
+                    continue;
+                if ( ! out_console ){
+                    tmp=new File(pre_dir+dir);
                     if ( tmp.exists() ){
                         if ( !tmp.isDirectory() ){
-                            System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+dir);
+                            System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+pre_dir+dir);
                             System.exit(1);
                         }
                     }else
                         tmp.mkdir();
-                }else{
-                    dir+=partes[i];
-                    tmp=new File(dir);
-                    if ( tmp.exists() ){
-                        if ( tmp.isDirectory() ){
-                            System.err.println("Erro, não é possível utilizar o caminho a seguir como arquivo: "+dir);
-                            System.exit(1);
-                        }
-                    }
-                    copiaByStream(zis,new FileOutputStream(new File(dir)));
                 }
-            }else{
-                dir+=partes[i]+"/";
-                tmp=new File(dir);
-                if ( tmp.exists() ){
-                    if ( !tmp.isDirectory() ){
-                        System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+dir);
-                        System.exit(1);
-                    }
-                }else
-                    tmp.mkdir();
             }
         }
-    }
-    
-    private void zip_extractSelected(String entrada, String selected, String saida) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
     
     public void gzip()
@@ -5552,11 +5578,10 @@ class XML{
 /* class by manual */                + "    cat entrada.zip | y zip extract\n"
 /* class by manual */                + "    y zip extract entrada.zip -out /destino\n"
 /* class by manual */                + "    cat entrada.zip | y zip extract -out /destino\n"
-/* class by manual */                + "    y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
+/* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
 /* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
-/* class by manual */                + "    obs: o comando \"cat File1.txt | y zip add > saida.zip\" gera o arquivo saida.zip com o conteudo interno chamado dummy\n"
 /* class by manual */                + "[y gzip]\n"
 /* class by manual */                + "    cat arquivo | y gzip > arquivo.gz\n"
 /* class by manual */                + "[y gunzip]\n"
