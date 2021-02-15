@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
@@ -2259,11 +2260,8 @@ cat buffer.log
     */
     ////////////
     private void zip_add(String a,String dummy_name) throws Exception {
-        if ( a != null ){
-            if ( ! new File(a).exists() ){
-                System.err.println("Erro, esse conteudo nao existe: "+a);
-                System.exit(1);
-            }
+        if ( a != null ){            
+            valida_leitura_arquivo(a);
             if ( a.equals(".") || a.equals("..") ){
                 System.err.println("Erro, esse tipo de diretório não é válido!: "+a);
                 System.exit(1);
@@ -2272,6 +2270,13 @@ cat buffer.log
         zip_add(a,dummy_name,System.out);
     }
 
+    private void valida_leitura_arquivo(String a){
+        if ( ! new File(a).exists() ){
+            System.err.println("Erro, esse conteudo nao existe: "+a);
+            System.exit(1);
+        }
+    }
+    
     private java.util.zip.ZipOutputStream zip_output=null;
     private ArrayList<String> zip_elementos=null;
     private void zip_add(String a, String dummy_name, OutputStream os) throws Exception {
@@ -2339,15 +2344,118 @@ cat buffer.log
         }
     }
     
+    private void zip_list(String a) throws Exception {
+        valida_leitura_arquivo(a);
+        if ( a == null ){
+            ZipInputStream zis=new ZipInputStream(System.in);
+            ZipEntry entry=null;
+            while( (entry=zis.getNextEntry()) != null ){
+                System.out.println(entry.getName());
+            }
+        }else{
+            ZipFile zipFile = new ZipFile(a);
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while(entries.hasMoreElements()){
+                ZipEntry entry = entries.nextElement();            
+                System.out.println(entry.getName());
+            }                
+        }
+    }
+
+    private void zip_extract(String a, String pasta) throws Exception {
+        // zipFile.getInputStream(entry);
+        if ( pasta != null ){
+            pasta=pasta.trim();
+            if ( pasta.length() == 0 ){
+                System.err.println("Erro, preenchimento incorreto de pasta!");
+                System.exit(1);
+            }
+            File pasta_=new File(pasta);
+            if ( ! pasta_.exists() ){
+                System.err.println("Erro, a pasta "+pasta+ " não existe!");
+                System.exit(1);
+            }else{
+                if ( ! pasta_.isDirectory() ){
+                    System.err.println("Erro, o caminho a seguir não é uma pasta: "+pasta);
+                    System.exit(1);
+                }
+            }
+            pasta=pasta.replace("\\","/");
+            if ( !pasta.endsWith("/") )
+                pasta+="/";
+        }
+        if ( a != null )
+            valida_leitura_arquivo(a);
+        if ( a == null ){
+            ZipInputStream zis=new ZipInputStream(System.in);
+            ZipEntry entry=null;
+            while( (entry=zis.getNextEntry()) != null ){                                
+                if ( entry.getName().endsWith("/") ){
+                    zip_extract_grava(pasta,entry.getName(),null);
+                }else{
+                    zip_extract_grava(pasta,entry.getName(),zis);
+                }
+            }
+        }else{
+            ZipFile zipFile = new ZipFile(a);
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while(entries.hasMoreElements()){
+                ZipEntry entry = entries.nextElement();            
+                if ( entry.getName().endsWith("/") ){
+                    zip_extract_grava(pasta,entry.getName(),null);
+                }else{
+                    zip_extract_grava(pasta,entry.getName(),zipFile.getInputStream(entry));
+                }
+            }                
+        }
+    }
+
+    private void zip_extract_grava(String pasta, String name, InputStream zis) throws Exception {
+        String entrada="";
+        if ( pasta != null )
+            entrada=pasta+name;
+        else
+            entrada=name;
+        String [] partes=entrada.split("/");
+        String dir="";
+        File tmp=null;
+        for ( int i=0;i<partes.length;i++ ){
+            if ( i == partes.length-1 ){
+                if ( zis == null ){
+                    dir+=partes[i]+"/";
+                    tmp=new File(dir);
+                    if ( tmp.exists() ){
+                        if ( !tmp.isDirectory() ){
+                            System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+dir);
+                            System.exit(1);
+                        }
+                    }else
+                        tmp.mkdir();
+                }else{
+                    dir+=partes[i];
+                    tmp=new File(dir);
+                    if ( tmp.exists() ){
+                        if ( tmp.isDirectory() ){
+                            System.err.println("Erro, não é possível utilizar o caminho a seguir como arquivo: "+dir);
+                            System.exit(1);
+                        }
+                    }
+                    copiaByStream(zis,new FileOutputStream(new File(dir)));
+                }
+            }else{
+                dir+=partes[i]+"/";
+                tmp=new File(dir);
+                if ( tmp.exists() ){
+                    if ( !tmp.isDirectory() ){
+                        System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+dir);
+                        System.exit(1);
+                    }
+                }else
+                    tmp.mkdir();
+            }
+        }
+    }
     
-    private void zip_list(String arg) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
-    private void zip_extract(String arg, Object object) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-    }
-
     private void zip_extractSelected(String entrada, String selected, String saida) {
         throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
@@ -4632,6 +4740,17 @@ cat buffer.log
             throw new IOException("File length changed while reading");
         return b;
     }    
+
+
+
+    private void copiaByStream(InputStream pipe_in, OutputStream pipe_out) throws Exception {
+        byte[] buf = new byte[BUFFER_SIZE];            
+        int len;
+        while ((len = pipe_in.read(buf)) > -1)
+            pipe_out.write(buf, 0, len);
+        pipe_out.flush();
+        pipe_out.close();
+    }
 
     
 }
