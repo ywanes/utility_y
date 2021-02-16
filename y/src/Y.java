@@ -150,7 +150,8 @@ cat buffer.log
         //teste
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
-        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                        
+        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                                
+        
         new Y().go(args);
     }
         
