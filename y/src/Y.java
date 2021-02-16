@@ -744,6 +744,26 @@ cat buffer.log
             tee(args[1]);
             return;
         }
+        if ( args[0].equals("uniq") ){
+            uniq_quebra(false);
+            return;
+        }
+        if ( args[0].equals("quebra") ){
+            uniq_quebra(true);
+            return;
+        }
+        if ( args[0].equals("seq") ){
+            try{
+                if ( args.length == 3 ){
+                    seq(Integer.parseInt(args[1]),Integer.parseInt(args[2]),0);
+                    return;
+                }
+                if ( args.length == 4 ){
+                    seq(Integer.parseInt(args[1]),Integer.parseInt(args[2]),Integer.parseInt(args[3]));
+                    return;
+                }
+            }catch(Exception e){}
+        }
         if ( args[0].equals("awk") )
         {
             if ( args.length >= 3 && args[1].equals("print") )
@@ -1886,21 +1906,30 @@ cat buffer.log
         }
         countLinhas[0]++;
     }
-    
-    public String lpad(long inputLong, int length,String append) {
-        return lpad(inputLong+"",length,append);
-    }
-    
-    public String lpad(String inputString, int length,String append) {
-        if (inputString.length() >= length) {
-            return inputString;
-        }
-        StringBuilder sb = new StringBuilder();
-        while (sb.length() < length - inputString.length()) {
-            sb.append(append);
-        }
-        sb.append(inputString);
 
+    public String lpad(long inputLong, int length,String append) {
+        if ( inputLong < 0 )
+            return lpad(true,(inputLong+"").substring(1),length,append);
+        else
+            return lpad(false,inputLong+"",length,append);
+    }
+
+    public String lpad(String inputString, int length,String append) {
+        return lpad(false,inputString,length,append);
+    }
+
+    public String lpad(boolean sinalNegativo, String inputString, int length,String append) {
+        int len_input=inputString.length();
+        if ( len_input >= length) {
+            if ( sinalNegativo )
+                return "-"+inputString;
+            else
+                return inputString;
+        }
+        StringBuilder sb = new StringBuilder(sinalNegativo?"-":"");
+        for ( int i=0;i<=length-len_input;i++ )
+            sb.append(append);
+        sb.append(inputString);
         return sb.toString();
     }
 
@@ -2637,6 +2666,8 @@ cat buffer.log
             closeLine();
             System.out.println(count);
         }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
         }
     }
     
@@ -3509,7 +3540,55 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
-        
+    
+    public void uniq_quebra(boolean quebra){
+        String tail=null;
+        String line=null;
+        try {
+            long count=0;
+            while ( (line=readLine()) != null ){
+                if ( tail == null ){
+                    count++;
+                    tail=line;
+                    continue;
+                }
+                if ( !line.equals(tail) ){
+                    if ( quebra ){
+                        System.out.print(count);
+                        System.out.print(" ");
+                    }
+                    System.out.println(tail);
+                    count=0;
+                }
+                tail=line;
+                count++;
+            }
+            if ( tail != null ){
+                if ( quebra ){
+                    System.out.print(count);
+                    System.out.print(" ");
+                }
+                System.out.println(tail);
+            }
+            closeLine();
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }
+    }
+    
+    public void seq(int a,int b,int len){
+        int inc=1;
+        if ( a > b )
+            inc=-1;
+        while(true){
+            System.out.println( lpad(a,len,"0") );
+            if ( a == b )
+                break;
+            a+=inc;
+        }
+    }
+    
     public void awk_print(String [] args)
     {
         ArrayList<Integer> lista=new ArrayList<Integer>();
@@ -5514,6 +5593,9 @@ class XML{
 /* class by manual */                + "  [y touch]\n"
 /* class by manual */                + "  [y iconv]\n"
 /* class by manual */                + "  [y tee]\n"
+/* class by manual */                + "  [y uniq]\n"
+/* class by manual */                + "  [y quebra]\n"
+/* class by manual */                + "  [y seq]\n"
 /* class by manual */                + "  [y awk print]\n"
 /* class by manual */                + "  [y dev_null]\n"
 /* class by manual */                + "  [y dev_in]\n"
@@ -5683,6 +5765,14 @@ class XML{
 /* class by manual */                + "    obs4: BOM do UCS-2LE em numerico => 255 254\n"
 /* class by manual */                + "[y tee]\n"
 /* class by manual */                + "    cat arquivo | y tee saida.txt\n"
+/* class by manual */                + "[y uniq]\n"
+/* class by manual */                + "    cat arquivo | y uniq\n"
+/* class by manual */                + "[y quebra]\n"
+/* class by manual */                + "    cat arquivo | y quebra\n"
+/* class by manual */                + "[y seq]\n"
+/* class by manual */                + "    y seq 1 10 2\n"
+/* class by manual */                + "    y seq 5 7\n"
+/* class by manual */                + "    y seq 9 -10\n"
 /* class by manual */                + "[y awk]\n"
 /* class by manual */                + "    cat arquivo | y awk print 1 3 5,6\n"
 /* class by manual */                + "    cat arquivo | y awk start AAA end BBB    \n"
@@ -5798,6 +5888,9 @@ class XML{
 /* class by manual */                + "  [y touch]\n"
 /* class by manual */                + "  [y iconv]\n"
 /* class by manual */                + "  [y tee]\n"
+/* class by manual */                + "  [y uniq]\n"
+/* class by manual */                + "  [y quebra]\n"
+/* class by manual */                + "  [y seq]\n"
 /* class by manual */                + "  [y awk print]\n"
 /* class by manual */                + "  [y dev_null]\n"
 /* class by manual */                + "  [y dev_in]\n"
