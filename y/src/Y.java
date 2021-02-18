@@ -5665,6 +5665,7 @@ class XML{
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
 /* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
+/* class by manual */                + "    obs: se add pasta e a descricao de pasta tem \"/\" ou \"\\\\\" entao o pacote tera o conteudo da pasta, caso contrario tera a pasta citada+conteudo.\n"
 /* class by manual */                + "[y gzip]\n"
 /* class by manual */                + "    cat arquivo | y gzip > arquivo.gz\n"
 /* class by manual */                + "[y gunzip]\n"

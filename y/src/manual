@@ -107,6 +107,7 @@ Exemplos...
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
     y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
+    obs: se add pasta e a descricao de pasta tem "/" ou "\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.
 [y gzip]
     cat arquivo | y gzip > arquivo.gz
 [y gunzip]
