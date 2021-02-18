@@ -151,7 +151,9 @@ cat buffer.log
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                                
-        
+
+        //args=new String[]{"banco","-fileCSV","C:\\tmp\\cc\\a","connOut,hash","-outTable","TABELA_CCC","createTable","createjobcarga"};        
+        //args=new String[]{"banco","fromCSV","-outTable","TMP_ANALISE_PMD2","selectInsert"};
         new Y().go(args);
     }
         
@@ -1934,6 +1936,7 @@ cat buffer.log
     }
 
     public String gettoken(String hash){
+        
         String dir_token=getenv();
         if ( ! env_ok(dir_token) )
             return null;
@@ -2125,7 +2128,7 @@ cat buffer.log
         return null;
     }
 
-    public void readLine(String caminho) throws Exception{
+    public static void readLine(String caminho) throws Exception{
         readLine(new FileInputStream(new File(caminho)));
     }
     
@@ -2137,8 +2140,9 @@ cat buffer.log
     
     public static String readLine(){
         try{            
-            if ( scanner_pipe == null )
+            if ( scanner_pipe == null ){
                 readLine(System.in);
+            }
             if ( scanner_pipe.hasNext() )
                 return scanner_pipe.next().replace("\r","");
             else
@@ -2287,7 +2291,6 @@ cat buffer.log
     y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
     */
-    ////////////
     private void zip_add(String a,String dummy_name) throws Exception {
         if ( a != null ){            
             valida_leitura_arquivo(a);
@@ -4344,9 +4347,9 @@ cat buffer.log
             return null;
         if ( linhaCSV.substring(ponteiroLinhaCSV, ponteiroLinhaCSV+1).equals("\"") )
         {
-            return readColunaCSVComplexa().replace("\r","").replace("\n","");
+            return readColunaCSVComplexa();
         }else{
-            return readColunaCSVSimples().replace("\r","").replace("\n","");
+            return readColunaCSVSimples();
         }
         
         // linhaCSV
@@ -4371,7 +4374,7 @@ cat buffer.log
         int pos=ponteiroLinhaCSV+1; // olhando adiantado
         int pos_=-1;
         while(true)
-        {            
+        {    
             pos_=linhaCSV.indexOf("\"",pos);
             if ( pos_ == -1 )
             {
@@ -4386,7 +4389,7 @@ cat buffer.log
             ponteiroLinhaCSV=pos_+2;
             break;
         }
-        return linhaCSV.substring(ini,fim);
+        return linhaCSV.substring(ini,fim).replace("\r","").replace("\n","");
     }
     
     private String readColunaCSVSimples() {
@@ -4407,7 +4410,7 @@ cat buffer.log
             fim=pos;
             ponteiroLinhaCSV=pos+1;
         }
-        return linhaCSV.substring(ini,fim);
+        return linhaCSV.substring(ini,fim).replace("\r","").replace("\n","");
     }
 
     private String getCreateByCamposCSV(String[] camposCSV, String table) {
