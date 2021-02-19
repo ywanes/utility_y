@@ -152,8 +152,6 @@ cat buffer.log
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                                
 
-        //args=new String[]{"banco","-fileCSV","C:\\tmp\\cc\\a","connOut,hash","-outTable","TABELA_CCC","createTable","createjobcarga"};        
-        //args=new String[]{"banco","fromCSV","-outTable","TMP_ANALISE_PMD2","selectInsert"};
         new Y().go(args);
     }
         
