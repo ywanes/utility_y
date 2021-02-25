@@ -151,7 +151,8 @@ cat buffer.log
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                                
-
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","listaAbas"};                                
+        
         new Y().go(args);
     }
         
@@ -2132,7 +2133,14 @@ cat buffer.log
     
     public static java.util.Scanner scanner_pipe=null;
     public static void readLine(InputStream in){        
-        scanner_pipe=new java.util.Scanner(in);
+        readLine(in,null);
+    }    
+    
+    public static void readLine(InputStream in,String encoding){
+        if ( encoding == null )
+            scanner_pipe=new java.util.Scanner(in);
+        else
+            scanner_pipe=new java.util.Scanner(in,encoding);
         scanner_pipe.useDelimiter("\n");
     }    
     
@@ -5222,7 +5230,7 @@ class XML{
         listaTxt=new ArrayList<String>();
         listaNivel=new ArrayList<Integer>();
         
-        Y.readLine(is);
+        Y.readLine(is,"UTF-8");
         StringBuilder sb=new StringBuilder();
         String line="";
         String txt=null;
