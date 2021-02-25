@@ -4671,7 +4671,6 @@ cat buffer.log
                     is = zipFile.getInputStream(entry);
                     XML.loadIs(is,caminho,mostraEstrutura);
                     is.close();
-
                     if ( caminho.equals("xl/workbook.xml") && !mostraEstrutura  ){
                         xmlNomes=XML.getXML();
                         for ( XML item1 : xmlNomes.getFilhos()){
@@ -4684,8 +4683,9 @@ cat buffer.log
                             }
                         }
                     }
-
+                    
                     if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") && !mostraEstrutura && !listaAbas ){
+                        
                         if ( nomes.size() == 0 )
                             XML.ErroFatal(99);                    
                         if ( numeroAba == -1 && nomeAba.equals(nomes.get(sheet_count)) ){
@@ -5227,10 +5227,20 @@ class XML{
         String line="";
         String txt=null;
         boolean first=true;
-        while ( (line=Y.readLine()) != null ){
-            if ( first && line.startsWith("<?xml") ){
+        while ( (line=Y.readLine()) != null ){            
+            if ( first ){
                 first=false;
-                continue;
+                int detectBOM=line.indexOf("<?xml");
+                if ( detectBOM >=1 && detectBOM <= 3 )
+                    line=line.substring(detectBOM);
+                if ( line.startsWith("<?xml") ){
+                    int tmp=line.indexOf("?>");
+                    if ( tmp > -1 ){
+                        line=line.substring(tmp+2);
+                    }else{
+                        ErroFatal(44);
+                    }
+                }
             }
             sb.append(line);            
         }
@@ -5371,13 +5381,14 @@ class XML{
         
         if ( ini == fim && !listaTxt.get(ini).startsWith("<") )
             return listaTxt.get(ini);        
-            
         ArrayList<XML> lista=new ArrayList<XML>();
         XML xml=null;        
         int inicio_n=0;
         String inicio_tag="";
         for(int i=ini;i<=fim;i++ ){
             if ( listaNivel.get(i) == nivel && xml == null ){
+                if ( listaTxt.get(i).trim().equals("") )
+                    continue;
                 xml=new XML();
                 tag=XML.getTagFromLine(listaTxt.get(i));
                 tipoTag=XML.getTipoTagFromLine(listaTxt.get(i));
