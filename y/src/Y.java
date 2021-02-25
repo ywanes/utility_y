@@ -150,9 +150,9 @@ cat buffer.log
         //teste
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
-        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};                                
-        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","listaAbas"};                                
+        //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};             
         
+        args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","Gestão de Mud (CITSD_change)"};                                        
         new Y().go(args);
     }
         
@@ -4739,12 +4739,12 @@ cat buffer.log
                                                     if ( atributo_t != null && atributo_t.equals("s") ){
                                                         processaCelula(
                                                             item3.getAtributo("r")
-                                                            ,shared.get(Integer.parseInt(item4.getValue())).replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("\"","\"\"")
+                                                            ,shared.get(Integer.parseInt(item4.getValue()))
                                                         );
                                                     }else{
                                                         processaCelula(
                                                             item3.getAtributo("r")
-                                                            ,item4.getValue().replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("\"","\"\"")
+                                                            ,item4.getValue()
                                                         );
                                                     }
                                                 }
@@ -4758,7 +4758,6 @@ cat buffer.log
                     processaCelulaFlush();
                 }
             }
-
         }catch(Exception e){
             System.err.println("Erro "+e.toString());
             System.exit(1);
@@ -4780,6 +4779,10 @@ cat buffer.log
         int len=local.length();
         String entrada="";
         int pos=0;
+        
+        if ( valor == null )
+            valor="";
+        valor=valor.replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("\"","\"\"");
         
         for ( int i=len-1;i>=0;i-- ){ // obs: no excel a primeira linha é 1. A primeira coluna é A(aqui representada com 0)
             entrada=local.substring(i,i+1);
