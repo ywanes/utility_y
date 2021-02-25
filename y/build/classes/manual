@@ -88,6 +88,7 @@ Exemplos...
     xlsxToCSV arquivo.xlsx listaAbas
     xlsxToCSV arquivo.xlsx numeroAba 1
     xlsxToCSV arquivo.xlsx nomeAba Planilha1
+    xlsxToCSV arquivo.xlsx exportAll
     obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1
 [y token]
     y token value

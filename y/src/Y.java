@@ -152,7 +152,10 @@ cat buffer.log
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565","show"};        
         //args=new String[]{"serverRouter","192.168.0.100","25565","192.168.0.200","25565"};             
         
-        args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","Gestão de Mud (CITSD_change)"};                                        
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","Gestão de Mud (CITSD_change)"};                
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","N A (AccountLeads)"};
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
+        
         new Y().go(args);
     }
         
@@ -284,27 +287,44 @@ cat buffer.log
             //args=new String[]{"xlsxToCSV","teste.xlsx","listaAbas"};
             //args=new String[]{"xlsxToCSV","teste.xlsx","numeroAba","1"};
             //args=new String[]{"xlsxToCSV","teste.xlsx","nomeAba","A"};
-            
-            if ( new File(args[1]).exists() ){
-                if ( args.length == 3 && args[2].equals("mostraEstrutura") ){
-                    xlsxToCSV(args[1],true,false,-1,"");
-                    return;
-                }
-                if ( args.length == 3 && args[2].equals("listaAbas") ){
-                    xlsxToCSV(args[1],false,true,-1,"");
-                    return;
-                }
-                if ( args.length == 4 && args[2].equals("numeroAba") ){
-                    try{
-                        xlsxToCSV(args[1],false,false,Integer.parseInt(args[3]),"");
+
+            try{
+                if ( new File(args[1]).exists() ){
+                    if ( args.length == 3 && args[2].equals("mostraEstrutura") ){
+                        xlsxToCSV(args[1],true,false,-1,"",System.out);
                         return;
-                    }catch(Exception e){}
+                    }
+                    if ( args.length == 3 && args[2].equals("listaAbas") ){
+                        xlsxToCSV(args[1],false,true,-1,"",System.out);
+                        for ( int i=0;i<xlsxToCSV_nomes.size();i++ )
+                            System.out.println(xlsxToCSV_nomes.get(i));
+                        return;
+                    }
+                    if ( args.length == 3 && args[2].equals("exportAll") ){
+                        xlsxToCSV(args[1],false,true,-1,"",null);
+                        ArrayList<String> bkp_lista=xlsxToCSV_nomes;
+                        for ( int i=0;i<bkp_lista.size();i++ ){
+                            System.out.println("exportando("+(i+1)+"/"+bkp_lista.size()+") arquivo: "+bkp_lista.get(i)+".csv");
+                            xlsxToCSV(args[1],false,false,-1,bkp_lista.get(i),new FileOutputStream(bkp_lista.get(i)+".csv"));
+                        }
+                        return;
+                    }
+                    if ( args.length == 4 && args[2].equals("numeroAba") ){
+                        try{
+                            xlsxToCSV(args[1],false,false,Integer.parseInt(args[3]),"",System.out);
+                            return;
+                        }catch(Exception e){}
+                    }
+                    if ( args.length == 4 && args[2].equals("nomeAba") && args[3].length() > 0 ){
+                        xlsxToCSV(args[1],false,false,-1,args[3],System.out);
+                        return;
+                    }
                 }
-                if ( args.length == 4 && args[2].equals("nomeAba") && args[3].length() > 0 ){
-                    xlsxToCSV(args[1],false,false,-1,args[3]);
-                    return;
-                }
+            }catch(Exception e){
+                System.err.println("Erro, "+e.toString());
+                System.exit(1);
             }
+            
         }        
         if ( args[0].equals("token") ){
             if ( args.length == 1 ){
@@ -4645,20 +4665,21 @@ cat buffer.log
         return i;
     }
 
-    private void xlsxToCSV(String caminhoXlsx, boolean mostraEstrutura, boolean listaAbas, int numeroAba, String nomeAba) {
+    ArrayList<String> xlsxToCSV_nomes=new ArrayList<String>();
+    private void xlsxToCSV(String caminhoXlsx, boolean mostraEstrutura, boolean listaAbas, int numeroAba, String nomeAba, OutputStream out) throws Exception {
         //"C:\\Users\\ywanes\\Documents\\teste.xlsx"
         //xlsxToCSV arquivo.xlsx mostraEstrutura
         //xlsxToCSV arquivo.xlsx listaAbas
         //xlsxToCSV arquivo.xlsx numeroAba 1
         //xlsxToCSV arquivo.xlsx nomeAba Planilha1
         
-        try{
+        try{            
             ZipFile zipFile = new ZipFile(caminhoXlsx);
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
-
+            xlsxToCSV_nomes=new ArrayList<String>();
+    
             InputStream is=null;
-            ArrayList<String> shared=new ArrayList<String>();
-            ArrayList<String> nomes=new ArrayList<String>();
+            ArrayList<String> shared=new ArrayList<String>();            
             String caminho="";
             XML xml=null;
             XML xmlShared=null;
@@ -4684,19 +4705,16 @@ cat buffer.log
                         for ( XML item1 : xmlNomes.getFilhos()){
                             if ( item1.getTag().equals("sheets") ){
                                 for ( XML item2 : item1.getFilhos()){
-                                    if ( listaAbas )
-                                        System.out.println(item2.getAtributo("name"));
-                                    nomes.add(item2.getAtributo("name"));
+                                    xlsxToCSV_nomes.add(item2.getAtributo("name"));
                                 }
                             }
                         }
                     }
                     
                     if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") && !mostraEstrutura && !listaAbas ){
-                        
-                        if ( nomes.size() == 0 )
+                        if ( xlsxToCSV_nomes.size() == 0 )
                             XML.ErroFatal(99);                    
-                        if ( numeroAba == -1 && nomeAba.equals(nomes.get(sheet_count)) ){
+                        if ( numeroAba == -1 && nomeAba.equals(xlsxToCSV_nomes.get(sheet_count)) ){
                             xml=XML.getXML();
                         }
                         if ( numeroAba != -1 && numeroAba == sheet_count+1 ){
@@ -4727,6 +4745,7 @@ cat buffer.log
                         System.err.println("Erro, nomeAba: "+nomeAba+" não encontrada!");
                     System.exit(1);
                 }else{
+                    processaCelulaInit();
                     for ( XML item1 : xml.getFilhos()){
                         if ( item1.getTag().equals("sheetData") ){
                             for ( XML item2 : item1.getFilhos()){
@@ -4740,11 +4759,13 @@ cat buffer.log
                                                         processaCelula(
                                                             item3.getAtributo("r")
                                                             ,shared.get(Integer.parseInt(item4.getValue()))
+                                                            ,out
                                                         );
                                                     }else{
                                                         processaCelula(
                                                             item3.getAtributo("r")
                                                             ,item4.getValue()
+                                                            ,out
                                                         );
                                                     }
                                                 }
@@ -4755,12 +4776,16 @@ cat buffer.log
                             }
                         }
                     }  
-                    processaCelulaFlush();
+                    processaCelulaFlush(out);
                 }
-            }
+            }            
         }catch(Exception e){
             System.err.println("Erro "+e.toString());
             System.exit(1);
+        }
+        if ( out != null ){
+            out.flush();
+            out.close();
         }
     }
 
@@ -4768,7 +4793,14 @@ cat buffer.log
     private int processaCelula_tail_linha=-1;
     private int processaCelula_tail_coluna=-1;
     private int processaCelula_max_tail_coluna=-1;
-    private void processaCelula(String local, String valor) {
+    private void processaCelulaInit(){
+        processaCelula_sb=new StringBuilder();
+        processaCelula_tail_linha=-1;
+        processaCelula_tail_coluna=-1;
+        processaCelula_max_tail_coluna=-1;
+    }
+    
+    private void processaCelula(String local, String valor, OutputStream out) throws Exception {
         //public static String linhasExcel="0123456789";    
         //public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         int linha=0;
@@ -4815,7 +4847,8 @@ cat buffer.log
                     processaCelula_tail_coluna++;
                 }
                 processaCelula_tail_coluna=-1;
-                System.out.println(processaCelula_sb.toString());
+                out.write(processaCelula_sb.toString().getBytes());
+                out.write("\n".getBytes());
                 processaCelula_sb=new StringBuilder();
                 processaCelula_tail_linha++;
             }
@@ -4837,14 +4870,15 @@ cat buffer.log
             processaCelula_max_tail_coluna=coluna;        
     }
 
-    private void processaCelulaFlush(){
+    private void processaCelulaFlush(OutputStream out) throws Exception{
         if ( processaCelula_sb.length() > 0 ){
             while(processaCelula_tail_coluna<processaCelula_max_tail_coluna){
                 processaCelula_sb.append("\"\"");
                 processaCelula_sb.append(sepCSV);
                 processaCelula_tail_coluna++;
             }
-            System.out.println(processaCelula_sb.toString());
+            out.write(processaCelula_sb.toString().getBytes());
+            out.write("\n".getBytes());
         }
     }
 
@@ -5669,6 +5703,7 @@ class XML{
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx listaAbas\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx numeroAba 1\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx nomeAba Planilha1\n"
+/* class by manual */                + "    xlsxToCSV arquivo.xlsx exportAll\n"
 /* class by manual */                + "    obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1\n"
 /* class by manual */                + "[y token]\n"
 /* class by manual */                + "    y token value\n"
@@ -5989,5 +6024,6 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
