@@ -4665,7 +4665,8 @@ cat buffer.log
         return i;
     }
 
-    ArrayList<String> xlsxToCSV_nomes=new ArrayList<String>();
+    ArrayList<String> xlsxToCSV_nomes=null;
+    ArrayList<String> shared=null;            
     private void xlsxToCSV(String caminhoXlsx, boolean mostraEstrutura, boolean listaAbas, int numeroAba, String nomeAba, OutputStream out) throws Exception {
         //"C:\\Users\\ywanes\\Documents\\teste.xlsx"
         //xlsxToCSV arquivo.xlsx mostraEstrutura
@@ -4675,11 +4676,9 @@ cat buffer.log
         
         try{            
             ZipFile zipFile = new ZipFile(caminhoXlsx);
-            Enumeration<? extends ZipEntry> entries = zipFile.entries();
-            xlsxToCSV_nomes=new ArrayList<String>();
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();            
     
-            InputStream is=null;
-            ArrayList<String> shared=new ArrayList<String>();            
+            InputStream is=null;            
             String caminho="";
             XML xml=null;
             XML xmlShared=null;
@@ -4697,21 +4696,28 @@ cat buffer.log
                     // xl/worksheets/_rels/sheet2.xml.rels
                     // xl/workbook.xml
 
+                    if ( caminho.equals("xl/workbook.xml") && xlsxToCSV_nomes != null )
+                        continue; // conteudo ja carregado.
+                    if ( caminho.equals("xl/sharedStrings.xml") && shared != null )
+                        continue; // conteudo ja carregado.
+                    
+                    
                     is = zipFile.getInputStream(entry);
                     XML.loadIs(is,caminho,mostraEstrutura);
                     is.close();
+                    
+                    // carrega lista de abas
                     if ( caminho.equals("xl/workbook.xml") && !mostraEstrutura  ){
+                        xlsxToCSV_nomes=new ArrayList<String>();
                         xmlNomes=XML.getXML();
-                        for ( XML item1 : xmlNomes.getFilhos()){
-                            if ( item1.getTag().equals("sheets") ){
-                                for ( XML item2 : item1.getFilhos()){
+                        for ( XML item1 : xmlNomes.getFilhos())
+                            if ( item1.getTag().equals("sheets") )
+                                for ( XML item2 : item1.getFilhos())
                                     xlsxToCSV_nomes.add(item2.getAtributo("name"));
-                                }
-                            }
-                        }
                     }
                     
-                    if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") && !mostraEstrutura && !listaAbas ){
+                    // coloca em cache o xml consultado
+                    if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") && !mostraEstrutura && !listaAbas ){                        
                         if ( xlsxToCSV_nomes.size() == 0 )
                             XML.ErroFatal(99);                    
                         if ( numeroAba == -1 && nomeAba.equals(xlsxToCSV_nomes.get(sheet_count)) ){
@@ -4723,7 +4729,9 @@ cat buffer.log
                         sheet_count++;
                     }
 
+                    // carrega dicionario de palavras compartilhadas
                     if ( caminho.equals("xl/sharedStrings.xml") && !mostraEstrutura && !listaAbas ){
+                        shared=new ArrayList<String>();  
                         xmlShared=XML.getXML();
                         for ( XML item1 : xmlShared.getFilhos()){
                             for ( XML item2 : item1.getFilhos()){
@@ -4737,6 +4745,7 @@ cat buffer.log
                 }
             }
 
+            // processa xml selecionado com ajuda do dicionario
             if ( !mostraEstrutura && !listaAbas ){
                 if ( xml == null ){
                     if ( numeroAba != -1 )
