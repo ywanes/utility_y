@@ -3623,20 +3623,14 @@ cat buffer.log
         ArrayList<Integer> lista=new ArrayList<Integer>();
         int [] elem;
         String [] partes;
-        int p;
         
         try{
             for ( int i=2;i<args.length;i++ ){
                 partes=args[i].split(",");
                 for ( int j=0;j<partes.length;j++ ){
-                    if ( j != 0 )
-                        lista.add(-1);
-                    p=Integer.parseInt(partes[j]);
-                    if ( p < 0 ){
-                        comando_invalido(args);
-                        return;
-                    }                    
-                    lista.add(p);
+                    if ( j > 0 )
+                        lista.add(500); // " "
+                    lista.add(Integer.parseInt(partes[j]));
                 }
             }
         }catch(Exception e){
@@ -3644,15 +3638,17 @@ cat buffer.log
             return;
         }
         
+        // list command print
         elem=new int[lista.size()];
         for ( int i=0;i<lista.size();i++ )
             elem[i]=lista.get(i);
         
         try {
             String line=null;
-            while ( (line=readLine()) != null ) {            
+            while ( (line=readLine()) != null ) {      
+                // partes de linha
                 partes=line.replaceAll("\t"," ").replaceAll("\r"," ").split(" ");
-                for ( int i=0;i<elem.length;i++ ){
+                for ( int i=0;i<elem.length;i++ ){                    
                     if ( elem[i] == 0 )
                     {
                         for ( int j=0;j<partes.length;j++ ){
@@ -3662,13 +3658,20 @@ cat buffer.log
                         }
                         continue;
                     }
-                    if ( elem[i] == -1 )
+                    if ( elem[i] == 500 )
                     {
                         System.out.print(" ");
                         continue;
                     }
-                    if ( elem[i] > partes.length ) continue;
-                    System.out.print(partes[elem[i]-1]);
+                    int p=elem[i];     
+                    if ( p > 0 ) // posição iniciada de 0
+                        p-=1;
+                    else
+                        p+=partes.length; // correção do pedido negativo print -1 equivale a print 3 caso o total de palavras seja 4, ou seja, -1 significa o ultimo
+                    
+                    if ( p < 0 ) continue;
+                    if ( p >= partes.length ) continue;                    
+                    System.out.print(partes[p]);
                 }
                 System.out.println("");                
             }
@@ -5843,6 +5846,7 @@ class XML{
 /* class by manual */                + "    y seq 9 -10\n"
 /* class by manual */                + "[y awk]\n"
 /* class by manual */                + "    cat arquivo | y awk print 1 3 5,6\n"
+/* class by manual */                + "    cat arquivo | y awk print -1\n"
 /* class by manual */                + "    cat arquivo | y awk start AAA end BBB    \n"
 /* class by manual */                + "    cat arquivo | y awk start AAA\n"
 /* class by manual */                + "    cat arquivo | y awk end BBB    \n"
@@ -5851,6 +5855,7 @@ class XML{
 /* class by manual */                + "    cat arquivo | y awk -v end BBB    \n"
 /* class by manual */                + "    obs: \"-v\" e a negativa\n"
 /* class by manual */                + "    obs2: start e end pode ocorrer varias vezes no texto\n"
+/* class by manual */                + "    obs3: -1 significa o ultimo\n"
 /* class by manual */                + "[y dev_null]\n"
 /* class by manual */                + "    cat arquivo | y banco buffer -n_lines 500 -log buffer.log | y dev_null\n"
 /* class by manual */                + "[y dev_in]\n"

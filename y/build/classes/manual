@@ -219,6 +219,7 @@ Exemplos...
     y seq 9 -10
 [y awk]
     cat arquivo | y awk print 1 3 5,6
+    cat arquivo | y awk print -1
     cat arquivo | y awk start AAA end BBB    
     cat arquivo | y awk start AAA
     cat arquivo | y awk end BBB    
@@ -227,6 +228,7 @@ Exemplos...
     cat arquivo | y awk -v end BBB    
     obs: "-v" é a negativa
     obs2: start e end pode ocorrer varias vezes no texto
+    obs3: -1 significa o ultimo
 [y dev_null]
     cat arquivo | y banco buffer -n_lines 500 -log buffer.log | y dev_null
 [y dev_in]
