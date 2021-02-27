@@ -513,8 +513,8 @@ cat buffer.log
             return;
         }
         
-        if ( args[0].equals("grep") && args.length == 2 ){
-            grep(args[1]);
+        if ( args[0].equals("grep") ){
+            grep(args);
             return;
         }        
         if ( args.length == 2 && args[0].equals("wc") && args[1].equals("-l") ){
@@ -1036,6 +1036,38 @@ cat buffer.log
         return new String[]{connIn,fileCSV,connOut,outTable,trunc,app};
     }
         
+    public String [] get_v_i_txt(String [] args){
+        String v="N";
+        String i="N";
+        String txt="";
+        
+        if ( args.length > 0 && args[0].equals("grep") )
+            args=sliceParm(1,args);
+        
+        if ( args.length > 1 && args[0].equals("-v") ){
+            v="S";
+            args=sliceParm(1,args);
+        }
+        if ( args.length > 1 && args[0].equals("-i") ){
+            i="S";
+            args=sliceParm(1,args);
+        }        
+        if ( args.length > 1 && args[0].equals("-v") ){ // repetido de proposito, tratando [-v -i] e [-i -v]
+            v="S";
+            args=sliceParm(1,args);
+        }
+
+        if ( args.length == 1 ){
+            txt=args[0];
+            args=sliceParm(1,args);
+        }
+        
+        if ( txt.equals("") )
+            return null;
+        return new String[]{v,i,txt};
+    }
+    
+    
     public String [] get_senha_isEncoding_md_salt(String [] args){
         String senha=null;
         String isEncoding="S";
@@ -2648,38 +2680,53 @@ cat buffer.log
         return n_lines_buffer;
     }
     
-    public void grep(String grep)
+    public void grep(String [] args)
     {
         boolean first=false;
         boolean tail=false;
         
-        if ( grep.startsWith("^") ){
-            first=true;
-            grep=grep.substring(1);
+        String [] get_v_i_txt=get_v_i_txt(args);
+        if ( get_v_i_txt == null ){
+            comando_invalido(args);
+            return;
         }
-        if ( grep.endsWith("$") ){
+        boolean v_=get_v_i_txt[0].equals("S");
+        boolean i_=get_v_i_txt[1].equals("S");        
+        String txt=get_v_i_txt[2];        
+        
+        boolean print=false;
+        String line=null;
+        String line_="";
+        
+        if ( txt.startsWith("^") ){
+            first=true;
+            txt=txt.substring(1);
+        }
+        if ( txt.endsWith("$") ){
             tail=true;
-            grep=grep.substring(0,grep.length()-2);
-        }        
-        try {
-            String line=null;
-            while ( (line=readLine()) != null ) {
-                if ( ! first && ! tail && line.contains(grep) ){
+            txt=txt.substring(0,txt.length()-2);
+        }     
+        if ( i_ )
+            txt=txt.toUpperCase();
+        
+        try {            
+            while ( (line_=line=readLine()) != null ) {
+                if ( i_ )
+                    line_=line_.toUpperCase();
+                if ( !print && !first && !tail && line_.contains(txt) )
+                    print=true;                
+                if ( !print && first && !tail && line_.startsWith(txt) )
+                    print=true;                
+                if ( !print && !first && tail && line_.endsWith(txt) )
+                    print=true;                
+                if ( !print && first && tail && line_.startsWith(txt) && line_.endsWith(txt) )
+                    print=true;  
+                
+                if ( v_ )
+                    print=!print;
+                
+                if ( print )
                     System.out.println(line);
-                    continue;
-                }
-                if ( first && ! tail && line.startsWith(grep) ){
-                    System.out.println(line);
-                    continue;
-                }
-                if ( ! first && tail && line.endsWith(grep) ){
-                    System.out.println(line);
-                    continue;
-                }
-                if ( first && tail && line.startsWith(grep) && line.endsWith(grep) ){
-                    System.out.println(line);
-                    continue;
-                }                
             }
             closeLine();
         }catch(Exception e){
