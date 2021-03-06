@@ -155,7 +155,6 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","Gestão de Mud (CITSD_change)"};                
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","N A (AccountLeads)"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
-        
         new Y().go(args);
     }
         
@@ -325,7 +324,36 @@ cat buffer.log
                 System.exit(1);
             }
             
-        }        
+        }   
+        
+        if ( args[0].equals("xml") && ( args.length == 2 || args.length == 3 ) ){
+            try{
+                if ( args.length == 2 && args[1].equals("mostraEstrutura") ){
+                    XML.loadIs(System.in,true,false,null);
+                    return;
+                }            
+                if ( args.length == 2 && args[1].equals("mostraTags") ){
+                    XML.loadIs(System.in,false,true,null);
+                    return;
+                }            
+                if ( args.length == 3 && new File(args[1]).exists() && args[2].equals("mostraEstrutura") ){
+                    FileInputStream is = new FileInputStream(args[1]);
+                    XML.loadIs(is,true,false,null);
+                    is.close();                
+                    return;
+                }            
+                if ( args.length == 3 && new File(args[1]).exists() && args[2].equals("mostraTags") ){
+                    FileInputStream is = new FileInputStream(args[1]);
+                    XML.loadIs(is,false,true,null);
+                    is.close();                
+                    return;                
+                }          
+            }catch(Exception e){
+                System.err.println(e.toString());
+                System.exit(1);
+            }
+        }
+        
         if ( args[0].equals("token") ){
             if ( args.length == 1 ){
                 System.err.println("usage:"
@@ -4751,9 +4779,8 @@ cat buffer.log
                     if ( caminho.equals("xl/sharedStrings.xml") && shared != null )
                         continue; // conteudo ja carregado.
                     
-                    
                     is = zipFile.getInputStream(entry);
-                    XML.loadIs(is,caminho,mostraEstrutura);
+                    XML.loadIs(is,mostraEstrutura,false,caminho);
                     is.close();
                     
                     // carrega lista de abas
@@ -4962,7 +4989,6 @@ cat buffer.log
         pipe_out.flush();
         pipe_out.close();
     }
-
     
 }
 
@@ -5301,18 +5327,103 @@ class Ponte {
 }  
 
 class XML{
-    private static void mostra(ArrayList<String> listaTxt, ArrayList<Integer> listaNivel,String caminho) {
+    private static void mostraEstrutura(ArrayList<String> listaTxt, ArrayList<Integer> listaNivel,String caminho) {
         int len=listaTxt.size();
-        int n=0;
+        int nivel=0;
         System.out.println();
-        System.out.println("=> "+caminho);        
+        if ( caminho != null )
+            System.out.println("=> "+caminho);        
         for (int i=0;i<len;i++ ){
-            //System.out.print(listaNivel.get(i));
-            n=listaNivel.get(i)-1;
-            for (int j=0;j<n;j++ )
+            nivel=listaNivel.get(i)-1;
+            for (int j=0;j<nivel;j++ )
                 System.out.print("\t");
             System.out.println(listaTxt.get(i));
         }
+    }
+    
+    private static void mostraTags(ArrayList<String> listaTxt, ArrayList<Integer> listaNivel,String caminho) {
+        int len=listaTxt.size();
+        int nivel=0;
+        int nivelTail=-1;
+        ArrayList<String> pilha=new ArrayList<String>();
+        ArrayList<String> tags=new ArrayList<String>();
+        String tag="";
+        if ( caminho != null )
+            System.out.println("=> "+caminho);        
+        for (int i=0;i<len;i++ ){
+            nivel=listaNivel.get(i)-1;
+            if ( nivel == nivelTail+1 ){
+                if ( ! listaTxt.get(i).trim().startsWith("<") ) continue;
+                if ( listaTxt.get(i).trim().startsWith("</") ){
+                    ErroFatal(54);
+                }
+                pilha.add(getTagFromLine(listaTxt.get(i)));
+                nivelTail=nivel;
+                tag="";
+                for ( int j=0;j<pilha.size();j++ )
+                    tag+="/"+pilha.get(j);
+                boolean achou=false;
+                for ( int j=0;j<tags.size();j++ ){
+                    if ( tags.get(j).equals(tag) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                if ( ! achou )
+                    tags.add(tag);
+                continue;
+            }
+            if ( nivel == nivelTail ){
+                if ( ! listaTxt.get(i).trim().startsWith("<") ) continue;
+                if ( listaTxt.get(i).trim().startsWith("</") ) continue;
+                // remove a ultima posicao
+                pilha.remove(pilha.size()-1); 
+                pilha.add(getTagFromLine(listaTxt.get(i)));
+                nivelTail=nivel;
+                tag="";
+                for ( int j=0;j<pilha.size();j++ )
+                    tag+="/"+pilha.get(j);
+                boolean achou=false;
+                for ( int j=0;j<tags.size();j++ ){
+                    if ( tags.get(j).equals(tag) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                if ( ! achou )
+                    tags.add(tag);
+                continue;
+            }
+            if ( nivel == nivelTail-1 ){
+                if ( ! listaTxt.get(i).trim().startsWith("<") ) continue;
+                if ( listaTxt.get(i).trim().startsWith("</") ){
+                    pilha.remove(pilha.size()-1); 
+                    nivelTail=nivel;
+                    continue;
+                }
+                // remove as duas ultimas posicoes
+                pilha.remove(pilha.size()-1);
+                pilha.remove(pilha.size()-1); 
+                pilha.add(getTagFromLine(listaTxt.get(i)));
+                nivelTail=nivel;
+                tag="";
+                for ( int j=0;j<pilha.size();j++ )
+                    tag+="/"+pilha.get(j);
+                boolean achou=false;
+                for ( int j=0;j<tags.size();j++ ){
+                    if ( tags.get(j).equals(tag) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                if ( ! achou )
+                    tags.add(tag);
+                continue;
+            }
+            ErroFatal(44);
+        }
+        for (int i=0;i<tags.size();i++ )            
+            System.out.println(tags.get(i));
     }
 
     private HashMap atributos=new HashMap();
@@ -5322,7 +5433,7 @@ class XML{
     
     private static ArrayList<String> listaTxt=null;
     private static ArrayList<Integer> listaNivel=null;
-    public static void loadIs(InputStream is,String caminho,boolean mostraEstrutura) {
+    public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho) {
         listaTxt=new ArrayList<String>();
         listaNivel=new ArrayList<Integer>();
         
@@ -5469,7 +5580,9 @@ class XML{
             ErroFatal(4);
         }        
         if ( mostraEstrutura )
-            mostra(listaTxt,listaNivel,caminho);
+            mostraEstrutura(listaTxt,listaNivel,caminho);
+        if ( mostraTags )
+            mostraTags(listaTxt,listaNivel,caminho);
     }
     
     public static XML getXML(){
@@ -5764,6 +5877,10 @@ class XML{
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx nomeAba Planilha1\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx exportAll\n"
 /* class by manual */                + "    obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1\n"
+/* class by manual */                + "[y xml]\n"
+/* class by manual */                + "    cat arquivo.xml | mostraEstrutura\n"
+/* class by manual */                + "    xml arquivo.xlsx mostraEstrutura\n"
+/* class by manual */                + "    cat arquivo.xml | mostraTags\n"
 /* class by manual */                + "[y token]\n"
 /* class by manual */                + "    y token value\n"
 /* class by manual */                + "[y gettoken]\n"
@@ -6085,6 +6202,5 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
 

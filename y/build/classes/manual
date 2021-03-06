@@ -90,6 +90,10 @@ Exemplos...
     xlsxToCSV arquivo.xlsx nomeAba Planilha1
     xlsxToCSV arquivo.xlsx exportAll
     obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1
+[y xml]
+    cat arquivo.xml | mostraEstrutura
+    xml arquivo.xlsx mostraEstrutura
+    cat arquivo.xml | mostraTags
 [y token]
     y token value
 [y gettoken]
