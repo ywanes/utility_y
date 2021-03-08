@@ -155,6 +155,8 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","Gestão de Mud (CITSD_change)"};                
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","N A (AccountLeads)"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
+        
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
         new Y().go(args);
     }
         
@@ -5879,7 +5881,7 @@ class XML{
 /* class by manual */                + "    obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1\n"
 /* class by manual */                + "[y xml]\n"
 /* class by manual */                + "    cat arquivo.xml | mostraEstrutura\n"
-/* class by manual */                + "    xml arquivo.xlsx mostraEstrutura\n"
+/* class by manual */                + "    xml arquivo.xml mostraEstrutura\n"
 /* class by manual */                + "    cat arquivo.xml | mostraTags\n"
 /* class by manual */                + "[y token]\n"
 /* class by manual */                + "    y token value\n"

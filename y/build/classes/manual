@@ -92,7 +92,7 @@ Exemplos...
     obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1
 [y xml]
     cat arquivo.xml | mostraEstrutura
-    xml arquivo.xlsx mostraEstrutura
+    xml arquivo.xml mostraEstrutura
     cat arquivo.xml | mostraTags
 [y token]
     y token value
