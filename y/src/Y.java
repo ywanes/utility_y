@@ -157,6 +157,9 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
         
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
+        
+        //args=new String[]{"selectCSV","-csv","c:\\tmp\\tmp\\a.csv","select CAMPO2, CAMPO2 from this"};                                        
+                
         new Y().go(args);
     }
         
@@ -283,6 +286,17 @@ cat buffer.log
             comando_invalido(args);
             return;
         }
+        
+        if ( args[0].equals("selectCSV") ){
+            try{
+                selectCSV(args);
+                return;
+            }catch(Exception e){
+                System.err.println(e.toString());
+                System.exit(1);
+            }
+        }
+        
         if ( args[0].equals("xlsxToCSV") && args.length >= 3 ){
             //args=new String[]{"xlsxToCSV","teste.xlsx","mostraEstrutura"};
             //args=new String[]{"xlsxToCSV","teste.xlsx","listaAbas"};
@@ -1097,6 +1111,34 @@ cat buffer.log
         return new String[]{v,i,txt};
     }
     
+    public String[] get_csvFile_sqlFile_sqlText(String[] args) {
+        String csvFile="";
+        String sqlFile="";
+        String sqlText="";
+        
+        if ( args.length > 0 && args[0].equals("selectCSV") )
+            args=sliceParm(1,args);
+        
+        if ( args.length > 1 && args[0].equals("-csv") ){
+            csvFile=args[1];
+            args=sliceParm(2,args);
+        }
+        if ( args.length > 1 && args[0].equals("-sql") ){
+            sqlFile=args[1];
+            args=sliceParm(2,args);
+        }
+        if ( args.length == 1 ){
+            sqlText=args[0];
+            args=sliceParm(1,args);
+        }
+        
+        if ( sqlFile.equals("") && sqlText.equals("") )
+            return null;
+        if ( !sqlFile.equals("") && !sqlText.equals("") )
+            return null;
+        return new String[]{csvFile,sqlFile,sqlText};        
+    }
+    
     
     public String [] get_senha_isEncoding_md_salt(String [] args){
         String senha=null;
@@ -1468,6 +1510,100 @@ cat buffer.log
         
     }
 
+    // comando selectCSV(nao confundir com banco selectCSV)
+    public String [] selectCSV_camposName=null;
+    public String [] selectCSV_camposValue=null;
+    public String [] selectCSV_camposNameSaida=null;
+    public String [] selectCSV_camposNameSaidaAlias=null;    
+    public String [] selectCSV_tratativasWhere=null;    
+    public void selectCSV(String[] args) throws Exception {
+        ////////////////
+        
+        String [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText(args);
+        if ( csvFile_sqlFile_sqlText == null ){
+            comando_invalido(args);
+            return;
+        }
+        
+        String csvFile=csvFile_sqlFile_sqlText[0];
+        String sqlFile=csvFile_sqlFile_sqlText[1];
+        String sqlText=csvFile_sqlFile_sqlText[2];
+        OutputStream out=System.out;
+        
+        if ( !sqlFile.equals("") ){
+            String line=null;
+            sqlText="";
+            readLineB(sqlFile);
+            while ( (line=readLineB()) != null )
+                sqlText+=line+" ";
+            closeLineB();
+        }
+
+        if ( sqlText.equals("") ){ // trava de segurança
+            comando_invalido(args);
+            return;
+        }
+        
+        try{
+            if ( ! csvFile.equals("") )
+                readLine(csvFile);
+            String line;            
+            int qntCamposCSV=0;
+            String valorColuna=null;
+                
+            while ( (line=readLine()) != null ){
+                // tratando header
+                if ( qntCamposCSV == 0 )
+                {
+                    selectCSV_camposName=getCamposCSV(line);
+                    qntCamposCSV=selectCSV_camposName.length;
+                    selectCSV_camposValue=new String[selectCSV_camposName.length];
+                    interpretaSqlParaSelectCSV(sqlText);
+                    
+                    StringBuilder sb=new StringBuilder();
+                    for ( int i=0;i<selectCSV_camposNameSaidaAlias.length;i++ ){                    
+                        sb.append("\"");
+                        sb.append(selectCSV_camposNameSaidaAlias[i]);
+                        if ( i < selectCSV_camposNameSaidaAlias.length-1 )
+                            sb.append("\";");
+                        else
+                            sb.append("\"");
+                    }
+                    sb.append("\n");
+                    out.write(sb.toString().getBytes());
+                    continue;
+                }
+                
+                if ( line.trim().equals("") && qntCamposCSV > 1 )
+                    break;
+                
+                readColunaCSV(line); // init linhaCSV                
+                
+                for ( int i=0;i<qntCamposCSV;i++ ){                    
+                    if ( linhaCSV != null ){
+                        valorColuna=readColunaCSV();
+                        if ( valorColuna == null )
+                            linhaCSV=null; // nao precisar ler mais nada    
+                    }
+                    selectCSV_camposValue[i]=valorColuna;
+                }     
+                processaRegistroSqlParaSelectCSV(out);                
+            }
+            closeLine();
+        }
+        catch(Exception e)
+        {
+            if ( ! csvFile.equals("") )
+                System.err.println("Erro: "+e.toString());
+            else
+                System.err.println("Erro: "+e.toString()+" file:"+csvFile);
+            System.exit(1);
+        }    
+        out.flush();
+        out.close();
+    }
+
+    // comando banco selectCSV(nao confundir com selectCSV)
     public void selectCSV(String conn,String parm){
         
         boolean onlychar=false;
@@ -1618,7 +1754,7 @@ cat buffer.log
             con.setAutoCommit(false);
             stmt = con.createStatement();
 
-            while( (line=readlineB()) != null ){
+            while( (line=readLineB()) != null ){
                 if ( par && line.trim().equals("") )
                     continue;
                 if ( par ){
@@ -2260,7 +2396,7 @@ cat buffer.log
         scanner_pipeB.useDelimiter("\n");
     }
         
-    public String readlineB(){        
+    public String readLineB(){        
         try{
             if ( scanner_pipeB == null )
                 readLineB(System.in);
@@ -4991,6 +5127,75 @@ cat buffer.log
         pipe_out.flush();
         pipe_out.close();
     }
+
+    private void interpretaSqlParaSelectCSV(String sqlText) throws Exception {
+        String sqlTextBKP=sqlText;
+        
+        if ( ! sqlText.startsWith("select ") )
+            throw_erroDeInterpretacaoDeSQL("ORAZ: 01 - Não foi possível interpretar o SQL: "+sqlTextBKP);
+        
+        // remove "select "
+        sqlText=sqlText.substring("select ".length());
+        
+        if ( ! sqlText.endsWith(" from this") )
+            throw_erroDeInterpretacaoDeSQL("ORAZ: 02 - Não foi possível interpretar o SQL: "+sqlTextBKP);
+
+        // remove 
+        sqlText=sqlText.substring(0,sqlText.length()-" from this".length());
+
+        sqlText=sqlText.trim();
+        
+        if ( sqlText.equals("") )
+            throw_erroDeInterpretacaoDeSQL("ORAZ: 03 - Não foi possível interpretar o SQL: "+sqlTextBKP);
+        
+        if ( sqlText.equals("*") ){
+            selectCSV_camposNameSaida=selectCSV_camposName;
+            selectCSV_camposNameSaidaAlias=selectCSV_camposName;
+            selectCSV_tratativasWhere=new String[]{};
+            return;
+        }
+            
+        String [] partes=sqlText.split(",");
+        for ( int i=0;i<partes.length;i++ )
+            partes[i]=partes[i].trim();
+        selectCSV_camposNameSaida=partes;
+        selectCSV_camposNameSaidaAlias=partes;
+        selectCSV_tratativasWhere=new String[]{};
+    }
+
+    private void processaRegistroSqlParaSelectCSV(OutputStream out) throws Exception {
+        StringBuilder sb=new StringBuilder();
+        boolean achou=false;
+        
+        for ( int i=0;i<selectCSV_camposNameSaida.length;i++ ){        
+            sb.append("\"");
+            achou=false;
+            for ( int j=0;j<selectCSV_camposName.length;j++ ){        
+                if ( selectCSV_camposNameSaida[i].equals(selectCSV_camposName[j]) ){
+                    achou=true;
+                    if ( selectCSV_camposValue[j] != null )
+                        sb.append(selectCSV_camposValue[j]);
+                    break;
+                }
+            }
+            if ( ! achou )
+                throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo: "+selectCSV_camposNameSaida[i]);
+            
+            if ( i < selectCSV_camposNameSaida.length-1 )
+                sb.append("\";");
+            else
+                sb.append("\"");
+        }
+        
+        // implementar where depois
+        
+        sb.append("\n");
+        out.write(sb.toString().getBytes());
+    }
+
+    private void throw_erroDeInterpretacaoDeSQL(String string) throws Exception {
+        throw new Exception(string);
+    }
     
 }
 
@@ -5783,6 +5988,7 @@ class XML{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -5796,6 +6002,7 @@ class XML{
 /* class by manual */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
 /* class by manual */                + "  [y banco executejob]\n"
 /* class by manual */                + "  [y banco buffer [|-n_lines 500] [|-log buffer.log]]\n"
+/* class by manual */                + "  [y selectCSV]\n"
 /* class by manual */                + "  [y xlsxToCSV]\n"
 /* class by manual */                + "  [y token]\n"
 /* class by manual */                + "  [y gettoken]\n"
@@ -5872,6 +6079,10 @@ class XML{
 /* class by manual */                + "    ) | y banco executejob\n"
 /* class by manual */                + "[y banco buffer [|-n_lines 500] [|-log buffer.log]]    \n"
 /* class by manual */                + "    echo \"select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 500 -log buffer.log | y banco conn,hash executeInsert\n"
+/* class by manual */                + "[y selectCSV]\n"
+/* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this\"\n"
+/* class by manual */                + "    y selectCSV -csv file.csv \"select * from this\"\n"
+/* class by manual */                + "    y selectCSV -csv file.csv -sql consulta.sql\n"
 /* class by manual */                + "[y xlsxToCSV]\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx mostraEstrutura\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx listaAbas\n"
@@ -6099,6 +6310,7 @@ class XML{
 /* class by manual */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
 /* class by manual */                + "  [y banco executejob]\n"
 /* class by manual */                + "  [y banco buffer [|-n_lines 500] [|-log buffer.log]]\n"
+/* class by manual */                + "  [y selectCSV]\n"
 /* class by manual */                + "  [y xlsxToCSV]\n"
 /* class by manual */                + "  [y token]\n"
 /* class by manual */                + "  [y gettoken]\n"
