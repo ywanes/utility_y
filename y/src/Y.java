@@ -4909,7 +4909,7 @@ cat buffer.log
             ArrayList<ZipEntry> entries=new ArrayList<ZipEntry>();
             while(enumeration_entries.hasMoreElements()){
                 ZipEntry z=enumeration_entries.nextElement();
-                if ( z.getName().equals("xl/sharedStrings.xml") ) // "xl/sharedStrings.xml" na frente
+                if ( z.getName().equals("xl/sharedStrings.xml") ) // "xl/sharedStrings.xml" precisa ser carregado antes das "xl/worksheets/"
                     entries.add(0,z);
                 else
                     entries.add(z);
