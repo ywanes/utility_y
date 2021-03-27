@@ -5026,7 +5026,7 @@ cat buffer.log
         processaCelula_max_tail_coluna=-1;
     }
     
-    private void processaCelula(String local, String valor, OutputStream out) throws Exception {
+    private void processaCelula(String localCelula, String valor, OutputStream out) throws Exception {
         //public static String linhasExcel="0123456789";    
         //public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         int linha=0;
@@ -5034,7 +5034,7 @@ cat buffer.log
         int coluna=0;
         int coluna_exp=0;    
         
-        int len=local.length();
+        int len=localCelula.length();
         String entrada="";
         int pos=0;
         
@@ -5043,7 +5043,7 @@ cat buffer.log
         valor=valor.replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("\"","\"\"");
         
         for ( int i=len-1;i>=0;i-- ){ // obs: no excel a primeira linha é 1. A primeira coluna é A(aqui representada com 0)
-            entrada=local.substring(i,i+1);
+            entrada=localCelula.substring(i,i+1);
             pos=linhasExcel.indexOf(entrada);
             if ( pos != -1 ){ // linha
                 linha+=Math.pow(linhasExcel_len, linha_exp++)*pos;
