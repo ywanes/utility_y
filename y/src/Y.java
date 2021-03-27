@@ -158,8 +158,9 @@ cat buffer.log
         
         //args=new String[]{"selectCSV","-csv","c:\\tmp\\tmp\\a.csv","select CAMPO2, CAMPO2 from this"};                                        
         
-        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};                                        
-        args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","mostraEstrutura"};                                        
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","mostraEstrutura"};
         
         new Y().go(args);
     }
@@ -1517,8 +1518,7 @@ cat buffer.log
     public String [] selectCSV_camposNameSaida=null;
     public String [] selectCSV_camposNameSaidaAlias=null;    
     public String [] selectCSV_tratativasWhere=null;    
-    public void selectCSV(String[] args) throws Exception {
-        ////////////////
+    public void selectCSV(String[] args) throws Exception {        
         
         String [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText(args);
         if ( csvFile_sqlFile_sqlText == null ){
@@ -4896,7 +4896,7 @@ cat buffer.log
         
         try{            
             ZipFile zipFile = new ZipFile(caminhoXlsx);
-            Enumeration<? extends ZipEntry> entries = zipFile.entries();            
+            Enumeration<? extends ZipEntry> enumeration_entries = zipFile.entries();            
     
             InputStream is=null;            
             String caminho="";
@@ -4905,9 +4905,17 @@ cat buffer.log
             XML xmlNomes=null;
             int sheet_count=0;
             String atributo_t=null;
-
-            while(entries.hasMoreElements()){
-                ZipEntry entry = entries.nextElement();            
+            
+            ArrayList<ZipEntry> entries=new ArrayList<ZipEntry>();
+            while(enumeration_entries.hasMoreElements()){
+                ZipEntry z=enumeration_entries.nextElement();
+                if ( z.getName().equals("xl/sharedStrings.xml") ) // "xl/sharedStrings.xml" na frente
+                    entries.add(0,z);
+                else
+                    entries.add(z);
+            }
+            
+            for ( ZipEntry entry : entries){
                 caminho=entry.getName();            
                 if ( caminho.equals("xl/sharedStrings.xml") || caminho.equals("xl/workbook.xml") || caminho.startsWith("xl/worksheets/") ){
                     // xl/worksheets/sheet1.xml
@@ -5647,8 +5655,8 @@ class XML{
     private String tag=null;    
     
         
-    private static ArrayList<String> listaTxt=null;
-    private static ArrayList<Integer> listaNivel=null;
+    public static ArrayList<String> listaTxt=null;
+    public static ArrayList<Integer> listaNivel=null;
     public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho) {
         resetLista();
         
@@ -5671,6 +5679,9 @@ class XML{
         // tag de fechamento </a>
         // tag unica         <a/>
         
+        if ( mostraEstrutura && caminho != null )
+            System.out.println("=> "+caminho);        
+        
         while ( (txt=Y.readLine()) != null ){                        
             txt=txt.replace("\n","")+">";
             len=txt.length();
@@ -5679,7 +5690,7 @@ class XML{
             if ( first ){
                 first=false;
                 int detectBOM=txt.indexOf("<?xml");
-                if ( detectBOM < -1 && detectBOM <= 3 )
+                if ( detectBOM > -1 && detectBOM <= 3 )
                     continue;
             }
 
@@ -5720,7 +5731,7 @@ class XML{
                     tail=null;
                     tag_in=false;
                     tag_finish=false; // segurança
-                    addLista(sb.toString(),nivel);
+                    addLista(sb.toString(),nivel,mostraEstrutura);
                     sb=new StringBuilder();
                     tail_tag_abertura=false;
                     continue;                
@@ -5730,7 +5741,7 @@ class XML{
                     sb.append(entrada);
                     tail=null;
                     tag_in=false;                
-                    addLista(sb.toString(),nivel);
+                    addLista(sb.toString(),nivel,mostraEstrutura);
                     sb=new StringBuilder();
                     if ( tag_finish ){
                         //nivel--; foi decrementado em outro local
@@ -5751,7 +5762,7 @@ class XML{
                     tag_value=true;                
                     sb.append(tail);                    
                     tail=entrada;
-                    addLista(sb.toString(),nivel);
+                    addLista(sb.toString(),nivel,mostraEstrutura);
                     sb=new StringBuilder();
                     tag_value=false;
                     tail_tag_abertura=false;
@@ -5772,7 +5783,7 @@ class XML{
                     tag_value=false;
                     sb.append(tail);                    
                     tail=entrada;
-                    addLista(sb.toString(),nivel);
+                    addLista(sb.toString(),nivel,mostraEstrutura);
                     sb=new StringBuilder();
                     continue;            
                 }
@@ -5786,8 +5797,6 @@ class XML{
         if ( tail != null ){
             ErroFatal(4);
         }        
-        if ( mostraEstrutura )
-            mostraEstrutura(listaTxt,listaNivel,caminho);
         if ( mostraTags )
             mostraTags(listaTxt,listaNivel,caminho);
     }
@@ -5797,8 +5806,17 @@ class XML{
         listaNivel=new ArrayList<Integer>();
     }
     
-    private static void addLista(String txt, int nivel) {
-        listaTxt.add(txt);
+    private static void addLista(String txt, int nivel, boolean mostraEstrutura) {
+        
+        if ( mostraEstrutura ){
+            if ( ! txt.trim().equals("") ){
+                for (int j=0;j<nivel-1;j++ )
+                    System.out.print("\t");
+                System.out.println(txt);
+            }
+        }
+        
+        listaTxt.add(txt.trim());
         listaNivel.add(nivel);
     }
     
@@ -5812,7 +5830,6 @@ class XML{
         // int inicia em 0        
         String tag="";
         String tipoTag=""; // inicio fim unica
-        
         if ( ini == fim && !listaTxt.get(ini).startsWith("<") )
             return listaTxt.get(ini);        
         ArrayList<XML> lista=new ArrayList<XML>();
