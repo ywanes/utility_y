@@ -159,7 +159,8 @@ cat buffer.log
         //args=new String[]{"selectCSV","-csv","c:\\tmp\\tmp\\a.csv","select CAMPO2, CAMPO2 from this"};                                        
         
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};                                        
-                
+        args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","mostraEstrutura"};                                        
+        
         new Y().go(args);
     }
         
@@ -4886,6 +4887,7 @@ cat buffer.log
     ArrayList<String> xlsxToCSV_nomes=null;
     ArrayList<String> shared=null;            
     private void xlsxToCSV(String caminhoXlsx, boolean mostraEstrutura, boolean listaAbas, int numeroAba, String nomeAba, OutputStream out) throws Exception {
+
         //"C:\\Users\\ywanes\\Documents\\teste.xlsx"
         //xlsxToCSV arquivo.xlsx mostraEstrutura
         //xlsxToCSV arquivo.xlsx listaAbas
@@ -5543,6 +5545,9 @@ class XML{
         if ( caminho != null )
             System.out.println("=> "+caminho);        
         for (int i=0;i<len;i++ ){
+            // suprimindo espaços
+            if ( listaTxt.get(i).trim().equals("") )
+                continue;
             nivel=listaNivel.get(i)-1;
             for (int j=0;j<nivel;j++ )
                 System.out.print("\t");
@@ -5635,6 +5640,7 @@ class XML{
             System.out.println(tags.get(i));
     }
 
+
     private HashMap atributos=new HashMap();
     private String value=null;
     private ArrayList<XML> filhos=new ArrayList<XML>();
@@ -5644,8 +5650,7 @@ class XML{
     private static ArrayList<String> listaTxt=null;
     private static ArrayList<Integer> listaNivel=null;
     public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho) {
-        listaTxt=new ArrayList<String>();
-        listaNivel=new ArrayList<Integer>();
+        resetLista();
         
         Y.readLine(is,"UTF-8",">");        
         StringBuilder sb=new StringBuilder();
@@ -5670,16 +5675,18 @@ class XML{
             txt=txt.replace("\n","")+">";
             len=txt.length();
             
+
             if ( first ){
                 first=false;
                 int detectBOM=txt.indexOf("<?xml");
-                if ( detectBOM <= 3 )
+                if ( detectBOM < -1 && detectBOM <= 3 )
                     continue;
             }
 
             for( int i=0;i<len;i++ ){
                 entrada=txt.substring(i,i+1);
-                if ( nivel < 1 ){
+                
+                if ( nivel < 1 ){                    
                     ErroFatal(1);
                 }     
                 if ( tag_in && tag_value ){
@@ -5713,8 +5720,7 @@ class XML{
                     tail=null;
                     tag_in=false;
                     tag_finish=false; // segurança
-                    listaTxt.add(sb.toString());
-                    listaNivel.add(nivel);
+                    addLista(sb.toString(),nivel);
                     sb=new StringBuilder();
                     tail_tag_abertura=false;
                     continue;                
@@ -5724,8 +5730,7 @@ class XML{
                     sb.append(entrada);
                     tail=null;
                     tag_in=false;                
-                    listaTxt.add(sb.toString());
-                    listaNivel.add(nivel);
+                    addLista(sb.toString(),nivel);
                     sb=new StringBuilder();
                     if ( tag_finish ){
                         //nivel--; foi decrementado em outro local
@@ -5746,8 +5751,7 @@ class XML{
                     tag_value=true;                
                     sb.append(tail);                    
                     tail=entrada;
-                    listaTxt.add(sb.toString());
-                    listaNivel.add(nivel);
+                    addLista(sb.toString(),nivel);
                     sb=new StringBuilder();
                     tag_value=false;
                     tail_tag_abertura=false;
@@ -5768,8 +5772,7 @@ class XML{
                     tag_value=false;
                     sb.append(tail);                    
                     tail=entrada;
-                    listaTxt.add(sb.toString());
-                    listaNivel.add(nivel);
+                    addLista(sb.toString(),nivel);
                     sb=new StringBuilder();
                     continue;            
                 }
@@ -5789,6 +5792,16 @@ class XML{
             mostraTags(listaTxt,listaNivel,caminho);
     }
         
+    private static void resetLista() {
+        listaTxt=new ArrayList<String>();
+        listaNivel=new ArrayList<Integer>();
+    }
+    
+    private static void addLista(String txt, int nivel) {
+        listaTxt.add(txt);
+        listaNivel.add(nivel);
+    }
+    
     public static XML getXML(){
         return ((ArrayList<XML>)getXML(1,0,listaTxt.size()-1)).get(0);
     }    
@@ -5946,6 +5959,7 @@ class XML{
     }
     
     public static void ErroFatal(int n) {
+        System.out.println("Erro Fatal! "+n);
         System.err.println("Erro Fatal! "+n);
         System.exit(1);
     }    
