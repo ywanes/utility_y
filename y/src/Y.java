@@ -156,9 +156,9 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","N A (AccountLeads)"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
         
-        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
-        
         //args=new String[]{"selectCSV","-csv","c:\\tmp\\tmp\\a.csv","select CAMPO2, CAMPO2 from this"};                                        
+        
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};                                        
                 
         new Y().go(args);
     }
@@ -2351,15 +2351,17 @@ cat buffer.log
     
     public static java.util.Scanner scanner_pipe=null;
     public static void readLine(InputStream in){        
-        readLine(in,null);
+        readLine(in,null,null);
     }    
     
-    public static void readLine(InputStream in,String encoding){
+    public static void readLine(InputStream in,String encoding,String delimiter){
+        if ( delimiter == null )
+            delimiter="\n";
         if ( encoding == null )
             scanner_pipe=new java.util.Scanner(in);
         else
             scanner_pipe=new java.util.Scanner(in,encoding);
-        scanner_pipe.useDelimiter("\n");
+        scanner_pipe.useDelimiter(delimiter);        
     }    
     
     public static String readLine(){
@@ -5002,7 +5004,7 @@ cat buffer.log
                     }  
                     processaCelulaFlush(out);
                 }
-            }            
+            }               
         }catch(Exception e){
             System.err.println("Erro "+e.toString());
             System.exit(1);
@@ -5638,41 +5640,22 @@ class XML{
     private ArrayList<XML> filhos=new ArrayList<XML>();
     private String tag=null;    
     
+        
     private static ArrayList<String> listaTxt=null;
     private static ArrayList<Integer> listaNivel=null;
     public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho) {
         listaTxt=new ArrayList<String>();
         listaNivel=new ArrayList<Integer>();
         
-        Y.readLine(is,"UTF-8");
+        Y.readLine(is,"UTF-8",">");        
         StringBuilder sb=new StringBuilder();
-        String line="";
         String txt=null;
         boolean first=true;
-        while ( (line=Y.readLine()) != null ){            
-            if ( first ){
-                first=false;
-                int detectBOM=line.indexOf("<?xml");
-                if ( detectBOM >=1 && detectBOM <= 3 )
-                    line=line.substring(detectBOM);
-                if ( line.startsWith("<?xml") ){
-                    int tmp=line.indexOf("?>");
-                    if ( tmp > -1 ){
-                        line=line.substring(tmp+2);
-                    }else{
-                        ErroFatal(44);
-                    }
-                }
-            }
-            sb.append(line);            
-        }
-        Y.closeLine();
-        txt=sb.toString();
         
         String entrada=null;
         String tail=null;
         sb=new StringBuilder();
-        int len=txt.length();
+        int len=0;
         int nivel=1;
         boolean tag_in=false;
         boolean tag_finish=false;
@@ -5683,106 +5666,120 @@ class XML{
         // tag de fechamento </a>
         // tag unica         <a/>
         
-        for( int i=0;i<len;i++ ){
-            entrada=txt.substring(i,i+1);
-            if ( nivel < 1 ){
-                ErroFatal(1);
-            }     
-            if ( tag_in && tag_value ){
-                ErroFatal(2);
+        while ( (txt=Y.readLine()) != null ){                        
+            txt=txt.replace("\n","")+">";
+            len=txt.length();
+            
+            if ( first ){
+                first=false;
+                int detectBOM=txt.indexOf("<?xml");
+                if ( detectBOM <= 3 )
+                    continue;
             }
-            if ( tail == null ){
-                tail=entrada;
-                continue;
-            }
-            if( !tag_in && !tag_value && tail.equals("<") && entrada.equals("/") ){ // tag de fechamento
-                sb.append(tail);
-                sb.append(entrada);
-                tail=null;
-                tag_in=true;
-                tag_finish=true;
-                nivel--;
-                continue;
-            }
-            if( !tag_in && !tag_value && tail.equals("<") ){ // tag de abertura ou tag unica
-                sb.append(tail);                
-                tail=entrada;
-                tag_in=true;                
-                continue;
-            }
-            if ( tag_in && tail.equals("/") && entrada.equals(">") ){ // tag unica            
-                if ( tag_finish ){ // nao pode haver finish com tag unica
-                    ErroFatal(3);
+
+            for( int i=0;i<len;i++ ){
+                entrada=txt.substring(i,i+1);
+                if ( nivel < 1 ){
+                    ErroFatal(1);
+                }     
+                if ( tag_in && tag_value ){
+                    ErroFatal(2);
                 }
-                sb.append(tail);
-                sb.append(entrada);
-                tail=null;
-                tag_in=false;
-                tag_finish=false; // segurança
-                listaTxt.add(sb.toString());
-                listaNivel.add(nivel);
-                sb=new StringBuilder();
-                tail_tag_abertura=false;
-                continue;                
-            }
-            if ( tag_in && entrada.equals(">") ){ // tag abertura ou tag fechamento
-                sb.append(tail);
-                sb.append(entrada);
-                tail=null;
-                tag_in=false;                
-                listaTxt.add(sb.toString());
-                listaNivel.add(nivel);
-                sb=new StringBuilder();
-                if ( tag_finish ){
-                    //nivel--; foi decrementado em outro local
+                if ( tail == null ){
+                    tail=entrada;
+                    continue;
+                }
+                if( !tag_in && !tag_value && tail.equals("<") && entrada.equals("/") ){ // tag de fechamento
+                    sb.append(tail);
+                    sb.append(entrada);
+                    tail=null;
+                    tag_in=true;
+                    tag_finish=true;
+                    nivel--;
+                    continue;
+                }
+                if( !tag_in && !tag_value && tail.equals("<") ){ // tag de abertura ou tag unica
+                    sb.append(tail);                
+                    tail=entrada;
+                    tag_in=true;                
+                    continue;
+                }
+                if ( tag_in && tail.equals("/") && entrada.equals(">") ){ // tag unica            
+                    if ( tag_finish ){ // nao pode haver finish com tag unica
+                        ErroFatal(3);
+                    }
+                    sb.append(tail);
+                    sb.append(entrada);
+                    tail=null;
+                    tag_in=false;
+                    tag_finish=false; // segurança
+                    listaTxt.add(sb.toString());
+                    listaNivel.add(nivel);
+                    sb=new StringBuilder();
                     tail_tag_abertura=false;
-                }else{
-                    nivel++;
-                    tail_tag_abertura=true;
+                    continue;                
                 }
-                tag_finish=false;
-                continue;                
-            }
-            if ( !tag_in && !tag_value && entrada.equals("<") ){ // inicio e fim de value bem rapido ex: ...>5<...
-                if ( ! tail_tag_abertura ){
-                    // nao eh possivel iniciar value
+                if ( tag_in && entrada.equals(">") ){ // tag abertura ou tag fechamento
+                    sb.append(tail);
+                    sb.append(entrada);
+                    tail=null;
+                    tag_in=false;                
+                    listaTxt.add(sb.toString());
+                    listaNivel.add(nivel);
+                    sb=new StringBuilder();
+                    if ( tag_finish ){
+                        //nivel--; foi decrementado em outro local
+                        tail_tag_abertura=false;
+                    }else{
+                        nivel++;
+                        tail_tag_abertura=true;
+                    }
+                    tag_finish=false;
+                    continue;                
+                }
+                if ( !tag_in && !tag_value && entrada.equals("<") ){ // inicio e fim de value bem rapido ex: ...>5<...
+                    if ( ! tail_tag_abertura ){
+                        // nao eh possivel iniciar value
+                        tail=entrada;
+                        continue;
+                    }
+                    tag_value=true;                
+                    sb.append(tail);                    
+                    tail=entrada;
+                    listaTxt.add(sb.toString());
+                    listaNivel.add(nivel);
+                    sb=new StringBuilder();
+                    tag_value=false;
+                    tail_tag_abertura=false;
+                    continue;
+                }
+                if ( !tag_in && !tag_value ){ // iniciando value
+                    if ( ! tail_tag_abertura ){
+                        // nao eh possivel iniciar value
+                        tail=entrada;
+                        continue;
+                    }                
+                    tag_value=true;                
+                    sb.append(tail);                    
                     tail=entrada;
                     continue;
                 }
-                tag_value=true;                
-                sb.append(tail);                    
-                tail=entrada;
-                listaTxt.add(sb.toString());
-                listaNivel.add(nivel);
-                sb=new StringBuilder();
-                tag_value=false;
-                tail_tag_abertura=false;
-                continue;
-            }
-            if ( !tag_in && !tag_value ){ // iniciando value
-                if ( ! tail_tag_abertura ){
-                    // nao eh possivel iniciar value
+                if( tag_value && entrada.equals("<") ){ // finalizando processamento de value
+                    tag_value=false;
+                    sb.append(tail);                    
                     tail=entrada;
-                    continue;
-                }                
-                tag_value=true;                
+                    listaTxt.add(sb.toString());
+                    listaNivel.add(nivel);
+                    sb=new StringBuilder();
+                    continue;            
+                }
                 sb.append(tail);                    
                 tail=entrada;
-                continue;
-            }
-            if( tag_value && entrada.equals("<") ){ // finalizando processamento de value
-                tag_value=false;
-                sb.append(tail);                    
-                tail=entrada;
-                listaTxt.add(sb.toString());
-                listaNivel.add(nivel);
-                sb=new StringBuilder();
                 continue;            
-            }
-            sb.append(tail);                    
-            tail=entrada;
-            continue;            
+            }            
         }
+        Y.closeLine();
+        
         if ( tail != null ){
             ErroFatal(4);
         }        
@@ -5791,7 +5788,7 @@ class XML{
         if ( mostraTags )
             mostraTags(listaTxt,listaNivel,caminho);
     }
-    
+        
     public static XML getXML(){
         return ((ArrayList<XML>)getXML(1,0,listaTxt.size()-1)).get(0);
     }    
