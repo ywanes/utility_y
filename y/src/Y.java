@@ -2866,14 +2866,14 @@ cat buffer.log
         boolean print=false;
         String line=null;
         String line_="";
-        
+
         if ( txt.startsWith("^") ){
             first=true;
             txt=txt.substring(1);
         }
         if ( txt.endsWith("$") ){
             tail=true;
-            txt=txt.substring(0,txt.length()-2);
+            txt=txt.substring(0,txt.length()-1);
         }     
         if ( i_ )
             txt=txt.toUpperCase();
