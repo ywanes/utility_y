@@ -157,6 +157,7 @@ Exemplos...
 [y grep]
     cat arquivo | y grep ^Texto$
     cat arquivo | y grep AB
+    cat arquivo | y grep -i -v aa bb cc
 [y wc -l]
     cat arquivo | y wc -l
 [y head]

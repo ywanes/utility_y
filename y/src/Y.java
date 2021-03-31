@@ -1082,35 +1082,63 @@ cat buffer.log
         return new String[]{connIn,fileCSV,connOut,outTable,trunc,app};
     }
         
-    public String [] get_v_i_txt(String [] args){
+    public ArrayList<String> get_v_i_txt(String [] args){
         String v="N";
         String i="N";
         String txt="";
+        ArrayList<String> lista=new ArrayList<String>();
         
         if ( args.length > 0 && args[0].equals("grep") )
             args=sliceParm(1,args);
         
-        if ( args.length > 1 && args[0].equals("-v") ){
+        // parametros -v -i
+        if ( args.length > 2 && args[0].equals("-v") && args[1].equals("-i") ){
             v="S";
-            args=sliceParm(1,args);
-        }
-        if ( args.length > 1 && args[0].equals("-i") ){
             i="S";
-            args=sliceParm(1,args);
-        }        
-        if ( args.length > 1 && args[0].equals("-v") ){ // repetido de proposito, tratando [-v -i] e [-i -v]
-            v="S";
-            args=sliceParm(1,args);
+            args=sliceParm(2,args);
+        }else{
+            if ( args.length > 2 && args[0].equals("-i") && args[1].equals("-v") ){
+                i="S";
+                v="S";
+                args=sliceParm(2,args);
+            }else{
+                if ( args.length > 1 && args[0].equals("-v") ){
+                    v="S";
+                    args=sliceParm(1,args);
+                }else{
+                    if ( args.length > 1 && args[0].equals("-i") ){
+                        i="S";
+                        args=sliceParm(1,args);
+                    }
+                }
+            }            
         }
 
-        if ( args.length == 1 ){
+        lista.add(v);
+        lista.add(i);
+
+        while(args.length > 0){
+            String starting="N";
+            String ending="N";
+            
             txt=args[0];
+            if ( i.equals("S") )
+                txt=txt.toUpperCase();
+            
+            if ( txt.startsWith("^") ){
+                txt=txt.substring(1);
+                starting="S";
+            }
+            if ( txt.endsWith("$") ){
+                txt=txt.substring(0,txt.length()-1);
+                ending="S";
+            }  
+            lista.add(starting);
+            lista.add(ending);
+            lista.add(txt);
             args=sliceParm(1,args);
         }
-        
-        if ( txt.equals("") )
-            return null;
-        return new String[]{v,i,txt};
+        return lista;
     }
     
     public String[] get_csvFile_sqlFile_sqlText(String[] args) {
@@ -2851,45 +2879,60 @@ cat buffer.log
     
     public void grep(String [] args)
     {
-        boolean first=false;
-        boolean tail=false;
+        boolean print=false;
+        String line_bkp="";
+        String line="";
+
+        ArrayList<Boolean> lista_starting=new ArrayList<Boolean>();
+        ArrayList<Boolean> lista_ending=new ArrayList<Boolean>();
+        ArrayList<String> lista_txt=new ArrayList<String>();
         
-        String [] get_v_i_txt=get_v_i_txt(args);
-        if ( get_v_i_txt == null ){
+        ArrayList<String> lista=get_v_i_txt(args);
+        if ( lista == null ){
             comando_invalido(args);
             return;
         }
-        boolean v_=get_v_i_txt[0].equals("S");
-        boolean i_=get_v_i_txt[1].equals("S");        
-        String txt=get_v_i_txt[2];        
+        boolean v_=lista.get(0).equals("S");
+        boolean i_=lista.get(1).equals("S");
         
-        boolean print=false;
-        String line=null;
-        String line_="";
-
-        if ( txt.startsWith("^") ){
-            first=true;
-            txt=txt.substring(1);
+        for ( int i=2;i<lista.size();i+=3 ){
+            lista_starting.add(lista.get(i).equals("S"));
+            lista_ending.add(lista.get(i+1).equals("S"));
+            lista_txt.add(lista.get(i+2));
         }
-        if ( txt.endsWith("$") ){
-            tail=true;
-            txt=txt.substring(0,txt.length()-1);
-        }     
+        
         if ( i_ )
-            txt=txt.toUpperCase();
+            lista_txt.set(0,lista_txt.get(0).toUpperCase());
         
         try {            
-            while ( (line_=line=readLine()) != null ) {
+            while ( (line=line_bkp=readLine()) != null ) {
                 if ( i_ )
-                    line_=line_.toUpperCase();
-                if ( !print && !first && !tail && line_.contains(txt) )
-                    print=true;                
-                if ( !print && first && !tail && line_.startsWith(txt) )
-                    print=true;                
-                if ( !print && !first && tail && line_.endsWith(txt) )
-                    print=true;                
-                if ( !print && first && tail && line_.startsWith(txt) && line_.endsWith(txt) )
-                    print=true;  
+                    line=line.toUpperCase();
+                for ( int i=0;i<lista_txt.size();i++ ){
+                    if ( lista_txt.get(i).equals("") && lista_starting.get(i) && lista_ending.get(i) ){ // ^$
+                        if (line.equals("")){
+                            print=true;
+                            break;
+                        }else
+                            continue;
+                    }
+                    if ( !lista_starting.get(i) && !lista_ending.get(i) && line.contains(lista_txt.get(i)) ){
+                        print=true;
+                        break;
+                    }
+                    if ( lista_starting.get(i) && !lista_ending.get(i) && line.startsWith(lista_txt.get(i)) ){
+                        print=true;
+                        break;
+                    }
+                    if ( !lista_starting.get(i) && lista_ending.get(i) && line.endsWith(lista_txt.get(i)) ){
+                        print=true;
+                        break;
+                    }
+                    if ( lista_starting.get(i) && lista_ending.get(i) && line.startsWith(lista_txt.get(i)) && line.endsWith(lista_txt.get(i)) ){
+                        print=true;
+                        break;
+                    }
+                }
                 
                 if ( v_ )
                     print=!print;
@@ -2899,9 +2942,10 @@ cat buffer.log
             }
             closeLine();
         }catch(Exception e){
-            System.out.println(e.toString());
+            System.out.println(e.toString()+" - "+line_bkp);
         }
     }
+    
     public void wc_l()
     {
         try {
@@ -6015,8 +6059,6 @@ class XML{
 
 
 
-
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6180,6 +6222,7 @@ class XML{
 /* class by manual */                + "[y grep]\n"
 /* class by manual */                + "    cat arquivo | y grep ^Texto$\n"
 /* class by manual */                + "    cat arquivo | y grep AB\n"
+/* class by manual */                + "    cat arquivo | y grep -i -v aa bb cc\n"
 /* class by manual */                + "[y wc -l]\n"
 /* class by manual */                + "    cat arquivo | y wc -l\n"
 /* class by manual */                + "[y head]\n"
