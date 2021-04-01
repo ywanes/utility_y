@@ -68,11 +68,7 @@ public class Y {
     public static int [] indexBase64 = new int []{65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,51,52,53,54,55,56,57,43,47};
     // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
     public static String txtBase64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
-    
-    public static String linhasExcel="0123456789";    
-    public static int linhasExcel_len=linhasExcel.length();    
-    public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    public static int colunasExcel_len=colunasExcel.length();    
+   
     
     int BARRA_R=13;     // \r
     int CHAR_R=114;     // r
@@ -158,9 +154,12 @@ cat buffer.log
         
         //args=new String[]{"selectCSV","-csv","c:\\tmp\\tmp\\a.csv","select CAMPO2, CAMPO2 from this"};                                        
         
-        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};
-        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","mostraEstrutura"};
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","numeroAba","1"};
+        //args=new String[]{"xml","C:\\tmp\\aa\\sheet438.xml","mostraTags"};
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","11"};
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};
         
         new Y().go(args);
     }
@@ -347,22 +346,22 @@ cat buffer.log
         if ( args[0].equals("xml") && ( args.length == 2 || args.length == 3 ) ){
             try{
                 if ( args.length == 2 && args[1].equals("mostraEstrutura") ){
-                    XML.loadIs(System.in,true,false,null);
+                    XML.loadIs(System.in,true,false,null,false,null);
                     return;
                 }            
                 if ( args.length == 2 && args[1].equals("mostraTags") ){
-                    XML.loadIs(System.in,false,true,null);
+                    XML.loadIs(System.in,false,true,null,false,null);
                     return;
                 }            
                 if ( args.length == 3 && new File(args[1]).exists() && args[2].equals("mostraEstrutura") ){
                     FileInputStream is = new FileInputStream(args[1]);
-                    XML.loadIs(is,true,false,null);
+                    XML.loadIs(is,true,false,null,false,null);
                     is.close();                
                     return;
                 }            
                 if ( args.length == 3 && new File(args[1]).exists() && args[2].equals("mostraTags") ){
                     FileInputStream is = new FileInputStream(args[1]);
-                    XML.loadIs(is,false,true,null);
+                    XML.loadIs(is,false,true,null,false,null);
                     is.close();                
                     return;                
                 }          
@@ -4929,7 +4928,7 @@ cat buffer.log
     }
 
     ArrayList<String> xlsxToCSV_nomes=null;
-    ArrayList<String> shared=null;            
+    ArrayList<String> shared=null;
     private void xlsxToCSV(String caminhoXlsx, boolean mostraEstrutura, boolean listaAbas, int numeroAba, String nomeAba, OutputStream out) throws Exception {
 
         //"C:\\Users\\ywanes\\Documents\\teste.xlsx"
@@ -4944,11 +4943,13 @@ cat buffer.log
     
             InputStream is=null;            
             String caminho="";
-            XML xml=null;
             XML xmlShared=null;
             XML xmlNomes=null;
             int sheet_count=0;
-            String atributo_t=null;
+            boolean exportSheetCSV=false;
+            int sheetEncontrados=0;
+            //XML xml=null;
+            //String atributo_t=null;
             
             ArrayList<ZipEntry> entries=new ArrayList<ZipEntry>();
             while(enumeration_entries.hasMoreElements()){
@@ -4972,9 +4973,28 @@ cat buffer.log
                         continue; // conteudo ja carregado.
                     if ( caminho.equals("xl/sharedStrings.xml") && shared != null )
                         continue; // conteudo ja carregado.
+                                        
+                    if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") && listaAbas )
+                        continue;
+                    
+                    exportSheetCSV=false;
+                    if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") && !mostraEstrutura && !listaAbas ){                        
+                        if ( xlsxToCSV_nomes.size() == 0 )
+                            XML.ErroFatal(99);                    
+                        if ( numeroAba == -1 && nomeAba.equals(xlsxToCSV_nomes.get(sheet_count)) ){
+                            exportSheetCSV=true;
+                        }
+                        if ( numeroAba != -1 && numeroAba == sheet_count+1 ){
+                            exportSheetCSV=true;
+                        }                        
+                        sheet_count++;
+                        if ( ! exportSheetCSV )
+                            continue;
+                        sheetEncontrados++;
+                    }
                     
                     is = zipFile.getInputStream(entry);
-                    XML.loadIs(is,mostraEstrutura,false,caminho);
+                    XML.loadIs(is,mostraEstrutura,false,caminho,exportSheetCSV,out);
                     is.close();
                     
                     // carrega lista de abas
@@ -4987,18 +5007,6 @@ cat buffer.log
                                     xlsxToCSV_nomes.add(item2.getAtributo("name"));
                     }
                     
-                    // coloca em cache o xml consultado
-                    if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") && !mostraEstrutura && !listaAbas ){                        
-                        if ( xlsxToCSV_nomes.size() == 0 )
-                            XML.ErroFatal(99);                    
-                        if ( numeroAba == -1 && nomeAba.equals(xlsxToCSV_nomes.get(sheet_count)) ){
-                            xml=XML.getXML();
-                        }
-                        if ( numeroAba != -1 && numeroAba == sheet_count+1 ){
-                            xml=XML.getXML();
-                        }                        
-                        sheet_count++;
-                    }
 
                     // carrega dicionario de palavras compartilhadas
                     if ( caminho.equals("xl/sharedStrings.xml") && !mostraEstrutura && !listaAbas ){
@@ -5011,54 +5019,19 @@ cat buffer.log
                                 }
                             }
                         }
+                        XML.shared=shared;
                     }
-
                 }
             }
 
-            // processa xml selecionado com ajuda do dicionario
-            if ( !mostraEstrutura && !listaAbas ){
-                if ( xml == null ){
-                    if ( numeroAba != -1 )
-                        System.err.println("Erro, numeroAba: "+numeroAba+" não encontrada!");
-                    else
-                        System.err.println("Erro, nomeAba: "+nomeAba+" não encontrada!");
-                    System.exit(1);
-                }else{
-                    processaCelulaInit();
-                    for ( XML item1 : xml.getFilhos()){
-                        if ( item1.getTag().equals("sheetData") ){
-                            for ( XML item2 : item1.getFilhos()){
-                                if ( item2.getTag().equals("row") ){
-                                    for ( XML item3 : item2.getFilhos()){
-                                        if ( item3.getTag().equals("c") ){
-                                            for ( XML item4 : item3.getFilhos()){
-                                                if ( item4.getTag().equals("v") ){
-                                                    atributo_t=item3.getAtributo("t");
-                                                    if ( atributo_t != null && atributo_t.equals("s") ){
-                                                        processaCelula(
-                                                            item3.getAtributo("r")
-                                                            ,shared.get(Integer.parseInt(item4.getValue()))
-                                                            ,out
-                                                        );
-                                                    }else{
-                                                        processaCelula(
-                                                            item3.getAtributo("r")
-                                                            ,item4.getValue()
-                                                            ,out
-                                                        );
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }  
-                    processaCelulaFlush(out);
-                }
-            }               
+            if ( !mostraEstrutura && !listaAbas && sheetEncontrados==0 ){
+                if ( numeroAba != -1 )
+                    System.err.println("Erro, numeroAba: "+numeroAba+" não encontrada!");
+                else
+                    System.err.println("Erro, nomeAba: "+nomeAba+" não encontrada!");
+                System.exit(1);
+            }
+            
         }catch(Exception e){
             System.err.println("Erro "+e.toString());
             System.exit(1);
@@ -5069,98 +5042,6 @@ cat buffer.log
         }
     }
 
-    private StringBuilder processaCelula_sb=new StringBuilder();
-    private int processaCelula_tail_linha=-1;
-    private int processaCelula_tail_coluna=-1;
-    private int processaCelula_max_tail_coluna=-1;
-    private void processaCelulaInit(){
-        processaCelula_sb=new StringBuilder();
-        processaCelula_tail_linha=-1;
-        processaCelula_tail_coluna=-1;
-        processaCelula_max_tail_coluna=-1;
-    }
-    
-    private void processaCelula(String localCelula, String valor, OutputStream out) throws Exception {
-        //public static String linhasExcel="0123456789";    
-        //public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        int linha=0;
-        int linha_exp=0;
-        int coluna=0;
-        int coluna_exp=0;    
-        
-        int len=localCelula.length();
-        String entrada="";
-        int pos=0;
-        
-        if ( valor == null )
-            valor="";
-        valor=valor.replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("\"","\"\"");
-        
-        for ( int i=len-1;i>=0;i-- ){ // obs: no excel a primeira linha é 1. A primeira coluna é A(aqui representada com 0)
-            entrada=localCelula.substring(i,i+1);
-            pos=linhasExcel.indexOf(entrada);
-            if ( pos != -1 ){ // linha
-                linha+=Math.pow(linhasExcel_len, linha_exp++)*pos;
-            }else{ // coluna
-                pos=colunasExcel.indexOf(entrada);
-                if ( pos != -1 ){ 
-                    coluna+=Math.pow(colunasExcel_len, coluna_exp++)*pos;
-                }else{
-                    XML.ErroFatal(15);
-                }
-            }
-        }
-        
-        if ( processaCelula_tail_linha == -1 ){
-            processaCelula_tail_linha=linha;
-            processaCelula_tail_coluna=-1;
-            if ( processaCelula_tail_coluna > processaCelula_max_tail_coluna )
-                processaCelula_max_tail_coluna=coluna;        
-        }else{
-            if ( processaCelula_tail_linha > linha ){
-                XML.ErroFatal(14);
-            }
-            while(processaCelula_tail_linha < linha){
-                while(processaCelula_tail_coluna<processaCelula_max_tail_coluna){
-                    processaCelula_sb.append("\"\"");
-                    processaCelula_sb.append(sepCSV);
-                    processaCelula_tail_coluna++;
-                }
-                processaCelula_tail_coluna=-1;
-                out.write(processaCelula_sb.toString().getBytes());
-                out.write("\n".getBytes());
-                processaCelula_sb=new StringBuilder();
-                processaCelula_tail_linha++;
-            }
-        }
-        while(processaCelula_tail_coluna<coluna-1){
-            processaCelula_sb.append("\"\"");
-            processaCelula_sb.append(sepCSV);
-            processaCelula_tail_coluna++;
-        }
-        
-        processaCelula_sb.append("\"");
-        processaCelula_sb.append(valor);
-        processaCelula_sb.append("\"");
-        processaCelula_sb.append(sepCSV);
-        
-        processaCelula_tail_linha=linha;
-        processaCelula_tail_coluna=coluna;
-        if ( processaCelula_tail_coluna > processaCelula_max_tail_coluna )
-            processaCelula_max_tail_coluna=coluna;        
-    }
-
-    private void processaCelulaFlush(OutputStream out) throws Exception{
-        if ( processaCelula_sb.length() > 0 ){
-            while(processaCelula_tail_coluna<processaCelula_max_tail_coluna){
-                processaCelula_sb.append("\"\"");
-                processaCelula_sb.append(sepCSV);
-                processaCelula_tail_coluna++;
-            }
-            out.write(processaCelula_sb.toString().getBytes());
-            out.write("\n".getBytes());
-        }
-    }
 
     public static byte[] readAllBytes(String path) throws IOException {
         java.io.RandomAccessFile f = new java.io.RandomAccessFile(new File(path), "r");
@@ -5590,109 +5471,132 @@ class Ponte {
 }  
 
 class XML{
-    private static void mostraEstrutura(ArrayList<String> listaTxt, ArrayList<Integer> listaNivel,String caminho) {
-        int len=listaTxt.size();
-        int nivel=0;
-        System.out.println();
-        if ( caminho != null )
-            System.out.println("=> "+caminho);        
-        for (int i=0;i<len;i++ ){
-            // suprimindo espaços
-            if ( listaTxt.get(i).trim().equals("") )
-                continue;
-            nivel=listaNivel.get(i)-1;
-            for (int j=0;j<nivel;j++ )
-                System.out.print("\t");
-            System.out.println(listaTxt.get(i));
+    public static String linhasExcel="0123456789";    
+    public static int linhasExcel_len=linhasExcel.length();    
+    public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    public static int colunasExcel_len=colunasExcel.length();    
+    public static String sepCSV=";";
+    
+    private static void resetControleTags(){
+        controleTags_pilha=new ArrayList<String>();
+        controleTags_tags=new ArrayList<String>();
+        controleTags_nivelTail=-1;
+        pivo_t=null;
+        pivo_r=null;
+        pivo_txt=null;
+    }
+    
+    private static ArrayList<String> controleTags_pilha=new ArrayList<String>();
+    private static ArrayList<String> controleTags_tags=new ArrayList<String>();
+    private static int controleTags_nivelTail=-1;
+    private static String pivo_t=null;
+    private static String pivo_r=null;
+    private static String pivo_txt=null;
+    public static ArrayList<String> shared=null;
+    private static void controleTags(String txt,int nivel,boolean exportSheetCSV){
+        nivel=nivel-1;// lista iniciada com 0
+        pivo_txt=null;
+        
+        if ( nivel == controleTags_nivelTail+1 ){
+            if ( ! txt.trim().startsWith("<") ){
+                // pivo_txt
+                if ( exportSheetCSV 
+                    && controleTags_pilha.size() == 5
+                    && controleTags_pilha.get(0).equals("worksheet")
+                    && controleTags_pilha.get(1).equals("sheetData")
+                    && controleTags_pilha.get(2).equals("row")
+                    && controleTags_pilha.get(3).equals("c")
+                    && controleTags_pilha.get(4).equals("v")
+                ){
+                    pivo_txt=txt;                    
+                }
+                return;
+            }
+            if ( txt.trim().startsWith("</") ){
+                ErroFatal(54);
+            }
+            controleTags_pilha.add(getTagFromLine(txt));
+            controleTags_nivelTail=nivel;
+            controleTagsUpdate();
+            // pivo_t/pivo_r
+            if ( exportSheetCSV 
+                && controleTags_pilha.size() == 4
+                && controleTags_pilha.get(0).equals("worksheet")
+                && controleTags_pilha.get(1).equals("sheetData")
+                && controleTags_pilha.get(2).equals("row")
+                && controleTags_pilha.get(3).equals("c")                
+            ){                
+                pivo_t=null;
+                pivo_r=null;
+                HashMap att=getAtributosFromLine(txt);
+                if (att.containsKey("t"))
+                    pivo_t=att.get("t").toString();
+                if (att.containsKey("r"))
+                    pivo_r=att.get("r").toString();
+            }            
+            return;
+        }
+        if ( nivel == controleTags_nivelTail ){
+            if ( ! txt.trim().startsWith("<") ) return;
+            if ( txt.trim().startsWith("</") ) return;
+            // remove a ultima posicao
+            controleTags_pilha.remove(controleTags_pilha.size()-1); 
+            controleTags_pilha.add(getTagFromLine(txt));
+            controleTags_nivelTail=nivel;
+            controleTagsUpdate();
+            // pivo_t/pivo_r
+            if ( exportSheetCSV 
+                && controleTags_pilha.size() == 4
+                && controleTags_pilha.get(0).equals("worksheet")
+                && controleTags_pilha.get(1).equals("sheetData")
+                && controleTags_pilha.get(2).equals("row")
+                && controleTags_pilha.get(3).equals("c")                
+            ){                
+                pivo_t=null;
+                pivo_r=null;
+                HashMap att=getAtributosFromLine(txt);
+                if (att.containsKey("t"))
+                    pivo_t=att.get("t").toString();
+                if (att.containsKey("r"))
+                    pivo_r=att.get("r").toString();
+            }                        
+            return;
+        }
+
+        if ( nivel == controleTags_nivelTail-1 ){
+            if ( ! txt.trim().startsWith("<") )
+                return;                
+            if ( txt.trim().startsWith("</") ){
+                controleTags_pilha.remove(controleTags_pilha.size()-1); 
+                controleTags_nivelTail=nivel;
+                return;
+            }
+            // remove as duas ultimas posicoes
+            controleTags_pilha.remove(controleTags_pilha.size()-1);
+            controleTags_pilha.remove(controleTags_pilha.size()-1); 
+            controleTags_pilha.add(getTagFromLine(txt));
+            controleTags_nivelTail=nivel;
+            controleTagsUpdate();
+            return;
         }
     }
     
-    private static void mostraTags(ArrayList<String> listaTxt, ArrayList<Integer> listaNivel,String caminho) {
-        int len=listaTxt.size();
-        int nivel=0;
-        int nivelTail=-1;
-        ArrayList<String> pilha=new ArrayList<String>();
-        ArrayList<String> tags=new ArrayList<String>();
+    private static void controleTagsUpdate(){
         String tag="";
-        if ( caminho != null )
-            System.out.println("=> "+caminho);        
-        for (int i=0;i<len;i++ ){
-            nivel=listaNivel.get(i)-1;
-            if ( nivel == nivelTail+1 ){
-                if ( ! listaTxt.get(i).trim().startsWith("<") ) continue;
-                if ( listaTxt.get(i).trim().startsWith("</") ){
-                    ErroFatal(54);
-                }
-                pilha.add(getTagFromLine(listaTxt.get(i)));
-                nivelTail=nivel;
-                tag="";
-                for ( int j=0;j<pilha.size();j++ )
-                    tag+="/"+pilha.get(j);
-                boolean achou=false;
-                for ( int j=0;j<tags.size();j++ ){
-                    if ( tags.get(j).equals(tag) ){
-                        achou=true;
-                        break;
-                    }
-                }
-                if ( ! achou )
-                    tags.add(tag);
-                continue;
+        for ( int j=0;j<controleTags_pilha.size();j++ )
+            tag+="/"+controleTags_pilha.get(j);
+        boolean achou=false;
+        for ( int j=0;j<controleTags_tags.size();j++ ){
+            if ( controleTags_tags.get(j).equals(tag) ){
+                achou=true;
+                break;
             }
-            if ( nivel == nivelTail ){
-                if ( ! listaTxt.get(i).trim().startsWith("<") ) continue;
-                if ( listaTxt.get(i).trim().startsWith("</") ) continue;
-                // remove a ultima posicao
-                pilha.remove(pilha.size()-1); 
-                pilha.add(getTagFromLine(listaTxt.get(i)));
-                nivelTail=nivel;
-                tag="";
-                for ( int j=0;j<pilha.size();j++ )
-                    tag+="/"+pilha.get(j);
-                boolean achou=false;
-                for ( int j=0;j<tags.size();j++ ){
-                    if ( tags.get(j).equals(tag) ){
-                        achou=true;
-                        break;
-                    }
-                }
-                if ( ! achou )
-                    tags.add(tag);
-                continue;
-            }
-            if ( nivel == nivelTail-1 ){
-                if ( ! listaTxt.get(i).trim().startsWith("<") ) continue;
-                if ( listaTxt.get(i).trim().startsWith("</") ){
-                    pilha.remove(pilha.size()-1); 
-                    nivelTail=nivel;
-                    continue;
-                }
-                // remove as duas ultimas posicoes
-                pilha.remove(pilha.size()-1);
-                pilha.remove(pilha.size()-1); 
-                pilha.add(getTagFromLine(listaTxt.get(i)));
-                nivelTail=nivel;
-                tag="";
-                for ( int j=0;j<pilha.size();j++ )
-                    tag+="/"+pilha.get(j);
-                boolean achou=false;
-                for ( int j=0;j<tags.size();j++ ){
-                    if ( tags.get(j).equals(tag) ){
-                        achou=true;
-                        break;
-                    }
-                }
-                if ( ! achou )
-                    tags.add(tag);
-                continue;
-            }
-            ErroFatal(44);
         }
-        for (int i=0;i<tags.size();i++ )            
-            System.out.println(tags.get(i));
+        if ( ! achou )
+            controleTags_tags.add(tag);
+        
     }
-
-
+    
     private HashMap atributos=new HashMap();
     private String value=null;
     private ArrayList<XML> filhos=new ArrayList<XML>();
@@ -5701,7 +5605,7 @@ class XML{
         
     public static ArrayList<String> listaTxt=null;
     public static ArrayList<Integer> listaNivel=null;
-    public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho) {
+    public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho, boolean exportSheetCSV,OutputStream out) throws Exception {
         resetLista();
         
         Y.readLine(is,"UTF-8",">");        
@@ -5719,12 +5623,13 @@ class XML{
         boolean tag_value=false;
         boolean tail_tag_abertura=false; //
         
-        // tag de abertura   <a>
-        // tag de fechamento </a>
-        // tag unica         <a/>
+        if ( exportSheetCSV )
+            processaCelulaInit();
         
         if ( mostraEstrutura && caminho != null )
             System.out.println("=> "+caminho);        
+        
+        resetControleTags();
         
         while ( (txt=Y.readLine()) != null ){                        
             txt=txt.replace("\n","")+">";
@@ -5775,7 +5680,7 @@ class XML{
                     tail=null;
                     tag_in=false;
                     tag_finish=false; // segurança
-                    addLista(sb.toString(),nivel,mostraEstrutura);
+                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out);
                     sb=new StringBuilder();
                     tail_tag_abertura=false;
                     continue;                
@@ -5785,7 +5690,7 @@ class XML{
                     sb.append(entrada);
                     tail=null;
                     tag_in=false;                
-                    addLista(sb.toString(),nivel,mostraEstrutura);
+                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out);
                     sb=new StringBuilder();
                     if ( tag_finish ){
                         //nivel--; foi decrementado em outro local
@@ -5806,7 +5711,7 @@ class XML{
                     tag_value=true;                
                     sb.append(tail);                    
                     tail=entrada;
-                    addLista(sb.toString(),nivel,mostraEstrutura);
+                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out);
                     sb=new StringBuilder();
                     tag_value=false;
                     tail_tag_abertura=false;
@@ -5827,7 +5732,7 @@ class XML{
                     tag_value=false;
                     sb.append(tail);                    
                     tail=entrada;
-                    addLista(sb.toString(),nivel,mostraEstrutura);
+                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out);
                     sb=new StringBuilder();
                     continue;            
                 }
@@ -5838,11 +5743,15 @@ class XML{
         }
         Y.closeLine();
         
+        if ( exportSheetCSV )
+            processaCelulaFlush(out);
+        
         if ( tail != null ){
             ErroFatal(4);
         }        
         if ( mostraTags )
-            mostraTags(listaTxt,listaNivel,caminho);
+            for (int i=0;i<controleTags_tags.size();i++ )            
+                System.out.println(controleTags_tags.get(i));
     }
         
     private static void resetLista() {
@@ -5850,8 +5759,7 @@ class XML{
         listaNivel=new ArrayList<Integer>();
     }
     
-    private static void addLista(String txt, int nivel, boolean mostraEstrutura) {
-        
+    private static void addLista(String txt, int nivel, boolean mostraEstrutura, boolean exportSheetCSV,OutputStream out) throws Exception{
         if ( mostraEstrutura ){
             if ( ! txt.trim().equals("") ){
                 for (int j=0;j<nivel-1;j++ )
@@ -5859,9 +5767,132 @@ class XML{
                 System.out.println(txt);
             }
         }
+        controleTags(txt.trim(),nivel,exportSheetCSV);
         
-        listaTxt.add(txt.trim());
-        listaNivel.add(nivel);
+        if ( exportSheetCSV ){
+            if ( pivo_txt != null ){
+/*
+pendente de implementação
+<c r="F329" s="2">
+        <v>
+                5.8000000000000003E-2
+        </v>
+</c>
+=> 0.058                
+*/                
+                if ( pivo_t != null && pivo_t.equals("s") ){
+                    processaCelula(
+                        pivo_r
+                        ,shared.get(Integer.parseInt(pivo_txt))
+                        ,out
+                    );
+                }else{
+                    processaCelula(
+                        pivo_r
+                        ,pivo_txt
+                        ,out
+                    );
+                }
+            }
+        }else{
+            // processamento cache
+            listaTxt.add(txt.trim());
+            listaNivel.add(nivel);        
+        }
+    }
+    
+    private static StringBuilder processaCelula_sb=new StringBuilder();
+    private static int processaCelula_tail_linha=-1;
+    private static int processaCelula_tail_coluna=-1;
+    private static int processaCelula_max_tail_coluna=-1;
+    private static void processaCelulaInit(){
+        processaCelula_sb=new StringBuilder();
+        processaCelula_tail_linha=-1;
+        processaCelula_tail_coluna=-1;
+        processaCelula_max_tail_coluna=-1;
+    }
+    
+    private static void processaCelula(String localCelula, String valor, OutputStream out) throws Exception {
+        //public static String linhasExcel="0123456789";    
+        //public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        int linha=0;
+        int linha_exp=0;
+        int coluna=0;
+        int coluna_exp=0;    
+        
+        int len=localCelula.length();
+        String entrada="";
+        int pos=0;
+        
+        if ( valor == null )
+            valor="";
+        valor=valor.replace("&lt;","<").replace("&gt;",">").replace("&amp;","&").replace("\"","\"\"");
+        
+        for ( int i=len-1;i>=0;i-- ){ // obs: no excel a primeira linha é 1. A primeira coluna é A(aqui representada com 0)
+            entrada=localCelula.substring(i,i+1);
+            pos=linhasExcel.indexOf(entrada);
+            if ( pos != -1 ){ // linha
+                linha+=Math.pow(linhasExcel_len, linha_exp++)*pos;
+            }else{ // coluna
+                pos=colunasExcel.indexOf(entrada);
+                if ( pos != -1 ){ 
+                    coluna+=Math.pow(colunasExcel_len, coluna_exp++)*pos;
+                }else{
+                    XML.ErroFatal(15);
+                }
+            }
+        }
+
+        if ( processaCelula_tail_linha == -1 ){
+            processaCelula_tail_linha=linha;
+            processaCelula_tail_coluna=-1;
+            if ( processaCelula_tail_coluna > processaCelula_max_tail_coluna )
+                processaCelula_max_tail_coluna=coluna;        
+        }else{
+            if ( processaCelula_tail_linha > linha ){
+                XML.ErroFatal(14);
+            }
+            while(processaCelula_tail_linha < linha){
+                while(processaCelula_tail_coluna<processaCelula_max_tail_coluna){
+                    processaCelula_sb.append("\"\"");
+                    processaCelula_sb.append(sepCSV);
+                    processaCelula_tail_coluna++;
+                }
+                processaCelula_tail_coluna=-1;
+                out.write(processaCelula_sb.toString().getBytes());
+                out.write("\n".getBytes());
+                processaCelula_sb=new StringBuilder();
+                processaCelula_tail_linha++;
+            }
+        }
+        while(processaCelula_tail_coluna<coluna-1){
+            processaCelula_sb.append("\"\"");
+            processaCelula_sb.append(sepCSV);
+            processaCelula_tail_coluna++;
+        }
+        
+        processaCelula_sb.append("\"");
+        processaCelula_sb.append(valor);
+        processaCelula_sb.append("\"");
+        processaCelula_sb.append(sepCSV);
+        
+        processaCelula_tail_linha=linha;
+        processaCelula_tail_coluna=coluna;
+        if ( processaCelula_tail_coluna > processaCelula_max_tail_coluna ){
+            processaCelula_max_tail_coluna=coluna;        
+        }
+    }
+
+    private static void processaCelulaFlush(OutputStream out) throws Exception{
+        if ( processaCelula_sb.length() > 0 ){
+            while(processaCelula_tail_coluna<processaCelula_max_tail_coluna){
+                processaCelula_sb.append("\"\"");
+                processaCelula_sb.append(sepCSV);
+                processaCelula_tail_coluna++;
+            }
+            out.write(processaCelula_sb.toString().getBytes());
+            out.write("\n".getBytes());
+        }
     }
     
     public static XML getXML(){
