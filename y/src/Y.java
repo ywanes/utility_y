@@ -6,7 +6,6 @@
 // alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.55.jar Y'
 // crétidos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
 // crétidos https://github.com/is/jsch/tree/master/examples
-//
 
 import com.jcraft.jsch.*;
 import java.awt.*;
