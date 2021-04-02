@@ -156,10 +156,10 @@ cat buffer.log
         
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","mostraEstrutura"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","numeroAba","1"};
-        //args=new String[]{"xml","C:\\tmp\\aa\\sheet438.xml","mostraTags"};
-        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
-        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","11"};
+        //args=new String[]{"xml","C:\\tmp\\aa\\sheet438.xml","mostraTags"};        
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","1"};        
+        //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
         
         new Y().go(args);
     }
@@ -5491,6 +5491,7 @@ class XML{
     private static int controleTags_nivelTail=-1;
     private static String pivo_t=null;
     private static String pivo_r=null;
+    private static String pivo_s=null;
     private static String pivo_txt=null;
     public static ArrayList<String> shared=null;
     private static void controleTags(String txt,int nivel,boolean exportSheetCSV){
@@ -5518,7 +5519,7 @@ class XML{
             controleTags_pilha.add(getTagFromLine(txt));
             controleTags_nivelTail=nivel;
             controleTagsUpdate();
-            // pivo_t/pivo_r
+            // pivo_t/pivo_r/pivo_r
             if ( exportSheetCSV 
                 && controleTags_pilha.size() == 4
                 && controleTags_pilha.get(0).equals("worksheet")
@@ -5528,11 +5529,14 @@ class XML{
             ){                
                 pivo_t=null;
                 pivo_r=null;
+                pivo_s=null;
                 HashMap att=getAtributosFromLine(txt);
                 if (att.containsKey("t"))
                     pivo_t=att.get("t").toString();
                 if (att.containsKey("r"))
                     pivo_r=att.get("r").toString();
+                if (att.containsKey("s"))
+                    pivo_s=att.get("s").toString();
             }            
             return;
         }
@@ -5544,7 +5548,7 @@ class XML{
             controleTags_pilha.add(getTagFromLine(txt));
             controleTags_nivelTail=nivel;
             controleTagsUpdate();
-            // pivo_t/pivo_r
+            // pivo_t/pivo_r/pivo_s
             if ( exportSheetCSV 
                 && controleTags_pilha.size() == 4
                 && controleTags_pilha.get(0).equals("worksheet")
@@ -5554,11 +5558,14 @@ class XML{
             ){                
                 pivo_t=null;
                 pivo_r=null;
+                pivo_s=null;
                 HashMap att=getAtributosFromLine(txt);
                 if (att.containsKey("t"))
                     pivo_t=att.get("t").toString();
                 if (att.containsKey("r"))
                     pivo_r=att.get("r").toString();
+                if (att.containsKey("s"))
+                    pivo_s=att.get("s").toString();
             }                        
             return;
         }
@@ -5594,7 +5601,93 @@ class XML{
         }
         if ( ! achou )
             controleTags_tags.add(tag);
+    }
+
+    // faz arredondamento e tira notação cientifica    
+    // de   5.8000000000000003E-2
+    // para 0.058
+    // de 0.99409999999999998
+    // para 0.9941
+    private static String arredondamentoNumber(String txt) {        
         
+        boolean analise=false;
+        if ( txt.equals("6.7100000000000007E-2") ) // 0.060
+            analise=true;
+        
+        
+        int flutuacao=0;
+        String tmp="";
+        String a="";
+        String b="";
+        boolean achou=false;
+        
+        if ( txt.contains("E") ){
+            tmp=txt.split("E")[1];
+            txt=txt.split("E")[0];
+            flutuacao=Integer.parseInt(tmp);
+        }
+        
+        a=txt.split("\\.")[0];
+        b=txt.split("\\.")[1];
+        
+        if ( b.length() >= 15 ){
+            // arredondamento ...999X
+            // de 0.99409999999999998
+            // para 0.9941
+            if ( 
+                b.substring(b.length()-2,b.length()-1).equals("9") 
+                && b.substring(b.length()-3,b.length()-2).equals("9") 
+                && b.substring(b.length()-4,b.length()-3).equals("9") 
+            ){
+                for( int i=b.length()-5;i>=0;i-- ){
+                    if ( ! b.substring(i,i+1).equals("9") ){
+                        b=b.substring(0,i)+(Integer.parseInt(b.substring(i,i+1))+1);
+                        achou=true;
+                        break;
+                    }
+                }
+                if ( ! achou ){
+                    b="0";
+                    a=(Integer.parseInt(a)+1)+"";
+                }
+            }else{
+                // convert 058000000000000003 em 058
+                if ( 
+                    b.substring(b.length()-2,b.length()-1).equals("0") 
+                    && b.substring(b.length()-3,b.length()-2).equals("0") 
+                    && b.substring(b.length()-4,b.length()-3).equals("0") 
+                ){
+                    for( int i=b.length()-5;i>=0;i-- ){
+                        if ( ! b.substring(i,i+1).equals("0") ){
+                            b=b.substring(0,i)+b.substring(i,i+1);
+                            achou=true;
+                            break;
+                        }
+                    }
+                }
+                if ( ! achou ){
+                    b="0";
+                }
+            }
+        }
+                
+        while(flutuacao>0){
+            if ( b.length() == 0 ){
+                a+="0";
+            }else{
+                a+=b.substring(0,1);
+                b=b.substring(1);
+            }
+            flutuacao--;
+        }
+        while(flutuacao<0){
+            b=a+b;
+            a="0";
+            flutuacao++;
+        }    
+        if ( b.equals("0") )
+            return a;
+        return a+"."+b;
     }
     
     private HashMap atributos=new HashMap();
@@ -5627,7 +5720,7 @@ class XML{
             processaCelulaInit();
         
         if ( mostraEstrutura && caminho != null )
-            System.out.println("=> "+caminho);        
+            System.out.println("\n=> "+caminho);        
         
         resetControleTags();
         
@@ -5771,15 +5864,6 @@ class XML{
         
         if ( exportSheetCSV ){
             if ( pivo_txt != null ){
-/*
-pendente de implementação
-<c r="F329" s="2">
-        <v>
-                5.8000000000000003E-2
-        </v>
-</c>
-=> 0.058                
-*/                
                 if ( pivo_t != null && pivo_t.equals("s") ){
                     processaCelula(
                         pivo_r
@@ -5787,11 +5871,19 @@ pendente de implementação
                         ,out
                     );
                 }else{
-                    processaCelula(
-                        pivo_r
-                        ,pivo_txt
-                        ,out
-                    );
+                    if ( pivo_s != null && pivo_s.equals("2") && ( pivo_txt.contains("E") || ( txt.contains(".") && txt.split("\\.")[1].length() >= 15 ) ) ){ 
+                        processaCelula(
+                            pivo_r
+                            ,arredondamentoNumber(pivo_txt)
+                            ,out
+                        );
+                    }else{
+                        processaCelula(
+                            pivo_r
+                            ,pivo_txt
+                            ,out
+                        );
+                    }
                 }
             }
         }else{
