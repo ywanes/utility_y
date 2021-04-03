@@ -319,14 +319,18 @@ cat buffer.log
                     if ( args.length == 3 && args[2].equals("exportAll") ){
                         xlsxToCSV(args[1],false,true,-1,"",null,false);
                         ArrayList<String> bkp_lista=xlsxToCSV_nomes;
-                        FileOutputStream out=null;
+                        OutputStream out=null;
                         boolean suprimeHeader=false;
+                        boolean config_SystemOuput=true;
                         String abaSequencial=get_abaSequencial(bkp_lista);
                         if ( abaSequencial != null ){
-                            System.out.println("exportando "+abaSequencial+".csv");
-                            for ( int i=0;i<bkp_lista.size();i++ ){                                
-                                if ( i == 0)
-                                    out=new FileOutputStream(abaSequencial+".csv");
+                            if ( config_SystemOuput ){
+                                out=System.out;
+                            }else{
+                                System.out.println("exportando "+abaSequencial+".csv");
+                                out=new FileOutputStream(abaSequencial+".csv");
+                            }
+                            for ( int i=0;i<bkp_lista.size();i++ ){
                                 if ( i == 0)
                                     suprimeHeader=false;
                                 else
