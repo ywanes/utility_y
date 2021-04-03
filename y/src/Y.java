@@ -307,32 +307,57 @@ cat buffer.log
             try{
                 if ( new File(args[1]).exists() ){
                     if ( args.length == 3 && args[2].equals("mostraEstrutura") ){
-                        xlsxToCSV(args[1],true,false,-1,"",System.out);
+                        xlsxToCSV(args[1],true,false,-1,"",System.out,false);
                         return;
                     }
                     if ( args.length == 3 && args[2].equals("listaAbas") ){
-                        xlsxToCSV(args[1],false,true,-1,"",System.out);
+                        xlsxToCSV(args[1],false,true,-1,"",System.out,false);
                         for ( int i=0;i<xlsxToCSV_nomes.size();i++ )
                             System.out.println(xlsxToCSV_nomes.get(i));
                         return;
                     }
                     if ( args.length == 3 && args[2].equals("exportAll") ){
-                        xlsxToCSV(args[1],false,true,-1,"",null);
+                        xlsxToCSV(args[1],false,true,-1,"",null,false);
                         ArrayList<String> bkp_lista=xlsxToCSV_nomes;
-                        for ( int i=0;i<bkp_lista.size();i++ ){
-                            System.out.println("exportando("+(i+1)+"/"+bkp_lista.size()+") arquivo: "+bkp_lista.get(i)+".csv");
-                            xlsxToCSV(args[1],false,false,-1,bkp_lista.get(i),new FileOutputStream(bkp_lista.get(i)+".csv"));
+                        FileOutputStream out=null;
+                        boolean suprimeHeader=false;
+                        String abaSequencial=get_abaSequencial(bkp_lista);
+                        if ( abaSequencial != null ){
+                            System.out.println("exportando "+abaSequencial+".csv");
+                            for ( int i=0;i<bkp_lista.size();i++ ){                                
+                                if ( i == 0)
+                                    out=new FileOutputStream(abaSequencial+".csv");
+                                if ( i == 0)
+                                    suprimeHeader=false;
+                                else
+                                    suprimeHeader=true;
+                                xlsxToCSV(args[1],false,false,-1,bkp_lista.get(i),out,suprimeHeader);
+                            }                            
+                            if ( out != null ){
+                                out.flush();
+                                out.close();
+                            }
+                        }else{
+                            for ( int i=0;i<bkp_lista.size();i++ ){
+                                System.out.println("exportando("+(i+1)+"/"+bkp_lista.size()+") arquivo: "+bkp_lista.get(i)+".csv");
+                                out=new FileOutputStream(bkp_lista.get(i)+".csv");
+                                xlsxToCSV(args[1],false,false,-1,bkp_lista.get(i),out,false);
+                                if ( out != null ){
+                                    out.flush();
+                                    out.close();
+                                }
+                            }
                         }
                         return;
                     }
                     if ( args.length == 4 && args[2].equals("numeroAba") ){
                         try{
-                            xlsxToCSV(args[1],false,false,Integer.parseInt(args[3]),"",System.out);
+                            xlsxToCSV(args[1],false,false,Integer.parseInt(args[3]),"",System.out,false);
                             return;
                         }catch(Exception e){}
                     }
                     if ( args.length == 4 && args[2].equals("nomeAba") && args[3].length() > 0 ){
-                        xlsxToCSV(args[1],false,false,-1,args[3],System.out);
+                        xlsxToCSV(args[1],false,false,-1,args[3],System.out,false);
                         return;
                     }
                 }
@@ -340,28 +365,27 @@ cat buffer.log
                 System.err.println("Erro, "+e.toString());
                 System.exit(1);
             }
-            
         }   
         
         if ( args[0].equals("xml") && ( args.length == 2 || args.length == 3 ) ){
             try{
                 if ( args.length == 2 && args[1].equals("mostraEstrutura") ){
-                    XML.loadIs(System.in,true,false,null,false,null);
+                    XML.loadIs(System.in,true,false,null,false,null,false);
                     return;
                 }            
                 if ( args.length == 2 && args[1].equals("mostraTags") ){
-                    XML.loadIs(System.in,false,true,null,false,null);
+                    XML.loadIs(System.in,false,true,null,false,null,false);
                     return;
                 }            
                 if ( args.length == 3 && new File(args[1]).exists() && args[2].equals("mostraEstrutura") ){
                     FileInputStream is = new FileInputStream(args[1]);
-                    XML.loadIs(is,true,false,null,false,null);
+                    XML.loadIs(is,true,false,null,false,null,false);
                     is.close();                
                     return;
                 }            
                 if ( args.length == 3 && new File(args[1]).exists() && args[2].equals("mostraTags") ){
                     FileInputStream is = new FileInputStream(args[1]);
-                    XML.loadIs(is,false,true,null,false,null);
+                    XML.loadIs(is,false,true,null,false,null,false);
                     is.close();                
                     return;                
                 }          
@@ -4929,7 +4953,7 @@ cat buffer.log
 
     ArrayList<String> xlsxToCSV_nomes=null;
     ArrayList<String> shared=null;
-    private void xlsxToCSV(String caminhoXlsx, boolean mostraEstrutura, boolean listaAbas, int numeroAba, String nomeAba, OutputStream out) throws Exception {
+    private void xlsxToCSV(String caminhoXlsx, boolean mostraEstrutura, boolean listaAbas, int numeroAba, String nomeAba, OutputStream out, boolean suprimeHeader) throws Exception {
 
         //"C:\\Users\\ywanes\\Documents\\teste.xlsx"
         //xlsxToCSV arquivo.xlsx mostraEstrutura
@@ -4994,7 +5018,7 @@ cat buffer.log
                     }
                     
                     is = zipFile.getInputStream(entry);
-                    XML.loadIs(is,mostraEstrutura,false,caminho,exportSheetCSV,out);
+                    XML.loadIs(is,mostraEstrutura,false,caminho,exportSheetCSV,out,suprimeHeader);
                     is.close();
                     
                     // carrega lista de abas
@@ -5036,10 +5060,11 @@ cat buffer.log
             System.err.println("Erro "+e.toString());
             System.exit(1);
         }
-        if ( out != null ){
+        // finalizacao será feita no chamador de xlsxToCSV
+        /*if ( out != null ){
             out.flush();
             out.close();
-        }
+        }*/
     }
 
 
@@ -5132,6 +5157,18 @@ cat buffer.log
 
     private void throw_erroDeInterpretacaoDeSQL(String string) throws Exception {
         throw new Exception(string);
+    }
+
+    private String get_abaSequencial(ArrayList<String> bkp_lista) {
+        if ( bkp_lista.size() > 1 && bkp_lista.get(0).length() > 3 && bkp_lista.get(0).endsWith("(1)") ){
+            String tmp=bkp_lista.get(0).substring(0,bkp_lista.get(0).length()-3);
+            for ( int i=1;i<bkp_lista.size();i++ ){
+                if ( ! bkp_lista.get(i).equals(tmp+"("+(i+1)+")") )
+                    return null;
+            }
+            return tmp;
+        }
+        return null;
     }
     
 }
@@ -5698,7 +5735,7 @@ class XML{
         
     public static ArrayList<String> listaTxt=null;
     public static ArrayList<Integer> listaNivel=null;
-    public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho, boolean exportSheetCSV,OutputStream out) throws Exception {
+    public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho, boolean exportSheetCSV,OutputStream out, boolean suprimeHeader) throws Exception {
         resetLista();
         
         Y.readLine(is,"UTF-8",">");        
@@ -5773,7 +5810,7 @@ class XML{
                     tail=null;
                     tag_in=false;
                     tag_finish=false; // segurança
-                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out);
+                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out,suprimeHeader);
                     sb=new StringBuilder();
                     tail_tag_abertura=false;
                     continue;                
@@ -5783,7 +5820,7 @@ class XML{
                     sb.append(entrada);
                     tail=null;
                     tag_in=false;                
-                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out);
+                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out,suprimeHeader);
                     sb=new StringBuilder();
                     if ( tag_finish ){
                         //nivel--; foi decrementado em outro local
@@ -5804,7 +5841,7 @@ class XML{
                     tag_value=true;                
                     sb.append(tail);                    
                     tail=entrada;
-                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out);
+                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out,suprimeHeader);
                     sb=new StringBuilder();
                     tag_value=false;
                     tail_tag_abertura=false;
@@ -5825,7 +5862,7 @@ class XML{
                     tag_value=false;
                     sb.append(tail);                    
                     tail=entrada;
-                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out);
+                    addLista(sb.toString(),nivel,mostraEstrutura,exportSheetCSV,out,suprimeHeader);
                     sb=new StringBuilder();
                     continue;            
                 }
@@ -5852,7 +5889,7 @@ class XML{
         listaNivel=new ArrayList<Integer>();
     }
     
-    private static void addLista(String txt, int nivel, boolean mostraEstrutura, boolean exportSheetCSV,OutputStream out) throws Exception{
+    private static void addLista(String txt, int nivel, boolean mostraEstrutura, boolean exportSheetCSV,OutputStream out, boolean suprimeHeader) throws Exception{
         if ( mostraEstrutura ){
             if ( ! txt.trim().equals("") ){
                 for (int j=0;j<nivel-1;j++ )
@@ -5869,6 +5906,7 @@ class XML{
                         pivo_r
                         ,shared.get(Integer.parseInt(pivo_txt))
                         ,out
+                        ,suprimeHeader
                     );
                 }else{
                     if ( pivo_s != null && pivo_s.equals("2") && ( pivo_txt.contains("E") || ( txt.contains(".") && txt.split("\\.")[1].length() >= 15 ) ) ){ 
@@ -5876,12 +5914,14 @@ class XML{
                             pivo_r
                             ,arredondamentoNumber(pivo_txt)
                             ,out
+                            ,suprimeHeader
                         );
                     }else{
                         processaCelula(
                             pivo_r
                             ,pivo_txt
                             ,out
+                            ,suprimeHeader
                         );
                     }
                 }
@@ -5897,14 +5937,16 @@ class XML{
     private static int processaCelula_tail_linha=-1;
     private static int processaCelula_tail_coluna=-1;
     private static int processaCelula_max_tail_coluna=-1;
+    private static int countWrited=0;
     private static void processaCelulaInit(){
         processaCelula_sb=new StringBuilder();
         processaCelula_tail_linha=-1;
         processaCelula_tail_coluna=-1;
         processaCelula_max_tail_coluna=-1;
+        countWrited=0;
     }
     
-    private static void processaCelula(String localCelula, String valor, OutputStream out) throws Exception {
+    private static void processaCelula(String localCelula, String valor, OutputStream out, boolean suprimeHeader) throws Exception {
         //public static String linhasExcel="0123456789";    
         //public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         int linha=0;
@@ -5951,8 +5993,13 @@ class XML{
                     processaCelula_tail_coluna++;
                 }
                 processaCelula_tail_coluna=-1;
-                out.write(processaCelula_sb.toString().getBytes());
-                out.write("\n".getBytes());
+                countWrited++;
+                if ( suprimeHeader && countWrited == 1 ){
+                    // suprime
+                }else{
+                    out.write(processaCelula_sb.toString().getBytes());
+                    out.write("\n".getBytes());
+                }
                 processaCelula_sb=new StringBuilder();
                 processaCelula_tail_linha++;
             }
