@@ -3,6 +3,7 @@
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/jsch-0.1.55.jar > jsch-0.1.55.jar
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 // javac -encoding UTF-8 -cp .:ojdbc6.jar:jsch-0.1.55.jar Y.java
+// javac -encoding ISO-8859-1 -cp .;ojdbc6.jar;jsch-0.1.55.jar Y.java
 // alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.55.jar Y'
 // crétidos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
 // crétidos https://github.com/is/jsch/tree/master/examples
