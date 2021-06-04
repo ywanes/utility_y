@@ -1,7 +1,7 @@
 //
-// curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/ojdbc6.jar > ojdbc6.jar
-// curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/sqljdbc4-3.0.jar > sqljdbc4-3.0.jar
-// curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/jsch-0.1.55.jar > jsch-0.1.55.jar
+// curl https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar > ojdbc6.jar
+// curl https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar > sqljdbc4-3.0.jar
+// curl https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar > jsch-0.1.55.jar
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 // javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:jsch-0.1.55.jar Y.java
 // javac -encoding ISO-8859-1 -cp .;ojdbc6.jar;sqljdbc4-3.0.jar;jsch-0.1.55.jar Y.java
