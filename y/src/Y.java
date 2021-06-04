@@ -1,10 +1,11 @@
 //
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/ojdbc6.jar > ojdbc6.jar
+// curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/sqljdbc4-3.0.jar > sqljdbc4-3.0.jar
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/dist/lib/jsch-0.1.55.jar > jsch-0.1.55.jar
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-// javac -encoding UTF-8 -cp .:ojdbc6.jar:jsch-0.1.55.jar Y.java
-// javac -encoding ISO-8859-1 -cp .;ojdbc6.jar;jsch-0.1.55.jar Y.java
-// alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.55.jar Y'
+// javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:jsch-0.1.55.jar Y.java
+// javac -encoding ISO-8859-1 -cp .;ojdbc6.jar;sqljdbc4-3.0.jar;jsch-0.1.55.jar Y.java
+// alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/jsch-0.1.55.jar Y'
 // crétidos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
 // crétidos https://github.com/is/jsch/tree/master/examples
 //
@@ -1336,7 +1337,6 @@ cat buffer.log
                 sb=new StringBuilder();
                 for ( int i=0;i<campos.size();i++ ){
                     tmp=rs.getString(campos.get(i));
-
                     if ( tmp == null  ){
                         if ( i == campos.size()-1 )
                         {
@@ -1347,13 +1347,13 @@ cat buffer.log
                         continue;
                     }
                     if ( tipos.get(i) == -3 || tipos.get(i) == 2 || tipos.get(i) == 12 || tipos.get(i) == -9
-                        || tipos.get(i) == 1 || tipos.get(i) == 2005 || tipos.get(i) == -1 || tipos.get(i) == 93 )
+                        || tipos.get(i) == 1 || tipos.get(i) == 2005 || tipos.get(i) == -1 || tipos.get(i) == 93 || tipos.get(i) == 4 )
                     {
                         if ( tipos.get(i) == 2 && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
-                        //tmp=tmp.replace("'","''");
+                        //tmp=tmp.replace("'","''"); // nao usado no select
                         if ( i == campos.size()-1 ){
                             sb.append(tmp);
                         }else{
@@ -1362,7 +1362,6 @@ cat buffer.log
                         }
                         continue;
                     }
-                    close(rs,stmt,con);
                     throw new Exception("tipo desconhecido:"+tipos.get(i) + " -> " + rs.getString(campos.get(i)) );
                 }
                 System.out.println(sb.toString());
@@ -2386,17 +2385,28 @@ cat buffer.log
     }
 
     public Connection getcon(String stringcon){
-        if ( stringcon.split("\\|").length != 3){
-            System.err.println("Erro na conexão: Login e senha não encontrado!");
-            return null;
-        }else{
-            String par = stringcon.split("\\|")[0];
-            String user = stringcon.split("\\|")[1];
-            String pass = stringcon.split("\\|")[2];
-            try {
-                return DriverManager.getConnection(par, user, pass);
+        if ( stringcon.startsWith("jdbc:sqlserver") ){
+            //SQLServer            
+            try {      
+                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+                return DriverManager.getConnection(stringcon);
             } catch (Exception x) {
                 System.err.println("Erro na conexão:"+x.toString());
+            }
+        }else{
+            //Oracle
+            if ( stringcon.split("\\|").length != 3){
+                System.err.println("Erro na conexão: Login e senha não encontrado!");
+                return null;
+            }else{
+                String par = stringcon.split("\\|")[0];
+                String user = stringcon.split("\\|")[1];
+                String pass = stringcon.split("\\|")[2];
+                try {
+                    return DriverManager.getConnection(par, user, pass);
+                } catch (Exception x) {
+                    System.err.println("Erro na conexão:"+x.toString());
+                }
             }
         }
         return null;
@@ -6662,5 +6672,7 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
