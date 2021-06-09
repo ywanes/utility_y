@@ -660,36 +660,34 @@ cat buffer.log
                 System.out.println("Parametro inválido!");
                 System.out.println("Modelo:");
                 System.out.println("y M ClassePrincipal Caminho Senha");
+                System.out.println("y M Pacote ClassePrincipal Caminho Senha");
                 return;
             }    
-            if ( args.length == 4 ){
+            if ( args.length == 4 || args.length == 5 ){
                 String txt="";        
                 boolean principal_encontrado=false;
                 String classe="";
                 byte[] data=null;
 
-                //String senha=Utilonsole.getPasswordConsole("Digite a senha: ");
-                //if ( senha == null || senha.length() == 0 ){
-                //    System.out.println("Erro, nenhuma senha digitada!");
-                //    System.exit(1);
-                //}
-                //String principal=Utilonsole.getTextConsole("Digite o classe principal: ");
-                //if ( principal == null || principal.length() == 0 ){
-                //    System.out.println("Erro, nenhuma classe digitada!");
-                //    System.exit(1);
-                //}
-                //String dir=Utilonsole.getTextConsole("Digite o caminho(para o caminho digite enter): ");
-                //if ( dir != null && dir.length() > 0 && ! new java.io.File(dir).exists() ){
-                //    System.out.println("Erro, caminho inexistente!");
-                //    System.exit(1);
-                //}
-                
-                String principal=args[1];
-                String dir=args[2];
-                String senha=args[3];
+                String pacote="";
+                String principal="";
+                String dir="";
+                String senha="";
 
+                if ( args.length == 4 ){
+                    pacote="";
+                    principal=args[1];
+                    dir=args[2];
+                    senha=args[3];                    
+                }else{
+                    pacote=args[1]+".";
+                    principal=args[2];
+                    dir=args[3];
+                    senha=args[4];                    
+                }
+                
                 // chamada principal
-                txt=","+principal;
+                txt=","+pacote+principal;
 
                 if ( dir.equals("") ) dir=".";
                 java.io.File[] files=new java.io.File(dir).listFiles();
@@ -705,7 +703,7 @@ cat buffer.log
                         System.out.println("Erro na leitrua do arquivo: "+files[i].getAbsolutePath()+". "+e.toString());
                         System.exit(1);
                     }
-                    txt+=","+classe;
+                    txt+=","+pacote+classe;
                     try{
                         txt+=","+base64_B_S(data,true);        
                     }catch(Exception e){
