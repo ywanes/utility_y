@@ -660,50 +660,40 @@ cat buffer.log
                 System.out.println("Parametro inválido!");
                 System.out.println("Modelo:");
                 System.out.println("y M ClassePrincipal Caminho Senha");
-                System.out.println("y M Pacote ClassePrincipal Caminho Senha");
+                System.out.println("y M pacote1/ClassePrincipal Caminho Senha");
                 return;
             }    
-            if ( args.length == 4 || args.length == 5 ){
+            if ( args.length == 4 ){
                 String txt="";        
                 boolean principal_encontrado=false;
                 String classe="";
+                String path="";
                 byte[] data=null;
 
-                String pacote="";
-                String principal="";
-                String dir="";
-                String senha="";
-
-                if ( args.length == 4 ){
-                    pacote="";
-                    principal=args[1];
-                    dir=args[2];
-                    senha=args[3];                    
-                }else{
-                    pacote=args[1]+".";
-                    principal=args[2];
-                    dir=args[3];
-                    senha=args[4];                    
-                }
+                String principal=args[1].replace("/",".");
+                String dir=args[2];
+                String senha=args[3];                    
                 
                 // chamada principal
-                txt=","+pacote+principal;
+                txt=","+principal;
 
-                if ( dir.equals("") ) dir=".";
-                java.io.File[] files=new java.io.File(dir).listFiles();
-                for ( int i=0;i<files.length;i++ ){
-                    if ( !files[i].isFile() ) continue;
-                    if ( !files[i].getAbsolutePath().endsWith(".class") ) continue;                        
-                    classe=files[i].getName().substring(0,files[i].getName().length()-6);
+                for ( String item : nav_custom(dir) ){
+                    if ( ! item.contains("|") ){
+                        System.err.println("Erro fatal 44");
+                        System.exit(1);
+                    }
+                    classe=item.split("\\|")[0];
+                    path=item.split("\\|")[1];
+                    
                     if ( classe.equals(principal) )
                         principal_encontrado=true;
                     try{
-                        data=readAllBytes( files[i].getAbsolutePath() );
+                        data=readAllBytes( path );
                     }catch(Exception e){
-                        System.out.println("Erro na leitrua do arquivo: "+files[i].getAbsolutePath()+". "+e.toString());
+                        System.out.println("Erro na leitrua do arquivo: "+path+". "+e.toString());
                         System.exit(1);
                     }
-                    txt+=","+pacote+classe;
+                    txt+=","+classe;
                     try{
                         txt+=","+base64_B_S(data,true);        
                     }catch(Exception e){
@@ -5183,7 +5173,48 @@ cat buffer.log
         }
         return null;
     }
-    
+
+    // tipos de retorno
+    // file1|D:\pasta1\file1.class
+    // pacote1.file1|D:\pacote1\file1.class
+    private ArrayList<String> nav_custom(String dir){
+        // dir possiveis
+        // .
+        // pasta
+        // pasta\\
+        // d:\\aa
+        if ( dir.equals("") ) dir=".";
+        dir=new File(dir).getAbsolutePath();
+        String sep="/";
+        if ( dir.contains("\\") )
+            sep="\\";
+        if ( dir.endsWith(sep+".") )
+            dir=dir.substring(0,dir.length()-2);
+        return nav_custom(dir,"",sep);
+    }
+
+    private ArrayList<String> nav_custom(String dir1, String dir2, String sep) {
+        ArrayList<String> retorno=new ArrayList<String>();
+        
+        for ( File item : new java.io.File(dir1+dir2).listFiles() ){
+            if ( !item.isFile() ) continue;
+            if ( !item.getAbsolutePath().endsWith(".class") ) continue;
+            String tmp=item.getAbsolutePath().substring(dir1.length()+1);
+            tmp=tmp.substring(0,tmp.length()-".class".length());
+            tmp=tmp.replace(sep,".");
+            retorno.add(
+                tmp
+                +"|"
+                +item.getAbsolutePath()
+            );
+        }
+        
+        for ( File item : new java.io.File(dir1+dir2).listFiles() ){
+            if ( !item.isDirectory() ) continue;
+            retorno.addAll(nav_custom(dir1,dir2+sep+item.getName(),sep));
+        }
+        return retorno;
+    }    
 }
 
 class Ponte {
