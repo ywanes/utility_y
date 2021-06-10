@@ -167,6 +167,7 @@ cat buffer.log
     }
         
     public void go(String[] args){        
+        try_load_libraries();
         try_load_ORAs();
 
         if ( args.length == 0 ){
@@ -767,17 +768,54 @@ cat buffer.log
                 System.out.println("class M_Loader{ public static boolean loader(String senha,String[] args) throws Exception { try{ java.util.HashMap classes=new java.util.HashMap(); String base=M_Dados.get(); String txt=new String( new M_AES().decrypt( M_Base64.base64(base,false) ,senha,null) ); if (!txt.startsWith(\",\")){ throw new Exception(\"Erro fatal!\"); }else{ txt=txt.substring(1); } String partes[]=txt.split(\",\"); String id=null; String principal=null; for ( int i=0;i<partes.length;i++ ){ if ( principal == null ){ principal=partes[i]; continue; } if ( id == null ){ id=partes[i]; continue; } classes.put(id,partes[i]); id=null; } ClassLoader classLoader=new ClassLoader() {            @Override protected Class<?> findClass(String name) throws ClassNotFoundException { if ( classes.containsKey(name) ){ try { byte[] data=M_Base64.base64((String)classes.get(name),false); return defineClass(name,data,0,data.length);        } catch (Exception e) { System.err.println(\"Erro no carregamento da classe \"+name); System.exit(1); } } return super.findClass(name); } }; Class c=classLoader.loadClass(principal); java.lang.reflect.Method method=c.getDeclaredMethod(\"main\", new Class[]{String[].class} ); method.invoke(null, new Object[]{ args } ); }catch(Exception e){ return false;} return true;} }");
                 
                 int len=txt.length();
-                System.out.println("//M_Dados");
-                System.out.println("class M_Dados {");
-                System.out.println("    public static String get() {");
+                int method_len=1;
+                int cont=0;
+                int cont_len=1000;
+                
+                // methods
+                System.out.println("class M_Dados_"+method_len+" {");
+                System.out.println("    public static String get(){");
                 System.out.println("        StringBuilder sb=new StringBuilder();");
-                for ( int i=0;i<len;i+=200 ){            
+                for ( int i=0;i<len;i+=200 ){
+                    if ( cont > cont_len ){
+                        cont=0;
+                        method_len++;
+                        System.out.println("        return sb.toString();");
+                        System.out.println("    }");
+                        System.out.println("}");
+                        System.out.println("class M_Dados_"+method_len+" {");
+                        System.out.println("    public static String get(){");
+                        System.out.println("        StringBuilder sb=new StringBuilder();");
+                    }
                     if ( i+200 > len )
                         System.out.println("        sb.append(\""+txt.substring(i,len)+"\");");
                     else
                         System.out.println("        sb.append(\""+txt.substring(i,i+200)+"\");");
+                    cont++;
                 }
                 System.out.println("        return sb.toString();");
+                System.out.println("    }");
+                System.out.println("}");
+                
+                //finish
+                System.out.println("//M_Dados");
+                System.out.println("class M_Dados {");
+                System.out.println("    public static String get(){");
+                for ( int i=1;i<=method_len;i++ ){
+                    if ( i == 1 && method_len == 1 ){
+                        System.out.println("        return M_Dados.get_1();");
+                    }else{
+                        if ( i == 1 ){
+                            System.out.println("        return M_Dados_1.get()");
+                        }else{
+                            if ( i < method_len ){
+                                System.out.println("        + M_Dados_"+i+".get()");                                
+                            }else{
+                                System.out.println("        + M_Dados_"+i+".get();");
+                            }
+                        }
+                    }                    
+                }
                 System.out.println("    }");
                 System.out.println("}");
                 return;
@@ -2275,6 +2313,20 @@ cat buffer.log
         return result;
     }
 
+    public void try_load_libraries(){
+        try{
+            Class.forName("oracle.jdbc.OracleDriver");
+        }catch (Exception e){
+            System.err.println("Não foi possível carregar a biblioteca Oracle");
+            System.exit(1);
+        }            
+        try{
+            Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+        }catch (Exception e){
+            System.err.println("Não foi possível carregar a biblioteca SQL Server");
+            System.exit(1);
+        }                    
+    }
     public void try_load_ORAs() {        
         ORAs=lendo_arquivo_pacote("/y/ORAs").split("\n");
         
@@ -2376,7 +2428,7 @@ cat buffer.log
         if ( stringcon.startsWith("jdbc:sqlserver") ){
             //SQLServer            
             try {      
-                Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
+                //Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
                 return DriverManager.getConnection(stringcon);
             } catch (Exception x) {
                 System.err.println("Erro na conexão:"+x.toString());
@@ -2391,6 +2443,7 @@ cat buffer.log
                 String user = stringcon.split("\\|")[1];
                 String pass = stringcon.split("\\|")[2];
                 try {
+                    //Class.forName("oracle.jdbc.OracleDriver");
                     return DriverManager.getConnection(par, user, pass);
                 } catch (Exception x) {
                     System.err.println("Erro na conexão:"+x.toString());
@@ -6580,10 +6633,10 @@ class XML{
 /* class by manual */                + "\n"
 /* class by manual */                + "alias no windows(criar arquivo c:\\Windows\\System32\\y.bat com o conteudo abaixo):\n"
 /* class by manual */                + "@echo off\n"
-/* class by manual */                + "java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9\n"
+/* class by manual */                + "java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\sqljdbc4-3.0.jar;c:\\\\y\\\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "alias no linux:\n"
-/* class by manual */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/jsch-0.1.55.jar Y'";
+/* class by manual */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/jsch-0.1.55.jar Y'";
 /* class by manual */            if ( caminho.equals("/y/manual_mini") )
 /* class by manual */                return ""
 /* class by manual */                + "usage:\n"
@@ -6701,7 +6754,5 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
 
 
