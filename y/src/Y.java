@@ -179,7 +179,7 @@ cat buffer.log
         if ( args[0].equals("banco") ){            
             if ( args.length == 1 ){
                 System.err.println(
-                    lendo_arquivo_pacote("/y/manual")
+                    somente_banco("/y/manual")
                 );            
                 return;
             }
@@ -766,7 +766,7 @@ cat buffer.log
                 System.out.println("//M_Loader");
                 System.out.println("//[classe principal],[load classA]  ,[load classB] ");
                 System.out.println("//,classA           ,classA,dados...,classB,dados...");
-                System.out.println("class M_Loader{ public static boolean loader(String senha,String[] args) throws Exception { String showLoadClass_txt=System.getenv(\"showLoadClass\"); boolean showLoadClass=showLoadClass_txt != null && showLoadClass_txt.equals(\"S\"); try{ if ( showLoadClass ) System.out.println(\"showLoadClass...\"); java.util.HashMap classes=new java.util.HashMap(); String base=M_Dados.get(); String txt=new String( new M_AES().decrypt( M_Base64.base64(base,false) ,senha,null) ); if (!txt.startsWith(\",\")){ throw new Exception(\"Erro fatal!\"); }else{ txt=txt.substring(1); } String partes[]=txt.split(\",\"); String id=null; String principal=null; for ( int i=0;i<partes.length;i++ ){ if ( principal == null ){ principal=partes[i]; continue; } if ( id == null ){ id=partes[i]; continue; } classes.put(id,partes[i]); id=null; } ClassLoader classLoader=new ClassLoader() {            @Override protected Class<?> findClass(String name) throws ClassNotFoundException { if ( classes.containsKey(name) ){ try { byte[] data=M_Base64.base64((String)classes.get(name),false); if ( showLoadClass ) System.out.println(\"showLoadClass...loadClasse...\"+name); return defineClass(name,data,0,data.length);        } catch (Exception e) { System.err.println(\"Erro no carregamento da classe \"+name); System.exit(1); } } if ( showLoadClass ) System.out.println(\"showLoadClass...loadClasseNative...\"+name); return super.findClass(name); } }; Class c=classLoader.loadClass(principal); java.lang.reflect.Method method=c.getDeclaredMethod(\"main\", new Class[]{String[].class} ); method.invoke(null, new Object[]{ args } ); }catch(Exception e){ return false;} return true;} }");
+                System.out.println("class M_Loader{ public static boolean loader(String senha,String[] args) throws Exception { String showLoadClass_txt=System.getenv(\"showLoadClass\"); boolean showLoadClass=showLoadClass_txt != null && showLoadClass_txt.equals(\"S\"); try{ if ( showLoadClass ) System.out.println(\"showLoadClass...\"); java.util.HashMap classes=new java.util.HashMap(); String base=M_Dados.get(); String txt=new String( new M_AES().decrypt( M_Base64.base64(base,false) ,senha,null) ); if (!txt.startsWith(\",\")){ throw new Exception(\"Erro fatal!\"); }else{ txt=txt.substring(1); } String partes[]=txt.split(\",\"); String id=null; String principal=null; for ( int i=0;i<partes.length;i++ ){ if ( principal == null ){ principal=partes[i]; continue; } if ( id == null ){ id=partes[i]; continue; } classes.put(id,partes[i]); id=null; } ClassLoader classLoader=new ClassLoader() {            @Override protected Class<?> findClass(String name) throws ClassNotFoundException { if ( classes.containsKey(name) ){ try { byte[] data=M_Base64.base64((String)classes.get(name),false); if ( showLoadClass ) System.out.println(\"showLoadClass...loadClasse...\"+name); return defineClass(name,data,0,data.length);        } catch (Exception e) { System.err.println(\"Erro no carregamento da classe \"+name); System.exit(1); } } if ( showLoadClass ) System.out.println(\"showLoadClass...loadClasseNative...\"+name); return super.findClass(name); } }; Class c=classLoader.loadClass(principal); java.lang.reflect.Method method=c.getDeclaredMethod(\"main\", String[].class ); method.invoke(null, new Object[]{ args } ); }catch(Exception e){ return false;} return true;} }");
                 
                 int len=txt.length();
                 int method_len=1;
@@ -4657,6 +4657,29 @@ cat buffer.log
         }
     }
 
+    public String somente_banco(String a){
+        String [] linhas=lendo_arquivo_pacote(a).split("\n");
+        String result="";
+        int tag=0;
+        for ( int i=0;i<linhas.length;i++ ){
+            if ( linhas[i].startsWith(" ") && linhas[i].trim().startsWith("[y ") && !linhas[i].trim().startsWith("[y banco ") ) continue;
+            if ( linhas[i].startsWith("[y ") ){
+                if ( linhas[i].startsWith("[y banco ") )
+                    tag=1;
+                else
+                    tag=2;
+            }
+            
+            if ( tag > 0 && linhas[i].trim().equals("") )
+                tag=0;
+            
+            if ( tag == 2 ) continue;
+            
+            result+=linhas[i]+"\n";
+        }
+        return result;
+    }
+    
     public String lendo_arquivo_pacote(String caminho){
         // System.out.println(
         //   lendo_arquivo_pacote("/y/manual_mini")

@@ -266,7 +266,6 @@ Exemplos...
     y serverRouter 192.168.0.100 8080 localhost 9090 show
     y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend
     y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive
-
     y serverRouter localhost 8080 localhost 9090
     y serverRouter localhost 8080 localhost 9090 show
     y serverRouter localhost 8080 localhost 9090 showOnlySend
