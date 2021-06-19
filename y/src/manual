@@ -183,6 +183,7 @@ Exemplos...
 [y [bytesToInts|bi]]
     cat arquivo | y bytesToInts
     cat arquivo | y bi
+    cat arquivo | y bi -128
     obs entrada: arquivo binario
     obs saida: lista de numeros bytes(0..255)
     obs2 bi == bytesToInts

@@ -632,7 +632,10 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("bytesToInts") || args[0].equals("bi") ){
-            bytesToInts();
+            boolean dif_128=false;
+            if ( args.length > 1 && args[1].equals("-128") )
+                dif_128=true;
+            bytesToInts(dif_128);
             return;
         }       
         if ( args[0].equals("intsToBytes") || args[0].equals("ib") ){
@@ -3277,7 +3280,7 @@ cat buffer.log
         int entrada=-1;
         
         for ( int i=0;i<a.size();i++ ){
-            entrada=byte_to_int_java(a.get(i));
+            entrada=byte_to_int_java(a.get(i),false);
             if ( tail == -1 ){
                 tail=entrada;
                 continue;
@@ -3386,12 +3389,12 @@ cat buffer.log
         }
     }
     
-    public void bytesToInts()
+    public void bytesToInts(boolean dif_128)
     {      
         try {
             byte[] entrada_ = new byte[1];
             while ( read1Byte(entrada_) ){
-                System.out.println( byte_to_int_java(entrada_[0]) );
+                System.out.println( byte_to_int_java(entrada_[0],dif_128) );
             }
         }catch(Exception e){
             System.out.println(e.toString());
@@ -3529,7 +3532,7 @@ cat buffer.log
             int i=0;
             byte[] entrada_ = new byte[1];
             while ( read1Byte(entrada_) ){
-                i=byte_to_int_java(entrada_[0]);
+                i=byte_to_int_java(entrada_[0],false);
                 write1od(i);                
             }
             writeodFlush();
@@ -3588,7 +3591,7 @@ cat buffer.log
             if ( caminho != null && ! caminho.equals("") )
                 readBytes(caminho);
             while ( read1Byte(entrada_) ){
-                entrada=byte_to_int_java(entrada_[0]);
+                entrada=byte_to_int_java(entrada_[0],false);
                 if ( ! tail_use ){
                     tail_use=true;
                     tail=entrada;
@@ -3628,7 +3631,7 @@ cat buffer.log
             if ( caminho != null && ! caminho.equals("") )
                 readBytes(caminho);
             while ( read1Byte(entrada_) ){
-                entrada=byte_to_int_java(entrada_[0]);
+                entrada=byte_to_int_java(entrada_[0],false);
                 if ( entrada >= 128 && entrada < 192 ){
                     write1Byte(194);
                     write1Byte(entrada);
@@ -3702,7 +3705,7 @@ cat buffer.log
         byte[] entrada_ = new byte[1];
         int entrada=0;
         while ( read1Byte(entrada_) ){
-            entrada=byte_to_int_java(entrada_[0]);
+            entrada=byte_to_int_java(entrada_[0],false);
             nextEsteira(entrada,-1);
         }
         
@@ -4157,7 +4160,7 @@ cat buffer.log
                 }  
                 break;
             }
-            entrada=byte_to_int_java(buf[0]);
+            entrada=byte_to_int_java(buf[0],false);
             agulha=(agulha<<8)|entrada;
             agulha_count+=8;
             while(agulha_count>=6){
@@ -4214,7 +4217,7 @@ cat buffer.log
                 System.exit(1);
                 break;
             }
-            entrada=byte_to_int_java(buf[0]);
+            entrada=byte_to_int_java(buf[0],false);
             // suprimindo \r\n
             if ( entrada == 10 || entrada == 13 )
                 continue;
@@ -5022,11 +5025,13 @@ cat buffer.log
         return txt.length() != (txt.replace("@","").length()+1);
     }
 
-    public static int byte_to_int_java(byte a) {
+    public static int byte_to_int_java(byte a,boolean dif_128) {
         // os bytes em java vem 0..127 e -128..-1 totalizando 256
         // implementacao manual de Byte.toUnsignedInt(a)
+        // dif_128 true  => -128..127
+        // dif_128 false =>    0..255
         int i=(int)a;
-        if ( i < 0 )
+        if ( !dif_128 && i < 0 )
             i+=256;
         return i;
     }
@@ -5468,7 +5473,7 @@ class Ponte {
             int count=0;
             StringBuilder sb=new StringBuilder();
             for (byte b : buffer){
-                sb.append(Y.OD_BC_R[Y.byte_to_int_java(b)]);
+                sb.append(Y.OD_BC_R[Y.byte_to_int_java(b,false)]);
                 if ( ++count >= len )
                     break;
             }
@@ -5479,7 +5484,7 @@ class Ponte {
             int count=0;
             StringBuilder sb=new StringBuilder();
             for (byte b : buffer){
-                sb.append(String.format("%02X",Y.byte_to_int_java(b)));
+                sb.append(String.format("%02X",Y.byte_to_int_java(b,false)));
                 if ( ++count >= len )
                     break;
             }
@@ -6350,6 +6355,7 @@ class XML{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6539,6 +6545,7 @@ class XML{
 /* class by manual */                + "[y [bytesToInts|bi]]\n"
 /* class by manual */                + "    cat arquivo | y bytesToInts\n"
 /* class by manual */                + "    cat arquivo | y bi\n"
+/* class by manual */                + "    cat arquivo | y bi -128\n"
 /* class by manual */                + "    obs entrada: arquivo binario\n"
 /* class by manual */                + "    obs saida: lista de numeros bytes(0..255)\n"
 /* class by manual */                + "    obs2 bi == bytesToInts\n"
@@ -6622,7 +6629,6 @@ class XML{
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 show\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive\n"
-/* class by manual */                + "\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 show\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showOnlySend\n"
@@ -6778,5 +6784,4 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
