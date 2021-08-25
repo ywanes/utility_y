@@ -105,15 +105,12 @@ public class Y {
     public static void main(String[] args) {
 
 /*
-
 # criando tabela a com 400k registros
 y banco conn,hash execute "drop table a"
 y banco conn,hash execute "create table a ( C1 varchar2(3000), C2 varchar2(3000), C3 varchar2(3000) )"
 y banco conn,hash execute "insert into a values('123456789','123456789','123456789')"
 y echo "select a.* from a,(select level from dual connect by level <= 399999)" | y banco connIn,hash connOut,hash -outTable a carga
 y banco conn,hash select "select count(1) from a"
-
-
 # 34k linhas/s - table to table
 # y banco $conn execute "create table a ( C1 varchar2(3000), C2 varchar2(3000), C3 varchar2(3000) )"
 y banco conn,desktop execute "drop table b"
@@ -121,29 +118,20 @@ y banco conn,desktop execute "create table b as select * from a where rownum <= 
 y banco conn,desktop selectInsert "select b.* from b,(select level from dual connect by level <= 160000)" | y banco buffer -n_line 500 -log buffer.log | y banco conn,desktop executeInsert
 cat buffer.log
 # y banco conn,desktop select "select count(1) from b"
-
-
 # 65k linhas/s - lendo arquivo
 y cat a a a | y banco buffer -n_lines 500 -log buffer.log | y dev_null
 cat buffer.log
-
-
 # 4k linhas/s - gravando arquivo
 y cat a | y banco buffer -n_lines 500 -log buffer.log > aa
 cat buffer.log
-
-
 # 34k linhas/s - table to null               
 y banco conn,desktop selectInsert "select * from a" | y banco buffer -n_lines 500 -log buffer.log | y dev_null
 cat buffer.log
-
-
 # 59k linhas/s - file to table
 y banco conn,desktop execute "drop table b"
 y banco conn,desktop execute "create table b as select * from a where rownum <= 1"
 y cat b | y banco buffer -n_lines 500 -log buffer.log | y banco conn,desktop executeInsert
 cat buffer.log
-
 */
         //teste
         //y serverRouter 192.168.0.100 8080 localhost 9090 show        
@@ -1238,7 +1226,7 @@ cat buffer.log
         
         if ( args.length > 0 && args[0].equals("aes") )
             args=sliceParm(1,args);
-        
+                
         if ( args.length > 0 && ( args[0].equals("-e") || args[0].equals("-d") ) ){
             if ( args[0].equals("-e") )
                 isEncoding="S";
@@ -1246,12 +1234,12 @@ cat buffer.log
                 isEncoding="N";
             args=sliceParm(1,args);
         }
-        
+
         if ( args.length > 0 ){
             senha=args[0];
             args=sliceParm(1,args);
         }
-
+        
         if ( args.length > 1 && args[0].equals("-md") ){            
             if ( args[1].toUpperCase().equals("MD5") || args[1].toUpperCase().equals("SHA256") || args[1].toUpperCase().equals("SHA-256") ){
                 args=sliceParm(1,args);
@@ -1530,7 +1518,6 @@ cat buffer.log
         33;44
         33;44;44;44;44;44;44;44;44;44;44;44;44;44;44;44
         33;44;44;44;44;44;44;44;44;44;44;44;44;44;44;44
-
         obs: campos além do headr nao serão considerados
         */
         
@@ -2494,12 +2481,6 @@ cat buffer.log
         return null;
     }
 
-    public static void skipLine(){
-        try{
-            scanner_pipe.reset();            
-        }catch(Exception e){}
-    }
-        
     public static void closeLine(){
         try{
             scanner_pipe.close();            
@@ -3071,12 +3052,10 @@ cat buffer.log
                 if ( ++count <= p )
                     System.out.println(line);
                 else{
-                    //closeLine();
+                    closeLine();
                     break;
                 }
             }
-            System.exit(0);
-            skipLine();
             closeLine();
         }catch(Exception e){
             System.out.println(e.toString());
@@ -6793,4 +6772,3 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
