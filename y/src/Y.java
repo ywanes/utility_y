@@ -1239,11 +1239,6 @@ cat buffer.log
         if ( args.length > 0 && args[0].equals("aes") )
             args=sliceParm(1,args);
         
-        if ( args.length > 0 ){
-            senha=args[0];
-            args=sliceParm(1,args);
-        }
-        
         if ( args.length > 0 && ( args[0].equals("-e") || args[0].equals("-d") ) ){
             if ( args[0].equals("-e") )
                 isEncoding="S";
@@ -1252,6 +1247,11 @@ cat buffer.log
             args=sliceParm(1,args);
         }
         
+        if ( args.length > 0 ){
+            senha=args[0];
+            args=sliceParm(1,args);
+        }
+
         if ( args.length > 1 && args[0].equals("-md") ){            
             if ( args[1].toUpperCase().equals("MD5") || args[1].toUpperCase().equals("SHA256") || args[1].toUpperCase().equals("SHA-256") ){
                 args=sliceParm(1,args);
@@ -2494,6 +2494,12 @@ cat buffer.log
         return null;
     }
 
+    public static void skipLine(){
+        try{
+            scanner_pipe.reset();            
+        }catch(Exception e){}
+    }
+        
     public static void closeLine(){
         try{
             scanner_pipe.close();            
@@ -3065,10 +3071,12 @@ cat buffer.log
                 if ( ++count <= p )
                     System.out.println(line);
                 else{
-                    closeLine();
+                    //closeLine();
                     break;
                 }
             }
+            System.exit(0);
+            skipLine();
             closeLine();
         }catch(Exception e){
             System.out.println(e.toString());
