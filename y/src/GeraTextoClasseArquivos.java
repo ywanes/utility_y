@@ -68,7 +68,7 @@ public class GeraTextoClasseArquivos {
     public String lendo_arquivo_pacote(String caminho){
         InputStream fstream=getClass().getResourceAsStream(caminho);
         // System.out.println(
-        //   lendo_arquivo_pacote("/y/manual_mini")
+        //   lendo_arquivo_pacote("/y/manual")
         // );
         String result="";
         try{

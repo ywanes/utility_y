@@ -48,6 +48,7 @@ usage:
   [y sftp]
   [y serverRouter]
   [y httpServer]
+  [y wget]
   [y help]
 
 Exemplos...
@@ -284,6 +285,8 @@ Exemplos...
 [y httpServer]
     y httpServer localhost pagina_toke_zzz111 "Lista de arquivos" 8888 "/dir" "" ""
     parametros: host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
+[y wget]
+    y wget -h
 
 Exemplo de conn: -conn "jdbc:oracle:thin:@//host_name:1521/service_name|login|senha"
 Exemplo de conn: -conn "jdbc:oracle:thin:@host_name:1566:sid_name|login|senha"

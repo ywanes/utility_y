@@ -43,6 +43,17 @@ import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.ProgressMonitor;
+import java.net.HttpURLConnection;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.swing.JOptionPane;
 
 
 public class Y {    
@@ -144,7 +155,6 @@ cat buffer.log
         
         //args=new String[]{"selectCSV","-csv","c:\\tmp\\tmp\\a.csv","select CAMPO2, CAMPO2 from this"};                                        
         
-		
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","mostraEstrutura"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","numeroAba","1"};
         //args=new String[]{"xml","C:\\tmp\\aa\\sheet438.xml","mostraTags"};        
@@ -161,7 +171,7 @@ cat buffer.log
 
         if ( args.length == 0 ){
             System.err.println(      
-                lendo_arquivo_pacote("/y/manual_mini")
+                somente_mini("/y/manual")
             );
             return;
         }
@@ -932,7 +942,12 @@ cat buffer.log
         {
             new HttpServer(new String[]{args[1],args[2],args[3],args[4],args[5],args[6],args[7]});
             return;            
-        }        
+        }  
+        if ( args[0].equals("wget"))
+        {
+            wget(args);
+            return;            
+        }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             System.err.println(
                 "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
@@ -4671,9 +4686,20 @@ cat buffer.log
         return result;
     }
     
+    public String somente_mini(String a){
+        String [] linhas=lendo_arquivo_pacote(a).split("\n");
+        String result="";
+        for ( int i=0;i<linhas.length;i++ ){
+            result+=linhas[i]+"\n";
+            if ( linhas[i].trim().equals("") )
+                break;
+        }
+        return result;
+    }
+    
     public String lendo_arquivo_pacote(String caminho){
         // System.out.println(
-        //   lendo_arquivo_pacote("/y/manual_mini")
+        //   lendo_arquivo_pacote("/y/manual")
         // );
         String result="";
         try{
@@ -5285,6 +5311,20 @@ cat buffer.log
         }
         return retorno;
     }    
+
+    private void wget(String[] args) {
+        args=sliceParm(1,args);
+        if ( args.length == 0 )
+            args=new String[]{"-h"};
+        Wget w=new Wget();
+        for ( String comando : args)
+            w.comando(comando);
+        try {
+            w.start_motor();
+        } catch (Exception ex) {
+            System.err.println("Error: "+ex.toString());
+        }
+    }
 }
 
 class Ponte {
@@ -6341,8 +6381,23 @@ class XML{
 /* class HttpServer */ String index : new String[]{"index.html","index.htm"} ){if ( new File(nav+index).exists() ){nav+=index;break;}}}if ( uri.equals("/"+titulo_url) ){sb = new StringBuilder(); for ( String line : new String[]{"HTTP/1.1 200 OK\r\n","Content-Type: text/html; charset=UTF-8\r\n","\r\n","<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n","<html xmlns=\"http://www.w3.org/1999/xhtml\">\n","<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n","<br>\n","&nbsp;"+titulo+"<br>\n"}){sb.append(line);System.out.println("    |---> " + line.replace("\r\n",""));}File[] files = new File(dir).listFiles();Arrays.sort(files, new Comparator<File>() {public int compare(File f1, File f2) {return f1.lastModified()<f2.lastModified()?1:-1;}});sb.append("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");System.out.println("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");sb.append("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");System.out.println("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");for ( File p : files){if ( ! p.isFile() ) continue;if ( ! endsWith_OK(p.getName(),endsWiths) ) continue;sb.append("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href='" + p.getName() + "'>" + p.getName() + "</a></td></tr>\n");System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href='" + p.getName() + "'>" + p.getName() + "</a></td></tr>\n");}sb.append("</table></html>");System.out.println("</table></html>");System.out.println("   |    ");output.write(sb.toString().getBytes());return;}System.out.println("nav: "+nav+";uri: "+uri);if ( new File(nav).exists() && new File(nav).isFile() && endsWith_OK(nav,endsWiths) ){for ( String line : new String[]{"HTTP/1.1 200 OK\r\n"+ "Content-Type: "+ getContentType(nav)+ "; charset=UTF-8\r\n"+ "\r\n"}){sb.append(line);System.out.println("    |---> " + line.replace("\r\n",""));}System.out.println("   |    ");output.write(sb.toString().getBytes());try{System.out.println("iniciando leitura do arquivo: " + nav);transf_bytes(output,nav);System.out.println("finalizando leitura do arquivo: " + nav);return;}catch(Exception e){System.out.println("erro 404, não foi possivel ler o arquivo: " + nav);}}else{System.out.println("nao encontrou o arquivo: " + nav);if ( uri.equals("/favicon.ico") ){return;}}/* ERROR 404 */sb = new StringBuilder();for ( String line : new String[]{"HTTP/1.1 200 OK\r\n","Content-Type: text/html; charset=UTF-8\r\n","\r\n","<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +"<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +"<head>\n" +"<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" +"<title>404 - File or directory not found.</title>\n" +"<style type=\"text/css\">\n" +"<!--\n" +"body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" +"fieldset{padding:0 15px 10px 15px;} \n" 
 /* class HttpServer */ +"h1{font-size:2.4em;margin:0;color:#FFF;}\n" +"h2{font-size:1.7em;margin:0;color:#CC0000;} \n" +"h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n"  +"#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" +"background-color:#555555;}\n" +"#content{margin:0 0 0 2%;position:relative;}\n" +".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" +"-->\n" +"</style>\n" +"</head>\n" +"<body>\n" +"<div id=\"header\"><h1>Server Error</h1></div>\n" +"<div id=\"content\">\n" +" <div class=\"content-container\"><fieldset>\n" +"  <h2>404 - File or directory not found.</h2>\n" +"  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" +" </fieldset></div>\n" +"</div>\n" +"</body>\n" +"</html>"}){sb.append(line);System.out.println("    |---> " + line.replace("\r\n",""));}System.out.println("   |    ");output.write(sb.toString().getBytes());}private String getContentType(String caminho) {if ( caminho.endsWith(".html") || caminho.endsWith(".htm") )return "text/html";if ( caminho.endsWith(".css") )return "text/css";if ( caminho.endsWith(".png") || caminho.endsWith(".ico") || caminho.endsWith(".jpg") )return "image/png";return "application/octet-stream";}public byte[] lendo_arquivo(String caminho) throws Exception {FileInputStream fis=null;File file = new File(caminho);byte[] bFile = new byte[(int) file.length()];fis = new FileInputStream(file);fis.read(bFile);fis.close();return bFile;}public ArrayList<String> lendo_arquivo_display(String caminho) throws Exception {ArrayList<String> result=new ArrayList<String>();String strLine;try{FileReader rf=new FileReader(caminho);BufferedReader in=new BufferedReader(rf);while ((strLine = in.readLine()) != null)result.add(strLine);in.close();rf.close();}catch (Exception e){throw new Exception("nao foi possivel encontrar o arquivo "+caminho);}return result;}private void transf_bytes(OutputStream output, String nav) throws Exception {int count;DataInputStream dis=new DataInputStream(new FileInputStream(nav));byte[] buffer = new byte[8192];while ((count = dis.read(buffer)) > 0)output.write(buffer, 0, count);}private boolean endsWith_OK(String url,String ends){if ( ends.equals("") ) return true;String [] partes = ends.split(",");for ( int i=0;i<partes.length;i++ )if ( url.endsWith("."+partes[i]) )return true;return false;}}
 
-
-
+/* class Wget */ //String [] args2 = {"-h"};               
+/* class Wget */ //String [] args2 = {"-ban","%d0","-only_before","-list_mp3","-list_diretories","http://195.122.253.112/public/mp3/"};        
+/* class Wget */ //String [] args2 = {"-list_files_and_diretories","http://www.dcbasso.rsn86.com/arquivos/Musicas/"};    
+/* class Wget */ //String [] args2 = {"-accep_escape_host_mp3","-list_files_and_diretories","http://openwebindex.com/mp3/music/"};    
+/* class Wget */ //String [] args2 = {"-accep_escape_host_mp3","-list_mp3","-list_diretories","http://www.brain-magazine.com"};    
+/* class Wget */ //String [] args2 = {"-only_before","-list_mp3","-list_diretories","http://moransa.com/music/"};        
+/* class Wget */ //String [] args2 = {"-r","http://www.blesscosmetics.com.br/","-list_files","-list_diretories","-output|C:\\Users\\ywanes\\Documents"};               
+/* class Wget */ //String [] args2 = {"-r","http://www.blesscosmetics.com.br/","-output|C:\\Users\\ywanes\\Documents"};               
+/* class Wget */ //String [] args2 = {"-r","http://www.naosalvo.com.br/","-output|C:\\Users\\ywanes\\Documents"};               
+/* class Wget */ //String [] args2 = {"http://moransa.com/music/Guns%20N'%20Roses%20-%20Appetite%20for%20Destruction/","-only_before","-output|C:\\Users\\ywanes\\Documents","-tipo|.ini|.jpg"};               
+/* class Wget */ //String [] args2 = {"-list_mp3","-only_before","http://jeankulle.free.fr/ftp/sons/"};
+/* class Wget */ //String [] args2 = {"-list_mp3","-only_before","http://percyvanrijn.com/music/"};        
+/* class Wget */ //String [] args2 = {"-list_mp3","-only_before","https://notendur.hi.is/gvr/music/Big%20Whiskey%20and%20the%20GrooGrux%20King/"};                                
+/* class Wget */ class Wget {  public int cont; public boolean list_mp3=false; public String motor="";  Hashtable hashtable = new Hashtable(); int hash_cont=0; private boolean list_files=false; private boolean list_diretorios=false; public ArrayList<String> pilha=new ArrayList<String>(); private boolean accep_escape_host_mp3=false; private boolean only_before=false; private String string_only_before=null; private boolean ban=false; private String string_ban=null; private boolean recursive=false; private String string_output_dir=""; public String sep=""; private String tipo=""; public String proxy=""; public boolean legend=false;   public String parametros [][] = { {"-output|","pasta de arquivo de saida ex:-output|c:\\user\\usuario\\Documents"}, { "http://site.com.br","site da utilizacao"}, {"-r","recursivo, download do site todo"}, {"-h","help, mostra parametros"}, {"-list_mp3","listar as mp3s"}, {"-list_files","listar os arquivos"}, {"-list_diretories","listar os diretorios"}, {"-accep_escape_host_mp3","aceitar navegação de outro host por url mp3"}, {"-tipo|.mp3|.wma","baixar somente arquivos com estas extensoes"}, { "-only_before","somente navegação da url de uma ponto pra frente"} , { "-proxy|","ex: -proxy|endereco-proxy|80"}, {"-ban","palava ou caracter banido, ex -ban %d0"}, {"-legend","colocando 1 arquivo A, 2 arquivo B ... "}, };   String parametros() { String retorno=""; for ( int i=0;i<parametros.length;i++){ retorno+=parametros[i][0]+" => "+parametros[i][1]+"\n"; } return retorno; }  void comando(String comando) { if ( comando.startsWith("-output|")){ string_output_dir=comando.split("\\|")[1]; return; } if ( comando.startsWith("-tipo|")){ tipo=comando.replace("-tipo\\|",""); return; } if ( ban && string_ban == null ){ string_ban=comando; return; } if ( comando.equals("-ban") ){ ban=true; return; } if ( comando.equals("-r") ){ recursive=true; only_before=true; return; } if ( comando.equals("-list_mp3") ){ list_mp3=true; return; } if ( comando.equals("-list_files") ){ list_files=true; return; } if ( comando.equals("-list_diretories") ){ list_diretorios=true;             return; } if ( comando.equals("-accep_escape_host_mp3") ){ accep_escape_host_mp3=true; return; } if ( comando.equals("-only_before") ){ only_before=true; return; } if ( comando.equals("-legend") ){ legend=true; return; } if ( comando.startsWith("-proxy|") ){ comando=comando.replace("-proxy|",""); if ( comando.split("\\|").length != 2 ){ throw new Error("Comando "+comando+" invalido "+comando.split("|").length+" "+comando); } proxy=comando; return; }  if ( comando.contains("-h") ){       System.out.println("Parametros:"); System.out.println(parametros()); System.exit(0); }  if ( ! comando.startsWith("-")){ fix_barra_url(comando); return; } throw new Error("Comando "+comando+" invalido"); }  public void start_motor() throws Exception{ if ( ! motor.equals("")){ cont=0; if ( recursive || ! tipo.equals("")){ if (string_output_dir.equals("")){ throw new Exception("erro, falta do parametro -output|[dir], necessario com o parametro -r ou -tipo ");                 }else{ if ( ! new File(string_output_dir).exists() ){ throw new Exception("erro, o diretorio "+string_output_dir + " nao existe.");                 }else{ grava(get_raiz(motor),"dir"); } } } motor(motor);             } }  public void motor(String url) throws Exception{ if ( url_invalida(url) ){ return; } if ( only_before ){ if (  string_only_before == null ){ string_only_before=url; 
+/* class Wget */ }else{ if ( ! url.contains(string_only_before)){ return; } }             } if ( url.contains("#")){ url=fix_sharp(url); } if ( url.contains("/../") ){ url=fix_dotdot(url); }    if ( ! url.endsWith("/") && ! get_life(url).contains(".")){ url+="/"; }     if ( url_de_request(url) ){  if ( list_diretorios && url.endsWith("/")){ if ( legend ){ System.out.println("pasta                  "+url); }else{ System.out.println(url); } } String html = getcode(url);   if ( ! html.equals("")){ boolean tmp_tipo=false; if ( ! tipo.equals("")){ for ( String ext : tipo.split("\\|")){ if ( url.toLowerCase().endsWith(ext)){ tmp_tipo=true; } } } if ( recursive || tmp_tipo ){ grava(url,"file"); } for ( String parametro : gethref(html) ){    if ( ! parametro.equals("") && ! parametro.contains("?") && ! parametro.contains(" ")){ if ( ban && string_ban != null && parametro.contains(string_ban)){ }else{ motor(monta_url(url,parametro)); } } } }             }else{ if (  (list_mp3 && url.toLowerCase().endsWith(".mp3")) || list_files                     ){ if ( legend ){ System.out.println(++cont+"           arquivo    "+url); }else{ System.out.println(url); } }   boolean tmp_tipo=false; if ( ! tipo.equals("")){ for ( String ext : tipo.split("\\|")){ if ( url.toLowerCase().endsWith(ext)){ tmp_tipo=true; } } } if ( recursive || tmp_tipo ){ grava(url,"file"); }             } }  public boolean url_invalida(String url) throws Exception{ if ( url.length() > 1000){ throw new Exception("erro inesperado ! "+url); }  url=url.trim();  if ( hashtable.contains(new String(url)) ){ return true;             } hashtable.put(hash_cont++,url);  if ( url.contains(";") && ! url.contains("&amp;")){ return true; }     return false; }  public ArrayList<String> gethref(String texto){ ArrayList<String> lista=new ArrayList<String>(); Matcher m; m = Pattern.compile(" href=\"([^\"])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" HREF=\"([^\"])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" href='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" HREF='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" src='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(6)); } m = Pattern.compile(" SRC='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(6)); } return lista; }  public String getcode(String url){  String texto=""; String inputLine="";         HttpURLConnection httpcon=null; BufferedReader in=null;  try{ URLConnection con=null; if ( proxy.equals("")){ con=new URL(url).openConnection();                 }else{ con=new URL(url).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1]))));                 }  con.setUseCaches(false);   (httpcon = (HttpURLConnection) con).addRequestProperty("User-Agent", "Mozilla/4.76"); if ( httpcon.getResponseCode() != 503 ){ in = new BufferedReader(new InputStreamReader(httpcon.getInputStream())); while ((inputLine = in.readLine()) != null) texto+=inputLine; in.close(); return texto; } return ""; }catch (Exception e){ if ( true )return ""; }  return texto; }  public boolean mp3_realmente(String url){ String inputLine;   int cont=0;  try{ URL UrL=new URL(url); URLConnection con; con=UrL.openConnection(); HttpURLConnection httpcon = (HttpURLConnection) con;  httpcon.addRequestProperty("User-Agent", "Mozilla/6.0");  
+/* class Wget */ BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream())); cont=0; while ((inputLine = in.readLine()) != null && cont < 50){ cont++; } in.close(); }catch (Exception e){} if ( cont == 50 ){ return true; } return false; }  public void fix_barra_url(String comando){         if ( ! comando.toLowerCase().startsWith("http://") && ! comando.toLowerCase().startsWith("https://") ){ comando="http://"+comando; } if ( quantidade_de_barra(comando) == 0){ comando+="/";     } motor=comando;         }  private String fix_dotdot(String url2) { boolean final_com_barra=url2.endsWith("/"); reset_pilha(); for ( String pasta : url2.split("/")){ if ( pasta.equals("..") ){ resempilha(); }else{ empilha(pasta); } } String retorno=""; for ( String pasta : pilha ){ retorno+=pasta+"/"; } if ( ! final_com_barra ){ retorno=retorno.substring(0,retorno.length()-1); } return retorno; }  private void reset_pilha() { pilha=new ArrayList<String>(); }  private void resempilha() { if ( pilha.size() > 0 ){ pilha.remove(pilha.size()-1); } }  private void empilha(String pasta) { pilha.add(pasta); }  private String tira_file_da_url(String url2) { while ( ! url2.endsWith("/")){ url2=url2.substring(0,url2.length()-1); } return url2;      }  private String fix_sharp(String incremento) { if ( incremento.contains("#") ){ boolean ignore=false; String incremento_aux=""; for ( int i=0;i<incremento.length() && ! ignore;i++){ if ( incremento.substring(i,i+1).equals("#")){ ignore=true; }else{ incremento_aux+=incremento.substring(i,i+1); }                 } return incremento_aux; }         return incremento; }  private int quantidade_de_barra(String comando) { comando=tira_http(comando); int cont=0; for ( int i=0;i<comando.length();i++){ if ( comando.substring(i,i+1).equals("/")){ cont++; } } return cont; }  private boolean url_de_request(String url) { url=url.toLowerCase(); if ( url.endsWith("/") || url.contains(".asp")  || url.contains(".php") || url.contains(".html") || url.contains(".htm") || url.contains(".apsx") ){ return true; } if ( pasta(url) ){ return true; } return false; }  private boolean pasta(String url) { url=url.replace("http://",""); String u=""; for ( String p : url.split("/")) { u=p; } if ( ! u.contains(".")){ return true; } return false; }  private String get_raiz(String url) { url=tira_http(url); return "http://"+url.split("/")[0]; }  private String tira_http(String comando) { return comando.replace("http://",""); }  private String monta_url(String url, String parametro) { if ( parametro.startsWith("http://")){                         return parametro; }else{ if ( parametro.startsWith("/")){ return get_raiz(url)+parametro; }else{ if ( ! parametro.contains(".") && ! parametro.endsWith("/")){ parametro+="/"; } if ( url.endsWith("/")){ return url+parametro; }else{ if ( ! tira_file(url).equals("") ){ return tira_file(url)+parametro; } return url+"/"+parametro; } } } }  private String tira_file(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return retorno; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return ""; }  private void grava(String conteudo,String tipo) { if ( string_output_dir.contains("\\")){ sep="\\"; }else{ sep="/"; }  if ( tipo.equals("dir")){ conteudo=string_output_dir+sep+tira_http(conteudo);         if ( ! new File(conteudo).exists() ){ new File(conteudo).mkdir(); } }else{     download(conteudo); } }  private void download(String conteudo) {                 
+/* class Wget */ String path=string_output_dir+sep; String aux=""; for ( String pasta : tira_http(tira_file_da_url(conteudo)).split("/")){ path+=pasta+sep; aux=path.replace("%20"," "); if ( ! new File(aux).exists() ){ new File(aux).mkdir(); } }     String file=get_life(conteudo); if ( ! conteudo.contains("?")){ System.out.println("Salvando: "+conteudo); if ( file.equals("")){ file="index.html"; if ( ! new File(path+file).exists() ){                 String html = getcode(conteudo);             try{ aux=(path+file).replace("%20"," "); FileWriter fstream = new FileWriter(aux); BufferedWriter out = new BufferedWriter(fstream); out.write(html); out.close(); }catch (Exception e){ System.err.println("Error: " + e.getMessage()); } } }else{ aux=(path+file).replace("%20"," "); if ( ! new File(aux).exists() ){ new UrlDownload().fileDownload(conteudo,path,proxy); } } } }  private String get_life(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return pasta; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return "";         }  public static class UrlDownload { final static int size=1024; public static void fileUrl(String fAddress, String localFileName, String destinationDir,String proxy) { String aux=""; if ((new File(destinationDir+"\\"+localFileName)).exists()) { System.out.println("Arquivo " + localFileName + " ja exite."); return; }else{ OutputStream outStream = null; URLConnection  uCon = null; InputStream is = null; try { URL Url; byte[] buf; int ByteRead,ByteWritten=0;                 aux=(destinationDir+"\\"+localFileName).replace("%20"," "); outStream = new BufferedOutputStream(new FileOutputStream(aux)); if ( proxy.equals("")){ uCon=new URL(fAddress).openConnection(); }else{ uCon=new URL(fAddress).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1]))));                 }  is = uCon.getInputStream(); buf = new byte[size];  while ((ByteRead = is.read(buf)) != -1) { outStream.write(buf, 0, ByteRead); ByteWritten += ByteRead; } is.close(); outStream.close(); }catch (Exception e) { } } }  public static void fileDownload(String fAddress, String destinationDir,String proxy) { int slashIndex =fAddress.lastIndexOf('/'); int periodIndex =fAddress.lastIndexOf('.'); String fileName=fAddress.substring(slashIndex + 1); if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1) { if(fileName.contains("?")){ String tmp []=fileName.split("="); fileName=tmp[0]; fileName=fileName.substring(0, fileName.length()-2); } fileUrl(fAddress,fileName,destinationDir,proxy); }else{ System.err.println("path or file name."); } } } } 
 
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
@@ -6398,6 +6453,7 @@ class XML{
 /* class by manual */                + "  [y sftp]\n"
 /* class by manual */                + "  [y serverRouter]\n"
 /* class by manual */                + "  [y httpServer]\n"
+/* class by manual */                + "  [y wget]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
@@ -6634,6 +6690,8 @@ class XML{
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer localhost pagina_toke_zzz111 \"Lista de arquivos\" 8888 \"/dir\" \"\" \"\"\n"
 /* class by manual */                + "    parametros: host(pode ser \"\"), titulo_url, titulo, port, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
+/* class by manual */                + "[y wget]\n"
+/* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
 /* class by manual */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
@@ -6655,59 +6713,6 @@ class XML{
 /* class by manual */                + "\n"
 /* class by manual */                + "alias no linux:\n"
 /* class by manual */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/jsch-0.1.55.jar Y'";
-/* class by manual */            if ( caminho.equals("/y/manual_mini") )
-/* class by manual */                return ""
-/* class by manual */                + "usage:\n"
-/* class by manual */                + "  [y banco fromCSV -outTable tabelaA selectInsert]\n"
-/* class by manual */                + "  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
-/* class by manual */                + "  [y banco conn,hash executeInsert]\n"
-/* class by manual */                + "  [y banco conn,hash execute [|execute..]]\n"
-/* class by manual */                + "  [y banco conn,hash createjobexecute]\n"
-/* class by manual */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
-/* class by manual */                + "  [y banco executejob]\n"
-/* class by manual */                + "  [y banco buffer [|-n_lines 500] [|-log buffer.log]]\n"
-/* class by manual */                + "  [y selectCSV]\n"
-/* class by manual */                + "  [y xlsxToCSV]\n"
-/* class by manual */                + "  [y token]\n"
-/* class by manual */                + "  [y gettoken]\n"
-/* class by manual */                + "  [y zip]\n"
-/* class by manual */                + "  [y gzip]\n"
-/* class by manual */                + "  [y gunzip]\n"
-/* class by manual */                + "  [y echo]\n"
-/* class by manual */                + "  [y printf]\n"
-/* class by manual */                + "  [y cat]\n"
-/* class by manual */                + "  [y md5]\n"
-/* class by manual */                + "  [y sha1]\n"
-/* class by manual */                + "  [y sha256]\n"
-/* class by manual */                + "  [y aes]\n"
-/* class by manual */                + "  [y base64]\n"
-/* class by manual */                + "  [y grep]\n"
-/* class by manual */                + "  [y wc -l]\n"
-/* class by manual */                + "  [y head]\n"
-/* class by manual */                + "  [y tail]\n"
-/* class by manual */                + "  [y cut]\n"
-/* class by manual */                + "  [y sed]\n"
-/* class by manual */                + "  [y n]\n"
-/* class by manual */                + "  [y rn]\n"
-/* class by manual */                + "  [y [bytesToInts|bi]]\n"
-/* class by manual */                + "  [y [intsToBytes|ib]]\n"
-/* class by manual */                + "  [y od]\n"
-/* class by manual */                + "  [y touch]\n"
-/* class by manual */                + "  [y iconv]\n"
-/* class by manual */                + "  [y tee]\n"
-/* class by manual */                + "  [y uniq]\n"
-/* class by manual */                + "  [y quebra]\n"
-/* class by manual */                + "  [y seq]\n"
-/* class by manual */                + "  [y awk print]\n"
-/* class by manual */                + "  [y dev_null]\n"
-/* class by manual */                + "  [y dev_in]\n"
-/* class by manual */                + "  [y scp]\n"
-/* class by manual */                + "  [y execSsh]\n"
-/* class by manual */                + "  [y ssh]\n"
-/* class by manual */                + "  [y sftp]\n"
-/* class by manual */                + "  [y serverRouter]\n"
-/* class by manual */                + "  [y httpServer]\n"
-/* class by manual */                + "  [y help]";
 /* class by manual */            if ( caminho.equals("/y/ORAs") )
 /* class by manual */                return ""
 /* class by manual */                + "ORA-00911\n"
@@ -6772,3 +6777,4 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
