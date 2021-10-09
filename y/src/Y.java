@@ -2992,6 +2992,7 @@ cat buffer.log
         
         try {            
             while ( (line=line_bkp=readLine()) != null ) {
+                print=false;
                 if ( i_ )
                     line=line.toUpperCase();
                 for ( int i=0;i<lista_txt.size();i++ ){
