@@ -5518,7 +5518,7 @@ class Ponte {
             text = text.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", " ");
             // removes non-printable characters from Unicode
             text = text.replaceAll("\\p{C}", " ");
-            return text.trim();
+            return text.replace("$"," ").trim();
         }
         
         private String getInts(byte[] buffer,int len) {            
