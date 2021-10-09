@@ -5005,7 +5005,12 @@ cat buffer.log
             new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),"");
             return;
         }
-        if ( args.length == 6 && ( args[5].equals("show") || args[5].equals("showOnlySend") || args[5].equals("showOnlyReceive") ) ){
+        if ( args.length == 6 && ( 
+                args[5].equals("show") 
+                || args[5].equals("showOnlySend") 
+                || args[5].equals("showOnlyReceive") 
+                || args[5].equals("showSimple") 
+        ) ){
             new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),args[5]);
             return;
         }
@@ -5438,15 +5443,18 @@ class Ponte {
         Destino destino=null;
         boolean displayIda=false;
         boolean displayVolta=false;
+        boolean displaySimple=false;
         int port0;
         
         private Origem(Socket credencialSocket,String ponteID,String typeShow) {            
             socket=credencialSocket;
             this.ponteID=ponteID;
-            if ( typeShow.equals("show") || typeShow.equals("showOnlySend"))
+            if ( typeShow.equals("show") || typeShow.equals("showOnlySend") || typeShow.equals("showSimple"))
                 displayIda=true;
-            if ( typeShow.equals("show") || typeShow.equals("showOnlyReceive"))
+            if ( typeShow.equals("show") || typeShow.equals("showOnlyReceive") || typeShow.equals("showSimple"))
                 displayVolta=true;
+            if ( typeShow.equals("showSimple") )
+                displaySimple=true;
         }
         private void referencia(Destino destino) {
             this.destino=destino;
@@ -5487,17 +5495,32 @@ class Ponte {
         }
 
         private void mostra(int len,String direcao, String ponteID, byte[] buffer) {
-            // INT
-            System.out.println(
-                direcao+"(id "+ponteID+" int):"
-                +getInts(buffer,len)
-            );
-             
-            // STR
-            for (String parte : new String(buffer,0,len).split("\n") )                
-                System.out.println(direcao+"(id "+ponteID+" str):"+parte);            
+            if (displaySimple){
+                System.out.println(direcao.replace("->","1 ").replace("<-","2 ")+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
+            }else{
+                // INT
+                System.out.println(
+                    direcao+"(id "+ponteID+" int):"
+                    +getInts(buffer,len)
+                );
+
+                // STR
+                for (String parte : new String(buffer,0,len).split("\n") )                
+                    System.out.println(direcao+"(id "+ponteID+" str):"+parte);            
+            }
         }
 
+        private String cleanTextContent(String text) 
+        {
+            // strips off all non-ASCII characters
+            text = text.replaceAll("[^\\x00-\\x7F]", " ");
+            // erases all the ASCII control characters
+            text = text.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", " ");
+            // removes non-printable characters from Unicode
+            text = text.replaceAll("\\p{C}", " ");
+            return text.trim();
+        }
+        
         private String getInts(byte[] buffer,int len) {            
             int count=0;
             StringBuilder sb=new StringBuilder();
@@ -6400,6 +6423,7 @@ class XML{
 /* class Wget */ BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream())); cont=0; while ((inputLine = in.readLine()) != null && cont < 50){ cont++; } in.close(); }catch (Exception e){} if ( cont == 50 ){ return true; } return false; }  public void fix_barra_url(String comando){         if ( ! comando.toLowerCase().startsWith("http://") && ! comando.toLowerCase().startsWith("https://") ){ comando="http://"+comando; } if ( quantidade_de_barra(comando) == 0){ comando+="/";     } motor=comando;         }  private String fix_dotdot(String url2) { boolean final_com_barra=url2.endsWith("/"); reset_pilha(); for ( String pasta : url2.split("/")){ if ( pasta.equals("..") ){ resempilha(); }else{ empilha(pasta); } } String retorno=""; for ( String pasta : pilha ){ retorno+=pasta+"/"; } if ( ! final_com_barra ){ retorno=retorno.substring(0,retorno.length()-1); } return retorno; }  private void reset_pilha() { pilha=new ArrayList<String>(); }  private void resempilha() { if ( pilha.size() > 0 ){ pilha.remove(pilha.size()-1); } }  private void empilha(String pasta) { pilha.add(pasta); }  private String tira_file_da_url(String url2) { while ( ! url2.endsWith("/")){ url2=url2.substring(0,url2.length()-1); } return url2;      }  private String fix_sharp(String incremento) { if ( incremento.contains("#") ){ boolean ignore=false; String incremento_aux=""; for ( int i=0;i<incremento.length() && ! ignore;i++){ if ( incremento.substring(i,i+1).equals("#")){ ignore=true; }else{ incremento_aux+=incremento.substring(i,i+1); }                 } return incremento_aux; }         return incremento; }  private int quantidade_de_barra(String comando) { comando=tira_http(comando); int cont=0; for ( int i=0;i<comando.length();i++){ if ( comando.substring(i,i+1).equals("/")){ cont++; } } return cont; }  private boolean url_de_request(String url) { url=url.toLowerCase(); if ( url.endsWith("/") || url.contains(".asp")  || url.contains(".php") || url.contains(".html") || url.contains(".htm") || url.contains(".apsx") ){ return true; } if ( pasta(url) ){ return true; } return false; }  private boolean pasta(String url) { url=url.replace("http://",""); String u=""; for ( String p : url.split("/")) { u=p; } if ( ! u.contains(".")){ return true; } return false; }  private String get_raiz(String url) { url=tira_http(url); return "http://"+url.split("/")[0]; }  private String tira_http(String comando) { return comando.replace("http://",""); }  private String monta_url(String url, String parametro) { if ( parametro.startsWith("http://")){                         return parametro; }else{ if ( parametro.startsWith("/")){ return get_raiz(url)+parametro; }else{ if ( ! parametro.contains(".") && ! parametro.endsWith("/")){ parametro+="/"; } if ( url.endsWith("/")){ return url+parametro; }else{ if ( ! tira_file(url).equals("") ){ return tira_file(url)+parametro; } return url+"/"+parametro; } } } }  private String tira_file(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return retorno; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return ""; }  private void grava(String conteudo,String tipo) { if ( string_output_dir.contains("\\")){ sep="\\"; }else{ sep="/"; }  if ( tipo.equals("dir")){ conteudo=string_output_dir+sep+tira_http(conteudo);         if ( ! new File(conteudo).exists() ){ new File(conteudo).mkdir(); } }else{     download(conteudo); } }  private void download(String conteudo) {                 
 /* class Wget */ String path=string_output_dir+sep; String aux=""; for ( String pasta : tira_http(tira_file_da_url(conteudo)).split("/")){ path+=pasta+sep; aux=path.replace("%20"," "); if ( ! new File(aux).exists() ){ new File(aux).mkdir(); } }     String file=get_life(conteudo); if ( ! conteudo.contains("?")){ System.out.println("Salvando: "+conteudo); if ( file.equals("")){ file="index.html"; if ( ! new File(path+file).exists() ){                 String html = getcode(conteudo);             try{ aux=(path+file).replace("%20"," "); FileWriter fstream = new FileWriter(aux); BufferedWriter out = new BufferedWriter(fstream); out.write(html); out.close(); }catch (Exception e){ System.err.println("Error: " + e.getMessage()); } } }else{ aux=(path+file).replace("%20"," "); if ( ! new File(aux).exists() ){ new UrlDownload().fileDownload(conteudo,path,proxy); } } } }  private String get_life(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return pasta; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return "";         }  public static class UrlDownload { final static int size=1024; public static void fileUrl(String fAddress, String localFileName, String destinationDir,String proxy) { String aux=""; if ((new File(destinationDir+"\\"+localFileName)).exists()) { System.out.println("Arquivo " + localFileName + " ja exite."); return; }else{ OutputStream outStream = null; URLConnection  uCon = null; InputStream is = null; try { URL Url; byte[] buf; int ByteRead,ByteWritten=0;                 aux=(destinationDir+"\\"+localFileName).replace("%20"," "); outStream = new BufferedOutputStream(new FileOutputStream(aux)); if ( proxy.equals("")){ uCon=new URL(fAddress).openConnection(); }else{ uCon=new URL(fAddress).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1]))));                 }  is = uCon.getInputStream(); buf = new byte[size];  while ((ByteRead = is.read(buf)) != -1) { outStream.write(buf, 0, ByteRead); ByteWritten += ByteRead; } is.close(); outStream.close(); }catch (Exception e) { } } }  public static void fileDownload(String fAddress, String destinationDir,String proxy) { int slashIndex =fAddress.lastIndexOf('/'); int periodIndex =fAddress.lastIndexOf('.'); String fileName=fAddress.substring(slashIndex + 1); if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1) { if(fileName.contains("?")){ String tmp []=fileName.split("="); fileName=tmp[0]; fileName=fileName.substring(0, fileName.length()-2); } fileUrl(fAddress,fileName,destinationDir,proxy); }else{ System.err.println("path or file name."); } } } } 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6674,10 +6698,12 @@ class XML{
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 show\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 displaySimple\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 show\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showOnlySend\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showOnlyReceive\n"
+/* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showSimple\n"
 /* class by manual */                + "    obs:\n"
 /* class by manual */                + "        192.168.0.100 -> ip a se conectar(se colocar localhost ele vai tentar pegar o ip correto)\n"
 /* class by manual */                + "        8080 -> porta para conectar no router\n"

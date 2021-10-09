@@ -268,10 +268,12 @@ Exemplos...
     y serverRouter 192.168.0.100 8080 localhost 9090 show
     y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend
     y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive
+    y serverRouter 192.168.0.100 8080 localhost 9090 displaySimple
     y serverRouter localhost 8080 localhost 9090
     y serverRouter localhost 8080 localhost 9090 show
     y serverRouter localhost 8080 localhost 9090 showOnlySend
     y serverRouter localhost 8080 localhost 9090 showOnlyReceive
+    y serverRouter localhost 8080 localhost 9090 showSimple
     obs:
         192.168.0.100 -> ip a se conectar(se colocar localhost ele vai tentar pegar o ip correto)
         8080 -> porta para conectar no router
