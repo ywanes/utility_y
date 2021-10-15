@@ -161,7 +161,7 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","1"};        
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
-        
+
         new Y().go(args);
     }
         
@@ -949,10 +949,18 @@ cat buffer.log
             return;            
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
-            System.err.println(
-                "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
-                + lendo_arquivo_pacote("/y/manual")
-            );
+            String retorno=null;
+            if ( args.length == 2 )
+                retorno=helplike(args[1]);
+            if ( retorno == null )
+                System.err.println(
+                    "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
+                    + lendo_arquivo_pacote("/y/manual")
+                );
+            else
+                System.err.println(
+                    retorno
+                );
             return;
         }
         
@@ -4687,6 +4695,49 @@ cat buffer.log
         return result;
     }
     
+    public String helplike(String txt){
+        String retorno=helplikecase(txt,true);
+        if ( retorno.equals("") )
+            retorno=helplikecase(txt,false);
+        if ( retorno.equals("") )
+            return null;
+        return retorno;
+    }
+    
+    public String helplikecase(String txt, boolean case_){
+        String [] linhas=somente_detalhado().split("\n");
+        String result="";
+        boolean achou=false;
+        for ( int i=0;i<linhas.length;i++ ){
+            if ( linhas[i].startsWith("[") ){
+                achou=false;
+                if ( 
+                    (case_ && linhas[i].equals("[y "+txt+"]"))
+                    || (!case_ && linhas[i].contains(txt))
+                )
+                    achou=true;
+            }
+            if ( achou )
+                result+=linhas[i]+"\n";
+        }
+        return result;
+    }
+    
+    public String somente_detalhado(){
+        String [] linhas=lendo_arquivo_pacote("/y/manual").split("\n");
+        String result="";
+        int count=0;
+        for ( int i=0;i<linhas.length;i++ ){
+            if ( count == 2 )
+                result+=linhas[i]+"\n";
+            if ( linhas[i].trim().equals("") )
+                count++;
+            if ( count == 3 )
+                break;
+        }
+        return result;
+    }
+    
     public String somente_mini(String a){
         String [] linhas=lendo_arquivo_pacote(a).split("\n");
         String result="";
@@ -4697,7 +4748,7 @@ cat buffer.log
         }
         return result;
     }
-    
+        
     public String lendo_arquivo_pacote(String caminho){
         // System.out.println(
         //   lendo_arquivo_pacote("/y/manual")
