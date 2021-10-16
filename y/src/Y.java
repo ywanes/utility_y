@@ -956,6 +956,7 @@ cat buffer.log
                 System.err.println(
                     "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
                     + lendo_arquivo_pacote("/y/manual")
+                    + "\n\nUtilitário Y versão:" + lendo_arquivo_pacote("/y/versao")
                 );
             else
                 System.err.println(
