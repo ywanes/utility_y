@@ -250,6 +250,8 @@ Exemplos...
     y scp file1 user,pass@servidor:file2 22
     y scp user,pass@servidor:file1 file2
     y scp user,pass@servidor:file1 file2 22
+    comando para windows nao testado abaixo:
+    y scp user,pass@servidor:/c/temp file2 22
     obs: user,pass ou user
 [y execSsh]
     y execSsh user,pass@servidor command
