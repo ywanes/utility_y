@@ -287,6 +287,8 @@ Exemplos...
 [y TESTEclient]
     y TESTEclient localhost 8080
 [y httpServer]
+    y httpServer
+    obs: o comando acima irá criar um httpServer temporario com parametros padroes
     y httpServer localhost pagina_toke_zzz111 "Lista de arquivos" 8888 "/dir" "" ""
     parametros: host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 [y wget]
