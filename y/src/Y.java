@@ -1395,9 +1395,7 @@ cat buffer.log
                         }
                         continue;
                     }
-                    if ( tipos.get(i) == -3 || tipos.get(i) == 2 || tipos.get(i) == 12 || tipos.get(i) == -9
-                        || tipos.get(i) == 1 || tipos.get(i) == 2005 || tipos.get(i) == -1 || tipos.get(i) == 93 || tipos.get(i) == 4 )
-                    {
+                    if ( tipo_cadastrado(tipos.get(i)) ){
                         if ( tipos.get(i) == 2 && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
@@ -1487,9 +1485,7 @@ cat buffer.log
                         }
                         continue;
                     }
-                    if ( tipos.get(i) == -3 || tipos.get(i) == 2 || tipos.get(i) == 12 || tipos.get(i) == -9
-                        || tipos.get(i) == 1 || tipos.get(i) == 2005 || tipos.get(i) == -1 || tipos.get(i) == 93 )
-                    {
+                    if ( tipo_cadastrado(tipos.get(i)) ){
                         if ( tipos.get(i) == 2 && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
@@ -1774,9 +1770,7 @@ cat buffer.log
                         }
                         continue;
                     }
-                    if ( tipos.get(i) == -3 || tipos.get(i) == 2 || tipos.get(i) == 12 || tipos.get(i) == -9
-                        || tipos.get(i) == 1 || tipos.get(i) == 2005 || tipos.get(i) == -1 || tipos.get(i) == 93 )
-                    {
+                    if ( tipo_cadastrado(tipos.get(i)) ){
                         if ( tipos.get(i) == 2 && tmp.startsWith(".") )
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
@@ -5383,6 +5377,21 @@ cat buffer.log
         } catch (Exception ex) {
             System.err.println("Error: "+ex.toString());
         }
+    }
+
+    private boolean tipo_cadastrado(int a) {
+        return true // controle desabilitado - ja foram feitos muitos testes... 
+            || a == -9
+            || a == -5
+            || a == -3
+            || a == -1
+            || a == 1
+            || a == 2
+            || a == 3
+            || a == 4
+            || a == 12
+            || a == 93
+            || a == 2005;                
     }
 }
 
