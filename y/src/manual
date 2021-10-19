@@ -174,7 +174,9 @@ Exemplos...
     cat arquivo | y cut -c5
     cat arquivo | y cut -c5-10,15-17
 [y sed]
-    cat arquivo | y sed A B    
+    cat arquivo | y sed A B
+    cat arquivo | y sed A B E F
+    obs: sed com dois parametros é performatico e aceita por exemplo \n como quebra
 [y n]
     cat arquivo | y n
     obs: modifica arquivo \r\n para \n(se ja tiver \n nao tem problema)

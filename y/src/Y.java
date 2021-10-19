@@ -618,9 +618,15 @@ cat buffer.log
             cut(args);
             return;
         }
-        if ( args[0].equals("sed") && args.length == 3 && args[1].length() > 0 ){
-            sed(args);
-            return;
+        if ( args[0].equals("sed") ){
+            if ( args.length == 3 ){
+                sed(args);
+                return;
+            }
+            if ( args.length%2 == 1 ){
+                sedBasic(args);
+                return;
+            }
         }
         if ( args[0].equals("n") ){
             n();
@@ -3212,7 +3218,22 @@ cat buffer.log
             System.out.println(e.toString());
         }
     }
-         
+
+    public void sedBasic(String [] args)
+    {
+        String line;
+        while ( (line=readLine()) != null ) {
+            for ( int i=1;i<args.length;i+=2 ){
+                if ( args[i].length() == 0 ){
+                    System.err.println("Erro nos parametros!!");
+                    System.exit(1);
+                }
+                line=line.replace(args[i],args[i+1]);
+            }
+            System.out.println(line);
+        }
+    }
+    
     ArrayList<Byte> sed_agulha1=new ArrayList<Byte>();
     int sed_agulha1_count=0;
     ArrayList<Byte> sed_agulha2=new ArrayList<Byte>(); // substituir in
@@ -3221,7 +3242,6 @@ cat buffer.log
     int sed_agulha3_count=0;
     public void sed(String [] args)
     {     
-        
         byte [] in_=args[1].getBytes();
         for ( int i=0;i<in_.length;i++ )
             sed_agulha2.add(in_[i]);   
@@ -6658,7 +6678,9 @@ class XML{
 /* class by manual */                + "    cat arquivo | y cut -c5\n"
 /* class by manual */                + "    cat arquivo | y cut -c5-10,15-17\n"
 /* class by manual */                + "[y sed]\n"
-/* class by manual */                + "    cat arquivo | y sed A B    \n"
+/* class by manual */                + "    cat arquivo | y sed A B\n"
+/* class by manual */                + "    cat arquivo | y sed A B E F\n"
+/* class by manual */                + "    obs: sed com dois parametros e performatico e aceita por exemplo \\n como quebra\n"
 /* class by manual */                + "[y n]\n"
 /* class by manual */                + "    cat arquivo | y n\n"
 /* class by manual */                + "    obs: modifica arquivo \\r\\n para \\n(se ja tiver \\n nao tem problema)\n"
@@ -6865,4 +6887,5 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
