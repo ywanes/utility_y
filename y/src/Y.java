@@ -1768,8 +1768,13 @@ cat buffer.log
                     if ( tmp == null  ){
                         if ( first )
                         {
-                            header+="\""+campos.get(i)+"\""+sepCSV;
-                            first_detail+="\"\""+sepCSV;
+                            if ( i == campos.size()-1 ){
+                                header+="\""+campos.get(i)+"\"";
+                                first_detail+="\"\"";
+                            }else{
+                                header+="\""+campos.get(i)+"\""+sepCSV;
+                                first_detail+="\"\""+sepCSV;
+                            }
                         }else{
                             sb.append("\"\"");
                             sb.append(sepCSV);
@@ -1787,8 +1792,13 @@ cat buffer.log
                         
                         if ( first )
                         {
-                            header+="\""+campos.get(i)+"\""+sepCSV;
-                            first_detail+="\""+tmp+"\""+sepCSV;
+                            if ( i == campos.size()-1 ){
+                                header+="\""+campos.get(i)+"\"";
+                                first_detail+="\""+tmp+"\"";
+                            }else{
+                                header+="\""+campos.get(i)+"\""+sepCSV;
+                                first_detail+="\""+tmp+"\""+sepCSV;
+                            }
                         }else{
                             // nao imprime delimitador em onlychar e tipos.get(i) == 2
                             if ( !onlychar || tipos.get(i) != 2 )
@@ -1796,7 +1806,10 @@ cat buffer.log
                             sb.append(tmp);
                             if ( !onlychar || tipos.get(i) != 2 )
                                 sb.append("\"");
-                            sb.append(sepCSV);
+                            if ( i == campos.size()-1 ){
+                            }else{
+                                sb.append(sepCSV);
+                            }
                         }
 
                         continue;
