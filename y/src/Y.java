@@ -5380,18 +5380,9 @@ cat buffer.log
     }
 
     private boolean tipo_cadastrado(int a) {
-        return true // controle desabilitado - ja foram feitos muitos testes... 
-            || a == -9
-            || a == -5
-            || a == -3
-            || a == -1
-            || a == 1
-            || a == 2
-            || a == 3
-            || a == 4
-            || a == 12
-            || a == 93
-            || a == 2005;                
+        return true; 
+        // controle desabilitado - ja foram feitos muitos testes... 
+        // return a == -9 || a == -5 || a == -3 || a == -1 || a == 1 || a == 2 || a == 3 || a == 4 || a == 12 || a == 93 || a == 2005;                
     }
 }
 
