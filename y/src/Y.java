@@ -1760,10 +1760,11 @@ cat buffer.log
             semHeader=true;
         
                 
-        // configuracao TZ UTC NATAL
+        // configuracao TZ UTC NATAL YYYY-MM-DD
         String dataT=" ";
         String dataZ=" ";
         boolean flag_natal=false;
+        boolean flag_ymd=false;
         String format_data=System.getenv("FORMAT_DATA_Y");
         if ( format_data != null && format_data.equals("TZ") ){
             dataT="T";
@@ -1773,7 +1774,9 @@ cat buffer.log
             dataZ=" UTC";
         if ( format_data != null && format_data.equals("NATAL") )
             flag_natal=true;
-                
+        if ( format_data != null && format_data.equals("YYYY-MM-DD") )
+            flag_ymd=true;
+        
         Connection con=null;
         Statement stmt=null;
         ResultSet rs=null;
@@ -1845,7 +1848,10 @@ cat buffer.log
                             if ( flag_natal )
                                 tmp="25/12/"+tmp.substring(0, 4)+dataT+tmp.substring(11, 19)+dataZ;
                             else
-                                tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+dataT+tmp.substring(11, 19)+dataZ;
+                                if ( flag_ymd )
+                                    tmp=tmp.substring(0, 4)+"-"+tmp.substring(5, 7)+"-"+tmp.substring(8, 10)+dataT+tmp.substring(11, 19)+dataZ;
+                                else
+                                    tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+dataT+tmp.substring(11, 19)+dataZ;
                         // o csv suporta ".."".." mas para ficar mais simples o comando abaixo tira o "
                         tmp=tmp.replace("\"","").replace("\n","");
                         tmp=tmp.trim();
@@ -6906,6 +6912,7 @@ class XML{
 /* class by manual */                + "export FORMAT_DATA_Y=\"TZ\" deixando a data 10/10/2010T10:10:10Z\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"UTC\" deixando a data 10/10/2010 10:10:10 UTC\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data sera na data do natal ex 25/12/2010 10:10:15\n"
+/* class by manual */                + "export FORMAT_DATA_Y=\"YYYY-MM-DD\" toda data sera na data do natal ex 25/12/2010 10:10:15\n"
 /* class by manual */                + "export COM_SEPARADOR_FINAL_CSV_Y=\"S\" ex: \"a\";\"a\"; o padrao seria \"a\";\"a\"\n"
 /* class by manual */                + "export SEM_HEADER_CSV_Y=\"S\"\n"
 /* class by manual */                + "\n"
@@ -6983,4 +6990,6 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
