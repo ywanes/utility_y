@@ -311,7 +311,7 @@ export CSV_ONLYCHAR_Y="S" usado para nao imprimir aspas duplas em numericos, pod
 export FORMAT_DATA_Y="TZ" deixando a data 10/10/2010T10:10:10Z
 export FORMAT_DATA_Y="UTC" deixando a data 10/10/2010 10:10:10 UTC
 export FORMAT_DATA_Y="NATAL" toda data será na data do natal ex 25/12/2010 10:10:15
-export FORMAT_DATA_Y="YYYY-MM-DD" toda data será na data do natal ex 25/12/2010 10:10:15
+export FORMAT_DATA_Y="YYYY-MM-DD" 2010-07-07 12:12:12
 export COM_SEPARADOR_FINAL_CSV_Y="S" ex: "a";"a"; o padrao seria "a";"a"
 export SEM_HEADER_CSV_Y="S"
 

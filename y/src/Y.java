@@ -6912,7 +6912,7 @@ class XML{
 /* class by manual */                + "export FORMAT_DATA_Y=\"TZ\" deixando a data 10/10/2010T10:10:10Z\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"UTC\" deixando a data 10/10/2010 10:10:10 UTC\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data sera na data do natal ex 25/12/2010 10:10:15\n"
-/* class by manual */                + "export FORMAT_DATA_Y=\"YYYY-MM-DD\" toda data sera na data do natal ex 25/12/2010 10:10:15\n"
+/* class by manual */                + "export FORMAT_DATA_Y=\"YYYY-MM-DD\" 2010-07-07 12:12:12\n"
 /* class by manual */                + "export COM_SEPARADOR_FINAL_CSV_Y=\"S\" ex: \"a\";\"a\"; o padrao seria \"a\";\"a\"\n"
 /* class by manual */                + "export SEM_HEADER_CSV_Y=\"S\"\n"
 /* class by manual */                + "\n"
@@ -6990,6 +6990,7 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
