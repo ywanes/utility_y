@@ -310,6 +310,7 @@ export CSV_SEP_Y="|" para utilizar um separador diferente, pode ser usado tanto 
 export CSV_ONLYCHAR_Y="S" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravação de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso
 export FORMAT_DATA_Y="TZ" deixando a data 10/10/2010T10:10:10Z
 export FORMAT_DATA_Y="UTC" deixando a data 10/10/2010 10:10:10 UTC
+export FORMAT_DATA_Y="NATAL" toda data será na data do natal ex 25/12/2010 10:10:15
 
 Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;
 Dica2: vendo os tokens: grep ":" $TOKEN_Y/*
