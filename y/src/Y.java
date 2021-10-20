@@ -6567,6 +6567,7 @@ class XML{
 /* class Wget */ String path=string_output_dir+sep; String aux=""; for ( String pasta : tira_http(tira_file_da_url(conteudo)).split("/")){ path+=pasta+sep; aux=path.replace("%20"," "); if ( ! new File(aux).exists() ){ new File(aux).mkdir(); } }     String file=get_life(conteudo); if ( ! conteudo.contains("?")){ System.out.println("Salvando: "+conteudo); if ( file.equals("")){ file="index.html"; if ( ! new File(path+file).exists() ){                 String html = getcode(conteudo);             try{ aux=(path+file).replace("%20"," "); FileWriter fstream = new FileWriter(aux); BufferedWriter out = new BufferedWriter(fstream); out.write(html); out.close(); }catch (Exception e){ System.err.println("Error: " + e.getMessage()); } } }else{ aux=(path+file).replace("%20"," "); if ( ! new File(aux).exists() ){ new UrlDownload().fileDownload(conteudo,path,proxy); } } } }  private String get_life(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return pasta; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return "";         }  public static class UrlDownload { final static int size=1024; public static void fileUrl(String fAddress, String localFileName, String destinationDir,String proxy) { String aux=""; if ((new File(destinationDir+"\\"+localFileName)).exists()) { System.out.println("Arquivo " + localFileName + " ja exite."); return; }else{ OutputStream outStream = null; URLConnection  uCon = null; InputStream is = null; try { URL Url; byte[] buf; int ByteRead,ByteWritten=0;                 aux=(destinationDir+"\\"+localFileName).replace("%20"," "); outStream = new BufferedOutputStream(new FileOutputStream(aux)); if ( proxy.equals("")){ uCon=new URL(fAddress).openConnection(); }else{ uCon=new URL(fAddress).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1]))));                 }  is = uCon.getInputStream(); buf = new byte[size];  while ((ByteRead = is.read(buf)) != -1) { outStream.write(buf, 0, ByteRead); ByteWritten += ByteRead; } is.close(); outStream.close(); }catch (Exception e) { } } }  public static void fileDownload(String fAddress, String destinationDir,String proxy) { int slashIndex =fAddress.lastIndexOf('/'); int periodIndex =fAddress.lastIndexOf('.'); String fileName=fAddress.substring(slashIndex + 1); if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1) { if(fileName.contains("?")){ String tmp []=fileName.split("="); fileName=tmp[0]; fileName=fileName.substring(0, fileName.length()-2); } fileUrl(fAddress,fileName,destinationDir,proxy); }else{ System.err.println("path or file name."); } } } } 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6884,6 +6885,7 @@ class XML{
 /* class by manual */                + "export FORMAT_DATA_Y=\"TZ\" deixando a data 10/10/2010T10:10:10Z\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"UTC\" deixando a data 10/10/2010 10:10:10 UTC\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data sera na data do natal ex 25/12/2010 10:10:15\n"
+/* class by manual */                + "export COM_SEPARADOR_FINAL_CSV_Y=\"S\" ex: \"a\";\"a\"; o padrao seria \"a\";\"a\"\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;\n"
 /* class by manual */                + "Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*\n"
@@ -6959,4 +6961,6 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
