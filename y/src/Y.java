@@ -1754,8 +1754,11 @@ cat buffer.log
         String com_separador_final_=System.getenv("COM_SEPARADOR_FINAL_CSV_Y");
         if ( com_separador_final_ != null && com_separador_final_.equals("S") )
             com_separador_final=true;
+        boolean semHeader=false;
+        String semHeader_=System.getenv("SEM_HEADER_CSV_Y");
+        if ( semHeader_ != null && semHeader_.equals("S") )
+            semHeader=true;
         
-                
                 
         // configuracao TZ UTC NATAL
         String dataT=" ";
@@ -1889,7 +1892,8 @@ cat buffer.log
 
                 if ( first ){
                     first=false;
-                    System.out.println(header);
+                    if ( !semHeader )
+                        System.out.println(header);
                     System.out.println(first_detail);
                     count++;
                     continue;
