@@ -1750,7 +1750,13 @@ cat buffer.log
         String onlychar_=System.getenv("CSV_ONLYCHAR_Y");
         if ( onlychar_ != null && onlychar_.equals("S") )
             onlychar=true;
+        boolean com_separador_final=false;
+        String com_separador_final_=System.getenv("COM_SEPARADOR_FINAL_CSV_Y");
+        if ( com_separador_final_ != null && com_separador_final_.equals("S") )
+            com_separador_final=true;
         
+                
+                
         // configuracao TZ UTC NATAL
         String dataT=" ";
         String dataZ=" ";
@@ -1816,8 +1822,13 @@ cat buffer.log
                     if ( tmp == null  ){
                         if ( first )
                         {
-                            header+="\""+campos.get(i)+"\""+sepCSV;
-                            first_detail+="\"\""+sepCSV;
+                            if ( i == campos.size()-1 && !com_separador_final ){
+                                header+="\""+campos.get(i)+"\"";
+                                first_detail+="\"\"";
+                            }else{
+                                header+="\""+campos.get(i)+"\""+sepCSV;
+                                first_detail+="\"\""+sepCSV;
+                            }
                         }else{
                             sb.append("\"\"");
                             sb.append(sepCSV);
@@ -1838,8 +1849,13 @@ cat buffer.log
                         
                         if ( first )
                         {
-                            header+="\""+campos.get(i)+"\""+sepCSV;
-                            first_detail+="\""+tmp+"\""+sepCSV;
+                            if ( i == campos.size()-1 && !com_separador_final ){
+                                header+="\""+campos.get(i)+"\"";
+                                first_detail+="\""+tmp+"\"";
+                            }else{
+                                header+="\""+campos.get(i)+"\""+sepCSV;
+                                first_detail+="\""+tmp+"\""+sepCSV;
+                            }
                         }else{
                             // nao imprime delimitador em onlychar e tipos.get(i) == 2
                             if ( !onlychar || tipos.get(i) != 2 )
@@ -1847,7 +1863,10 @@ cat buffer.log
                             sb.append(tmp);
                             if ( !onlychar || tipos.get(i) != 2 )
                                 sb.append("\"");
-                            sb.append(sepCSV);
+                            if ( i == campos.size()-1 && !com_separador_final ){
+                            }else{
+                                sb.append(sepCSV);
+                            }
                         }
 
                         continue;
