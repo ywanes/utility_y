@@ -1851,14 +1851,14 @@ cat buffer.log
                         {
                             if ( i == campos.size()-1 && !com_separador_final ){
                                 header+="\""+campos.get(i)+"\"";
-                                if ( onlychar || tipo_numerico(tipos.get(i)) ){
+                                if ( onlychar && tipo_numerico(tipos.get(i)) ){
                                     first_detail+=tmp;
                                 }else{
                                     first_detail+="\""+tmp+"\"";
                                 }
                             }else{
                                 header+="\""+campos.get(i)+"\""+sepCSV;
-                                if ( onlychar || tipo_numerico(tipos.get(i)) ){
+                                if ( onlychar && tipo_numerico(tipos.get(i)) ){
                                     first_detail+=tmp+sepCSV;
                                 }else{
                                     first_detail+="\""+tmp+"\""+sepCSV;
@@ -1866,12 +1866,12 @@ cat buffer.log
                             }
                         }else{
                             // nao imprime delimitador em onlychar e tipos.get(i) == 2
-                            if ( onlychar || tipo_numerico(tipos.get(i)) ){
+                            if ( onlychar && tipo_numerico(tipos.get(i)) ){
                             }else{
                                 sb.append("\"");
                             }
                             sb.append(tmp);
-                            if ( onlychar || tipo_numerico(tipos.get(i)) ){
+                            if ( onlychar && tipo_numerico(tipos.get(i)) ){
                             }else{
                                 sb.append("\"");
                             }
