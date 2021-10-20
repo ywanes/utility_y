@@ -1416,7 +1416,7 @@ cat buffer.log
                         continue;
                     }
                     if ( tipo_cadastrado(tipos.get(i)) ){
-                        if ( tipos.get(i) == 2 && tmp.startsWith("."))
+                        if ( tipo_numerico(tipos.get(i)) && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             if ( flag_natal )
@@ -1523,7 +1523,7 @@ cat buffer.log
                         continue;
                     }
                     if ( tipo_cadastrado(tipos.get(i)) ){
-                        if ( tipos.get(i) == 2 && tmp.startsWith("."))
+                        if ( tipo_numerico(tipos.get(i)) && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             if ( flag_natal )
@@ -1836,7 +1836,7 @@ cat buffer.log
                         continue;
                     }
                     if ( tipo_cadastrado(tipos.get(i)) ){
-                        if ( tipos.get(i) == 2 && tmp.startsWith(".") )
+                        if ( tipo_numerico(tipos.get(i)) && tmp.startsWith(".") )
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             if ( flag_natal )
@@ -5474,6 +5474,11 @@ cat buffer.log
         // controle desabilitado - ja foram feitos muitos testes... 
         // return a == -9 || a == -5 || a == -3 || a == -1 || a == 1 || a == 2 || a == 3 || a == 4 || a == 12 || a == 93 || a == 2005;                
     }
+    
+    private boolean tipo_numerico(int a) {
+        return a == 2 || a == 3 || a == 4;
+    }
+    
 }
 
 class Ponte {
