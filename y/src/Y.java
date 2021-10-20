@@ -1355,7 +1355,18 @@ cat buffer.log
         Connection con=null;
         Statement stmt=null;
         ResultSet rs=null;
-        
+
+        // configuracao TZ UTC
+        String dataT=" ";
+        String dataZ=" ";
+        String format_data=System.getenv("FORMAT_DATA_Y");
+        if ( format_data != null && format_data.equals("TZ") ){
+            dataT="T";
+            dataZ="Z";
+        }
+        if ( format_data != null && format_data.equals("UTC") )
+            dataZ=" UTC";
+
         try{            
             con = getcon(conn);
             if ( con == null ){
@@ -1405,7 +1416,7 @@ cat buffer.log
                         if ( tipos.get(i) == 2 && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
-                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+"T"+tmp.substring(11, 19)+"Z";
+                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+dataT+tmp.substring(11, 19)+dataZ;
                         //tmp=tmp.replace("'","''"); // nao usado no select
                         if ( i == campos.size()-1 ){
                             sb.append(tmp);
@@ -1440,6 +1451,17 @@ cat buffer.log
         Connection con=null;
         Statement stmt=null;
         ResultSet rs=null;
+
+        // configuracao TZ UTC
+        String dataT=" ";
+        String dataZ=" ";
+        String format_data=System.getenv("FORMAT_DATA_Y");
+        if ( format_data != null && format_data.equals("TZ") ){
+            dataT="T";
+            dataZ="Z";
+        }
+        if ( format_data != null && format_data.equals("UTC") )
+            dataZ=" UTC";
         
         int countCommit=0;
         try{
@@ -1495,7 +1517,7 @@ cat buffer.log
                         if ( tipos.get(i) == 2 && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
-                            tmp="to_date('"+tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+"T"+tmp.substring(11, 19)+"Z','DD/MM/YYYY HH24:MI:SS')";
+                            tmp="to_date('"+tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+dataT+tmp.substring(11, 19)+dataZ+"','DD/MM/YYYY HH24:MI:SS')";
                         if ( tmp.length() <= 4000 ){
                             if ( tipos.get(i) == 93 ){ // DATA
                                 sb.append(tmp);
@@ -1717,6 +1739,17 @@ cat buffer.log
         if ( onlychar_ != null && onlychar_.equals("S") )
             onlychar=true;
         
+        // configuracao TZ UTC
+        String dataT=" ";
+        String dataZ=" ";
+        String format_data=System.getenv("FORMAT_DATA_Y");
+        if ( format_data != null && format_data.equals("TZ") ){
+            dataT="T";
+            dataZ="Z";
+        }
+        if ( format_data != null && format_data.equals("UTC") )
+            dataZ=" UTC";
+                
         Connection con=null;
         Statement stmt=null;
         ResultSet rs=null;
@@ -1780,7 +1813,7 @@ cat buffer.log
                         if ( tipos.get(i) == 2 && tmp.startsWith(".") )
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
-                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+"T"+tmp.substring(11, 19)+"Z";
+                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+dataT+tmp.substring(11, 19)+dataZ;
                         // o csv suporta ".."".." mas para ficar mais simples o comando abaixo tira o "
                         tmp=tmp.replace("\"","").replace("\n","");
                         tmp=tmp.trim();
@@ -6812,6 +6845,8 @@ class XML{
 /* class by manual */                + "export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV\n"
 /* class by manual */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravacao\n"
 /* class by manual */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravacao de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
+/* class by manual */                + "export FORMAT_DATA_Y=\"TZ\" deixando a data 10/10/2010T10:10:10Z\n"
+/* class by manual */                + "export FORMAT_DATA_Y=\"UTC\" deixando a data 10/10/2010 10:10:10 UTC\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;\n"
 /* class by manual */                + "Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*\n"
@@ -6887,5 +6922,4 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 

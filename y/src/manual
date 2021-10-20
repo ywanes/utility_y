@@ -308,6 +308,8 @@ export STATUS_FIM_Y=path/fim.log para receber a confirmação de fim de processa
 export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV
 export CSV_SEP_Y="|" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravação
 export CSV_ONLYCHAR_Y="S" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravação de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso
+export FORMAT_DATA_Y="TZ" deixando a data 10/10/2010T10:10:10Z
+export FORMAT_DATA_Y="UTC" deixando a data 10/10/2010 10:10:10 UTC
 
 Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;
 Dica2: vendo os tokens: grep ":" $TOKEN_Y/*
