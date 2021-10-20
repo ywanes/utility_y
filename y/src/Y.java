@@ -1405,7 +1405,7 @@ cat buffer.log
                         if ( tipos.get(i) == 2 && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
-                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
+                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+"T"+tmp.substring(11, 19)+"Z";
                         //tmp=tmp.replace("'","''"); // nao usado no select
                         if ( i == campos.size()-1 ){
                             sb.append(tmp);
@@ -1495,7 +1495,7 @@ cat buffer.log
                         if ( tipos.get(i) == 2 && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
-                            tmp="to_date('"+tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19)+"','DD/MM/YYYY HH24:MI:SS')";
+                            tmp="to_date('"+tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+"T"+tmp.substring(11, 19)+"Z','DD/MM/YYYY HH24:MI:SS')";
                         if ( tmp.length() <= 4000 ){
                             if ( tipos.get(i) == 93 ){ // DATA
                                 sb.append(tmp);
@@ -1617,7 +1617,7 @@ cat buffer.log
         
     }
 
-    // comando selectCSV(nao confundir com banco selectCSV)
+    // comando "y selectCSV"(nao confundir com "y banco selectCSV")
     public String [] selectCSV_camposName=null;
     public String [] selectCSV_camposValue=null;
     public String [] selectCSV_camposNameSaida=null;
@@ -1709,7 +1709,7 @@ cat buffer.log
         out.close();
     }
 
-    // comando banco selectCSV(nao confundir com selectCSV)
+    // comando "y banco selectCSV"(nao confundir com "y selectCSV")
     public void selectCSV(String conn,String parm){
         
         boolean onlychar=false;
@@ -1768,13 +1768,8 @@ cat buffer.log
                     if ( tmp == null  ){
                         if ( first )
                         {
-                            if ( i == campos.size()-1 ){
-                                header+="\""+campos.get(i)+"\"";
-                                first_detail+="\"\"";
-                            }else{
-                                header+="\""+campos.get(i)+"\""+sepCSV;
-                                first_detail+="\"\""+sepCSV;
-                            }
+                            header+="\""+campos.get(i)+"\""+sepCSV;
+                            first_detail+="\"\""+sepCSV;
                         }else{
                             sb.append("\"\"");
                             sb.append(sepCSV);
@@ -1785,20 +1780,15 @@ cat buffer.log
                         if ( tipos.get(i) == 2 && tmp.startsWith(".") )
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
-                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+" "+tmp.substring(11, 19);
+                            tmp=tmp.substring(8, 10)+"/"+tmp.substring(5, 7)+"/"+tmp.substring(0, 4)+"T"+tmp.substring(11, 19)+"Z";
                         // o csv suporta ".."".." mas para ficar mais simples o comando abaixo tira o "
                         tmp=tmp.replace("\"","").replace("\n","");
                         tmp=tmp.trim();
                         
                         if ( first )
                         {
-                            if ( i == campos.size()-1 ){
-                                header+="\""+campos.get(i)+"\"";
-                                first_detail+="\""+tmp+"\"";
-                            }else{
-                                header+="\""+campos.get(i)+"\""+sepCSV;
-                                first_detail+="\""+tmp+"\""+sepCSV;
-                            }
+                            header+="\""+campos.get(i)+"\""+sepCSV;
+                            first_detail+="\""+tmp+"\""+sepCSV;
                         }else{
                             // nao imprime delimitador em onlychar e tipos.get(i) == 2
                             if ( !onlychar || tipos.get(i) != 2 )
@@ -1806,10 +1796,7 @@ cat buffer.log
                             sb.append(tmp);
                             if ( !onlychar || tipos.get(i) != 2 )
                                 sb.append("\"");
-                            if ( i == campos.size()-1 ){
-                            }else{
-                                sb.append(sepCSV);
-                            }
+                            sb.append(sepCSV);
                         }
 
                         continue;
