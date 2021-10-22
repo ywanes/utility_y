@@ -166,7 +166,8 @@ cat buffer.log
         new Y().go(args);
     }
         
-    public void go(String[] args){        
+    public void go(String[] args){    
+        System.setProperty("https.protocols", "TLSv1.1");
         try_load_libraries();
         try_load_ORAs();
 
