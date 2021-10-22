@@ -1,11 +1,12 @@
 //
 // curl https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar > ojdbc6.jar
 // curl https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar > sqljdbc4-3.0.jar
+// curl http://121.42.227.72:8081/nexus/content/groups/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar > mysql-connector-java-8.0.26.jar
 // curl https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar > jsch-0.1.55.jar
 // curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-// javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:jsch-0.1.55.jar Y.java
-// javac -encoding ISO-8859-1 -cp .;ojdbc6.jar;sqljdbc4-3.0.jar;jsch-0.1.55.jar Y.java
-// alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/jsch-0.1.55.jar Y'
+// javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
+// javac -encoding ISO-8859-1 -cp .;ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;jsch-0.1.55.jar Y.java
+// alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar Y'
 // crétidos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
 // crétidos https://github.com/is/jsch/tree/master/examples
 //
