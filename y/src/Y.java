@@ -1027,6 +1027,7 @@ cat buffer.log
                     conn=base64_S_S(conn,false);
                 }catch(Exception e){}
             }
+            conn=conn.replace("\n","");
             args=sliceParm(1,args);
         }
         
