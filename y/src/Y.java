@@ -1022,6 +1022,11 @@ cat buffer.log
                 return null;
             }
             conn=value_;
+            if ( ! conn.equals(":")){
+                try{
+                    conn=base64_S_S(conn,false);
+                }catch(Exception e){}
+            }
             args=sliceParm(1,args);
         }
         
