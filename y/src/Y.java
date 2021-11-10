@@ -1022,7 +1022,7 @@ cat buffer.log
                 return null;
             }
             conn=value_;
-            if ( ! conn.equals(":")){
+            if ( ! conn.contains(":")){
                 try{
                     conn=base64_S_S(conn,false);
                 }catch(Exception e){}
