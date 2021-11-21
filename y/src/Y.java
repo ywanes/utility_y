@@ -957,11 +957,15 @@ cat buffer.log
                 return;
             }            
         }  
-        if ( args[0].equals("wget"))
-        {
+        if ( args[0].equals("wget")){
             wget(args);
             return;            
         }
+        if ( args[0].equals("os")){
+            os();
+            return;            
+        }
+        
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             String retorno=null;
             if ( args.length == 2 )
@@ -5499,6 +5503,44 @@ cat buffer.log
         }
     }
 
+    private void os() {
+        Process proc;
+        try {
+            boolean show=false;
+            for ( String command : new String[]{
+                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
+                "system_profiler SPSoftwareDataType",
+                "oslevel",
+                "lsb_release -a",
+                "cat /etc/os-release",
+            } ){
+                proc = Runtime.getRuntime().exec(command);
+                int len=0;
+                byte[] b=new byte[1024];
+                boolean ok=false;
+                boolean error=false;
+                while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                    System.out.write(b, 0, len);
+                    ok=true;
+                }
+                while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                    error=true;
+                }           
+                if ( ok == error ){
+                    System.err.println("Erro fatal 99!");
+                    System.exit(1);
+                }
+                if ( error ) continue;
+                show=true;
+                break;
+            }
+            if ( !show )
+                System.out.println("Nenhum sistema foi detectado!");
+        } catch (Exception ex) {
+            System.err.println(ex.toString());
+        }
+    }
+    
     private boolean tipo_cadastrado(int a) {
         return true; 
         // controle desabilitado - ja foram feitos muitos testes... 
@@ -6602,7 +6644,6 @@ class XML{
 /* class Wget */ String path=string_output_dir+sep; String aux=""; for ( String pasta : tira_http(tira_file_da_url(conteudo)).split("/")){ path+=pasta+sep; aux=path.replace("%20"," "); if ( ! new File(aux).exists() ){ new File(aux).mkdir(); } }     String file=get_life(conteudo); if ( ! conteudo.contains("?")){ System.out.println("Salvando: "+conteudo); if ( file.equals("")){ file="index.html"; if ( ! new File(path+file).exists() ){                 String html = getcode(conteudo);             try{ aux=(path+file).replace("%20"," "); FileWriter fstream = new FileWriter(aux); BufferedWriter out = new BufferedWriter(fstream); out.write(html); out.close(); }catch (Exception e){ System.err.println("Error: " + e.getMessage()); } } }else{ aux=(path+file).replace("%20"," "); if ( ! new File(aux).exists() ){ new UrlDownload().fileDownload(conteudo,path,proxy); } } } }  private String get_life(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return pasta; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return "";         }  public static class UrlDownload { final static int size=1024; public static void fileUrl(String fAddress, String localFileName, String destinationDir,String proxy) { String aux=""; if ((new File(destinationDir+"\\"+localFileName)).exists()) { System.out.println("Arquivo " + localFileName + " ja exite."); return; }else{ OutputStream outStream = null; URLConnection  uCon = null; InputStream is = null; try { URL Url; byte[] buf; int ByteRead,ByteWritten=0;                 aux=(destinationDir+"\\"+localFileName).replace("%20"," "); outStream = new BufferedOutputStream(new FileOutputStream(aux)); if ( proxy.equals("")){ uCon=new URL(fAddress).openConnection(); }else{ uCon=new URL(fAddress).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1]))));                 }  is = uCon.getInputStream(); buf = new byte[size];  while ((ByteRead = is.read(buf)) != -1) { outStream.write(buf, 0, ByteRead); ByteWritten += ByteRead; } is.close(); outStream.close(); }catch (Exception e) { } } }  public static void fileDownload(String fAddress, String destinationDir,String proxy) { int slashIndex =fAddress.lastIndexOf('/'); int periodIndex =fAddress.lastIndexOf('.'); String fileName=fAddress.substring(slashIndex + 1); if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1) { if(fileName.contains("?")){ String tmp []=fileName.split("="); fileName=tmp[0]; fileName=fileName.substring(0, fileName.length()-2); } fileUrl(fAddress,fileName,destinationDir,proxy); }else{ System.err.println("path or file name."); } } } } 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6658,6 +6699,7 @@ class XML{
 /* class by manual */                + "  [y serverRouter]\n"
 /* class by manual */                + "  [y httpServer]\n"
 /* class by manual */                + "  [y wget]\n"
+/* class by manual */                + "  [y os]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
@@ -6904,6 +6946,9 @@ class XML{
 /* class by manual */                + "    parametros: host(pode ser \"\"), titulo_url, titulo, port, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
+/* class by manual */                + "[y os]\n"
+/* class by manual */                + "    y os\n"
+/* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
@@ -6998,7 +7043,4 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
 

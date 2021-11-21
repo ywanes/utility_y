@@ -49,6 +49,7 @@ usage:
   [y serverRouter]
   [y httpServer]
   [y wget]
+  [y os]
   [y help]
 
 Exemplos...
@@ -295,6 +296,9 @@ Exemplos...
     parametros: host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 [y wget]
     y wget -h
+[y os]
+    y os
+    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
 [y help]
     y help <command>
     y help router
