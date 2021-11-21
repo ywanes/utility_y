@@ -5504,16 +5504,17 @@ cat buffer.log
     }
 
     private void os() {
-        Process proc;
-        try {
-            boolean show=false;
-            for ( String command : new String[]{
-                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
-                "system_profiler SPSoftwareDataType",
-                "oslevel",
-                "lsb_release -a",
-                "cat /etc/os-release",
-            } ){
+        boolean show=false;
+        
+        for ( String command : new String[]{
+            "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
+            "system_profiler SPSoftwareDataType",
+            "oslevel",
+            "lsb_release -a",
+            "cat /etc/os-release",
+        } ){
+            try {
+                Process proc;
                 proc = Runtime.getRuntime().exec(command);
                 int len=0;
                 byte[] b=new byte[1024];
@@ -5532,13 +5533,14 @@ cat buffer.log
                 }
                 if ( error ) continue;
                 show=true;
-                break;
-            }
-            if ( !show )
-                System.out.println("Nenhum sistema foi detectado!");
-        } catch (Exception ex) {
-            System.err.println(ex.toString());
+                    break;
+            } catch (Exception ex) {
+                continue;
+            }        
         }
+        if ( !show )
+            System.out.println("Nenhum sistema foi detectado!");
+
     }
     
     private boolean tipo_cadastrado(int a) {
