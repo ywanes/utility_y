@@ -5529,7 +5529,7 @@ cat buffer.log
                 while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
                     error=true;
                 }           
-                if ( ok == error ){
+                if ( !ok ){
                     System.err.println("Erro fatal 99!");
                     System.exit(1);
                 }
