@@ -1332,27 +1332,26 @@ cat buffer.log
         String start=null;
         String end=null;
         
-        if ( args.length > 0 && args[0].equals("awk") )
+        if ( args.length > 0 && args[0].equals("awk") ){
             args=sliceParm(1,args);
+        }
         
         if ( args.length > 0 && args[0].equals("-v") ){
             negativa="S";        
             args=sliceParm(1,args);
         }
 
-        if ( args.length > 1 && args[0].equals("start") )
-        {
+        if ( args.length > 1 && args[0].equals("start") ){
             start=args[1];
             args=sliceParm(2,args);
         }
         
-        if ( args.length > 1 && args[0].equals("end") )
-        {
+        if ( args.length > 1 && args[0].equals("end") ){
             end=args[1];
             args=sliceParm(2,args);
         }
 
-        if ( args.length == 0 ){
+        if ( args.length > 0 ){
             return null;
         }
         
