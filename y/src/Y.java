@@ -4170,12 +4170,14 @@ cat buffer.log
             comando_invalido(args);
             return;
         }
-        String negativa=args[0]; // S/N
-        String start=args[1]; // ".." ou null
-        String end=args[2]; // ".." ou null
+        String negativa=negativaStartEnd[0]; // S/N
+        String start=negativaStartEnd[1]; // ".." ou null
+        String end=negativaStartEnd[2]; // ".." ou null
         
         int status=0; // 0 -> fora, 1 -> dentro do range
-        
+        if ( start == null )
+            status=1;
+
         try {
             String line=null;
             while ( (line=readLine()) != null ) {
@@ -4189,7 +4191,7 @@ cat buffer.log
                     System.out.println(line);
                 
                 if ( end != null && status == 1 && line.contains(end) )
-                    status=0;                
+                    status=0;   
             }
             closeLine();
         }catch(Exception e){
