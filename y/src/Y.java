@@ -951,40 +951,40 @@ cat buffer.log
         if ( args[0].equals("httpServer"))
         {
             String host="localhost";
-            if ( args.length > 1 ){
+            if ( args.length > 1 )
                 host=args[1];
+            else
                 System.out.println("host preenchido automaticamente => " + host);
-            }        
             String titulo_url="tmp";
-            if ( args.length > 2 ){
+            if ( args.length > 2 )
                 titulo_url=args[2];
-                System.out.println("titulo url preenchido automaticamente => " + titulo_url);
-            }        
+            else
+                System.out.println("titulo url preenchido automaticamente => " + titulo_url);     
             String titulo="tmp";
-            if ( args.length > 3 ){
+            if ( args.length > 3 )
                 titulo=args[3];
-                System.out.println("titulo preenchido automaticamente => " + titulo);
-            }        
+            else
+                System.out.println("titulo preenchido automaticamente => " + titulo);        
             String port="8888";
-            if ( args.length > 4 ){
+            if ( args.length > 4 )
                 port=args[4];
-                System.out.println("porta preenchido automaticamente => " + port);
-            }        
+            else
+                System.out.println("porta preenchido automaticamente => " + port);     
             String dir=".";
-            if ( args.length > 5 ){
+            if ( args.length > 5 )
                 dir=args[5];
-                System.out.println("diretorio preenchido automaticamente => " + dir);
-            }        
+            else
+                System.out.println("diretorio preenchido automaticamente => " + dir);     
             String endsWiths="";
-            if ( args.length > 6 ){
+            if ( args.length > 6 )
                 endsWiths=args[6];
-                System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);
-            }        
+            else
+                System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);     
             String ips_banidos="";
-            if ( args.length > 7 ){
+            if ( args.length > 7 )
                 ips_banidos=args[7];
-                System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);
-            }        
+            else
+                System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
             new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos});
             return;
         }  
@@ -5626,7 +5626,13 @@ class Ponte {
 
     private void ponte0(Socket credencialSocket, String host1, int port1,String typeShow) {
         String id=padLeftZeros(new Random().nextInt(100000)+"",6);
-        System.out.println("iniciando ponte id "+id);
+        String ip_origem=credencialSocket.getRemoteSocketAddress().toString().substring(1);
+        if ( ip_origem.contains(":") ){
+            int p=ip_origem.length()-1;
+            while(ip_origem.charAt(p--) != ':'){}
+            ip_origem=ip_origem.substring(0,p+1);
+        }
+        System.out.println("iniciando ponte id "+id+" - ip origem "+ip_origem);
         Origem origem=null;
         try{
             Destino destino=new Destino(host1,port1);                    
@@ -6678,6 +6684,7 @@ class XML{
 /* class Wget */ String path=string_output_dir+sep; String aux=""; for ( String pasta : tira_http(tira_file_da_url(conteudo)).split("/")){ path+=pasta+sep; aux=path.replace("%20"," "); if ( ! new File(aux).exists() ){ new File(aux).mkdir(); } }     String file=get_life(conteudo); if ( ! conteudo.contains("?")){ System.out.println("Salvando: "+conteudo); if ( file.equals("")){ file="index.html"; if ( ! new File(path+file).exists() ){                 String html = getcode(conteudo);             try{ aux=(path+file).replace("%20"," "); FileWriter fstream = new FileWriter(aux); BufferedWriter out = new BufferedWriter(fstream); out.write(html); out.close(); }catch (Exception e){ System.err.println("Error: " + e.getMessage()); } } }else{ aux=(path+file).replace("%20"," "); if ( ! new File(aux).exists() ){ new UrlDownload().fileDownload(conteudo,path,proxy); } } } }  private String get_life(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return pasta; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return "";         }  public static class UrlDownload { final static int size=1024; public static void fileUrl(String fAddress, String localFileName, String destinationDir,String proxy) { String aux=""; if ((new File(destinationDir+"\\"+localFileName)).exists()) { System.out.println("Arquivo " + localFileName + " ja exite."); return; }else{ OutputStream outStream = null; URLConnection  uCon = null; InputStream is = null; try { URL Url; byte[] buf; int ByteRead,ByteWritten=0;                 aux=(destinationDir+"\\"+localFileName).replace("%20"," "); outStream = new BufferedOutputStream(new FileOutputStream(aux)); if ( proxy.equals("")){ uCon=new URL(fAddress).openConnection(); }else{ uCon=new URL(fAddress).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1]))));                 }  is = uCon.getInputStream(); buf = new byte[size];  while ((ByteRead = is.read(buf)) != -1) { outStream.write(buf, 0, ByteRead); ByteWritten += ByteRead; } is.close(); outStream.close(); }catch (Exception e) { } } }  public static void fileDownload(String fAddress, String destinationDir,String proxy) { int slashIndex =fAddress.lastIndexOf('/'); int periodIndex =fAddress.lastIndexOf('.'); String fileName=fAddress.substring(slashIndex + 1); if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1) { if(fileName.contains("?")){ String tmp []=fileName.split("="); fileName=tmp[0]; fileName=fileName.substring(0, fileName.length()-2); } fileUrl(fAddress,fileName,destinationDir,proxy); }else{ System.err.println("path or file name."); } } } } 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6957,7 +6964,7 @@ class XML{
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 show\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 displaySimple\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showSimple\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 show\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showOnlySend\n"
@@ -7077,4 +7084,5 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
