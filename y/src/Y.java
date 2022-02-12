@@ -5684,6 +5684,8 @@ class Ponte {
                     try{
                         while( (len=is.read(buffer)) > -1 )
                             origem.volta(len,buffer);
+                        System.out.println("desconectou");
+                        origem.destroy();  
                     }catch(Exception e){
                         System.out.println("desconectou destino "+e.toString());
                     }
