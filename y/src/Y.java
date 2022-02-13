@@ -938,16 +938,6 @@ cat buffer.log
             serverRouter(args);
             return;            
         }
-        if ( args[0].equals("TESTEserver"))
-        {
-            TESTEserver(args);
-            return;            
-        }
-        if ( args[0].equals("TESTEclient"))
-        {
-            TESTEclient(args);
-            return;            
-        }
         if ( args[0].equals("httpServer"))
         {
             String host="localhost";
@@ -5226,28 +5216,6 @@ cat buffer.log
         System.exit(0);
     }
 
-    private void TESTEserver(String[] args) {
-        if ( args.length == 2 ){
-            new Ponte().TESTEserver(null,Integer.parseInt(args[1]));
-            return;
-        }
-        if ( args.length == 3 ){
-            new Ponte().TESTEserver(args[1],Integer.parseInt(args[2]));
-            return;
-        }
-        comando_invalido(args);
-        System.exit(0);
-    }
-
-    private void TESTEclient(String[] args) {
-        if ( args.length == 3 ){
-            new Ponte().TESTEclient(args[1],Integer.parseInt(args[2]));
-            return;
-        }
-        comando_invalido(args);
-        System.exit(0);
-    }
-
     public static int byte_to_int_java(byte a,boolean dif_128) {
         // os bytes em java vem 0..127 e -128..-1 totalizando 256
         // implementacao manual de Byte.toUnsignedInt(a)
@@ -5594,10 +5562,9 @@ class Ponte {
     //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"showOnlySend");                
     //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"showOnlyReceive");                
     
-    // teste server
-    //new Ponte().TESTEserver("9090");                        
-    // teste client
-    //new Ponte().TESTEclient("localhost","8080");
+    public static boolean displayIda=false;
+    public static boolean displayVolta=false;
+    public static boolean displaySimple=false;
 
     public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow){
         Ambiente ambiente=null;
@@ -5609,12 +5576,18 @@ class Ponte {
         }     
         System.out.println("ServerRouter criado.");
         System.out.println("obs: A ponte só estabelece conexão com o destino quando detectar o início da origem");
+        if ( typeShow.equals("show") || typeShow.equals("showOnlySend") || typeShow.equals("showSimple"))
+            displayIda=true;
+        if ( typeShow.equals("show") || typeShow.equals("showOnlyReceive") || typeShow.equals("showSimple"))
+            displayVolta=true;
+        if ( typeShow.equals("showSimple") )
+            displaySimple=true;
         while(true){
             try{
                 final Socket credencialSocket=ambiente.getCredencialSocket();
                 new Thread(){
                     public void run(){
-                        ponte0(credencialSocket,host1,port1,typeShow);
+                        ponte0(credencialSocket,host1,port1);
                     }
                 }.start();   
             }catch(Exception e){
@@ -5624,8 +5597,9 @@ class Ponte {
         }
     }
 
-    private void ponte0(Socket credencialSocket, String host1, int port1,String typeShow) {
+    private void ponte0(Socket credencialSocket, String host1, int port1) {
         String id=padLeftZeros(new Random().nextInt(100000)+"",6);
+        // formatando ip
         String ip_origem=credencialSocket.getRemoteSocketAddress().toString().substring(1);
         if ( ip_origem.contains(":") ){
             int p=ip_origem.length()-1;
@@ -5636,7 +5610,7 @@ class Ponte {
         Origem origem=null;
         try{
             Destino destino=new Destino(host1,port1);                    
-            origem=new Origem(credencialSocket,id,typeShow);
+            origem=new Origem(credencialSocket,id);
             origem.referencia(destino);
             destino.referencia(origem);
             origem.start(); // destino é startado no meio do start da origem;
@@ -5647,21 +5621,7 @@ class Ponte {
         System.out.println("finalizando ponte id "+id);
     }
 
-    public static class OutputStreamCustom{ 
-        public static int IDA=1;
-        public static int VOLTA=2;
-
-        private OutputStream os=null;
-        private OutputStreamCustom(OutputStream os) {
-            this.os=os;
-        }
-        
-        public void write(int sentido_, byte[] buffer, int off, int len) throws IOException {
-            os.write(buffer, off, len);
-        }
-    }
-
-    private class Destino {
+    private class Destino {   // |   |<->|
         OutputStreamCustom os=null;
         Origem origem=null;
         String host1;
@@ -5675,8 +5635,8 @@ class Ponte {
         }
         private void start() throws Exception {
             Socket socket=new Socket(host1, port1);                                                
-            final InputStream is=socket.getInputStream();                        
-            os=new OutputStreamCustom(socket.getOutputStream());
+            final InputStream is=socket.getInputStream();           //  |   |<- |             
+            os=new OutputStreamCustom(socket.getOutputStream());    //  |   | ->|
             new Thread(){
                 public void run(){
                     int len=0;   
@@ -5684,39 +5644,30 @@ class Ponte {
                     try{
                         while( (len=is.read(buffer)) > -1 )
                             origem.volta(len,buffer);
-                        System.out.println("desconectou");
-                        origem.destroy();  
+                        System.out.println("desconectou"); 
                     }catch(Exception e){
                         System.out.println("desconectou destino "+e.toString());
                     }
+                    origem.destroy(); 
                 }
             }.start();                                    
         }
 
-        private void ida(byte[] buffer,int len) throws Exception {            
-            os.write(OutputStreamCustom.IDA,buffer,0,len);
+        private void ida(byte[] buffer,int len, String ponteID) throws Exception {   // |   | ->|          
+            os.write(OutputStreamCustom.IDA,buffer,0,len,ponteID);
         }
     }
 
-    private class Origem {    
+    private class Origem {    // |<->|   |
         String ponteID="";
         Socket socket=null;
         OutputStreamCustom os=null;
         Destino destino=null;
-        boolean displayIda=false;
-        boolean displayVolta=false;
-        boolean displaySimple=false;
         int port0;
         
-        private Origem(Socket credencialSocket,String ponteID,String typeShow) {            
+        private Origem(Socket credencialSocket,String ponteID) {            
             socket=credencialSocket;
             this.ponteID=ponteID;
-            if ( typeShow.equals("show") || typeShow.equals("showOnlySend") || typeShow.equals("showSimple"))
-                displayIda=true;
-            if ( typeShow.equals("show") || typeShow.equals("showOnlyReceive") || typeShow.equals("showSimple"))
-                displayVolta=true;
-            if ( typeShow.equals("showSimple") )
-                displaySimple=true;
         }
         private void referencia(Destino destino) {
             this.destino=destino;
@@ -5725,29 +5676,23 @@ class Ponte {
         private void start() throws Exception {
             // start destino
             destino.start();
+            // start origem
             int len=0;
             byte[] buffer = new byte[2048];            
             InputStream is=null;
             os=null;
             BufferedInputStream bis=null;                            
-            is=socket.getInputStream();
-            os=new OutputStreamCustom(socket.getOutputStream());            
+            is=socket.getInputStream();                            //  | ->|   |
+            os=new OutputStreamCustom(socket.getOutputStream());   //  |<- |   |         
             bis=new BufferedInputStream(is);                            
-            while( (len=bis.read(buffer)) != -1 ){
-                // local de filtro ida
-                if (displayIda)
-                    mostra(len,"->",ponteID,buffer);
-                destino.ida(buffer,len);
-            }            
+            while( (len=bis.read(buffer)) != -1 )
+                destino.ida(buffer,len,ponteID);
             try{ bis.close(); }catch(Exception e){}
             try{ is.close(); }catch(Exception e){}
         }
 
-        private void volta(int len,byte[] buffer) throws Exception {
-            // local de filtro volta
-            if (displayVolta)
-                mostra(len,"<-",ponteID,buffer);
-            os.write(OutputStreamCustom.VOLTA,buffer,0,len);
+        private void volta(int len,byte[] buffer) throws Exception { // |<- |   |
+            os.write(OutputStreamCustom.VOLTA,buffer,0,len,ponteID);
         }
 
         private void destroy() {
@@ -5755,21 +5700,46 @@ class Ponte {
                 socket.close();
             }catch(Exception e){}
         }
+    }
 
-        private void mostra(int len,String direcao, String ponteID, byte[] buffer) {
-            if (displaySimple){
-                System.out.println(direcao.replace("->","1 ").replace("<-","2 ")+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
-            }else{
-                // INT
-                System.out.println(
-                    direcao+"(id "+ponteID+" int):"
-                    +getInts(buffer,len)
-                );
+    public static class OutputStreamCustom{ 
+        public static int IDA=1;   //  |   | ->|
+        public static int VOLTA=2; //  |<- |   |
 
-                // STR
-                for (String parte : new String(buffer,0,len).split("\n") )                
-                    System.out.println(direcao+"(id "+ponteID+" str):"+parte);            
-            }
+        private OutputStream os=null;
+        private OutputStreamCustom(OutputStream os) {
+            this.os=os;
+        }
+        
+        public void write(int sentido_, byte[] buffer, int off, int len, String ponteID) throws IOException {
+            // implementar aqui o controle geral
+            //  if (sentido_ == IDA)     |   | ->|
+            //  if (sentido_ == VOLTA)   |<- |   |
+            os.write(buffer, off, len);
+            mostra_(sentido_,buffer,len,ponteID);
+        }
+
+        private void mostra_(int sentido_, byte[] buffer, int len, String ponteID) {
+            if (sentido_ == VOLTA && displayVolta)
+                mostra("<-",buffer,len,ponteID);
+            if (sentido_ == IDA && displayIda)
+                mostra("->",buffer,len,ponteID);
+            if (sentido_ == VOLTA && displaySimple)
+                System.out.println("2 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
+            if (sentido_ == IDA && displaySimple)
+                System.out.println("1 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
+        }
+
+        private void mostra(String direcao, byte[] buffer, int len, String ponteID) {
+            // INT
+            System.out.println(
+                direcao+"(id "+ponteID+" int):"
+                +getInts(buffer,len)
+            );
+
+            // STR
+            for (String parte : new String(buffer,0,len).split("\n") )                
+                System.out.println(direcao+"(id "+ponteID+" str):"+parte);            
         }
 
         private String cleanTextContent(String text) 
@@ -5805,83 +5775,6 @@ class Ponte {
             return sb.toString();
         }
 
-    }
-
-    // preparando para receber varias conexoes
-    public void TESTEserver(String host,int port){
-        try{
-            
-            // exemplo host0 -> "192.168.0.100"
-            if ( host == null || host.equals("localhost") ){
-                try{
-                    host=InetAddress.getLocalHost().getHostName();
-                }catch(Exception e){
-                    System.out.println("warning: procurando ip ...");
-                    host=getListaIPs().get(0);
-                    System.out.println("warning: ip localizado -> "+host);
-                }                    
-            }
-            
-            ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName(host));
-            System.out.println("servidor porta "+port+" criado.");
-            while (true) {
-                final Socket socket=serverSocket.accept();
-                System.out.println("recebendo conexao..");
-                new Thread(){
-                    public void run(){
-                        try {
-                            TESTEserver0(socket);
-                        } catch (Exception e) {
-                            System.out.println("Erro ao executar servidor:" + e.toString());
-                        }
-                        System.out.println("finalizando conexao..");
-                    }
-                }.start();
-            }
-        }catch(Exception e){
-            System.out.println(e.toString());
-        }
-    }
-
-    // operando uma unica comunicação
-    private void TESTEserver0(Socket socket) throws Exception{
-        int len=0;
-        byte[] buffer = new byte[2048];            
-        InputStream is=null;
-        BufferedInputStream bis=null;
-        is = socket.getInputStream();
-        bis=new BufferedInputStream(is);            
-        while( (len=bis.read (buffer)) != -1 )
-        {
-            System.out.println(
-                new String(buffer)
-            );
-        }
-        try{ bis.close(); }catch(Exception e){}
-        try{ is.close(); }catch(Exception e){}
-    }
-
-    public void TESTEclient(String host, int port){
-        try{
-            System.out.println("cliente iniciado.");
-            OutputStream os=null;
-
-            Socket socket=new Socket(host, port);
-            os=socket.getOutputStream();
-            os.write(new byte[]{1,2,3,70});
-            try {Thread.sleep(3000);}catch (Exception e) { }        
-            os.write(new byte[]{1,2,3,70});
-            try {Thread.sleep(3000);}catch (Exception e) { }        
-            os.write(new byte[]{1,2,3,70});
-            try {Thread.sleep(3000);}catch (Exception e) { }        
-            os.write(new byte[]{1,2,3,70});
-            try {Thread.sleep(3000);}catch (Exception e) { }        
-            os.write(new byte[]{1,2,3,70});
-            try {Thread.sleep(3000);}catch (Exception e) { }        
-            try{ os.close(); }catch(Exception e){}
-        }catch(Exception e){
-            System.out.println(e.toString());
-        }
     }
 
     class Ambiente {
@@ -6977,11 +6870,6 @@ class XML{
 /* class by manual */                + "        8080 -> porta para conectar no router\n"
 /* class by manual */                + "        localhost -> local que o serverRouter conecta(use nome da maquina ou ip)\n"
 /* class by manual */                + "        9090 -> porta que o serverRouter conecta\n"
-/* class by manual */                + "[y TESTEserver]\n"
-/* class by manual */                + "    y TESTEserver 9090\n"
-/* class by manual */                + "    y TESTEserver 192.168.0.100 9090\n"
-/* class by manual */                + "[y TESTEclient]\n"
-/* class by manual */                + "    y TESTEclient localhost 8080\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"

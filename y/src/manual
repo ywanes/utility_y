@@ -284,11 +284,6 @@ Exemplos...
         8080 -> porta para conectar no router
         localhost -> local que o serverRouter conecta(use nome da maquina ou ip)
         9090 -> porta que o serverRouter conecta
-[y TESTEserver]
-    y TESTEserver 9090
-    y TESTEserver 192.168.0.100 9090
-[y TESTEclient]
-    y TESTEclient localhost 8080
 [y httpServer]
     y httpServer
     obs: o comando acima irá criar um httpServer temporario com parametros padroes
