@@ -651,18 +651,22 @@ cat buffer.log
             intsToBytes(args);
             return;
         }    
-        if ( args[0].equals("od") 
-            && ( 
-                args.length == 1 
-                || (args.length == 2 && args[1].startsWith("-") && args[1].length() > 1)
-                )
-            ){
-            if ( args.length == 1 )
+        if ( args[0].equals("od") ){
+            if ( args.length == 1 ){
                 od("");
-            else
-                od(args[1].substring(1));
-            return;
-        }          
+                return;
+            }
+            if ( args.length == 2 && ! args[1].equals("") ){
+                if ( args[1].startsWith("-") && args[1].substring(1).replace("b","").replace("c","").replace("r","").equals("") ){
+                    od(args[1].substring(1));
+                    return;
+                } 
+                if ( args[1].replace("b","").replace("c","").replace("r","").equals("") ){
+                    od(args[1]);
+                    return;
+                } 
+            }
+        }       
         if ( args[0].equals("touch") && (args.length == 2 || args.length == 3) ){
             touch(args);
             return;
@@ -3669,7 +3673,7 @@ cat buffer.log
         if ( isPrint ){            
             System.out.print( lpad( Integer.toOctalString(count_all_od-count_16_od).trim() ,7,"0") );        
         }else{
-            System.out.print("       ");
+            System.out.print("        ");
         }
     }
     
@@ -6584,6 +6588,7 @@ class XML{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6796,6 +6801,8 @@ class XML{
 /* class by manual */                + "    cat arquivo | od -bc\n"
 /* class by manual */                + "    cat arquivo | od -bcr\n"
 /* class by manual */                + "    obs: -r mostra numero bytes\n"
+/* class by manual */                + "         -b octal bytes\n"
+/* class by manual */                + "         -c character\n"
 /* class by manual */                + "[y touch]\n"
 /* class by manual */                + "    y touch fileA\n"
 /* class by manual */                + "    y touch fileA -3600\n"
@@ -6978,5 +6985,6 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 

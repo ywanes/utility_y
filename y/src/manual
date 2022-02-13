@@ -206,6 +206,8 @@ Exemplos...
     cat arquivo | od -bc
     cat arquivo | od -bcr
     obs: -r mostra numero bytes
+         -b octal bytes
+         -c character
 [y touch]
     y touch fileA
     y touch fileA -3600
