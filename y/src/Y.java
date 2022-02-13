@@ -5719,15 +5719,19 @@ class Ponte {
             mostra_(sentido_,buffer,len,ponteID);
         }
 
-        private void mostra_(int sentido_, byte[] buffer, int len, String ponteID) {
-            if (sentido_ == VOLTA && displayVolta)
-                mostra("<-",buffer,len,ponteID);
-            if (sentido_ == IDA && displayIda)
-                mostra("->",buffer,len,ponteID);
-            if (sentido_ == VOLTA && displaySimple)
-                System.out.println("2 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
-            if (sentido_ == IDA && displaySimple)
-                System.out.println("1 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
+        private void mostra_(int sentido_, byte[] buffer, int len, String ponteID){
+            if (sentido_ == IDA){
+                if (displayIda)
+                    mostra("->",buffer,len,ponteID);
+                if (displaySimple)
+                    System.out.println("1 "+ponteID+" "+cleanTextContent(new String(buffer,0,len)));
+            }
+            if (sentido_ == VOLTA){
+                if (displayVolta)
+                    mostra("<-",buffer,len,ponteID);
+                if (displaySimple)
+                    System.out.println("2 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
+            }
         }
 
         private void mostra(String direcao, byte[] buffer, int len, String ponteID) {
