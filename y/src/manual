@@ -14,6 +14,9 @@ usage:
   [y zip]
   [y gzip]
   [y gunzip]
+  [y tar]
+  [y untar]
+  [y tarlist]
   [y echo]
   [y printf]
   [y cat]
@@ -124,6 +127,13 @@ Exemplos...
     cat arquivo | y gzip > arquivo.gz
 [y gunzip]
     cat arquivo.gz | y gunzip > arquivo
+[y tar]
+    y tar test.tar in
+[y untar]
+    y untar test.tar
+    y untar test.tar in/in2/only
+[y tarlist]
+    y tarlist test.tar
 [y echo]
     echo a b c
     echo "a b c"
