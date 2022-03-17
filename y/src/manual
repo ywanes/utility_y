@@ -128,8 +128,10 @@ Exemplos...
 [y gunzip]
     cat arquivo.gz | y gunzip > arquivo
 [y tar]
+    y tar in > test.tar
     y tar test.tar in
 [y untar]
+    y cat test.tar | y untar
     y untar test.tar
     y untar test.tar in/in2/only
 [y tarlist]
