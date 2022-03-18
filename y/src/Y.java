@@ -992,7 +992,19 @@ cat buffer.log
         if ( args[0].equals("ssh") ){
             ssh(args);
             return;
-        }        
+        }    
+        if ( args[0].equals("sshinfo") && args.length == 1){
+            sshinfo(null, null);
+            return;
+        }    
+        if ( args[0].equals("sshinfo") && args.length == 2){
+            sshinfo(args[1], null);
+            return;
+        }    
+        if ( args[0].equals("sshinfo") && args.length == 3){
+            sshinfo(args[1], args[2]);
+            return;
+        }    
         if ( args[0].equals("sftp") ){
             sftp(args);
             return;
@@ -5191,7 +5203,31 @@ cat buffer.log
         new JSchCustom().ssh(new String[]{args[1]},senha[0],port);
         System.exit(0);
     }
-
+    
+    private void sshinfo(String host_,String port_){
+        String host = "localhost";
+        int port = 22;
+        if ( host_ != null )
+            host = host_;
+        if ( port_ != null )
+            port = Integer.parseInt(port_);
+        try{
+            InetAddress serverAddress = InetAddress.getByName(host);
+            Socket socket_ = new Socket(host, port);
+            BufferedInputStream _instream = new BufferedInputStream(socket_.getInputStream());
+            StringBuffer received = new StringBuffer();
+            int b;
+            while( (b = _instream.read()) != '\n' )
+                received.append((char) b);
+            System.out.println(received.toString());
+            _instream.close();
+            socket_.close();
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }
+    }
+    
     private void sftp(String[] args) {
         // créditos
         // https://github.com/is/jsch/tree/master/examples
@@ -6671,6 +6707,7 @@ class XML{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6725,6 +6762,7 @@ class XML{
 /* class by manual */                + "  [y scp]\n"
 /* class by manual */                + "  [y execSsh]\n"
 /* class by manual */                + "  [y ssh]\n"
+/* class by manual */                + "  [y sshinfo]\n"
 /* class by manual */                + "  [y sftp]\n"
 /* class by manual */                + "  [y serverRouter]\n"
 /* class by manual */                + "  [y httpServer]\n"
@@ -6954,7 +6992,10 @@ class XML{
 /* class by manual */                + "[y ssh]\n"
 /* class by manual */                + "    y ssh user,pass@servidor\n"
 /* class by manual */                + "    y ssh user,pass@servidor 22\n"
-/* class by manual */                + "    obs: user,pass ou user\n"
+/* class by manual */                + "    obs: user,pass ou user(dependendo da origem e destino windows buga)\n"
+/* class by manual */                + "[y sshinfo]\n"
+/* class by manual */                + "    y sshinfo 192.168.0.100\n"
+/* class by manual */                + "    y sshinfo 192.168.0.100 22\n"
 /* class by manual */                + "[y sftp]\n"
 /* class by manual */                + "    y sftp user,pass@servidor\n"
 /* class by manual */                + "    y sftp user,pass@servidor 22\n"
@@ -7081,5 +7122,3 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-

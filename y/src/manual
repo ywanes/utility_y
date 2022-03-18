@@ -48,6 +48,7 @@ usage:
   [y scp]
   [y execSsh]
   [y ssh]
+  [y sshinfo]
   [y sftp]
   [y serverRouter]
   [y httpServer]
@@ -277,7 +278,11 @@ Exemplos...
 [y ssh]
     y ssh user,pass@servidor
     y ssh user,pass@servidor 22
-    obs: user,pass ou user
+    obs: user,pass ou user(dependendo da origem e destino windows buga)
+[y sshinfo]
+    y sshinfo
+    y sshinfo 192.168.0.100
+    y sshinfo 192.168.0.100 22
 [y sftp]
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22
