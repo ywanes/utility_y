@@ -1064,9 +1064,16 @@ cat buffer.log
         }
         if ( args[0].equals("find") && (args.length == 1 || args.length == 2) ){
             if ( args.length == 2 )
-                find(args[1]);
+                find(args[1], false);
             else
-                find(null);
+                find(null, false);
+            return;
+        }
+        if ( args[0].equals("ls") && (args.length == 1 || args.length == 2) ){
+            if ( args.length == 2 )
+                find(args[1], true);
+            else
+                find(null, true);
             return;
         }
         if ( args[0].equals("os")){
@@ -5614,15 +5621,20 @@ cat buffer.log
         }
     }
 
-    private void find(String path){
+    private void find(String path, Boolean superficial){
         String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
-        File f;
+        File f=null;
         if (path == null){
             f=new File(System.getProperty("user.dir"));
             path="";
-        }else
-            f=new File(path);
-            
+        }else{
+            try{
+                f=new File(path);
+            }catch(Exception e){
+                System.out.println(e.toString());
+                System.exit(1);
+            }
+        }
         if ( !f.exists() ){
             System.err.println("Error: \""+path+"\" not found!");
             System.exit(1);
@@ -5631,12 +5643,12 @@ cat buffer.log
             System.out.println(path);
         else
             if ( f.isDirectory() )
-                find_nav(f,sep,path);
+                find_nav(f,sep,path,superficial);
     }
     
-    private void find_nav(File f, String sep, String hist){
+    private void find_nav(File f, String sep, String hist, Boolean superficial){
         if ( !hist.equals("") ){
-            if ( !hist.equals(".") )
+            if ( !hist.equals(".") && !superficial )
                 System.out.println(hist);
             hist+=sep;
         }
@@ -5644,10 +5656,16 @@ cat buffer.log
             File [] files = f.listFiles();
             for ( int i=0;i<files.length;i++ )
                 if ( !files[i].isDirectory() )
-                    System.out.println(hist+files[i].getName());
+                    if ( superficial )
+                        System.out.println(files[i].getName());
+                    else
+                        System.out.println(hist+files[i].getName());
             for ( int i=0;i<files.length;i++ )
                 if ( files[i].isDirectory() )
-                    find_nav(files[i], sep, hist+files[i].getName());
+                    if ( superficial )
+                        System.out.println(files[i].getName());
+                    else
+                        find_nav(files[i], sep, hist+files[i].getName(), superficial);
         }catch(Exception e){}
     }
     
@@ -6753,6 +6771,7 @@ class XML{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6814,6 +6833,7 @@ class XML{
 /* class by manual */                + "  [y wget]\n"
 /* class by manual */                + "  [y pwd]\n"
 /* class by manual */                + "  [y find]\n"
+/* class by manual */                + "  [y ls]\n"
 /* class by manual */                + "  [y os]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -7077,6 +7097,9 @@ class XML{
 /* class by manual */                + "    y find\n"
 /* class by manual */                + "    y find .\n"
 /* class by manual */                + "    y find /\n"
+/* class by manual */                + "[y ls]\n"
+/* class by manual */                + "    y ls\n"
+/* class by manual */                + "    y ls pasta1\n"
 /* class by manual */                + "[y os]\n"
 /* class by manual */                + "    y os\n"
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"

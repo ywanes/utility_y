@@ -55,6 +55,7 @@ usage:
   [y wget]
   [y pwd]
   [y find]
+  [y ls]
   [y os]
   [y help]
 
@@ -318,6 +319,9 @@ Exemplos...
     y find
     y find .
     y find /
+[y ls]
+    y ls
+    y ls pasta1
 [y os]
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
