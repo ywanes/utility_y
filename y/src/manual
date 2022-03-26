@@ -53,6 +53,8 @@ usage:
   [y serverRouter]
   [y httpServer]
   [y wget]
+  [y pwd]
+  [y find]
   [y os]
   [y help]
 
@@ -312,6 +314,10 @@ Exemplos...
     y wget -h
 [y pwd]
     y pwd
+[y find]
+    y find
+    y find .
+    y find /
 [y os]
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]

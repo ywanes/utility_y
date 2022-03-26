@@ -1062,6 +1062,13 @@ cat buffer.log
             System.out.println(System.getProperty("user.dir"));
             return;            
         }
+        if ( args[0].equals("find") && (args.length == 1 || args.length == 2) ){
+            if ( args.length == 2 )
+                find(args[1]);
+            else
+                find(null);
+            return;
+        }
         if ( args[0].equals("os")){
             os();
             return;            
@@ -5607,6 +5614,43 @@ cat buffer.log
         }
     }
 
+    private void find(String path){
+        String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
+        File f;
+        if (path == null){
+            f=new File(System.getProperty("user.dir"));
+            path="";
+        }else
+            f=new File(path);
+            
+        if ( !f.exists() ){
+            System.err.println("Error: \""+path+"\" not found!");
+            System.exit(1);
+        }
+        if ( !f.isDirectory() )
+            System.out.println(path);
+        else
+            if ( f.isDirectory() )
+                find_nav(f,sep,path);
+    }
+    
+    private void find_nav(File f, String sep, String hist){
+        if ( !hist.equals("") ){
+            if ( !hist.equals(".") )
+                System.out.println(hist);
+            hist+=sep;
+        }
+        try{
+            File [] files = f.listFiles();
+            for ( int i=0;i<files.length;i++ )
+                if ( !files[i].isDirectory() )
+                    System.out.println(hist+files[i].getName());
+            for ( int i=0;i<files.length;i++ )
+                if ( files[i].isDirectory() )
+                    find_nav(files[i], sep, hist+files[i].getName());
+        }catch(Exception e){}
+    }
+    
     private void os() {
         boolean show=false;
         
@@ -6708,6 +6752,7 @@ class XML{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6767,6 +6812,8 @@ class XML{
 /* class by manual */                + "  [y serverRouter]\n"
 /* class by manual */                + "  [y httpServer]\n"
 /* class by manual */                + "  [y wget]\n"
+/* class by manual */                + "  [y pwd]\n"
+/* class by manual */                + "  [y find]\n"
 /* class by manual */                + "  [y os]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -6994,6 +7041,7 @@ class XML{
 /* class by manual */                + "    y ssh user,pass@servidor 22\n"
 /* class by manual */                + "    obs: user,pass ou user(dependendo da origem e destino windows buga)\n"
 /* class by manual */                + "[y sshinfo]\n"
+/* class by manual */                + "    y sshinfo\n"
 /* class by manual */                + "    y sshinfo 192.168.0.100\n"
 /* class by manual */                + "    y sshinfo 192.168.0.100 22\n"
 /* class by manual */                + "[y sftp]\n"
@@ -7025,6 +7073,10 @@ class XML{
 /* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "[y pwd]\n"
 /* class by manual */                + "    y pwd\n"
+/* class by manual */                + "[y find]\n"
+/* class by manual */                + "    y find\n"
+/* class by manual */                + "    y find .\n"
+/* class by manual */                + "    y find /\n"
 /* class by manual */                + "[y os]\n"
 /* class by manual */                + "    y os\n"
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
