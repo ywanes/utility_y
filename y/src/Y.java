@@ -170,7 +170,7 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","1"};        
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
-        args=new String[]{"find", "/"};
+        //args=new String[]{"find", "/"};
                 
         new Y().go(args);
     }
