@@ -170,7 +170,8 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","exportAll"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","1"};        
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
-
+        args=new String[]{"find", "/"};
+                
         new Y().go(args);
     }
         
@@ -5642,14 +5643,15 @@ cat buffer.log
         if ( !f.isDirectory() )
             System.out.println(path);
         else
-            if ( f.isDirectory() )
+            if ( f.isDirectory())
                 find_nav(f,sep,path,superficial);
     }
     
     private void find_nav(File f, String sep, String hist, Boolean superficial){
-        if ( !hist.equals("") ){
-            if ( !hist.equals(".") && !superficial )
-                System.out.println(hist);
+        if (superficial || hist.equals("") || hist.equals(".") || hist.equals("/") || (hist.contains(":") && hist.length() <= 3) ){
+            // faz nada
+        }else{
+            System.out.println(hist);
             hist+=sep;
         }
         try{
