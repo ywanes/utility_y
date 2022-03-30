@@ -5675,11 +5675,19 @@ cat buffer.log
     }
     
     private void link(String fonte, String new_){
+        if ( new File(new_).exists() ){
+            System.out.println("Error - Ja existe o elemento " + new_ + "!");
+            System.exit(1);        
+        }
+        if ( !new File(fonte).exists() ){
+            System.out.println("Warning: O Elemento de origem " + fonte + " nao foi encontrado, mesmo assim o linked deve ser criado!");
+        }
+            
         String command="";
         if ( System.getProperty("user.dir").contains("/") )
             command = "ln -s " + fonte + " " + new_;
         else
-            command = "mklink /j " + new_ + " " + fonte;
+            command = "cmd /c mklink /j " + new_ + " " + fonte;
         
         try{
             System.out.println("running command " + command);
