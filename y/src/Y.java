@@ -1077,11 +1077,14 @@ cat buffer.log
                 find(null, true);
             return;
         }
+        if ( args[0].equals("link") && args.length == 3 ){
+            link(args[1], args[2]);
+            return;            
+        }
         if ( args[0].equals("os")){
             os();
             return;            
         }
-        
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             String retorno=null;
             if ( args.length == 2 )
@@ -5671,6 +5674,24 @@ cat buffer.log
         }catch(Exception e){}
     }
     
+    private void link(String fonte, String new_){
+        String command="";
+        if ( System.getProperty("user.dir").contains("/") )
+            command = "ln -s " + fonte + " " + new_;
+        else
+            command = "mklink /j " + new_ + " " + fonte;
+        
+        try{
+            System.out.println("running command " + command);
+            Runtime.getRuntime().exec(command);
+            System.out.println("finish!");
+        }catch(Exception e){
+            System.out.println("Error...");
+            System.out.println(e.toString());
+            System.exit(1);
+        }            
+    }
+    
     private void os() {
         boolean show=false;
         
@@ -6836,6 +6857,7 @@ class XML{
 /* class by manual */                + "  [y pwd]\n"
 /* class by manual */                + "  [y find]\n"
 /* class by manual */                + "  [y ls]\n"
+/* class by manual */                + "  [y link]\n"
 /* class by manual */                + "  [y os]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -7102,6 +7124,13 @@ class XML{
 /* class by manual */                + "[y ls]\n"
 /* class by manual */                + "    y ls\n"
 /* class by manual */                + "    y ls pasta1\n"
+/* class by manual */                + "[y link]\n"
+/* class by manual */                + "    y link /opt/original original_linked\n"
+/* class by manual */                + "    y link c:\\\\tmp\\\\original original_linked\n"
+/* class by manual */                + "    y link a b\n"
+/* class by manual */                + "    obs: original_linked sendo o link criado que aponta para /opt/original\n"
+/* class by manual */                + "    internal command windows: mklink /j original_linked c:\\\\tmp\\\\original\n"
+/* class by manual */                + "    internal command nao windows: ln -s /opt/original original_linked\n"
 /* class by manual */                + "[y os]\n"
 /* class by manual */                + "    y os\n"
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"

@@ -56,6 +56,7 @@ usage:
   [y pwd]
   [y find]
   [y ls]
+  [y link]
   [y os]
   [y help]
 
@@ -322,6 +323,13 @@ Exemplos...
 [y ls]
     y ls
     y ls pasta1
+[y link]
+    y link /opt/original original_linked
+    y link c:\\tmp\\original original_linked
+    y link a b
+    obs: original_linked sendo o link criado que aponta para /opt/original
+    internal command windows: mklink /j original_linked c:\\tmp\\original
+    internal command nao windows: ln -s /opt/original original_linked
 [y os]
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
