@@ -5678,6 +5678,14 @@ cat buffer.log
         if ( new File(new_).exists() ){
             System.out.println("Error - Ja existe o elemento " + new_ + "!");
             System.exit(1);        
+        }else{
+            File [] files = new File(new_).getParentFile().listFiles();
+            for ( int i=0;i<files.length;i++ ){
+                if ( files[i].getName().equals(new_)){
+                    System.out.println("Error - Ja existe o elemento " + new_ + "!");
+                    System.exit(1);                            
+                }
+            }
         }
         if ( !new File(fonte).exists() ){
             System.out.println("Warning: O Elemento de origem " + fonte + " nao foi encontrado, mesmo assim o linked deve ser criado!");
