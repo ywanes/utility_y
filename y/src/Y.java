@@ -5679,7 +5679,8 @@ cat buffer.log
             System.out.println("Error - Ja existe o elemento " + new_ + "!");
             System.exit(1);        
         }else{
-            File [] files = new File(new_).getParentFile().listFiles();
+            String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
+            File [] files = new File(System.getProperty("user.dir")+sep+new_).getParentFile().listFiles();
             for ( int i=0;i<files.length;i++ ){
                 if ( files[i].getName().equals(new_)){
                     System.out.println("Error - Ja existe o elemento " + new_ + "!");
