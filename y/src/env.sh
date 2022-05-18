@@ -43,6 +43,8 @@ alias lss='ls -ltr'
 alias pss='ps -ef'
 export PATH="$PATH":.
 alias y='java -Dfile.encoding=ISO-8859-1 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar Y'
+rm -f /opt/.u_flag
+alias u='/opt/.u'
 EOF
 
 chmod 777 /opt/env_
@@ -57,6 +59,24 @@ curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.
 javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
 EOF
 chmod 777 /opt/compilaCurl
+
+cat <<EOF> /opt/.u
+#!/bin/bash
+
+if [ `whoami` == "root" ]
+then
+  if [ -e /opt/.u_flag ]
+  then
+      apt upgrade
+  else
+      touch /opt/.u_flag
+      apt update
+  fi
+else
+  sudo su
+fi
+EOF
+chmod 777 /opt/.u
 
 cd /opt/y
 if [ ! -e ojdbc6.jar ]
