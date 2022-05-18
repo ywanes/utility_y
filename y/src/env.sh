@@ -1,5 +1,11 @@
 # setup env/maquina
 # curl  https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
+# test
+# docker run -itd --name test node
+# docker exec -it test bash
+# curl  https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
+# docker stop test
+# docker rm test
 
 if [ `whoami` != "root" ]
 then
@@ -11,7 +17,7 @@ type javac 2> /tmp/not
 if [ $((`cat /tmp/not | wc -l`)) -ge 1 ]
 then
   echo instale o javac, use o comando abaixo:
-  echo apt install openjdk-8-jdk
+  echo "apt install openjdk-8-jdk(ou openjdk-11-jdk)"
   echo Mas antes, faça apt update e apt upgrade
   exit 1
 fi
