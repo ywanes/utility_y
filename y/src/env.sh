@@ -42,7 +42,7 @@ then
 fi
 chmod 777 /opt/y
 
-cat <<EOF> /opt/env_
+cat <<'EOF'> /opt/env_
 #!/bin/bash
 alias lss='ls -ltr'
 alias pss='ps -ef'
@@ -54,18 +54,18 @@ EOF
 
 chmod 777 /opt/env_
 
-cat <<EOF> /opt/compila
+cat <<'EOF'> /opt/compila
 javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
 EOF
 chmod 777 /opt/compila
 
-cat <<EOF> /opt/compilaCurl
+cat <<'EOF'> /opt/compilaCurl
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
 EOF
 chmod 777 /opt/compilaCurl
 
-cat <<EOF> /opt/.u
+cat <<'EOF'> /opt/.u
 #!/bin/bash
 
 if [ `whoami` == "root" ]
@@ -119,7 +119,7 @@ echo rode o comando abaixo e considere tudo finalizado:
 echo . /opt/env_
 
 
-cat <<EOF>/dev/null
+cat <<'EOF'> /dev/null
     # ALGUNS COMANDOS EXTRAS
    
     # remove password
