@@ -76,7 +76,7 @@ then
       apt upgrade
   else
       touch /opt/.u_flag
-	  chmod 777 /opt/.u_flag
+      chmod 777 /opt/.u_flag
       apt update
   fi
 else
