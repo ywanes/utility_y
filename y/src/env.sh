@@ -33,15 +33,14 @@ fi
 if [ ! -e /opt ]
 then
     mkdir /opt
-    chmod 777 /opt
 fi
+chmod 777 /opt
 
 if [ ! -e /opt/y ]
 then
     mkdir /opt/y
-    chmod 777 /opt/y
 fi
-
+chmod 777 /opt/y
 
 cat <<EOF> /opt/env_
 #!/bin/bash
