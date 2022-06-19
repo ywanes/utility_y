@@ -30,7 +30,7 @@ usage:
   [y head]
   [y tail]
   [y cut]
-  [y sed]
+  [y [sed|tr]]
   [y n]
   [y rn]
   [y [bytesToInts|bi]]
@@ -191,7 +191,7 @@ Exemplos...
     cat arquivo | y cut -c5-
     cat arquivo | y cut -c5
     cat arquivo | y cut -c5-10,15-17
-[y sed]
+[y [sed|tr]]
     cat arquivo | y sed A B
     cat arquivo | y sed A B E F
     obs: sed com dois parametros é performatico e aceita por exemplo \n como quebra

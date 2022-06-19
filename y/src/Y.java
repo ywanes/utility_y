@@ -683,7 +683,7 @@ cat buffer.log
             cut(args);
             return;
         }
-        if ( args[0].equals("sed") ){
+        if ( args[0].equals("sed") || args[0].equals("tr") ){
             if ( args.length == 3 ){
                 sed(args);
                 return;
@@ -6848,7 +6848,7 @@ class XML{
 /* class by manual */                + "  [y head]\n"
 /* class by manual */                + "  [y tail]\n"
 /* class by manual */                + "  [y cut]\n"
-/* class by manual */                + "  [y sed]\n"
+/* class by manual */                + "  [y [sed|tr]]\n"
 /* class by manual */                + "  [y n]\n"
 /* class by manual */                + "  [y rn]\n"
 /* class by manual */                + "  [y [bytesToInts|bi]]\n"
@@ -7009,7 +7009,7 @@ class XML{
 /* class by manual */                + "    cat arquivo | y cut -c5-\n"
 /* class by manual */                + "    cat arquivo | y cut -c5\n"
 /* class by manual */                + "    cat arquivo | y cut -c5-10,15-17\n"
-/* class by manual */                + "[y sed]\n"
+/* class by manual */                + "[y [sed|tr]]\n"
 /* class by manual */                + "    cat arquivo | y sed A B\n"
 /* class by manual */                + "    cat arquivo | y sed A B E F\n"
 /* class by manual */                + "    obs: sed com dois parametros e performatico e aceita por exemplo \\n como quebra\n"
