@@ -47,7 +47,7 @@ cat <<'EOF'> /opt/env_
 alias lss='ls -ltr'
 alias pss='ps -ef'
 export PATH="$PATH":.
-alias y='java -Dfile.encoding=ISO-8859-1 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar Y'
+alias y='java -Dfile.encoding=ISO-8859-1 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
 rm -f /opt/.u_flag
 alias u='/opt/.u'
 EOF
@@ -55,13 +55,13 @@ EOF
 chmod 777 /opt/env_
 
 cat <<'EOF'> /opt/y/compila
-javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
+javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
 EOF
 chmod 777 /opt/y/compila
 
 cat <<'EOF'> /opt/y/compilaCurl
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
+javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
 EOF
 chmod 777 /opt/y/compilaCurl
 

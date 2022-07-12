@@ -4,10 +4,10 @@
     curl http://121.42.227.72:8081/nexus/content/groups/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar > mysql-connector-java-8.0.26.jar
     curl https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar > jsch-0.1.55.jar
     curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-    javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
-    javac -encoding UTF-8 -cp .;ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;jsch-0.1.55.jar Y.java
-    alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar Y'
-    alias y='java -Dfile.encoding=ISO-8859-1 -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar Y'
+    javac -encoding ISO-8859-1 -cp ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
+    javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;jsch-0.1.55.jar;. Y.java
+    alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar:. Y'
+    alias y='java -Dfile.encoding=ISO-8859-1 -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar:. Y'
     java -XshowSettings 2>&1 | grep "file.encoding "
     crétidos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
     crétidos https://github.com/is/jsch/tree/master/examples
@@ -7177,7 +7177,7 @@ class XML{
 /* class by manual */                + "\n"
 /* class by manual */                + "alias no windows(criar arquivo c:\\Windows\\System32\\y.bat com o conteudo abaixo):\n"
 /* class by manual */                + "@echo off\n"
-/* class by manual */                + "java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\sqljdbc4-3.0.jar;c:\\\\y\\\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9\n"
+/* class by manual */                + "java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\sqljdbc4-3.0.jar;c:\\\\y\\\\jsch-0.1.55.jar;. Y %1 %2 %3 %4 %5 %6 %7 %8 %9\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "alias no linux:\n"
 /* class by manual */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/jsch-0.1.55.jar Y'";
