@@ -49,6 +49,7 @@ if [ -e /usr/bin/ls ] # remove color
 then
   alias lss='/usr/bin/ls -ltr'
   alias grep='/usr/bin/grep'
+  alias ls='/usr/bin/ls'
 fi
 alias pss='ps -ef'
 export PATH="$PATH":.
