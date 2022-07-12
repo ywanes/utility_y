@@ -57,7 +57,6 @@ alias y='java -Dfile.encoding=ISO-8859-1 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sql
 rm -f /opt/.u_flag
 alias u='/opt/.u'
 EOF
-
 chmod 777 /opt/env_
 
 cat <<'EOF'> /opt/y/compila
@@ -136,6 +135,7 @@ cat <<'EOF'> /dev/null
     apt-get install openssh-server
    
     # vi /etc/ssh/sshd_config
+	UsePAM yes
     Match User userA
         PasswordAuthentication yes
         KbdInteractiveAuthentication yes
