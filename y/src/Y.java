@@ -732,7 +732,7 @@ cat buffer.log
             touch(args);
             return;
         }
-        if ( args[0].equals("M") )
+        if ( args[0].equals("M") || args[0].equals("m") )
         {
             if ( args.length == 1 ){
                 System.out.println("Parametro inválido!");
