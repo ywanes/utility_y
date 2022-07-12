@@ -45,6 +45,11 @@ chmod 777 /opt/y
 cat <<'EOF'> /opt/env_
 #!/bin/bash
 alias lss='ls -ltr'
+if [ -e /usr/bin/ls ] # remove color
+then
+  alias lss='/usr/bin/ls -ltr'
+  alias grep='/usr/bin/grep'
+fi
 alias pss='ps -ef'
 export PATH="$PATH":.
 alias y='java -Dfile.encoding=ISO-8859-1 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
