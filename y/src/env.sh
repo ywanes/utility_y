@@ -120,7 +120,7 @@ else
     fi
 fi
 
-echo ""
+echo
 echo rode o comando abaixo e considere tudo finalizado:
 echo . /opt/env_
 
