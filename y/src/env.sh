@@ -54,16 +54,16 @@ EOF
 
 chmod 777 /opt/env_
 
-cat <<'EOF'> /opt/compila
+cat <<'EOF'> /opt/y/compila
 javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
 EOF
 chmod 777 /opt/compila
 
-cat <<'EOF'> /opt/compilaCurl
+cat <<'EOF'> /opt/y/compilaCurl
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
 EOF
-chmod 777 /opt/compilaCurl
+chmod 777 /opt/y/compilaCurl
 
 cat <<'EOF'> /opt/.u
 #!/bin/bash
@@ -103,6 +103,7 @@ then
 fi
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
+chmod 777 *
 
 if [ -e ~/.bashrc ]
 then
