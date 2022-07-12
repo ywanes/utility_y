@@ -57,7 +57,7 @@ chmod 777 /opt/env_
 cat <<'EOF'> /opt/y/compila
 javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
 EOF
-chmod 777 /opt/compila
+chmod 777 /opt/y/compila
 
 cat <<'EOF'> /opt/y/compilaCurl
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
