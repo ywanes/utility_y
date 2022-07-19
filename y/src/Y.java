@@ -6924,9 +6924,9 @@ class XML{
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx exportAll\n"
 /* class by manual */                + "    obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1\n"
 /* class by manual */                + "[y xml]\n"
-/* class by manual */                + "    cat arquivo.xml | mostraEstrutura\n"
+/* class by manual */                + "    cat arquivo.xml | y xml mostraEstrutura\n"
 /* class by manual */                + "    xml arquivo.xml mostraEstrutura\n"
-/* class by manual */                + "    cat arquivo.xml | mostraTags\n"
+/* class by manual */                + "    cat arquivo.xml | y xml mostraTags\n"
 /* class by manual */                + "[y token]\n"
 /* class by manual */                + "    y token value\n"
 /* class by manual */                + "[y gettoken]\n"
@@ -7177,7 +7177,7 @@ class XML{
 /* class by manual */                + "\n"
 /* class by manual */                + "alias no windows(criar arquivo c:\\Windows\\System32\\y.bat com o conteudo abaixo):\n"
 /* class by manual */                + "@echo off\n"
-/* class by manual */                + "java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\sqljdbc4-3.0.jar;c:\\\\y\\\\jsch-0.1.55.jar;. Y %1 %2 %3 %4 %5 %6 %7 %8 %9\n"
+/* class by manual */                + "java -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\sqljdbc4-3.0.jar;c:\\\\y\\\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "alias no linux:\n"
 /* class by manual */                + "alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/jsch-0.1.55.jar Y'";
@@ -7245,3 +7245,4 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
