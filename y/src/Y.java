@@ -3128,7 +3128,7 @@ cat buffer.log
     public void echo(String [] args)
     {
         printf(args);
-        System.out.println("");
+        System.out.print("\n");
     }
 
     public void printf(String [] args)
@@ -6738,6 +6738,7 @@ class XML{
         System.exit(1);
     }    
 }
+
 
 /* class AES */ // echo TXT | openssl aes-256-cbc -base64 -pass pass:SENHA -md md5 -e
 /* class AES */ // y echo PPP | openssl aes-256-cbc -md md5 -k SENHA -e | y base64
