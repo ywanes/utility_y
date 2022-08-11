@@ -177,6 +177,7 @@ cat buffer.log
         
     public void go(String[] args){    
         System.setProperty("https.protocols", "TLSv1.1");
+        System.setProperty("line.separator", "\n");
         try_load_libraries();
         try_load_ORAs();
 
@@ -451,6 +452,12 @@ cat buffer.log
             System.out.println(value);
             return;
         }
+        
+        if ( args[0].equals("json") ){
+            json();
+            return;
+        }
+            
         /*
         y zip add File1.txt > saida.zip
         cat File1.txt | y zip add -name File1.txt > saida.zip
@@ -2486,6 +2493,66 @@ cat buffer.log
         return lendo_token(dir_token,hash);
     }
 
+    boolean literal_json=false;
+    public void json(){
+        byte[] entrada_ = new byte[1];
+        while ( read1Byte(entrada_) ){
+            String t=new String(entrada_);
+            if ( t.equals("\"") )
+                literal_json=!literal_json;
+            if ( !literal_json ){
+                if ( t.equals(" ") || t.equals("\t") || t.equals("\r") || t.equals("\n") )
+                continue;
+            }
+            jsonB(t);
+            if ( t.equals(":"))
+                jsonB(" ");            
+        }   
+        System.out.println();
+    }
+
+    private void indexacao_json() {        
+        for ( int i=0;i<count_pilha_json*2;i++ )
+            System.out.print(" ");
+    }
+    
+    String [] pilha_json=new String [999];
+    int count_pilha_json=0;
+    String level_in_json="[{";
+    String level_out_json="]}";
+    private void jsonB(String t) {
+        if ( level_in_json.contains(t) ){
+            int aux=level_in_json.indexOf(t);
+            pilha_json[count_pilha_json++]=level_out_json.substring(aux, aux+1);
+            System.out.print(t);
+            System.out.print("\n");
+            indexacao_json();
+            return;
+        }else{
+            if ( level_out_json.contains(t) ){
+                if (count_pilha_json==0 || !pilha_json[count_pilha_json-1].equals(t))
+                    erroFatal(99);
+                count_pilha_json--;     
+                System.out.print("\n");
+                indexacao_json();
+                System.out.print(t);
+                return;
+            }
+        }
+        if ( t.equals(",")){
+            System.out.print(t);
+            System.out.print("\n");
+            indexacao_json();
+            return;
+        }
+        System.out.print(t);
+    }    
+    
+    private void erroFatal(int a) {
+        System.err.println(a);
+        System.exit(9);
+    }
+    
     public String apresentacao(String [] programas)
     {
         String retorno="";
@@ -3128,7 +3195,7 @@ cat buffer.log
     public void echo(String [] args)
     {
         printf(args);
-        System.out.print("\n");
+        System.out.println();
     }
 
     public void printf(String [] args)
@@ -3642,6 +3709,10 @@ cat buffer.log
         }catch(Exception e){
             System.out.println(e.toString());
         }
+    }
+        
+    public Boolean checkWindows(){
+        return new File("c:/").exists();
     }
     
     public void bytesToInts(boolean dif_128)
@@ -6811,8 +6882,6 @@ class XML{
 
 
 
-
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -6830,6 +6899,7 @@ class XML{
 /* class by manual */                + "  [y xlsxToCSV]\n"
 /* class by manual */                + "  [y token]\n"
 /* class by manual */                + "  [y gettoken]\n"
+/* class by manual */                + "  [y json]\n"
 /* class by manual */                + "  [y zip]\n"
 /* class by manual */                + "  [y gzip]\n"
 /* class by manual */                + "  [y gunzip]\n"
@@ -6932,6 +7002,8 @@ class XML{
 /* class by manual */                + "    y token value\n"
 /* class by manual */                + "[y gettoken]\n"
 /* class by manual */                + "    y gettoken hash\n"
+/* class by manual */                + "[y json]\n"
+/* class by manual */                + "   y cat file.json | y json mostraEstrutura\n"
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
@@ -7246,4 +7318,5 @@ class XML{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 

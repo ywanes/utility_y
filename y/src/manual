@@ -11,6 +11,7 @@ usage:
   [y xlsxToCSV]
   [y token]
   [y gettoken]
+  [y json]
   [y zip]
   [y gzip]
   [y gunzip]
@@ -113,6 +114,8 @@ Exemplos...
     y token value
 [y gettoken]
     y gettoken hash
+[y json]
+   y cat file.json | y json mostraEstrutura
 [y zip]
     y zip add File1.txt > saida.zip
     cat File1.txt | y zip add -name File1.txt > saida.zip
