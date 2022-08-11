@@ -65,11 +65,10 @@ import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 
 
-public class Y {    
+public class Y extends Util{    
     //public static String local_env=null;
     public static String local_env="c:\\tmp";
-
-    public static int BUFFER_SIZE=1024;
+    
     public static String linhaCSV=null;
     public static int ponteiroLinhaCSV=0;    
     public static String sepCSV=getSeparadorCSV(); // ";";
@@ -454,7 +453,7 @@ cat buffer.log
         }
         
         if ( args[0].equals("json") ){
-            json();
+            new JSON().go(args);
             return;
         }
             
@@ -2493,66 +2492,6 @@ cat buffer.log
         return lendo_token(dir_token,hash);
     }
 
-    boolean literal_json=false;
-    public void json(){
-        byte[] entrada_ = new byte[1];
-        while ( read1Byte(entrada_) ){
-            String t=new String(entrada_);
-            if ( t.equals("\"") )
-                literal_json=!literal_json;
-            if ( !literal_json ){
-                if ( t.equals(" ") || t.equals("\t") || t.equals("\r") || t.equals("\n") )
-                continue;
-            }
-            jsonB(t);
-            if ( t.equals(":"))
-                jsonB(" ");            
-        }   
-        System.out.println();
-    }
-
-    private void indexacao_json() {        
-        for ( int i=0;i<count_pilha_json*2;i++ )
-            System.out.print(" ");
-    }
-    
-    String [] pilha_json=new String [999];
-    int count_pilha_json=0;
-    String level_in_json="[{";
-    String level_out_json="]}";
-    private void jsonB(String t) {
-        if ( level_in_json.contains(t) ){
-            int aux=level_in_json.indexOf(t);
-            pilha_json[count_pilha_json++]=level_out_json.substring(aux, aux+1);
-            System.out.print(t);
-            System.out.print("\n");
-            indexacao_json();
-            return;
-        }else{
-            if ( level_out_json.contains(t) ){
-                if (count_pilha_json==0 || !pilha_json[count_pilha_json-1].equals(t))
-                    erroFatal(99);
-                count_pilha_json--;     
-                System.out.print("\n");
-                indexacao_json();
-                System.out.print(t);
-                return;
-            }
-        }
-        if ( t.equals(",")){
-            System.out.print(t);
-            System.out.print("\n");
-            indexacao_json();
-            return;
-        }
-        System.out.print(t);
-    }    
-    
-    private void erroFatal(int a) {
-        System.err.println(a);
-        System.exit(9);
-    }
-    
     public String apresentacao(String [] programas)
     {
         String retorno="";
@@ -2763,163 +2702,6 @@ cat buffer.log
         }
         return null;
     }
-
-    public static void readLine(String caminho) throws Exception{
-        readLine(new FileInputStream(new File(caminho)));
-    }
-    
-    public static java.util.Scanner scanner_pipe=null;
-    public static void readLine(InputStream in){        
-        readLine(in,null,null);
-    }    
-    
-    public static void readLine(InputStream in,String encoding,String delimiter){
-        if ( delimiter == null )
-            delimiter="\n";
-        if ( encoding == null )
-            scanner_pipe=new java.util.Scanner(in);
-        else
-            scanner_pipe=new java.util.Scanner(in,encoding);
-        scanner_pipe.useDelimiter(delimiter);        
-    }    
-    
-    public static String readLine(){
-        try{            
-            if ( scanner_pipe == null ){
-                readLine(System.in);
-            }
-            if ( scanner_pipe.hasNext() )
-                return scanner_pipe.next().replace("\r","");
-            else
-                return null;            
-        }catch(java.util.NoSuchElementException no) {
-            return null;
-        }catch(Exception e){
-            System.err.println("NOK: "+e.toString());
-        }
-        return null;
-    }
-
-    public static void closeLine(){
-        try{
-            scanner_pipe.close();            
-        }catch(Exception e){}
-        scanner_pipe=null;
-    }
-    
-    public static java.util.Scanner scanner_pipeB=null;
-    public void readLineB(String caminho) throws Exception{
-        readLineB(new FileInputStream(new File(caminho)));
-    }
-    
-    public void readLineB(InputStream in){
-        scanner_pipeB=new java.util.Scanner(in);
-        scanner_pipeB.useDelimiter("\n");
-    }
-        
-    public String readLineB(){        
-        try{
-            if ( scanner_pipeB == null )
-                readLineB(System.in);
-            if ( scanner_pipeB.hasNext() )
-                return scanner_pipeB.next();
-            else
-                return null;
-        }catch(java.util.NoSuchElementException no) {
-            return null;
-        }catch(Exception e){
-            System.err.println("NOK: "+e.toString());
-        }
-        return null;
-    }
-    
-    public void closeLineB(){
-        try{
-            scanner_pipeB.close();
-        }catch(Exception e){}
-        scanner_pipeB=null;
-    }
-    
-    public static InputStream inputStream_pipe=null;
-    public void readBytes(String caminho) throws Exception{
-        readBytes(new File(caminho));
-    }
-    public void readBytes(File file) throws Exception{
-        readBytesInit();
-        inputStream_pipe=new FileInputStream(file);
-    }
-    
-    public int readBytes(byte[] buf){
-        return readBytes(buf,0,BUFFER_SIZE);
-    }
-    
-    int read1Byte_n=-1;
-    int read1Byte_len=-1;
-    public void readBytesInit(){
-        read1Byte_n=-1;
-        read1Byte_len=-1;
-    }
-    
-    public int readBytes(byte[] buf,int off,int len){
-        try{
-            if ( inputStream_pipe == null ){
-                readBytesInit();
-                inputStream_pipe=System.in;
-            }
-            int retorno=-1;
-            while( (retorno=inputStream_pipe.read(buf,off,len)) == 0 ){}
-            return retorno;
-        }catch(Exception e){
-            System.err.println("Erro, "+e.toString());
-            System.exit(1);
-        }
-        return -1;
-    }
-    
-    byte[] read1ByteBuff = new byte[BUFFER_SIZE];
-    public boolean read1Byte(byte [] b){
-        if ( inputStream_pipe == null ){
-            readBytesInit();
-            inputStream_pipe=System.in;
-        }        
-        if ( read1Byte_n == -1 || read1Byte_n >= read1Byte_len ){
-            read1Byte_n=0;
-            read1Byte_len=readBytes(read1ByteBuff);            
-        }        
-        if ( read1Byte_n < read1Byte_len ){
-            b[0]=read1ByteBuff[read1Byte_n];
-            read1Byte_n++;
-            return true;
-        }
-        return false;
-    }
-    
-    public void closeBytes(){
-        try{
-            inputStream_pipe.close();            
-        }catch(Exception e){}
-        inputStream_pipe=null;
-    }
-    
-    public void write1Byte(int b){
-        write1Byte(new byte[]{(byte)b});
-    }
-
-    // write1Byte
-    byte[] write1ByteBuff = new byte[BUFFER_SIZE];
-    int write1Byte_n=0;
-    public void write1Byte(byte [] b){
-        if ( write1Byte_n >= BUFFER_SIZE ){
-            System.out.write(write1ByteBuff, 0, BUFFER_SIZE);
-            write1Byte_n=0;            
-        }
-        write1ByteBuff[write1Byte_n]=b[0];
-        write1Byte_n++;
-    }
-    
-    public void write1ByteFlush(){
-        System.out.write(write1ByteBuff, 0, write1Byte_n);
-    }    
     
     /*
     y zip add File1.txt > saida.zip
@@ -5473,7 +5255,7 @@ cat buffer.log
                     exportSheetCSV=false;
                     if ( caminho.startsWith("xl/worksheets/") && caminho.endsWith("xml") && !mostraEstrutura && !listaAbas ){                        
                         if ( xlsxToCSV_nomes.size() == 0 )
-                            XML.ErroFatal(99);                    
+                            erroFatal(99);                    
                         if ( numeroAba == -1 && nomeAba.equals(xlsxToCSV_nomes.get(sheet_count)) ){
                             exportSheetCSV=true;
                         }
@@ -5832,6 +5614,231 @@ cat buffer.log
     
 }
 
+class Util{
+    public static int BUFFER_SIZE=1024;
+    
+    public static void readLine(String caminho) throws Exception{
+        readLine(new FileInputStream(new File(caminho)));
+    }
+    
+    public static java.util.Scanner scanner_pipe=null;
+    public static void readLine(InputStream in){        
+        readLine(in,null,null);
+    }    
+    
+    public static void readLine(InputStream in,String encoding,String delimiter){
+        if ( delimiter == null )
+            delimiter="\n";
+        if ( encoding == null )
+            scanner_pipe=new java.util.Scanner(in);
+        else
+            scanner_pipe=new java.util.Scanner(in,encoding);
+        scanner_pipe.useDelimiter(delimiter);        
+    }    
+    
+    public static String readLine(){
+        try{            
+            if ( scanner_pipe == null ){
+                readLine(System.in);
+            }
+            if ( scanner_pipe.hasNext() )
+                return scanner_pipe.next().replace("\r","");
+            else
+                return null;            
+        }catch(java.util.NoSuchElementException no) {
+            return null;
+        }catch(Exception e){
+            System.err.println("NOK: "+e.toString());
+        }
+        return null;
+    }
+
+    public static void closeLine(){
+        try{
+            scanner_pipe.close();            
+        }catch(Exception e){}
+        scanner_pipe=null;
+    }
+    
+    public static java.util.Scanner scanner_pipeB=null;
+    public void readLineB(String caminho) throws Exception{
+        readLineB(new FileInputStream(new File(caminho)));
+    }
+    
+    public void readLineB(InputStream in){
+        scanner_pipeB=new java.util.Scanner(in);
+        scanner_pipeB.useDelimiter("\n");
+    }
+        
+    public String readLineB(){        
+        try{
+            if ( scanner_pipeB == null )
+                readLineB(System.in);
+            if ( scanner_pipeB.hasNext() )
+                return scanner_pipeB.next();
+            else
+                return null;
+        }catch(java.util.NoSuchElementException no) {
+            return null;
+        }catch(Exception e){
+            System.err.println("NOK: "+e.toString());
+        }
+        return null;
+    }
+    
+    public void closeLineB(){
+        try{
+            scanner_pipeB.close();
+        }catch(Exception e){}
+        scanner_pipeB=null;
+    }
+    
+    public static InputStream inputStream_pipe=null;
+    public void readBytes(String caminho) throws Exception{
+        readBytes(new File(caminho));
+    }
+    public void readBytes(File file) throws Exception{
+        readBytesInit();
+        inputStream_pipe=new FileInputStream(file);
+    }
+    
+    public int readBytes(byte[] buf){
+        return readBytes(buf,0,BUFFER_SIZE);
+    }
+    
+    int read1Byte_n=-1;
+    int read1Byte_len=-1;
+    public void readBytesInit(){
+        read1Byte_n=-1;
+        read1Byte_len=-1;
+    }
+    
+    public int readBytes(byte[] buf,int off,int len){
+        try{
+            if ( inputStream_pipe == null ){
+                readBytesInit();
+                inputStream_pipe=System.in;
+            }
+            int retorno=-1;
+            while( (retorno=inputStream_pipe.read(buf,off,len)) == 0 ){}
+            return retorno;
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+            System.exit(1);
+        }
+        return -1;
+    }
+    
+    byte[] read1ByteBuff = new byte[BUFFER_SIZE];
+    public boolean read1Byte(byte [] b){
+        if ( inputStream_pipe == null ){
+            readBytesInit();
+            inputStream_pipe=System.in;
+        }        
+        if ( read1Byte_n == -1 || read1Byte_n >= read1Byte_len ){
+            read1Byte_n=0;
+            read1Byte_len=readBytes(read1ByteBuff);            
+        }        
+        if ( read1Byte_n < read1Byte_len ){
+            b[0]=read1ByteBuff[read1Byte_n];
+            read1Byte_n++;
+            return true;
+        }
+        return false;
+    }
+    
+    public void closeBytes(){
+        try{
+            inputStream_pipe.close();            
+        }catch(Exception e){}
+        inputStream_pipe=null;
+    }
+    
+    public void write1Byte(int b){
+        write1Byte(new byte[]{(byte)b});
+    }
+
+    // write1Byte
+    byte[] write1ByteBuff = new byte[BUFFER_SIZE];
+    int write1Byte_n=0;
+    public void write1Byte(byte [] b){
+        if ( write1Byte_n >= BUFFER_SIZE ){
+            System.out.write(write1ByteBuff, 0, BUFFER_SIZE);
+            write1Byte_n=0;            
+        }
+        write1ByteBuff[write1Byte_n]=b[0];
+        write1Byte_n++;
+    }
+    
+    public void write1ByteFlush(){
+        System.out.write(write1ByteBuff, 0, write1Byte_n);
+    }    
+    
+    public static void erroFatal(int n) {
+        System.out.println("Erro Fatal! "+n);
+        System.err.println("Erro Fatal! "+n);
+        System.exit(1);
+    }      
+}
+
+class JSON extends Util{
+
+    boolean literal=false;
+    public void go(String [] args){
+        byte[] entrada_ = new byte[1];
+        while ( read1Byte(entrada_) ){
+            String t=new String(entrada_);
+            if ( t.equals("\"") )
+                literal=!literal;
+            if ( !literal ){
+                if ( t.equals(" ") || t.equals("\t") || t.equals("\r") || t.equals("\n") )
+                continue;
+            }
+            next(t);
+            if ( t.equals(":"))
+                next(" ");            
+        }   
+        System.out.println();
+    }
+
+    private void indexacao() {        
+        for ( int i=0;i<count_pilha*2;i++ )
+            System.out.print(" ");
+    }
+    
+    String [] pilha=new String [999];
+    int count_pilha=0;
+    String level_in="[{";
+    String level_out="]}";
+    private void next(String t) {
+        if ( level_in.contains(t) ){
+            int aux=level_in.indexOf(t);
+            pilha[count_pilha++]=level_out.substring(aux, aux+1);
+            System.out.print(t);
+            System.out.print("\n");
+            indexacao();
+            return;
+        }else{
+            if ( level_out.contains(t) ){
+                if (count_pilha==0 || !pilha[count_pilha-1].equals(t))
+                    erroFatal(99);
+                count_pilha--;     
+                System.out.print("\n");
+                indexacao();
+                System.out.print(t);
+                return;
+            }
+        }
+        if ( t.equals(",")){
+            System.out.print(t);
+            System.out.print("\n");
+            indexacao();
+            return;
+        }
+        System.out.print(t);
+    }    
+}
+
 class Ponte {
     //exemplo
     //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"");                
@@ -6121,7 +6128,7 @@ class Ponte {
     }
 }  
 
-class XML{
+class XML extends Util{
     public static String linhasExcel="0123456789";    
     public static int linhasExcel_len=linhasExcel.length();    
     public static String colunasExcel="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -6165,7 +6172,7 @@ class XML{
                 return;
             }
             if ( txt.trim().startsWith("</") ){
-                ErroFatal(54);
+                erroFatal(54);
             }
             controleTags_pilha.add(getTagFromLine(txt));
             controleTags_nivelTail=nivel;
@@ -6391,10 +6398,10 @@ class XML{
                 entrada=txt.substring(i,i+1);
                 
                 if ( nivel < 1 ){                    
-                    ErroFatal(1);
+                    erroFatal(1);
                 }     
                 if ( tag_in && tag_value ){
-                    ErroFatal(2);
+                    erroFatal(2);
                 }
                 if ( tail == null ){
                     tail=entrada;
@@ -6417,7 +6424,7 @@ class XML{
                 }
                 if ( tag_in && tail.equals("/") && entrada.equals(">") ){ // tag unica            
                     if ( tag_finish ){ // nao pode haver finish com tag unica
-                        ErroFatal(3);
+                        erroFatal(3);
                     }
                     sb.append(tail);
                     sb.append(entrada);
@@ -6491,7 +6498,7 @@ class XML{
             processaCelulaFlush(out);
         
         if ( tail != null ){
-            ErroFatal(4);
+            erroFatal(4);
         }        
         if ( mostraTags )
             for (int i=0;i<controleTags_tags.size();i++ )            
@@ -6586,7 +6593,7 @@ class XML{
                 if ( pos != -1 ){ 
                     coluna+=Math.pow(colunasExcel_len, coluna_exp++)*pos;
                 }else{
-                    XML.ErroFatal(15);
+                    erroFatal(15);
                 }
             }
         }
@@ -6598,7 +6605,7 @@ class XML{
                 processaCelula_max_tail_coluna=coluna;        
         }else{
             if ( processaCelula_tail_linha > linha ){
-                XML.ErroFatal(14);
+                erroFatal(14);
             }
             while(processaCelula_tail_linha < linha){
                 while(processaCelula_tail_coluna<processaCelula_max_tail_coluna){
@@ -6672,7 +6679,7 @@ class XML{
                 tag=XML.getTagFromLine(listaTxt.get(i));
                 tipoTag=XML.getTipoTagFromLine(listaTxt.get(i));
                 if ( tipoTag.equals("fim") )
-                    ErroFatal(8);
+                    erroFatal(8);
                 xml.addAtributoAll(XML.getAtributosFromLine(listaTxt.get(i)));
                 if ( tipoTag.equals("unica") ){
                     xml.setTag(tag);
@@ -6689,9 +6696,9 @@ class XML{
                 tag=XML.getTagFromLine(listaTxt.get(i));
                 tipoTag=XML.getTipoTagFromLine(listaTxt.get(i));
                 if ( !tipoTag.equals("fim") )
-                    ErroFatal(9);                
+                    erroFatal(9);                
                 if ( ! tag.equals(inicio_tag) )
-                    ErroFatal(10);
+                    erroFatal(10);
                 if ( (i-inicio_n) > 1 ){
                     Object interno=getXML(nivel+1,inicio_n+1,i-1);
                     try{
@@ -6710,7 +6717,7 @@ class XML{
     private static String getTagFromLine(String line) {
         String tag=line.replace("<","").replace(">","").replace("/","").split(" ")[0];
         if ( tag.length() == 0 )
-            ErroFatal(12);
+            erroFatal(12);
         return tag;
     }
 
@@ -6723,7 +6730,7 @@ class XML{
                 tipoTag="unica";
             else{
                 if ( !line.startsWith("<") || !line.endsWith(">") )
-                    ErroFatal(11);
+                    erroFatal(11);
                 tipoTag="inicio";
             }
         }
@@ -6802,12 +6809,7 @@ class XML{
     public ArrayList<XML> getFilhos(){
         return filhos;
     }
-    
-    public static void ErroFatal(int n) {
-        System.out.println("Erro Fatal! "+n);
-        System.err.println("Erro Fatal! "+n);
-        System.exit(1);
-    }    
+      
 }
 
 
