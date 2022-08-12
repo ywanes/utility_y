@@ -70,8 +70,7 @@ public class Y extends Util{
     public static String local_env="c:\\tmp";
     
     public static String linhaCSV=null;
-    public static int ponteiroLinhaCSV=0;    
-    public static String sepCSV=getSeparadorCSV(); // ";";
+    public static int ponteiroLinhaCSV=0;        
     public static int n_lines_buffer_DEFAULT=500;        
     public String [] ORAs=new String[]{};
     public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8","UTF-8BOM","UCS-2LE","UCS-2LEBOM"};
@@ -4882,13 +4881,6 @@ cat buffer.log
         Arrays f;
         Comparator g;
     }
-
-    private static String getSeparadorCSV(){
-        String sep_=System.getenv("CSV_SEP_Y");
-        if ( sep_ == null || sep_.trim().equals("") )
-            sep_=";";
-        return sep_;
-    }
     
     private String [] getCamposCSV(String txt) {
         // modelos
@@ -5631,8 +5623,15 @@ class Util{
             erroFatal(404);
         }
     }
-
+    public static String sepCSV=getSeparadorCSV(); // ";";
     public static int BUFFER_SIZE=1024;
+    
+    private static String getSeparadorCSV(){
+        String sep_=System.getenv("CSV_SEP_Y");
+        if ( sep_ == null || sep_.trim().equals("") )
+            sep_=";";
+        return sep_;
+    }
     
     public static void readLine(String caminho) throws Exception{
         readLine(new FileInputStream(new File(caminho)));
@@ -5994,7 +5993,7 @@ class JSON extends Util{
             }
             if ( contem(key) ){
                 if ( !detail.equals("") )
-                    detail+=",";
+                    detail+=sepCSV;
                 detail+="\""+value+"\"";
             }
         }
@@ -6006,7 +6005,7 @@ class JSON extends Util{
     private void print_header(){
         for ( int i=0;i<count_campos;i++ ){
             if ( i != 0 )
-                System.out.print(",");
+                System.out.print(sepCSV);
             System.out.print("\""+campos[i]+"\"");
         }
         System.out.println();        
@@ -6042,7 +6041,6 @@ class JSON extends Util{
             a=a.substring(0, a.length()-1);
         return a;
     }
-    
 }
 
 class Ponte {
