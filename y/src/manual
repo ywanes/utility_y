@@ -116,6 +116,7 @@ Exemplos...
     y gettoken hash
 [y json]
    y cat file.json | y json mostraEstrutura
+   y cat file.json | y json mostraTabela
    y cat file.json | y json "[elem for elem in data['items']]"
    y cat file.json | y json "[elem['id'] for elem in data['items']]"
    y cat file.json | y json "[elem['id'] for elem in data]"

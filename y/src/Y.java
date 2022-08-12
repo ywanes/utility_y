@@ -7087,7 +7087,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7210,6 +7209,7 @@ class XML extends Util{
 /* class by manual */                + "    y gettoken hash\n"
 /* class by manual */                + "[y json]\n"
 /* class by manual */                + "   y cat file.json | y json mostraEstrutura\n"
+/* class by manual */                + "   y cat file.json | y json mostraTabela\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem for elem in data['items']]\"\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data['items']]\"\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data]\"\n"
