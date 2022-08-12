@@ -170,10 +170,12 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","1"};        
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
         //args=new String[]{"find", "/"};
-                
+        //Util.testOn(); args=new String[]{"json", "[elem['id'] for elem in data['items']]"};
+        //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
+        
         new Y().go(args);
     }
-        
+
     public void go(String[] args){    
         System.setProperty("https.protocols", "TLSv1.1");
         System.setProperty("line.separator", "\n");
@@ -452,9 +454,14 @@ cat buffer.log
             return;
         }
         
-        if ( args[0].equals("json") ){
-            new JSON().go(args);
-            return;
+        if ( args[0].equals("json") && args.length > 1 ){
+            boolean mostraObs=false;
+            boolean mostraEstrutura=args[1].equals("mostraEstrutura");
+            String command=args[1].contains("for elem in data")?args[1]:"";
+            if ( !command.equals("") || mostraEstrutura ){
+                new JSON().go(command,mostraEstrutura,mostraObs);
+                return;
+            }
         }
             
         /*
@@ -5615,6 +5622,15 @@ cat buffer.log
 }
 
 class Util{
+
+    static void testOn() {
+        try{
+            inputStream_pipe=new FileInputStream("c:/tmp/a");
+        }catch(Exception e){
+            erroFatal(404);
+        }
+    }
+
     public static int BUFFER_SIZE=1024;
     
     public static void readLine(String caminho) throws Exception{
@@ -5693,7 +5709,8 @@ class Util{
         scanner_pipeB=null;
     }
     
-    public static InputStream inputStream_pipe=null;
+    public static InputStream inputStream_pipe=null;    
+    
     public void readBytes(String caminho) throws Exception{
         readBytes(new File(caminho));
     }
@@ -5781,41 +5798,86 @@ class Util{
     }      
 }
 
-class JSON extends Util{
 
-    boolean literal=false;
-    public void go(String [] args){
+class JSON extends Util{
+    boolean literal=false;   
+    boolean mostraEstrutura=false;
+    boolean mostraObs=false;
+    String filter_for="_.items._";
+    String filter_item="id";
+    boolean filter_on=false;
+    public void go(String command, boolean mostraEstrutura, boolean mostraObs){ // "[elem['id'] for elem in data['items']]"
+        setFilter(command);
+        this.mostraEstrutura=mostraEstrutura;
+        this.mostraObs=mostraObs;        
         byte[] entrada_ = new byte[1];
         while ( read1Byte(entrada_) ){
             String t=new String(entrada_);
-            if ( t.equals("\"") )
+            if ( t.equals("\"") ){
                 literal=!literal;
+                if ( literal )
+                    pai="";
+            }
             if ( !literal ){
                 if ( t.equals(" ") || t.equals("\t") || t.equals("\r") || t.equals("\n") )
-                continue;
+                    continue;
             }
+            if ( literal && !t.equals("\"") && !t.equals(" ") )
+                pai+=t;
             next(t);
             if ( t.equals(":"))
                 next(" ");            
         }   
-        System.out.println();
+        nextflush();
     }
-
-    private void indexacao() {        
+    
+    private void setFilter(String command){ // "[elem['id'] for elem in data['items']['itemsB']]"
+        if ( command.startsWith("[") && command.endsWith("]") ) // "[elem['id'] for elem in data['items']]" -> "elem['id'] for elem in data['items']['itemsB']"
+            command=command.substring(1,command.length()-1); 
+        String [] partes=command.split(" for elem in ");
+        if ( partes.length == 2 ){
+            String a=partes[0];
+            String b=partes[1];
+            partes=a.split("'"); // elem['id']
+            if ( partes.length == 3 )
+                filter_item=partes[1];
+            if ( b.startsWith("data") ){ // data['items']['itemsB'] -> _items.itemsB._
+                partes=b.substring(4).replace("[", "").replace("]", "").split("'");
+                filter_for="_";
+                for ( String parte : partes ){
+                    if ( parte.equals("") )
+                        continue;
+                    filter_for+="."+parte;
+                }
+                filter_for+="._";
+            }
+        }    
+        if ( filter_for.equals("") || filter_item.equals("") )
+            filter_for=filter_item="n/a";
+    }
+    
+    private void indexacao() {     
         for ( int i=0;i<count_pilha*2;i++ )
-            System.out.print(" ");
+            outindex(" ");
     }
     
     String [] pilha=new String [999];
+    String [] pilha_pai=new String [999];
+    String pai="";
+    
     int count_pilha=0;
     String level_in="[{";
     String level_out="]}";
     private void next(String t) {
         if ( level_in.contains(t) ){
             int aux=level_in.indexOf(t);
-            pilha[count_pilha++]=level_out.substring(aux, aux+1);
-            System.out.print(t);
-            System.out.print("\n");
+            pilha[count_pilha]=level_out.substring(aux, aux+1);
+            pilha_pai[count_pilha]=pai;
+            pai="";
+            count_pilha++;
+            out(t);
+            outwrite();                
+            obs();
             indexacao();
             return;
         }else{
@@ -5823,20 +5885,69 @@ class JSON extends Util{
                 if (count_pilha==0 || !pilha[count_pilha-1].equals(t))
                     erroFatal(99);
                 count_pilha--;     
-                System.out.print("\n");
+                outwrite();
+                obs();
                 indexacao();
-                System.out.print(t);
+                out(t);
                 return;
             }
         }
         if ( t.equals(",")){
-            System.out.print(t);
-            System.out.print("\n");
+            pai="";
+            out(t);
+            outwrite();
+            obs();
             indexacao();
             return;
         }
-        System.out.print(t);
-    }    
+        out(t);
+    }   
+       
+    private void nextflush(){
+        outwrite();
+    }
+    
+    private void obs(){
+        String obs="";
+        for ( int i=0;i<count_pilha;i++ ){
+            if ( i > 0 )
+                obs+=".";
+            obs+=pilha_pai[i].equals("")?"_":pilha_pai[i];
+        }
+        if ( mostraObs )
+            System.out.println(obs);
+        filter_on=obs.equals(filter_for);
+    } 
+    
+    String out="";
+    String out_mostra="";
+    private void out(String a){
+        out+=a;
+        out_mostra+=a;
+    }
+    private void outindex(String a){
+        out_mostra+=a;
+    }
+    private void outwrite(){
+        if ( mostraEstrutura )
+            System.out.println(out_mostra);
+        if ( filter_on && out.indexOf("\""+filter_item+"\": ") == 0)
+            System.out.println("\""+getElem(out)+"\"");
+        out="";
+        out_mostra="";
+    }
+    private String getElem(String a){
+        if ( a.endsWith(",") )
+            a=a.substring(0,a.length()-1);
+        int p=a.indexOf(": ");
+        if ( p > 0 )
+            a=a.substring(p+2);
+        if ( a.startsWith("\"") )
+            a=a.substring(1);
+        if ( a.endsWith("\"") )
+            a=a.substring(0,a.length()-1);
+        return a;
+    }
 }
 
 class Ponte {
@@ -6773,7 +6884,7 @@ class XML extends Util{
         }
         return retorno;
     }
-    
+
     public void setTag(String tag){
         this.tag=tag;
     }
@@ -6876,8 +6987,6 @@ class XML extends Util{
 /* class Tar  */ public static TarHeader createHeader(String entryName, long size, long modTime, boolean dir, int permissions) { String name = entryName; name = TarUtils.trim(name.replace(File.separatorChar, '/'), '/');  TarHeader header = new TarHeader(); header.linkName = new StringBuffer(""); header.mode = permissions;  if (name.length() > 100) { header.namePrefix = new StringBuffer(name.substring(0, name.lastIndexOf('/'))); header.name = new StringBuffer(name.substring(name.lastIndexOf('/') + 1)); } else { header.name = new StringBuffer(name); } if (dir) { header.linkFlag = TarHeader.LF_DIR; if (header.name.charAt(header.name.length() - 1) != '/') { header.name.append("/"); } header.size = 0; } else { header.linkFlag = TarHeader.LF_NORMAL; header.size = size; }  header.modTime = modTime; header.checkSum = 0; header.devMajor = 0; header.devMinor = 0;  return header; } }  class PermissionUtils { private static enum StandardFilePermission { EXECUTE(0110), WRITE(0220), READ(0440);  private int mode;  private StandardFilePermission(int mode) { this.mode = mode; } }  private static Map<PosixFilePermission, Integer> posixPermissionToInteger = new HashMap<>();  static { posixPermissionToInteger.put(PosixFilePermission.OWNER_EXECUTE, 0100); posixPermissionToInteger.put(PosixFilePermission.OWNER_WRITE, 0200); posixPermissionToInteger.put(PosixFilePermission.OWNER_READ, 0400);  posixPermissionToInteger.put(PosixFilePermission.GROUP_EXECUTE, 0010); posixPermissionToInteger.put(PosixFilePermission.GROUP_WRITE, 0020); posixPermissionToInteger.put(PosixFilePermission.GROUP_READ, 0040);  posixPermissionToInteger.put(PosixFilePermission.OTHERS_EXECUTE, 0001); posixPermissionToInteger.put(PosixFilePermission.OTHERS_WRITE, 0002); posixPermissionToInteger.put(PosixFilePermission.OTHERS_READ, 0004); }  public static int permissions(File f) { if(f == null) { throw new NullPointerException("File is null."); } if(!f.exists()) { throw new IllegalArgumentException("File " + f + " does not exist."); }  return isPosix ? posixPermissions(f) : standardPermissions(f); }  private static final boolean isPosix = FileSystems.getDefault().supportedFileAttributeViews().contains("posix");  private static int posixPermissions(File f) { int number = 0; try { Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(f.toPath()); for (Map.Entry<PosixFilePermission, Integer> entry : posixPermissionToInteger.entrySet()) { if (permissions.contains(entry.getKey())) { number += entry.getValue(); } } } catch (IOException e) { throw new RuntimeException(e); } return number; }  private static Set<StandardFilePermission> readStandardPermissions(File f) { Set<StandardFilePermission> permissions = new HashSet<>(); if(f.canExecute()) { permissions.add(StandardFilePermission.EXECUTE); } if(f.canWrite()) { permissions.add(StandardFilePermission.WRITE); } if(f.canRead()) { permissions.add(StandardFilePermission.READ); } return permissions; }  private static Integer standardPermissions(File f) { int number = 0; Set<StandardFilePermission> permissions = readStandardPermissions(f); for (StandardFilePermission permission : permissions) { number += permission.mode; } return number; } }  class Octal { public static long parseOctal(byte[] header, int offset, int length) { long result = 0; boolean stillPadding = true;  int end = offset + length; for (int i = offset; i < end; ++i) { if (header[i] == 0) break;  if (header[i] == (byte) ' ' || header[i] == '0') { 
 /* class Tar  */ if (stillPadding) continue;  if (header[i] == (byte) ' ') break; }  stillPadding = false;  result = ( result << 3 ) + ( header[i] - '0' ); }  return result; }  public static int getOctalBytes(long value, byte[] buf, int offset, int length) { int idx = length - 1;  buf[offset + idx] = 0; --idx; buf[offset + idx] = (byte) ' '; --idx;  if (value == 0) { buf[offset + idx] = (byte) '0'; --idx; } else { for (long val = value; idx >= 0 && val > 0; --idx) { buf[offset + idx] = (byte) ( (byte) '0' + (byte) ( val & 7 ) ); val = val >> 3; } }  for (; idx >= 0; --idx) { buf[offset + idx] = (byte) '0'; }  return offset + length; } public static int getCheckSumOctalBytes(long value, byte[] buf, int offset, int length) { getOctalBytes( value, buf, offset, length ); buf[offset + length - 1] = (byte) ' '; buf[offset + length - 2] = 0; return offset + length; }  public static int getLongOctalBytes(long value, byte[] buf, int offset, int length) { byte[] temp = new byte[length + 1]; getOctalBytes( value, temp, 0, length + 1 ); System.arraycopy( temp, 0, buf, offset, length ); return offset + length; }  }  class TarUtils { public static long calculateTarSize(File path) { return tarSize(path) + TarConstants.EOF_BLOCK; }  private static long tarSize(File dir) { long size = 0;  if (dir.isFile()) { return entrySize(dir.length()); } else { File[] subFiles = dir.listFiles();  if (subFiles != null && subFiles.length > 0) { for (File file : subFiles) { if (file.isFile()) { size += entrySize(file.length()); } else { size += tarSize(file); } } } else { return TarConstants.HEADER_BLOCK; } }  return size; }  private static long entrySize(long fileSize) { long size = 0; size += TarConstants.HEADER_BLOCK; size += fileSize;  long extra = size % TarConstants.DATA_BLOCK;  if (extra > 0) { size += (TarConstants.DATA_BLOCK - extra); }  return size; }  public static String trim(String s, char c) { StringBuffer tmp = new StringBuffer(s); for (int i = 0; i < tmp.length(); i++) { if (tmp.charAt(i) != c) { break; } else { tmp.deleteCharAt(i); } }  for (int i = tmp.length() - 1; i >= 0; i--) { if (tmp.charAt(i) != c) { break; } else { tmp.deleteCharAt(i); } }  return tmp.toString(); } }  class TarInputStream extends FilterInputStream {  private static final int SKIP_BUFFER_SIZE = 2048; private TarEntry currentEntry; private long currentFileSize; private long bytesRead; private boolean defaultSkip = false;  public TarInputStream(InputStream in) { super(in); currentFileSize = 0; bytesRead = 0; }  @Override public boolean markSupported() { return false; }  @Override public synchronized void mark(int readlimit) { }  @Override public synchronized void reset() throws IOException { throw new IOException("mark/reset not supported"); }  @Override public int read() throws IOException { byte[] buf = new byte[1];  int res = this.read(buf, 0, 1);  if (res != -1) { return 0xFF & buf[0]; }  return res; }  @Override public int read(byte[] b, int off, int len) throws IOException { if (currentEntry != null) { if (currentFileSize == currentEntry.getSize()) { return -1; } else if ((currentEntry.getSize() - currentFileSize) < len) { len = (int) (currentEntry.getSize() - currentFileSize); } }  int br = super.read(b, off, len);  if (br != -1) { if (currentEntry != null) { currentFileSize += br; }  bytesRead += br; }  return br; }  public TarEntry getNextEntry() throws IOException { closeCurrentEntry();  byte[] header = new byte[TarConstants.HEADER_BLOCK]; 
 /* class Tar  */ byte[] theader = new byte[TarConstants.HEADER_BLOCK]; int tr = 0;  while (tr < TarConstants.HEADER_BLOCK) { int res = read(theader, 0, TarConstants.HEADER_BLOCK - tr);  if (res < 0) { break; }  System.arraycopy(theader, 0, header, tr, res); tr += res; }  boolean eof = true; for (byte b : header) { if (b != 0) { eof = false; break; } }  if (!eof) { currentEntry = new TarEntry(header); }  return currentEntry; }  public long getCurrentOffset() { return bytesRead; }  protected void closeCurrentEntry() throws IOException { if (currentEntry != null) { if (currentEntry.getSize() > currentFileSize) { long bs = 0; while (bs < currentEntry.getSize() - currentFileSize) { long res = skip(currentEntry.getSize() - currentFileSize - bs);  if (res == 0 && currentEntry.getSize() - currentFileSize > 0) { throw new IOException("Possible tar file corruption"); }  bs += res; } }  currentEntry = null; currentFileSize = 0L; skipPad(); } }  protected void skipPad() throws IOException { if (bytesRead > 0) { int extra = (int) (bytesRead % TarConstants.DATA_BLOCK);  if (extra > 0) { long bs = 0; while (bs < TarConstants.DATA_BLOCK - extra) { long res = skip(TarConstants.DATA_BLOCK - extra - bs); bs += res; } } } }  @Override public long skip(long n) throws IOException { if (defaultSkip) { long bs = super.skip(n); bytesRead += bs;  return bs; }  if (n <= 0) { return 0; }  long left = n; byte[] sBuff = new byte[SKIP_BUFFER_SIZE];  while (left > 0) { int res = read(sBuff, 0, (int) (left < SKIP_BUFFER_SIZE ? left : SKIP_BUFFER_SIZE)); if (res < 0) { break; } left -= res; }  return n - left; }  public boolean isDefaultSkip() { return defaultSkip; }  public void setDefaultSkip(boolean defaultSkip) { this.defaultSkip = defaultSkip; } }
-
-
 
 
 
@@ -7006,6 +7115,9 @@ class XML extends Util{
 /* class by manual */                + "    y gettoken hash\n"
 /* class by manual */                + "[y json]\n"
 /* class by manual */                + "   y cat file.json | y json mostraEstrutura\n"
+/* class by manual */                + "   y cat file.json | y json \"[elem for elem in data['items']]\"\n"
+/* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data['items']]\"\n"
+/* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data]\"\n"
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
