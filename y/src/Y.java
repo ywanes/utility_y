@@ -172,6 +172,7 @@ cat buffer.log
         //args=new String[]{"find", "/"};
         //Util.testOn(); args=new String[]{"json", "[elem['id'] for elem in data['items']]"};
         //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
+        //Util.testOn(); args=new String[]{"json", "mostraTabela"};
         
         new Y().go(args);
     }
@@ -456,10 +457,11 @@ cat buffer.log
         
         if ( args[0].equals("json") && args.length > 1 ){
             boolean mostraObs=false;
-            boolean mostraEstrutura=args[1].equals("mostraEstrutura");
+            boolean mostraEstrutura=args[1].equals("mostraEstrutura");            
+            boolean mostraTabela=args[1].equals("mostraTabela");
             String command=args[1].contains("for elem in data")?args[1]:"";
-            if ( !command.equals("") || mostraEstrutura ){
-                new JSON().go(command,mostraEstrutura,mostraObs);
+            if ( !command.equals("") || mostraEstrutura || mostraTabela ){
+                new JSON().go(command,mostraEstrutura,mostraTabela,mostraObs);
                 return;
             }
         }
@@ -5622,10 +5624,9 @@ cat buffer.log
 }
 
 class Util{
-
     static void testOn() {
         try{
-            inputStream_pipe=new FileInputStream("c:/tmp/a");
+            inputStream_pipe=new FileInputStream("c:/tmp/file.json");
         }catch(Exception e){
             erroFatal(404);
         }
@@ -5801,15 +5802,22 @@ class Util{
 
 class JSON extends Util{
     boolean literal=false;   
+    String command="";
     boolean mostraEstrutura=false;
+    boolean mostraTabela=false;
     boolean mostraObs=false;
     String filter_for="";
-    String filter_item="";
     boolean filter_on=false;
-    public void go(String command, boolean mostraEstrutura, boolean mostraObs){ // "[elem['id'] for elem in data['items']]"
-        setFilter(command);
+    String unico_campo="";
+    String [] campos= new String[99];
+    int count_campos=0;
+    boolean finish_add_campos=false;
+    public void go(String command, boolean mostraEstrutura, boolean mostraTabela, boolean mostraObs){ // "[elem['id'] for elem in data['items']]"        
+        this.command=command;
         this.mostraEstrutura=mostraEstrutura;
+        this.mostraTabela=mostraTabela;
         this.mostraObs=mostraObs;        
+        setFilter();
         byte[] entrada_ = new byte[1];
         while ( read1Byte(entrada_) ){
             String t=new String(entrada_);
@@ -5825,13 +5833,13 @@ class JSON extends Util{
             if ( literal && !t.equals("\"") && !t.equals(" ") )
                 pai+=t;
             next(t);
-            if ( t.equals(":"))
+            if ( !literal && t.equals(":"))
                 next(" ");            
         }   
         nextflush();
     }
     
-    private void setFilter(String command){ // "[elem['id'] for elem in data['items']['itemsB']]"
+    private void setFilter(){ // "[elem['id'] for elem in data['items']['itemsB']]"
         if ( command.startsWith("[") && command.endsWith("]") ) // "[elem['id'] for elem in data['items']]" -> "elem['id'] for elem in data['items']['itemsB']"
             command=command.substring(1,command.length()-1); 
         String [] partes=command.split(" for elem in ");
@@ -5839,9 +5847,11 @@ class JSON extends Util{
             String a=partes[0];
             String b=partes[1];
             partes=a.split("'"); // elem['id']
-            if ( partes.length == 3 )
-                filter_item=partes[1];
-            if ( b.startsWith("data") ){ // data['items']['itemsB'] -> _items.itemsB._
+            if ( partes.length == 3 ){
+                unico_campo=partes[1];
+            }
+            if ( b.startsWith("data") ){ // data['items']['itemsB'] -> _.items.itemsB._
+                                         // data -> _
                 partes=b.substring(4).replace("[", "").replace("]", "").split("'");
                 filter_for="_";
                 for ( String parte : partes ){
@@ -5852,8 +5862,6 @@ class JSON extends Util{
                 filter_for+="._";
             }
         }    
-        if ( filter_for.equals("") || filter_item.equals("") )
-            filter_for=filter_item="n/a";
     }
     
     private void indexacao() {     
@@ -5904,21 +5912,47 @@ class JSON extends Util{
     }   
        
     private void nextflush(){
-        if ( !out.equals("") )
-            outwrite();
+        outwrite();
+        if ( !command.equals("") ){
+            if ( !finish_add_campos  )
+                print_header();
+            if ( !detail.equals("") )
+                System.out.println(detail);
+        }
     }
     
+    String [] tabelas=new String[99];
+    int count_tabelas=0;    
     private void obs(){
         String obs="";
+        String tabela="data";
         for ( int i=0;i<count_pilha;i++ ){
             if ( i > 0 )
                 obs+=".";
             obs+=pilha_pai[i].equals("")?"_":pilha_pai[i];
+            if ( i > 0 && i < count_pilha-1)
+                tabela+="['"+pilha_pai[i]+"']";
         }
         if ( mostraObs )
             System.out.println(obs);
+        if ( mostraTabela ){
+            if ( obs.endsWith("._") && !obs.contains("._.") ){
+                tabela="[elem for elem in " + tabela + "]";
+                if ( !contemNaTabela(tabela) && count_tabelas < 50 ){
+                    tabelas[count_tabelas++]=tabela;
+                    System.out.println(tabela);
+                }
+            }           
+        }
         filter_on=obs.equals(filter_for);
     } 
+    private boolean contemNaTabela(String a){
+        for ( int i=0;i<count_tabelas;i++ )
+            if ( tabelas[i].equals(a) )
+                return true;
+        return false;
+    }        
+            
     
     String out="";
     String out_mostra="";
@@ -5929,26 +5963,86 @@ class JSON extends Util{
     private void outindex(String a){
         out_mostra+=a;
     }
+    String detail="";
+    String key="";
+    String value="";
     private void outwrite(){
         if ( mostraEstrutura )
             System.out.println(out_mostra);
-        if ( filter_on && out.indexOf("\""+filter_item+"\": ") == 0)
-            System.out.println("\""+getElem(out)+"\"");
+        if ( !command.equals("") && filter_on ){
+            get_KeyValue();
+            // add campo
+            if ( !finish_add_campos ){
+                if ( value.equals("{") || value.equals("[") ){
+                    finish_add_campos=true;
+                    print_header();                    
+                }else{
+                    if ( !contem(key) ){
+                        if ( unico_campo.equals("") )
+                            campos[count_campos++]=key;
+                        if ( !unico_campo.equals("") && unico_campo.equals(key) )
+                            campos[count_campos++]=key;
+                    }else{
+                        finish_add_campos=true;
+                        print_header();
+                    }
+                }
+            }
+            if ( finish_add_campos && campos[0].equals(key)){
+                System.out.println(detail);
+                detail="";
+            }
+            if ( contem(key) ){
+                if ( !detail.equals("") )
+                    detail+=",";
+                detail+="\""+value+"\"";
+            }
+        }
+        
         out="";
         out_mostra="";
     }
-    private String getElem(String a){
-        if ( a.endsWith(",") )
-            a=a.substring(0,a.length()-1);
+    
+    private void print_header(){
+        for ( int i=0;i<count_campos;i++ ){
+            if ( i != 0 )
+                System.out.print(",");
+            System.out.print("\""+campos[i]+"\"");
+        }
+        System.out.println();        
+    }
+    
+    private boolean contem(String a){
+        for ( int i=0;i<count_campos;i++ )
+            if ( campos[i].equals(a) )
+                return true;
+        return false;
+    }
+    
+    private void get_KeyValue(){
+        String a=out;
+        key="?";
+        value="?";
+        a=tiraVirgula(a);
         int p=a.indexOf(": ");
-        if ( p > 0 )
-            a=a.substring(p+2);
+        if ( p > 0 ){
+            key=tiraAspasPontas(a.substring(0, p-1));
+            value=tiraAspasPontas(a.substring(p+2,a.length()));
+        }
+    }
+    private String tiraVirgula(String a){
+        if ( a.endsWith(",") )
+            return a.substring(0,a.length()-1);         
+        return a;
+    }
+    private String tiraAspasPontas(String a){
         if ( a.startsWith("\"") )
             a=a.substring(1);
         if ( a.endsWith("\"") )
-            a=a.substring(0,a.length()-1);
+            a=a.substring(0, a.length()-1);
         return a;
     }
+    
 }
 
 class Ponte {
