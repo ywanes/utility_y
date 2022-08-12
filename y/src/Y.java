@@ -5803,8 +5803,8 @@ class JSON extends Util{
     boolean literal=false;   
     boolean mostraEstrutura=false;
     boolean mostraObs=false;
-    String filter_for="_.items._";
-    String filter_item="id";
+    String filter_for="";
+    String filter_item="";
     boolean filter_on=false;
     public void go(String command, boolean mostraEstrutura, boolean mostraObs){ // "[elem['id'] for elem in data['items']]"
         setFilter(command);
@@ -5904,7 +5904,8 @@ class JSON extends Util{
     }   
        
     private void nextflush(){
-        outwrite();
+        if ( !out.equals("") )
+            outwrite();
     }
     
     private void obs(){
