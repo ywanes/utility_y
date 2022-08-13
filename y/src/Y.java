@@ -6047,7 +6047,8 @@ class JSON extends Util{
         }else{
             key="f"+(++seq)+"_";
             value=a;
-        }        
+        }   
+        value=value.replace("\"", "\"\"");
         return true;
     }
     private String tiraVirgula(String a){
