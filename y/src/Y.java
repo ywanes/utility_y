@@ -169,8 +169,10 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","1"};        
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
         //args=new String[]{"find", "/"};
-        //Util.testOn(); args=new String[]{"json", "[elem['id'] for elem in data['items']]"};
+        //Util.testOn(); args=new String[]{"json", "[elem for elem in data['items']]"};        
+        //Util.testOn(); args=new String[]{"json", "[elem for elem in data['a']]"};        
         //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
+        //Util.testOn(); args=new String[]{"json", "mostraEstruturaObs"};
         //Util.testOn(); args=new String[]{"json", "mostraTabela"};
         
         new Y().go(args);
@@ -455,12 +457,12 @@ cat buffer.log
         }
         
         if ( args[0].equals("json") && args.length > 1 ){
-            boolean mostraObs=false;
-            boolean mostraEstrutura=args[1].equals("mostraEstrutura");            
             boolean mostraTabela=args[1].equals("mostraTabela");
+            boolean mostraEstrutura=args[1].equals("mostraEstrutura");            
+            boolean mostraEstruturaObs=args[1].equals("mostraEstruturaObs");
             String command=args[1].contains("for elem in data")?args[1]:"";
-            if ( !command.equals("") || mostraEstrutura || mostraTabela ){
-                new JSON().go(command,mostraEstrutura,mostraTabela,mostraObs);
+            if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaObs ){
+                new JSON().go(command,mostraTabela,mostraEstrutura,mostraEstruturaObs);
                 return;
             }
         }
@@ -5802,20 +5804,22 @@ class Util{
 class JSON extends Util{
     boolean literal=false;   
     String command="";
-    boolean mostraEstrutura=false;
     boolean mostraTabela=false;
-    boolean mostraObs=false;
+    boolean mostraEstrutura=false;
+    boolean mostraEstruturaObs=false;
     String filter_for="";
+    String filter_forB="";
     boolean filter_on=false;
+    boolean filter_onB=false;
     String unico_campo="";
     String [] campos= new String[99];
     int count_campos=0;
     boolean finish_add_campos=false;
-    public void go(String command, boolean mostraEstrutura, boolean mostraTabela, boolean mostraObs){ // "[elem['id'] for elem in data['items']]"        
+    public void go(String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaObs){ // "[elem['id'] for elem in data['items']]"        
         this.command=command;
-        this.mostraEstrutura=mostraEstrutura;
         this.mostraTabela=mostraTabela;
-        this.mostraObs=mostraObs;        
+        this.mostraEstrutura=mostraEstrutura;
+        this.mostraEstruturaObs=mostraEstruturaObs;        
         setFilter();
         byte[] entrada_ = new byte[1];
         while ( read1Byte(entrada_) ){
@@ -5858,6 +5862,7 @@ class JSON extends Util{
                         continue;
                     filter_for+="."+parte;
                 }
+                filter_forB=filter_for;
                 filter_for+="._";
             }
         }    
@@ -5875,8 +5880,10 @@ class JSON extends Util{
     int count_pilha=0;
     String level_in="[{";
     String level_out="]}";
+    int seq=0;
     private void next(String t) {
         if ( level_in.contains(t) ){
+            seq=0;
             int aux=level_in.indexOf(t);
             pilha[count_pilha]=level_out.substring(aux, aux+1);
             pilha_pai[count_pilha]=pai;
@@ -5932,7 +5939,7 @@ class JSON extends Util{
             if ( i > 0 && i < count_pilha-1)
                 tabela+="['"+pilha_pai[i]+"']";
         }
-        if ( mostraObs )
+        if ( mostraEstruturaObs )
             System.out.println(obs);
         if ( mostraTabela ){
             if ( obs.endsWith("._") && !obs.contains("._.") ){
@@ -5943,15 +5950,15 @@ class JSON extends Util{
                 }
             }           
         }
-        filter_on=obs.equals(filter_for);
+        filter_on=obs.equals(filter_for); // list of obj -> [{"b":1},{"b":2}] ou [[1,2],[3,4]]
+        filter_onB=obs.equals(filter_forB); // list of value -> [1,2]
     } 
     private boolean contemNaTabela(String a){
         for ( int i=0;i<count_tabelas;i++ )
             if ( tabelas[i].equals(a) )
                 return true;
         return false;
-    }        
-            
+    }                    
     
     String out="";
     String out_mostra="";
@@ -5964,12 +5971,19 @@ class JSON extends Util{
     }
     String detail="";
     String key="";
-    String value="";
+    String value="";    
+    boolean unica_verificacao=false;
     private void outwrite(){
-        if ( mostraEstrutura )
+        if ( mostraEstrutura || mostraEstruturaObs )
             System.out.println(out_mostra);
-        if ( !command.equals("") && filter_on ){
-            get_KeyValue();
+        if ( !unica_verificacao && !command.equals("") && filter_onB ){
+            unica_verificacao=true;
+            if ( !out.startsWith("{") && !out.startsWith("[") ){
+                filter_on=filter_onB;
+                filter_for=filter_forB;
+            }
+        }
+        if ( !command.equals("") && filter_on && get_KeyValue() ){
             // add campo
             if ( !finish_add_campos ){
                 if ( value.equals("{") || value.equals("[") ){
@@ -6018,16 +6032,23 @@ class JSON extends Util{
         return false;
     }
     
-    private void get_KeyValue(){
+    private boolean get_KeyValue(){
         String a=out;
         key="?";
         value="?";
+        if ( a.endsWith("{") || a.endsWith("[") || a.equals("}") || a.equals("]") || a.equals("},") || a.equals("],") ){
+            return false;
+        }
         a=tiraVirgula(a);
         int p=a.indexOf(": ");
         if ( p > 0 ){
             key=tiraAspasPontas(a.substring(0, p-1));
             value=tiraAspasPontas(a.substring(p+2,a.length()));
-        }
+        }else{
+            key="f"+(++seq)+"_";
+            value=a;
+        }        
+        return true;
     }
     private String tiraVirgula(String a){
         if ( a.endsWith(",") )
