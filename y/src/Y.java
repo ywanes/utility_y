@@ -5823,16 +5823,16 @@ class JSON extends Util{
         setFilter();
         byte[] entrada_ = new byte[1];
         while ( read1Byte(entrada_) ){
-            String t=new String(entrada_);
+            String t=new String(entrada_);            
             if ( t.equals("\"") ){
                 literal=!literal;
                 if ( literal )
                     pai="";
             }
-            if ( !literal ){
-                if ( t.equals(" ") || t.equals("\t") || t.equals("\r") || t.equals("\n") )
-                    continue;
-            }
+            if ( !literal && t.equals(" ") )
+                continue;
+            if ( t.equals("\t") || t.equals("\r") || t.equals("\n") )
+                continue;
             if ( literal && !t.equals("\"") && !t.equals(" ") )
                 pai+=t;
             next(t);
@@ -6046,7 +6046,7 @@ class JSON extends Util{
             value=tiraAspasPontas(a.substring(p+2,a.length()));
         }else{
             key="f"+(++seq)+"_";
-            value=a;
+            value=tiraAspasPontas(a);
         }   
         value=value.replace("\"", "\"\"");
         return true;
@@ -6057,10 +6057,8 @@ class JSON extends Util{
         return a;
     }
     private String tiraAspasPontas(String a){
-        if ( a.startsWith("\"") )
-            a=a.substring(1);
-        if ( a.endsWith("\"") )
-            a=a.substring(0, a.length()-1);
+        if ( a.startsWith("\"") && a.endsWith("\"") )
+            return a.substring(1, a.length()-1);
         return a;
     }
 }
