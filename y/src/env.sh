@@ -56,6 +56,14 @@ export PATH="$PATH":.
 alias y='java -Dfile.encoding=ISO-8859-1 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
 rm -f /opt/.u_flag
 alias u='/opt/.u'
+if [ `whoami` == "root" ] && [ -e /opt/.vv ] # echo '22.10' > /opt/.vv 
+then
+  vv=`curl https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk ' { print $2 } '`
+  if [ "$vv" != "" ] && [ "$vv" != `cat /opt/.vv` ]
+  then
+    echo 'New ubuntu --> '$vv
+  fi
+fi
 EOF
 chmod 777 /opt/env_
 
