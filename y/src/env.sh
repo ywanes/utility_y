@@ -63,6 +63,11 @@ then
   then
     echo 'New ubuntu --> '$vv
   fi
+  if [ -e /etc/update-manager/release-upgrades ] && [ `cat /etc/update-manager/release-upgrades | grep ^Prompt=normal$ | wc -l` == 0 ]
+  then
+    echo Alerta LTS, roda o comando abaixo!!:
+    echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
+  fi
 fi
 EOF
 chmod 777 /opt/env_
