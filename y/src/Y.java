@@ -9,8 +9,8 @@
     alias y='java -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar:. Y'
     alias y='java -Dfile.encoding=ISO-8859-1 -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar:. Y'
     java -XshowSettings 2>&1 | grep "file.encoding "
-    crétidos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
-    crétidos https://github.com/is/jsch/tree/master/examples
+    créditos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
+    créditos https://github.com/is/jsch/tree/master/examples
 */
 
 import com.jcraft.jsch.*;
