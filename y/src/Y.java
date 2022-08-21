@@ -2488,7 +2488,7 @@ cat buffer.log
                 return inputString;
         }
         StringBuilder sb = new StringBuilder(sinalNegativo?"-":"");
-        for ( int i=0;i<=length-len_input;i++ )
+        for ( int i=0;i<length-len_input;i++ )
             sb.append(append);
         sb.append(inputString);
         return sb.toString();
