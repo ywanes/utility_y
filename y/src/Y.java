@@ -7104,7 +7104,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7253,6 +7252,7 @@ class XML extends Util{
 /* class by manual */                + "[y tar]\n"
 /* class by manual */                + "    y tar in > test.tar\n"
 /* class by manual */                + "    y tar test.tar in\n"
+/* class by manual */                + "    obs: suporta arquivo com ateh 8 gigas\n"
 /* class by manual */                + "[y untar]\n"
 /* class by manual */                + "    y cat test.tar | y untar\n"
 /* class by manual */                + "    y untar test.tar\n"
@@ -7545,5 +7545,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 

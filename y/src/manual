@@ -142,6 +142,7 @@ Exemplos...
 [y tar]
     y tar in > test.tar
     y tar test.tar in
+    obs: suporta arquivo com ateh 8 gigas
 [y untar]
     y cat test.tar | y untar
     y untar test.tar
