@@ -4020,9 +4020,11 @@ cat buffer.log
             byte[] buf = new byte[BUFFER_SIZE];
             while( (len=readBytes(buf)) > -1){
                 out.write(buf, 0, len);
+                out.flush();
                 System.out.write(buf, 0, len);
+                System.out.flush();
             }
-            out.flush();
+            out.flush();            
             out.close();
             System.out.flush();
             closeBytes();
