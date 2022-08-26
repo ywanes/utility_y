@@ -3560,6 +3560,7 @@ cat buffer.log
                     System.exit(1);
                 }
                 write1Byte(valor);            
+                write1ByteFlush();//0 cache
             } 
             closeLine();
         }else{ // parametros
@@ -3571,6 +3572,7 @@ cat buffer.log
                     System.exit(valor);
                 }
                 write1Byte(valor);            
+                write1ByteFlush();//0 cache
             }                    
         }
         write1ByteFlush();
