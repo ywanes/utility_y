@@ -6,7 +6,7 @@ usage:
   [y banco conn,hash createjobexecute]
   [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]
   [y banco executejob]
-  [y banco buffer [|-n_lines 500] [|-log buffer.log]]
+  [y banco buffer [|-n_lines 4000] [|-log buffer.log]]
   [y selectCSV]
   [y xlsxToCSV]
   [y token]
@@ -93,8 +93,8 @@ Exemplos...
         echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc createjobcarga
         echo "select * from TABELA_CCC" | y banco connIn,hash connOut,hash -outTable TABELA_CCC trunc createjobcarga
     ) | y banco executejob
-[y banco buffer [|-n_lines 500] [|-log buffer.log]]    
-    echo "select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 500 -log buffer.log | y banco conn,hash executeInsert
+[y banco buffer [|-n_lines 4000] [|-log buffer.log]]    
+    echo "select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert
 [y selectCSV]
     y cat file.csv | y selectCSV "select * from this"
     y selectCSV -csv file.csv "select * from this"
@@ -274,9 +274,10 @@ Exemplos...
     obs2: start e end pode ocorrer varias vezes no texto
     obs3: -1 significa o ultimo
 [y dev_null]
-    cat arquivo | y banco buffer -n_lines 500 -log buffer.log | y dev_null
+    cat arquivo | y banco buffer -n_lines 4000 -log buffer.log | y dev_null
 [y dev_in]
-    y dev_in | y banco buffer -n_lines 500 -log buffer.log | y dev_null
+    y dev_in | y banco buffer -n_lines 4000 -log buffer.log | y dev_null
+    y dev_in | y banco buffer -n_lines 4000 -log buffer.log > /dev/null
 [y scp]
     y scp file1 user,pass@servidor:file2
     y scp file1 user,pass@servidor:file2 22

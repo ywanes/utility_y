@@ -79,7 +79,7 @@ public class Y extends Util{
     
     public static String linhaCSV=null;
     public static int ponteiroLinhaCSV=0;        
-    public static int n_lines_buffer_DEFAULT=500;        
+    public static int n_lines_buffer_DEFAULT=4000;        
     public String [] ORAs=new String[]{};
     public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8","UTF-8BOM","UCS-2LE","UCS-2LEBOM"};
     public int [] BOM_UTF_8=new int[]{239,187,191};    
@@ -3049,7 +3049,7 @@ cat buffer.log
                 int BUFFER_SIZE=1024;
                 byte[] buf = new byte[BUFFER_SIZE];
                 int len=0;
-                while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) != 0 ){
+                while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
                     System.out.write(buf, 0, len);
                 }
                 System.out.flush();
@@ -4225,9 +4225,12 @@ cat buffer.log
     public void dev_null()
     {
         try{            
+            InputStream inputStream_pipe=System.in;
+            int BUFFER_SIZE=1024;
             byte[] buf = new byte[BUFFER_SIZE];
-            while(readBytes(buf) > -1){}
-            closeBytes();
+            while( inputStream_pipe.read(buf,0,BUFFER_SIZE) > 0 ){}
+            System.out.flush();
+            System.out.close();
         }catch(Exception e){
             System.out.println(e.toString());
         }
@@ -4235,8 +4238,13 @@ cat buffer.log
 
     public void dev_in()
     {
+        int BUFFER_SIZE=1024;
+        String s="";
+        for ( int i=0;i<BUFFER_SIZE/2;i++ )
+            s+="0\n";
+        byte[] buf = s.getBytes();
         while(true)
-            System.out.println(0);
+            System.out.write(buf, 0, BUFFER_SIZE);
     }
 
     public byte[] base64_B_B(byte[] txt,boolean encoding) throws Exception{ // byte in byte out
@@ -7152,7 +7160,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7165,7 +7172,7 @@ class XML extends Util{
 /* class by manual */                + "  [y banco conn,hash createjobexecute]\n"
 /* class by manual */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
 /* class by manual */                + "  [y banco executejob]\n"
-/* class by manual */                + "  [y banco buffer [|-n_lines 500] [|-log buffer.log]]\n"
+/* class by manual */                + "  [y banco buffer [|-n_lines 4000] [|-log buffer.log]]\n"
 /* class by manual */                + "  [y selectCSV]\n"
 /* class by manual */                + "  [y xlsxToCSV]\n"
 /* class by manual */                + "  [y token]\n"
@@ -7252,8 +7259,8 @@ class XML extends Util{
 /* class by manual */                + "        echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc createjobcarga\n"
 /* class by manual */                + "        echo \"select * from TABELA_CCC\" | y banco connIn,hash connOut,hash -outTable TABELA_CCC trunc createjobcarga\n"
 /* class by manual */                + "    ) | y banco executejob\n"
-/* class by manual */                + "[y banco buffer [|-n_lines 500] [|-log buffer.log]]    \n"
-/* class by manual */                + "    echo \"select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 500 -log buffer.log | y banco conn,hash executeInsert\n"
+/* class by manual */                + "[y banco buffer [|-n_lines 4000] [|-log buffer.log]]    \n"
+/* class by manual */                + "    echo \"select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert\n"
 /* class by manual */                + "[y selectCSV]\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this\"\n"
 /* class by manual */                + "    y selectCSV -csv file.csv \"select * from this\"\n"
@@ -7433,9 +7440,10 @@ class XML extends Util{
 /* class by manual */                + "    obs2: start e end pode ocorrer varias vezes no texto\n"
 /* class by manual */                + "    obs3: -1 significa o ultimo\n"
 /* class by manual */                + "[y dev_null]\n"
-/* class by manual */                + "    cat arquivo | y banco buffer -n_lines 500 -log buffer.log | y dev_null\n"
+/* class by manual */                + "    cat arquivo | y banco buffer -n_lines 4000 -log buffer.log | y dev_null\n"
 /* class by manual */                + "[y dev_in]\n"
-/* class by manual */                + "    y dev_in | y banco buffer -n_lines 500 -log buffer.log | y dev_null\n"
+/* class by manual */                + "    y dev_in | y banco buffer -n_lines 4000 -log buffer.log | y dev_null\n"
+/* class by manual */                + "    y dev_in | y banco buffer -n_lines 4000 -log buffer.log > /dev/null\n"
 /* class by manual */                + "[y scp]\n"
 /* class by manual */                + "    y scp file1 user,pass@servidor:file2\n"
 /* class by manual */                + "    y scp file1 user,pass@servidor:file2 22\n"
@@ -7596,5 +7604,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
