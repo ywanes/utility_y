@@ -922,8 +922,26 @@ cat buffer.log
                 System.out.println("}");
                 return;
             }
+        }        
+        if ( args[0].equals("i1") ){ // atalho iconv
+            if ( args.length == 1 ){
+                args=new String[]{"iconv", "-f", "UTF-8", "-t", "ISO-8859-1"};
+            }else{
+                if ( args.length == 2 ){
+                    args=new String[]{"iconv", "-f", "UTF-8", "-t", "ISO-8859-1", args[1]};
+                }
+            }
         }
-        if ( args[0].equals("iconv") ){            
+        if ( args[0].equals("i2") ){ // atalho iconv
+            if ( args.length == 1 ){
+                args=new String[]{"iconv", "-f", "ISO-8859-1", "-t", "UTF-8"};
+            }else{
+                if ( args.length == 2 ){
+                    args=new String[]{"iconv", "-f", "ISO-8859-1", "-t", "UTF-8", args[1]};
+                }
+            }
+        }
+        if ( args[0].equals("iconv") ){
             if ( args.length == 1 ){
                 System.out.println("Tipos suportados de iconv:");
                 for(int i=0;i<suportIconv.length;i++)
@@ -963,7 +981,7 @@ cat buffer.log
                 }            
                 return;
             }        
-        }
+        }        
         if ( args[0].equals("tee") && args.length == 2 ){
             tee(args[1]);
             return;
@@ -7114,6 +7132,9 @@ class XML extends Util{
 
 
 
+
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7364,7 +7385,9 @@ class XML extends Util{
 /* class by manual */                + "[y iconv]\n"
 /* class by manual */                + "    y iconv -f UTF-8 -t ISO-8859-1 file\n"
 /* class by manual */                + "    cat file | y iconv -f UTF-8 -t ISO-8859-1 \n"
+/* class by manual */                + "    cat file | y i1\n"
 /* class by manual */                + "    cat file | y iconv -f ISO-8859-1 -t UTF-8\n"
+/* class by manual */                + "    cat file | y i2\n"
 /* class by manual */                + "    obs: tipos suportados: \"ISO-8859-1\",\"UTF-8\",\"UTF-8BOM\",\"UCS-2LE\",\"UCS-2LEBOM\"\n"
 /* class by manual */                + "    obs2: convert UTF-8 para ISO-8859-1(padrao windows, equivalente ao ANSI do notepad e equivalente ao windows-1252)\n"
 /* class by manual */                + "    obs3: BOM do UTF-8 em numerico => 239 187 191\n"
@@ -7555,6 +7578,5 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
 
