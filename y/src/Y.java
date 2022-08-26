@@ -7160,6 +7160,7 @@ class XML extends Util{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7441,9 +7442,11 @@ class XML extends Util{
 /* class by manual */                + "    obs3: -1 significa o ultimo\n"
 /* class by manual */                + "[y dev_null]\n"
 /* class by manual */                + "    cat arquivo | y banco buffer -n_lines 4000 -log buffer.log | y dev_null\n"
+/* class by manual */                + "    cat arquivo | y banco buffer -n_lines 4000 -log buffer.log > /dev/null\n"
 /* class by manual */                + "[y dev_in]\n"
 /* class by manual */                + "    y dev_in | y banco buffer -n_lines 4000 -log buffer.log | y dev_null\n"
 /* class by manual */                + "    y dev_in | y banco buffer -n_lines 4000 -log buffer.log > /dev/null\n"
+/* class by manual */                + "    obs: ref. a dd if e dd of\n"
 /* class by manual */                + "[y scp]\n"
 /* class by manual */                + "    y scp file1 user,pass@servidor:file2\n"
 /* class by manual */                + "    y scp file1 user,pass@servidor:file2 22\n"
