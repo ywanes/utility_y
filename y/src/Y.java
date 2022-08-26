@@ -620,7 +620,7 @@ cat buffer.log
             printf(args);
             return;
         }              
-        if ( args[0].equals("cat") && args.length >= 2 ){
+        if ( args[0].equals("cat") ){
             cat(args);
             return;
         }        
@@ -3026,23 +3026,34 @@ cat buffer.log
     
     public void cat(String [] caminhos)
     {
-        
         try{
-            for ( int i=1;i<caminhos.length;i++ )
-            {
-                if ( ! new File(caminhos[i]).exists() ){
-                    System.err.println("Erro, este arquivo não existe: "+caminhos[i]);
-                    return;
+            if ( caminhos.length > 1 ){
+                for ( int i=1;i<caminhos.length;i++ )
+                {
+                    if ( ! new File(caminhos[i]).exists() ){
+                        System.err.println("Erro, este arquivo não existe: "+caminhos[i]);
+                        return;
+                    }
                 }
-            }
-            for ( int i=1;i<caminhos.length;i++ )
-            {                
-                byte[] buf = new byte[BUFFER_SIZE];            
-                FileInputStream fis = new FileInputStream(caminhos[i]);
-                int len;
-                while ((len = fis.read(buf)) > -1)
-                    System.out.write(buf, 0, len);            
-                fis.close();
+                for ( int i=1;i<caminhos.length;i++ )
+                {                
+                    byte[] buf = new byte[BUFFER_SIZE];            
+                    FileInputStream fis = new FileInputStream(caminhos[i]);
+                    int len;
+                    while ((len = fis.read(buf)) > -1)
+                        System.out.write(buf, 0, len);            
+                    fis.close();
+                }
+            }else{
+                InputStream inputStream_pipe=System.in;
+                int BUFFER_SIZE=1024;
+                byte[] buf = new byte[BUFFER_SIZE];
+                int len=0;
+                while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) != 0 ){
+                    System.out.write(buf, 0, len);
+                }
+                System.out.flush();
+                System.out.close();
             }
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
@@ -3201,7 +3212,7 @@ cat buffer.log
     }
             
     public void tail(String [] args)
-    {
+    {                
         int p;
         String line;
         ArrayList<String> lista=new ArrayList<String>();
