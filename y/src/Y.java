@@ -3382,11 +3382,13 @@ cat buffer.log
                 sed_agulha1=new ArrayList<Byte>();
                 sed_agulha1_count=0;
             }
+            write1ByteFlush();// 0 cache
         }
         while( sed_agulha1_count>0 ){
             write1Byte(sed_agulha1.get(0));
             sed_agulha1.remove(0);
             sed_agulha1_count--;            
+            write1ByteFlush();// 0 cache
         }
         write1ByteFlush();
     }
@@ -5818,7 +5820,10 @@ class Util{
     }
     
     public void write1ByteFlush(){
-        System.out.write(write1ByteBuff, 0, write1Byte_n);
+        if ( write1Byte_n > 0 ){
+            System.out.write(write1ByteBuff, 0, write1Byte_n);
+            write1Byte_n=0;
+        }
     }    
     
     public static void erroFatal(int n) {
