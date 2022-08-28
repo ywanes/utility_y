@@ -3168,11 +3168,18 @@ cat buffer.log
     
     public void wc_l()
     {
-        try {
-            long count=0;
-            while ( (readLine()) != null )
-                count++;
-            closeLine();
+        try{
+            InputStream inputStream_pipe=System.in;
+            int BUFFER_SIZE=1024;
+            byte[] buf = new byte[BUFFER_SIZE];
+            int count=0;
+            int len=0;
+            byte[] r_="\n".getBytes();
+            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                for ( int i=0;i<len;i++ )
+                    if (buf[i] == r_[0])
+                        count++;
+            }
             System.out.println(count);
         }catch(Exception e){
             System.err.println(e.toString());
