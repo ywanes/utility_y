@@ -28,6 +28,7 @@ usage:
   [y base64]
   [y grep]
   [y wc -l]
+  [y len]
   [y head]
   [y tail]
   [y cut]
@@ -187,6 +188,11 @@ Exemplos...
     cat arquivo | y grep -i -v aa bb cc
 [y wc -l]
     cat arquivo | y wc -l
+[y len]
+    cat arquivo | y len
+    obs: echo aabaa | tr b "\n" | y len
+    result: 2
+            2
 [y head]
     cat arquivo | y head
     cat arquivo | y head -30

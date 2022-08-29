@@ -685,6 +685,10 @@ cat buffer.log
             wc_l();
             return;
         }       
+        if ( args.length == 1 && args[0].equals("len")){
+            len();
+            return;
+        }       
         if ( args[0].equals("head") 
             && (
                 args.length == 1 
@@ -3174,13 +3178,44 @@ cat buffer.log
             byte[] buf = new byte[BUFFER_SIZE];
             int count=0;
             int len=0;
-            byte[] r_="\n".getBytes();
+            byte[] n_="\n".getBytes();
             while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
                 for ( int i=0;i<len;i++ )
-                    if (buf[i] == r_[0])
+                    if (buf[i] == n_[0])
                         count++;
             }
             System.out.println(count);
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }
+    }
+
+    public void len()
+    {
+        try{
+            InputStream inputStream_pipe=System.in;
+            int BUFFER_SIZE=1024;
+            byte[] buf = new byte[BUFFER_SIZE];            
+            int len=0;
+            int count=0;
+            byte[] n_="\n".getBytes();
+            byte[] r_="\r".getBytes();
+            boolean any=false;
+            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                any=true;
+                for ( int i=0;i<len;i++ ){
+                    if (buf[i] == n_[0]){
+                        System.out.println(count);
+                        count=0;
+                    }else{
+                        if (buf[i] != r_[0])
+                            count++;
+                    }
+                }
+            }
+            if ( count > 0 || !any )
+                System.out.println(count);            
         }catch(Exception e){
             System.err.println(e.toString());
             System.exit(1);
@@ -7202,6 +7237,7 @@ class XML extends Util{
 /* class by manual */                + "  [y base64]\n"
 /* class by manual */                + "  [y grep]\n"
 /* class by manual */                + "  [y wc -l]\n"
+/* class by manual */                + "  [y len]\n"
 /* class by manual */                + "  [y head]\n"
 /* class by manual */                + "  [y tail]\n"
 /* class by manual */                + "  [y cut]\n"
@@ -7361,6 +7397,11 @@ class XML extends Util{
 /* class by manual */                + "    cat arquivo | y grep -i -v aa bb cc\n"
 /* class by manual */                + "[y wc -l]\n"
 /* class by manual */                + "    cat arquivo | y wc -l\n"
+/* class by manual */                + "[y len]\n"
+/* class by manual */                + "    cat arquivo | y len\n"
+/* class by manual */                + "    obs: echo aabaa | tr b \"\\n\" | y len\n"
+/* class by manual */                + "    result: 2\n"
+/* class by manual */                + "            2\n"
 /* class by manual */                + "[y head]\n"
 /* class by manual */                + "    cat arquivo | y head\n"
 /* class by manual */                + "    cat arquivo | y head -30\n"
@@ -7614,6 +7655,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
