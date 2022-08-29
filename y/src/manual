@@ -175,6 +175,7 @@ Exemplos...
     cat arquivo | y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA | y base64
     obs: O comando "y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA" equivale à "openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA"
     obs2: O valor de salt(-S) deverá contér 16 hexas maiúsculos, ex: AAAAAAAAAAAAAAAA
+    obs3: Se utilizar o salt na encriptacao, entao devera utilizar o mesmo salt na decriptacao
 [y base64]
     cat arquivo | y base64
     cat arquivo | y base64 -d
