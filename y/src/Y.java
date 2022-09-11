@@ -1123,6 +1123,26 @@ cat buffer.log
                 find(null, true);
             return;
         }
+        if ( args[0].equals("split") ){
+            /*
+            String [] BytesLinesPrefixParm=getBytesLinesPrefixParm(args);
+
+            if ( BytesLinesPrefixParm == null ){
+                comando_invalido(args);
+                return;
+            }
+
+            String bytes=BytesLinesPrefixParm[0];
+            String lines=BytesLinesPrefixParm[1];
+            String prefix=BytesLinesPrefixParm[2];
+            String parm=BytesLinesPrefixParm[3];
+            
+            split(bytes, lines, prefix, parm);
+            */
+            System.out.println("Não implementado!");
+            
+            return;
+        }
         if ( args[0].equals("link") && args.length == 3 ){
             link(args[1], args[2]);
             return;            
@@ -2666,7 +2686,7 @@ cat buffer.log
         }
         return retorno;
     }
-
+            
     public String removePontoEVirgual(String txt){
         String retorno=RTRIM(txt);
         if ( retorno.endsWith(";") )
@@ -5623,6 +5643,14 @@ cat buffer.log
         }catch(Exception e){}
     }
     
+    private void split(String bytes, String lines, String prefix, String parm){
+        
+    }
+    
+    public String [] getBytesLinesPrefixParm(String [] args){
+        return null;
+    }
+    
     private void link(String fonte, String new_){
         if ( new File(new_).exists() ){
             System.out.println("Error - Ja existe o elemento " + new_ + "!");
@@ -7270,6 +7298,7 @@ class XML extends Util{
 /* class by manual */                + "  [y pwd]\n"
 /* class by manual */                + "  [y find]\n"
 /* class by manual */                + "  [y ls]\n"
+/* class by manual */                + "  [y split]\n"
 /* class by manual */                + "  [y link]\n"
 /* class by manual */                + "  [y os]\n"
 /* class by manual */                + "  [y help]\n"
@@ -7555,6 +7584,12 @@ class XML extends Util{
 /* class by manual */                + "[y ls]\n"
 /* class by manual */                + "    y ls\n"
 /* class by manual */                + "    y ls pasta1\n"
+/* class by manual */                + "[y split]\n"
+/* class by manual */                + "    y cat fileA | y split -b 22\n"
+/* class by manual */                + "    y cat fileA | y split -l 22\n"
+/* class by manual */                + "    y cat fileA | y split --lines=22\n"
+/* class by manual */                + "    y cat fileA | y split --bytes=22\n"
+/* class by manual */                + "    y split --lines=22 --prefix=AA fileA # AAxxa\n"
 /* class by manual */                + "[y link]\n"
 /* class by manual */                + "    y link /opt/original original_linked\n"
 /* class by manual */                + "    y link c:\\\\tmp\\\\original original_linked\n"
@@ -7659,7 +7694,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
 
 

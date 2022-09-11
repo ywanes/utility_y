@@ -58,6 +58,7 @@ usage:
   [y pwd]
   [y find]
   [y ls]
+  [y split]
   [y link]
   [y os]
   [y help]
@@ -343,6 +344,12 @@ Exemplos...
 [y ls]
     y ls
     y ls pasta1
+[y split]
+    y cat fileA | y split -b 22
+    y cat fileA | y split -l 22
+    y cat fileA | y split --lines=22
+    y cat fileA | y split --bytes=22
+    y split --lines=22 --prefix=AA fileA # AAxxa
 [y link]
     y link /opt/original original_linked
     y link c:\\tmp\\original original_linked
