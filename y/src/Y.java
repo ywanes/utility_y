@@ -1124,7 +1124,6 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("split") ){
-            /*
             String [] BytesLinesPrefixParm=getBytesLinesPrefixParm(args);
 
             if ( BytesLinesPrefixParm == null ){
@@ -1138,9 +1137,6 @@ cat buffer.log
             String parm=BytesLinesPrefixParm[3];
             
             split(bytes, lines, prefix, parm);
-            */
-            System.out.println("Não implementado!");
-            
             return;
         }
         if ( args[0].equals("link") && args.length == 3 ){
@@ -5645,10 +5641,197 @@ cat buffer.log
     
     private void split(String bytes, String lines, String prefix, String parm){
         
+        /*
+        byte[] buf = new byte[BUFFER_SIZE];            
+        FileInputStream fis = new FileInputStream(caminhos[i]);
+        int len;
+        while ((len = fis.read(buf)) > -1)
+            System.out.write(buf, 0, len);            
+        fis.close();
+        */
+        int q_bytes=0;
+        int q_lines=0;
+        
+        if ( !parm.equals("") && ( !new File(parm).exists() || !new File(parm).isFile()) )
+        {
+            System.err.println(parm + " nao é um arquivo valido!");
+            System.exit(1);            
+        }            
+        
+        if ( !bytes.equals("") ){
+            try{
+                q_bytes=Integer.parseInt(bytes);
+                if ( q_bytes <= 0 )
+                    throw new Exception();
+            }catch(Exception e){
+                System.err.println("numero invalido = "+ bytes);
+                System.exit(1);                            
+            }
+        }
+
+        if ( !lines.equals("") ){
+            try{
+                q_lines=Integer.parseInt(lines);
+                if ( q_bytes <= 0 )
+                    throw new Exception();
+            }catch(Exception e){
+                System.err.println("numero invalido = "+ lines);
+                System.exit(1);                            
+            }
+        }
+        
+        InputStream is=null;
+        OutputStream os=null;
+        Integer [] pivo=new Integer[]{120, 97, 97};
+        try{
+            if (parm.equals(""))
+                is=System.in;
+            else
+                is=new FileInputStream(parm);
+            
+            int BUFFER_SIZE=1024;
+            byte[] buf = new byte[BUFFER_SIZE];
+            int count=0;
+            int len=0;
+            int p=0;
+            String name="";
+            byte[] n_="\n".getBytes();
+			
+            while( (len=is.read(buf,0,BUFFER_SIZE)) > 0 ){
+                p=0;                                
+                if ( q_bytes > 0 ){ // bytes
+                    while(p < len){						
+                        if ( os == null ){
+                            name=getNameSplit(pivo, prefix);
+                            if ( name == null ){
+                                System.err.println("Error limit split command!");
+                                System.exit(1);                                                    
+                            }
+                            os = new FileOutputStream(name);
+                        }
+                        if ( count >= q_bytes ){
+                            os.flush();
+                            os.close();
+                            name=getNameSplit(pivo, prefix);
+                            if ( name == null ){
+                                System.err.println("Error limit split command!");
+                                System.exit(1);                                                    
+                            }
+                            os = new FileOutputStream(name);
+                            count=0;
+                        }                 
+                        if ( len-p <= q_bytes-count ){
+                            int aux=len-p;
+                            os.write(buf, p, aux);
+                            count+=aux;
+                            p+=aux;
+                        }else{
+                            int aux=q_bytes-count;
+                            os.write(buf, p, aux);
+                            count+=aux;
+                            p+=aux;                            
+                        }
+                    }
+                }else{ // lines
+					System.err.println("parm lines not implements");
+					System.exit(1);                            
+                }
+                /*
+                for ( int i=0;i<len;i++ )
+                    if (buf[i] == n_[0])
+                        count++;
+                */
+            }
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }
+        try{
+            is.close();
+        }catch(Exception e){}
+        try{
+            os.flush();
+            os.close();
+        }catch(Exception e){}
+        
+        
+        
+        
+        //////////////////
+        /*
+                    System.out.println(
+                ""+(char)i+(char)i
+            );
+        }
+        // 97 a
+        // 120 x
+        // 122 z
+        */
     }
     
     public String [] getBytesLinesPrefixParm(String [] args){
-        return null;
+        /*
+        y cat fileA | y split -b 22
+        y cat fileA | y split -l 22
+        y cat fileA | y split --lines=22
+        y cat fileA | y split --bytes=22
+        --prefix=AA
+        */
+
+        String bytes="";        
+        String lines="";
+        String prefix="";
+        String parm="";
+        
+        if ( args.length > 0 && args[0].equals("split") )
+            args=sliceParm(1,args);
+        
+        if ( args.length > 0 && args[0].startsWith("--bytes=") )
+        {
+            bytes=args[0].split("=")[1];
+            args=sliceParm(1,args);
+        }
+
+        if ( args.length > 1 && args[0].startsWith("-b") )
+        {
+            bytes=args[1];
+            args=sliceParm(2,args);
+        }
+        
+        if ( args.length > 0 && args[0].startsWith("--lines=") )
+        {
+            lines=args[0].split("=")[1];
+            args=sliceParm(1,args);
+        }
+
+        if ( args.length > 1 && args[0].startsWith("-l") )
+        {
+            lines=args[1];
+            args=sliceParm(2,args);
+        }
+
+        if ( args.length > 0 && args[0].startsWith("--prefix=") )
+        {
+            prefix=args[0].split("=")[1];
+            args=sliceParm(1,args);
+        }
+
+        if ( args.length > 1 && args[0].startsWith("-p") )
+        {
+            prefix=args[1];
+            args=sliceParm(2,args);
+        }
+        
+        if ( args.length > 0 )
+        {
+            parm=args[0];
+            args=sliceParm(1,args);
+        }
+        
+        if ( args.length > 0 || lines.equals("") == bytes.equals("") )
+            return null;
+
+        return new String[]{bytes, lines, prefix, parm};
     }
     
     private void link(String fonte, String new_){
@@ -5734,6 +5917,22 @@ cat buffer.log
     
     private boolean tipo_numerico(int a) {
         return a == 2 || a == 3 || a == 4;
+    }
+
+    private String getNameSplit(Integer[] pivo, String prefix) {
+        String result=""+prefix+(char)(int)pivo[0]+(char)(int)pivo[1]+(char)(int)pivo[2];
+        pivo[2]++;
+        if (pivo[2] > 122){
+            pivo[2]=97;
+            pivo[1]++;
+        }
+        if (pivo[1] > 122){
+            pivo[1]=97;
+            pivo[0]++;
+        }
+        if (pivo[0] > 122)
+            return null;
+        return result;
     }
     
 }
