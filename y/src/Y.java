@@ -5640,15 +5640,6 @@ cat buffer.log
     }
     
     private void split(String bytes, String lines, String prefix, String parm){
-        
-        /*
-        byte[] buf = new byte[BUFFER_SIZE];            
-        FileInputStream fis = new FileInputStream(caminhos[i]);
-        int len;
-        while ((len = fis.read(buf)) > -1)
-            System.out.write(buf, 0, len);            
-        fis.close();
-        */
         int q_bytes=0;
         int q_lines=0;
         
@@ -5672,7 +5663,7 @@ cat buffer.log
         if ( !lines.equals("") ){
             try{
                 q_lines=Integer.parseInt(lines);
-                if ( q_bytes <= 0 )
+                if ( q_lines <= 0 )
                     throw new Exception();
             }catch(Exception e){
                 System.err.println("numero invalido = "+ lines);
@@ -5733,14 +5724,36 @@ cat buffer.log
                         }
                     }
                 }else{ // lines
-					System.err.println("parm lines not implements");
-					System.exit(1);                            
+                    while(p < len){						
+                        if ( os == null ){
+                            name=getNameSplit(pivo, prefix);
+                            if ( name == null ){
+                                System.err.println("Error limit split command!");
+                                System.exit(1);                                                    
+                            }
+                            os = new FileOutputStream(name);
+                        }
+                        if ( count >= q_lines ){
+                            os.flush();
+                            os.close();
+                            name=getNameSplit(pivo, prefix);
+                            if ( name == null ){
+                                System.err.println("Error limit split command!");
+                                System.exit(1);                                                    
+                            }
+                            os = new FileOutputStream(name);
+                            count=0;
+                        }    
+                        int aux=0;
+                        while(p < len && count < q_lines){
+                            if (buf[p] == n_[0])
+                                count++;
+                            aux++;
+                            p++;                            
+                        }
+                        os.write(buf, p-aux, aux);
+                    }
                 }
-                /*
-                for ( int i=0;i<len;i++ )
-                    if (buf[i] == n_[0])
-                        count++;
-                */
             }
         }catch(Exception e){
             System.err.println(e.toString());
