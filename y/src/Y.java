@@ -5673,7 +5673,6 @@ cat buffer.log
         
         InputStream is=null;
         OutputStream os=null;
-        Integer [] pivo=new Integer[]{120, 97, 97};
         try{
             if (parm.equals(""))
                 is=System.in;
@@ -5693,21 +5692,13 @@ cat buffer.log
                 if ( q_bytes > 0 ){ // bytes
                     while(p < len){						
                         if ( os == null ){
-                            name=getNameSplit(pivo, prefix);
-                            if ( name == null ){
-                                System.err.println("Error limit split command!");
-                                System.exit(1);                                                    
-                            }
+                            name=getNameSplit(prefix);
                             os = new FileOutputStream(name);
                         }
                         if ( count >= q_bytes ){
                             os.flush();
                             os.close();
-                            name=getNameSplit(pivo, prefix);
-                            if ( name == null ){
-                                System.err.println("Error limit split command!");
-                                System.exit(1);                                                    
-                            }
+                            name=getNameSplit(prefix);
                             os = new FileOutputStream(name);
                             count=0;
                         }                 
@@ -5726,21 +5717,13 @@ cat buffer.log
                 }else{ // lines
                     while(p < len){						
                         if ( os == null ){
-                            name=getNameSplit(pivo, prefix);
-                            if ( name == null ){
-                                System.err.println("Error limit split command!");
-                                System.exit(1);                                                    
-                            }
+                            name=getNameSplit(prefix);
                             os = new FileOutputStream(name);
                         }
                         if ( count >= q_lines ){
                             os.flush();
                             os.close();
-                            name=getNameSplit(pivo, prefix);
-                            if ( name == null ){
-                                System.err.println("Error limit split command!");
-                                System.exit(1);                                                    
-                            }
+                            name=getNameSplit(prefix);
                             os = new FileOutputStream(name);
                             count=0;
                         }    
@@ -5932,19 +5915,30 @@ cat buffer.log
         return a == 2 || a == 3 || a == 4;
     }
 
-    private String getNameSplit(Integer[] pivo, String prefix) {
-        String result=""+prefix+(char)(int)pivo[0]+(char)(int)pivo[1]+(char)(int)pivo[2];
-        pivo[2]++;
-        if (pivo[2] > 122){
-            pivo[2]=97;
-            pivo[1]++;
+    ArrayList<Integer> pivoName=new ArrayList<Integer>();    
+    int pivoNameP1=1;    
+    private String getNameSplit(String prefix) {
+        if ( pivoName.size() == 0 ){
+            pivoName.add(120);
+            pivoName.add(97);
+            pivoName.add(97);
         }
-        if (pivo[1] > 122){
-            pivo[1]=97;
-            pivo[0]++;
+        String result=prefix;
+        int len=pivoName.size();        
+        for ( int i=0;i<len;i++ )
+            result+=(char)(int)pivoName.get(i);        
+        pivoName.set(len-1,pivoName.get(len-1)+1);
+        for ( int i=pivoName.size()-1;i>0;i-- ){
+            if ( pivoName.get(i) > 122 ){
+                pivoName.set(i, 97);
+                pivoName.set(i-1,pivoName.get(i-1)+1);
+            }
         }
-        if (pivo[0] > 122)
-            return null;
+        if (pivoName.get(pivoNameP1) >= 122){
+            pivoNameP1++;
+            pivoName.add(97);
+            pivoName.add(97);            
+        }
         return result;
     }
     
