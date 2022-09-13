@@ -8,6 +8,7 @@
     javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;jsch-0.1.55.jar;. Y.java
     alias y='java -Dfile.encoding=UTF-8 -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar:. Y'
     java -XshowSettings 2>&1 | grep "file.encoding "
+    configurando terminal windows cmd -> chcp 65001
     Y.bat(c:/windows/system32)
 @echo off
 (set \n=^^^
