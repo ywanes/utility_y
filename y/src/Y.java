@@ -63,6 +63,7 @@ import java.net.URLConnection;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
+import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -1001,9 +1002,12 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("seq") ){
-            try{
+            try{                
                 if ( args.length == 3 ){
-                    seq(Integer.parseInt(args[1]),Integer.parseInt(args[2]),0);
+                    if (args[1].split("-").length > 1 || args[1].split("/").length > 1)
+                        seqDate(args[1], args[2]);
+                    else
+                        seq(Integer.parseInt(args[1]),Integer.parseInt(args[2]),0);
                     return;
                 }
                 if ( args.length == 4 ){
@@ -4179,6 +4183,41 @@ cat buffer.log
             System.err.println(e.toString());
             System.exit(1);
         }
+    }
+    
+    public void seqDate(String a, String b) throws Exception{
+        String base1="yyyy-MM-dd";
+        String base2="dd/MM/yyyy";
+        String base=a.split("-").length>1?base1:base2;
+        
+        java.util.Date d1 = new java.text.SimpleDateFormat(base, java.util.Locale.ENGLISH).parse(a);       
+        java.util.Date d2 = new java.text.SimpleDateFormat(base, java.util.Locale.ENGLISH).parse(b);       
+        String s1 = new java.text.SimpleDateFormat(base).format(d1);
+        String s2 = new java.text.SimpleDateFormat(base).format(d2);
+        java.util.Calendar c = java.util.Calendar.getInstance(); 
+        
+        int v = s1.compareTo(s2);        
+        if ( a.split("/").length>1 ){
+            String s1_ = new java.text.SimpleDateFormat(base1).format(d1);
+            String s2_ = new java.text.SimpleDateFormat(base1).format(d2);
+            v = s1.compareTo(s2);
+        }
+        
+        if ( v == 0 ){
+            System.out.println(s1);
+            return;
+        }
+        int inc=v>0?-1:1;
+        while(true){
+            System.out.println(s1);                
+            if ( s1.equals(s2) )
+                break;
+            c.setTime(d1); 
+            c.add(java.util.Calendar.DATE, inc);
+            d1 = c.getTime();
+            s1 = new java.text.SimpleDateFormat(base).format(d1);
+        }
+              
     }
     
     public void seq(int a,int b,int len){
@@ -7448,7 +7487,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7725,6 +7763,8 @@ class XML extends Util{
 /* class by manual */                + "    y seq 1 10 2\n"
 /* class by manual */                + "    y seq 5 7\n"
 /* class by manual */                + "    y seq 9 -10\n"
+/* class by manual */                + "    y seq 2022-09-19 2022-11-19\n"
+/* class by manual */                + "    y seq 19/11/2022 19/09/2022\n"
 /* class by manual */                + "[y awk]\n"
 /* class by manual */                + "    cat arquivo | y awk print 1 3 5,6\n"
 /* class by manual */                + "    cat arquivo | y awk print -1\n"
@@ -7913,6 +7953,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
