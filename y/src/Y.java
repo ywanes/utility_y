@@ -1140,6 +1140,13 @@ cat buffer.log
             split(bytes, lines, prefix, parm);
             return;
         }
+        if ( args[0].equals("split") ){
+            if ( args.length == 2 )
+                regua(Integer.parseInt(args[1]));
+            else
+                regua(90);
+            return;
+        }
         if ( args[0].equals("link") && args.length == 3 ){
             link(args[1], args[2]);
             return;            
@@ -5765,7 +5772,7 @@ cat buffer.log
         // 122 z
         */
     }
-    
+        
     public String [] getBytesLinesPrefixParm(String [] args){
         /*
         y cat fileA | y split -b 22
@@ -5830,7 +5837,11 @@ cat buffer.log
 
         return new String[]{bytes, lines, prefix, parm};
     }
-    
+
+    private void regua(int p){
+        
+    }
+
     private void link(String fonte, String new_){
         if ( new File(new_).exists() ){
             System.out.println("Error - Ja existe o elemento " + new_ + "!");
@@ -7440,7 +7451,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7506,6 +7516,7 @@ class XML extends Util{
 /* class by manual */                + "  [y find]\n"
 /* class by manual */                + "  [y ls]\n"
 /* class by manual */                + "  [y split]\n"
+/* class by manual */                + "  [y regua]\n"
 /* class by manual */                + "  [y link]\n"
 /* class by manual */                + "  [y os]\n"
 /* class by manual */                + "  [y help]\n"
@@ -7797,6 +7808,9 @@ class XML extends Util{
 /* class by manual */                + "    y cat fileA | y split --lines=22\n"
 /* class by manual */                + "    y cat fileA | y split --bytes=22\n"
 /* class by manual */                + "    y split --lines=22 --prefix=AA fileA # AAxxa\n"
+/* class by manual */                + "[y regua]\n"
+/* class by manual */                + "    y regua\n"
+/* class by manual */                + "    y regua 90\n"
 /* class by manual */                + "[y link]\n"
 /* class by manual */                + "    y link /opt/original original_linked\n"
 /* class by manual */                + "    y link c:\\\\tmp\\\\original original_linked\n"

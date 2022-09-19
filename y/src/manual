@@ -59,6 +59,7 @@ usage:
   [y find]
   [y ls]
   [y split]
+  [y regua]
   [y link]
   [y os]
   [y help]
@@ -350,6 +351,9 @@ Exemplos...
     y cat fileA | y split --lines=22
     y cat fileA | y split --bytes=22
     y split --lines=22 --prefix=AA fileA # AAxxa
+[y regua]
+    y regua
+    y regua 90
 [y link]
     y link /opt/original original_linked
     y link c:\\tmp\\original original_linked
