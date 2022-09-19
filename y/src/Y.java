@@ -183,6 +183,7 @@ cat buffer.log
         //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
         //Util.testOn(); args=new String[]{"json", "mostraEstruturaObs"};
         //Util.testOn(); args=new String[]{"json", "mostraTabela"};
+        //args=new String[]{"regua"};
         
         new Y().go(args);
     }
@@ -1140,11 +1141,11 @@ cat buffer.log
             split(bytes, lines, prefix, parm);
             return;
         }
-        if ( args[0].equals("split") ){
+        if ( args[0].equals("regua") ){
             if ( args.length == 2 )
                 regua(Integer.parseInt(args[1]));
             else
-                regua(90);
+                regua(130);
             return;
         }
         if ( args[0].equals("link") && args.length == 3 ){
@@ -5757,31 +5758,9 @@ cat buffer.log
             os.flush();
             os.close();
         }catch(Exception e){}
-        
-        
-        
-        
-        //////////////////
-        /*
-                    System.out.println(
-                ""+(char)i+(char)i
-            );
-        }
-        // 97 a
-        // 120 x
-        // 122 z
-        */
     }
         
     public String [] getBytesLinesPrefixParm(String [] args){
-        /*
-        y cat fileA | y split -b 22
-        y cat fileA | y split -l 22
-        y cat fileA | y split --lines=22
-        y cat fileA | y split --bytes=22
-        --prefix=AA
-        */
-
         String bytes="";        
         String lines="";
         String prefix="";
@@ -5839,7 +5818,22 @@ cat buffer.log
     }
 
     private void regua(int p){
-        
+        String s="";
+        if( p < 0 ) 
+            return;
+        if ( p > 300 )
+            p=300;
+        for ( int i=5;i<=p;i+=5 ){
+            if(i%10==5)
+                s+="....+";
+            else{
+                String t=""+i;
+                while (t.length()<5)
+                    t="."+t;
+                s+=t;
+            }
+        }
+        System.out.println(s);
     }
 
     private void link(String fonte, String new_){
