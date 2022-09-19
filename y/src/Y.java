@@ -184,7 +184,7 @@ cat buffer.log
         //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
         //Util.testOn(); args=new String[]{"json", "mostraEstruturaObs"};
         //Util.testOn(); args=new String[]{"json", "mostraTabela"};
-        //args=new String[]{"regua"};
+        //args=new String[]{"regua"};        
         
         new Y().go(args);
     }
@@ -1014,6 +1014,12 @@ cat buffer.log
                     seq(Integer.parseInt(args[1]),Integer.parseInt(args[2]),Integer.parseInt(args[3]));
                     return;
                 }
+            }catch(Exception e){}
+        }
+        if ( args[0].equals("add") && args.length == 2 && (args[1].split("-").length > 1 || args[1].split("/").length > 1) ){
+            try{                
+                add(args[1]);
+                return;
             }catch(Exception e){}
         }
         if ( args[0].equals("awk") )
@@ -4220,6 +4226,22 @@ cat buffer.log
               
     }
     
+    public void add(String a) throws Exception{
+        String base1="yyyy-MM-dd";
+        String base2="dd/MM/yyyy";
+        String base=a.split("-").length>1?base1:base2;
+
+        java.util.Date d1 = new java.text.SimpleDateFormat(base, java.util.Locale.ENGLISH).parse(a);       
+        String s1 = new java.text.SimpleDateFormat(base).format(d1);
+        java.util.Calendar c = java.util.Calendar.getInstance(); 
+
+        c.setTime(d1); 
+        c.add(java.util.Calendar.DATE, 1);
+        d1 = c.getTime();
+        s1 = new java.text.SimpleDateFormat(base).format(d1);
+        System.out.println(s1);
+    }
+        
     public void seq(int a,int b,int len){
         int inc=1;
         if ( a > b )
@@ -7485,8 +7507,6 @@ class XML extends Util{
 
 
 
-
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7537,6 +7557,7 @@ class XML extends Util{
 /* class by manual */                + "  [y uniq]\n"
 /* class by manual */                + "  [y quebra]\n"
 /* class by manual */                + "  [y seq]\n"
+/* class by manual */                + "  [y add]\n"
 /* class by manual */                + "  [y awk print]\n"
 /* class by manual */                + "  [y dev_null]\n"
 /* class by manual */                + "  [y dev_in]\n"
@@ -7765,6 +7786,9 @@ class XML extends Util{
 /* class by manual */                + "    y seq 9 -10\n"
 /* class by manual */                + "    y seq 2022-09-19 2022-11-19\n"
 /* class by manual */                + "    y seq 19/11/2022 19/09/2022\n"
+/* class by manual */                + "[y add]\n"
+/* class by manual */                + "    y add 2022-09-19\n"
+/* class by manual */                + "    y add 19/09/2022\n"
 /* class by manual */                + "[y awk]\n"
 /* class by manual */                + "    cat arquivo | y awk print 1 3 5,6\n"
 /* class by manual */                + "    cat arquivo | y awk print -1\n"
@@ -7953,6 +7977,9 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
 
 
 
