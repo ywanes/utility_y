@@ -1148,6 +1148,10 @@ cat buffer.log
                 regua(130);
             return;
         }
+        if ( args[0].equals("unique") ){
+            System.out.println("Vc quis dizer uniq?");
+            return;
+        }
         if ( args[0].equals("link") && args.length == 3 ){
             link(args[1], args[2]);
             return;            
