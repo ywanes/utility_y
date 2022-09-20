@@ -348,6 +348,8 @@ Exemplos...
     y find
     y find .
     y find /
+    y find -mtime -1 .  # arquivos recentes de 1 dia para menos
+    y find -mtime 0.5 . # arquivos recentes a mais de 12 horas
 [y ls]
     y ls
     y ls pasta1

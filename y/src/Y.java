@@ -184,7 +184,7 @@ cat buffer.log
         //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
         //Util.testOn(); args=new String[]{"json", "mostraEstruturaObs"};
         //Util.testOn(); args=new String[]{"json", "mostraTabela"};
-        //args=new String[]{"regua"};        
+        //args=new String[]{"regua"};                
         
         new Y().go(args);
     }
@@ -1121,18 +1121,33 @@ cat buffer.log
             System.out.println(System.getProperty("user.dir"));
             return;            
         }
-        if ( args[0].equals("find") && (args.length == 1 || args.length == 2) ){
-            if ( args.length == 2 )
-                find(args[1], false);
-            else
-                find(null, false);
-            return;
+        if ( args[0].equals("find") && args.length >= 1 && args.length <= 4 ){
+            float mtime = 0;
+            if ( args.length == 1 ){
+                find(null, false, mtime);
+                return;
+            }
+            if ( args.length == 2 ){
+                find(args[1], false, mtime);
+                return;
+            }
+            if ( args.length > 2 && args[1].equals("-mtime") ){
+                try{
+                    mtime=Float.parseFloat(args[2]);
+                    mtime*=24*60*60*1000;
+                    if ( args.length == 3 )
+                        find(null, false, mtime);
+                    else
+                        find(args[1], false, mtime);
+                    return;
+                }catch(Exception e){}
+            }
         }
         if ( args[0].equals("ls") && (args.length == 1 || args.length == 2) ){
             if ( args.length == 2 )
-                find(args[1], true);
+                find(args[1], true, 0);
             else
-                find(null, true);
+                find(null, true, 0);
             return;
         }
         if ( args[0].equals("split") ){
@@ -5664,7 +5679,7 @@ cat buffer.log
         }
     }
 
-    private void find(String path, Boolean superficial){
+    private void find(String path, Boolean superficial, float mtime){
         String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
         File f=null;
         if (path == null){
@@ -5683,17 +5698,17 @@ cat buffer.log
             System.exit(1);
         }
         if ( !f.isDirectory() )
-            System.out.println(path);
+            showfind(path, mtime);
         else
             if ( f.isDirectory())
-                find_nav(f,sep,path,superficial);
+                find_nav(f, sep, path, superficial, mtime);
     }
     
-    private void find_nav(File f, String sep, String hist, Boolean superficial){
+    private void find_nav(File f, String sep, String hist, Boolean superficial, float mtime){
         if (superficial || hist.equals("") || hist.equals(".") || hist.equals("/") || (hist.contains(":") && hist.length() <= 3) ){
             // faz nada
         }else{
-            System.out.println(hist);
+            showfind(hist, mtime);
             hist+=sep;
         }
         try{
@@ -5701,16 +5716,35 @@ cat buffer.log
             for ( int i=0;i<files.length;i++ )
                 if ( !files[i].isDirectory() )
                     if ( superficial )
-                        System.out.println(files[i].getName());
+                        showfind(files[i].getName(), mtime);
                     else
-                        System.out.println(hist+files[i].getName());
+                        showfind(hist+files[i].getName(), mtime);
             for ( int i=0;i<files.length;i++ )
                 if ( files[i].isDirectory() )
                     if ( superficial )
-                        System.out.println(files[i].getName());
+                        showfind(files[i].getName(), mtime);
                     else
-                        find_nav(files[i], sep, hist+files[i].getName(), superficial);
+                        find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime);
         }catch(Exception e){}
+    }
+    
+    long findnow = 0;
+    private void showfind(String a, float mtime){
+        if ( mtime == 0 ){
+            System.out.println(a);
+        }else{
+            if ( findnow == 0 ){
+                findnow = java.util.Calendar.getInstance().getTime().getTime();
+            }
+            long b = new java.util.Date(new File(a).lastModified()).getTime();
+            long diffMili = Math.abs(findnow - b);
+            if (
+                (mtime > 0 && diffMili >= mtime)
+                || (mtime < 0 && mtime*-1 >= diffMili)
+            ){
+                System.out.println(a);
+            }
+        }                
     }
     
     private void split(String bytes, String lines, String prefix, String parm){
@@ -7861,6 +7895,8 @@ class XML extends Util{
 /* class by manual */                + "    y find\n"
 /* class by manual */                + "    y find .\n"
 /* class by manual */                + "    y find /\n"
+/* class by manual */                + "    y find -mtime -1 .  # arquivos recentes de 1 dia para menos\n"
+/* class by manual */                + "    y find -mtime 0.5 . # arquivos recentes a mais de 12 horas\n"
 /* class by manual */                + "[y ls]\n"
 /* class by manual */                + "    y ls\n"
 /* class by manual */                + "    y ls pasta1\n"
@@ -7977,12 +8013,5 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
-
 
 
