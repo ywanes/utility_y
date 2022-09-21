@@ -1164,6 +1164,17 @@ cat buffer.log
                 find(null, true, 0);
             return;
         }
+        if ( args[0].equals("sleep") && (args.length == 1 || args.length == 2) ){
+            if ( args.length == 2 ){
+                try{
+                    sleep(Float.parseFloat(args[1]));
+                    return;
+                }catch(Exception e){}                                
+            }else{
+                sleep(null);
+                return;
+            }
+        }
         if ( args[0].equals("split") ){
             String [] BytesLinesPrefixParm=getBytesLinesPrefixParm(args);
 
@@ -5761,6 +5772,10 @@ cat buffer.log
         }                
     }
     
+    private void sleep(Float a){
+        try { Thread.sleep((int)(a*1000)); } catch (Exception ee) {}
+    }
+    
     private void split(String bytes, String lines, String prefix, String parm){
         int q_bytes=0;
         int q_lines=0;
@@ -7555,7 +7570,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7915,6 +7929,9 @@ class XML extends Util{
 /* class by manual */                + "[y ls]\n"
 /* class by manual */                + "    y ls\n"
 /* class by manual */                + "    y ls pasta1\n"
+/* class by manual */                + "[y sleep]\n"
+/* class by manual */                + "    y sleep\n"
+/* class by manual */                + "    y sleep 0.22 # 0.22 seconds\n"
 /* class by manual */                + "[y split]\n"
 /* class by manual */                + "    y cat fileA | y split -b 22\n"
 /* class by manual */                + "    y cat fileA | y split -l 22\n"
@@ -8028,6 +8045,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
