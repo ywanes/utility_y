@@ -185,6 +185,7 @@ cat buffer.log
         //Util.testOn(); args=new String[]{"json", "mostraEstruturaObs"};
         //Util.testOn(); args=new String[]{"json", "mostraTabela"};
         //args=new String[]{"regua"};                
+        //args=new String[]{"find", ".", "-mtime", "1"};                
         
         new Y().go(args);
     }
@@ -1131,17 +1132,30 @@ cat buffer.log
                 find(args[1], false, mtime);
                 return;
             }
-            if ( args.length > 2 && args[1].equals("-mtime") ){
+            if ( args.length == 3 && args[1].equals("-mtime") ){
                 try{
                     mtime=Float.parseFloat(args[2]);
                     mtime*=24*60*60*1000;
-                    if ( args.length == 3 )
-                        find(null, false, mtime);
-                    else
-                        find(args[1], false, mtime);
+                    find(null, false, mtime);
                     return;
                 }catch(Exception e){}
             }
+            if ( args.length == 4 && args[2].equals("-mtime") ){
+                try{
+                    mtime=Float.parseFloat(args[3]);
+                    mtime*=24*60*60*1000;
+                    find(args[1], false, mtime);
+                    return;
+                }catch(Exception e){}
+            }
+            if ( args.length == 4 && args[1].equals("-mtime") ){
+                try{
+                    mtime=Float.parseFloat(args[2]);
+                    mtime*=24*60*60*1000;
+                    find(args[3], false, mtime);
+                    return;
+                }catch(Exception e){}
+            }            
         }
         if ( args[0].equals("ls") && (args.length == 1 || args.length == 2) ){
             if ( args.length == 2 )
@@ -7541,6 +7555,7 @@ class XML extends Util{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7895,8 +7910,8 @@ class XML extends Util{
 /* class by manual */                + "    y find\n"
 /* class by manual */                + "    y find .\n"
 /* class by manual */                + "    y find /\n"
-/* class by manual */                + "    y find -mtime -1 .  # arquivos recentes de 1 dia para menos\n"
-/* class by manual */                + "    y find -mtime 0.5 . # arquivos recentes a mais de 12 horas\n"
+/* class by manual */                + "    y find . -mtime -1  # arquivos recentes de 1 dia para menos\n"
+/* class by manual */                + "    y find . -mtime 0.5 # arquivos recentes a mais de 12 horas\n"
 /* class by manual */                + "[y ls]\n"
 /* class by manual */                + "    y ls\n"
 /* class by manual */                + "    y ls pasta1\n"
@@ -8013,5 +8028,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
