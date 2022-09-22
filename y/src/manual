@@ -320,6 +320,7 @@ Exemplos...
     y sftp user,pass@servidor 22
     obs: user,pass ou user
 [y serverRouter]
+    y serverRouter [ipA] 8080 [ipB] 9090
     y serverRouter 192.168.0.100 8080 localhost 9090
     y serverRouter 192.168.0.100 8080 localhost 9090 show
     y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend
@@ -331,10 +332,8 @@ Exemplos...
     y serverRouter localhost 8080 localhost 9090 showOnlyReceive
     y serverRouter localhost 8080 localhost 9090 showSimple
     obs:
-        192.168.0.100 -> ip a se conectar(se colocar localhost ele vai tentar pegar o ip correto)
-        8080 -> porta para conectar no router
-        localhost -> local que o serverRouter conecta(use nome da maquina ou ip)
-        9090 -> porta que o serverRouter conecta
+        [ipA] -> Router -> [ipB]
+        [ipA] conecta no router que conecta no [ipB]
 [y httpServer]
     y httpServer
     obs: o comando acima irá criar um httpServer temporario com parametros padroes

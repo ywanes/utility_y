@@ -7570,6 +7570,7 @@ class XML extends Util{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7896,6 +7897,7 @@ class XML extends Util{
 /* class by manual */                + "    y sftp user,pass@servidor 22\n"
 /* class by manual */                + "    obs: user,pass ou user\n"
 /* class by manual */                + "[y serverRouter]\n"
+/* class by manual */                + "    y serverRouter [ipA] 8080 [ipB] 9090\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 show\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend\n"
@@ -7907,10 +7909,8 @@ class XML extends Util{
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showOnlyReceive\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showSimple\n"
 /* class by manual */                + "    obs:\n"
-/* class by manual */                + "        192.168.0.100 -> ip a se conectar(se colocar localhost ele vai tentar pegar o ip correto)\n"
-/* class by manual */                + "        8080 -> porta para conectar no router\n"
-/* class by manual */                + "        localhost -> local que o serverRouter conecta(use nome da maquina ou ip)\n"
-/* class by manual */                + "        9090 -> porta que o serverRouter conecta\n"
+/* class by manual */                + "        [ipA] -> Router -> [ipB]\n"
+/* class by manual */                + "        [ipA] conecta no router que conecta no [ipB]\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
@@ -8045,7 +8045,5 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
 
 
