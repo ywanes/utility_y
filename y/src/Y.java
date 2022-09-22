@@ -4562,7 +4562,7 @@ cat buffer.log
             }
             entrada=byte_to_int_java(buf[0],false);
             // suprimindo \r\n
-            if ( entrada == 10 || entrada == 13 )
+            if ( entrada == 10 || entrada == 13 || entrada == 32 )
                 continue;
             entrada=txtBase64.indexOf((char)entrada);
             if ( entrada == -1 ){
