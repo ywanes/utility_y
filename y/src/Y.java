@@ -3862,21 +3862,27 @@ cat buffer.log
                 }
                 if(args[i].equals(".") || args[i].equals("..")){
                     System.out.println("Error, diretorios \".\" e \"..\" nao sao permitidos.");
+                    errorRmPrinted = true;
                     continue;
                 }
                 File f=new File(args[i]);
-                if ( f.exists() == false )
+                if ( f.exists() == false ){
                     System.out.println("Error, " + args[i] + " nao encontrado.");
-                else
+                    errorRmPrinted = true;
+                }else
                     rm(new File(args[i]), recursiveMode);
                 
             }catch(Exception e){
                 System.out.println(e.toString());
+                errorRmPrinted = true;
             }        
         }
+        if ( errorRmPrinted )
+            System.exit(1);
     }
 
-    boolean errorRPrinted = false;
+    boolean errorRmPrinted = false;
+    boolean errorRRmPrinted = false;
     public void rm(File f, boolean recursiveMode){
         try{
             if( f.isDirectory() ){
@@ -3887,8 +3893,9 @@ cat buffer.log
                     }
                     f.delete();
                 }else{
-                    if ( errorRPrinted == false ){
-                        errorRPrinted = true;
+                    if ( errorRRmPrinted == false ){
+                        errorRRmPrinted = true;
+                        errorRmPrinted = true;
                         System.out.println("Error, use -R para pasta");
                     }
                 }
@@ -3897,6 +3904,7 @@ cat buffer.log
             }
         }catch(Exception e){
             System.out.println(e.toString());
+            errorRmPrinted = true;
         }        
     }
     
