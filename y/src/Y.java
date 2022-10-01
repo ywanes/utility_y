@@ -764,6 +764,10 @@ cat buffer.log
             touch(args);
             return;
         }
+        if ( args[0].equals("rm") && args.length > 1 ){
+            rm(args);
+            return;
+        }
         if ( args[0].equals("M") || args[0].equals("m") )
         {
             if ( args.length == 1 ){
@@ -3846,6 +3850,54 @@ cat buffer.log
             System.exit(1);
         }
         return;
+    }
+    
+    public void rm(String [] args){
+        boolean recursiveMode = false;
+        for ( int i=1;i<args.length;i++ ){
+            try{                
+                if(args[i].equals("-R")){
+                    recursiveMode=true;
+                    continue;
+                }
+                if(args[i].equals(".") || args[i].equals("..")){
+                    System.out.println("Error, diretorios \".\" e \"..\" nao sao permitidos.");
+                    continue;
+                }
+                File f=new File(args[i]);
+                if ( f.exists() == false )
+                    System.out.println("Error, " + args[i] + " nao encontrado.");
+                else
+                    rm(new File(args[i]), recursiveMode);
+                
+            }catch(Exception e){
+                System.out.println(e.toString());
+            }        
+        }
+    }
+
+    boolean errorRPrinted = false;
+    public void rm(File f, boolean recursiveMode){
+        try{
+            if( f.isDirectory() ){
+                if ( recursiveMode ){
+                    File [] files=f.listFiles();
+                    for( int i=0;i<files.length;i++ ){
+                        rm(files[i], recursiveMode);
+                    }
+                    f.delete();
+                }else{
+                    if ( errorRPrinted == false ){
+                        errorRPrinted = true;
+                        System.out.println("Error, use -R para pasta");
+                    }
+                }
+            }else{
+                f.delete();
+            }
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }        
     }
     
     public void touch(File file, long current_milisegundos, long dif_segundos) throws Exception{        
@@ -7571,6 +7623,7 @@ class XML extends Util{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7616,6 +7669,7 @@ class XML extends Util{
 /* class by manual */                + "  [y [intsToBytes|ib]]\n"
 /* class by manual */                + "  [y od]\n"
 /* class by manual */                + "  [y touch]\n"
+/* class by manual */                + "  [y rm]\n"
 /* class by manual */                + "  [y iconv]\n"
 /* class by manual */                + "  [y tee]\n"
 /* class by manual */                + "  [y uniq]\n"
@@ -7828,6 +7882,10 @@ class XML extends Util{
 /* class by manual */                + "    obs: 60(60 segundos a frente)\n"
 /* class by manual */                + "    obs2: -3600(3600 segundos atras)\n"
 /* class by manual */                + "    obs3: 20210128235959(setando em 28/01/2021 23:59:59)\n"
+/* class by manual */                + "[y rm]\n"
+/* class by manual */                + "    y rm file1 file2\n"
+/* class by manual */                + "    y rm -R pasta\n"
+/* class by manual */                + "    y rm -R pasta1 file1\n"
 /* class by manual */                + "[y iconv]\n"
 /* class by manual */                + "    y iconv -f UTF-8 -t ISO-8859-1 file\n"
 /* class by manual */                + "    cat file | y iconv -f UTF-8 -t ISO-8859-1 \n"
@@ -8045,5 +8103,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 

@@ -39,6 +39,7 @@ usage:
   [y [intsToBytes|ib]]
   [y od]
   [y touch]
+  [y rm]
   [y iconv]
   [y tee]
   [y uniq]
@@ -251,6 +252,10 @@ Exemplos...
     obs: 60(60 segundos a frente)
     obs2: -3600(3600 segundos atrás)
     obs3: 20210128235959(setando em 28/01/2021 23:59:59)
+[y rm]
+    y rm file1 file2
+    y rm -R pasta
+    y rm -R pasta1 file1
 [y iconv]
     y iconv -f UTF-8 -t ISO-8859-1 file
     cat file | y iconv -f UTF-8 -t ISO-8859-1 
