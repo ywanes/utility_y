@@ -474,12 +474,18 @@ cat buffer.log
         }
         
         if ( args[0].equals("json") && args.length > 1 ){
-            boolean mostraTabela=args[1].equals("mostraTabela");
-            boolean mostraEstrutura=args[1].equals("mostraEstrutura");            
-            boolean mostraEstruturaObs=args[1].equals("mostraEstruturaObs");
-            String command=args[1].contains("for elem in data")?args[1]:"";
+            String parm=args[1];
+            boolean list_on=false;
+            if ( args.length > 2 && args[1].equals("list") ){
+                list_on = true;
+                parm=args[2];
+            }                
+            boolean mostraTabela=parm.equals("mostraTabela");
+            boolean mostraEstrutura=parm.equals("mostraEstrutura");            
+            boolean mostraEstruturaObs=parm.equals("mostraEstruturaObs");
+            String command=parm.contains("for elem in data")?parm:"";
             if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaObs ){
-                new JSON().go(command,mostraTabela,mostraEstrutura,mostraEstruturaObs);
+                new JSON().go(command,mostraTabela,mostraEstrutura,mostraEstruturaObs,list_on);
                 return;
             }
         }
@@ -6336,6 +6342,7 @@ class JSON extends Util{
     boolean mostraTabela=false;
     boolean mostraEstrutura=false;
     boolean mostraEstruturaObs=false;
+    boolean list_on=false;
     String filter_for="";
     String filter_forB="";
     boolean filter_on=false;
@@ -6344,11 +6351,12 @@ class JSON extends Util{
     String [] campos= new String[99];
     int count_campos=0;
     boolean finish_add_campos=false;
-    public void go(String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaObs){ // "[elem['id'] for elem in data['items']]"        
+    public void go(String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaObs, boolean list_on){ // "[elem['id'] for elem in data['items']]"        
         this.command=command;
         this.mostraTabela=mostraTabela;
         this.mostraEstrutura=mostraEstrutura;
-        this.mostraEstruturaObs=mostraEstruturaObs;        
+        this.mostraEstruturaObs=mostraEstruturaObs;  
+        this.list_on=list_on;
         setFilter();
         byte[] entrada_ = new byte[1];
         while ( read1Byte(entrada_) ){
@@ -6533,12 +6541,19 @@ class JSON extends Util{
                 }
             }
             if ( finish_add_campos && campos[0].equals(key)){
-                System.out.println(detail);
-                detail="";
+                if ( list_on ){
+                    //pass
+                }else{
+                    System.out.println(detail);
+                    detail="";                                        
+                }
             }
             if ( contem(key) ){
                 if ( !detail.equals("") )
-                    detail+=sepCSV;
+                    if ( list_on )
+                        detail+=", ";
+                    else
+                        detail+=sepCSV;
                 detail+="\""+value+"\"";
             }
         }
@@ -6548,12 +6563,14 @@ class JSON extends Util{
     }
     
     private void print_header(){
-        for ( int i=0;i<count_campos;i++ ){
-            if ( i != 0 )
-                System.out.print(sepCSV);
-            System.out.print("\""+campos[i]+"\"");
+        if ( list_on == false ){
+            for ( int i=0;i<count_campos;i++ ){
+                if ( i != 0 )
+                    System.out.print(sepCSV);
+                System.out.print("\""+campos[i]+"\"");
+            }
+            System.out.println();        
         }
-        System.out.println();        
     }
     
     private boolean contem(String a){
@@ -7641,6 +7658,7 @@ class XML extends Util{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7772,6 +7790,7 @@ class XML extends Util{
 /* class by manual */                + "   y cat file.json | y json \"[elem for elem in data['items']]\"\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data['items']]\"\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data]\"\n"
+/* class by manual */                + "   y cat file.json | y json list \"[elem['id'] for elem in data]\"\n"
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
@@ -8120,6 +8139,5 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
 

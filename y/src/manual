@@ -125,6 +125,7 @@ Exemplos...
    y cat file.json | y json "[elem for elem in data['items']]"
    y cat file.json | y json "[elem['id'] for elem in data['items']]"
    y cat file.json | y json "[elem['id'] for elem in data]"
+   y cat file.json | y json list "[elem['id'] for elem in data]"
 [y zip]
     y zip add File1.txt > saida.zip
     cat File1.txt | y zip add -name File1.txt > saida.zip
