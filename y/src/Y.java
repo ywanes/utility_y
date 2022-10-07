@@ -18,8 +18,11 @@
 ^
 
 )
+if "%1" equ "echo" (
+echo %*
+) else (
 java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
-
+)
     créditos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
     créditos https://github.com/is/jsch/tree/master/examples
 */
@@ -182,7 +185,7 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
         //args=new String[]{"find", "/"};
         //Util.testOn(); args=new String[]{"json", "[elem for elem in data['items']]"};        
-        //Util.testOn(); args=new String[]{"json", "[elem for elem in data['a']]"};        
+        //Util.testOn(); args=new String[]{"json", "[elem for elem in data['b']]"};        
         //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
         //Util.testOn(); args=new String[]{"json", "mostraEstruturaObs"};
         //Util.testOn(); args=new String[]{"json", "mostraTabela"};
@@ -1659,7 +1662,7 @@ cat buffer.log
 
             for ( int i=1;i<=rsmd.getColumnCount();i++ )
             {
-                campos.add(rsmd.getColumnName(i));
+                campos.add(rsmd.getColumnName(i));                
                 tipos.add(rsmd.getColumnType(i));
             }
 
@@ -6517,10 +6520,12 @@ class JSON extends Util{
                     print_header();                    
                 }else{
                     if ( !contem(key) ){
-                        if ( unico_campo.equals("") )
+                        if ( unico_campo.equals("") ){
                             campos[count_campos++]=key;
-                        if ( !unico_campo.equals("") && unico_campo.equals(key) )
+                        }
+                        if ( !unico_campo.equals("") && unico_campo.equals(key) ){
                             campos[count_campos++]=key;
+                        }
                     }else{
                         finish_add_campos=true;
                         print_header();
@@ -6583,8 +6588,10 @@ class JSON extends Util{
         return a;
     }
     private String tiraAspasPontas(String a){
-        if ( a.startsWith("\"") && a.endsWith("\"") )
-            return a.substring(1, a.length()-1);
+        if ( a.startsWith("\"") )
+            a = a.substring(1, a.length());
+        if ( a.endsWith("\"") )
+            a = a.substring(0, a.length()-1);
         return a;
     }
 }
