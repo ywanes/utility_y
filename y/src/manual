@@ -64,6 +64,7 @@ usage:
   [y regua]
   [y link]
   [y os]
+  [y date]
   [y help]
 
 Exemplos...
@@ -380,6 +381,8 @@ Exemplos...
 [y os]
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
+[y date]
+    y date "+%m/%d/%Y %H:%M:%S:%N %Z %s"
 [y help]
     y help <command>
     y help router

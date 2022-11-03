@@ -191,7 +191,8 @@ cat buffer.log
         //Util.testOn(); args=new String[]{"json", "mostraTabela"};
         //args=new String[]{"regua"};                
         //args=new String[]{"find", ".", "-mtime", "1"};                
-        
+        //args=new String[]{"date","+%m/%d/%Y","%H:%M:%S:%N","%Z","%s"};
+                
         new Y().go(args);
     }
 
@@ -1224,6 +1225,10 @@ cat buffer.log
         if ( args[0].equals("os")){
             os();
             return;            
+        }
+        if ( args[0].equals("date") && args.length > 1){
+            date(args);
+            return;
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             String retorno=null;
@@ -3110,6 +3115,7 @@ cat buffer.log
 
     public void echo(String [] args)
     {
+        args = bind_asterisk(args, 1);
         printf(args);
         System.out.println();
     }
@@ -6110,6 +6116,69 @@ cat buffer.log
 
     }
     
+    private void date(String [] args){
+        String parm=args[1];
+        for ( int i=2;i<args.length;i++ )
+            parm+=" "+args[i];
+        if(parm.startsWith("+"))
+            parm=parm.substring(1);
+        Date d = new Date();
+        String w="";
+        for(int i=0;i<parm.length();i++){
+            w+=parm.substring(i, i+1);
+            if(w.equals("%"))
+                continue;
+            if(w.equals("%d")){
+                System.out.print(new SimpleDateFormat("dd").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%m")){
+                System.out.print(new SimpleDateFormat("MM").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%Y")){
+                System.out.print(new SimpleDateFormat("yyyy").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%H")){
+                System.out.print(new SimpleDateFormat("HH").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%M")){
+                System.out.print(new SimpleDateFormat("mm").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%S")){
+                System.out.print(new SimpleDateFormat("ss").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%N")){
+                System.out.print(new SimpleDateFormat("SSS").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%Z")){
+                System.out.print(new SimpleDateFormat("X").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%s")){
+                System.out.print((d.toInstant().toEpochMilli()+"").substring(0, 10));
+                w="";
+                continue;
+            }                
+            System.out.print(w);
+            w="";
+        }
+        System.out.println();
+    }
+    
     private boolean tipo_cadastrado(int a) {
         return true; 
         // controle desabilitado - ja foram feitos muitos testes... 
@@ -6145,6 +6214,10 @@ cat buffer.log
             pivoName.add(97);            
         }
         return result;
+    }
+
+    private String[] bind_asterisk(String[] args, int i) {
+        return args;
     }
     
 }
@@ -7659,6 +7732,8 @@ class XML extends Util{
 
 
 
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7729,6 +7804,7 @@ class XML extends Util{
 /* class by manual */                + "  [y regua]\n"
 /* class by manual */                + "  [y link]\n"
 /* class by manual */                + "  [y os]\n"
+/* class by manual */                + "  [y date]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
@@ -8045,6 +8121,8 @@ class XML extends Util{
 /* class by manual */                + "[y os]\n"
 /* class by manual */                + "    y os\n"
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
+/* class by manual */                + "[y date]\n"
+/* class by manual */                + "    y date \"+%m/%d/%Y %H:%M:%S:%N %Z %s\"\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
