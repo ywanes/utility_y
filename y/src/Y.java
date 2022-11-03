@@ -6117,7 +6117,7 @@ cat buffer.log
     }
     
     private void date(String [] args){
-        String parm="+%m/%d/%Y %H:%M:%S";
+        String parm="+%d/%m/%Y %H:%M:%S";
         if ( args.length > 1 ){
             parm=args[1];
             for ( int i=2;i<args.length;i++ )
@@ -8125,7 +8125,9 @@ class XML extends Util{
 /* class by manual */                + "    y os\n"
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
 /* class by manual */                + "[y date]\n"
-/* class by manual */                + "    y date \"+%m/%d/%Y %H:%M:%S:%N %Z %s\"\n"
+/* class by manual */                + "    y date\n"
+/* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
@@ -8220,5 +8222,3 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-

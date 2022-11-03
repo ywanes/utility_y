@@ -383,7 +383,8 @@ Exemplos...
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
 [y date]
     y date
-    y date "+%m/%d/%Y %H:%M:%S:%N %Z %s"
+    y date "+%Y%m%d_%H%M%S"
+    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
 [y help]
     y help <command>
     y help router
