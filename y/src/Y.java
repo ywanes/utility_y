@@ -1226,7 +1226,7 @@ cat buffer.log
             os();
             return;            
         }
-        if ( args[0].equals("date") && args.length > 1){
+        if ( args[0].equals("date")){
             date(args);
             return;
         }
@@ -6117,9 +6117,12 @@ cat buffer.log
     }
     
     private void date(String [] args){
-        String parm=args[1];
-        for ( int i=2;i<args.length;i++ )
-            parm+=" "+args[i];
+        String parm="+%m/%d/%Y %H:%M:%S";
+        if ( args.length > 1 ){
+            parm=args[1];
+            for ( int i=2;i<args.length;i++ )
+                parm+=" "+args[i];
+        }
         if(parm.startsWith("+"))
             parm=parm.substring(1);
         Date d = new Date();
