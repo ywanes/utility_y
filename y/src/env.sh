@@ -123,11 +123,11 @@ curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.
 javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
 chmod 777 *
 
-if [ -e ~/.profile ]
+if [ -e ~/.bashrc ]
 then
-    echo '. /opt/env_' >> ~/.profile
-else
     echo '. /opt/env_' >> ~/.bashrc
+else
+    echo '. /opt/env_' >> ~/.profile
 fi
 
 echo
