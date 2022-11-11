@@ -65,6 +65,7 @@ usage:
   [y link]
   [y os]
   [y date]
+  [y cronometro]
   [y help]
 
 Exemplos...
@@ -385,6 +386,10 @@ Exemplos...
     y date
     y date "+%Y%m%d_%H%M%S"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
+[y cronometro]
+    y cronometro start
+    y cronometro flag
+    y cronometro end
 [y help]
     y help <command>
     y help router

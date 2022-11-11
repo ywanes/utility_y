@@ -447,7 +447,7 @@ cat buffer.log
             if ( ! env_ok(dir_token) )
                 return;
             String value=args[1];
-            String hash=gravado_token(dir_token,value);
+            String hash=salvando_token(dir_token,value);
             if ( hash == null ){
                 System.err.println("Não foi possível utilizar a pasta "+dir_token);
                 return;
@@ -1228,6 +1228,10 @@ cat buffer.log
         }
         if ( args[0].equals("date")){
             date(args);
+            return;
+        }
+        if ( args[0].equals("cronometro") && args.length == 2 && (args[1].equals("start") || args[1].equals("flag") || args[1].equals("end")) ){
+            cronometro(args[1]);
             return;
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
@@ -2658,7 +2662,7 @@ cat buffer.log
         }
         return true;
     }
-    public String gravado_token(String dir_token,String value){
+    public String salvando_token(String dir_token,String value){
         dir_token=fix_caminho(dir_token);
         String md5=digest_text(value,"MD5");
         if(salvando_file(value+"\n",new File(dir_token+md5)))
@@ -2672,8 +2676,11 @@ cat buffer.log
         return lendo_arquivo(dir_token+md5);
     }
     public boolean salvando_file(String texto, File arquivo) {
+        return salvando_file(texto, arquivo, false);
+    }
+    public boolean salvando_file(String texto, File arquivo, boolean append) {
         try{
-            BufferedWriter out = new BufferedWriter(new FileWriter(arquivo));
+            BufferedWriter out = new BufferedWriter(new FileWriter(arquivo, append));
             out.write(texto);
             out.flush();
             out.close();
@@ -6172,14 +6179,43 @@ cat buffer.log
                 continue;
             }
             if(w.equals("%s")){
-                System.out.print((d.toInstant().toEpochMilli()+"").substring(0, 10));
+                System.out.print(epoch(d));
                 w="";
                 continue;
-            }                
+            }
             System.out.print(w);
             w="";
         }
         System.out.println();
+    }
+    
+    private void cronometro(String parm){
+        if ( parm.equals("start") )
+            if ( ! salvando_file(epochmili(null)+"\n",new File(".cron_flag")) )
+                System.out.println("Erro, nao foi possivel gravar uma flag!");
+        if ( parm.equals("flag") )
+            if ( ! salvando_file(epochmili(null)+"\n",new File(".cron_flag"),true) )
+                System.out.println("Erro, nao foi possivel gravar uma flag!");
+        if ( parm.equals("end") ){
+            File f=new File(".cron_flag");
+            if ( f.exists() ){
+                String s=lendo_arquivo(".cron_flag")+"\n"+epochmili(null);
+                String [] partes=s.split("\n");
+                Long [] elem=new Long[partes.length];
+                for ( int i=0;i<partes.length;i++ )
+                    elem[i]=Long.parseLong(partes[i]);
+                for ( int i=1;i<partes.length;i++ ){
+                    if( i == 1 ){
+                        System.out.println((elem[i]-elem[i-1])+" mili");
+                    }else{
+                        System.out.println((elem[i]-elem[i-1]) + " mili - " + (elem[i]-elem[0]) + " mili total");
+                    }
+                }
+                if ( ! new File(".cron_flag").delete() )
+                    System.out.println("Erro, nao foi possivel apagar a flag!");
+            }else
+                System.out.println("Erro, nao foi possivel ler a flag!");
+        }
     }
     
     private boolean tipo_cadastrado(int a) {
@@ -6222,7 +6258,16 @@ cat buffer.log
     private String[] bind_asterisk(String[] args, int i) {
         return args;
     }
+
+    private long epoch(Date d) {
+        return Long.parseLong((epochmili(d)+"").substring(0,10));                
+    }
     
+    private long epochmili(Date d){
+        if ( d == null )
+            d = new Date();
+        return d.toInstant().toEpochMilli();
+    }
 }
 
 class Util{
@@ -7737,6 +7782,7 @@ class XML extends Util{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -7808,6 +7854,7 @@ class XML extends Util{
 /* class by manual */                + "  [y link]\n"
 /* class by manual */                + "  [y os]\n"
 /* class by manual */                + "  [y date]\n"
+/* class by manual */                + "  [y cronometro]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
@@ -8128,6 +8175,10 @@ class XML extends Util{
 /* class by manual */                + "    y date\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
+/* class by manual */                + "[y cronometro]\n"
+/* class by manual */                + "    y cronometro start\n"
+/* class by manual */                + "    y cronometro flag\n"
+/* class by manual */                + "    y cronometro end\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
