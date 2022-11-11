@@ -640,6 +640,15 @@ cat buffer.log
             cat(args);
             return;
         }        
+        if ( args[0].equals("xor") && args.length <= 2 ){
+            try{
+                Integer parm=100;
+                if ( args.length == 2 )
+                    Integer.parseInt(args[1]);
+                xor(parm);
+                return;
+            }catch(Exception e){}            
+        }        
         if ( args[0].equals("md5") ){
             digest("MD5");
             return;
@@ -3171,6 +3180,28 @@ cat buffer.log
         }
     }
 
+    public void xor(int parm){
+        while(parm < 0)
+            parm+=256;
+        while(parm >= 256)
+            parm-=256;        
+        try{
+            InputStream inputStream_pipe=System.in;
+            int BUFFER_SIZE=1024;
+            byte[] buf = new byte[BUFFER_SIZE];
+            int len=0;
+            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                for( int i=0;i<len;i++ )
+                    buf[i]^=parm;
+                System.out.write(buf, 0, len);
+            }
+            System.out.flush();
+            System.out.close();
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+        }
+    }
+    
     public void digest(String tipo){        
         try {
             MessageDigest digest=MessageDigest.getInstance(tipo);            
@@ -7810,6 +7841,7 @@ class XML extends Util{
 /* class by manual */                + "  [y echo]\n"
 /* class by manual */                + "  [y printf]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y xor]\n"
 /* class by manual */                + "  [y md5]\n"
 /* class by manual */                + "  [y sha1]\n"
 /* class by manual */                + "  [y sha256]\n"
@@ -7955,6 +7987,10 @@ class XML extends Util{
 /* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y xor]\n"
+/* class by manual */                + "    y cat file | y xor 100\n"
+/* class by manual */                + "    y cat file | y xor 100\n"
+/* class by manual */                + "    obs: valor entre 0 e 255. Por padrao 100\n"
 /* class by manual */                + "[y md5]\n"
 /* class by manual */                + "    cat arquivo | y md5\n"
 /* class by manual */                + "[y sha1]\n"

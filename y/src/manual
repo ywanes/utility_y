@@ -21,6 +21,7 @@ usage:
   [y echo]
   [y printf]
   [y cat]
+  [y xor]
   [y md5]
   [y sha1]
   [y sha256]
@@ -166,6 +167,10 @@ Exemplos...
     obs: diferente do echo, o printf nao gera \n no final
 [y cat]
     y cat arquivo
+[y xor]
+    y cat file | y xor 100
+    y cat file | y xor 100
+    obs: valor entre 0 e 255. Por padrao 100
 [y md5]
     cat arquivo | y md5
 [y sha1]
