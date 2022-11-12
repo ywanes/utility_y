@@ -3131,7 +3131,7 @@ cat buffer.log
 
     public void echo(String [] args)
     {
-        args = bind_asterisk(args, 1);
+        args = bind_asterisk(args);
         printf(args);
         System.out.println();
     }
@@ -6286,10 +6286,38 @@ cat buffer.log
         return result;
     }
 
-    private String[] bind_asterisk(String[] args, int i) {
+    private String[] bind_asterisk(String[] args) {        
+        //   validos
+        //   *ff*
+        //   ../../a*
+        //   /a/**/c
+        
+        //   invalido
+        //   aa\\bb  
+        /* // pendente de implementacao
+        ArrayList lista=new ArrayList<String>();
+        for(int i=0;i<args.length;i++){
+            if ( args[i].contains("*") )
+                if ( args[i].contains("\\") && args[i].contains("/") ){                    
+                }else{
+                    String sep="/";
+                    if(args[i].contains("\\"))
+                        sep="\\";
+                    if ( args[i].startsWith("/") )
+                        lista.addAll(bind_asterisk(args[i],"/",0));
+                }
+        }
+        args=new String[lista.size()];
+        for(int i=0;i<lista.size();i++)
+            args[i]=lista.get(i).toString();
+        */
         return args;
     }
 
+    private ArrayList bind_asterisk(String parm, String raiz, int lvl) {
+        return null; // pendente de implementacao
+    }
+    
     private long epoch(Date d) {
         return Long.parseLong((epochmili(d)+"").substring(0,10));                
     }
