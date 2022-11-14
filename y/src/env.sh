@@ -56,19 +56,26 @@ export PATH="$PATH":.
 alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
 rm -f /opt/.u_flag
 alias u='/opt/.u'
-if [ `whoami` == "root" ] && [ -e /opt/.vv ] # echo '22.10' > /opt/.vv 
+if [ "1" == "0" ] # verify new ubuntu and LTS
 then
-  vv=`curl https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk ' { print $2 } '`
-  if [ "$vv" != "" ] && [ "$vv" != `cat /opt/.vv` ]
+  if [ `whoami` == "root" ] && [ -e /etc/os-release ]
   then
-    echo 'New ubuntu --> '$vv
+    vv=`curl https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk ' { print $2 } '`
+    v2=`cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk ' { print $2 } '`
+    if [ "$vv" != "" ] && [ "$vv" != "$v2" ]
+    then
+      echo 'New ubuntu --> '$v2
+    fi
+    if [ -e /etc/update-manager/release-upgrades ] && [ `cat /etc/update-manager/release-upgrades | grep ^Prompt=normal$ | wc -l` == 0 ]
+    then
+      echo Alerta LTS, roda o comando abaixo!!:
+      echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
+    fi
   fi
-  if [ -e /etc/update-manager/release-upgrades ] && [ `cat /etc/update-manager/release-upgrades | grep ^Prompt=normal$ | wc -l` == 0 ]
-  then
-    echo Alerta LTS, roda o comando abaixo!!:
-    echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
-  fi
+else
+  echo "disable -> verify new ubuntu and LTS"
 fi
+
 EOF
 chmod 777 /opt/env_
 
