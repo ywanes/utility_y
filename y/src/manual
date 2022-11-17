@@ -392,9 +392,11 @@ Exemplos...
     y date "+%Y%m%d_%H%M%S"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
 [y cronometro]
+    y cronometro
     y cronometro start
     y cronometro flag
     y cronometro end
+    obs: "y cronometro" dispara o comando equivalente a flag a cada enter pressionado.
 [y help]
     y help <command>
     y help router

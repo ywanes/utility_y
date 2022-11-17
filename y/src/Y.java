@@ -1239,9 +1239,15 @@ cat buffer.log
             date(args);
             return;
         }
-        if ( args[0].equals("cronometro") && args.length == 2 && (args[1].equals("start") || args[1].equals("flag") || args[1].equals("end")) ){
-            cronometro(args[1]);
-            return;
+        if ( args[0].equals("cronometro") ){
+            if ( args.length == 2 && (args[1].equals("start") || args[1].equals("flag") || args[1].equals("end")) ){
+                cronometro(args[1]);
+                return;
+            }
+            if ( args.length == 1 ){
+                cronometro(null);
+                return;
+            }
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             String retorno=null;
@@ -6221,31 +6227,62 @@ cat buffer.log
     }
     
     private void cronometro(String parm){
-        if ( parm.equals("start") )
-            if ( ! salvando_file(epochmili(null)+"\n",new File(".cron_flag")) )
-                System.out.println("Erro, nao foi possivel gravar uma flag!");
-        if ( parm.equals("flag") )
-            if ( ! salvando_file(epochmili(null)+"\n",new File(".cron_flag"),true) )
-                System.out.println("Erro, nao foi possivel gravar uma flag!");
-        if ( parm.equals("end") ){
-            File f=new File(".cron_flag");
-            if ( f.exists() ){
-                String s=lendo_arquivo(".cron_flag")+"\n"+epochmili(null);
-                String [] partes=s.split("\n");
-                Long [] elem=new Long[partes.length];
-                for ( int i=0;i<partes.length;i++ )
-                    elem[i]=Long.parseLong(partes[i]);
-                for ( int i=1;i<partes.length;i++ ){
-                    if( i == 1 ){
-                        System.out.println((elem[i]-elem[i-1])+" mili");
-                    }else{
-                        System.out.println((elem[i]-elem[i-1]) + " mili - " + (elem[i]-elem[0]) + " mili total");
-                    }
+        if ( parm == null ){
+            try{
+                System.out.print("startado. pressione enter para mais flags.");
+                InputStream inputStream_pipe=System.in;
+                int BUFFER_SIZE=1024;
+                byte[] buf = new byte[BUFFER_SIZE];
+                int len=0;
+                ArrayList<Long> lista=new ArrayList<>();
+                lista.add(epochmili(null));
+                while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                    lista.add(epochmili(null));
+                    Long [] elem=new Long[lista.size()];
+                    for ( int i=0;i<lista.size();i++ )
+                        elem[i]=(Long)lista.get(i);
+                    String s="";
+                    for ( int i=1;i<lista.size();i++ ){
+                        if( i == 1 ){
+                            s=(elem[i]-elem[i-1])+" mili";
+                        }else{
+                            s=(elem[i]-elem[i-1]) + " mili - " + (elem[i]-elem[0]) + " mili total";                                
+                        }
+                    }                        
+                    System.out.print(s);
                 }
-                if ( ! new File(".cron_flag").delete() )
-                    System.out.println("Erro, nao foi possivel apagar a flag!");
-            }else
-                System.out.println("Erro, nao foi possivel ler a flag!");
+                System.out.flush();
+                System.out.close();
+            }catch(
+                Exception e){System.out.println("Erro fatal!");
+            };            
+        }else{
+            if ( parm.equals("start") )
+                if ( ! salvando_file(epochmili(null)+"\n",new File(".cron_flag")) )
+                    System.out.println("Erro, nao foi possivel gravar uma flag!");
+            if ( parm.equals("flag") )
+                if ( ! salvando_file(epochmili(null)+"\n",new File(".cron_flag"),true) )
+                    System.out.println("Erro, nao foi possivel gravar uma flag!");
+            if ( parm.equals("end") ){
+                File f=new File(".cron_flag");
+                if ( f.exists() ){
+                    String s=lendo_arquivo(".cron_flag")+"\n"+epochmili(null);
+                    String [] partes=s.split("\n");
+                    Long [] elem=new Long[partes.length];
+                    for ( int i=0;i<partes.length;i++ )
+                        elem[i]=Long.parseLong(partes[i]);
+                    for ( int i=1;i<partes.length;i++ ){
+                        if( i == 1 ){
+                            System.out.println((elem[i]-elem[i-1])+" mili");
+                        }else{
+                            System.out.println((elem[i]-elem[i-1]) + " mili - " + (elem[i]-elem[0]) + " mili total");
+                        }
+                    }
+                    if ( ! new File(".cron_flag").delete() )
+                        System.out.println("Erro, nao foi possivel apagar a flag!");
+                }else
+                    System.out.println("Erro, nao foi possivel ler a flag!");
+            }
         }
     }
     
@@ -8240,9 +8277,11 @@ class XML extends Util{
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
 /* class by manual */                + "[y cronometro]\n"
+/* class by manual */                + "    y cronometro\n"
 /* class by manual */                + "    y cronometro start\n"
 /* class by manual */                + "    y cronometro flag\n"
 /* class by manual */                + "    y cronometro end\n"
+/* class by manual */                + "    obs: \"y cronometro\" dispara o comando equivalente a flag a cada enter pressionado.\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
