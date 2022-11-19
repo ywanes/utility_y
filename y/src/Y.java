@@ -7826,14 +7826,297 @@ class XML extends Util{
 /* class JSchCustom */ try { filename = c.readlink(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("realpath")) { if (cmds.size() != 2) continue; String p1 = (String) cmds.elementAt(1); String filename = null; try { filename = c.realpath(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("version")) { out.println("SFTP protocol version " + c.version()); continue; } if (cmd.equals("help") || cmd.equals("?")) { out.println(help); continue; } out.println("unimplemented command: " + cmd); } session.disconnect(); } catch (Exception e) { System.out.println(e); } System.exit(0); } private static String help = "      Available commands:\n" + "      * means unimplemented command.\n" + "cd path                       Change remote directory to 'path'\n" + "lcd path                      Change local directory to 'path'\n" + "chgrp grp path                Change group of file 'path' to 'grp'\n" + "chmod mode path               Change permissions of file 'path' to 'mode'\n" + "chown own path                Change owner of file 'path' to 'own'\n" + "df [path]                     Display statistics for current directory or\n" + "                              filesystem containing 'path'\n" + "help                          Display this help text\n" + "get remote-path [local-path]  Download file\n" + "get-resume remote-path [local-path]  Resume to download file.\n" + "get-append remote-path [local-path]  Append remote file to local file\n" + "hardlink oldpath newpath      Hardlink remote file\n" + "*lls [ls-options [path]]      Display local directory listing\n" + "ln oldpath newpath            Symlink remote file\n" + "*lmkdir path                  Create local directory\n" + "lpwd                          Print local working directory\n" + "ls [path]                     Display remote directory listing\n" + "*lumask umask                 Set local umask to 'umask'\n" + "mkdir path                    Create remote directory\n" + "put local-path [remote-path]  Upload file\n" + "put-resume local-path [remote-path]  Resume to upload file\n" + "put-append local-path [remote-path]  Append local file to remote file.\n" + "pwd                           Display remote working directory\n" + "stat path                     Display info about path\n" + "exit                          Quit sftp\n" + "quit                          Quit sftp\n" + "rename oldpath newpath        Rename remote file\n" + "rmdir path                    Remove remote directory\n" + "rm path                       Delete remote file\n" + "symlink oldpath newpath       Symlink remote file\n" + "readlink path                 Check the target of a symbolic link\n" + "realpath path                 Canonicalize the path\n" + "rekey                         Key re-exchanging\n" + "compression level             Packet compression will be enabled\n" + "version                       Show SFTP version\n" + "?                             Synonym for help"; public static class MyProgressMonitor implements SftpProgressMonitor { ProgressMonitor monitor; long count = 0; long max = 0; public void init(int op, String src, String dest, long max) { this.max = max; monitor = new ProgressMonitor(null, ((op == SftpProgressMonitor.PUT) ? "put" : "get") + ": " + src, "", 0, (int) max); count = 0; percent = -1; monitor.setProgress((int) this.count); 
 /* class JSchCustom */ monitor.setMillisToDecideToPopup(1000); } private long percent = -1; public boolean count(long count) { this.count += count; if (percent >= this.count * 100 / max) { return true; } percent = this.count * 100 / max; monitor.setNote("Completed " + this.count + "(" + percent + "%) out of " + max + "."); monitor.setProgress((int) this.count); return !(monitor.isCanceled()); } public void end() { monitor.close(); } } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 7"); System.exit(1); } final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } 
 
-
 /* class HttpServer */ // parametros
 /* class HttpServer */ // new HttpServer(...)
 /* class HttpServer */ // host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
-/* class HttpServer */ class HttpServer {String host,titulo_url,titulo,dir,nav,endsWiths,ips_banidos;int port;Socket socket = null;public HttpServer(String[] args){    host=args[0];    if ( args[0] == null || args[0].equals("localhost") )try{host=InetAddress.getLocalHost().getHostName();}catch(Exception e){}        titulo_url = args[1];titulo = args[2];port = Integer.parseInt(args[3]);dir = args[4].trim();if ( ! dir.endsWith("/") ) dir+="/";endsWiths = args[5];ips_banidos = args[6];try{serve();}catch(Exception e){System.err.println(e.toString());System.exit(1);}}public void serve() throws Exception {ServerSocket serverSocket = null;String origem="";try {serverSocket = new ServerSocket(port, 1,InetAddress.getByName(host)); if ( host.contains(":") ) System.out.println("Service opened: http://["+host+"]:"+port+"/"+titulo_url); else System.out.println("Service opened: http://"+host+":"+port+"/"+titulo_url); System.out.println("path work: "+dir);} catch (Exception e) {throw new Exception("erro na inicialização: "+e.toString());}while(true) {try {socket = serverSocket.accept();origem = socket.getRemoteSocketAddress().toString();if ( origem.length() > 2 && origem.startsWith("/") )origem=origem.substring(1);if ( origem.indexOf(":") != -1 )origem=origem.substring(0,origem.indexOf(":"));System.out.println("Conexao de origem: "+origem+", data:"+(new Date()));if ( ips_banidos.length() > 0 && (","+ips_banidos+",").contains(","+origem+",") ){System.out.println("Acesso recusado para o ip banido: "+origem);continue;}new ClientThread(socket,titulo_url,titulo,dir,endsWiths);} catch (Exception e) {System.out.println("Erro ao executar servidor:" + e.toString());}}}}class ClientThread {String method,uri,protocol,titulo_url,titulo,dir,endsWiths;String nav;InputStream input = null;OutputStream output = null;char[] buffer = new char[2048];Writer writer;InputStreamReader isr=null;Reader reader;public ClientThread(final Socket socket,String titulo_url, String titulo, String dir,String endsWiths) {this.titulo_url=titulo_url;this.titulo=titulo;this.dir=dir;this.endsWiths=endsWiths;new Thread(){public void run(){try {input = socket.getInputStream();output = socket.getOutputStream();if ( input != null ){isr = new InputStreamReader(input);reader = new BufferedReader(isr);writer = new StringWriter();lendo();gravando();socket.close();writer.close();reader.close();isr.close();}} catch (Exception e) {System.out.println("----------> Erro ao executar servidor:" + e.toString());}}}.start();}private void lendo() throws Exception {try {int i = reader.read(buffer);if ( i == -1 ) return;writer.write(buffer, 0, i);BufferedReader br = new BufferedReader(new StringReader(writer.toString()));String line = null;int lineNumber = 0;while ((line = br.readLine()) != null) {System.out.println("<---|    " + line);if (lineNumber == 0 && line.split(" ").length == 3 ) {this.method     = line.split(" ")[0];this.uri        = line.split(" ")[1];this.protocol   = line.split(" ")[2];}lineNumber++;}System.out.println("     |    ");} catch (IOException e) {throw new Exception("Erro ao converter stream para string:" + e.toString());}}private void gravando() throws Exception {StringBuilder sb = new StringBuilder();if ( method.equals("OPTIONS") ){for ( String line : new String[]{"HTTP/1.1 501 Not Implemented\r\n"+ "\r\n"}){sb.append(line);System.out.println("    |---> " + line.replace("\r\n",""));}System.out.println("   |    ");output.write(sb.toString().getBytes());return;}sb = new StringBuilder();nav=dir+uri.replace("//","/").trim();nav=nav.replace("//","/").replace("%20"," ");if ( ! new File(nav).isFile() ){nav+="/";int c=9;while ( nav.contains("//") && c-->0 )nav=nav.replace("//","/");for ( 
-/* class HttpServer */ String index : new String[]{"index.html","index.htm"} ){if ( new File(nav+index).exists() ){nav+=index;break;}}}if ( uri.equals("/"+titulo_url) ){sb = new StringBuilder(); for ( String line : new String[]{"HTTP/1.1 200 OK\r\n","Content-Type: text/html; charset=UTF-8\r\n","\r\n","<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n","<html xmlns=\"http://www.w3.org/1999/xhtml\">\n","<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n","<br>\n","&nbsp;"+titulo+"<br>\n"}){sb.append(line);System.out.println("    |---> " + line.replace("\r\n",""));}File[] files = new File(dir).listFiles();Arrays.sort(files, new Comparator<File>() {public int compare(File f1, File f2) {if (f1.lastModified()<f2.lastModified()) return 1; if (f1.lastModified()>f2.lastModified()) return -1; return 0;}});sb.append("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");System.out.println("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");sb.append("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");System.out.println("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");for ( File p : files){if ( ! p.isFile() ) continue;if ( ! endsWith_OK(p.getName(),endsWiths) ) continue;sb.append("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href='" + p.getName() + "'>" + p.getName() + "</a></td></tr>\n");System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href='" + p.getName() + "'>" + p.getName() + "</a></td></tr>\n");}sb.append("</table></html>");System.out.println("</table></html>");System.out.println("   |    ");output.write(sb.toString().getBytes());return;}System.out.println("nav: "+nav+";uri: "+uri);if ( new File(nav).exists() && new File(nav).isFile() && endsWith_OK(nav,endsWiths) ){for ( String line : new String[]{"HTTP/1.1 200 OK\r\n"+ "Content-Type: "+ getContentType(nav)+ "; charset=UTF-8\r\n"+ "\r\n"}){sb.append(line);System.out.println("    |---> " + line.replace("\r\n",""));}System.out.println("   |    ");output.write(sb.toString().getBytes());try{System.out.println("iniciando leitura do arquivo: " + nav);transf_bytes(output,nav);System.out.println("finalizando leitura do arquivo: " + nav);return;}catch(Exception e){System.out.println("erro 404, não foi possivel ler o arquivo: " + nav);}}else{System.out.println("nao encontrou o arquivo: " + nav);if ( uri.equals("/favicon.ico") ){return;}}/* ERROR 404 */sb = new StringBuilder();for ( String line : new String[]{"HTTP/1.1 200 OK\r\n","Content-Type: text/html; charset=UTF-8\r\n","\r\n","<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +"<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +"<head>\n" +"<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" +"<title>404 - File or directory not found.</title>\n" +"<style type=\"text/css\">\n" +"<!--\n" +"body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" +"fieldset{padding:0 15px 10px 15px;} \n" 
-/* class HttpServer */ +"h1{font-size:2.4em;margin:0;color:#FFF;}\n" +"h2{font-size:1.7em;margin:0;color:#CC0000;} \n" +"h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n"  +"#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" +"background-color:#555555;}\n" +"#content{margin:0 0 0 2%;position:relative;}\n" +".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" +"-->\n" +"</style>\n" +"</head>\n" +"<body>\n" +"<div id=\"header\"><h1>Server Error</h1></div>\n" +"<div id=\"content\">\n" +" <div class=\"content-container\"><fieldset>\n" +"  <h2>404 - File or directory not found.</h2>\n" +"  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" +" </fieldset></div>\n" +"</div>\n" +"</body>\n" +"</html>"}){sb.append(line);System.out.println("    |---> " + line.replace("\r\n",""));}System.out.println("   |    ");output.write(sb.toString().getBytes());}private String getContentType(String caminho) {if ( caminho.endsWith(".html") || caminho.endsWith(".htm") )return "text/html";if ( caminho.endsWith(".css") )return "text/css";if ( caminho.endsWith(".png") || caminho.endsWith(".ico") || caminho.endsWith(".jpg") )return "image/png";return "application/octet-stream";}public byte[] lendo_arquivo(String caminho) throws Exception {FileInputStream fis=null;File file = new File(caminho);byte[] bFile = new byte[(int) file.length()];fis = new FileInputStream(file);fis.read(bFile);fis.close();return bFile;}public ArrayList<String> lendo_arquivo_display(String caminho) throws Exception {ArrayList<String> result=new ArrayList<String>();String strLine;try{FileReader rf=new FileReader(caminho);BufferedReader in=new BufferedReader(rf);while ((strLine = in.readLine()) != null)result.add(strLine);in.close();rf.close();}catch (Exception e){throw new Exception("nao foi possivel encontrar o arquivo "+caminho);}return result;}private void transf_bytes(OutputStream output, String nav) throws Exception {int count;DataInputStream dis=new DataInputStream(new FileInputStream(nav));byte[] buffer = new byte[8192];while ((count = dis.read(buffer)) > 0)output.write(buffer, 0, count);}private boolean endsWith_OK(String url,String ends){if ( ends.equals("") ) return true;String [] partes = ends.split(",");for ( int i=0;i<partes.length;i++ )if ( url.endsWith("."+partes[i]) )return true;return false;}}
-
+/* class HttpServer */ class HttpServer {
+/* class HttpServer */     String host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos;
+/* class HttpServer */     int port;
+/* class HttpServer */     Socket socket = null;
+/* class HttpServer */     public HttpServer(String[] args) {
+/* class HttpServer */         host = args[0];
+/* class HttpServer */         if (args[0] == null || args[0].equals("localhost")) try {
+/* class HttpServer */             host = InetAddress.getLocalHost().getHostName();
+/* class HttpServer */         } catch (Exception e) {}
+/* class HttpServer */         titulo_url = args[1];
+/* class HttpServer */         titulo = args[2];
+/* class HttpServer */         port = Integer.parseInt(args[3]);
+/* class HttpServer */         dir = args[4].trim();
+/* class HttpServer */         if (!dir.endsWith("/")) dir += "/";
+/* class HttpServer */         endsWiths = args[5];
+/* class HttpServer */         ips_banidos = args[6];
+/* class HttpServer */         try {
+/* class HttpServer */             serve();
+/* class HttpServer */         } catch (Exception e) {
+/* class HttpServer */             System.err.println(e.toString());
+/* class HttpServer */             System.exit(1);
+/* class HttpServer */         }
+/* class HttpServer */     }
+/* class HttpServer */     public void serve() throws Exception {
+/* class HttpServer */         ServerSocket serverSocket = null;
+/* class HttpServer */         String origem = "";
+/* class HttpServer */         try {
+/* class HttpServer */             serverSocket = new ServerSocket(port, 1, InetAddress.getByName(host));
+/* class HttpServer */             if (host.contains(":")) System.out.println("Service opened: http://[" + host + "]:" + port + "/" + titulo_url);
+/* class HttpServer */             else System.out.println("Service opened: http://" + host + ":" + port + "/" + titulo_url);
+/* class HttpServer */             System.out.println("path work: " + dir);
+/* class HttpServer */         } catch (Exception e) {
+/* class HttpServer */             throw new Exception("erro na inicialização: " + e.toString());
+/* class HttpServer */         }
+/* class HttpServer */         while (true) {
+/* class HttpServer */             try {
+/* class HttpServer */                 socket = serverSocket.accept();
+/* class HttpServer */                 origem = socket.getRemoteSocketAddress().toString();
+/* class HttpServer */                 if (origem.length() > 2 && origem.startsWith("/")) origem = origem.substring(1);
+/* class HttpServer */                 if (origem.indexOf(":") != -1) origem = origem.substring(0, origem.indexOf(":"));
+/* class HttpServer */                 System.out.println("Conexao de origem: " + origem + ", data:" + (new Date()));
+/* class HttpServer */                 if (ips_banidos.length() > 0 && ("," + ips_banidos + ",").contains("," + origem + ",")) {
+/* class HttpServer */                     System.out.println("Acesso recusado para o ip banido: " + origem);
+/* class HttpServer */                     continue;
+/* class HttpServer */                 }
+/* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths);
+/* class HttpServer */             } catch (Exception e) {
+/* class HttpServer */                 System.out.println("Erro ao executar servidor:" + e.toString());
+/* class HttpServer */             }
+/* class HttpServer */         }
+/* class HttpServer */     }
+/* class HttpServer */ }
+/* class HttpServer */ class ClientThread {
+/* class HttpServer */     String method, uri, protocol, titulo_url, titulo, dir, endsWiths;
+/* class HttpServer */     long range=-1;
+/* class HttpServer */     String nav;
+/* class HttpServer */     InputStream input = null;
+/* class HttpServer */     OutputStream output = null;
+/* class HttpServer */     char[] buffer = new char[2048];
+/* class HttpServer */     Writer writer;
+/* class HttpServer */     InputStreamReader isr = null;
+/* class HttpServer */     Reader reader;
+/* class HttpServer */     public ClientThread(final Socket socket, String titulo_url, String titulo, String dir, String endsWiths) {
+/* class HttpServer */         this.titulo_url = titulo_url;
+/* class HttpServer */         this.titulo = titulo;
+/* class HttpServer */         this.dir = dir;
+/* class HttpServer */         this.endsWiths = endsWiths;
+/* class HttpServer */         new Thread() {
+/* class HttpServer */             public void run() {
+/* class HttpServer */                 try {
+/* class HttpServer */                     input = socket.getInputStream();
+/* class HttpServer */                     output = socket.getOutputStream();
+/* class HttpServer */                     if (input != null) {
+/* class HttpServer */                         isr = new InputStreamReader(input);
+/* class HttpServer */                         reader = new BufferedReader(isr);
+/* class HttpServer */                         writer = new StringWriter();
+/* class HttpServer */                         lendo();
+/* class HttpServer */                         gravando();
+/* class HttpServer */                         socket.close();
+/* class HttpServer */                         writer.close();
+/* class HttpServer */                         reader.close();
+/* class HttpServer */                         isr.close();
+/* class HttpServer */                     }
+/* class HttpServer */                 } catch (Exception e) {
+/* class HttpServer */                     System.out.println("----------> Erro ao executar servidor:" + e.toString());
+/* class HttpServer */                 }
+/* class HttpServer */             }
+/* class HttpServer */         }.start();
+/* class HttpServer */     }
+/* class HttpServer */     private void lendo() throws Exception {
+/* class HttpServer */         try {
+/* class HttpServer */             int i = reader.read(buffer);
+/* class HttpServer */             if (i == -1) return;
+/* class HttpServer */             writer.write(buffer, 0, i);
+/* class HttpServer */             BufferedReader br = new BufferedReader(new StringReader(writer.toString()));
+/* class HttpServer */             String line = null;
+/* class HttpServer */             int lineNumber = 0;
+/* class HttpServer */             this.range = -1;
+/* class HttpServer */             while ((line = br.readLine()) != null) {
+/* class HttpServer */                 System.out.println("<---|    " + line.replace("\n","\n          "));
+/* class HttpServer */                 if (lineNumber == 0 && line.split(" ").length == 3) {
+/* class HttpServer */                     this.method = line.split(" ")[0];
+/* class HttpServer */                     this.uri = line.split(" ")[1];
+/* class HttpServer */                     this.protocol = line.split(" ")[2];
+/* class HttpServer */                 }
+/* class HttpServer */                 if (line.startsWith("Range: bytes=") && line.endsWith("-") )
+/* class HttpServer */                   this.range = Long.parseLong(line.split("=")[1].replace("-", ""));
+/* class HttpServer */                 lineNumber++;
+/* class HttpServer */             }
+/* class HttpServer */             System.out.println("    |");
+/* class HttpServer */         } catch (IOException e) {
+/* class HttpServer */             throw new Exception("Erro ao converter stream para string:" + e.toString());
+/* class HttpServer */         }
+/* class HttpServer */     }
+/* class HttpServer */     private void gravando() throws Exception {
+/* class HttpServer */         StringBuilder sb = new StringBuilder();
+/* class HttpServer */         if (method.equals("OPTIONS")) {
+/* class HttpServer */             for (String line: new String[] {
+/* class HttpServer */                     "HTTP/1.1 501 Not Implemented\r\n" + "\r\n"
+/* class HttpServer */                 }) {
+/* class HttpServer */                 sb.append(line);
+/* class HttpServer */                 System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */             }
+/* class HttpServer */             System.out.println("    |");
+/* class HttpServer */             output.write(sb.toString().getBytes());
+/* class HttpServer */             return;
+/* class HttpServer */         }
+/* class HttpServer */         sb = new StringBuilder();
+/* class HttpServer */         nav = dir + uri.replace("//", "/").trim();
+/* class HttpServer */         nav = nav.replace("//", "/").replace("%20", " ");
+/* class HttpServer */         if (!new File(nav).isFile()) {
+/* class HttpServer */             nav += "/";
+/* class HttpServer */             int c = 9;
+/* class HttpServer */             while (nav.contains("//") && c-- > 0) nav = nav.replace("//", "/");
+/* class HttpServer */             for (
+/* class HttpServer */                 String index: new String[] {
+/* class HttpServer */                     "index.html",
+/* class HttpServer */                     "index.htm"
+/* class HttpServer */                 }) {
+/* class HttpServer */                 if (new File(nav + index).exists()) {
+/* class HttpServer */                     nav += index;
+/* class HttpServer */                     break;
+/* class HttpServer */                 }
+/* class HttpServer */             }
+/* class HttpServer */         }
+/* class HttpServer */         if (uri.equals("/" + titulo_url)) {
+/* class HttpServer */             sb = new StringBuilder();
+/* class HttpServer */             for (String line: new String[] {
+/* class HttpServer */                     "HTTP/1.1 200 OK\r\n",
+/* class HttpServer */                     "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                     "\r\n",
+/* class HttpServer */                     "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
+/* class HttpServer */                     "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
+/* class HttpServer */                     "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n",
+/* class HttpServer */                     "<br>\n",
+/* class HttpServer */                     "&nbsp;" + titulo + "<br>\n"
+/* class HttpServer */                 }) {
+/* class HttpServer */                 sb.append(line);
+/* class HttpServer */                 System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */             }
+/* class HttpServer */             File[] files = new File(dir).listFiles();
+/* class HttpServer */             Arrays.sort(files, new Comparator < File > () {
+/* class HttpServer */                 public int compare(File f1, File f2) {
+/* class HttpServer */                     if (f1.lastModified() < f2.lastModified()) return 1;
+/* class HttpServer */                     if (f1.lastModified() > f2.lastModified()) return -1;
+/* class HttpServer */                     return 0;
+/* class HttpServer */                 }
+/* class HttpServer */             });
+/* class HttpServer */             sb.append("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
+/* class HttpServer */             System.out.println("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
+/* class HttpServer */             sb.append("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
+/* class HttpServer */             System.out.println("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
+/* class HttpServer */             for (File p: files) {
+/* class HttpServer */                 if (!p.isFile()) continue;
+/* class HttpServer */                 if (!endsWith_OK(p.getName(), endsWiths)) continue;
+/* class HttpServer */                 sb.append("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href='" + p.getName() + "'>" + p.getName() + "</a></td></tr>\n");
+/* class HttpServer */                 System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href='" + p.getName() + "'>" + p.getName() + "</a></td></tr>\n");
+/* class HttpServer */             }
+/* class HttpServer */             sb.append("</table></html>");
+/* class HttpServer */             System.out.println("</table></html>");
+/* class HttpServer */             System.out.println("    |");
+/* class HttpServer */             output.write(sb.toString().getBytes());
+/* class HttpServer */             return;
+/* class HttpServer */         }
+/* class HttpServer */         if ( ! uri.equals("/favicon.ico"))
+/* class HttpServer */             System.out.println("nav: " + nav + ";uri: " + uri);
+/* class HttpServer */         if (new File(nav).exists() && new File(nav).isFile() && endsWith_OK(nav, endsWiths)) {
+/* class HttpServer */             long lenFile = -1;
+/* class HttpServer */             if ( range > -1 ){
+/* class HttpServer */                 lenFile = new File(nav).length();
+/* class HttpServer */                 if ( range >= lenFile)
+/* class HttpServer */                     range = -1;
+/* class HttpServer */             }
+/* class HttpServer */             if ( range > -1){
+/* class HttpServer */                 String rangeFormat = "accept-ranges: bytes\r\nContent-Length: " + lenFile + "\r\nContent-Range: bytes " + range + "-" + (lenFile-1) + "/" + lenFile + "\r\n";
+/* class HttpServer */                 for (String line: new String[] {
+/* class HttpServer */                         "HTTP/1.1 206 OK\r\n" + "Content-Type: " + getContentType(nav) + "\r\ncharset=UTF-8\r\n" + rangeFormat + "\r\n"
+/* class HttpServer */                     }) {
+/* class HttpServer */                     sb.append(line);
+/* class HttpServer */                     System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */                 }
+/* class HttpServer */             }else{  
+/* class HttpServer */                 for (String line: new String[] {
+/* class HttpServer */                         "HTTP/1.1 200 OK\r\n" + "Content-Type: " + getContentType(nav) + "\r\ncharset=UTF-8\r\n" + "\r\n"
+/* class HttpServer */                     }) {
+/* class HttpServer */                     sb.append(line);
+/* class HttpServer */                     System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */                 }
+/* class HttpServer */             }    
+/* class HttpServer */             System.out.println("    |");
+/* class HttpServer */             output.write(sb.toString().getBytes());
+/* class HttpServer */             try {
+/* class HttpServer */                 System.out.println("iniciando leitura do arquivo: " + nav);
+/* class HttpServer */                 transf_bytes(output, nav, range);
+/* class HttpServer */                 System.out.println("finalizando leitura do arquivo: " + nav);
+/* class HttpServer */                 return;
+/* class HttpServer */             } catch (Exception e) {
+/* class HttpServer */                 if ( e.toString().contains("Software caused connection abort: socket write error") ){}else{
+/* class HttpServer */                     System.out.println("erro 404, não foi possivel ler o arquivo: " + nav);
+/* class HttpServer */                 }
+/* class HttpServer */                 return;
+/* class HttpServer */             }
+/* class HttpServer */         } else {
+/* class HttpServer */             if (uri.equals("/favicon.ico")) {
+/* class HttpServer */                 return;
+/* class HttpServer */             }else{
+/* class HttpServer */                 System.out.println("nao encontrou o arquivo: " + nav);
+/* class HttpServer */             }
+/* class HttpServer */         } /* ERROR 404 */
+/* class HttpServer */         sb = new StringBuilder();
+/* class HttpServer */         for (String line: new String[] {
+/* class HttpServer */                 "HTTP/1.1 200 OK\r\n",
+/* class HttpServer */                 "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                 "\r\n",
+/* class HttpServer */                 "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" + "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" + "<title>404 - File or directory not found.</title>\n" + "<style type=\"text/css\">\n" + "<!--\n" + "body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" + "fieldset{padding:0 15px 10px 15px;} \n" +
+/* class HttpServer */                 "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
+/* class HttpServer */             }) {
+/* class HttpServer */             sb.append(line);
+/* class HttpServer */             System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */         }
+/* class HttpServer */         System.out.println("    |");
+/* class HttpServer */         output.write(sb.toString().getBytes());
+/* class HttpServer */     }
+/* class HttpServer */     private String getContentType(String caminho) {
+/* class HttpServer */         if (caminho.endsWith(".html") || caminho.endsWith(".htm")) return "text/html";
+/* class HttpServer */         if (caminho.endsWith(".css")) return "text/css";
+/* class HttpServer */         if (caminho.endsWith(".png") || caminho.endsWith(".ico") || caminho.endsWith(".jpg")) return "image/png";
+/* class HttpServer */         if (caminho.endsWith(".mkv")) return "video/webm";
+/* class HttpServer */         return "application/octet-stream";
+/* class HttpServer */     }
+/* class HttpServer */     public byte[] lendo_arquivo(String caminho) throws Exception {
+/* class HttpServer */         FileInputStream fis = null;
+/* class HttpServer */         File file = new File(caminho);
+/* class HttpServer */         byte[] bFile = new byte[(int) file.length()];
+/* class HttpServer */         fis = new FileInputStream(file);
+/* class HttpServer */         fis.read(bFile);
+/* class HttpServer */         fis.close();
+/* class HttpServer */         return bFile;
+/* class HttpServer */     }
+/* class HttpServer */     public ArrayList < String > lendo_arquivo_display(String caminho) throws Exception {
+/* class HttpServer */         ArrayList < String > result = new ArrayList < String > ();
+/* class HttpServer */         String strLine;
+/* class HttpServer */         try {
+/* class HttpServer */             FileReader rf = new FileReader(caminho);
+/* class HttpServer */             BufferedReader in = new BufferedReader(rf);
+/* class HttpServer */             while ((strLine = in .readLine()) != null) result.add(strLine); in .close();
+/* class HttpServer */             rf.close();
+/* class HttpServer */         } catch (Exception e) {
+/* class HttpServer */             throw new Exception("nao foi possivel encontrar o arquivo " + caminho);
+/* class HttpServer */         }
+/* class HttpServer */         return result;
+/* class HttpServer */     }
+/* class HttpServer */     private void transf_bytes(OutputStream output, String nav, long resume) throws Exception {
+/* class HttpServer */         int count;
+/* class HttpServer */         DataInputStream dis = new DataInputStream(new FileInputStream(nav));
+/* class HttpServer */         byte[] buffer = new byte[8192];
+/* class HttpServer */         if ( resume > 0 ) 
+/* class HttpServer */             dis.skip(resume);
+/* class HttpServer */         while ((count = dis.read(buffer)) > 0) output.write(buffer, 0, count);
+/* class HttpServer */     }
+/* class HttpServer */     private boolean endsWith_OK(String url, String ends) {
+/* class HttpServer */         if (ends.equals("")) return true;
+/* class HttpServer */         String[] partes = ends.split(",");
+/* class HttpServer */         for (int i = 0; i < partes.length; i++)
+/* class HttpServer */             if (url.endsWith("." + partes[i])) return true;
+/* class HttpServer */         return false;
+/* class HttpServer */     }
+/* class HttpServer */ }
 
 /* class Wget */ //String [] args2 = {"-h"};               
 /* class Wget */ //String [] args2 = {"-ban","%d0","-only_before","-list_mp3","-list_diretories","http://195.122.253.112/public/mp3/"};        
