@@ -56,6 +56,24 @@ export PATH="$PATH":.
 alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
 rm -f /opt/.u_flag
 alias u='/opt/.u'
+alias uu='/opt/.u_c'
+if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null | grep "not upgraded" | wc -l` -eq 1 ]
+then  
+  echo "" > /opt/.u_c
+  apt list --upgradable -a 2>/dev/null | while read linha 
+  do
+    if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
+    then
+      p1=`echo $linha | awk ' { print $1 } '`
+	  echo $p1
+    fi    
+  done | head -1 | while read linha
+  do
+    echo "apt-get install --only-upgrade $linha" > /opt/.u_c
+	chmod 777 /opt/.u_c
+	echo digite uu
+  done
+fi
 if [ "1" == "0" ] # verify new ubuntu and LTS
 then
   if [ `whoami` == "root" ] && [ -e /etc/os-release ]
