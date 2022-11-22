@@ -1182,11 +1182,22 @@ cat buffer.log
                 }catch(Exception e){}
             }            
         }
-        if ( args[0].equals("ls") && (args.length == 1 || args.length == 2) ){
-            if ( args.length == 2 )
-                find(args[1], true, 0);
-            else
+        if ( args[0].equals("ls") ){
+            int len_antes=args.length;
+            args = bind_asterisk(args);
+            if ( args.length == 1 ){
                 find(null, true, 0);
+                return;
+            }
+            if ( args.length == 2 ){
+                find(args[1], true, 0);
+                return;
+            }
+            for( int i=1;i<args.length;i++ ){
+                if ( len_antes > 2 )
+                    System.out.println("\n"+args[i]+":");
+                find(args[i], true, 0);                
+            }
             return;
         }
         if ( args[0].equals("sleep") && (args.length == 1 || args.length == 2) ){
@@ -6323,36 +6334,100 @@ cat buffer.log
         return result;
     }
 
-    private String[] bind_asterisk(String[] args) {        
-        //   validos
-        //   *ff*
-        //   ../../a*
-        //   /a/**/c
-        
-        //   invalido
-        //   aa\\bb  
-        /* // pendente de implementacao
-        ArrayList lista=new ArrayList<String>();
-        for(int i=0;i<args.length;i++){
-            if ( args[i].contains("*") )
-                if ( args[i].contains("\\") && args[i].contains("/") ){                    
-                }else{
-                    String sep="/";
-                    if(args[i].contains("\\"))
-                        sep="\\";
-                    if ( args[i].startsWith("/") )
-                        lista.addAll(bind_asterisk(args[i],"/",0));
-                }
-        }
-        args=new String[lista.size()];
-        for(int i=0;i<lista.size();i++)
-            args[i]=lista.get(i).toString();
-        */
-        return args;
+    private String[] arrayList_to_array(ArrayList a){
+        String[] args=new String[a.size()];
+        for(int i=0;i<a.size();i++)
+            args[i]=a.get(i).toString();
+        return args;        
     }
 
-    private ArrayList bind_asterisk(String parm, String raiz, int lvl) {
-        return null; // pendente de implementacao
+    private boolean bind_isSep(String parm){    
+        return parm.startsWith("/") || parm.startsWith("\\");
+    }
+    
+    private String[] bind_asterisk(String[] args) {        
+        ArrayList lista=new ArrayList<String>();
+        for(int i=0;i<args.length;i++)
+            lista.addAll(bind_asterisk_parm(args[i]));
+        return arrayList_to_array(lista);
+    }
+   
+    ArrayList bind_nav;
+    private ArrayList bind_asterisk_parm(String parm){
+        bind_nav=new ArrayList();
+        if ( ! parm.contains("*") || parm.equals("") ){
+            bind_nav.add(parm);
+            return bind_nav;
+        }
+        String [] partesA=bind_asterisk_getPartes(parm);
+        String [] partesB=bind_asterisk_getPartes(parm);
+        File f;
+        if(parm.length()>1){
+            if( partesA[0].equals("/") )
+                bind_asterisk_nav(new File("/"), partesA, partesB, 1);
+            else
+                if( partesA[0].contains(":") )
+                    bind_asterisk_nav(new File(partesA[0]+"\\"), partesA, partesB, 2);
+                else
+                    if(partesA[0].contains("*"))
+                        bind_asterisk_nav(new File("."), partesA, partesB, 0);
+                    else
+                        bind_asterisk_nav(new File(partesA[0]), partesA, partesB, 2);
+        }else
+            bind_asterisk_nav(new File("."), partesA, partesB, 0);
+        if ( bind_nav.size() == 0 )
+            bind_nav.add(parm);
+        return bind_nav;
+    }    
+        
+    private void bind_asterisk_nav(File f, String [] partesA, String [] partesB, int p){
+        if ( ! f.exists() )
+            return;
+        File [] files=f.listFiles();
+        if ( files == null )
+            return;
+        for( int i=0;i<files.length;i++ ){
+            String result_match=bind_match(partesA[p],files[i].getName());
+            if ( result_match != null ){
+                partesB[p]=result_match;
+                if(p+2>=partesA.length){
+                    bind_processa(partesB);
+                }else{
+                    bind_asterisk_nav(files[i], partesA, partesB, p+2);
+                }
+            }
+        }
+    }
+    
+    private String bind_match(String digitado, String presenteNoLocal){
+        ////////////
+        if(digitado.equals(presenteNoLocal))
+            return digitado;
+        if(digitado.equals("*"))
+            return presenteNoLocal;
+        return null;
+    }
+    
+    private void bind_processa(String [] partes){
+        String s="";
+        for(int i=0;i<partes.length;i++)
+            s+=partes[i];
+        bind_nav.add(s);
+    }
+    
+    private String[] bind_asterisk_getPartes(String parm){    
+        ArrayList lista=new ArrayList();
+        String tail=parm.substring(0, 1);
+        for(int i=1;i<parm.length();i++){
+            String p=parm.substring(i, i+1);
+            if ( bind_isSep(tail) != bind_isSep(p) ){
+                lista.add(tail);
+                tail=p;
+            }else
+                tail+=p;
+        }
+        lista.add(tail);
+        return arrayList_to_array(lista);
     }
     
     private long epoch(Date d) {
