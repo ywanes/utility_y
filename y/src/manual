@@ -161,6 +161,7 @@ Exemplos...
 [y echo]
     echo a b c
     echo "a b c"
+    echo "a*"
 [y printf]
     echo a b c
     echo "a b c"
@@ -365,6 +366,7 @@ Exemplos...
 [y ls]
     y ls
     y ls pasta1
+    y ls "pas*"
 [y sleep]
     y sleep
     y sleep 0.22 # 0.22 seconds

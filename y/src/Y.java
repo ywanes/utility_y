@@ -6400,12 +6400,34 @@ cat buffer.log
     }
     
     private String bind_match(String digitado, String presenteNoLocal){
-        ////////////
         if(digitado.equals(presenteNoLocal))
             return digitado;
-        if(digitado.equals("*"))
-            return presenteNoLocal;
+        if(digitado.contains("*")){
+            boolean result=bind_match(digitado, 0, presenteNoLocal, 0);
+            if (result){
+                return presenteNoLocal;
+            }
+        }
         return null;
+    }
+    
+    private boolean bind_match(String digitado, int pos1, String presenteNoLocal, int pos2){
+        if ( pos1 == digitado.length() && pos2 == presenteNoLocal.length())
+            return true;
+        if ( pos1 >= digitado.length() || pos2 >= presenteNoLocal.length())
+            return false;
+        if ( digitado.substring(pos1,pos1+1).equals("*") ){
+            for(int i=0;i<presenteNoLocal.length()-pos2+1;i++){
+                boolean result=bind_match(digitado, pos1+1, presenteNoLocal, pos2+i);
+                if(result)
+                    return true;
+            }
+        }else{
+            if ( digitado.substring(pos1,pos1+1).equals(presenteNoLocal.substring(pos2,pos2+1)) ){
+                return bind_match(digitado, pos1+1, presenteNoLocal, pos2+1);
+            }
+        }
+        return false;
     }
     
     private void bind_processa(String [] partes){
@@ -8404,6 +8426,7 @@ class XML extends Util{
 /* class by manual */                + "[y echo]\n"
 /* class by manual */                + "    echo a b c\n"
 /* class by manual */                + "    echo \"a b c\"\n"
+/* class by manual */                + "    echo \"a*\"\n"
 /* class by manual */                + "[y printf]\n"
 /* class by manual */                + "    echo a b c\n"
 /* class by manual */                + "    echo \"a b c\"\n"
@@ -8608,6 +8631,7 @@ class XML extends Util{
 /* class by manual */                + "[y ls]\n"
 /* class by manual */                + "    y ls\n"
 /* class by manual */                + "    y ls pasta1\n"
+/* class by manual */                + "    y ls \"pas*\"\n"
 /* class by manual */                + "[y sleep]\n"
 /* class by manual */                + "    y sleep\n"
 /* class by manual */                + "    y sleep 0.22 # 0.22 seconds\n"
