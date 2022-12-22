@@ -1136,9 +1136,34 @@ cat buffer.log
                 ips_banidos=args[7];
             else
                 System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
-            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos});
+            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},false);
             return;
         }  
+        if ( args[0].equals("playlist")){
+            String host="localhost";
+            if ( args.length > 1 )
+                host=args[1];
+            else
+                System.out.println("host preenchido automaticamente => " + host);
+            String titulo_url="tmp";
+            System.out.println("titulo url preenchido automaticamente => " + titulo_url);     
+            String titulo="tmp";
+            System.out.println("titulo preenchido automaticamente => " + titulo);        
+            String port="8888";
+            if ( args.length > 2 )
+                port=args[2];
+            else
+                System.out.println("porta preenchido automaticamente => " + port);     
+            String dir=".";
+            System.out.println("diretorio preenchido automaticamente => " + dir);     
+            String endsWiths="";
+            System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);     
+            String ips_banidos="";
+            System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
+            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},true);
+            return;            
+        }
+            
         if ( args[0].equals("wget")){
             wget(args);
             return;            
@@ -7923,14 +7948,117 @@ class XML extends Util{
 /* class JSchCustom */ try { filename = c.readlink(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("realpath")) { if (cmds.size() != 2) continue; String p1 = (String) cmds.elementAt(1); String filename = null; try { filename = c.realpath(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("version")) { out.println("SFTP protocol version " + c.version()); continue; } if (cmd.equals("help") || cmd.equals("?")) { out.println(help); continue; } out.println("unimplemented command: " + cmd); } session.disconnect(); } catch (Exception e) { System.out.println(e); } System.exit(0); } private static String help = "      Available commands:\n" + "      * means unimplemented command.\n" + "cd path                       Change remote directory to 'path'\n" + "lcd path                      Change local directory to 'path'\n" + "chgrp grp path                Change group of file 'path' to 'grp'\n" + "chmod mode path               Change permissions of file 'path' to 'mode'\n" + "chown own path                Change owner of file 'path' to 'own'\n" + "df [path]                     Display statistics for current directory or\n" + "                              filesystem containing 'path'\n" + "help                          Display this help text\n" + "get remote-path [local-path]  Download file\n" + "get-resume remote-path [local-path]  Resume to download file.\n" + "get-append remote-path [local-path]  Append remote file to local file\n" + "hardlink oldpath newpath      Hardlink remote file\n" + "*lls [ls-options [path]]      Display local directory listing\n" + "ln oldpath newpath            Symlink remote file\n" + "*lmkdir path                  Create local directory\n" + "lpwd                          Print local working directory\n" + "ls [path]                     Display remote directory listing\n" + "*lumask umask                 Set local umask to 'umask'\n" + "mkdir path                    Create remote directory\n" + "put local-path [remote-path]  Upload file\n" + "put-resume local-path [remote-path]  Resume to upload file\n" + "put-append local-path [remote-path]  Append local file to remote file.\n" + "pwd                           Display remote working directory\n" + "stat path                     Display info about path\n" + "exit                          Quit sftp\n" + "quit                          Quit sftp\n" + "rename oldpath newpath        Rename remote file\n" + "rmdir path                    Remove remote directory\n" + "rm path                       Delete remote file\n" + "symlink oldpath newpath       Symlink remote file\n" + "readlink path                 Check the target of a symbolic link\n" + "realpath path                 Canonicalize the path\n" + "rekey                         Key re-exchanging\n" + "compression level             Packet compression will be enabled\n" + "version                       Show SFTP version\n" + "?                             Synonym for help"; public static class MyProgressMonitor implements SftpProgressMonitor { ProgressMonitor monitor; long count = 0; long max = 0; public void init(int op, String src, String dest, long max) { this.max = max; monitor = new ProgressMonitor(null, ((op == SftpProgressMonitor.PUT) ? "put" : "get") + ": " + src, "", 0, (int) max); count = 0; percent = -1; monitor.setProgress((int) this.count); 
 /* class JSchCustom */ monitor.setMillisToDecideToPopup(1000); } private long percent = -1; public boolean count(long count) { this.count += count; if (percent >= this.count * 100 / max) { return true; } percent = this.count * 100 / max; monitor.setNote("Completed " + this.count + "(" + percent + "%) out of " + max + "."); monitor.setProgress((int) this.count); return !(monitor.isCanceled()); } public void end() { monitor.close(); } } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 7"); System.exit(1); } final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } 
 
+/* class texto_longo */ class texto_longo{
+/* class texto_longo */     public static String get_html_virtual_playlist(){
+/* class texto_longo */         String faixas="";
+/* class texto_longo */         File [] f=new File(".").listFiles();
+/* class texto_longo */         for ( int i=0;i<f.length;i++ ){
+/* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") ){
+/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white;\" onclick=\"click_faixa(this)\">\n" + f[i].getName() + "</td></tr>\n";
+/* class texto_longo */             }
+/* class texto_longo */         };
+/* class texto_longo */         return "<html>\n" +
+/* class texto_longo */         "<head>\n" +
+/* class texto_longo */         "<body onload=\"preparacao();\">\n" +
+/* class texto_longo */         "<meta charset=\"utf-8\">\n" +
+/* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
+/* class texto_longo */         "<div id=\"master\"></div>\n" +
+/* class texto_longo */         "<a style=\"color: #777; font-size: 8px;\">&nbsp;&nbsp;click no corpo da pagina para pausar/despausar</a></br></br>\n" +
+/* class texto_longo */         "<div><style>.bordered {border: solid #177 3px;border-radius: 6px;}.bordered tr:hover {background: #999;}.bordered td, .bordered th {border-left: 2px solid #177;border-top: 2px solid #177;padding: 10px;}audio::-webkit-media-controls-panel{background-color: #777;}</style>\n" +
+/* class texto_longo */         "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;\"><tbody>\n" +
+/* class texto_longo */         faixas +
+/* class texto_longo */         "</tbody></table></div>\n" +
+/* class texto_longo */         "<script type=\"text/javascript\">\n" +
+/* class texto_longo */         "function remove_playlist(){\n" +
+/* class texto_longo */         "  document.getElementById(\"master\").innerHTML='';\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function create_playlist(){\n" +
+/* class texto_longo */         "  document.getElementById(\"master\").innerHTML=`\n" +
+/* class texto_longo */         "    <audio id=\"p\" controls=\"controls\" preload=\"metadata\">\n" +
+/* class texto_longo */         "	<source src=\"\" type=\"audio/mp3\" />\n" +
+/* class texto_longo */         "	seu navegador não suporta HTML5\n" +
+/* class texto_longo */         "	</audio>\n" +
+/* class texto_longo */         "  `;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function pause(){\n" +
+/* class texto_longo */         "  document.getElementById(\"p\").pause();\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function play(){\n" +
+/* class texto_longo */         "  var playPromise=document.getElementById(\"p\").play();\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function vai_pro_fim_da_faixa(){\n" +
+/* class texto_longo */         "  var d=document.getElementById(\"p\").duration-1;\n" +
+/* class texto_longo */         "  document.getElementById(\"p\").currentTime=d;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function troca_de_faixa(){\n" +
+/* class texto_longo */         "  //document.getElementById(\"p\").currentTime=0;\n" +
+/* class texto_longo */         "  //document.getElementById(\"p\").play();\n" +
+/* class texto_longo */         "  play_faixa(get_index_faixa_playing()+1);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function preparacao(){\n" +
+/* class texto_longo */         "  document.body.style.backgroundColor = \"#000\";\n" +
+/* class texto_longo */         "  create_playlist();\n" +
+/* class texto_longo */         "  add_listener();\n" +
+/* class texto_longo */         "  play_faixa(0);  \n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function pause_play(){\n" +
+/* class texto_longo */         "  if ( document.getElementById(\"p\").paused )\n" +
+/* class texto_longo */         "    play();\n" +
+/* class texto_longo */         "  else\n" +
+/* class texto_longo */         "    pause();\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function add_listener(){\n" +
+/* class texto_longo */         "  document.getElementById(\"p\").onended = function(){\n" +
+/* class texto_longo */         "    troca_de_faixa();\n" +
+/* class texto_longo */         "  };\n" +
+/* class texto_longo */         "  document.addEventListener('click', function(e) {  \n" +
+/* class texto_longo */         "    if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' )\n" +
+/* class texto_longo */         "	    pause_play();  \n" +
+/* class texto_longo */         "  },false);  \n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function limpa_click_faixa(){\n" +
+/* class texto_longo */         "  var t=document.getElementById(\"tablebase\");\n" +
+/* class texto_longo */         "  for ( var i=0;i<t.children[0].children.length;i++ )\n" +
+/* class texto_longo */         "    t.children[0].children[i].children[0].style.background=''\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function click_faixa(e){\n" +
+/* class texto_longo */         "  limpa_click_faixa();\n" +
+/* class texto_longo */         "  e.style.background='#999';  \n" +
+/* class texto_longo */         "  document.getElementById(\"p\").src=e.innerText;\n" +
+/* class texto_longo */         "  play();  \n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function play_faixa(n){\n" +
+/* class texto_longo */         "  var t=document.getElementById(\"tablebase\");\n" +
+/* class texto_longo */         "  if ( n < 0 || n >= t.children[0].children.length )\n" +
+/* class texto_longo */         "    n=0;\n" +
+/* class texto_longo */         "  for ( var i=0;i<t.children[0].children.length;i++ ){\n" +
+/* class texto_longo */         "    if ( i == n ){\n" +
+/* class texto_longo */         "	  click_faixa(t.children[0].children[i].children[0]);    \n" +
+/* class texto_longo */         "	  break;\n" +
+/* class texto_longo */         "	}\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function get_index_faixa_playing(){\n" +
+/* class texto_longo */         "  var t=document.getElementById(\"tablebase\");\n" +
+/* class texto_longo */         "  for ( var i=0;i<t.children[0].children.length;i++ )\n" +
+/* class texto_longo */         "    if ( t.children[0].children[i].children[0].style.background != '')\n" +
+/* class texto_longo */         "	  return i;\n" +
+/* class texto_longo */         "  return -1;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "</script>\n" +
+/* class texto_longo */         "</body></head></html>\n";
+/* class texto_longo */     }
+/* class texto_longo */ }
+
 /* class HttpServer */ // parametros
 /* class HttpServer */ // new HttpServer(...)
 /* class HttpServer */ // host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 /* class HttpServer */ class HttpServer {
 /* class HttpServer */     String host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos;
+/* class HttpServer */     boolean index_playlist=false;
 /* class HttpServer */     int port;
 /* class HttpServer */     Socket socket = null;
-/* class HttpServer */     public HttpServer(String[] args) {
+/* class HttpServer */     public HttpServer(String[] args, boolean index_playlist) {
 /* class HttpServer */         host = args[0];
 /* class HttpServer */         if (args[0] == null || args[0].equals("localhost")) try {
 /* class HttpServer */             host = InetAddress.getLocalHost().getHostName();
@@ -7942,6 +8070,7 @@ class XML extends Util{
 /* class HttpServer */         if (!dir.endsWith("/")) dir += "/";
 /* class HttpServer */         endsWiths = args[5];
 /* class HttpServer */         ips_banidos = args[6];
+/* class HttpServer */         this.index_playlist = index_playlist;
 /* class HttpServer */         try {
 /* class HttpServer */             serve();
 /* class HttpServer */         } catch (Exception e) {
@@ -7971,7 +8100,7 @@ class XML extends Util{
 /* class HttpServer */                     System.out.println("Acesso recusado para o ip banido: " + origem);
 /* class HttpServer */                     continue;
 /* class HttpServer */                 }
-/* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths);
+/* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths, index_playlist);
 /* class HttpServer */             } catch (Exception e) {
 /* class HttpServer */                 System.out.println("Erro ao executar servidor:" + e.toString());
 /* class HttpServer */             }
@@ -7988,11 +8117,13 @@ class XML extends Util{
 /* class HttpServer */     Writer writer;
 /* class HttpServer */     InputStreamReader isr = null;
 /* class HttpServer */     Reader reader;
-/* class HttpServer */     public ClientThread(final Socket socket, String titulo_url, String titulo, String dir, String endsWiths) {
+/* class HttpServer */     boolean index_playlist=false;
+/* class HttpServer */     public ClientThread(final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, boolean index_playlist) {
 /* class HttpServer */         this.titulo_url = titulo_url;
 /* class HttpServer */         this.titulo = titulo;
 /* class HttpServer */         this.dir = dir;
 /* class HttpServer */         this.endsWiths = endsWiths;
+/* class HttpServer */         this.index_playlist = index_playlist;
 /* class HttpServer */         new Thread() {
 /* class HttpServer */             public void run() {
 /* class HttpServer */                 try {
@@ -8052,6 +8183,35 @@ class XML extends Util{
 /* class HttpServer */             System.out.println("    |");
 /* class HttpServer */             output.write(sb.toString().getBytes());
 /* class HttpServer */             return;
+/* class HttpServer */         }
+/* class HttpServer */         if (uri.equals("/") && nav == null && index_playlist){
+/* class HttpServer */             // verifica arquivos locais
+/* class HttpServer */             File [] f=new File(".").listFiles();
+/* class HttpServer */             boolean existe=false;
+/* class HttpServer */             for ( int i=0;i<f.length;i++ ){
+/* class HttpServer */                 if ( f[i].isFile() ){
+/* class HttpServer */                     existe=true;
+/* class HttpServer */                     break;
+/* class HttpServer */                 }
+/* class HttpServer */             }
+/* class HttpServer */             if ( existe ){
+/* class HttpServer */                 sb = new StringBuilder();
+/* class HttpServer */                 for (String line: new String[] {
+/* class HttpServer */                         "HTTP/1.1 200 OK\r\n",
+/* class HttpServer */                         "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                         "\r\n",
+/* class HttpServer */                         texto_longo.get_html_virtual_playlist()
+/* class HttpServer */                     }) {
+/* class HttpServer */                     sb.append(line);
+/* class HttpServer */                     System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */                 }
+/* class HttpServer */                 System.out.println("    |");
+/* class HttpServer */                 output.write(sb.toString().getBytes());
+/* class HttpServer */                 return;
+/* class HttpServer */             }else{    
+/* class HttpServer */                 System.out.println("Error, nao foi possivel encontrar nenhum arquivo no diretorio atual!");
+/* class HttpServer */                 return;
+/* class HttpServer */             }
 /* class HttpServer */         }
 /* class HttpServer */         sb = new StringBuilder();
 /* class HttpServer */         nav = dir + uri.replace("//", "/").trim();
@@ -8247,7 +8407,6 @@ class XML extends Util{
 /* class Tar  */ public static TarHeader createHeader(String entryName, long size, long modTime, boolean dir, int permissions) { String name = entryName; name = TarUtils.trim(name.replace(File.separatorChar, '/'), '/');  TarHeader header = new TarHeader(); header.linkName = new StringBuffer(""); header.mode = permissions;  if (name.length() > 100) { header.namePrefix = new StringBuffer(name.substring(0, name.lastIndexOf('/'))); header.name = new StringBuffer(name.substring(name.lastIndexOf('/') + 1)); } else { header.name = new StringBuffer(name); } if (dir) { header.linkFlag = TarHeader.LF_DIR; if (header.name.charAt(header.name.length() - 1) != '/') { header.name.append("/"); } header.size = 0; } else { header.linkFlag = TarHeader.LF_NORMAL; header.size = size; }  header.modTime = modTime; header.checkSum = 0; header.devMajor = 0; header.devMinor = 0;  return header; } }  class PermissionUtils { private static enum StandardFilePermission { EXECUTE(0110), WRITE(0220), READ(0440);  private int mode;  private StandardFilePermission(int mode) { this.mode = mode; } }  private static Map<PosixFilePermission, Integer> posixPermissionToInteger = new HashMap<>();  static { posixPermissionToInteger.put(PosixFilePermission.OWNER_EXECUTE, 0100); posixPermissionToInteger.put(PosixFilePermission.OWNER_WRITE, 0200); posixPermissionToInteger.put(PosixFilePermission.OWNER_READ, 0400);  posixPermissionToInteger.put(PosixFilePermission.GROUP_EXECUTE, 0010); posixPermissionToInteger.put(PosixFilePermission.GROUP_WRITE, 0020); posixPermissionToInteger.put(PosixFilePermission.GROUP_READ, 0040);  posixPermissionToInteger.put(PosixFilePermission.OTHERS_EXECUTE, 0001); posixPermissionToInteger.put(PosixFilePermission.OTHERS_WRITE, 0002); posixPermissionToInteger.put(PosixFilePermission.OTHERS_READ, 0004); }  public static int permissions(File f) { if(f == null) { throw new NullPointerException("File is null."); } if(!f.exists()) { throw new IllegalArgumentException("File " + f + " does not exist."); }  return isPosix ? posixPermissions(f) : standardPermissions(f); }  private static final boolean isPosix = FileSystems.getDefault().supportedFileAttributeViews().contains("posix");  private static int posixPermissions(File f) { int number = 0; try { Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(f.toPath()); for (Map.Entry<PosixFilePermission, Integer> entry : posixPermissionToInteger.entrySet()) { if (permissions.contains(entry.getKey())) { number += entry.getValue(); } } } catch (IOException e) { throw new RuntimeException(e); } return number; }  private static Set<StandardFilePermission> readStandardPermissions(File f) { Set<StandardFilePermission> permissions = new HashSet<>(); if(f.canExecute()) { permissions.add(StandardFilePermission.EXECUTE); } if(f.canWrite()) { permissions.add(StandardFilePermission.WRITE); } if(f.canRead()) { permissions.add(StandardFilePermission.READ); } return permissions; }  private static Integer standardPermissions(File f) { int number = 0; Set<StandardFilePermission> permissions = readStandardPermissions(f); for (StandardFilePermission permission : permissions) { number += permission.mode; } return number; } }  class Octal { public static long parseOctal(byte[] header, int offset, int length) { long result = 0; boolean stillPadding = true;  int end = offset + length; for (int i = offset; i < end; ++i) { if (header[i] == 0) break;  if (header[i] == (byte) ' ' || header[i] == '0') { 
 /* class Tar  */ if (stillPadding) continue;  if (header[i] == (byte) ' ') break; }  stillPadding = false;  result = ( result << 3 ) + ( header[i] - '0' ); }  return result; }  public static int getOctalBytes(long value, byte[] buf, int offset, int length) { int idx = length - 1;  buf[offset + idx] = 0; --idx; buf[offset + idx] = (byte) ' '; --idx;  if (value == 0) { buf[offset + idx] = (byte) '0'; --idx; } else { for (long val = value; idx >= 0 && val > 0; --idx) { buf[offset + idx] = (byte) ( (byte) '0' + (byte) ( val & 7 ) ); val = val >> 3; } }  for (; idx >= 0; --idx) { buf[offset + idx] = (byte) '0'; }  return offset + length; } public static int getCheckSumOctalBytes(long value, byte[] buf, int offset, int length) { getOctalBytes( value, buf, offset, length ); buf[offset + length - 1] = (byte) ' '; buf[offset + length - 2] = 0; return offset + length; }  public static int getLongOctalBytes(long value, byte[] buf, int offset, int length) { byte[] temp = new byte[length + 1]; getOctalBytes( value, temp, 0, length + 1 ); System.arraycopy( temp, 0, buf, offset, length ); return offset + length; }  }  class TarUtils { public static long calculateTarSize(File path) { return tarSize(path) + TarConstants.EOF_BLOCK; }  private static long tarSize(File dir) { long size = 0;  if (dir.isFile()) { return entrySize(dir.length()); } else { File[] subFiles = dir.listFiles();  if (subFiles != null && subFiles.length > 0) { for (File file : subFiles) { if (file.isFile()) { size += entrySize(file.length()); } else { size += tarSize(file); } } } else { return TarConstants.HEADER_BLOCK; } }  return size; }  private static long entrySize(long fileSize) { long size = 0; size += TarConstants.HEADER_BLOCK; size += fileSize;  long extra = size % TarConstants.DATA_BLOCK;  if (extra > 0) { size += (TarConstants.DATA_BLOCK - extra); }  return size; }  public static String trim(String s, char c) { StringBuffer tmp = new StringBuffer(s); for (int i = 0; i < tmp.length(); i++) { if (tmp.charAt(i) != c) { break; } else { tmp.deleteCharAt(i); } }  for (int i = tmp.length() - 1; i >= 0; i--) { if (tmp.charAt(i) != c) { break; } else { tmp.deleteCharAt(i); } }  return tmp.toString(); } }  class TarInputStream extends FilterInputStream {  private static final int SKIP_BUFFER_SIZE = 2048; private TarEntry currentEntry; private long currentFileSize; private long bytesRead; private boolean defaultSkip = false;  public TarInputStream(InputStream in) { super(in); currentFileSize = 0; bytesRead = 0; }  @Override public boolean markSupported() { return false; }  @Override public synchronized void mark(int readlimit) { }  @Override public synchronized void reset() throws IOException { throw new IOException("mark/reset not supported"); }  @Override public int read() throws IOException { byte[] buf = new byte[1];  int res = this.read(buf, 0, 1);  if (res != -1) { return 0xFF & buf[0]; }  return res; }  @Override public int read(byte[] b, int off, int len) throws IOException { if (currentEntry != null) { if (currentFileSize == currentEntry.getSize()) { return -1; } else if ((currentEntry.getSize() - currentFileSize) < len) { len = (int) (currentEntry.getSize() - currentFileSize); } }  int br = super.read(b, off, len);  if (br != -1) { if (currentEntry != null) { currentFileSize += br; }  bytesRead += br; }  return br; }  public TarEntry getNextEntry() throws IOException { closeCurrentEntry();  byte[] header = new byte[TarConstants.HEADER_BLOCK]; 
 /* class Tar  */ byte[] theader = new byte[TarConstants.HEADER_BLOCK]; int tr = 0;  while (tr < TarConstants.HEADER_BLOCK) { int res = read(theader, 0, TarConstants.HEADER_BLOCK - tr);  if (res < 0) { break; }  System.arraycopy(theader, 0, header, tr, res); tr += res; }  boolean eof = true; for (byte b : header) { if (b != 0) { eof = false; break; } }  if (!eof) { currentEntry = new TarEntry(header); }  return currentEntry; }  public long getCurrentOffset() { return bytesRead; }  protected void closeCurrentEntry() throws IOException { if (currentEntry != null) { if (currentEntry.getSize() > currentFileSize) { long bs = 0; while (bs < currentEntry.getSize() - currentFileSize) { long res = skip(currentEntry.getSize() - currentFileSize - bs);  if (res == 0 && currentEntry.getSize() - currentFileSize > 0) { throw new IOException("Possible tar file corruption"); }  bs += res; } }  currentEntry = null; currentFileSize = 0L; skipPad(); } }  protected void skipPad() throws IOException { if (bytesRead > 0) { int extra = (int) (bytesRead % TarConstants.DATA_BLOCK);  if (extra > 0) { long bs = 0; while (bs < TarConstants.DATA_BLOCK - extra) { long res = skip(TarConstants.DATA_BLOCK - extra - bs); bs += res; } } } }  @Override public long skip(long n) throws IOException { if (defaultSkip) { long bs = super.skip(n); bytesRead += bs;  return bs; }  if (n <= 0) { return 0; }  long left = n; byte[] sBuff = new byte[SKIP_BUFFER_SIZE];  while (left > 0) { int res = read(sBuff, 0, (int) (left < SKIP_BUFFER_SIZE ? left : SKIP_BUFFER_SIZE)); if (res < 0) { break; } left -= res; }  return n - left; }  public boolean isDefaultSkip() { return defaultSkip; }  public void setDefaultSkip(boolean defaultSkip) { this.defaultSkip = defaultSkip; } }
-
 
 
 
@@ -8618,6 +8777,11 @@ class XML extends Util{
 /* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
 /* class by manual */                + "    y httpServer localhost pagina_toke_zzz111 \"Lista de arquivos\" 8888 \"/dir\" \"\" \"\"\n"
 /* class by manual */                + "    parametros: host(pode ser \"\"), titulo_url, titulo, port, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
+/* class by manual */                + "[y playlist]\n"
+/* class by manual */                + "    y playlist\n"
+/* class by manual */                + "    y playlist 192.168.0.100\n"
+/* class by manual */                + "    y playlist 192.168.0.100 8888\n"
+/* class by manual */                + "    obs: na pasta de musicas, criar o arquivo start_.bat contendo y playlist 192.168.0.100, no browser abrir http://192.168.0.100:8888/\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "[y pwd]\n"
@@ -8758,3 +8922,5 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
