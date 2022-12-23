@@ -93,7 +93,10 @@ then
 else
   echo "disable -> verify new ubuntu and LTS"
 fi
-
+export CLOUDSDK_CONFIG="$HOME/.cf"
+export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missio@mb.com.br/adc.json"
+alias gopen='gcloud cloud-shell ssh'
+alias openzeus='gcloud --project="mb-prod-277215" beta compute ssh "zeus-bi-replica" --zone "us-east4-a"'
 EOF
 chmod 777 /opt/env_
 
@@ -103,6 +106,22 @@ EOF
 chmod 777 /opt/y/compila
 
 cat <<'EOF'> /opt/y/compilaCurl
+if [ ! -e ojdbc6.jar ]
+then
+    curl https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar > ojdbc6.jar
+fi
+if [ ! -e sqljdbc4-3.0.jar ]
+then
+    curl https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar > sqljdbc4-3.0.jar
+fi
+if [ ! -e mysql-connector-java-8.0.26.jar ]
+then
+    curl http://121.42.227.72:8081/nexus/content/groups/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar > mysql-connector-java-8.0.26.jar
+fi
+if [ ! -e jsch-0.1.55.jar ]
+then
+    curl https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar > jsch-0.1.55.jar
+fi
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
 EOF
@@ -128,24 +147,7 @@ EOF
 chmod 777 /opt/.u
 
 cd /opt/y
-if [ ! -e ojdbc6.jar ]
-then
-    curl https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar > ojdbc6.jar
-fi
-if [ ! -e sqljdbc4-3.0.jar ]
-then
-    curl https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar > sqljdbc4-3.0.jar
-fi
-if [ ! -e mysql-connector-java-8.0.26.jar ]
-then
-    curl http://121.42.227.72:8081/nexus/content/groups/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar > mysql-connector-java-8.0.26.jar
-fi
-if [ ! -e jsch-0.1.55.jar ]
-then
-    curl https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar > jsch-0.1.55.jar
-fi
-curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-javac -encoding ISO-8859-1 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar Y.java
+/opt/y/compila
 chmod 777 *
 
 if [ -e ~/.bashrc ]
@@ -170,16 +172,18 @@ cat <<'EOF'> /dev/null
     apt-get install openssh-server
    
     # vi /etc/ssh/sshd_config
+    # cuidado para nao ficar preso do lado de fora
 	UsePAM yes
     Match User userA
         PasswordAuthentication yes
         KbdInteractiveAuthentication yes
 
-    # add user
-    sudo adduser username
-   
-    # add group sudoers
-    sudo usermod -aG sudo username
+    # novo user - fazer ssh com novo user base
+    # sudo adduser base
+    # sudo usermod -aG sudo base
+
+    # verificando possiveis erros:
+    # sshd -t
    
     # ssh auto save
     # gerando chave
