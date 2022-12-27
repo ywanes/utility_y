@@ -6162,31 +6162,36 @@ cat buffer.log
         for ( String command : new String[]{
             "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
             "system_profiler SPSoftwareDataType",
-            "oslevel",
-            "lsb_release -a",
-            "cat /etc/os-release",
+            "oslevel;cat /proc/version",
+            "lsb_release -a;cat /proc/version",
+            "cat /etc/os-release;cat /proc/version",
         } ){
             try {
-                Process proc;
-                proc = Runtime.getRuntime().exec(command);
-                int len=0;
-                byte[] b=new byte[1024];
-                boolean ok=false;
+                String [] command_p = command.split(";");
                 boolean error=false;
-                while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                    System.out.write(b, 0, len);
-                    ok=true;
-                }
-                while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                    error=true;
-                }           
-                if ( !ok ){
-                    System.err.println("Erro fatal 99!");
-                    System.exit(1);
+                for ( int i=0;i<command_p.length;i++ ){
+                    Process proc;
+                    proc = Runtime.getRuntime().exec(command_p[i]);
+                    int len=0;
+                    byte[] b=new byte[1024];
+                    boolean ok=false;                    
+                    while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                        System.out.write(b, 0, len);
+                        ok=true;
+                    }
+                    while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                        error=true;
+                    }           
+                    if ( !ok ){
+                        System.err.println("Erro fatal 99!");
+                        System.exit(1);
+                    }
+                    if ( error ) break;
                 }
                 if ( error ) continue;
                 show=true;
                     break;
+                        
             } catch (Exception ex) {
                 continue;
             }        
