@@ -18,7 +18,7 @@
 ^
 
 )
-if "%1" equ "echo" (
+if "%1" equ "echo2" (
 echo %*
 ) else (
 java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
@@ -2740,24 +2740,6 @@ cat buffer.log
             System.err.println(e.toString());
         }        
         return false; 
-    }
-
-    public String lendo_arquivo(String caminho) {
-        String result="";
-        String strLine;
-        try{
-            readLine(caminho);
-            while ((strLine = readLine()) != null)   {
-                if ( result.equals("") )
-                    result+=strLine;
-                else
-                    result+="\n"+strLine;
-            }
-            closeLine();
-        }catch (Exception e){
-            System.out.println(e.toString());
-        }
-        return result;
     }
 
     public void try_load_libraries(){
@@ -6494,6 +6476,24 @@ cat buffer.log
 }
 
 class Util{
+    public static String lendo_arquivo(String caminho) {
+        String result="";
+        String strLine;
+        try{
+            readLine(caminho);
+            while ((strLine = readLine()) != null)   {
+                if ( result.equals("") )
+                    result+=strLine;
+                else
+                    result+="\n"+strLine;
+            }
+            closeLine();
+        }catch (Exception e){
+            System.out.println(e.toString());
+        }
+        return result;
+    }
+    
     static void testOn() {
         try{
             inputStream_pipe=new FileInputStream("c:/tmp/file.json");
@@ -7958,8 +7958,15 @@ class XML extends Util{
 /* class texto_longo */         String faixas="";
 /* class texto_longo */         File [] f=new File(".").listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
-/* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") ){
-/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white;width: 800px;\" onclick=\"click_faixa(this)\">\n" + f[i].getName() + "</td></tr>\n";
+/* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){
+/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white;width: 800px;\" onclick=\"click_faixa(this,'humanClick')\">\n" + f[i].getName() + "</td></tr>\n";
+/* class texto_longo */                 File f2=new File(f[i].getName()+".cfg");
+/* class texto_longo */                 if ( f2.exists() && f2.isFile() ){
+/* class texto_longo */                     String [] partes=Util.lendo_arquivo(f[i].getName()+".cfg").split("\n");
+/* class texto_longo */                     for ( int j=0;j<partes.length;j++ ){
+/* class texto_longo */                         faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white;width: 800px;\" onclick=\"click_faixa(this,'humanClick')\">\n" + partes[j] + "</td></tr>\n";
+/* class texto_longo */                     }
+/* class texto_longo */                 }
 /* class texto_longo */             }
 /* class texto_longo */         };
 /* class texto_longo */         return "<html>\n" +
@@ -8022,15 +8029,60 @@ class XML extends Util{
 /* class texto_longo */         "  },false);  \n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function limpa_click_faixa(){\n" +
-/* class texto_longo */         "  var t=document.getElementById(\"tablebase\");\n" +
-/* class texto_longo */         "  for ( var i=0;i<t.children[0].children.length;i++ )\n" +
-/* class texto_longo */         "    t.children[0].children[i].children[0].style.background=''\n" +
+/* class texto_longo */         "  var t=document.getElementById(\"tablebase\").children[0];\n" +
+/* class texto_longo */         "  for ( var i=0;i<t.children.length;i++ )\n" +
+/* class texto_longo */         "    t.children[i].children[0].style.background=''\n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function click_faixa(e){\n" +
+/* class texto_longo */         "function getNameHierarchy(e){\n" +
+/* class texto_longo */         "  if ( e.innerText == null )\n" +
+/* class texto_longo */         "    return 'null';\n" +
+/* class texto_longo */         "  if ( e.innerText.indexOf('+') != 0 )\n" +
+/* class texto_longo */         "    return e.innerText.trim(); \n" +
+/* class texto_longo */         "  return getNameHierarchy(e.parentElement.previousElementSibling.children[0]);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function getFaixaChildrenToSeconds(p){\n" +
+/* class texto_longo */         "  p=p.split(' ')[1].split(':');\n" +
+/* class texto_longo */         "  return parseInt(p[2])+parseInt(p[1])*60+parseInt(p[0])*60*60;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function getStart(e){\n" +
+/* class texto_longo */         "  if ( e.innerText.trim().split(' ')[1].length != 8 ){\n" +
+/* class texto_longo */         "    console.log('Alert, formato invalido ' + e.innerText.trim().split(' ')[1] + '. exemplo 00:37:46');\n" +
+/* class texto_longo */         "	return 0;\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  return getFaixaChildrenToSeconds(e.innerText.trim());\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function click_faixa(e,humanClick){ // click td\n" +
+/* class texto_longo */         "  // this is root and exists children +\n" +
+/* class texto_longo */         "  if ( e.innerText.trim().indexOf('+') != 0 && e.parentElement.nextElementSibling != null && e.parentElement.nextElementSibling.children[0].innerText.trim().indexOf('+') == 0 ){\n" +
+/* class texto_longo */         "    click_faixa(e.parentElement.nextElementSibling.children[0],humanClick);\n" +
+/* class texto_longo */         "	return;\n" +
+/* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  limpa_click_faixa();\n" +
 /* class texto_longo */         "  e.style.background='#999';  \n" +
-/* class texto_longo */         "  document.getElementById(\"p\").src=e.innerText;\n" +
+/* class texto_longo */         "  document.getElementById('p').src=getNameHierarchy(e);\n" +
+/* class texto_longo */         "  document.getElementById('p').currentTime=getStart(e);  \n" +
 /* class texto_longo */         "  play();  \n" +
+/* class texto_longo */         "  if ( humanClick == null )  \n" +
+/* class texto_longo */         "    e.scrollIntoView(false);  \n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function trySwapChildren(){\n" +
+/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  for ( var i=0;i<t.children.length;i++ ){\n" +
+/* class texto_longo */         "    if ( t.children[i].children[0].style.background != '' ){\n" +
+/* class texto_longo */         "	  e=t.children[i].children[0];\n" +
+/* class texto_longo */         "	  while ( e.innerText.trim().indexOf('+') == 0 && e.parentElement.previousElementSibling != null && e.parentElement.previousElementSibling.children[0].innerText.trim().indexOf('+') == 0 && document.getElementById('p').currentTime < getFaixaChildrenToSeconds(e.innerText.trim()) ){\n" +
+/* class texto_longo */         "	    e.style.background='';  \n" +
+/* class texto_longo */         "	    e.parentElement.previousElementSibling.children[0].style.background='#999';  \n" +
+/* class texto_longo */         "		e=e.parentElement.previousElementSibling.children[0];\n" +
+/* class texto_longo */         "	  }\n" +
+/* class texto_longo */         "	  while ( e.innerText.trim().indexOf('+') == 0 && e.parentElement.nextElementSibling != null && e.parentElement.nextElementSibling.children[0].innerText.trim().indexOf('+') == 0 && document.getElementById('p').currentTime >= getFaixaChildrenToSeconds(e.parentElement.nextElementSibling.children[0].innerText.trim()) ){\n" +
+/* class texto_longo */         "	    e.style.background='';  \n" +
+/* class texto_longo */         "	    e.parentElement.nextElementSibling.children[0].style.background='#999';  \n" +
+/* class texto_longo */         "		e=e.parentElement.nextElementSibling.children[0];\n" +
+/* class texto_longo */         "	  }\n" +
+/* class texto_longo */         "	  break;\n" +
+/* class texto_longo */         "	}\n" +
+/* class texto_longo */         "  }\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function play_faixa(n){\n" +
 /* class texto_longo */         "  var t=document.getElementById(\"tablebase\");\n" +
@@ -8050,6 +8102,7 @@ class XML extends Util{
 /* class texto_longo */         "	  return i;\n" +
 /* class texto_longo */         "  return -1;\n" +
 /* class texto_longo */         "}\n" +
+/* class texto_longo */         "setInterval(trySwapChildren, 1000);\n" +
 /* class texto_longo */         "</script>\n" +
 /* class texto_longo */         "</body></head></html>\n";
 /* class texto_longo */     }
@@ -8340,15 +8393,6 @@ class XML extends Util{
 /* class HttpServer */         if (caminho.endsWith(".png") || caminho.endsWith(".ico") || caminho.endsWith(".jpg")) return "image/png";
 /* class HttpServer */         if (caminho.endsWith(".mkv")) return "video/webm";
 /* class HttpServer */         return "application/octet-stream";
-/* class HttpServer */     }
-/* class HttpServer */     public byte[] lendo_arquivo(String caminho) throws Exception {
-/* class HttpServer */         FileInputStream fis = null;
-/* class HttpServer */         File file = new File(caminho);
-/* class HttpServer */         byte[] bFile = new byte[(int) file.length()];
-/* class HttpServer */         fis = new FileInputStream(file);
-/* class HttpServer */         fis.read(bFile);
-/* class HttpServer */         fis.close();
-/* class HttpServer */         return bFile;
 /* class HttpServer */     }
 /* class HttpServer */     public ArrayList < String > lendo_arquivo_display(String caminho) throws Exception {
 /* class HttpServer */         ArrayList < String > result = new ArrayList < String > ();
