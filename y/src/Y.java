@@ -7982,63 +7982,109 @@ class XML extends Util{
 /* class texto_longo */         "</tbody></table></div>\n" +
 /* class texto_longo */         "<script type=\"text/javascript\">\n" +
 /* class texto_longo */         "function remove_playlist(){\n" +
-/* class texto_longo */         "  document.getElementById(\"master\").innerHTML='';\n" +
+/* class texto_longo */         "  document.getElementById('master').innerHTML='';\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function create_playlist(){\n" +
-/* class texto_longo */         "  document.getElementById(\"master\").innerHTML=`\n" +
-/* class texto_longo */         "    <audio id=\"p\" controls=\"controls\" preload=\"metadata\">\n" +
-/* class texto_longo */         "	<source src=\"\" type=\"audio/mp3\" />\n" +
+/* class texto_longo */         "  document.getElementById('master').innerHTML=`\n" +
+/* class texto_longo */         "    <audio id='p' controls='controls' preload='metadata'>\n" +
+/* class texto_longo */         "	<source src='' type='audio/mp3' />\n" +
 /* class texto_longo */         "	seu navegador não suporta HTML5\n" +
 /* class texto_longo */         "	</audio>\n" +
 /* class texto_longo */         "  `;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function pause(){\n" +
-/* class texto_longo */         "  document.getElementById(\"p\").pause();\n" +
+/* class texto_longo */         "  document.getElementById('p').pause();\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function play(){\n" +
-/* class texto_longo */         "  var playPromise=document.getElementById(\"p\").play();\n" +
+/* class texto_longo */         "  var playPromise=document.getElementById('p').play();\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function vai_pro_fim_da_faixa(){\n" +
-/* class texto_longo */         "  var d=document.getElementById(\"p\").duration-1;\n" +
-/* class texto_longo */         "  document.getElementById(\"p\").currentTime=d;\n" +
+/* class texto_longo */         "  var d=document.getElementById('p').duration-1;\n" +
+/* class texto_longo */         "  document.getElementById('p').currentTime=d;\n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function troca_de_faixa(){\n" +
-/* class texto_longo */         "  //document.getElementById(\"p\").currentTime=0;\n" +
-/* class texto_longo */         "  //document.getElementById(\"p\").play();\n" +
-/* class texto_longo */         "  play_faixa(get_index_faixa_playing()+1);\n" +
+/* class texto_longo */         "function first(){\n" +
+/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  e=t.children[0].children[0];\n" +
+/* class texto_longo */         "  var limit=500;\n" +
+/* class texto_longo */         "  e=dir(e) || first(e);\n" +
+/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
+/* class texto_longo */         "    e=dir(e) || first();\n" +
+/* class texto_longo */         "  return e;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function troca_de_faixa(){  \n" +
+/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  var e=get_playing() || first();\n" +
+/* class texto_longo */         "  var limit=500;\n" +
+/* class texto_longo */         "  e=dir(e) || first(e);\n" +
+/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
+/* class texto_longo */         "    e=dir(e) || first();\n" +
+/* class texto_longo */         "  if ( limit <= 0 ){\n" +
+/* class texto_longo */         "	console.log('Erro Fatal Loop.');\n" +
+/* class texto_longo */         "	return;\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  click_faixa(e);\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function preparacao(){\n" +
-/* class texto_longo */         "  document.body.style.backgroundColor = \"#000\";\n" +
+/* class texto_longo */         "  document.body.style.backgroundColor = '#000';\n" +
 /* class texto_longo */         "  create_playlist();\n" +
 /* class texto_longo */         "  add_listener();\n" +
-/* class texto_longo */         "  play_faixa(0);  \n" +
+/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  click_faixa(t.children[0].children[0]);\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function pause_play(){\n" +
-/* class texto_longo */         "  if ( document.getElementById(\"p\").paused )\n" +
+/* class texto_longo */         "  if ( document.getElementById('p').paused )\n" +
 /* class texto_longo */         "    play();\n" +
 /* class texto_longo */         "  else\n" +
 /* class texto_longo */         "    pause();\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function add_listener(){\n" +
-/* class texto_longo */         "  document.getElementById(\"p\").onended = function(){\n" +
+/* class texto_longo */         "  document.getElementById('p').onended = function(){\n" +
 /* class texto_longo */         "    troca_de_faixa();\n" +
 /* class texto_longo */         "  };\n" +
 /* class texto_longo */         "  document.addEventListener('click', function(e) {  \n" +
-/* class texto_longo */         "    if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' )\n" +
-/* class texto_longo */         "	    pause_play();  \n" +
+/* class texto_longo */         "    if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' ){\n" +
+/* class texto_longo */         "	  pause_play();  	  \n" +
+/* class texto_longo */         "	}else{\n" +
+/* class texto_longo */         "	  if ( transfer_e != null ){\n" +
+/* class texto_longo */         "	    click_faixa(transfer_e,true,e.x);\n" +
+/* class texto_longo */         "		transfer_e=null;\n" +
+/* class texto_longo */         "	  }\n" +
+/* class texto_longo */         "	}\n" +
 /* class texto_longo */         "  },false);  \n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function limpa_click_faixa(){\n" +
-/* class texto_longo */         "  var t=document.getElementById(\"tablebase\").children[0];\n" +
+/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
 /* class texto_longo */         "  for ( var i=0;i<t.children.length;i++ )\n" +
-/* class texto_longo */         "    t.children[i].children[0].style.background=''\n" +
+/* class texto_longo */         "    t.children[i].children[0].style.background='';\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function isChildrenMusic(e){\n" +
+/* class texto_longo */         "  return e.innerText.trim().indexOf('+') == 0 || e.innerText.indexOf('-') == 0;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function isMasterMusic(e){\n" +
+/* class texto_longo */         "  return !isChildrenMusic(e);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function isChildrenMusicActive(e){\n" +
+/* class texto_longo */         "  return e.innerText.trim().indexOf('+') == 0;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function isChildrenMusicNotActive(e){\n" +
+/* class texto_longo */         "  return e.innerText.trim().indexOf('-') == 0;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function esq(e){\n" +
+/* class texto_longo */         "  if ( e.parentElement.previousElementSibling != null )\n" +
+/* class texto_longo */         "	return e.parentElement.previousElementSibling.children[0];\n" +
+/* class texto_longo */         "  return null;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function dir(e){\n" +
+/* class texto_longo */         "  if ( e.parentElement.nextElementSibling != null )\n" +
+/* class texto_longo */         "	return e.parentElement.nextElementSibling.children[0];\n" +
+/* class texto_longo */         "  return null;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function getNameHierarchy(e){\n" +
 /* class texto_longo */         "  if ( e.innerText == null )\n" +
 /* class texto_longo */         "    return 'null';\n" +
-/* class texto_longo */         "  if ( e.innerText.indexOf('+') != 0 )\n" +
-/* class texto_longo */         "    return e.innerText.trim(); \n" +
-/* class texto_longo */         "  return getNameHierarchy(e.parentElement.previousElementSibling.children[0]);\n" +
+/* class texto_longo */         "  if ( isChildrenMusic(e) )\n" +
+/* class texto_longo */         "    return getNameHierarchy(esq(e));\n" +
+/* class texto_longo */         "  return e.innerText.trim(); \n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function getFaixaChildrenToSeconds(p){\n" +
 /* class texto_longo */         "  p=p.split(' ')[1].split(':');\n" +
@@ -8051,10 +8097,85 @@ class XML extends Util{
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  return getFaixaChildrenToSeconds(e.innerText.trim());\n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function click_faixa(e,humanClick){ // click td\n" +
+/* class texto_longo */         "function QtyChildrenByChildren(e){\n" +
+/* class texto_longo */         "  var qty=1;\n" +
+/* class texto_longo */         "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
+/* class texto_longo */         "    e=esq(e);\n" +
+/* class texto_longo */         "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
+/* class texto_longo */         "	qty++;\n" +
+/* class texto_longo */         "    e=dir(e);\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  return qty;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function QtyChildrenActiveByChildren(e){\n" +
+/* class texto_longo */         "  var qty=0;\n" +
+/* class texto_longo */         "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
+/* class texto_longo */         "    e=esq(e);\n" +
+/* class texto_longo */         "  if ( isChildrenMusicActive(e) )\n" +
+/* class texto_longo */         "	qty++;\n" +
+/* class texto_longo */         "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
+/* class texto_longo */         "    e=dir(e);\n" +
+/* class texto_longo */         "    if ( isChildrenMusicActive(e) )\n" +
+/* class texto_longo */         "	  qty++;\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  return qty;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function setForActive(e){\n" +
+/* class texto_longo */         "  e.innerText='+'+e.innerText.trim().substr(1);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function setForNotActive(e){\n" +
+/* class texto_longo */         "  e.innerText='-'+e.innerText.trim().substr(1);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function setAllForActive(e){\n" +
+/* class texto_longo */         "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
+/* class texto_longo */         "    e=esq(e);\n" +
+/* class texto_longo */         "  setForActive(e);\n" +
+/* class texto_longo */         "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
+/* class texto_longo */         "    e=dir(e);\n" +
+/* class texto_longo */         "	setForActive(e);\n" +
+/* class texto_longo */         "  }	\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function setAllForNotActive(e){\n" +
+/* class texto_longo */         "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
+/* class texto_longo */         "    e=esq(e);\n" +
+/* class texto_longo */         "  setForNotActive(e);\n" +
+/* class texto_longo */         "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
+/* class texto_longo */         "    e=dir(e);\n" +
+/* class texto_longo */         "	setForNotActive(e);\n" +
+/* class texto_longo */         "  }		\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "var transfer_e=null;\n" +
+/* class texto_longo */         "function click_faixa(e,humanClick,humanClick_x){ // click td\n" +
+/* class texto_longo */         "  if ( humanClick && humanClick_x == null ){\n" +
+/* class texto_longo */         "    transfer_e=e;\n" +
+/* class texto_longo */         "    return;\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  if ( humanClick != null && isChildrenMusic(e) && humanClick_x <= 35 ){\n" +
+/* class texto_longo */         "	var qty=QtyChildrenByChildren(e);\n" +
+/* class texto_longo */         "	var qtyActive=QtyChildrenActiveByChildren(e);\n" +
+/* class texto_longo */         "	var qtyNotActive=qty-qtyActive;\n" +
+/* class texto_longo */         "	var isActive=isChildrenMusicActive(e);\n" +
+/* class texto_longo */         "	if ( isActive ){\n" +
+/* class texto_longo */         "	  if ( qty == 1 )\n" +
+/* class texto_longo */         "	    return;\n" +
+/* class texto_longo */         "	  if ( qtyActive == 1 ){\n" +
+/* class texto_longo */         "		setAllForActive(e);\n" +
+/* class texto_longo */         "		return;\n" +
+/* class texto_longo */         "	  }\n" +
+/* class texto_longo */         "	  if ( qtyActive == qty ){\n" +
+/* class texto_longo */         "		setAllForNotActive(e);\n" +
+/* class texto_longo */         "		setForActive(e);\n" +
+/* class texto_longo */         "		return;\n" +
+/* class texto_longo */         "	  }\n" +
+/* class texto_longo */         "	  setForNotActive(e);\n" +
+/* class texto_longo */         "	}else{\n" +
+/* class texto_longo */         "	  setForActive(e);\n" +
+/* class texto_longo */         "	}\n" +
+/* class texto_longo */         "	return;\n" +
+/* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  // this is root and exists children +\n" +
-/* class texto_longo */         "  if ( e.innerText.trim().indexOf('+') != 0 && e.parentElement.nextElementSibling != null && e.parentElement.nextElementSibling.children[0].innerText.trim().indexOf('+') == 0 ){\n" +
-/* class texto_longo */         "    click_faixa(e.parentElement.nextElementSibling.children[0],humanClick);\n" +
+/* class texto_longo */         "  if ( isMasterMusic(e) && dir(e) != null && isChildrenMusic(dir(e)) ){    \n" +
+/* class texto_longo */         "    click_faixa(dir(e));\n" +
 /* class texto_longo */         "	return;\n" +
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  limpa_click_faixa();\n" +
@@ -8065,44 +8186,32 @@ class XML extends Util{
 /* class texto_longo */         "  if ( humanClick == null )  \n" +
 /* class texto_longo */         "    e.scrollIntoView(false);  \n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function trySwapChildren(){\n" +
+/* class texto_longo */         "function tryUpdateStateChildren(){\n" +
+/* class texto_longo */         "  if ( document.getElementById('p') == null || document.getElementById('p').currentTime == null )\n" + 
+/* class texto_longo */         "    return;\n" +
+/* class texto_longo */         "  e=get_playing() || first();\n" +
+/* class texto_longo */         "  while ( isChildrenMusic(e) && esq(e) != null && isChildrenMusic(esq(e)) && document.getElementById('p').currentTime < getFaixaChildrenToSeconds(e.innerText.trim()) ){\n" +
+/* class texto_longo */         "	e.style.background='';  \n" +
+/* class texto_longo */         "	esq(e).style.background='#999';  \n" +
+/* class texto_longo */         "	e=esq(e);\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  while ( isChildrenMusic(e) && dir(e) != null && isChildrenMusic(dir(e)) && document.getElementById('p').currentTime >= getFaixaChildrenToSeconds(dir(e).innerText.trim()) ){\n" +
+/* class texto_longo */         "	e.style.background='';  \n" +
+/* class texto_longo */         "	dir(e).style.background='#999';  \n" +
+/* class texto_longo */         "	e=dir(e);\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  if ( isChildrenMusicNotActive(e) ){\n" +
+/* class texto_longo */         "	troca_de_faixa();\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function get_playing(){\n" +
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  for ( var i=0;i<t.children.length;i++ ){\n" +
-/* class texto_longo */         "    if ( t.children[i].children[0].style.background != '' ){\n" +
-/* class texto_longo */         "	  e=t.children[i].children[0];\n" +
-/* class texto_longo */         "	  while ( e.innerText.trim().indexOf('+') == 0 && e.parentElement.previousElementSibling != null && e.parentElement.previousElementSibling.children[0].innerText.trim().indexOf('+') == 0 && document.getElementById('p').currentTime < getFaixaChildrenToSeconds(e.innerText.trim()) ){\n" +
-/* class texto_longo */         "	    e.style.background='';  \n" +
-/* class texto_longo */         "	    e.parentElement.previousElementSibling.children[0].style.background='#999';  \n" +
-/* class texto_longo */         "		e=e.parentElement.previousElementSibling.children[0];\n" +
-/* class texto_longo */         "	  }\n" +
-/* class texto_longo */         "	  while ( e.innerText.trim().indexOf('+') == 0 && e.parentElement.nextElementSibling != null && e.parentElement.nextElementSibling.children[0].innerText.trim().indexOf('+') == 0 && document.getElementById('p').currentTime >= getFaixaChildrenToSeconds(e.parentElement.nextElementSibling.children[0].innerText.trim()) ){\n" +
-/* class texto_longo */         "	    e.style.background='';  \n" +
-/* class texto_longo */         "	    e.parentElement.nextElementSibling.children[0].style.background='#999';  \n" +
-/* class texto_longo */         "		e=e.parentElement.nextElementSibling.children[0];\n" +
-/* class texto_longo */         "	  }\n" +
-/* class texto_longo */         "	  break;\n" +
-/* class texto_longo */         "	}\n" +
-/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  for ( var i=0;i<t.children.length;i++ )\n" +
+/* class texto_longo */         "    if ( t.children[i].children[0].style.background != '')\n" +
+/* class texto_longo */         "	  return t.children[i].children[0];\n" +
+/* class texto_longo */         "  return null;\n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function play_faixa(n){\n" +
-/* class texto_longo */         "  var t=document.getElementById(\"tablebase\");\n" +
-/* class texto_longo */         "  if ( n < 0 || n >= t.children[0].children.length )\n" +
-/* class texto_longo */         "    n=0;\n" +
-/* class texto_longo */         "  for ( var i=0;i<t.children[0].children.length;i++ ){\n" +
-/* class texto_longo */         "    if ( i == n ){\n" +
-/* class texto_longo */         "	  click_faixa(t.children[0].children[i].children[0]);    \n" +
-/* class texto_longo */         "	  break;\n" +
-/* class texto_longo */         "	}\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function get_index_faixa_playing(){\n" +
-/* class texto_longo */         "  var t=document.getElementById(\"tablebase\");\n" +
-/* class texto_longo */         "  for ( var i=0;i<t.children[0].children.length;i++ )\n" +
-/* class texto_longo */         "    if ( t.children[0].children[i].children[0].style.background != '')\n" +
-/* class texto_longo */         "	  return i;\n" +
-/* class texto_longo */         "  return -1;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "setInterval(trySwapChildren, 1000);\n" +
+/* class texto_longo */         "setInterval(tryUpdateStateChildren, 100);\n" +
 /* class texto_longo */         "</script>\n" +
 /* class texto_longo */         "</body></head></html>\n";
 /* class texto_longo */     }
