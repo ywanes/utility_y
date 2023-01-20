@@ -8327,6 +8327,8 @@ class XML extends Util{
 /* class HttpServer */                 if (lineNumber == 0 && line.split(" ").length == 3) {
 /* class HttpServer */                     this.method = line.split(" ")[0];
 /* class HttpServer */                     this.uri = line.split(" ")[1];
+/* class HttpServer */                     if ( this.uri.indexOf("?") > -1 )
+/* class HttpServer */                         this.uri = this.uri.split("\\?")[0];
 /* class HttpServer */                     this.protocol = line.split(" ")[2];
 /* class HttpServer */                 }
 /* class HttpServer */                 if (line.startsWith("Range: bytes=") && line.endsWith("-") )
