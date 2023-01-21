@@ -8029,7 +8029,23 @@ class XML extends Util{
 /* class texto_longo */         "  create_playlist();\n" +
 /* class texto_longo */         "  add_listener();\n" +
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  trySetParm(window.location.href);\n" +
 /* class texto_longo */         "  click_faixa(t.children[0].children[0]);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function trySetParm(url){\n" +
+/* class texto_longo */         "  if ( url.indexOf('?')  > -1 && url.split('?')[1].trim().length > 0 ){\n" +
+/* class texto_longo */         "    url=decodeURI(url.split('?')[1].trim())\n" +
+/* class texto_longo */         "    var t=document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "    e=t.children[0].children[0];\n" +
+/* class texto_longo */         "    var limit=500;\n" +
+/* class texto_longo */         "    while( limit-- > 0 && e != null){\n" +
+/* class texto_longo */         "	  if ( isChildrenMusic(e) && e.innerText.trim().substring('+ 00:00:00 '.length) == url ){\n" +
+/* class texto_longo */         "	    symbol_click(e);\n" +
+/* class texto_longo */         "	    break;\n" +
+/* class texto_longo */         "	  }\n" +
+/* class texto_longo */         "	  e=dir(e);\n" +
+/* class texto_longo */         "	}\n" +
+/* class texto_longo */         "  }\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function pause_play(){\n" +
 /* class texto_longo */         "  if ( document.getElementById('p').paused )\n" +
@@ -8151,26 +8167,7 @@ class XML extends Util{
 /* class texto_longo */         "    return;\n" +
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  if ( humanClick != null && isChildrenMusic(e) && humanClick_x <= 35 ){\n" +
-/* class texto_longo */         "	var qty=QtyChildrenByChildren(e);\n" +
-/* class texto_longo */         "	var qtyActive=QtyChildrenActiveByChildren(e);\n" +
-/* class texto_longo */         "	var qtyNotActive=qty-qtyActive;\n" +
-/* class texto_longo */         "	var isActive=isChildrenMusicActive(e);\n" +
-/* class texto_longo */         "	if ( isActive ){\n" +
-/* class texto_longo */         "	  if ( qty == 1 )\n" +
-/* class texto_longo */         "	    return;\n" +
-/* class texto_longo */         "	  if ( qtyActive == 1 ){\n" +
-/* class texto_longo */         "		setAllForActive(e);\n" +
-/* class texto_longo */         "		return;\n" +
-/* class texto_longo */         "	  }\n" +
-/* class texto_longo */         "	  if ( qtyActive == qty ){\n" +
-/* class texto_longo */         "		setAllForNotActive(e);\n" +
-/* class texto_longo */         "		setForActive(e);\n" +
-/* class texto_longo */         "		return;\n" +
-/* class texto_longo */         "	  }\n" +
-/* class texto_longo */         "	  setForNotActive(e);\n" +
-/* class texto_longo */         "	}else{\n" +
-/* class texto_longo */         "	  setForActive(e);\n" +
-/* class texto_longo */         "	}\n" +
+/* class texto_longo */         "    symbol_click(e);\n" +
 /* class texto_longo */         "	return;\n" +
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  // this is root and exists children +\n" +
@@ -8186,8 +8183,30 @@ class XML extends Util{
 /* class texto_longo */         "  if ( humanClick == null )  \n" +
 /* class texto_longo */         "    e.scrollIntoView(false);  \n" +
 /* class texto_longo */         "}\n" +
+/* class texto_longo */         "function symbol_click(e){\n" +
+/* class texto_longo */         "  var qty=QtyChildrenByChildren(e);\n" +
+/* class texto_longo */         "  var qtyActive=QtyChildrenActiveByChildren(e);\n" +
+/* class texto_longo */         "  var qtyNotActive=qty-qtyActive;\n" +
+/* class texto_longo */         "  var isActive=isChildrenMusicActive(e);\n" +
+/* class texto_longo */         "  if ( isActive ){\n" +
+/* class texto_longo */         "    if ( qty == 1 )\n" +
+/* class texto_longo */         "  	  return;\n" +
+/* class texto_longo */         "    if ( qtyActive == 1 ){\n" +
+/* class texto_longo */         "  	  setAllForActive(e);\n" +
+/* class texto_longo */         "  	  return;\n" +
+/* class texto_longo */         "    }\n" +
+/* class texto_longo */         "    if ( qtyActive == qty ){\n" +
+/* class texto_longo */         "  	  setAllForNotActive(e);\n" +
+/* class texto_longo */         "  	  setForActive(e);\n" +
+/* class texto_longo */         "  	  return;\n" +
+/* class texto_longo */         "    }\n" +
+/* class texto_longo */         "  setForNotActive(e);\n" +
+/* class texto_longo */         "}else{\n" +
+/* class texto_longo */         "  setForActive(e);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "}\n" +
 /* class texto_longo */         "function tryUpdateStateChildren(){\n" +
-/* class texto_longo */         "  if ( document.getElementById('p') == null || document.getElementById('p').currentTime == null )\n" + 
+/* class texto_longo */         "  if ( document.getElementById('p') == null || document.getElementById('p').currentTime == null )\n" +
 /* class texto_longo */         "    return;\n" +
 /* class texto_longo */         "  e=get_playing() || first();\n" +
 /* class texto_longo */         "  while ( isChildrenMusic(e) && esq(e) != null && isChildrenMusic(esq(e)) && document.getElementById('p').currentTime < getFaixaChildrenToSeconds(e.innerText.trim()) ){\n" +
