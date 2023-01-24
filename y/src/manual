@@ -166,6 +166,7 @@ Exemplos...
     echo a b c
     echo "a b c"
     obs: diferente do echo, o printf nao gera \n no final
+    obs2: echo -n AA gera o mesmo efeito que, printf AA
 [y cat]
     y cat arquivo
 [y xor]

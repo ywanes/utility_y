@@ -8769,6 +8769,7 @@ class XML extends Util{
 /* class by manual */                + "    echo a b c\n"
 /* class by manual */                + "    echo \"a b c\"\n"
 /* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
+/* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
 /* class by manual */                + "[y xor]\n"
@@ -9101,5 +9102,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
