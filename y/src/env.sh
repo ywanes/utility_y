@@ -126,6 +126,7 @@ curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.
 javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
 EOF
 chmod 777 /opt/y/compilaCurl
+(cd /opt/y;compilaCurl)
 
 cat <<'EOF'> /opt/.u
 #!/bin/bash

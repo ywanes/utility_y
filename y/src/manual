@@ -399,6 +399,9 @@ Exemplos...
     y date
     y date "+%Y%m%d_%H%M%S"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
+[y uptime]
+    y uptime
+    y uptime -ms
 [y cronometro]
     y cronometro
     y cronometro start

@@ -192,6 +192,7 @@ cat buffer.log
         //args=new String[]{"regua"};                
         //args=new String[]{"find", ".", "-mtime", "1"};                
         //args=new String[]{"date","+%m/%d/%Y","%H:%M:%S:%N","%Z","%s"};
+        //args=new String[]{"uptime"};
                 
         new Y().go(args);
     }
@@ -1275,6 +1276,17 @@ cat buffer.log
             date(args);
             return;
         }
+        if ( args[0].equals("uptime")){
+            if ( args.length == 2 && args[1].equals("-ms") ){
+                uptime(true);
+                return;
+            }
+            if ( args.length == 1 ){
+                uptime(false);
+                return;
+            }
+        }
+       
         if ( args[0].equals("cronometro") ){
             if ( args.length == 2 && (args[1].equals("start") || args[1].equals("flag") || args[1].equals("end")) ){
                 cronometro(args[1]);
@@ -6142,7 +6154,7 @@ cat buffer.log
         boolean show=false;
         
         for ( String command : new String[]{
-            "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
+            "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
             "system_profiler SPSoftwareDataType",
             "oslevel;cat /proc/version",
             "lsb_release -a;cat /proc/version",
@@ -6247,6 +6259,111 @@ cat buffer.log
             w="";
         }
         System.out.println();
+    }
+    
+    private void uptime(boolean ms){
+        boolean show=false;
+        
+        String [] command = new String[]{
+            "cmd /c wmic path Win32_OperatingSystem get LastBootUpTime, LocalDateTime",
+            "cat /proc/uptime"
+        };
+        String [] index_command = new String[]{
+            "windows",
+            "linux"
+        };        
+        for ( int i=0;i<command.length;i++ ){
+            try {          
+                boolean error=false;
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                
+                Process proc = Runtime.getRuntime().exec(command[i]);
+                int len=0;
+                byte[] b=new byte[1024];
+                boolean ok=false;                    
+                while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                    baos.write(b, 0, len);
+                    ok=true;
+                }
+                while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                    error=true;
+                }           
+                if ( !ok ){
+                    System.err.println("Erro fatal 99!");
+                    System.exit(1);
+                }
+
+                if ( error ) continue;
+                
+                String s = baos.toString("UTF-8");
+                long seconds=-1;
+                if ( index_command[i].equals("windows") ){
+                    s = s.split("\r\n")[1];
+                    String s1=s.split(" ")[0];
+                    String s2=s.split(" ")[2];
+                    if ( s1.split("\\.").length > 1 )
+                        s1=s1.split("\\.")[0];
+                    if ( s2.split("\\.").length > 1 )
+                        s2=s2.split("\\.")[0];
+                    seconds=new SimpleDateFormat("yyyyMMddHHmmss").parse(s2).getTime() - new SimpleDateFormat("yyyyMMddHHmmss").parse(s1).getTime();                    
+                    seconds/=1000;
+                }
+                if ( index_command[i].equals("linux") ){
+                    s = s.split("\r\n")[0];
+                    String s1=s.split(" ")[0];
+                    String s2=s.split(" ")[1];
+                    if ( s1.split("\\.").length > 1 )
+                        s1=s1.split("\\.")[0];
+                    if ( s2.split("\\.").length > 1 )
+                        s2=s2.split("\\.")[0];
+                    seconds=Long.parseLong(s1)-Long.parseLong(s2);                    
+                }
+                if ( ms ){
+                    System.out.println(seconds+" seconds");
+                }else{
+                    long second = 1;
+                    long minute = 60*second;
+                    long hour = 60*minute;
+                    long day = 24*hour;
+                    long minutes=0;
+                    long hours=0;
+                    long days=0;
+                    while(seconds >= day){
+                        seconds-=day;
+                        days++;
+                    }
+                    while(seconds >= hour){
+                        seconds-=hour;
+                        hours++;
+                    }
+                    while(seconds >= minute){
+                        seconds-=minute;
+                        minutes++;
+                    }
+                    s="up ";
+                    if ( !s.equals("up ") || days > 0 ){
+                        s+=" "+days+" days,";
+                    }
+                    if ( !s.equals("up ") || hours > 0 ){
+                        s+=" "+hours+" hours,";
+                    }
+                    if ( !s.equals("up ") || minute > 0 ){
+                        s+=" "+minutes+" minutes,";
+                    }
+                    if ( !s.equals("up ") || second > 0 ){
+                        s+=" "+seconds+" seconds";
+                    }
+                    System.out.println(s);
+                }
+                show=true;
+                break;                        
+            } catch (Exception ex) {
+                continue;                
+            }        
+        }
+        if ( !show )
+            System.out.println("Falha ao obter uptime");
+        
     }
     
     private void cronometro(String parm){
@@ -9002,6 +9119,9 @@ class XML extends Util{
 /* class by manual */                + "    y date\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
+/* class by manual */                + "[y uptime]\n"
+/* class by manual */                + "    y uptime\n"
+/* class by manual */                + "    y uptime -ms\n"
 /* class by manual */                + "[y cronometro]\n"
 /* class by manual */                + "    y cronometro\n"
 /* class by manual */                + "    y cronometro start\n"
@@ -9102,7 +9222,3 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
