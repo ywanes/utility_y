@@ -6267,18 +6267,20 @@ cat buffer.log
         String [] command = new String[]{
             "cmd /c wmic path Win32_OperatingSystem get LastBootUpTime, LocalDateTime",
             "cat /proc/uptime",
-            "echo `date +%s`\" \"`sysctl -n kern.boottime | awk '{print $4}' | sed 's/,//g'`",
+            "date +%s",
+            "sysctl -n kern.boottime",
         };
         String [] index_command = new String[]{
             "windows",
             "linux",
+            "aux_mac",
             "mac",
-        };        
+        };      
+        String s1_aux="";  
         for ( int i=0;i<command.length;i++ ){
             try {          
                 boolean error=false;
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                
                 Process proc = Runtime.getRuntime().exec(command[i]);
                 int len=0;
                 byte[] b=new byte[1024];
@@ -6303,7 +6305,6 @@ cat buffer.log
                     System.err.println("Erro fatal 99!");
                     System.exit(1);
                 }
-
                 if ( error ) continue;
                 
                 long seconds=-1;
@@ -6328,10 +6329,15 @@ cat buffer.log
                         s2=s2.split("\\.")[0];
                     seconds=Long.parseLong(s1)-Long.parseLong(s2);                    
                 }
+                if ( index_command[i].equals("aux_mac") ){
+                    s = s.split("\r\n")[0];
+                    s1_aux = s.replace("\r","").replace("\n","");
+                    continue;
+                }
                 if ( index_command[i].equals("mac") ){
                     s = s.split("\r\n")[0];
-                    String s1=s.split(" ")[0];
-                    String s2=s.split(" ")[1];
+                    String s1=s1_aux;
+                    String s2=s.replace(",","").split(" ")[3];
                     seconds=Long.parseLong(s1)-Long.parseLong(s2);                    
                 }
                 if ( ms ){
@@ -6374,12 +6380,11 @@ cat buffer.log
                 show=true;
                 break;                        
             } catch (Exception ex) {
-                continue;                
+                continue;        
             }        
         }
         if ( !show )
             System.out.println("Falha ao obter uptime");
-        
     }
     
     private void cronometro(String parm){
