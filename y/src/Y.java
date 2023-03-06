@@ -6266,11 +6266,13 @@ cat buffer.log
         
         String [] command = new String[]{
             "cmd /c wmic path Win32_OperatingSystem get LastBootUpTime, LocalDateTime",
-            "cat /proc/uptime"
+            "cat /proc/uptime",
+            "echo `date +%s`\" \"`sysctl -n kern.boottime | awk '{print $4}' | sed 's/,//g'`",
         };
         String [] index_command = new String[]{
             "windows",
-            "linux"
+            "linux",
+            "mac",
         };        
         for ( int i=0;i<command.length;i++ ){
             try {          
@@ -6286,16 +6288,22 @@ cat buffer.log
                     ok=true;
                 }
                 while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                    baos.write(b, 0, len);
                     error=true;
-                }           
+                }          
+                String s = baos.toString("UTF-8");
+                
                 if ( !ok ){
+                    if ( s.contains("Permission denied") ){                        
+                        System.err.println("Permission denied!");
+                        System.exit(1);
+                    }
                     System.err.println("Erro fatal 99!");
                     System.exit(1);
                 }
 
                 if ( error ) continue;
                 
-                String s = baos.toString("UTF-8");
                 long seconds=-1;
                 if ( index_command[i].equals("windows") ){
                     s = s.split("\r\n")[1];
@@ -6316,6 +6324,12 @@ cat buffer.log
                         s1=s1.split("\\.")[0];
                     if ( s2.split("\\.").length > 1 )
                         s2=s2.split("\\.")[0];
+                    seconds=Long.parseLong(s1)-Long.parseLong(s2);                    
+                }
+                if ( index_command[i].equals("mac") ){
+                    s = s.split("\r\n")[0];
+                    String s1=s.split(" ")[0];
+                    String s2=s.split(" ")[1];
                     seconds=Long.parseLong(s1)-Long.parseLong(s2);                    
                 }
                 if ( ms ){
