@@ -6294,6 +6294,8 @@ cat buffer.log
                 String s = baos.toString("UTF-8");
                 
                 if ( !ok ){
+                    if ( s.contains("No such file") )
+                        continue;
                     if ( s.contains("Permission denied") ){                        
                         System.err.println("Permission denied!");
                         System.exit(1);
