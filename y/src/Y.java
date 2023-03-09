@@ -192,7 +192,7 @@ cat buffer.log
         //args=new String[]{"regua"};                
         //args=new String[]{"find", ".", "-mtime", "1"};                
         //args=new String[]{"date","+%m/%d/%Y","%H:%M:%S:%N","%Z","%s"};
-        //args=new String[]{"uptime"};
+        //args=new String[]{"curl","https://www.youtube.com"};
                 
         new Y().go(args);
     }
@@ -3569,6 +3569,7 @@ cat buffer.log
             String protocol="HTTP";
             int len=0;
             int port = 80;            
+
             
             for ( int i=1;i<args.length;i++ ){
                 if ( args[i].equals("-H") && i+1 < args.length ){
@@ -3583,8 +3584,10 @@ cat buffer.log
                     method=args[i].toUpperCase();
                     continue;
                 }
-                if ( host.equals("") )
+                if ( host.equals("") ){
                     host=args[i];
+                    continue;
+                }
                 return false; // parm not ok                
             }
             header+="\r\n";            
@@ -3639,17 +3642,18 @@ cat buffer.log
                     os.write(buffer, 0, len);                
             }
             os.flush();
-            os.close();
             
             try{
                 while( (len=is.read(buffer)) > -1 ){
                     System.out.write(buffer, 0, len);
+                    
                     if ( is.available() <= 0 )
                         break;
                 }
             }catch(Exception e){
                 System.out.println("\nError "+e.toString());
             }
+            
         }catch(Exception e){
             System.err.println("Error: " + e.toString());
         }
