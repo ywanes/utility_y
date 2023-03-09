@@ -3633,7 +3633,7 @@ cat buffer.log
             InputStream is=socket.getInputStream();
             OutputStream os=socket.getOutputStream(); 
             StringBuilder sb = new StringBuilder();
-            sb.append(method + " " + path +" HTTP/1.1\r\n");
+            sb.append(method + " " + host + path +" HTTP/1.1\r\n");
             sb.append(header);
             os.write(sb.toString().getBytes());            
             if ( method.equals("POST") ){
