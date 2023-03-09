@@ -125,8 +125,6 @@ fi
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
 EOF
-chmod 777 /opt/y/compilaCurl
-(cd /opt/y;compilaCurl)
 
 cat <<'EOF'> /opt/.u
 #!/bin/bash
@@ -147,9 +145,9 @@ fi
 EOF
 chmod 777 /opt/.u
 
-cd /opt/y
-/opt/y/compila
-chmod 777 *
+chmod 777 /opt/y/compilaCurl
+(cd /opt/y;compilaCurl;)
+chmod 777 /opt/y/*
 
 if [ -e ~/.bashrc ]
 then
