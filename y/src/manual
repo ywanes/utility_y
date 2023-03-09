@@ -33,6 +33,7 @@ usage:
   [y head]
   [y tail]
   [y cut]
+  [y curl]
   [y [sed|tr]]
   [y n]
   [y rn]
@@ -220,6 +221,15 @@ Exemplos...
     cat arquivo | y cut -c5-
     cat arquivo | y cut -c5
     cat arquivo | y cut -c5-10,15-17
+[y curl]
+    echo '{"id":1}' | y curl \
+        -H "Content-Type: application/json" \
+        -H "other: other" \
+        -X POST http://localhost:8080/v1/movies
+    cat file | y curl \
+        -H "Content-Type: application/json" \
+        -X POST http://localhost:8080/v1/movies
+    curl http://localhost:8080/v1/movies
 [y [sed|tr]]
     cat arquivo | y sed A B
     cat arquivo | y sed A B E F

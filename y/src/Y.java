@@ -737,6 +737,11 @@ cat buffer.log
             cut(args);
             return;
         }
+        if ( args[0].equals("curl") ){
+            if ( curl(args) ){
+                return;
+            }
+        }
         if ( args[0].equals("sed") || args[0].equals("tr") ){
             if ( args.length == 3 ){
                 sed(args);
@@ -3553,6 +3558,104 @@ cat buffer.log
         }
     }
 
+    public boolean curl(String [] args){        
+        boolean parms_curl_its_ok=true;
+
+        try{
+            String host = ""; //ex "https://www.uol.com.br:443/aa";
+            String path="/";
+            String method="GET";
+            String header="";
+            String protocol="HTTP";
+            int len=0;
+            int port = 80;            
+            
+            for ( int i=1;i<args.length;i++ ){
+                if ( args[i].equals("-H") && i+1 < args.length ){
+                    i++;
+                    header+=args[i]+"\r\n";
+                    continue;
+                }
+                if ( args[i].equals("-X") && i+1 < args.length ){                    
+                    i++;
+                    if ( !args[i].toUpperCase().equals("POST") && !args[i].toUpperCase().equals("GET") )
+                        return false; // parm not ok
+                    method=args[i].toUpperCase();
+                    continue;
+                }
+                if ( host.equals("") )
+                    host=args[i];
+                return false; // parm not ok                
+            }
+            header+="\r\n";            
+            
+            if ( host.toLowerCase().startsWith("http://") ){
+                host=host.substring(7);
+                port = 80;
+                protocol="HTTP";
+            }
+            if ( host.toLowerCase().startsWith("https://") ){
+                host=host.substring(8);
+                port = 443;
+                protocol="HTTPS";
+            }
+            int p=host.indexOf(":");
+            if ( p > -1 ){
+                path=host.substring(p+1);
+                host=host.substring(0,p);            
+                String port_aux="";
+                String numbers="0123456789";
+                while(path.length()>0&&numbers.contains(path.substring(0,1))){
+                    port_aux+=path.substring(0,1);
+                    path=path.substring(1);
+                }
+                port=Integer.parseInt(port_aux);
+            }else{
+                p=host.indexOf("/");
+                if ( p > -1 ){
+                    path=host.substring(p);
+                    host=host.substring(0,p);                            
+                }    
+            }
+            
+            Socket socket=null;
+            if ( protocol.equals("HTTP") ){
+                socket=new Socket(host, port);
+            }else{
+                javax.net.ssl.SSLSocketFactory sf = (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault();
+                socket = sf.createSocket(host, port);                
+            }
+
+            byte[] buffer = new byte[2048];
+            InputStream is=socket.getInputStream();
+            OutputStream os=socket.getOutputStream(); 
+            StringBuilder sb = new StringBuilder();
+            sb.append(method + " " + path +" HTTP/1.1\r\n");
+            sb.append(header);
+            os.write(sb.toString().getBytes());            
+            if ( method.equals("POST") ){
+                InputStream inputStream_pipe=System.in;
+                while( (len=inputStream_pipe.read(buffer,0,buffer.length)) > 0 )
+                    os.write(buffer, 0, len);                
+            }
+            os.flush();
+            os.close();
+            
+            try{
+                while( (len=is.read(buffer)) > -1 ){
+                    System.out.write(buffer, 0, len);
+                    if ( is.available() <= 0 )
+                        break;
+                }
+            }catch(Exception e){
+                System.out.println("\nError "+e.toString());
+            }
+        }catch(Exception e){
+            System.err.println("Error: " + e.toString());
+        }
+        return parms_curl_its_ok;
+    }
+    
     public void sedBasic(String [] args)
     {
         String line;
@@ -8774,6 +8877,7 @@ class XML extends Util{
 /* class by manual */                + "  [y head]\n"
 /* class by manual */                + "  [y tail]\n"
 /* class by manual */                + "  [y cut]\n"
+/* class by manual */                + "  [y curl]\n"
 /* class by manual */                + "  [y [sed|tr]]\n"
 /* class by manual */                + "  [y n]\n"
 /* class by manual */                + "  [y rn]\n"
@@ -8961,6 +9065,15 @@ class XML extends Util{
 /* class by manual */                + "    cat arquivo | y cut -c5-\n"
 /* class by manual */                + "    cat arquivo | y cut -c5\n"
 /* class by manual */                + "    cat arquivo | y cut -c5-10,15-17\n"
+/* class by manual */                + "[y curl]\n"
+/* class by manual */                + "    echo '{\"id\":1}' | y curl \\\n"
+/* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
+/* class by manual */                + "        -H \"other: other\" \\\n"
+/* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
+/* class by manual */                + "    cat file | y curl \\\n"
+/* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
+/* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
+/* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
 /* class by manual */                + "[y [sed|tr]]\n"
 /* class by manual */                + "    cat arquivo | y sed A B\n"
 /* class by manual */                + "    cat arquivo | y sed A B E F\n"
