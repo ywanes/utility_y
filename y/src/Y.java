@@ -3685,6 +3685,21 @@ cat buffer.log
                                 i++;
                                 if ( i < len ){
                                     System.out.write(buffer, i, len-i); 
+                                    /*
+                                    /////////////////
+                                    Transfer-Encoding: chunked
+                                    3 chunks of length 4, 6 and 14 (hexadecimal "E" or "e"):
+                                        4\r\n        (bytes to send)
+                                        Wiki\r\n     (data)
+                                        6\r\n        (bytes to send)
+                                        pedia \r\n   (data)
+                                        E\r\n        (bytes to send)
+                                        in \r\n
+                                        \r\n
+                                        chunks.\r\n  (data)
+                                        0\r\n        (final byte - 0)
+                                        \r\n         (end message)                                    
+                                    */
                                     heading=false;
                                     break;
                                 }
@@ -3692,8 +3707,6 @@ cat buffer.log
                         }
                     }else{
                         System.out.write(buffer, 0, len);
-////////////                        
-System.out.println("["+len+"]");
                     }
                 }
                 System.out.flush();
