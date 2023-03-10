@@ -3692,6 +3692,8 @@ cat buffer.log
                         }
                     }else{
                         System.out.write(buffer, 0, len);
+////////////                        
+System.out.println("["+len+"]");
                     }
                 }
                 System.out.flush();
