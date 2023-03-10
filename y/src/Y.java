@@ -3561,8 +3561,8 @@ cat buffer.log
     public boolean curl(String [] args){        
         boolean parms_curl_its_ok=true;
 
-        try{
-            String host = ""; //ex "https://www.uol.com.br:443/aa";
+        String host = "";
+        try{            
             String path="/";
             String method="GET";
             String header="";
@@ -3689,8 +3689,6 @@ cat buffer.log
                                 i++;
                                 if ( header_response.contains("\r\nTransfer-Encoding: chunked"))
                                     chunked=true;
-                                else
-                                    System.out.println("\n\n\n\n\n\n\n" + header_response);
                                 if ( i < len ){
                                     if ( chunked )
                                         curl_chunk_write(buffer, i, len-i); 
@@ -3712,7 +3710,9 @@ cat buffer.log
             }catch(Exception e){
                 System.out.println("\nError "+e.toString());
             }
-            
+
+        }catch(UnknownHostException e){
+            System.err.println("Error UnknownHost: " + host);
         }catch(Exception e){
             System.err.println("Error: " + e.toString());
         }
