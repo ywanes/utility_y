@@ -230,6 +230,7 @@ Exemplos...
         -H "Content-Type: application/json" \
         -X POST http://localhost:8080/v1/movies
     curl http://localhost:8080/v1/movies
+    obs: -v => verbose
 [y [sed|tr]]
     cat arquivo | y sed A B
     cat arquivo | y sed A B E F

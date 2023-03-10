@@ -192,7 +192,7 @@ cat buffer.log
         //args=new String[]{"regua"};                
         //args=new String[]{"find", ".", "-mtime", "1"};                
         //args=new String[]{"date","+%m/%d/%Y","%H:%M:%S:%N","%Z","%s"};
-        //args=new String[]{"curl","https://www.youtube.com"};
+        //args=new String[]{"curl","-v","https://www.youtube.com"};
                 
         new Y().go(args);
     }
@@ -3567,6 +3567,7 @@ cat buffer.log
             String method="GET";
             String header="";
             String protocol="HTTP";
+            boolean verbose=false;
             int len=0;
             int port = 80;            
 
@@ -3584,6 +3585,10 @@ cat buffer.log
                     method=args[i].toUpperCase();
                     continue;
                 }
+                if ( args[i].equals("-v") ){
+                    verbose=true;
+                    continue;
+                }
                 if ( host.equals("") ){
                     host=args[i];
                     continue;
@@ -3592,12 +3597,12 @@ cat buffer.log
             }
             header+="\r\n";            
             
-            if ( host.toLowerCase().startsWith("http://") ){
+            if ( host.toUpperCase().startsWith("HTTP://") ){
                 host=host.substring(7);
                 port = 80;
                 protocol="HTTP";
             }
-            if ( host.toLowerCase().startsWith("https://") ){
+            if ( host.toUpperCase().startsWith("HTTPS://") ){
                 host=host.substring(8);
                 port = 443;
                 protocol="HTTPS";
@@ -3633,8 +3638,29 @@ cat buffer.log
             InputStream is=socket.getInputStream();
             OutputStream os=socket.getOutputStream(); 
             StringBuilder sb = new StringBuilder();
-            sb.append(method + " " + host + path +" HTTP/1.1\r\n");
+            String http_version="HTTP/1.1";
+            /* not implemented            
+            if ( protocol.equals("HTTPS"))
+                http_version="HTTP/2";
+            */
+            String init_msg=method + " " + path + " " + http_version + "\r\n";
+            String pre_header="";
+            if ( !(init_msg+pre_header+header).contains("\r\nHost: ") )
+                pre_header+="Host: " + host + "\r\n";
+            if ( !(init_msg+pre_header+header).contains("\r\nuser-agent: ") )
+                pre_header+="user-agent: curl/7.87.0\r\n";
+            if ( !(init_msg+pre_header+header).contains("\r\naccept: ") )
+                pre_header+="accept: */*\r\n";
+            
+            sb.append(init_msg);
+            sb.append(pre_header);
             sb.append(header);
+            if ( verbose ){
+                System.out.println("* Connected " + socket.getInetAddress().toString().replace("/", " - ") + " port " + port);
+                System.out.print(init_msg);
+                System.out.print(pre_header);
+                System.out.print(header);
+            }
             os.write(sb.toString().getBytes());            
             if ( method.equals("POST") ){
                 InputStream inputStream_pipe=System.in;
@@ -3644,12 +3670,31 @@ cat buffer.log
             os.flush();
             
             try{
-                while( (len=is.read(buffer)) > -1 ){
-                    System.out.write(buffer, 0, len);
-                    
-                    if ( is.available() <= 0 )
-                        break;
+                boolean heading=true;
+                byte[] ending_head = new byte[4]; // \r\n\r\n 13 10 13 10
+                while( is.available() >= 0 && (len=is.read(buffer)) > -1 ){
+                    if ( heading ){
+                        for ( int i=0;i<len;i++ ){
+                            if ( verbose )
+                                System.out.write(buffer, i, 1);                        
+                            ending_head[0] = ending_head[1];
+                            ending_head[1] = ending_head[2];
+                            ending_head[2] = ending_head[3];
+                            ending_head[3] = buffer[i];
+                            if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){
+                                i++;
+                                if ( i < len ){
+                                    System.out.write(buffer, i, len-i); 
+                                    heading=false;
+                                    break;
+                                }
+                            }
+                        }
+                    }else{
+                        System.out.write(buffer, 0, len);
+                    }
                 }
+                System.out.flush();
             }catch(Exception e){
                 System.out.println("\nError "+e.toString());
             }
@@ -9078,6 +9123,7 @@ class XML extends Util{
 /* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
 /* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
+/* class by manual */                + "    obs: -v => verbose\n"
 /* class by manual */                + "[y [sed|tr]]\n"
 /* class by manual */                + "    cat arquivo | y sed A B\n"
 /* class by manual */                + "    cat arquivo | y sed A B E F\n"
