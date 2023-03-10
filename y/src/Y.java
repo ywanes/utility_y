@@ -3639,6 +3639,7 @@ cat buffer.log
             OutputStream os=socket.getOutputStream(); 
             StringBuilder sb = new StringBuilder();
             String http_version="HTTP/1.1";
+            boolean chunked=false;
             /* not implemented            
             if ( protocol.equals("HTTPS"))
                 http_version="HTTP/2";
@@ -3671,42 +3672,40 @@ cat buffer.log
             
             try{
                 boolean heading=true;
+                String header_response="";
                 byte[] ending_head = new byte[4]; // \r\n\r\n 13 10 13 10
                 while( is.available() >= 0 && (len=is.read(buffer)) > -1 ){
                     if ( heading ){
                         for ( int i=0;i<len;i++ ){
                             if ( verbose )
                                 System.out.write(buffer, i, 1);                        
+                            header_response+=(char)buffer[i];
+
                             ending_head[0] = ending_head[1];
                             ending_head[1] = ending_head[2];
                             ending_head[2] = ending_head[3];
                             ending_head[3] = buffer[i];
-                            if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){
+                            if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){                                
                                 i++;
+                                if ( header_response.contains("\r\nTransfer-Encoding: chunked"))
+                                    chunked=true;
+                                else
+                                    System.out.println("\n\n\n\n\n\n\n" + header_response);
                                 if ( i < len ){
-                                    System.out.write(buffer, i, len-i); 
-                                    /*
-                                    /////////////////
-                                    Transfer-Encoding: chunked
-                                    3 chunks of length 4, 6 and 14 (hexadecimal "E" or "e"):
-                                        4\r\n        (bytes to send)
-                                        Wiki\r\n     (data)
-                                        6\r\n        (bytes to send)
-                                        pedia \r\n   (data)
-                                        E\r\n        (bytes to send)
-                                        in \r\n
-                                        \r\n
-                                        chunks.\r\n  (data)
-                                        0\r\n        (final byte - 0)
-                                        \r\n         (end message)                                    
-                                    */
+                                    if ( chunked )
+                                        curl_chunk_write(buffer, i, len-i); 
+                                    else
+                                        System.out.write(buffer, i, len-i); 
                                     heading=false;
                                     break;
                                 }
                             }
                         }
                     }else{
-                        System.out.write(buffer, 0, len);
+                        if ( chunked )
+                            curl_chunk_write(buffer, 0, len);
+                        else
+                            System.out.write(buffer, 0, len);
                     }
                 }
                 System.out.flush();
@@ -3718,6 +3717,27 @@ cat buffer.log
             System.err.println("Error: " + e.toString());
         }
         return parms_curl_its_ok;
+    }
+    
+    public boolean curl_chunk_write(byte buffer[], int off, int len) {
+        /*
+        /////////////////
+        Transfer-Encoding: chunked
+        3 chunks of length 4, 6 and 14 (hexadecimal "E" or "e"):
+            4\r\n        (bytes to send)
+            Wiki\r\n     (data)
+            6\r\n        (bytes to send)
+            pedia \r\n   (data)
+            E\r\n        (bytes to send)
+            in \r\n
+            \r\n
+            chunks.\r\n  (data)
+            0\r\n        (final byte - 0)
+            \r\n         (end message)                                    
+        */
+        boolean finish=false;
+        System.out.write(buffer, off, len);         
+        return finish;
     }
     
     public void sedBasic(String [] args)
