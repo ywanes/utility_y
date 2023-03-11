@@ -193,6 +193,7 @@ cat buffer.log
         //args=new String[]{"find", ".", "-mtime", "1"};                
         //args=new String[]{"date","+%m/%d/%Y","%H:%M:%S:%N","%Z","%s"};
         //args=new String[]{"curl","-v","https://www.youtube.com"};
+        //args=new String[]{"curl","-v","http://dota.freeoda.com/100/"};
                 
         new Y().go(args);
     }
@@ -3690,20 +3691,28 @@ cat buffer.log
                                 if ( header_response.contains("\r\nTransfer-Encoding: chunked"))
                                     chunked=true;
                                 if ( i < len ){
-                                    if ( chunked )
-                                        curl_chunk_write(buffer, i, len-i); 
-                                    else
+                                    if ( chunked ){
+                                        if ( curl_chunk_write(buffer, i, len-i) ){
+                                            System.out.flush();
+                                            System.exit(0);
+                                        }
+                                    }else{
                                         System.out.write(buffer, i, len-i); 
+                                    }
                                     heading=false;
                                     break;
                                 }
                             }
                         }
                     }else{
-                        if ( chunked )
-                            curl_chunk_write(buffer, 0, len);
-                        else
+                        if ( chunked ){
+                            if ( curl_chunk_write(buffer, 0, len) ){
+                                System.out.flush();
+                                System.exit(0);
+                            }
+                        }else{
                             System.out.write(buffer, 0, len);
+                        }
                     }
                 }
                 System.out.flush();
@@ -3719,8 +3728,49 @@ cat buffer.log
         return parms_curl_its_ok;
     }
     
+    boolean flip=true; // true => head chunked | false => data chunked
+    int len_data_chunked=-1;
+    String txt_head_chunked="";
     public boolean curl_chunk_write(byte buffer[], int off, int len) {
+        while(off < len){
+            if ( flip ){
+                if(buffer[off] == 13){
+                    off++;
+                    continue;
+                }
+                if(buffer[off] == 10){
+                    off++;
+                    len_data_chunked=hex_string_to_int(txt_head_chunked);
+                    if ( len_data_chunked == 0 ){
+                        return true; // finish
+                    }
+                    txt_head_chunked="";
+                    flip=false;                    
+                    continue;
+                }
+                txt_head_chunked+=((char)buffer[off++]+"").toUpperCase();
+                continue;
+            }else{
+                if ( len_data_chunked >= len-off ){
+                    System.out.write(buffer, off, len-off);  
+                    len_data_chunked-=len-off;
+                    if ( len_data_chunked == 0 )
+                        flip=true;
+                    off=len;
+                    continue;
+                }else{
+                    System.out.write(buffer, off, len_data_chunked);  
+                    off+=len_data_chunked;
+                    len_data_chunked=0;
+                    flip=true;
+                    continue;
+                }
+            }
+        }        
+        return false; // finish
+        
         /*
+        //https://datatracker.ietf.org/doc/html/rfc9112#field.transfer-encoding
         /////////////////
         Transfer-Encoding: chunked
         3 chunks of length 4, 6 and 14 (hexadecimal "E" or "e"):
@@ -3735,9 +3785,20 @@ cat buffer.log
             0\r\n        (final byte - 0)
             \r\n         (end message)                                    
         */
-        boolean finish=false;
-        System.out.write(buffer, off, len);         
-        return finish;
+    }
+    
+    public int hex_string_to_int(String a){
+System.out.println("AA" + a);
+        int retorno=0;
+        int lvl=1;
+        while(a.length()>0){
+            int len=a.length();            
+            retorno+=Util.hex_string.indexOf(a.substring(len-1,len))*lvl;
+            a=a.substring(0, len-1);
+            lvl*=16;
+        }        
+System.out.println("BB" + retorno);        
+        return retorno+2;
     }
     
     public void sedBasic(String [] args)
@@ -6801,6 +6862,7 @@ cat buffer.log
 }
 
 class Util{
+    public static String hex_string="0123456789ABCDEF";
     public static String lendo_arquivo(String caminho) {
         String result="";
         String strLine;
