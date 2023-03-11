@@ -3693,7 +3693,6 @@ cat buffer.log
                                 if ( i < len ){
                                     if ( chunked ){
                                         if ( curl_chunk_write(buffer, i, len-i) ){
-                                            System.out.flush();
                                             System.exit(0);
                                         }
                                     }else{
@@ -3707,7 +3706,6 @@ cat buffer.log
                     }else{
                         if ( chunked ){
                             if ( curl_chunk_write(buffer, 0, len) ){
-                                System.out.flush();
                                 System.exit(0);
                             }
                         }else{
@@ -3753,13 +3751,16 @@ cat buffer.log
             }else{
                 if ( len_data_chunked >= len-off ){
                     System.out.write(buffer, off, len-off);  
+                    System.out.flush();
                     len_data_chunked-=len-off;
-                    if ( len_data_chunked == 0 )
+                    if ( len_data_chunked == 0 ){
                         flip=true;
+                    }
                     off=len;
                     continue;
                 }else{
                     System.out.write(buffer, off, len_data_chunked);  
+                    System.out.flush();
                     off+=len_data_chunked;
                     len_data_chunked=0;
                     flip=true;
@@ -3793,7 +3794,10 @@ System.out.println("AA" + a);
         int lvl=1;
         while(a.length()>0){
             int len=a.length();            
-            retorno+=Util.hex_string.indexOf(a.substring(len-1,len))*lvl;
+            int p=Util.hex_string.indexOf(a.substring(len-1,len));
+            if ( p == -1 )
+                Util.erroFatal(200);
+            retorno+=p*lvl;
             a=a.substring(0, len-1);
             lvl*=16;
         }        
