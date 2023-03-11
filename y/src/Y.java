@@ -3648,6 +3648,13 @@ cat buffer.log
             http_version="HTTP/1.0";
             //http_version="HTTP/1.1"; not implemented - problem with "Transfer-Encoding: chunked"
             
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            if ( method.equals("POST") ){
+                InputStream inputStream_pipe=System.in;                
+                while( (len=inputStream_pipe.read(buffer,0,buffer.length)) > 0 )
+                    baos.write(buffer, 0, len);
+            }
+            
             String init_msg=method + " " + path + " " + http_version + "\r\n";
             String pre_header="";
             if ( !(init_msg+pre_header+header).contains("\r\nHost: ") )
@@ -3656,22 +3663,23 @@ cat buffer.log
                 pre_header+="user-agent: curl/7.87.0\r\n";
             if ( !(init_msg+pre_header+header).contains("\r\naccept: ") )
                 pre_header+="accept: */*\r\n";
+            if ( method.equals("POST") && !(init_msg+pre_header+header).contains("\r\nContent-Type: ") )
+                pre_header+="Content-Type: application/x-www-form-urlencoded\r\n";
+            if ( method.equals("POST") && !(init_msg+pre_header+header).contains("\r\nContent-Length: ") )
+                pre_header+="Content-Length: " + baos.toByteArray().length + "\r\n";
             
             sb.append(init_msg);
             sb.append(pre_header);
-            sb.append(header);
+            sb.append(header);            
             if ( verbose ){
                 System.out.println("* Connected " + socket.getInetAddress().toString().replace("/", " - ") + " port " + port);
                 System.out.print(init_msg);
                 System.out.print(pre_header);
                 System.out.print(header);
+                System.out.println(baos.toString());
             }
-            os.write(sb.toString().getBytes());            
-            if ( method.equals("POST") ){
-                InputStream inputStream_pipe=System.in;
-                while( (len=inputStream_pipe.read(buffer,0,buffer.length)) > 0 )
-                    os.write(buffer, 0, len);                
-            }
+            os.write(sb.toString().getBytes());                        
+            os.write(baos.toByteArray());            
             os.flush();
             
             try{
