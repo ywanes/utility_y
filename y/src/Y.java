@@ -3641,10 +3641,13 @@ cat buffer.log
             StringBuilder sb = new StringBuilder();
             String http_version="HTTP/1.1";
             boolean chunked=false;
-            /* not implemented            
-            if ( protocol.equals("HTTPS"))
-                http_version="HTTP/2";
-            */
+            
+            // not implemented            
+            //if ( protocol.equals("HTTPS"))
+            //    http_version="HTTP/2";
+            http_version="HTTP/1.0";
+            //http_version="HTTP/1.1"; not implemented - problem with "Transfer-Encoding: chunked"
+            
             String init_msg=method + " " + path + " " + http_version + "\r\n";
             String pre_header="";
             if ( !(init_msg+pre_header+header).contains("\r\nHost: ") )
