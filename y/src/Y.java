@@ -3691,8 +3691,10 @@ cat buffer.log
                 while( is.available() >= 0 && (len=is.read(buffer)) > -1 ){
                     if ( heading ){
                         for ( int i=0;i<len;i++ ){
-                            if ( verbose )
+                            if ( verbose ){
                                 System.out.write(buffer, i, 1);                        
+                                System.out.flush();
+                            }
                             header_response+=(char)buffer[i];
 
                             ending_head[0] = ending_head[1];
@@ -3700,6 +3702,7 @@ cat buffer.log
                             ending_head[2] = ending_head[3];
                             ending_head[3] = buffer[i];
                             if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){                                
+                                heading=false;
                                 i++;
                                 if ( header_response.contains("\r\nTransfer-Encoding: chunked"))
                                     chunked=true;
@@ -3710,8 +3713,7 @@ cat buffer.log
                                         }
                                     }else{
                                         System.out.write(buffer, i, len-i); 
-                                    }
-                                    heading=false;
+                                    }                                    
                                     break;
                                 }
                             }
