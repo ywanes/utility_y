@@ -3619,6 +3619,7 @@ cat buffer.log
             String header="";
             String protocol="HTTP";
             boolean verbose=false;
+            boolean raw=false;
             int len=0;
             int port = 80;            
 
@@ -3638,6 +3639,10 @@ cat buffer.log
                 }
                 if ( args[i].equals("-v") ){
                     verbose=true;
+                    continue;
+                }
+                if ( args[i].equals("--raw") ){
+                    raw=true;
                     continue;
                 }
                 if ( host.equals("") ){
@@ -3754,7 +3759,7 @@ cat buffer.log
                             if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){                                
                                 heading=false;
                                 i++;
-                                if ( header_response.contains("\r\nTransfer-Encoding: chunked"))
+                                if ( !raw && header_response.contains("\r\nTransfer-Encoding: chunked"))
                                     chunked=true;
                                 if ( i < len ){
                                     if ( chunked ){
