@@ -194,7 +194,7 @@ cat buffer.log
         //args=new String[]{"date","+%m/%d/%Y","%H:%M:%S:%N","%Z","%s"};
         //args=new String[]{"curl","-v","https://www.youtube.com"};
         //args=new String[]{"curl","-v","http://dota.freeoda.com/100/"};
-                
+        
         new Y().go(args);
     }
 
@@ -3609,6 +3609,8 @@ cat buffer.log
                 protocol="HTTPS";
             }
             int p=host.indexOf(":");
+            while(host.indexOf(":",p+1) > -1)
+                p=host.indexOf(":",p+1);
             if ( p > -1 ){
                 path=host.substring(p+1);
                 host=host.substring(0,p);            
