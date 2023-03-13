@@ -538,8 +538,9 @@ cat buffer.log
             boolean mostraEstruturaObs=parm.equals("mostraEstruturaObs");
             String command=parm.contains("for elem in data")?parm:"";
             if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaObs ){
-                new JSON().go(command,mostraTabela,mostraEstrutura,mostraEstruturaObs,list_on);
-                return;
+                if ( new JSON().go(command,mostraTabela,mostraEstrutura,mostraEstruturaObs,list_on) ){
+                    return;
+                }
             }
         }
             
@@ -7157,13 +7158,16 @@ class JSON extends Util{
     String [] campos= new String[99];
     int count_campos=0;
     boolean finish_add_campos=false;
-    public void go(String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaObs, boolean list_on){ // "[elem['id'] for elem in data['items']]"        
+    public boolean go(String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaObs, boolean list_on){ // "[elem['id'] for elem in data['items']]"        
         this.command=command;
         this.mostraTabela=mostraTabela;
         this.mostraEstrutura=mostraEstrutura;
         this.mostraEstruturaObs=mostraEstruturaObs;  
         this.list_on=list_on;
-        setFilter();
+        if ( setFilter() ){
+        }else{
+            return false;
+        }
         byte[] entrada_ = new byte[1];
         while ( read1Byte(entrada_) ){
             String t=new String(entrada_);            
@@ -7187,14 +7191,17 @@ class JSON extends Util{
             }
         }   
         nextflush();
+        return true;
     }
     
     /*
       Define o filtro, ex data['items']['itemsB']
     */
-    private void setFilter(){ // "[elem['id'] for elem in data['items']['itemsB']]"
+    private boolean setFilter(){ // "[elem['id'] for elem in data['items']['itemsB']]"
         if ( command.startsWith("[") && command.endsWith("]") ) // "[elem['id'] for elem in data['items']]" -> "elem['id'] for elem in data['items']['itemsB']"
             command=command.substring(1,command.length()-1); 
+        else
+            return false;
         String [] partes=command.split(" for elem in ");
         if ( partes.length == 2 ){
             String a=partes[0];
@@ -7205,17 +7212,30 @@ class JSON extends Util{
             }
             if ( b.startsWith("data") ){ // data['items']['itemsB'] -> _.items.itemsB._
                                          // data -> _
-                partes=b.substring(4).replace("[", "").replace("]", "").split("'");
+                //partes=b.substring(4).replace("[", "").replace("]", "").split("'");
+                partes=b.substring(4).replace("]","],").split(",");
                 filter_for="_";
                 for ( String parte : partes ){
                     if ( parte.equals("") )
                         continue;
+                    if ( parte.startsWith("[") && parte.endsWith("]") )
+                        parte=parte.substring(1, parte.length()-1);
+                    else
+                        return false;
+                    if ( 
+                        (parte.startsWith("'") && !parte.endsWith("'"))
+                        || (!parte.startsWith("'") && parte.endsWith("'"))
+                    )
+                        return false;
+                    parte=parte.replace("'","");
                     filter_for+="."+parte;
                 }
                 filter_forB=filter_for;
                 filter_for+="._";
-            }
+            }else
+                return false;
         }    
+        return true;
     }
     
     private void indexacao() {     
