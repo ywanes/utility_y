@@ -7076,7 +7076,8 @@ class Util{
                 inputStream_pipe=System.in;
             }
             int retorno=-1;
-            while( (retorno=inputStream_pipe.read(buf,off,len)) == 0 ){}
+            while( (retorno=inputStream_pipe.read(buf,off,len)) == 0 ){
+            }
             return retorno;
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
@@ -7090,11 +7091,11 @@ class Util{
         if ( inputStream_pipe == null ){
             readBytesInit();
             inputStream_pipe=System.in;
-        }        
+        }   
         if ( read1Byte_n == -1 || read1Byte_n >= read1Byte_len ){
             read1Byte_n=0;
             read1Byte_len=readBytes(read1ByteBuff);            
-        }        
+        } 
         if ( read1Byte_n < read1Byte_len ){
             b[0]=read1ByteBuff[read1Byte_n];
             read1Byte_n++;
@@ -7171,19 +7172,26 @@ class JSON extends Util{
                 if ( literal )
                     pai="";
             }
-            if ( !literal && t.equals(" ") )
+            if ( !literal && t.equals(" ") ){
                 continue;
-            if ( t.equals("\t") || t.equals("\r") || t.equals("\n") )
+            }
+            if ( t.equals("\t") || t.equals("\r") || t.equals("\n") ){
                 continue;
-            if ( literal && !t.equals("\"") && !t.equals(" ") )
+            }
+            if ( literal && !t.equals("\"") && !t.equals(" ") ){
                 pai+=t;
+            }
             next(t);
-            if ( !literal && t.equals(":"))
+            if ( !literal && t.equals(":")){
                 next(" ");            
+            }
         }   
         nextflush();
     }
     
+    /*
+      Define o filtro, ex data['items']['itemsB']
+    */
     private void setFilter(){ // "[elem['id'] for elem in data['items']['itemsB']]"
         if ( command.startsWith("[") && command.endsWith("]") ) // "[elem['id'] for elem in data['items']]" -> "elem['id'] for elem in data['items']['itemsB']"
             command=command.substring(1,command.length()-1); 
@@ -7223,6 +7231,9 @@ class JSON extends Util{
     String level_in="[{";
     String level_out="]}";
     int seq=0;
+    /*
+      tratando byte a byte
+    */
     private void next(String t) {
         if ( level_in.contains(t) ){
             seq=0;
@@ -7238,8 +7249,9 @@ class JSON extends Util{
             return;
         }else{
             if ( level_out.contains(t) ){
-                if (count_pilha==0 || !pilha[count_pilha-1].equals(t))
+                if (count_pilha==0 || !pilha[count_pilha-1].equals(t)){
                     erroFatal(99);
+                }
                 count_pilha--;     
                 outwrite();
                 obs();
@@ -7258,7 +7270,9 @@ class JSON extends Util{
         }
         out(t);
     }   
-       
+    /*
+      finalizar processo.
+    */   
     private void nextflush(){
         outwrite();
         if ( !command.equals("") ){
