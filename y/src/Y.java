@@ -68,6 +68,7 @@ import java.net.URLConnection;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
+import java.security.Security;
 import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -902,7 +903,9 @@ cat buffer.log
                 try{
                     txt=base64_B_S(new AES().encrypt(txt.getBytes(),senha,null,null) ,true);
                 }catch(Exception e){
-                    System.out.println("Erro interno!");
+                    System.out.println("Erro interno !! "+ e.toString());
+                    if(e.toString().contains("java.security.InvalidKeyException: Illegal key size"))
+                        System.out.println("Erro conhecido no windows!");
                     System.exit(1);
                 }
 
