@@ -848,6 +848,18 @@ cat buffer.log
             rm(args);
             return;
         }
+        if ( args[0].equals("cp") && args.length == 3 ){
+            cp(new File(args[1]), new File(args[2]), false, true);
+            return;
+        }
+        if ( args[0].equals("cp") && args.length == 4 && args[1].equals("-R")){
+            cp(new File(args[2]), new File(args[3]), true, true);
+            return;
+        }
+        if ( args[0].equals("mkdir") && args.length == 2 ){
+            mkdir(new File(args[1]));
+            return;
+        }        
         if ( args[0].equals("M") || args[0].equals("m") )
         {
             if ( args.length == 1 ){
@@ -4325,6 +4337,108 @@ System.out.println("BB" + retorno);
         }        
     }
     
+    boolean errorCpPrinted = false;
+    public void cp(File f1, File f2, boolean recursiveMode, boolean isFirst){
+        if ( errorCpPrinted )
+            return;
+        try{
+            if ( f1.isDirectory() && !recursiveMode ){
+                System.out.println("Error, use -R para copia de pasta");
+                errorCpPrinted = true;
+                return;
+            }
+            if ( f1.getAbsolutePath().toUpperCase().equals(f2.getAbsolutePath().toUpperCase()) ){
+                System.out.println("Error, origem igual ao destino");
+                errorCpPrinted = true;
+                return;
+            }        
+            if ( f1.isDirectory() && f2.exists() && !f2.isDirectory() ){
+                System.out.println("Error, incompatibilidade.. [" + f1.getAbsolutePath() + "] é um diretório e [" + f2.getAbsolutePath() + "] não é um diretório.");
+                errorCpPrinted = true;
+                return;
+            }
+            if ( !f1.isDirectory() && f2.exists() && f2.isDirectory() ){
+                System.out.println("Error, incompatibilidade.. [" + f1.getAbsolutePath() + "] não é um diretório e [" + f2.getAbsolutePath() + "] é um diretório.");
+                errorCpPrinted = true;
+                return;
+            }
+            if ( isFirst ){
+                if( f1.isDirectory() ){
+                    // validation recursivo invalido
+                    String sep=f1.getAbsolutePath().contains("\\")?"\\":"/";
+                    String p2=f2.getAbsolutePath().toUpperCase();
+                    String p1=f1.getAbsolutePath().toUpperCase();
+                    if(!p2.endsWith(sep))
+                        p2+=sep;
+                    if(!p1.endsWith(sep))
+                        p1+=sep;
+                    if ( p2.indexOf(p1) == 0 ){
+                        System.out.println("Error, caminho recursivo invalido(infinito)");
+                        errorCpPrinted = true;
+                        return;
+                    }
+                    // fim validation recursivo invalido
+                    if( f2.exists() ){
+                        File f_=new File(f2.getAbsolutePath()+"/"+f1.getName());
+                        f_.mkdir();
+                        cp(f1, f_, recursiveMode, false);
+                        return;
+                    }
+                    f2.mkdir();
+                    cp(f1, f2, recursiveMode, false);
+                    return;                    
+                }else{
+                    if ( f2.exists() && f2.isDirectory() ){
+                        System.out.println("Error, incompatibilidade.. [" + f1.getAbsolutePath() + "] é um arquivo e [" + f2.getAbsolutePath() + "] é um diretório.");
+                        errorCpPrinted = true;
+                        return;
+                    }
+                    Files.copy(f1.toPath(), f2.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            }  
+            if ( f1.isDirectory() ){                
+                File [] files=f1.listFiles();
+                for( int i=0;i<files.length;i++ ){
+                    File f_=new File(f2.getAbsolutePath()+"/"+files[i].getName());
+                    if(files[i].isDirectory()){
+                        if(!f_.exists())
+                            f_.mkdir();
+                        cp(files[i], f_, recursiveMode, false);
+                    }else{
+                        if ( f_.exists() && f_.isDirectory() ){
+                            System.out.println("Error, incompatibilidade.. [" + files[i].getAbsolutePath() + "] é um arquivo e [" + f_.getAbsolutePath() + "] é um diretório.");
+                            errorCpPrinted = true;
+                            return;
+                        }
+                        Files.copy(files[i].toPath(), f_.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    }
+                }                
+            }else{
+                if ( f2.exists() && f2.isDirectory() ){
+                    System.out.println("Error, incompatibilidade.. [" + f1.getAbsolutePath() + "] é um arquivo e [" + f2.getAbsolutePath() + "] é um diretório.");
+                    errorCpPrinted = true;
+                    return;
+                }
+                Files.copy(f1.toPath(), f2.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }                
+        }catch(Exception e){
+            System.out.println(e.toString());
+            errorCpPrinted = true;
+        }        
+    }
+    
+    public void mkdir(File f){
+        if(f.exists()){
+            System.out.println("pasta "+f.getAbsolutePath() + " ja existe");
+            System.exit(1);
+        }
+        try{
+            f.mkdir();
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }    
+    }
+            
     public void touch(File file, long current_milisegundos, long dif_segundos) throws Exception{        
         if (!file.exists())
            new FileOutputStream(file).close();
@@ -9378,6 +9492,12 @@ class XML extends Util{
 /* class by manual */                + "    y rm file1 file2\n"
 /* class by manual */                + "    y rm -R pasta\n"
 /* class by manual */                + "    y rm -R pasta1 file1\n"
+/* class by manual */                + "[y cp]\n"
+/* class by manual */                + "    y cp file1 file2\n"
+/* class by manual */                + "    y cp -R pasta1 pasta2\n"
+/* class by manual */                + "    obs: se a pasta2 nao existir entao e criado a copia com o nome pasta2, se existir e copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
+/* class by manual */                + "[y mkdir]\n"
+/* class by manual */                + "    y mkdir pasta1\n"
 /* class by manual */                + "[y iconv]\n"
 /* class by manual */                + "    y iconv -f UTF-8 -t ISO-8859-1 file\n"
 /* class by manual */                + "    cat file | y iconv -f UTF-8 -t ISO-8859-1 \n"
@@ -9614,3 +9734,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+

@@ -277,6 +277,12 @@ Exemplos...
     y rm file1 file2
     y rm -R pasta
     y rm -R pasta1 file1
+[y cp]
+    y cp file1 file2
+    y cp -R pasta1 pasta2
+    obs: se a pasta2 nao existir entao é criado a cópia com o nome pasta2, se existir é copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)
+[y mkdir]
+    y mkdir pasta1
 [y iconv]
     y iconv -f UTF-8 -t ISO-8859-1 file
     cat file | y iconv -f UTF-8 -t ISO-8859-1 
