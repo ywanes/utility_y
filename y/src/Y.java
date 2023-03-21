@@ -6337,7 +6337,7 @@ System.out.println("BB" + retorno);
                         showfind(hist+files[i].getName(), mtime);
             for ( int i=0;i<files.length;i++ )
                 if ( files[i].isDirectory() ){
-                    if ( f.getPath().contains("\\") && !(f.getAbsolutePath()+"\\"+files[i].getName()).equals(files[i].toPath().toRealPath().toString()) )
+                    if ( f.getPath().contains("\\") && !(f.getAbsolutePath()+"\\"+files[i].getName()).replace(":\\\\",":\\").equals(files[i].toPath().toRealPath().toString()) )
                         continue;
                     if ( superficial )
                         showfind(files[i].getName(), mtime);
