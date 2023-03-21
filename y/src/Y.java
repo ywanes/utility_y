@@ -6336,11 +6336,14 @@ System.out.println("BB" + retorno);
                     else
                         showfind(hist+files[i].getName(), mtime);
             for ( int i=0;i<files.length;i++ )
-                if ( files[i].isDirectory() )
+                if ( files[i].isDirectory() ){
+                    if ( f.getPath().contains("\\") && !(f.getAbsolutePath()+"\\"+files[i].getName()).equals(files[i].toPath().toRealPath().toString()) )
+                        continue;
                     if ( superficial )
                         showfind(files[i].getName(), mtime);
                     else
                         find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime);
+                }
         }catch(Exception e){}
     }
     
