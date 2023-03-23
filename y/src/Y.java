@@ -11,7 +11,7 @@
     configurando terminal windows cmd -> chcp 65001
     rc linux -> echo $?
     rc windows -> echo %ERRORLEVEL%
-    Y.bat(c:/windows/system32)
+y.bat(c:/windows/system32)
 @echo off
 (set \n=^^^
 
@@ -23,6 +23,23 @@ echo %*
 ) else (
 java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
 )
+
+cd0.bat(c:/windows/system32)
+@echo off
+set argC=0
+for %%x in (%*) do Set /A argC+=1
+if "%argC%" equ "0" (
+pushd %userprofile%
+) else (
+pushd %*
+)
+
+arquivo config.ref
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Command Processor]
+"Autorun"="doskey cd=cd0 $*"
+
     créditos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
     créditos https://github.com/is/jsch/tree/master/examples
 */
@@ -4453,6 +4470,7 @@ System.out.println("BB" + retorno);
         try{
             if ( System.getProperty("user.dir").contains("/") )
                 System.out.println("Nao implementado!");
+                //Runtime.getRuntime().exec(new String[]{ "/bin/sh", "-c", "cd /tmp; ls -l" });                
                 //System.out.println("digite cd");
             else
                 System.out.println("Nao implementado!");
