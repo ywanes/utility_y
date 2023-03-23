@@ -865,6 +865,10 @@ cat buffer.log
             }
             return;
         }
+        if ( args[0].equals("cd") ){
+            cd();
+            return;
+        }
         if ( args[0].equals("mkdir") && args.length == 2 ){
             mkdir(new File(args[1]));
             return;
@@ -4443,6 +4447,23 @@ System.out.println("BB" + retorno);
             }
         }else
             Files.move(f1.toPath(), f2.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    }
+    
+    public void cd(){
+        try{
+            if ( System.getProperty("user.dir").contains("/") )
+                System.out.println("Nao implementado!");
+                //System.out.println("digite cd");
+            else
+                System.out.println("Nao implementado!");
+                //System.setProperty("user.dir", "c:/");
+                //Runtime.getRuntime().exec("cmd /c echo %userprofile%");
+                //new ProcessBuilder("cd","%userprofile%").inheritIO().start().waitFor();
+            
+        }catch(Exception e){
+            System.out.println("Error..." + e.toString());
+            System.exit(1);
+        }                    
     }
     
     public void mkdir(File f){

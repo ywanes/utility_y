@@ -44,6 +44,7 @@ usage:
   [y rm]
   [y cp]
   [y mv]
+  [y cd]
   [y iconv]
   [y tee]
   [y uniq]
@@ -288,6 +289,9 @@ Exemplos...
 [y mv]
     y mv file1 file2
     y mv pasta1 pasta2
+[y cd]
+    y cd
+    obs: equivalente a cd $HOME no linux e cd %userprofile% no windows
 [y mkdir]
     y mkdir pasta1
 [y iconv]
