@@ -1344,7 +1344,11 @@ cat buffer.log
                 return;
             }
         }
-        if ( args[0].equals("clean") || args[0].equals("clear") || args[0].equals("cls") ){
+        if ( args[0].equals("clean") ){
+            System.out.println("Digite y clear");
+            return;
+        }
+        if ( args[0].equals("clear") || args[0].equals("cls") ){
             clear_cls();
             return;
         }
@@ -6929,7 +6933,7 @@ System.out.println("BB" + retorno);
 
     ArrayList<Integer> pivoName=new ArrayList<Integer>();    
     int pivoNameP1=1;    
-    private String getNameSplit(String prefix) {
+    private String getNameSplit(String prefix) { // tipo split file => xxa
         if ( pivoName.size() == 0 ){
             pivoName.add(120);
             pivoName.add(97);
