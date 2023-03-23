@@ -42,6 +42,8 @@ usage:
   [y od]
   [y touch]
   [y rm]
+  [y cp]
+  [y mv]
   [y iconv]
   [y tee]
   [y uniq]
@@ -283,6 +285,9 @@ Exemplos...
     y cp file1 file2
     y cp -R pasta1 pasta2
     obs: se a pasta2 nao existir entao é criado a cópia com o nome pasta2, se existir é copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)
+[y mv]
+    y mv file1 file2
+    y mv pasta1 pasta2
 [y mkdir]
     y mkdir pasta1
 [y iconv]

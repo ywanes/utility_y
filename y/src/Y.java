@@ -856,6 +856,15 @@ cat buffer.log
             cp(new File(args[2]), new File(args[3]), true, true);
             return;
         }
+        if ( args[0].equals("mv") && args.length == 3){
+            try{
+                mv(new File(args[1]), new File(args[2]));
+            }catch(Exception e){
+                System.out.println("Erro, "+e.toString());
+                System.exit(1);
+            }
+            return;
+        }
         if ( args[0].equals("mkdir") && args.length == 2 ){
             mkdir(new File(args[1]));
             return;
@@ -4409,6 +4418,31 @@ System.out.println("BB" + retorno);
             System.out.println(e.toString());
             errorCpPrinted = true;
         }        
+    }
+    
+    public void mv(File f1, File f2) throws Exception{
+        if ( !f1.exists() ){
+            System.out.println("Item nao encontrado: "+f1.getAbsolutePath());            
+            System.exit(1);
+        }
+        if ( f1.getAbsolutePath().toUpperCase().equals(f2.getAbsolutePath().toUpperCase()) ){
+            System.out.println("Erro, caminho de origem e destino é o mesmo!");            
+            System.exit(1);
+        }
+        if ( f1.isDirectory() ){
+            if ( !f2.exists() )
+                Files.move(f1.toPath(), f2.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            else{
+                File f_=new File(f2.getAbsolutePath()+"/"+f1.getName());
+                if ( !f_.exists() )
+                    Files.move(f1.toPath(), f_.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                else{
+                    System.out.println("Erro, o diretorio nao esta vazio!");            
+                    System.exit(1);
+                }
+            }
+        }else
+            Files.move(f1.toPath(), f2.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
     }
     
     public void mkdir(File f){
@@ -9291,6 +9325,8 @@ class XML extends Util{
 /* class by manual */                + "  [y od]\n"
 /* class by manual */                + "  [y touch]\n"
 /* class by manual */                + "  [y rm]\n"
+/* class by manual */                + "  [y cp]\n"
+/* class by manual */                + "  [y mv]\n"
 /* class by manual */                + "  [y iconv]\n"
 /* class by manual */                + "  [y tee]\n"
 /* class by manual */                + "  [y uniq]\n"
@@ -9532,6 +9568,9 @@ class XML extends Util{
 /* class by manual */                + "    y cp file1 file2\n"
 /* class by manual */                + "    y cp -R pasta1 pasta2\n"
 /* class by manual */                + "    obs: se a pasta2 nao existir entao e criado a copia com o nome pasta2, se existir e copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
+/* class by manual */                + "[y mv]\n"
+/* class by manual */                + "    y mv file1 file2\n"
+/* class by manual */                + "    y mv pasta1 pasta2\n"
 /* class by manual */                + "[y mkdir]\n"
 /* class by manual */                + "    y mkdir pasta1\n"
 /* class by manual */                + "[y iconv]\n"
@@ -9777,5 +9816,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
