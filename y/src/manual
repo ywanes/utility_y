@@ -68,6 +68,8 @@ usage:
   [y os]
   [y date]
   [y cronometro]
+  [y clear]
+  [y cls]
   [y help]
 
 Exemplos...
@@ -426,6 +428,12 @@ Exemplos...
     y cronometro flag
     y cronometro end
     obs: "y cronometro" dispara o comando equivalente a flag a cada enter pressionado.
+[y clear]
+    y clear
+    obs: alternativa y cls
+[y cls]
+    y cls
+    obs: alternativa y clear
 [y help]
     y help <command>
     y help router

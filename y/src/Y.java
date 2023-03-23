@@ -1344,6 +1344,11 @@ cat buffer.log
                 return;
             }
         }
+        if ( args[0].equals("clean") || args[0].equals("clear") || args[0].equals("cls") ){
+            clear_cls();
+            return;
+        }
+        
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             String retorno=null;
             if ( args.length == 2 )
@@ -6900,6 +6905,18 @@ System.out.println("BB" + retorno);
         }
     }
     
+    private void clear_cls(){
+        try{
+            if ( System.getProperty("user.dir").contains("/") )
+                new ProcessBuilder("clear").inheritIO().start().waitFor();
+            else
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+        }catch(Exception e){
+            System.out.println("Error..." + e.toString());
+            System.exit(1);
+        }            
+    }
+    
     private boolean tipo_cadastrado(int a) {
         return true; 
         // controle desabilitado - ja foram feitos muitos testes... 
@@ -9296,6 +9313,8 @@ class XML extends Util{
 /* class by manual */                + "  [y os]\n"
 /* class by manual */                + "  [y date]\n"
 /* class by manual */                + "  [y cronometro]\n"
+/* class by manual */                + "  [y clear]\n"
+/* class by manual */                + "  [y cls]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
@@ -9654,6 +9673,12 @@ class XML extends Util{
 /* class by manual */                + "    y cronometro flag\n"
 /* class by manual */                + "    y cronometro end\n"
 /* class by manual */                + "    obs: \"y cronometro\" dispara o comando equivalente a flag a cada enter pressionado.\n"
+/* class by manual */                + "[y clear]\n"
+/* class by manual */                + "    y clear\n"
+/* class by manual */                + "    obs: alternativa y cls\n"
+/* class by manual */                + "[y cls]\n"
+/* class by manual */                + "    y cls\n"
+/* class by manual */                + "    obs: alternativa y clear\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
