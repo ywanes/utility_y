@@ -4467,21 +4467,8 @@ System.out.println("BB" + retorno);
     }
     
     public void cd(){
-        try{
-            if ( System.getProperty("user.dir").contains("/") )
-                System.out.println("Nao implementado!");
-                //Runtime.getRuntime().exec(new String[]{ "/bin/sh", "-c", "cd /tmp; ls -l" });                
-                //System.out.println("digite cd");
-            else
-                System.out.println("Nao implementado!");
-                //System.setProperty("user.dir", "c:/");
-                //Runtime.getRuntime().exec("cmd /c echo %userprofile%");
-                //new ProcessBuilder("cd","%userprofile%").inheritIO().start().waitFor();
-            
-        }catch(Exception e){
-            System.out.println("Error..." + e.toString());
-            System.exit(1);
-        }                    
+        System.out.println("digite cd");                 
+        System.out.println("para windows é preciso configurar pelo cabeçalho do Y.java");                 
     }
     
     public void mkdir(File f){
