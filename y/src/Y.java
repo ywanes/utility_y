@@ -7380,11 +7380,20 @@ class JSON extends Util{
         byte[] entrada_ = new byte[1];
         while ( read1Byte(entrada_) ){
             String t=new String(entrada_);      
-            if ( t.charAt(0) != entrada_[0] ){ // 1 char 2 bytes, acentos.
+            if ( entrada_[0] == -61 ){ // 1 char 2 bytes, acentos. ex: á
                 byte b1=entrada_[0];
                 read1Byte(entrada_);
                 t=new String(new byte[]{b1, entrada_[0]});      
+            }else{
+                if ( entrada_[0] == -30 ){ // 1 char 3 bytes, acentos. ex: “
+                    byte b1=entrada_[0];
+                    read1Byte(entrada_);
+                    byte b2=entrada_[0];
+                    read1Byte(entrada_);
+                    t=new String(new byte[]{b1, b2, entrada_[0]});      
+                }                
             }
+
             if ( t.equals("\"") ){
                 literal=!literal;
                 if ( literal )
@@ -7425,8 +7434,7 @@ class JSON extends Util{
                 unico_campo=partes[1];
             }
             if ( b.startsWith("data") ){ // data['items']['itemsB'] -> _.items.itemsB._
-                                         // data -> _
-                //partes=b.substring(4).replace("[", "").replace("]", "").split("'");
+                                               // data -> _
                 partes=b.substring(4).replace("]","],").split(",");
                 filter_for="_";
                 for ( String parte : partes ){
@@ -7469,7 +7477,7 @@ class JSON extends Util{
       tratando byte a byte
     */
     private void next(String t) {
-        if ( level_in.contains(t) ){
+        if ( !literal && level_in.contains(t) ){
             seq=0;
             int aux=level_in.indexOf(t);
             pilha[count_pilha]=level_out.substring(aux, aux+1);
@@ -7482,7 +7490,7 @@ class JSON extends Util{
             indexacao();
             return;
         }else{
-            if ( level_out.contains(t) ){
+            if ( !literal && level_out.contains(t) ){
                 if (count_pilha==0 || !pilha[count_pilha-1].equals(t)){
                     erroFatal(99);
                 }
@@ -7494,7 +7502,7 @@ class JSON extends Util{
                 return;
             }
         }
-        if ( t.equals(",")){
+        if ( !literal && t.equals(",")){
             pai="";
             out(t);
             outwrite();
