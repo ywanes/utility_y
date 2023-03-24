@@ -236,6 +236,7 @@ Exemplos...
         -X POST http://localhost:8080/v1/movies
     curl http://localhost:8080/v1/movies
     obs: -v => verbose
+    obs2: --header é o mesmo que -H
 [y [sed|tr]]
     cat arquivo | y sed A B
     cat arquivo | y sed A B E F

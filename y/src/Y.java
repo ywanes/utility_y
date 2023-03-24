@@ -3652,10 +3652,9 @@ cat buffer.log
             boolean raw=false;
             int len=0;
             int port = 80;            
-
             
             for ( int i=1;i<args.length;i++ ){
-                if ( args[i].equals("-H") && i+1 < args.length ){
+                if ( (args[i].equals("-H") || args[i].equals("--header"))&& i+1 < args.length ){
                     i++;
                     header+=args[i]+"\r\n";
                     continue;
@@ -7375,13 +7374,17 @@ class JSON extends Util{
         this.mostraEstrutura=mostraEstrutura;
         this.mostraEstruturaObs=mostraEstruturaObs;  
         this.list_on=list_on;
-        if ( setFilter() ){
-        }else{
+        if ( !command.equals("") && !setFilter() ){
             return false;
         }
         byte[] entrada_ = new byte[1];
         while ( read1Byte(entrada_) ){
-            String t=new String(entrada_);            
+            String t=new String(entrada_);      
+            if ( t.charAt(0) != entrada_[0] ){ // 1 char 2 bytes, acentos.
+                byte b1=entrada_[0];
+                read1Byte(entrada_);
+                t=new String(new byte[]{b1, entrada_[0]});      
+            }
             if ( t.equals("\"") ){
                 literal=!literal;
                 if ( literal )
@@ -7533,7 +7536,7 @@ class JSON extends Util{
                 tabela="[elem for elem in " + tabela + "]";
                 if ( !contemNaTabela(tabela) && count_tabelas < 50 ){
                     tabelas[count_tabelas++]=tabela;
-                    System.out.println(tabela);
+                    System.out.println("y json \""+tabela+"\"");
                 }
             }           
         }
@@ -9353,6 +9356,7 @@ class XML extends Util{
 /* class by manual */                + "  [y rm]\n"
 /* class by manual */                + "  [y cp]\n"
 /* class by manual */                + "  [y mv]\n"
+/* class by manual */                + "  [y cd]\n"
 /* class by manual */                + "  [y iconv]\n"
 /* class by manual */                + "  [y tee]\n"
 /* class by manual */                + "  [y uniq]\n"
@@ -9544,6 +9548,7 @@ class XML extends Util{
 /* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    obs: -v => verbose\n"
+/* class by manual */                + "    obs2: --header e o mesmo que -H\n"
 /* class by manual */                + "[y [sed|tr]]\n"
 /* class by manual */                + "    cat arquivo | y sed A B\n"
 /* class by manual */                + "    cat arquivo | y sed A B E F\n"
@@ -9597,6 +9602,9 @@ class XML extends Util{
 /* class by manual */                + "[y mv]\n"
 /* class by manual */                + "    y mv file1 file2\n"
 /* class by manual */                + "    y mv pasta1 pasta2\n"
+/* class by manual */                + "[y cd]\n"
+/* class by manual */                + "    y cd\n"
+/* class by manual */                + "    obs: equivalente a cd $HOME no linux e cd %userprofile% no windows\n"
 /* class by manual */                + "[y mkdir]\n"
 /* class by manual */                + "    y mkdir pasta1\n"
 /* class by manual */                + "[y iconv]\n"
@@ -9842,6 +9850,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
