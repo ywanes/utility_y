@@ -7205,7 +7205,7 @@ class Util{
     public static String readLine(){
         try{            
             if ( scanner_pipe == null ){
-                readLine(System.in);
+                readLine(System.in);                
             }
             if ( scanner_pipe.hasNext() )
                 return scanner_pipe.next().replace("\r","");
@@ -7219,6 +7219,24 @@ class Util{
         return null;
     }
 
+    public static String read1String(){
+        try{            
+            if ( scanner_pipe == null ){
+                readLine(System.in);
+                scanner_pipe.useDelimiter("");
+            }
+            if ( scanner_pipe.hasNext() )
+                return scanner_pipe.next();
+            else
+                return null;            
+        }catch(java.util.NoSuchElementException no) {
+            return null;
+        }catch(Exception e){
+            System.err.println("NOK: "+e.toString());
+        }
+        return null;
+    }
+    
     public static void closeLine(){
         try{
             scanner_pipe.close();            
@@ -7377,23 +7395,9 @@ class JSON extends Util{
         if ( !command.equals("") && !setFilter() ){
             return false;
         }
-        byte[] entrada_ = new byte[1];
-        while ( read1Byte(entrada_) ){
-            String t=new String(entrada_);      
-            if ( entrada_[0] == -61 ){ // 1 char 2 bytes, acentos. ex: á
-                byte b1=entrada_[0];
-                read1Byte(entrada_);
-                t=new String(new byte[]{b1, entrada_[0]});      
-            }else{
-                if ( entrada_[0] == -30 ){ // 1 char 3 bytes, acentos. ex: “
-                    byte b1=entrada_[0];
-                    read1Byte(entrada_);
-                    byte b2=entrada_[0];
-                    read1Byte(entrada_);
-                    t=new String(new byte[]{b1, b2, entrada_[0]});      
-                }                
-            }
-
+        
+        String t=null;
+        while( (t=read1String()) != null ){
             if ( t.equals("\"") ){
                 literal=!literal;
                 if ( literal )
