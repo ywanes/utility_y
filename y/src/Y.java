@@ -7378,7 +7378,7 @@ class JSON extends Util{
     boolean mostraEstruturaDebug=false;
     boolean list_on=false;
     String filterA=""; // filtro definido
-    String filterB=""; // filtro definido auxiliar para lista
+    String filterB=""; // filtro definido auxiliar para lista de nao objetos ex: [1, 2, 3]
     boolean filterMatchA=false; // match in filterA
     boolean filterMatchB=false; // match in filterB
     String unico_campo=""; // campo citado no comando, ex: "[elem['campo2'] for elem in data]"
@@ -9512,7 +9512,9 @@ class XML extends Util{
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data['items']]\"\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data]\"\n"
 /* class by manual */                + "   y cat file.json | y json list \"[elem['id'] for elem in data]\"\n"
-/* class by manual */                + "   obs: parametro complementar mostraEstruturaDebug\n"
+/* class by manual */                + "   obs: parametro de apoio => mostraEstruturaDebug\n"
+/* class by manual */                + "   obs2: exemplo com lista, representada por '_':\n"
+/* class by manual */                + "         y echo '{\"folders\": [{\"id\": 1, \"lists\":[{\"id\": 11},{\"id\": 12}] },{\"id\": 2, \"lists\":[{\"id\": 21},{\"id\": 22}] }] }' | y json \"[elem for elem in data['folders']['_']['lists']]\"\n"
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
@@ -9916,6 +9918,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
