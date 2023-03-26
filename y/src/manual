@@ -135,7 +135,9 @@ Exemplos...
    y cat file.json | y json "[elem['id'] for elem in data['items']]"
    y cat file.json | y json "[elem['id'] for elem in data]"
    y cat file.json | y json list "[elem['id'] for elem in data]"
-   obs: parametro complementar mostraEstruturaDebug
+   obs: parametro de apoio => mostraEstruturaDebug
+   obs2: exemplo com lista, representada por '_':
+         y echo '{"folders": [{"id": 1, "lists":[{"id": 11},{"id": 12}] },{"id": 2, "lists":[{"id": 21},{"id": 22}] }] }' | y json "[elem for elem in data['folders']['_']['lists']]"
 [y zip]
     y zip add File1.txt > saida.zip
     cat File1.txt | y zip add -name File1.txt > saida.zip

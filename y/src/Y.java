@@ -7557,19 +7557,19 @@ class JSON extends Util{
         mostra estrutura interna de identacao ex _.{.[
     */
     private void debug(){
-        String obs="";
+        String txtDebug="";
         String tabela="data";
         for ( int i=0;i<count_pilha;i++ ){
             if ( i > 0 )
-                obs+=".";
-            obs+=pilha_pai[i].equals("")?"_":pilha_pai[i];
+                txtDebug+=".";
+            txtDebug+=pilha_pai[i].equals("")?"_":pilha_pai[i];
             if ( i > 0 && i < count_pilha-1)
                 tabela+="['"+pilha_pai[i]+"']";
         }
         if ( mostraEstruturaDebug )
-            System.out.println(obs);
+            System.out.println(txtDebug);
         if ( mostraTabela ){
-            if ( obs.endsWith("._") && !obs.contains("._.") ){
+            if ( txtDebug.endsWith("._") && !txtDebug.contains("._.") ){
                 tabela="[elem for elem in " + tabela + "]";
                 if ( !contemNaTabela(tabela) && count_tabelas < 50 ){
                     tabelas[count_tabelas++]=tabela;
@@ -7577,8 +7577,8 @@ class JSON extends Util{
                 }
             }           
         }
-        filterMatchA=obs.equals(filterA); // list of obj -> [{"b":1},{"b":2}] ou [[1,2],[3,4]]
-        filterMatchB=obs.equals(filterB); // list of value -> [1,2]
+        filterMatchA=txtDebug.equals(filterA); // list of obj -> [{"b":1},{"b":2}] ou [[1,2],[3,4]]
+        filterMatchB=txtDebug.equals(filterB); // list of value -> [1,2]
     }
     
     /*
