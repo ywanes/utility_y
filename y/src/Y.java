@@ -255,7 +255,7 @@ cat buffer.log
         //Util.testOn(); args=new String[]{"json", "[elem for elem in data['items']]"};        
         //Util.testOn(); args=new String[]{"json", "[elem for elem in data['b']]"};        
         //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
-        //Util.testOn(); args=new String[]{"json", "mostraEstruturaObs"};
+        //Util.testOn(); args=new String[]{"json", "mostraEstruturaDebug"};
         //Util.testOn(); args=new String[]{"json", "mostraTabela"};
         //args=new String[]{"regua"};                
         //args=new String[]{"find", ".", "-mtime", "1"};                
@@ -553,10 +553,10 @@ cat buffer.log
             }                
             boolean mostraTabela=parm.equals("mostraTabela");
             boolean mostraEstrutura=parm.equals("mostraEstrutura");            
-            boolean mostraEstruturaObs=parm.equals("mostraEstruturaObs");
+            boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
             String command=parm.contains("for elem in data")?parm:"";
-            if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaObs ){
-                if ( new JSON().go(command,mostraTabela,mostraEstrutura,mostraEstruturaObs,list_on) ){
+            if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaDebug ){
+                if ( new JSON().go(command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,list_on) ){
                     return;
                 }
             }
@@ -7364,8 +7364,7 @@ class Util{
     }    
     
     public static void erroFatal(int n) {
-        System.out.println("Erro Fatal! "+n);
-        System.err.println("Erro Fatal! "+n);
+        System.err.println("Erro Fatal " + n + "!!!!");
         System.exit(1);
     }      
 }
@@ -7376,32 +7375,45 @@ class JSON extends Util{
     String command="";
     boolean mostraTabela=false;
     boolean mostraEstrutura=false;
-    boolean mostraEstruturaObs=false;
+    boolean mostraEstruturaDebug=false;
     boolean list_on=false;
-    String filter_for="";
-    String filter_forB="";
-    boolean filter_on=false;
-    boolean filter_onB=false;
-    String unico_campo="";
+    String filterA=""; // filtro definido
+    String filterB=""; // filtro definido auxiliar para lista
+    boolean filterMatchA=false; // match in filterA
+    boolean filterMatchB=false; // match in filterB
+    String unico_campo=""; // campo citado no comando, ex: "[elem['campo2'] for elem in data]"
     String [] campos= new String[99];
     int count_campos=0;
     boolean finish_add_campos=false;
-    public boolean go(String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaObs, boolean list_on){ // "[elem['id'] for elem in data['items']]"        
+    /*
+        controle de literal e guarda key pai(key de key/value da camada superiora)
+        contra_barra_lvl controla os elementos "  \\ ou \" " no literal
+        exemplo de literal => "abc"
+        command => exemplo de parametro de comando: 
+            "[elem['id'] for elem in data]"
+    */
+    public boolean go(String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaDebug, boolean list_on){ // "[elem['id'] for elem in data['items']]"        
         this.command=command;
         this.mostraTabela=mostraTabela;
         this.mostraEstrutura=mostraEstrutura;
-        this.mostraEstruturaObs=mostraEstruturaObs;  
+        this.mostraEstruturaDebug=mostraEstruturaDebug;  
         this.list_on=list_on;
-        if ( !command.equals("") && !setFilter() ){
+        if ( !command.equals("") && !setFilter() )
             return false;
-        }
         
         String t=null;
+        int contra_barra_lvl=0;   
         while( (t=read1String()) != null ){
-            if ( t.equals("\"") ){
+            if (literal && contra_barra_lvl > 1)
+                contra_barra_lvl=0;
+            else
+                if ((literal && t.equals("\\") && contra_barra_lvl == 0)
+                    || (literal && contra_barra_lvl == 1))
+                    contra_barra_lvl++;
+            if ( t.equals("\"") && contra_barra_lvl != 2 ){
                 literal=!literal;
                 if ( literal )
-                    pai="";
+                    key_pai="";
             }
             if ( !literal && t.equals(" ") ){
                 continue;
@@ -7410,7 +7422,7 @@ class JSON extends Util{
                 continue;
             }
             if ( literal && !t.equals("\"") && !t.equals(" ") ){
-                pai+=t;
+                key_pai+=t;
             }
             next(t);
             if ( !literal && t.equals(":")){
@@ -7420,6 +7432,61 @@ class JSON extends Util{
         nextflush();
         return true;
     }
+    
+    String [] pilha=new String [999];
+    String [] pilha_pai=new String [999];
+    String key_pai="";
+    int count_pilha=0;
+    String level_in="[{";
+    String level_out="]}";
+    int seq=0;
+    /*
+        tratando por caracter
+        level_in.contains(t) significa t contem { ou [
+        level_out.contains(t) significa t contem } ou ]
+        pilha => empilha as tas { [ fazendo o controle quando desempilhar
+        pilha_pai => empilha as keys de key/value
+        out => saida em buffer
+        outwrite => print saida
+        debug => trata mostraEstruturaDebug, codigo de elementos identados
+        identacao => controle de identacao - para parametro mostraEstrutura
+    */
+    private void next(String t) {
+        if ( !literal ){
+            if ( level_in.contains(t) ){
+                seq=0;
+                int aux=level_in.indexOf(t);
+                pilha[count_pilha]=level_out.substring(aux, aux+1);
+                pilha_pai[count_pilha]=key_pai;
+                key_pai="";
+                count_pilha++;
+                out(t);
+                outwrite();                
+                debug();
+                identacao();
+                return;
+            }
+            if ( level_out.contains(t) ){
+                if (count_pilha==0 || !pilha[count_pilha-1].equals(t))
+                    erroFatal(99);
+                count_pilha--;     
+                outwrite();
+                debug();
+                identacao();
+                out(t);
+                return;
+            }
+            if ( t.equals(",")){
+                key_pai="";
+                out(t);
+                outwrite();
+                debug();
+                identacao();
+                return;
+            }
+        }
+        out(t);
+    }   
     
     /*
       Define o filtro, ex data['items']['itemsB']
@@ -7434,13 +7501,12 @@ class JSON extends Util{
             String a=partes[0];
             String b=partes[1];
             partes=a.split("'"); // elem['id']
-            if ( partes.length == 3 ){
+            if ( partes.length == 3 )
                 unico_campo=partes[1];
-            }
             if ( b.startsWith("data") ){ // data['items']['itemsB'] -> _.items.itemsB._
                                                // data -> _
                 partes=b.substring(4).replace("]","],").split(",");
-                filter_for="_";
+                filterA="_";
                 for ( String parte : partes ){
                     if ( parte.equals("") )
                         continue;
@@ -7454,70 +7520,26 @@ class JSON extends Util{
                     )
                         return false;
                     parte=parte.replace("'","");
-                    filter_for+="."+parte;
+                    filterA+="."+parte;
                 }
-                filter_forB=filter_for;
-                filter_for+="._";
+                filterB=filterA;
+                filterA+="._";
             }else
                 return false;
         }    
         return true;
     }
     
-    private void indexacao() {     
+    /*
+        identacao para mostraEstrutura
+    */
+    private void identacao() {     
         for ( int i=0;i<count_pilha*2;i++ )
-            outindex(" ");
+            out_mostra+=" ";
     }
     
-    String [] pilha=new String [999];
-    String [] pilha_pai=new String [999];
-    String pai="";
-    
-    int count_pilha=0;
-    String level_in="[{";
-    String level_out="]}";
-    int seq=0;
     /*
-      tratando byte a byte
-    */
-    private void next(String t) {
-        if ( !literal && level_in.contains(t) ){
-            seq=0;
-            int aux=level_in.indexOf(t);
-            pilha[count_pilha]=level_out.substring(aux, aux+1);
-            pilha_pai[count_pilha]=pai;
-            pai="";
-            count_pilha++;
-            out(t);
-            outwrite();                
-            obs();
-            indexacao();
-            return;
-        }else{
-            if ( !literal && level_out.contains(t) ){
-                if (count_pilha==0 || !pilha[count_pilha-1].equals(t)){
-                    erroFatal(99);
-                }
-                count_pilha--;     
-                outwrite();
-                obs();
-                indexacao();
-                out(t);
-                return;
-            }
-        }
-        if ( !literal && t.equals(",")){
-            pai="";
-            out(t);
-            outwrite();
-            obs();
-            indexacao();
-            return;
-        }
-        out(t);
-    }   
-    /*
-      finalizar processo.
+      finaliza ultimas pendencias apos ultimo next
     */   
     private void nextflush(){
         outwrite();
@@ -7530,8 +7552,11 @@ class JSON extends Util{
     }
     
     String [] tabelas=new String[99];
-    int count_tabelas=0;    
-    private void obs(){
+    int count_tabelas=0; 
+    /*
+        mostra estrutura interna de identacao ex _.{.[
+    */
+    private void debug(){
         String obs="";
         String tabela="data";
         for ( int i=0;i<count_pilha;i++ ){
@@ -7541,7 +7566,7 @@ class JSON extends Util{
             if ( i > 0 && i < count_pilha-1)
                 tabela+="['"+pilha_pai[i]+"']";
         }
-        if ( mostraEstruturaObs )
+        if ( mostraEstruturaDebug )
             System.out.println(obs);
         if ( mostraTabela ){
             if ( obs.endsWith("._") && !obs.contains("._.") ){
@@ -7552,9 +7577,13 @@ class JSON extends Util{
                 }
             }           
         }
-        filter_on=obs.equals(filter_for); // list of obj -> [{"b":1},{"b":2}] ou [[1,2],[3,4]]
-        filter_onB=obs.equals(filter_forB); // list of value -> [1,2]
-    } 
+        filterMatchA=obs.equals(filterA); // list of obj -> [{"b":1},{"b":2}] ou [[1,2],[3,4]]
+        filterMatchB=obs.equals(filterB); // list of value -> [1,2]
+    }
+    
+    /*
+        verifica situação para mostrar em mostraTabela
+    */
     private boolean contemNaTabela(String a){
         for ( int i=0;i<count_tabelas;i++ )
             if ( tabelas[i].equals(a) )
@@ -7564,28 +7593,32 @@ class JSON extends Util{
     
     String out="";
     String out_mostra="";
+    /*
+        buffer de saida
+    */
     private void out(String a){
         out+=a;
         out_mostra+=a;
     }
-    private void outindex(String a){
-        out_mostra+=a;
-    }
+    
     String detail="";
     String key="";
     String value="";    
     boolean unica_verificacao=false;
+    /*
+        imprime
+    */
     private void outwrite(){
-        if ( mostraEstrutura || mostraEstruturaObs )
+        if ( mostraEstrutura || mostraEstruturaDebug )
             System.out.println(out_mostra);
-        if ( !unica_verificacao && !command.equals("") && filter_onB ){
+        if ( !unica_verificacao && !command.equals("") && filterMatchB ){
             unica_verificacao=true;
             if ( !out.startsWith("{") && !out.startsWith("[") ){
-                filter_on=filter_onB;
-                filter_for=filter_forB;
+                filterMatchA=filterMatchB;
+                filterA=filterB;
             }
         }
-        if ( !command.equals("") && filter_on && get_KeyValue() ){
+        if ( !command.equals("") && filterMatchA && get_KeyValue() ){
             // add campo
             if ( !finish_add_campos ){
                 if ( value.equals("{") || value.equals("[") ){
@@ -7593,12 +7626,10 @@ class JSON extends Util{
                     print_header();                    
                 }else{
                     if ( !contem(key) ){
-                        if ( unico_campo.equals("") ){
+                        if ( unico_campo.equals("") )
                             campos[count_campos++]=key;
-                        }
-                        if ( !unico_campo.equals("") && unico_campo.equals(key) ){
+                        if ( !unico_campo.equals("") && unico_campo.equals(key) )
                             campos[count_campos++]=key;
-                        }
                     }else{
                         finish_add_campos=true;
                         print_header();
@@ -7638,6 +7669,10 @@ class JSON extends Util{
         }
     }
     
+    /*
+        verifica se o campo deve ser impresso na saida
+        saida no formato csv
+    */
     private boolean contem(String a){
         for ( int i=0;i<count_campos;i++ )
             if ( campos[i].equals(a) )
@@ -7645,6 +7680,9 @@ class JSON extends Util{
         return false;
     }
     
+    /*
+        get key value do objeto
+    */
     private boolean get_KeyValue(){
         String a=out;
         key="?";
@@ -7664,11 +7702,23 @@ class JSON extends Util{
         value=value.replace("\"", "\"\"");
         return true;
     }
+    
+    /*
+        remove virgula de quebra de key/value ex:
+        {
+            "aa": "aa",
+            "bb": "bb"
+        }
+    */
     private String tiraVirgula(String a){
         if ( a.endsWith(",") )
             return a.substring(0,a.length()-1);         
         return a;
     }
+    
+    /*
+        remove aspas para pegar texto puro ex: "texto" => texto
+    */
     private String tiraAspasPontas(String a){
         if ( a.startsWith("\"") )
             a = a.substring(1, a.length());
@@ -9318,6 +9368,9 @@ class XML extends Util{
 
 
 
+
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -9459,6 +9512,7 @@ class XML extends Util{
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data['items']]\"\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data]\"\n"
 /* class by manual */                + "   y cat file.json | y json list \"[elem['id'] for elem in data]\"\n"
+/* class by manual */                + "   obs: parametro complementar mostraEstruturaDebug\n"
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
@@ -9862,6 +9916,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
