@@ -545,18 +545,22 @@ cat buffer.log
         }
         
         if ( args[0].equals("json") && args.length > 1 ){
-            String parm=args[1];
-            boolean list_on=false;
-            if ( args.length > 2 && args[1].equals("list") ){
-                list_on = true;
-                parm=args[2];
-            }                
-            boolean mostraTabela=parm.equals("mostraTabela");
-            boolean mostraEstrutura=parm.equals("mostraEstrutura");            
-            boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
-            String command=parm.contains("for elem in data")?parm:"";
-            if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaDebug ){
-                if ( new JSON().go(command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,list_on) ){
+            String [] args2 = new String[args.length];            
+            System.arraycopy(args, 0, args2, 0, args.length);
+            args2=sliceParm(1,args2);
+            
+            Object [] objs=new Object[2];
+            args2 = get_parms_json_listOn_parm(objs, args2);
+            boolean listOn=(Boolean)objs[0];
+            String parm=(String)objs[1];
+
+            if ( args2 != null && args2.length == 0 ){
+                boolean mostraTabela=parm.equals("mostraTabela");
+                boolean mostraEstrutura=parm.equals("mostraEstrutura");            
+                boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
+                String command=parm.contains("for elem in data")?parm:"";
+                if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaDebug ){
+                    new JSON().go(System.in, command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn);
                     return;
                 }
             }
@@ -808,10 +812,73 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("curl") ){
-            if ( curl(args) ){
+            String [] args2 = new String[args.length];            
+            System.arraycopy(args, 0, args2, 0, args.length);
+            args2=sliceParm(1,args2);
+            Object [] objs=new Object[5];
+            args2 = get_parms_curl_header_method_verbose_raw_host(objs, args2);
+            String header=(String)objs[0];
+            String method=(String)objs[1];
+            boolean verbose=(Boolean)objs[2];
+            boolean raw=(Boolean)objs[3];
+            String host=(String)objs[4];
+
+            if ( args2 != null && args2.length == 0 ){
+                curl(System.out, header, method, verbose, raw, host);
                 return;
             }
         }
+        if ( args[0].equals("curlJson") ){
+            String [] args2 = new String[args.length];            
+            System.arraycopy(args, 0, args2, 0, args.length);
+            args2=sliceParm(1,args2);
+            Object [] objsCurl=new Object[5];
+            args2 = get_parms_curl_header_method_verbose_raw_host(objsCurl, args2);
+            String header=(String)objsCurl[0];
+            String method=(String)objsCurl[1];
+            boolean verbose=(Boolean)objsCurl[2];
+            boolean raw=(Boolean)objsCurl[3];
+            String host=(String)objsCurl[4];            
+            
+            Object [] objsJson=new Object[2];
+            args2 = get_parms_json_listOn_parm(objsJson, args2);
+            boolean listOn=(Boolean)objsJson[0];
+            String parm=(String)objsJson[1];
+
+            if ( args2 != null && args2.length == 0 ){
+                boolean mostraTabela=parm.equals("mostraTabela");
+                boolean mostraEstrutura=parm.equals("mostraEstrutura");            
+                boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
+                String command=parm.contains("for elem in data")?parm:"";
+                if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaDebug ){
+                    try{
+                        final PipedInputStream pipedInputStream=new PipedInputStream();
+                        final PipedOutputStream pipedOutputStream=new PipedOutputStream();
+                        pipedInputStream.connect(pipedOutputStream);
+                        Thread pipeWriter=new Thread(new Runnable() {
+                            public void run() {
+                                curl(pipedOutputStream, header, method, verbose, raw, host);
+                            }
+                        });
+                        Thread pipeReader=new Thread(new Runnable() {
+                            public void run() {
+                                new JSON().go(pipedInputStream, command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn);
+                            }
+                        });
+                        pipeWriter.start();
+                        pipeReader.start();
+                        pipeWriter.join();
+                        pipeReader.join();
+                        pipedOutputStream.flush();
+                        pipedOutputStream.close();            
+                        pipedInputStream.close();        
+                    }catch(Exception e){
+                        System.err.println("Erro, "+e.toString());
+                    }            
+                    return;
+                }
+            }
+        }        
         if ( args[0].equals("sed") || args[0].equals("tr") ){
             if ( args.length == 3 ){
                 sed(args);
@@ -1386,7 +1453,7 @@ cat buffer.log
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             String retorno=null;
             if ( args.length == 2 )
-                retorno=helplike(args[1]);
+                retorno=helplikecase(args[1], false);
             if ( retorno == null )
                 System.err.println(
                     "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
@@ -2367,7 +2434,7 @@ cat buffer.log
         String command="";
         boolean achou=false;
         
-        readLineB(pipe);
+        readLineB(pipe, null, null);
         
         try{
             con = getcon(conn);
@@ -3639,48 +3706,12 @@ cat buffer.log
         }
     }
 
-    public boolean curl(String [] args){        
-        boolean parms_curl_its_ok=true;
-
-        String host = "";
+    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host){
         try{            
             String path="/";
-            String method="GET";
-            String header="";
             String protocol="HTTP";
-            boolean verbose=false;
-            boolean raw=false;
             int len=0;
             int port = 80;            
-            
-            for ( int i=1;i<args.length;i++ ){
-                if ( (args[i].equals("-H") || args[i].equals("--header"))&& i+1 < args.length ){
-                    i++;
-                    header+=args[i]+"\r\n";
-                    continue;
-                }
-                if ( args[i].equals("-X") && i+1 < args.length ){                    
-                    i++;
-                    if ( !args[i].toUpperCase().equals("POST") && !args[i].toUpperCase().equals("GET") )
-                        return false; // parm not ok
-                    method=args[i].toUpperCase();
-                    continue;
-                }
-                if ( args[i].equals("-v") ){
-                    verbose=true;
-                    continue;
-                }
-                if ( args[i].equals("--raw") ){
-                    raw=true;
-                    continue;
-                }
-                if ( host.equals("") ){
-                    host=args[i];
-                    continue;
-                }
-                return false; // parm not ok                
-            }
-            header+="\r\n";            
             
             if ( host.toUpperCase().startsWith("HTTP://") ){
                 host=host.substring(7);
@@ -3758,11 +3789,16 @@ cat buffer.log
             sb.append(pre_header);
             sb.append(header);            
             if ( verbose ){
-                System.out.println("* Connected " + socket.getInetAddress().toString().replace("/", " - ") + " port " + port);
-                System.out.print(init_msg);
-                System.out.print(pre_header);
-                System.out.print(header);
-                System.out.println(baos.toString());
+                os_print.write( ("* Connected " + socket.getInetAddress().toString().replace("/", " - ") + " port " + port).getBytes());
+                os_print.write("\n".getBytes());
+                os_print.write(init_msg.getBytes());
+                os_print.write("\n".getBytes());
+                os_print.write(pre_header.getBytes());
+                os_print.write("\n".getBytes());
+                os_print.write(header.getBytes());
+                os_print.write("\n".getBytes());
+                os_print.write(baos.toByteArray());
+                os_print.write("\n".getBytes());
             }
             os.write(sb.toString().getBytes());                        
             os.write(baos.toByteArray());            
@@ -3776,8 +3812,8 @@ cat buffer.log
                     if ( heading ){
                         for ( int i=0;i<len;i++ ){
                             if ( verbose ){
-                                System.out.write(buffer, i, 1);                        
-                                System.out.flush();
+                                os_print.write(buffer, i, 1);                        
+                                os_print.flush();
                             }
                             header_response+=(char)buffer[i];
 
@@ -3792,12 +3828,10 @@ cat buffer.log
                                     chunked=true;
                                 if ( i < len ){
                                     if ( chunked ){
-                                        if ( curl_chunk_write(buffer, i, len-i) ){
+                                        if ( curl_chunk_write(buffer, i, len-i) )
                                             System.exit(0);
-                                        }
-                                    }else{
-                                        System.out.write(buffer, i, len-i); 
-                                    }                                    
+                                    }else
+                                        os_print.write(buffer, i, len-i); 
                                     break;
                                 }
                             }
@@ -3807,22 +3841,19 @@ cat buffer.log
                             if ( curl_chunk_write(buffer, 0, len) ){
                                 System.exit(0);
                             }
-                        }else{
-                            System.out.write(buffer, 0, len);
-                        }
+                        }else
+                            os_print.write(buffer, 0, len);
                     }
                 }
-                System.out.flush();
+                os_print.flush();
             }catch(Exception e){
-                System.out.println("\nError "+e.toString());
+                os_print.write(("\nError "+e.toString()).getBytes());
             }
-
         }catch(UnknownHostException e){
             System.err.println("Error UnknownHost: " + host);
         }catch(Exception e){
             System.err.println("Error: " + e.toString());
         }
-        return parms_curl_its_ok;
     }
     
     boolean flip=true; // true => head chunked | false => data chunked
@@ -5660,15 +5691,6 @@ System.out.println("BB" + retorno);
         return result;
     }
     
-    public String helplike(String txt){
-        String retorno=helplikecase(txt,true);
-        if ( retorno.equals("") )
-            retorno=helplikecase(txt,false);
-        if ( retorno.equals("") )
-            return null;
-        return retorno;
-    }
-    
     public String helplikecase(String txt, boolean case_){
         String [] linhas=somente_detalhado().split("\n");
         String result="";
@@ -5685,6 +5707,8 @@ System.out.println("BB" + retorno);
             if ( achou )
                 result+=linhas[i]+"\n";
         }
+        if ( result.equals("") )
+            return null;        
         return result;
     }
     
@@ -6338,6 +6362,75 @@ System.out.println("BB" + retorno);
         }
     }
 
+    private String [] get_parms_curl_header_method_verbose_raw_host(Object [] objs, String [] args){
+        String header="";
+        String method="GET";
+        boolean verbose=false;
+        boolean raw=false;
+        String host = "";
+
+        while(true){
+            if ( args.length > 1 && (args[0].equals("-H") || args[0].equals("--header")) ){
+                header+=args[1]+"\r\n";
+                args=sliceParm(2, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-X") ){                    
+                if ( !args[0].toUpperCase().equals("POST") && !args[0].toUpperCase().equals("GET") )
+                    return null; // parm not ok
+                method=args[1].toUpperCase();
+                args=sliceParm(2, args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-v") ){
+                verbose=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("--raw") ){
+                raw=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && host.equals("") ){
+                host=args[0];
+                args=sliceParm(1, args);                
+                continue;
+            }
+            break;
+        }
+        header+="\r\n";            
+
+        objs[0] = (Object)header;
+        objs[1] = (Object)method;
+        objs[2] = (Object)verbose;
+        objs[3] = (Object)raw;
+        objs[4] = (Object)host;
+        return args;
+    }
+    
+    private String [] get_parms_json_listOn_parm(Object [] objs, String [] args){
+        boolean listOn=false;
+        String parm = "";
+
+        while(true){
+            if ( args.length > 0 && args[0].equals("list")){
+                listOn=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && parm.equals("") ){
+                parm=args[0];
+                args=sliceParm(1, args);
+                continue;                
+            }
+            break;
+        }
+        objs[0] = (Object)listOn;
+        objs[1] = (Object)parm;
+        return args;   
+    }
+            
     private Object [] get_parm_symbol_mtime_path(String [] args){
         boolean acceptSymbolicLink=false;
         float mtime = 0;
@@ -7222,10 +7315,8 @@ class Util{
     public static String read1String(){
         while(true){
             try{            
-                if ( scanner_pipe == null ){
+                if ( scanner_pipe == null )
                     readLine(System.in);
-                    scanner_pipe.useDelimiter("");
-                }
                 if ( scanner_pipe.hasNext() )
                     return scanner_pipe.next();
                 else
@@ -7252,18 +7343,23 @@ class Util{
     
     public static java.util.Scanner scanner_pipeB=null;
     public void readLineB(String caminho) throws Exception{
-        readLineB(new FileInputStream(new File(caminho)));
+        readLineB(new FileInputStream(new File(caminho)), null, null);
     }
     
-    public void readLineB(InputStream in){
-        scanner_pipeB=new java.util.Scanner(in);
-        scanner_pipeB.useDelimiter("\n");
-    }
-        
+    public static void readLineB(InputStream in,String encoding,String delimiter){
+        if ( delimiter == null )
+            delimiter="\n";
+        if ( encoding == null )
+            scanner_pipeB=new java.util.Scanner(in);
+        else
+            scanner_pipeB=new java.util.Scanner(in,encoding);
+        scanner_pipeB.useDelimiter(delimiter);        
+    }    
+    
     public String readLineB(){        
         try{
             if ( scanner_pipeB == null )
-                readLineB(System.in);
+                readLineB(System.in, null ,null);
             if ( scanner_pipeB.hasNext() )
                 return scanner_pipeB.next();
             else
@@ -7401,14 +7497,17 @@ class JSON extends Util{
         command => exemplo de parametro de comando: 
             "[elem['id'] for elem in data]"
     */
-    public boolean go(String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaDebug, boolean list_on){ // "[elem['id'] for elem in data['items']]"        
+    public void go(InputStream is, String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaDebug, boolean list_on){ // "[elem['id'] for elem in data['items']]"        
+        readLine(is, null, "");
         this.command=command;
         this.mostraTabela=mostraTabela;
         this.mostraEstrutura=mostraEstrutura;
         this.mostraEstruturaDebug=mostraEstruturaDebug;  
         this.list_on=list_on;
-        if ( !command.equals("") && !setFilter() )
-            return false;
+        if ( !command.equals("") && !setFilter() ){
+            System.out.println("Error, invalid filter!");
+            erroFatal(99);
+        }
         
         String t=null;
         int contra_barra_lvl=0;   
@@ -7439,7 +7538,6 @@ class JSON extends Util{
             }
         }   
         nextflush();
-        return true;
     }
     
     String [] pilha=new String [999];
@@ -9658,6 +9756,13 @@ class XML extends Util{
 /* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    obs: -v => verbose\n"
 /* class by manual */                + "    obs2: --header e o mesmo que -H\n"
+/* class by manual */                + "[ y curlJson]\n"
+/* class by manual */                + "    y curlJson \\\n"
+/* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
+/* class by manual */                + "        -H \"other: other\" \\\n"
+/* class by manual */                + "        http://localhost:8080/v1/movies \\\n"
+/* class by manual */                + "        \"[elem['id'] for elem in data]\"\n"
+/* class by manual */                + "    obs: mistura de curl com json\n"
 /* class by manual */                + "[y [sed|tr]]\n"
 /* class by manual */                + "    cat arquivo | y sed A B\n"
 /* class by manual */                + "    cat arquivo | y sed A B E F\n"

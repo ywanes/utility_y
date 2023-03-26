@@ -242,6 +242,13 @@ Exemplos...
     curl http://localhost:8080/v1/movies
     obs: -v => verbose
     obs2: --header é o mesmo que -H
+[ y curlJson]
+    y curlJson \
+        -H "Content-Type: application/json" \
+        -H "other: other" \
+        http://localhost:8080/v1/movies \
+        "[elem['id'] for elem in data]"
+    obs: mistura de curl com json
 [y [sed|tr]]
     cat arquivo | y sed A B
     cat arquivo | y sed A B E F
