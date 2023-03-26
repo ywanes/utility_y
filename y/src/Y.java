@@ -549,10 +549,11 @@ cat buffer.log
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
             
-            Object [] objs=new Object[2];
-            args2 = get_parms_json_listOn_parm(objs, args2);
+            Object [] objs=new Object[3];
+            args2 = get_parms_json_listOn_noHeader_parm(objs, args2);
             boolean listOn=(Boolean)objs[0];
-            String parm=(String)objs[1];
+            boolean noHeader=(Boolean)objs[1];
+            String parm=(String)objs[2];
 
             if ( args2 != null && args2.length == 0 ){
                 boolean mostraTabela=parm.equals("mostraTabela");
@@ -560,7 +561,7 @@ cat buffer.log
                 boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
                 String command=parm.contains("for elem in data")?parm:"";
                 if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaDebug ){
-                    new JSON().go(System.in, command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn);
+                    new JSON().go(System.in, command, mostraTabela, mostraEstrutura, mostraEstruturaDebug,listOn, noHeader);
                     return;
                 }
             }
@@ -840,10 +841,11 @@ cat buffer.log
             boolean raw=(Boolean)objsCurl[3];
             String host=(String)objsCurl[4];            
             
-            Object [] objsJson=new Object[2];
-            args2 = get_parms_json_listOn_parm(objsJson, args2);
+            Object [] objsJson=new Object[3];
+            args2 = get_parms_json_listOn_noHeader_parm(objsJson, args2);
             boolean listOn=(Boolean)objsJson[0];
-            String parm=(String)objsJson[1];
+            boolean noHeader=(Boolean)objsJson[1];
+            String parm=(String)objsJson[2];
 
             if ( args2 != null && args2.length == 0 ){
                 boolean mostraTabela=parm.equals("mostraTabela");
@@ -862,7 +864,7 @@ cat buffer.log
                         });
                         Thread pipeReader=new Thread(new Runnable() {
                             public void run() {
-                                new JSON().go(pipedInputStream, command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn);
+                                new JSON().go(pipedInputStream, command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn,noHeader);
                             }
                         });
                         pipeWriter.start();
@@ -6409,13 +6411,19 @@ System.out.println("BB" + retorno);
         return args;
     }
     
-    private String [] get_parms_json_listOn_parm(Object [] objs, String [] args){
+    private String [] get_parms_json_listOn_noHeader_parm(Object [] objs, String [] args){
         boolean listOn=false;
+        boolean noHeader=false;
         String parm = "";
 
         while(true){
             if ( args.length > 0 && args[0].equals("list")){
                 listOn=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("noHeader")){
+                noHeader=true;
                 args=sliceParm(1, args);
                 continue;
             }
@@ -6427,7 +6435,8 @@ System.out.println("BB" + retorno);
             break;
         }
         objs[0] = (Object)listOn;
-        objs[1] = (Object)parm;
+        objs[1] = (Object)noHeader;
+        objs[2] = (Object)parm;
         return args;   
     }
             
@@ -7479,6 +7488,7 @@ class JSON extends Util{
     boolean mostraEstrutura=false;
     boolean mostraEstruturaDebug=false;
     boolean list_on=false;
+    boolean noHeader=false;
     String filterA=""; // filtro definido
     String filterB=""; // filtro definido auxiliar para lista de nao objetos ex: [1, 2, 3]
     boolean filterMatchA=false; // match in filterA
@@ -7497,13 +7507,15 @@ class JSON extends Util{
         command => exemplo de parametro de comando: 
             "[elem['id'] for elem in data]"
     */
-    public void go(InputStream is, String command, boolean mostraTabela, boolean mostraEstrutura, boolean mostraEstruturaDebug, boolean list_on){ // "[elem['id'] for elem in data['items']]"        
+    public void go(InputStream is, String command, boolean mostraTabela, 
+                boolean mostraEstrutura, boolean mostraEstruturaDebug, boolean list_on, boolean noHeader){ // "[elem['id'] for elem in data['items']]"        
         readLine(is, null, "");
         this.command=command;
         this.mostraTabela=mostraTabela;
         this.mostraEstrutura=mostraEstrutura;
         this.mostraEstruturaDebug=mostraEstruturaDebug;  
         this.list_on=list_on;
+        this.noHeader=noHeader;
         if ( !command.equals("") && !setFilter() ){
             System.out.println("Error, invalid filter!");
             erroFatal(99);
@@ -7785,7 +7797,7 @@ class JSON extends Util{
     }
 
     private void print_header(){
-        if ( list_on == false ){
+        if ( list_on == false && noHeader == false){
             for ( int i=0;i<count_campos;i++ ){
                 if ( i != 0 )
                     System.out.print(sepCSV);
@@ -9507,7 +9519,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -9648,12 +9659,13 @@ class XML extends Util{
 /* class by manual */                + "   y cat file.json | y json \"[elem for elem in data['items']]\"\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data['items']]\"\n"
 /* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data]\"\n"
-/* class by manual */                + "   y cat file.json | y json list \"[elem['id'] for elem in data]\"\n"
 /* class by manual */                + "   obs: parametro de apoio => mostraEstruturaDebug\n"
 /* class by manual */                + "   obs2: exemplo com lista, representada por '_':\n"
 /* class by manual */                + "         y echo '{\"folders\": [{\"id\": 1, \"lists\":[{\"id\": 11},{\"id\": 12}] },{\"id\": 2, \"lists\":[{\"id\": 21},{\"id\": 22}] }] }' | y json \"[elem for elem in data['folders']['_']['lists']]\"\n"
 /* class by manual */                + "   obs3: selecionando alguns campos:\n"
 /* class by manual */                + "         y echo '{\"folders\": {\"id1\":11, \"id2\": 22, \"id3\": 33} }' | y json \"[[elem['id1'],elem['id3']] for elem in data['folders']]\"\n"
+/* class by manual */                + "   obs4: parametro noHeader => tira o header\n"
+/* class by manual */                + "   obs5: parametro list => resultado em forma de lista sem o header\n"
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
@@ -10064,11 +10076,5 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
 
 
