@@ -7220,21 +7220,27 @@ class Util{
     }
 
     public static String read1String(){
-        try{            
-            if ( scanner_pipe == null ){
-                readLine(System.in);
-                scanner_pipe.useDelimiter("");
+        while(true){
+            try{            
+                if ( scanner_pipe == null ){
+                    readLine(System.in);
+                    scanner_pipe.useDelimiter("");
+                }
+                if ( scanner_pipe.hasNext() )
+                    return scanner_pipe.next();
+                else
+                    return null;            
+            }catch(java.util.NoSuchElementException no) {
+                if ( no.toString().equals("java.util.InputMismatchException")){   // {"a":"name🚩 Proje"}         
+                    scanner_pipe.skip(".");
+                    continue;
+                }
+                return null;
+            }catch(Exception e){
+                System.err.println("NOK: "+e.toString());
             }
-            if ( scanner_pipe.hasNext() )
-                return scanner_pipe.next();
-            else
-                return null;            
-        }catch(java.util.NoSuchElementException no) {
             return null;
-        }catch(Exception e){
-            System.err.println("NOK: "+e.toString());
         }
-        return null;
     }
     
     public static void closeLine(){
@@ -7577,14 +7583,15 @@ class JSON extends Util{
         for ( int i=0;i<count_pilha;i++ ){
             if ( i > 0 )
                 txtDebug+=".";
-            txtDebug+=pilha_pai[i].equals("")?"_":pilha_pai[i];
+            String p=pilha_pai[i].equals("")?"_":pilha_pai[i];
+            txtDebug+=p;
             if ( i > 0 && i < count_pilha-1)
-                tabela+="['"+pilha_pai[i]+"']";
+                tabela+="['"+p+"']";
         }
         if ( mostraEstruturaDebug )
             System.out.println(txtDebug);
         if ( mostraTabela ){
-            if ( txtDebug.endsWith("._") && !txtDebug.contains("._.") ){
+            if ( txtDebug.endsWith("._")){// && !txtDebug.contains("._.") ){
                 tabela="[elem for elem in " + tabela + "]";
                 if ( !contemNaTabela(tabela) && count_tabelas < 50 ){
                     tabelas[count_tabelas++]=tabela;
