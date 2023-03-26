@@ -7381,10 +7381,13 @@ class JSON extends Util{
     String filterB=""; // filtro definido auxiliar para lista de nao objetos ex: [1, 2, 3]
     boolean filterMatchA=false; // match in filterA
     boolean filterMatchB=false; // match in filterB
-    String unico_campo=""; // campo citado no comando, ex: "[elem['campo2'] for elem in data]"
-    String [] campos= new String[99];
+    boolean auto_detect_campos=false;
+    String [] campos = new String[99];
     int count_campos=0;
+    String [] camposCandidate = new String[99];
+    int count_camposCandidate=0;
     boolean finish_add_campos=false;
+    boolean header_printed=false;
     /*
         controle de literal e guarda key pai(key de key/value da camada superiora)
         contra_barra_lvl controla os elementos "  \\ ou \" " no literal
@@ -7500,9 +7503,21 @@ class JSON extends Util{
         if ( partes.length == 2 ){
             String a=partes[0];
             String b=partes[1];
-            partes=a.split("'"); // elem['id']
-            if ( partes.length == 3 )
-                unico_campo=partes[1];
+            // parte a
+            if(a.equals("elem"))
+                auto_detect_campos=true;
+            else{
+                if(a.startsWith("[") && a.endsWith("]"))
+                    a=a.substring(1, a.length()-1);
+                String [] aa=a.split(",");
+                for(int i=0;i<aa.length;i++){
+                    partes=aa[i].split("'"); // elem['id']
+                    if ( partes.length == 3 ){
+                        camposCandidate[count_camposCandidate++]=partes[1];                
+                    }
+                }
+            }
+            
             if ( b.startsWith("data") ){ // data['items']['itemsB'] -> _.items.itemsB._
                                                // data -> _
                 partes=b.substring(4).replace("]","],").split(",");
@@ -7622,21 +7637,27 @@ class JSON extends Util{
             // add campo
             if ( !finish_add_campos ){
                 if ( value.equals("{") || value.equals("[") ){
-                    finish_add_campos=true;
-                    print_header();                    
+                    // pass
                 }else{
-                    if ( !contem(key) ){
-                        if ( unico_campo.equals("") )
-                            campos[count_campos++]=key;
-                        if ( !unico_campo.equals("") && unico_campo.equals(key) )
+                    if ( auto_detect_campos ){
+                        if ( contem(key) )
+                            finish_add_campos=true;
+                        else
                             campos[count_campos++]=key;
                     }else{
-                        finish_add_campos=true;
-                        print_header();
+                        if ( contem(key) )
+                            finish_add_campos=true;
+                        else
+                            if ( contemCandidate(key) )
+                                campos[count_campos++]=key;
                     }
                 }
             }
-            if ( finish_add_campos && campos[0].equals(key)){
+            if ( finish_add_campos && !header_printed ){
+                header_printed=true;
+                print_header();
+            }
+            if ( finish_add_campos && campos[0].equals(key) && !detail.equals("") ){
                 if ( list_on ){
                     //pass
                 }else{
@@ -7657,7 +7678,7 @@ class JSON extends Util{
         out="";
         out_mostra="";
     }
-    
+
     private void print_header(){
         if ( list_on == false ){
             for ( int i=0;i<count_campos;i++ ){
@@ -7670,12 +7691,23 @@ class JSON extends Util{
     }
     
     /*
-        verifica se o campo deve ser impresso na saida
-        saida no formato csv
+        verifica se o campo ja foi mapeado
+        Se nao foi, verifica o que fazer e ja foi finaliza o mapeamento    
     */
     private boolean contem(String a){
         for ( int i=0;i<count_campos;i++ )
             if ( campos[i].equals(a) )
+                return true;
+        return false;
+    }
+    
+    /*
+        verifica se o campo foi explicitamente solicitado
+        essa funcao auxilia para que o mapeamento esteja em ordem da leitura do json e nao na ordem da solicitacao
+    */
+    private boolean contemCandidate(String a){
+        for ( int i=0;i<count_camposCandidate;i++ )
+            if ( camposCandidate[i].equals(a) )
                 return true;
         return false;
     }
@@ -9515,6 +9547,8 @@ class XML extends Util{
 /* class by manual */                + "   obs: parametro de apoio => mostraEstruturaDebug\n"
 /* class by manual */                + "   obs2: exemplo com lista, representada por '_':\n"
 /* class by manual */                + "         y echo '{\"folders\": [{\"id\": 1, \"lists\":[{\"id\": 11},{\"id\": 12}] },{\"id\": 2, \"lists\":[{\"id\": 21},{\"id\": 22}] }] }' | y json \"[elem for elem in data['folders']['_']['lists']]\"\n"
+/* class by manual */                + "   obs3: selecionando alguns campos:\n"
+/* class by manual */                + "         y echo '{\"folders\": {\"id1\":11, \"id2\": 22, \"id3\": 33} }' | y json \"[[elem['id1'],elem['id3']] for elem in data['folders']]\"\n"
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
