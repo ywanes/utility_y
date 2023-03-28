@@ -1016,7 +1016,7 @@ cat buffer.log
                 }catch(Exception e){
                     System.out.println("Erro interno !! "+ e.toString());
                     if(e.toString().contains("java.security.InvalidKeyException: Illegal key size"))
-                        System.out.println("Erro conhecido no windows!");
+                        System.out.println("Erro conhecido no windows! - Utilize outro jdk windows -> https://mega.nz/file/md4jwRJB#39KHfD4hk8MwqIvrPMR3spbccoYVfmwxtpepqpKhqvs");
                     System.exit(1);
                 }
 
@@ -5117,6 +5117,8 @@ System.out.println("BB" + retorno);
                 new AES().decrypt(System.in,System.out,senha,md);
         }catch(Exception e){
             System.err.println(e.toString());
+            if(e.toString().contains("java.security.InvalidKeyException: Illegal key size"))
+                System.out.println("Erro conhecido no windows! - Utilize outro jdk windows -> https://mega.nz/file/md4jwRJB#39KHfD4hk8MwqIvrPMR3spbccoYVfmwxtpepqpKhqvs");            
             System.err.println(erroSequenciaIlegal);
             System.exit(1);
         }
