@@ -782,8 +782,8 @@ cat buffer.log
             grep(args);
             return;
         }        
-        if ( args.length == 2 && args[0].equals("wc") && args[1].equals("-l") ){
-            wc_l();
+        if ( args.length == 2 && args[0].equals("wc") && (args[1].equals("-l") || args[1].equals("-c") || args[1].equals("-w")) ){
+            wc(args[1]);
             return;
         }       
         if ( args.length == 1 && args[0].equals("len")){
@@ -3497,25 +3497,57 @@ cat buffer.log
         }
     }
     
-    public void wc_l()
-    {
-        try{
-            InputStream inputStream_pipe=System.in;
-            int BUFFER_SIZE=1024;
-            byte[] buf = new byte[BUFFER_SIZE];
-            int count=0;
-            int len=0;
-            byte[] n_="\n".getBytes();
-            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
-                for ( int i=0;i<len;i++ )
-                    if (buf[i] == n_[0])
-                        count++;
+    public void wc(String parm){
+        if ( parm.equals("-l") ){
+            try{
+                InputStream inputStream_pipe=System.in;
+                int BUFFER_SIZE=1024;
+                byte[] buf = new byte[BUFFER_SIZE];
+                int count=0;
+                int len=0;
+                byte[] n_="\n".getBytes();
+                while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                    for ( int i=0;i<len;i++ )
+                        if (buf[i] == n_[0])
+                            count++;
+                }
+                System.out.println(count);
+                return;
+            }catch(Exception e){
+                System.err.println(e.toString());
+                System.exit(1);
             }
-            System.out.println(count);
-        }catch(Exception e){
-            System.err.println(e.toString());
-            System.exit(1);
         }
+        if ( parm.equals("-w") ){
+            String t=null;
+            String notWord="\n\r\t ";
+            boolean word_in=false;
+            long count=0;
+            while( (t=read1String()) != null ){
+                if(word_in){
+                    if(notWord.indexOf(t) > -1){
+                        word_in=false;
+                        count++;
+                    }
+                }else{
+                    if(notWord.indexOf(t) == -1){
+                        word_in=true;
+                    }
+                }
+            }
+            if(word_in)
+                count++;
+            System.out.println(count);
+            return;
+        }        
+        if ( parm.equals("-c") ){
+            String t=null;
+            long count=0;
+            while( (t=read1String()) != null )
+                count++;
+            System.out.println(count);
+            return;
+        }        
     }
 
     public void len()
@@ -7325,7 +7357,7 @@ class Util{
         while(true){
             try{            
                 if ( scanner_pipe == null )
-                    readLine(System.in);
+                    readLine(System.in, null, "");
                 if ( scanner_pipe.hasNext() )
                     return scanner_pipe.next();
                 else
@@ -9553,7 +9585,7 @@ class XML extends Util{
 /* class by manual */                + "  [y aes]\n"
 /* class by manual */                + "  [y base64]\n"
 /* class by manual */                + "  [y grep]\n"
-/* class by manual */                + "  [y wc -l]\n"
+/* class by manual */                + "  [y wc]\n"
 /* class by manual */                + "  [y len]\n"
 /* class by manual */                + "  [y head]\n"
 /* class by manual */                + "  [y tail]\n"
@@ -9738,8 +9770,12 @@ class XML extends Util{
 /* class by manual */                + "    cat arquivo | y grep ^Texto$\n"
 /* class by manual */                + "    cat arquivo | y grep AB\n"
 /* class by manual */                + "    cat arquivo | y grep -i -v aa bb cc\n"
-/* class by manual */                + "[y wc -l]\n"
+/* class by manual */                + "[y wc]\n"
 /* class by manual */                + "    cat arquivo | y wc -l\n"
+/* class by manual */                + "    cat arquivo | y wc -w\n"
+/* class by manual */                + "    cat arquivo | y wc -c\n"
+/* class by manual */                + "    obs: conta. \n"
+/* class by manual */                + "         l -> lines, w -> words, c -> chars\n"
 /* class by manual */                + "[y len]\n"
 /* class by manual */                + "    cat arquivo | y len\n"
 /* class by manual */                + "    obs: echo aabaa | tr b \"\\n\" | y len\n"
@@ -10076,5 +10112,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 

@@ -28,7 +28,7 @@ usage:
   [y aes]
   [y base64]
   [y grep]
-  [y wc -l]
+  [y wc]
   [y len]
   [y head]
   [y tail]
@@ -213,8 +213,12 @@ Exemplos...
     cat arquivo | y grep ^Texto$
     cat arquivo | y grep AB
     cat arquivo | y grep -i -v aa bb cc
-[y wc -l]
+[y wc]
     cat arquivo | y wc -l
+    cat arquivo | y wc -w
+    cat arquivo | y wc -c
+    obs: conta. 
+         l -> lines, w -> words, c -> chars
 [y len]
     cat arquivo | y len
     obs: echo aabaa | tr b "\n" | y len
