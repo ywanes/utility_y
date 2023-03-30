@@ -6312,7 +6312,7 @@ System.out.println("BB" + retorno);
         }
         selectCSV_camposNameSaida=aux_saida.substring(1).split(",");
         selectCSV_camposNameSaidaAlias=aux_saidaAlias.substring(1).split(",");
-        selectCSV_tratativasWhere=new String[]{};
+        selectCSV_tratativasWhere=new String[]{};// where com notacao polonesa inversa
     }
 
     private void processaRegistroSqlParaSelectCSV(OutputStream out) throws Exception {
