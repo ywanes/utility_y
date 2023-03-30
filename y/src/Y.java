@@ -2154,6 +2154,7 @@ cat buffer.log
     public String [] selectCSV_tratativasWhere=null; 
     public String selectCSV_header=null;
     public boolean selectCSV_headerPrinted=false;
+    public grammarsWhere gw=null;
     public void selectCSV(String[] args) throws Exception {        
         
         String [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText(args);
@@ -6263,20 +6264,24 @@ System.out.println("BB" + retorno);
 
     private void interpretaSqlParaSelectCSV(String sqlText) throws Exception {
         String sqlTextBKP=sqlText;
+        String sqlTextWhere = "";        
         
+        sqlText=sqlText.trim();
+        int p_from=sqlText.indexOf(" from this");
+        if ( p_from == -1 ){
+            throw_erroDeInterpretacaoDeSQL("ORAZ: 02 - Não foi possível interpretar o SQL: "+sqlTextBKP);
+        }else{
+            sqlTextWhere=sqlText.substring(p_from + " from this".length(),sqlText.length()).trim();        
+            sqlText=sqlText.substring(0,p_from).trim();
+            if ( ! sqlTextWhere.equals("") && !sqlTextWhere.startsWith("where ") )
+                throw_erroDeInterpretacaoDeSQL("ORAZ: 03 - Não foi possível interpretar o SQL: "+sqlTextBKP);
+        }
         if ( ! sqlText.startsWith("select ") )
             throw_erroDeInterpretacaoDeSQL("ORAZ: 01 - Não foi possível interpretar o SQL: "+sqlTextBKP);
         
         // remove "select "
         sqlText=sqlText.substring("select ".length());
         
-        if ( ! sqlText.endsWith(" from this") )
-            throw_erroDeInterpretacaoDeSQL("ORAZ: 02 - Não foi possível interpretar o SQL: "+sqlTextBKP);
-
-        // remove 
-        sqlText=sqlText.substring(0,sqlText.length()-" from this".length());
-
-        sqlText=sqlText.trim();
         
         if ( sqlText.equals("") )
             throw_erroDeInterpretacaoDeSQL("ORAZ: 03 - Não foi possível interpretar o SQL: "+sqlTextBKP);
@@ -6312,7 +6317,8 @@ System.out.println("BB" + retorno);
         }
         selectCSV_camposNameSaida=aux_saida.substring(1).split(",");
         selectCSV_camposNameSaidaAlias=aux_saidaAlias.substring(1).split(",");
-        selectCSV_tratativasWhere=new String[]{};// where com notacao polonesa inversa
+        if(!sqlTextWhere.equals(""))
+            gw=new grammarsWhere(selectCSV_camposName, sqlTextWhere);
     }
 
     private void processaRegistroSqlParaSelectCSV(OutputStream out) throws Exception {
@@ -7300,6 +7306,66 @@ System.out.println("BB" + retorno);
             d = new Date();
         return d.toInstant().toEpochMilli();
     }
+
+}
+
+class grammarsWhere {
+    grammarsWhere(String [] campos, String where){
+        
+    }
+    public static boolean ok(String [] campos){
+        return true;
+    }
+    /*
+        root
+            where boolean
+
+        boolean
+            not boolean
+                valor_txt operador valor_txt
+                valor_int operador valor_int
+                ( boolean )
+                boolean and boolean
+                boolean or boolean
+
+        operador
+                =
+                >
+                <
+                >=
+                <=
+                !=
+
+        valor
+                valor_txt
+                valor_int
+
+        valor_txt
+                ' + text + '
+                campo_txt
+                valor_txt + valor_txt
+                valor_int + valor_txt
+                valor_txt + valor_int
+                substr( valor_txt , valor_int )
+
+        valor_int
+                numeric
+                parseInt( valor_txt )
+                valor_int + valor_int
+                valor_int - valor_int
+                valor_int * valor_int
+                valor_int / valor_int
+                ( valor_int ) 
+
+        // palavras absolutas - nao interpretadas
+        text
+        numeric
+        campo_txt
+
+        where 2 > 3
+    
+    */
+
 }
 
 class Util{
