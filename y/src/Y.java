@@ -2151,7 +2151,9 @@ cat buffer.log
     public String [] selectCSV_camposValue=null;
     public String [] selectCSV_camposNameSaida=null;
     public String [] selectCSV_camposNameSaidaAlias=null;    
-    public String [] selectCSV_tratativasWhere=null;    
+    public String [] selectCSV_tratativasWhere=null; 
+    public String selectCSV_header=null;
+    public boolean selectCSV_headerPrinted=false;
     public void selectCSV(String[] args) throws Exception {        
         
         String [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText(args);
@@ -2205,7 +2207,7 @@ cat buffer.log
                             sb.append("\"");
                     }
                     sb.append("\n");
-                    out.write(sb.toString().getBytes());
+                    selectCSV_header=sb.toString();
                     continue;
                 }
                 
@@ -2221,7 +2223,7 @@ cat buffer.log
                             linhaCSV=null; // nao precisar ler mais nada    
                     }
                     selectCSV_camposValue[i]=valorColuna;
-                }     
+                }    
                 processaRegistroSqlParaSelectCSV(out);                
             }
             closeLine();
@@ -2229,9 +2231,9 @@ cat buffer.log
         catch(Exception e)
         {
             if ( ! csvFile.equals("") )
-                System.err.println("Erro: "+e.toString());
-            else
                 System.err.println("Erro: "+e.toString()+" file:"+csvFile);
+            else
+                System.err.println("Erro: "+e.toString());
             System.exit(1);
         }    
         out.flush();
@@ -6278,19 +6280,38 @@ System.out.println("BB" + retorno);
         
         if ( sqlText.equals("") )
             throw_erroDeInterpretacaoDeSQL("ORAZ: 03 - Não foi possível interpretar o SQL: "+sqlTextBKP);
-        
-        if ( sqlText.equals("*") ){
-            selectCSV_camposNameSaida=selectCSV_camposName;
-            selectCSV_camposNameSaidaAlias=selectCSV_camposName;
-            selectCSV_tratativasWhere=new String[]{};
-            return;
-        }
             
         String [] partes=sqlText.split(",");
-        for ( int i=0;i<partes.length;i++ )
+        String aux_saida="";
+        String aux_saidaAlias="";
+        for ( int i=0;i<partes.length;i++ ){
             partes[i]=partes[i].trim();
-        selectCSV_camposNameSaida=partes;
-        selectCSV_camposNameSaidaAlias=partes;
+            if(partes[i].equals("*")){
+                for ( int j=0;j<selectCSV_camposName.length;j++ ){
+                    aux_saida+=","+selectCSV_camposName[j];
+                    aux_saidaAlias+=","+selectCSV_camposName[j];
+                }
+                continue;                
+            }
+            if(partes[i].split(" ").length == 2){
+                aux_saida+=","+partes[i].split(" ")[0];
+                aux_saidaAlias+=","+partes[i].split(" ")[1];
+                continue;                
+            }
+            if(partes[i].split(" ").length == 3 && partes[i].split(" ")[1].toLowerCase().equals("as")){
+                aux_saida+=","+partes[i].split(" ")[0];
+                aux_saidaAlias+=","+partes[i].split(" ")[2];
+                continue;                
+            }
+            if(partes[i].split(" ").length == 1){
+                aux_saida+=","+partes[i];
+                aux_saidaAlias+=","+partes[i];
+                continue;                
+            }
+            throw_erroDeInterpretacaoDeSQL("ORAZ: 04 - Não foi possível interpretar o SQL: "+sqlTextBKP);
+        }
+        selectCSV_camposNameSaida=aux_saida.substring(1).split(",");
+        selectCSV_camposNameSaidaAlias=aux_saidaAlias.substring(1).split(",");
         selectCSV_tratativasWhere=new String[]{};
     }
 
@@ -6311,16 +6332,17 @@ System.out.println("BB" + retorno);
             }
             if ( ! achou )
                 throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo: "+selectCSV_camposNameSaida[i]);
-            
             if ( i < selectCSV_camposNameSaida.length-1 )
                 sb.append("\";");
             else
                 sb.append("\"");
         }
-        
-        // implementar where depois
-        
         sb.append("\n");
+        if ( !selectCSV_headerPrinted ){
+            selectCSV_headerPrinted=true;
+            out.write(selectCSV_header.toString().getBytes());
+        }
+            
         out.write(sb.toString().getBytes());
     }
 
