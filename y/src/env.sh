@@ -93,6 +93,9 @@ then
 else
   echo "disable -> verify new ubuntu and LTS"
 fi
+alias gcloud='$HOME/google-cloud-sdk/bin/gcloud'
+alias gsutil='$HOME/google-cloud-sdk/bin/gsutil'
+alias bq='$HOME/google-cloud-sdk/bin/bq'
 export CLOUDSDK_CONFIG="$HOME/.cf"
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missio@mb.com.br/adc.json"
 alias gopen='gcloud cloud-shell ssh'
