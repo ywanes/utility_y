@@ -149,7 +149,7 @@ EOF
 chmod 777 /opt/.u
 
 chmod 777 /opt/y/compilaCurl
-(cd /opt/y;compilaCurl;)
+(cd /opt/y;./compilaCurl;)
 chmod 777 /opt/y/*
 
 if [ -e ~/.bashrc ]
