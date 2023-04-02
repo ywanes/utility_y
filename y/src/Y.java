@@ -10006,8 +10006,8 @@ class XML extends Util{
 /* class by manual */                + "    y scp file1 user,pass@servidor:file2 22\n"
 /* class by manual */                + "    y scp user,pass@servidor:file1 file2\n"
 /* class by manual */                + "    y scp user,pass@servidor:file1 file2 22\n"
-/* class by manual */                + "    comando para windows nao testado abaixo:\n"
-/* class by manual */                + "    y scp user,pass@servidor:/c/temp file2 22\n"
+/* class by manual */                + "    comando windows:\n"
+/* class by manual */                + "    y scp user,pass@servidor:c:/tmp file2 22\n"
 /* class by manual */                + "    obs: user,pass ou user\n"
 /* class by manual */                + "[y execSsh]\n"
 /* class by manual */                + "    y execSsh user,pass@servidor command\n"
@@ -10200,6 +10200,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
