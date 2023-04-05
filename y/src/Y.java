@@ -6348,8 +6348,8 @@ System.out.println("BB" + retorno);
             selectCSV_headerPrinted=true;
             out.write(selectCSV_header.toString().getBytes());
         }
-            
-        out.write(sb.toString().getBytes());
+        if ( gw == null || gw.ok(selectCSV_camposValue) )
+            out.write(sb.toString().getBytes());
     }
 
     private void throw_erroDeInterpretacaoDeSQL(String string) throws Exception {
@@ -7310,61 +7310,77 @@ System.out.println("BB" + retorno);
 }
 
 class grammarsWhere {
-    grammarsWhere(String [] campos, String where){
-        
-    }
-    public static boolean ok(String [] campos){
-        return true;
-    }
+    //  palavras absolutas - nao interpretadas
+    //    text
+    //    numeric
+    //    campo_txt
+
+    public static String [] grammars=new String []{
+        "root                                    "
+       ,"    where boolean                       "
+       ,"                                        "
+       ,"boolean                                 "
+       ,"    not boolean                         "
+       ,"    valor_txt operador valor_txt        "
+       ,"    valor_int operador valor_int        "
+       ,"    ( boolean )                         "
+       ,"    boolean and boolean                 "
+       ,"    boolean or boolean                  "
+      };
+
     /*
         root
             where boolean
 
         boolean
             not boolean
-                valor_txt operador valor_txt
-                valor_int operador valor_int
-                ( boolean )
-                boolean and boolean
-                boolean or boolean
+            valor_txt operador valor_txt
+            valor_int operador valor_int
+            ( boolean )
+            boolean and boolean
+            boolean or boolean
 
         operador
-                =
-                >
-                <
-                >=
-                <=
-                !=
+            =
+            >
+            <
+            >=
+            <=
+            !=
 
         valor
-                valor_txt
-                valor_int
+            valor_txt
+            valor_int
 
         valor_txt
-                ' + text + '
-                campo_txt
-                valor_txt + valor_txt
-                valor_int + valor_txt
-                valor_txt + valor_int
-                substr( valor_txt , valor_int )
+            ' + text + '
+            campo_txt
+            valor_txt + valor_txt
+            valor_int + valor_txt
+            valor_txt + valor_int
+            substr( valor_txt , valor_int )
 
         valor_int
-                numeric
-                parseInt( valor_txt )
-                valor_int + valor_int
-                valor_int - valor_int
-                valor_int * valor_int
-                valor_int / valor_int
-                ( valor_int ) 
+            numeric
+            parseInt( valor_txt )
+            valor_int + valor_int
+            valor_int - valor_int
+            valor_int * valor_int
+            valor_int / valor_int
+            ( valor_int ) 
 
-        // palavras absolutas - nao interpretadas
-        text
-        numeric
-        campo_txt
 
-        where 2 > 3
-    
     */
+    
+    public static String where="";
+    public static String [] selectCSV_camposName=null;
+    grammarsWhere(String [] selectCSV_camposName, String where){
+        this.selectCSV_camposName=selectCSV_camposName;
+        this.where=where;
+    }
+    public static boolean ok(String [] selectCSV_camposValue){
+        return true;
+    }
 
 }
 
