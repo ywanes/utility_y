@@ -1200,7 +1200,7 @@ cat buffer.log
         if ( args[0].equals("seq") ){
             try{                
                 if ( args.length == 3 ){
-                    if (args[1].split("-").length > 1 || args[1].split("/").length > 1)
+                    if (args[1].indexOf("-") > 0 || args[1].split("/").length > 1)
                         seqDate(args[1], args[2]);
                     else
                         seq(Integer.parseInt(args[1]),Integer.parseInt(args[2]),0);
