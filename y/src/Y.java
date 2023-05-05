@@ -49,6 +49,7 @@ import java.awt.*;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
 import java.io.*;
+import java.math.BigDecimal;
 import java.net.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -7312,11 +7313,6 @@ class grammarsWhere {
     // teste:
     // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV "select b c, a from this where b = 'b31'" 
     
-    //  palavras absolutas - nao interpretadas
-    //    text
-    //    numeric
-    //    campo_txt
-
     public static String [] transferPai=null;
     public static String [] transferFilhoStr=null;
     public static String [][] transferFilho=null;
@@ -7360,12 +7356,13 @@ class grammarsWhere {
        ,"                                      "
        ,"root                                  "
        ,"    where boolean                     "
-      };
+    };
     
     // teste:
     // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV "select b c, a from this where b = 'b31'"     
     public static String where="";
     public static ArrayList<Node> nodes=new ArrayList<Node>();
+    public static ArrayList<Node> nodesTemplate=null;
     public static String [] selectCSV_camposName=null; // nome original(nao eh o alias)
     grammarsWhere(String [] selectCSV_camposName, String where){
         this.selectCSV_camposName=selectCSV_camposName;
@@ -7375,13 +7372,69 @@ class grammarsWhere {
         //mostrandoNodes(nodes);
         //mostrandoTransfer(transferPai, transferFilhoStr);
     }
+    public static boolean ok(String [] selectCSV_camposValue){    
+        setCampos(selectCSV_camposValue);
+        int limit=100000;
+        //mostrandoNodes(nodes);        
+        while(limit-->0 && (nodes.size()>1 || !nodes.get(0).is_this.equals("root") ) ){
+            if(transfere())
+                continue;
+            mostrandoNodes(nodes);
+            erroFatal("nao foi possivel entender o where. debug acima");
+        }        
+        if ( limit <= 0 ){
+            mostrandoNodes(nodes);
+            erroFatal("error anti loop");
+        }
+        return true;
+    }
+    public static boolean transfere(){
+        for ( int pos_transfer=0;pos_transfer<transferPai.length;pos_transfer++ ){
+            for ( int pos_node=0;pos_node<nodes.size();pos_node++ ){
+                Node node=transfere(pos_transfer, pos_node);
+                if ( node == null )
+                    continue;
+                int qnt=transferFilho[pos_transfer].length;
+                for ( int i=0;i<qnt;i++ )
+                    nodes.remove(pos_node);
+                nodes.add(pos_node, node);
+                return true;
+            }            
+        }
+        return false;
+    }
+    public static Node transfere(int pos_transfer, int pos_node){
+        if(pos_node+transferFilho[pos_transfer].length > nodes.size())
+            return null;
+        for(int i=0;i<transferFilho[pos_transfer].length;i++)
+            if(!nodes.get(pos_node+i).is_this.equals(transferFilho[pos_transfer][i])){
+//if ( transferFilhoStr[pos_transfer].equals("valor_int + valor_txt")) System.out.println("pos_node " + pos_node + " " + nodes.get(pos_node+i).is_this + " " + transferFilho[pos_transfer][i]);                
+                return null;
+            }
+        return transfere(transferFilhoStr[pos_transfer], pos_transfer, pos_node);
+    }
+    public static Node transfere(String operacao, int pos_transfer, int pos_node){
+        if ( operacao.equals("valor_int * valor_int") )
+            return new Node(nodes.get(pos_node).value_decimal.multiply(nodes.get(pos_node+2).value_decimal).toString(),"valor_int");
+        if ( operacao.equals("valor_int + valor_txt") )
+            return new Node(nodes.get(pos_node).value_decimal.toString()+nodes.get(pos_node+2).value,"valor_txt");        
+        return null;
+    }
+    
+    public static void setCampos(String [] selectCSV_camposValue){
+        nodes=nodesTemplate;
+        for( int i=0;i<nodes.size();i++ ){
+            if(nodes.get(i).nome_campo != null)
+                nodes.get(i).value = selectCSV_camposValue[nodes.get(i).nome_campo_index];
+            else
+                if(nodes.get(i).is_this.equals(""))
+                    nodes.get(i).is_this=nodes.get(i).value;
+        }
+    }
     public static void erroFatal(String n) {
         System.err.println("Erro Fatal " + n + "!!!!");
         System.exit(1);
     }      
-    public static boolean ok(String [] selectCSV_camposValue){        
-        return true;
-    }
     public static void mostrando(String [] a){
         System.out.println("mostrando inicio:");
         for(int i=0;i<a.length;i++)
@@ -7391,7 +7444,7 @@ class grammarsWhere {
     public static void mostrandoNodes(ArrayList<Node> a){
         System.out.println("mostrando inicio:");
         for(int i=0;i<a.size();i++)
-            System.out.println("value: >>"+a.get(i).value+"<< tipo >>"+a.get(i).is_this+"<< by_campo >>"+a.get(i).is_by_campo+"<<");
+            System.out.println("value: >>"+a.get(i).value+"<< tipo >>"+a.get(i).is_this+"<< nome_campo >>"+a.get(i).nome_campo+"<<");
         System.out.println("mostrando fim");
     }
     public static void mostrandoTransfer(String [] transferPai, String [] transferFilhoStr){
@@ -7400,13 +7453,10 @@ class grammarsWhere {
             System.out.println("pai: " + transferPai[i] + " filhoStr: " + transferFilhoStr[i]);
         System.out.println("mostrando fim");
     }
-    public static void addNode(String s, boolean literal_on){
-        if ( !literal_on ){
-            s=s.trim();
-            if ( s.equals("") )
-                return;
-        }
-        nodes.add(new Node(s, literal_on));
+    public static void addNode(String s, String is_this){
+        if ( s.equals("") )
+            return;
+        nodes.add(new Node(s, is_this));
     }
     public static void initTransfer(){
         int count=0;
@@ -7421,9 +7471,8 @@ class grammarsWhere {
         transferFilho = new String[count][0];
         count=0;
         for ( int i=0;i<grammars.length;i++ ){
-            if ( grammars[i].trim().equals("") ){
+            if ( grammars[i].trim().equals("") )
                 continue;
-            }
             if ( !grammars[i].startsWith(" ") ){
                 pai=grammars[i].trim();
                 continue;
@@ -7457,13 +7506,13 @@ class grammarsWhere {
                         continue;
                     }
                     if(t.equals(" ")){
-                        addNode(s,literal_on);
+                        addNode(s.trim(),"");
                         literal_on=false;
                         s="";
                         tail="";
                         continue;
                     }
-                    addNode(s, literal_on);
+                    addNode(s.trim(), "");
                     literal_on=false;
                     s="";
                     tail=t;
@@ -7483,7 +7532,7 @@ class grammarsWhere {
                     //pass
                 }else{
                     s+=tail;
-                    addNode(s, literal_on);
+                    addNode(s.trim(), "");
                     s="";
                     tail=t;
                     continue;
@@ -7494,14 +7543,14 @@ class grammarsWhere {
                     //pass
                 }else{
                     s+=tail;
-                    addNode(s, literal_on);
+                    addNode(s.trim(), "");
                     s="";
                     tail=t;
                     continue;
                 }
             }
             if(!literal_on && tail.equals(" ")){
-                addNode(s, literal_on);
+                addNode(s.trim(), "");
                 s="";
                 tail=t;
                 continue;
@@ -7511,32 +7560,53 @@ class grammarsWhere {
         }
         if(literal_on){
             if(tail.equals("'")){
-                addNode(s, literal_on);
+                addNode(s.trim(), "valor_txt");
                 s="";
             }else
                 erroFatal("error, expected: '");
         }else{
             if(!tail.equals(""))
                 s+=tail;
-            addNode(s, literal_on);
+            addNode(s.trim(), "");
         }
+        nodesTemplate=nodes;
+        if(nodes.size()==0)
+            erroFatal("erro na interpretacao do where");
     }
+    
     static class Node{
-        final int is_root=1;
-        final int is_boolean=2;
-        final int is_operador=3;
-        final int is_valor=4;
-        final int is_valor_txt=5;
-        final int is_valor_int=6;
-        final int is_literal=7;
-        final int is_not_found=-1;        
-        int is_this=-1;  
-        boolean is_by_campo=false;
+        final String is_root="root";
+        final String is_boolean="boolean";
+        final String is_valor_txt="valor_txt";
+        final String is_valor_int="valor_int";
+        String is_this="";  
+        String nome_campo=null;
+        int nome_campo_index=-1;
         String value="";
-        public Node(String s, boolean literal_on){
+        BigDecimal value_decimal=null;        
+        public Node(String s, String is_this_){
             value=s;
-            if ( literal_on )
-                is_this=is_literal;
+            is_this=is_this_;
+            if ( is_this.equals("") ){
+                for( int i=0;i<selectCSV_camposName.length;i++ ){
+                    if(selectCSV_camposName[i].equals(s)){
+                        nome_campo=selectCSV_camposName[i];
+                        nome_campo_index=i;
+                        is_this=is_valor_txt;
+                        break;
+                    }
+                }
+            }
+            if ( is_this.equals("") || is_this.equals("valor_int")){
+                value=s;
+                try{
+                    value_decimal = new BigDecimal(value);
+                    is_this=is_valor_int;
+                }catch(Exception e){
+                    if(is_this.equals("valor_int"))
+                        erroFatal("Erro interno 004");
+                }
+            }
         }
     }
 }
