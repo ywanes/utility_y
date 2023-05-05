@@ -7317,62 +7317,50 @@ class grammarsWhere {
     //    numeric
     //    campo_txt
 
+    public static String [] transferPai=null;
+    public static String [] transferFilhoStr=null;
+    public static String [][] transferFilho=null;
     public static String [] grammars=new String []{
-        "root                                    "
-       ,"    where boolean                       "
-       ,"                                        "
-       ,"boolean                                 "
-       ,"    not boolean                         "
-       ,"    valor_txt operador valor_txt        "
-       ,"    valor_int operador valor_int        "
-       ,"    ( boolean )                         "
-       ,"    boolean and boolean                 "
-       ,"    boolean or boolean                  "
+        "valor_int                             "
+       ,"    parseInt( valor_txt )             "
+       ,"    valor_int * valor_int             "
+       ,"    valor_int / valor_int             "
+       ,"    valor_int + valor_int             "
+       ,"    valor_int - valor_int             "
+       ,"    ( valor_int )                     "
+       ,"                                      "
+       ,"valor_txt                             "
+       ,"    campo_txt                         "
+       ,"    valor_txt + valor_txt             "
+       ,"    valor_int + valor_txt             "
+       ,"    valor_txt + valor_int             "
+       ,"    substr( valor_txt )               "
+       ,"    substr( valor_txt , valor_int )   "
+       ,"    ( valor_txt )                     "
+       ,"                                      "
+       ,"boolean                               "
+       ,"    not boolean                       "
+       ,"    valor_txt = valor_txt             "
+       ,"    valor_txt > valor_txt             "
+       ,"    valor_txt < valor_txt             "
+       ,"    valor_txt >= valor_txt            "
+       ,"    valor_txt <= valor_txt            "
+       ,"    valor_txt != valor_txt            "
+       ,"    valor_int = valor_int             "
+       ,"    valor_int > valor_int             "
+       ,"    valor_int < valor_int             "
+       ,"    valor_int >= valor_int            "
+       ,"    valor_int <= valor_int            "
+       ,"    valor_int != valor_int            "
+       ,"    ( boolean )                       "
+       ,"    boolean and boolean               "
+       ,"    boolean or boolean                "
+       ,"    valor_int in ( valor_int )        " // aceita lista
+       ,"    valor_txt in ( valor_txt )        " // aceita lista
+       ,"                                      "
+       ,"root                                  "
+       ,"    where boolean                     "
       };
-
-    /*
-        root
-            where boolean
-
-        boolean
-            not boolean
-            valor_txt operador valor_txt
-            valor_int operador valor_int
-            ( boolean )
-            boolean and boolean
-            boolean or boolean
-
-        operador
-            =
-            >
-            <
-            >=
-            <=
-            !=
-
-        valor
-            valor_txt
-            valor_int
-
-        valor_txt
-            ' + text + '
-            campo_txt
-            valor_txt + valor_txt
-            valor_int + valor_txt
-            valor_txt + valor_int
-            substr( valor_txt , valor_int )
-
-        valor_int
-            numeric
-            parseInt( valor_txt )
-            valor_int + valor_int
-            valor_int - valor_int
-            valor_int * valor_int
-            valor_int / valor_int
-            ( valor_int ) 
-
-
-    */
     
     // teste:
     // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV "select b c, a from this where b = 'b31'"     
@@ -7382,8 +7370,10 @@ class grammarsWhere {
     grammarsWhere(String [] selectCSV_camposName, String where){
         this.selectCSV_camposName=selectCSV_camposName;
         this.where=where;        
+        initTransfer();
         initNodes();
-        mostrandoNodes(nodes);
+        //mostrandoNodes(nodes);
+        mostrandoTransfer(transferPai, transferFilhoStr);
     }
     public static void erroFatal(String n) {
         System.err.println("Erro Fatal " + n + "!!!!");
@@ -7394,16 +7384,20 @@ class grammarsWhere {
     }
     public static void mostrando(String [] a){
         System.out.println("mostrando inicio:");
-        for(int i=0;i<a.length;i++){
+        for(int i=0;i<a.length;i++)
             System.out.println(">>"+a[i]+"<<");
-        }
         System.out.println("mostrando fim");
     }
     public static void mostrandoNodes(ArrayList<Node> a){
         System.out.println("mostrando inicio:");
-        for(int i=0;i<a.size();i++){
-            System.out.println("value: >>"+a.get(i).value+"<< tipo >>"+a.get(i).is_this+"<<");
-        }
+        for(int i=0;i<a.size();i++)
+            System.out.println("value: >>"+a.get(i).value+"<< tipo >>"+a.get(i).is_this+"<< by_campo >>"+a.get(i).is_by_campo+"<<");
+        System.out.println("mostrando fim");
+    }
+    public static void mostrandoTransfer(String [] transferPai, String [] transferFilhoStr){
+        System.out.println("mostrando inicio:");
+        for(int i=0;i<transferPai.length;i++)
+            System.out.println("pai: " + transferPai[i] + " filhoStr: " + transferFilhoStr[i]);
         System.out.println("mostrando fim");
     }
     public static void addNode(String s, boolean literal_on){
@@ -7414,6 +7408,32 @@ class grammarsWhere {
         }
         nodes.add(new Node(s, literal_on));
     }
+    public static void initTransfer(){
+        int count=0;
+        String pai="";
+        for ( int i=0;i<grammars.length;i++ ){
+            if ( grammars[i].trim().equals("") || !grammars[i].startsWith(" ") )
+                continue;
+            count++;
+        }
+        transferPai = new String[count];
+        transferFilhoStr = new String[count];
+        transferFilho = new String[count][0];
+        count=0;
+        for ( int i=0;i<grammars.length;i++ ){
+            if ( grammars[i].trim().equals("") ){
+                continue;
+            }
+            if ( !grammars[i].startsWith(" ") ){
+                pai=grammars[i].trim();
+                continue;
+            }
+            transferPai[count]=pai;
+            transferFilhoStr[count]=grammars[i].trim();
+            transferFilho[count++]=grammars[i].trim().split(" ");
+        }
+    }
+    
     public static void initNodes(){
         boolean literal_on=false;
         String tail="";
@@ -7458,8 +7478,8 @@ class grammarsWhere {
                 tail=t;
                 continue;
             }
-            if(!literal_on && "\\({[,=<>".indexOf(tail) > 0){
-                if ( (tail.equals(">") || tail.equals("<")) && t.equals("=") ){
+            if(!literal_on && "\\({[,=<>+-*/".indexOf(tail) > 0){
+                if ( (tail.equals(">") || tail.equals("<") || tail.equals("!")) && t.equals("=") ){
                     //pass
                 }else{
                     s+=tail;
@@ -7469,8 +7489,8 @@ class grammarsWhere {
                     continue;
                 }
             }
-            if(!literal_on && "'\\)}],=<>".indexOf(t) > 0){
-                if ( (tail.equals(">") || tail.equals("<")) && t.equals("=") ){
+            if(!literal_on && "'\\)}],=<>+-*/".indexOf(t) > 0){
+                if ( (tail.equals(">") || tail.equals("<") || tail.equals("!")) && t.equals("=") ){
                     //pass
                 }else{
                     s+=tail;
@@ -7511,6 +7531,7 @@ class grammarsWhere {
         final int is_literal=7;
         final int is_not_found=-1;        
         int is_this=-1;  
+        boolean is_by_campo=false;
         String value="";
         public Node(String s, boolean literal_on){
             value=s;
