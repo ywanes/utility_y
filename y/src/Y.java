@@ -3937,7 +3937,6 @@ cat buffer.log
         
         /*
         //https://datatracker.ietf.org/doc/html/rfc9112#field.transfer-encoding
-        /////////////////
         Transfer-Encoding: chunked
         3 chunks of length 4, 6 and 14 (hexadecimal "E" or "e"):
             4\r\n        (bytes to send)
@@ -7310,6 +7309,9 @@ System.out.println("BB" + retorno);
 }
 
 class grammarsWhere {
+    // teste:
+    // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV "select b c, a from this where b = 'b31'" 
+    
     //  palavras absolutas - nao interpretadas
     //    text
     //    numeric
@@ -7372,16 +7374,150 @@ class grammarsWhere {
 
     */
     
+    // teste:
+    // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV "select b c, a from this where b = 'b31'"     
     public static String where="";
-    public static String [] selectCSV_camposName=null;
+    public static ArrayList<Node> nodes=new ArrayList<Node>();
+    public static String [] selectCSV_camposName=null; // nome original(nao eh o alias)
     grammarsWhere(String [] selectCSV_camposName, String where){
         this.selectCSV_camposName=selectCSV_camposName;
-        this.where=where;
+        this.where=where;        
+        initNodes();
+        mostrandoNodes(nodes);
     }
-    public static boolean ok(String [] selectCSV_camposValue){
+    public static void erroFatal(String n) {
+        System.err.println("Erro Fatal " + n + "!!!!");
+        System.exit(1);
+    }      
+    public static boolean ok(String [] selectCSV_camposValue){        
         return true;
     }
-
+    public static void mostrando(String [] a){
+        System.out.println("mostrando inicio:");
+        for(int i=0;i<a.length;i++){
+            System.out.println(">>"+a[i]+"<<");
+        }
+        System.out.println("mostrando fim");
+    }
+    public static void mostrandoNodes(ArrayList<Node> a){
+        System.out.println("mostrando inicio:");
+        for(int i=0;i<a.size();i++){
+            System.out.println("value: >>"+a.get(i).value+"<< tipo >>"+a.get(i).is_this+"<<");
+        }
+        System.out.println("mostrando fim");
+    }
+    public static void addNode(String s, boolean literal_on){
+        if ( !literal_on ){
+            s=s.trim();
+            if ( s.equals("") )
+                return;
+        }
+        nodes.add(new Node(s, literal_on));
+    }
+    public static void initNodes(){
+        boolean literal_on=false;
+        String tail="";
+        String s="";
+        for(int i=0;i < where.length();i++){
+            String t=where.substring(i, i+1);
+            if(t.equals("\t") || t.equals("\n") || t.equals("\r"))
+                t=" ";
+            if(tail.equals("")){
+                if(!t.equals(" "))
+                    tail=t;
+                continue;
+            }
+            if(!literal_on && t.equals(" ") && tail.equals(" "))
+                continue;
+            if(literal_on){
+                if (tail.equals("'")){
+                    if(t.equals("'")){
+                        s+="''";
+                        tail="";
+                        continue;
+                    }
+                    if(t.equals(" ")){
+                        addNode(s,literal_on);
+                        literal_on=false;
+                        s="";
+                        tail="";
+                        continue;
+                    }
+                    addNode(s, literal_on);
+                    literal_on=false;
+                    s="";
+                    tail=t;
+                    continue;
+                }
+                s+=tail;
+                tail=t;
+                continue;
+            }
+            if(!literal_on && tail.equals("'")){
+                literal_on=true;
+                tail=t;
+                continue;
+            }
+            if(!literal_on && "\\({[,=<>".indexOf(tail) > 0){
+                if ( (tail.equals(">") || tail.equals("<")) && t.equals("=") ){
+                    //pass
+                }else{
+                    s+=tail;
+                    addNode(s, literal_on);
+                    s="";
+                    tail=t;
+                    continue;
+                }
+            }
+            if(!literal_on && "'\\)}],=<>".indexOf(t) > 0){
+                if ( (tail.equals(">") || tail.equals("<")) && t.equals("=") ){
+                    //pass
+                }else{
+                    s+=tail;
+                    addNode(s, literal_on);
+                    s="";
+                    tail=t;
+                    continue;
+                }
+            }
+            if(!literal_on && tail.equals(" ")){
+                addNode(s, literal_on);
+                s="";
+                tail=t;
+                continue;
+            }
+            s+=tail;
+            tail=t;
+        }
+        if(literal_on){
+            if(tail.equals("'")){
+                addNode(s, literal_on);
+                s="";
+            }else
+                erroFatal("error, expected: '");
+        }else{
+            if(!tail.equals(""))
+                s+=tail;
+            addNode(s, literal_on);
+        }
+    }
+    static class Node{
+        final int is_root=1;
+        final int is_boolean=2;
+        final int is_operador=3;
+        final int is_valor=4;
+        final int is_valor_txt=5;
+        final int is_valor_int=6;
+        final int is_literal=7;
+        final int is_not_found=-1;        
+        int is_this=-1;  
+        String value="";
+        public Node(String s, boolean literal_on){
+            value=s;
+            if ( literal_on )
+                is_this=is_literal;
+        }
+    }
 }
 
 class Util{
