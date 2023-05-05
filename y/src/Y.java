@@ -7373,7 +7373,7 @@ class grammarsWhere {
         initTransfer();
         initNodes();
         //mostrandoNodes(nodes);
-        mostrandoTransfer(transferPai, transferFilhoStr);
+        //mostrandoTransfer(transferPai, transferFilhoStr);
     }
     public static void erroFatal(String n) {
         System.err.println("Erro Fatal " + n + "!!!!");
