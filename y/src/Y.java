@@ -2156,6 +2156,8 @@ cat buffer.log
     public String selectCSV_header=null;
     public boolean selectCSV_headerPrinted=false;
     public grammarsWhere gw=null;
+    public long sqlCount = 0;
+    public long sqlLimit = -1;
     public void selectCSV(String[] args) throws Exception {        
         
         String [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText(args);
@@ -6267,6 +6269,9 @@ System.out.println("BB" + retorno);
         String sqlTextWhere = "";        
         
         sqlText=sqlText.trim();
+        // trata limit
+        // pedente trata limit
+        
         int p_from=sqlText.indexOf(" from this");
         if ( p_from == -1 ){
             throw_erroDeInterpretacaoDeSQL("ORAZ: 02 - Não foi possível interpretar o SQL: "+sqlTextBKP);
@@ -6348,8 +6353,10 @@ System.out.println("BB" + retorno);
             selectCSV_headerPrinted=true;
             out.write(selectCSV_header.toString().getBytes());
         }
-        if ( gw == null || gw.ok(selectCSV_camposValue) )
+        if ( gw == null || gw.ok(selectCSV_camposValue) ){
+            if ( sqlLimit == -1 || sqlCount++ < sqlLimit )
             out.write(sb.toString().getBytes());
+        }
     }
 
     private void throw_erroDeInterpretacaoDeSQL(String string) throws Exception {
@@ -7326,12 +7333,11 @@ class grammarsWhere {
        ,"    ( valor_int )                     "
        ,"                                      "
        ,"valor_txt                             "
-       ,"    campo_txt                         "
        ,"    valor_txt + valor_txt             "
        ,"    valor_int + valor_txt             "
        ,"    valor_txt + valor_int             "
-       ,"    substr( valor_txt )               "
        ,"    substr( valor_txt , valor_int )   "
+       ,"    substr( valor_txt , valor_int , valor_int )   "
        ,"    ( valor_txt )                     "
        ,"                                      "
        ,"boolean                               "
@@ -7351,8 +7357,9 @@ class grammarsWhere {
        ,"    ( boolean )                       "
        ,"    boolean and boolean               "
        ,"    boolean or boolean                "
-       ,"    valor_int in ( valor_int )        " // aceita lista
-       ,"    valor_txt in ( valor_txt )        " // aceita lista
+       // implementação complicada da lista
+       //,"    valor_int in ( valor_int )        " // aceita lista
+       //,"    valor_txt in ( valor_txt )        " // aceita lista
        ,"                                      "
        ,"root                                  "
        ,"    where boolean                     "
@@ -7386,7 +7393,7 @@ class grammarsWhere {
             mostrandoNodes(nodes);
             erroFatal("error anti loop");
         }
-        return true;
+        return nodes.get(0).value.equals("S");
     }
     public static boolean transfere(){
         for ( int pos_transfer=0;pos_transfer<transferPai.length;pos_transfer++ ){
@@ -7404,20 +7411,148 @@ class grammarsWhere {
         return false;
     }
     public static Node transfere(int pos_transfer, int pos_node){
-        if(pos_node+transferFilho[pos_transfer].length > nodes.size())
-            return null;
-        for(int i=0;i<transferFilho[pos_transfer].length;i++)
-            if(!nodes.get(pos_node+i).is_this.equals(transferFilho[pos_transfer][i])){
-//if ( transferFilhoStr[pos_transfer].equals("valor_int + valor_txt")) System.out.println("pos_node " + pos_node + " " + nodes.get(pos_node+i).is_this + " " + transferFilho[pos_transfer][i]);                
+        for(int i=0;i<transferFilho[pos_transfer].length;i++){
+            if(pos_node+i >= nodes.size() || !nodes.get(pos_node+i).is_this.equals(transferFilho[pos_transfer][i])){
+                //if ( transferFilhoStr[pos_transfer].equals("valor_int + valor_txt")) System.out.println("pos_node " + pos_node + " " + nodes.get(pos_node+i).is_this + " " + transferFilho[pos_transfer][i]);                
                 return null;
             }
-        return transfere(transferFilhoStr[pos_transfer], pos_transfer, pos_node);
+        }
+        return transfere(transferPai[pos_transfer], transferFilhoStr[pos_transfer], pos_transfer, pos_node, false);
     }
-    public static Node transfere(String operacao, int pos_transfer, int pos_node){
-        if ( operacao.equals("valor_int * valor_int") )
-            return new Node(nodes.get(pos_node).value_decimal.multiply(nodes.get(pos_node+2).value_decimal).toString(),"valor_int");
-        if ( operacao.equals("valor_int + valor_txt") )
-            return new Node(nodes.get(pos_node).value_decimal.toString()+nodes.get(pos_node+2).value,"valor_txt");        
+    public static Node transfere(String pai, String filhoStr, int pos_transfer, int pos_node, boolean checkImplementation){
+        if ( filhoStr.equals("valor_int * valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value_decimal.multiply(nodes.get(pos_node+2).value_decimal).toString(),pai);
+        }
+        if ( filhoStr.equals("valor_int + valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value_decimal.add(nodes.get(pos_node+2).value_decimal).toString(),pai);
+        }
+        if ( filhoStr.equals("valor_int + valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value_decimal.toString()+nodes.get(pos_node+2).value,pai);        
+        }
+        if ( filhoStr.equals("valor_txt + valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value_decimal.toString()+nodes.get(pos_node+2).value,pai);        
+        }
+        if ( filhoStr.equals("valor_txt + valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value_decimal.toString()+nodes.get(pos_node+2).value,pai);        
+        }
+        if ( filhoStr.equals("( valor_int )") ){
+            if ( checkImplementation ) return new Node("","");
+            return nodes.get(pos_node+1);
+        }
+        if ( filhoStr.equals("( valor_txt )") ){
+            if ( checkImplementation ) return new Node("","");
+            return nodes.get(pos_node+1);
+        }
+        if ( filhoStr.equals("( boolean )") ){
+            if ( checkImplementation ) return new Node("","");
+            return nodes.get(pos_node+1);
+        }
+        if ( filhoStr.equals("boolean and boolean") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value.equals("S")&&nodes.get(pos_node+2).value.equals("S"))?"S":"N",pai);
+        }
+        if ( filhoStr.equals("boolean or boolean") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value.equals("S")||nodes.get(pos_node+2).value.equals("S"))?"S":"N",pai);
+        }
+        if ( filhoStr.equals("valor_int - valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value_decimal.subtract(nodes.get(pos_node+2).value_decimal).toString(),pai);
+        }
+        if ( filhoStr.equals("valor_txt = valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value.equals(nodes.get(pos_node+2).value)?"S":"N",pai);        
+        }
+        if ( filhoStr.equals("valor_txt != valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(!nodes.get(pos_node).value.equals(nodes.get(pos_node+2).value)?"S":"N",pai);        
+        }
+        if ( filhoStr.equals("valor_int != valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(!nodes.get(pos_node).value_decimal.equals(nodes.get(pos_node+2).value_decimal)?"S":"N",pai);        
+        }
+        if ( filhoStr.equals("valor_int = valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value_decimal.toString().equals(nodes.get(pos_node+2).value_decimal.toString())?"S":"N",pai);        
+        }
+        if ( filhoStr.equals("where boolean") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node+1).value,pai);        
+        }
+        if ( filhoStr.equals("parseInt( valor_txt )") ){
+            if ( checkImplementation ) return new Node("","");
+            try{
+                BigDecimal value_decimal = new BigDecimal(nodes.get(pos_node+1).value);
+                return new Node(value_decimal.toString(),pai);        
+            }catch(Exception e){
+                erroFatal("Nao foi possivel converter -> " + "parseInt( " + nodes.get(pos_node+1).value + " )");
+            }
+            return null;        
+        }        
+        if ( filhoStr.equals("valor_int / valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value_decimal.divide(nodes.get(pos_node+2).value_decimal).toString(),pai);
+        }
+        if ( filhoStr.equals("substr( valor_txt , valor_int )") ){
+            if ( checkImplementation ) return new Node("","");
+            try{
+                int valor_int = Integer.parseInt(nodes.get(pos_node+3).value);
+                return new Node(nodes.get(pos_node+3).value.substring(valor_int),pai);        
+            }catch(Exception e){
+                erroFatal("Nao foi possivel converter -> " + "substr( " + nodes.get(pos_node+1).value + " , " + nodes.get(pos_node+3).value + " )");
+            }
+        }        
+        if ( filhoStr.equals("substr( valor_txt , valor_int , valor_int )") ){
+            if ( checkImplementation ) return new Node("","");
+            try{
+                int valor_int = Integer.parseInt(nodes.get(pos_node+3).value);
+                int valor_int2 = Integer.parseInt(nodes.get(pos_node+5).value);
+                return new Node(nodes.get(pos_node+3).value.substring(valor_int,valor_int+valor_int2),pai);        
+            }catch(Exception e){
+                erroFatal("Nao foi possivel converter -> " + "substr( " + nodes.get(pos_node+1).value + " , " + nodes.get(pos_node+3).value + " , " + nodes.get(pos_node+5).value + " )");
+            }
+        }        
+        if ( filhoStr.equals("not boolean") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node+1).value.equals("S")?"N":"S",pai);
+        }
+        if ( filhoStr.equals("valor_txt > valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value.compareTo(nodes.get(pos_node+2).value))>0?"S":"N",pai);
+        }
+        if ( filhoStr.equals("valor_int > valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value_decimal.compareTo(nodes.get(pos_node+2).value_decimal))>0?"S":"N",pai);
+        }
+        if ( filhoStr.equals("valor_int >= valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value_decimal.compareTo(nodes.get(pos_node+2).value_decimal))>=0?"S":"N",pai);
+        }
+        if ( filhoStr.equals("valor_int < valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value_decimal.compareTo(nodes.get(pos_node+2).value_decimal))<0?"S":"N",pai);
+        }
+        if ( filhoStr.equals("valor_int <= valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value_decimal.compareTo(nodes.get(pos_node+2).value_decimal))<=0?"S":"N",pai);
+        }
+        if ( filhoStr.equals("valor_txt < valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value.compareTo(nodes.get(pos_node+2).value))<0?"S":"N",pai);
+        }
+        if ( filhoStr.equals("valor_txt >= valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value.compareTo(nodes.get(pos_node+2).value))>=0?"S":"N",pai);
+        }
+        if ( filhoStr.equals("valor_txt <= valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value.compareTo(nodes.get(pos_node+2).value))<=0?"S":"N",pai);
+        }
         return null;
     }
     
@@ -7480,6 +7615,12 @@ class grammarsWhere {
             transferPai[count]=pai;
             transferFilhoStr[count]=grammars[i].trim();
             transferFilho[count++]=grammars[i].trim().split(" ");
+        }
+        // check implementation transfer
+        for ( int i=0;i<transferFilhoStr.length;i++ ){
+            Node node = transfere("", transferFilhoStr[i], -1, -1, true);
+            if ( node == null )
+                erroFatal("Erro interno. Nao foi possivel encontrar a implementação " + transferFilhoStr[i]);
         }
     }
     
