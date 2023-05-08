@@ -78,11 +78,12 @@ if [ "1" == "0" ] # verify new ubuntu and LTS
 then
   if [ `whoami` == "root" ] && [ -e /etc/os-release ]
   then
-    vv=`curl https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk ' { print $2 } '`
-    v2=`cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk ' { print $2 } '`
-    if [ "$vv" != "" ] && [ "$vv" != "$v2" ]
+    v1=`cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk ' { print $2 } '`
+    v2=`curl https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk ' { print $2 } '`
+    v3=`curl http://changelogs.ubuntu.com/meta-release 2>/dev/null | grep "Version: " | tail -1 | awk ' { print $2 } '`
+    if [ "$v1" != "$v2" ] && [ "$v2" == "$v3" ] && [ "$v3" != "" ]
     then
-      echo 'New ubuntu --> '$v2
+      echo "New ubuntu --> $v3"
     fi
     if [ -e /etc/update-manager/release-upgrades ] && [ `cat /etc/update-manager/release-upgrades | grep ^Prompt=normal$ | wc -l` == 0 ]
     then
