@@ -91,6 +91,13 @@ then
       echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
     fi
   fi
+  alias u1='echo u1/u7..;apt update'
+  alias u2='echo u2/u7..;apt upgrade'
+  alias u3='echo u3/u7..;do-release-upgrade'
+  alias u4='echo u4/u7..;u1'
+  alias u5='echo u5/u7..;u2'
+  alias u6='echo u6/u7..;apt dist-upgrade'
+  alias u7='echo u7/u7..;do-release-upgrade -d'
 else
   echo "disable -> verify new ubuntu and LTS"
 fi
