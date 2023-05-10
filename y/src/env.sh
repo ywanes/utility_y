@@ -80,7 +80,7 @@ then
   then
     v1=`cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk ' { print $2 } '`
     v2=`curl https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk ' { print $2 } '`
-    v3=`curl http://changelogs.ubuntu.com/meta-release 2>/dev/null | grep "Version: " | tail -1 | awk ' { print $2 } '`
+    v3=`curl http://changelogs.ubuntu.com/meta-release-development 2>/dev/null | grep "Version: " | tail -1 | awk ' { print $2 } '`
     if [ "$v1" != "$v2" ] && [ "$v2" == "$v3" ] && [ "$v3" != "" ]
     then
       echo "New ubuntu --> $v3"
