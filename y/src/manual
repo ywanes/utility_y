@@ -73,6 +73,7 @@ usage:
   [y cronometro]
   [y clear]
   [y cls]
+  [t ips]
   [y help]
 
 Exemplos...
@@ -461,6 +462,9 @@ Exemplos...
 [y cls]
     y cls
     obs: alternativa y clear
+[y ips]
+    y ips
+    obs: mostra ips da maquina
 [y help]
     y help <command>
     y help router

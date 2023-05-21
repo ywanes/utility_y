@@ -1451,6 +1451,10 @@ cat buffer.log
             return;
         }
         
+        if ( args[0].equals("ips") ){
+            show_ips();
+            return;
+        }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             String retorno=null;
             if ( args.length == 2 )
@@ -7136,7 +7140,31 @@ System.out.println("BB" + retorno);
             }
         }
     }
-    
+
+    private void show_ips(){
+        try {
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp())
+                    continue;
+                java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();
+                boolean first=true;
+                while(addresses.hasMoreElements()) {
+                    java.net.InetAddress addr = addresses.nextElement();
+                    if ( first ){
+                        first=false;
+                        System.out.println(iface.getDisplayName()+":");
+                    }
+                    System.out.println("   "+addr.getHostAddress());
+                }
+            }
+        } catch (java.net.SocketException e) {
+            throw new RuntimeException(e);
+        } 
+    }           
+        
+
     private void clear_cls(){
         try{
             if ( System.getProperty("user.dir").contains("/") )
@@ -10102,6 +10130,7 @@ class XML extends Util{
 /* class by manual */                + "  [y cronometro]\n"
 /* class by manual */                + "  [y clear]\n"
 /* class by manual */                + "  [y cls]\n"
+/* class by manual */                + "  [t ips]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
@@ -10490,6 +10519,9 @@ class XML extends Util{
 /* class by manual */                + "[y cls]\n"
 /* class by manual */                + "    y cls\n"
 /* class by manual */                + "    obs: alternativa y clear\n"
+/* class by manual */                + "[y ips]\n"
+/* class by manual */                + "    y ips\n"
+/* class by manual */                + "    obs: mostra ips da maquina\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
@@ -10584,6 +10616,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
