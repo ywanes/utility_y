@@ -1451,8 +1451,16 @@ cat buffer.log
             return;
         }
         
+        if ( args[0].equals("ping") && args.length > 1 ){
+            System.out.println(ping(args[1]));
+            return;
+        }
+        if ( args[0].equals("pings") && args.length == 1 ){
+            show_ips(true);
+            return;
+        }
         if ( args[0].equals("ips") ){
-            show_ips();
+            show_ips(false);
             return;
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
@@ -7140,23 +7148,41 @@ System.out.println("BB" + retorno);
             }
         }
     }
-
-    private void show_ips(){
+    private String ping(String a){
+        try{
+            InetAddress address = InetAddress.getByName(a);
+            if ( address.isReachable(1) ){
+                return "OK";
+            }
+        } catch (Exception e){}        
+        return "NOK";
+    }
+    
+    private void show_ips(boolean ping){
         try {
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
                 java.net.NetworkInterface iface = interfaces.nextElement();
                 if (iface.isLoopback() || !iface.isUp())
                     continue;
-                java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();
+                String [] partes=new String[]{".", ":"};
                 boolean first=true;
-                while(addresses.hasMoreElements()) {
-                    java.net.InetAddress addr = addresses.nextElement();
-                    if ( first ){
-                        first=false;
-                        System.out.println(iface.getDisplayName()+":");
+                for(int i=0;i<partes.length;i++){
+                    java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();                    
+                    while(addresses.hasMoreElements()) {
+                        java.net.InetAddress addr = addresses.nextElement();
+                        if(addr.getHostAddress().contains(partes[i])){
+                            if ( first ){
+                                first=false;
+                                System.out.println(iface.getDisplayName()+":");
+                            }
+                            String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
+                            if ( ping )
+                                System.out.println("   "+ip + " -> ping " + ping(ip));
+                            else
+                                System.out.println("   "+ip);
+                        }
                     }
-                    System.out.println("   "+addr.getHostAddress());
                 }
             }
         } catch (java.net.SocketException e) {
