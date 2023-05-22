@@ -464,9 +464,13 @@ Exemplos...
     obs: alternativa y clear
 [y ping]
     y ping 192.168.0.100
+    y ping 192.168.0.100 -t 15
+    obs: -t 15 => timeout 15 segundos
 [y pings]
     y pings
+    y pings -t 15
     obs: lista os ips ja fazendo ping
+    obs2: -t 15 => timeout 15 segundos
 [y ips]
     y ips
     obs: mostra ips da maquina

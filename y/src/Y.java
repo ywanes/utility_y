@@ -1452,15 +1452,26 @@ cat buffer.log
         }
         
         if ( args[0].equals("ping") && args.length > 1 ){
-            System.out.println(ping(args[1]));
+            int timeout=15;
+            try{
+                if ( args.length == 4 && args[2].equals("-t") )
+                    timeout=Integer.parseInt(args[3]);
+            }catch(Exception e){}
+            System.out.println(ping(args[1], timeout));
             return;
         }
-        if ( args[0].equals("pings") && args.length == 1 ){
-            show_ips(true);
+        if ( args[0].equals("pings") && args.length > 0 ){
+            int timeout=15;
+            try{
+                if ( args.length == 3 && args[1].equals("-t") )
+                    timeout=Integer.parseInt(args[2]);
+            }catch(Exception e){}
+            show_ips(true, timeout);
             return;
         }
         if ( args[0].equals("ips") ){
-            show_ips(false);
+            int timeout=15;
+            show_ips(false, timeout);
             return;
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
@@ -7148,17 +7159,19 @@ System.out.println("BB" + retorno);
             }
         }
     }
-    private String ping(String a){
+    private String ping(String a, int timeout){
         try{
             InetAddress address = InetAddress.getByName(a);
-            if ( address.isReachable(1) ){
+            if ( address.isReachable(timeout) ){
                 return "OK";
             }
-        } catch (Exception e){}        
+        } catch (Exception e){
+            System.out.println("Error: " + e.toString());
+        }        
         return "NOK";
     }
     
-    private void show_ips(boolean ping){
+    private void show_ips(boolean ping, int timeout){
         try {
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
@@ -7178,9 +7191,9 @@ System.out.println("BB" + retorno);
                             }
                             String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
                             if ( ping )
-                                System.out.println("   "+ip + " -> ping " + ping(ip));
+                                format_show_ip(ip, ping(ip, timeout));
                             else
-                                System.out.println("   "+ip);
+                                format_show_ip(ip, null);
                         }
                     }
                 }
@@ -7190,7 +7203,17 @@ System.out.println("BB" + retorno);
         } 
     }           
         
-
+    private void format_show_ip(String a, String b){
+        if ( b != null ){
+            String s1="                                                                ".substring(0, 40-a.length());
+            String s2=" ";
+            if(b.equals("NOK"))
+                s2="";
+            System.out.println("   "+ a + s1 + " -> ping " + s2 + b);
+        }else
+            System.out.println("   "+ a );
+    }
+    
     private void clear_cls(){
         try{
             if ( System.getProperty("user.dir").contains("/") )
@@ -10547,9 +10570,13 @@ class XML extends Util{
 /* class by manual */                + "    obs: alternativa y clear\n"
 /* class by manual */                + "[y ping]\n"
 /* class by manual */                + "    y ping 192.168.0.100\n"
+/* class by manual */                + "    y ping 192.168.0.100 -t 15\n"
+/* class by manual */                + "    obs: -t 15 => timeout 15 segundos\n"
 /* class by manual */                + "[y pings]\n"
 /* class by manual */                + "    y pings\n"
+/* class by manual */                + "    y pings -t 15\n"
 /* class by manual */                + "    obs: lista os ips ja fazendo ping\n"
+/* class by manual */                + "    obs2: -t 15 => timeout 15 segundos\n"
 /* class by manual */                + "[y ips]\n"
 /* class by manual */                + "    y ips\n"
 /* class by manual */                + "    obs: mostra ips da maquina\n"
