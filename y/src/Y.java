@@ -10545,6 +10545,11 @@ class XML extends Util{
 /* class by manual */                + "[y cls]\n"
 /* class by manual */                + "    y cls\n"
 /* class by manual */                + "    obs: alternativa y clear\n"
+/* class by manual */                + "[y ping]\n"
+/* class by manual */                + "    y ping 192.168.0.100\n"
+/* class by manual */                + "[y pings]\n"
+/* class by manual */                + "    y pings\n"
+/* class by manual */                + "    obs: lista os ips ja fazendo ping\n"
 /* class by manual */                + "[y ips]\n"
 /* class by manual */                + "    y ips\n"
 /* class by manual */                + "    obs: mostra ips da maquina\n"
@@ -10642,9 +10647,5 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
 
 
