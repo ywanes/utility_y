@@ -1457,7 +1457,10 @@ cat buffer.log
                 if ( args.length == 4 && args[2].equals("-t") )
                     timeout=Integer.parseInt(args[3]);
             }catch(Exception e){}
-            System.out.println(ping(args[1], timeout));
+            if ( args[1].equals("list") )
+                ping_list(timeout);
+            else
+                System.out.println(ping(args[1], timeout));
             return;
         }
         if ( args[0].equals("pings") && args.length > 0 ){
@@ -1466,12 +1469,15 @@ cat buffer.log
                 if ( args.length == 3 && args[1].equals("-t") )
                     timeout=Integer.parseInt(args[2]);
             }catch(Exception e){}
-            show_ips(true, timeout);
+            show_ips(true, timeout, false);
             return;
         }
         if ( args[0].equals("ips") ){
             int timeout=15;
-            show_ips(false, timeout);
+            if (args.length == 2 && args[1].equals("list"))
+                show_ips(false, timeout, true);
+            else
+                show_ips(false, timeout, false);
             return;
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
@@ -7159,6 +7165,7 @@ System.out.println("BB" + retorno);
             }
         }
     }
+    
     private String ping(String a, int timeout){
         try{
             InetAddress address = InetAddress.getByName(a);
@@ -7171,8 +7178,20 @@ System.out.println("BB" + retorno);
         return "NOK";
     }
     
-    private void show_ips(boolean ping, int timeout){
+    private void ping_list(int timeout){
+        String line;
+        while ( (line=readLine()) != null ) {
+            if ( line.startsWith(" ") )
+                format_show_ip(line.trim(), ping(line.trim(), timeout));
+            else
+                System.out.println(line);
+        }
+    }
+    
+    
+    private void show_ips(boolean ping, int timeout, boolean list){
         try {
+            int count=0;
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
                 java.net.NetworkInterface iface = interfaces.nextElement();
@@ -7185,6 +7204,8 @@ System.out.println("BB" + retorno);
                     while(addresses.hasMoreElements()) {
                         java.net.InetAddress addr = addresses.nextElement();
                         if(addr.getHostAddress().contains(partes[i])){
+                            if ( list && ++count == 1 )
+                                System.out.println("a=$(\ncat << 'EOF'");
                             if ( first ){
                                 first=false;
                                 System.out.println(iface.getDisplayName()+":");
@@ -7198,6 +7219,8 @@ System.out.println("BB" + retorno);
                     }
                 }
             }
+            if( list && count > 0 )
+                System.out.println("EOF\n)\necho \"$a\" | y ping list");
         } catch (java.net.SocketException e) {
             throw new RuntimeException(e);
         } 
