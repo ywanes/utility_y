@@ -2226,6 +2226,8 @@ cat buffer.log
                 if ( qntCamposCSV == 0 )
                 {
                     selectCSV_camposName=getCamposCSV(line);
+                    for(int i=0;i<selectCSV_camposName.length;i++)
+                        selectCSV_camposName[i]=selectCSV_camposName[i].replace(" ","_");
                     qntCamposCSV=selectCSV_camposName.length;
                     selectCSV_camposValue=new String[selectCSV_camposName.length];
                     interpretaSqlParaSelectCSV(sqlText);
