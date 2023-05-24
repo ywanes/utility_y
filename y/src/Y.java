@@ -1344,13 +1344,16 @@ cat buffer.log
             return;            
         }
         if ( args[0].equals("find") && args.length >= 1 && args.length <= 7 ){                        
-            Object [] parm_path_symbol_mtime_type=get_parm_path_symbol_mtime_type(args);
-            if ( parm_path_symbol_mtime_type != null ){
-                String path=(String)parm_path_symbol_mtime_type[0];
-                boolean acceptSymbolicLink=(Boolean)parm_path_symbol_mtime_type[1];
-                float mtime=(Float)parm_path_symbol_mtime_type[2];
-                String type=(String)parm_path_symbol_mtime_type[3];
-                find(path, false, mtime, acceptSymbolicLink, type);
+            ///////////
+            Object [] parm_path_symbol_mtime_type_pre_pos=get_parm_path_symbol_mtime_type_pre_pos(args);
+            if ( parm_path_symbol_mtime_type_pre_pos != null ){
+                String path=(String)parm_path_symbol_mtime_type_pre_pos[0];
+                boolean acceptSymbolicLink=(Boolean)parm_path_symbol_mtime_type_pre_pos[1];
+                float mtime=(Float)parm_path_symbol_mtime_type_pre_pos[2];
+                String type=(String)parm_path_symbol_mtime_type_pre_pos[3];
+                String pre=(String)parm_path_symbol_mtime_type_pre_pos[4];
+                String pos=(String)parm_path_symbol_mtime_type_pre_pos[5];
+                find(path, false, mtime, acceptSymbolicLink, type, pre, pos);
                 return;                
             }
         }
@@ -1358,17 +1361,17 @@ cat buffer.log
             int len_antes=args.length;
             args = bind_asterisk(args);
             if ( args.length == 1 ){
-                find(null, true, 0, true, null);
+                find(null, true, 0, true, null, null, null);
                 return;
             }
             if ( args.length == 2 ){
-                find(args[1], true, 0, true, null);
+                find(args[1], true, 0, true, null, null, null);
                 return;
             }
             for( int i=1;i<args.length;i++ ){
                 if ( len_antes > 2 )
                     System.out.println("\n"+args[i]+":");
-                find(args[i], true, 0, true, null);                
+                find(args[i], true, 0, true, null, null, null);                
             }
             return;
         }
@@ -6539,11 +6542,13 @@ System.out.println("BB" + retorno);
         return args;   
     }
             
-    private Object [] get_parm_path_symbol_mtime_type(String [] args){
+    private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
         String path=null;
         boolean acceptSymbolicLink=false;
         float mtime = 0;
         String type = null;
+        String pre = null;
+        String pos = null;
         
         args=sliceParm(1,args);
         while(args.length > 0){
@@ -6569,6 +6574,18 @@ System.out.println("BB" + retorno);
                 args=sliceParm(1,args);
                 continue;
             }
+            if ( args.length > 1 && args[0].equals("-pre") ){
+                args=sliceParm(1,args);
+                pre=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-pos") ){
+                args=sliceParm(1,args);
+                pos=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
             if ( path == null ){
                 path=args[0];
                 args=sliceParm(1,args);
@@ -6576,10 +6593,10 @@ System.out.println("BB" + retorno);
             }
             return null;
         }
-        return new Object[]{path,acceptSymbolicLink,mtime,type};
+        return new Object[]{path,acceptSymbolicLink,mtime,type,pre,pos};
     }    
 
-    private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type){
+    private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, String pos){
         String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
         File f=null;
         if (path == null){
@@ -6598,17 +6615,17 @@ System.out.println("BB" + retorno);
             System.exit(1);
         }
         if ( !f.isDirectory() )
-            showfind(path, mtime, type);
+            showfind(path, mtime, type, pre, pos);
         else
             if ( f.isDirectory())
-                find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type);
+                find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type, pre, pos);
     }
     
-    private void find_nav(File f, String sep, String hist, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type){
+    private void find_nav(File f, String sep, String hist, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, String pos){
         if (superficial || hist.equals("") || hist.equals("/") || (hist.contains(":") && hist.length() <= 3) ){
             // faz nada
         }else{
-            showfind(hist, mtime, type);
+            showfind(hist, mtime, type, pre, pos);
             hist+=sep;
         }
         try{
@@ -6616,9 +6633,9 @@ System.out.println("BB" + retorno);
             for ( int i=0;i<files.length;i++ )
                 if ( !files[i].isDirectory() )
                     if ( superficial )
-                        showfind(files[i].getName(), mtime, type);
+                        showfind(files[i].getName(), mtime, type, pre, pos);
                     else
-                        showfind(hist+files[i].getName(), mtime, type);
+                        showfind(hist+files[i].getName(), mtime, type, pre, pos);
             for ( int i=0;i<files.length;i++ )
                 if ( files[i].isDirectory() ){
                     if ( !acceptSymbolicLink && f.getPath().contains("\\") && !(f.getAbsolutePath()+"\\"+files[i].getName()).replace(":\\\\",":\\").toUpperCase().equals(files[i].toPath().toRealPath().toString().toUpperCase()) )
@@ -6626,15 +6643,15 @@ System.out.println("BB" + retorno);
                     if (!acceptSymbolicLink && Files.isSymbolicLink(files[i].toPath()))
                         continue;
                     if ( superficial )
-                        showfind(files[i].getName(), mtime, type);
+                        showfind(files[i].getName(), mtime, type, pre, pos);
                     else
-                        find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type);
+                        find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos);
                 }
         }catch(Exception e){}
     }
     
     long findnow = 0;
-    private void showfind(String a, float mtime, String type){
+    private void showfind(String a, float mtime, String type, String pre, String pos){
         boolean print=false;
         if ( mtime == 0 ){
             print = true;
@@ -6658,8 +6675,15 @@ System.out.println("BB" + retorno);
             if ( !type.equals(type_a) )
                 print = false;
         }            
-        if ( print )
+        if ( print ){
+            if ( pre != null || pos != null )
+                a="\""+a+"\"";
+            if ( pre != null )
+                a=pre+" "+a;
+            if ( pos != null )
+                a=a+" "+pos;
             System.out.println(a);
+        }
     }
     
     private void sleep(Float a){
@@ -10565,7 +10589,8 @@ class XML extends Util{
 /* class by manual */                + "    y find /\n"
 /* class by manual */                + "    y find . -mtime -1  # arquivos recentes de 1 dia para menos\n"
 /* class by manual */                + "    y find . -mtime 0.5 # arquivos recentes a mais de 12 horas\n"
-/* class by manual */                + "    y find . -type f # somente Files\n"
+/* class by manual */                + "    y find . -type f # somente Files    \n"
+/* class by manual */                + "    y find -type f -pre \"y cat\" -pos \"| y grep -e 'PESQUISA AQUI'\" \n"
 /* class by manual */                + "    obs: -L para considerar SymbolicLink, ex: y find / -L\n"
 /* class by manual */                + "    obs2: -type contem as opcoes f e d\n"
 /* class by manual */                + "[y ls]\n"
@@ -10721,6 +10746,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
