@@ -416,7 +416,9 @@ Exemplos...
     y find /
     y find . -mtime -1  # arquivos recentes de 1 dia para menos
     y find . -mtime 0.5 # arquivos recentes a mais de 12 horas
-    obs: -L para considerar SymbolicLink, ex: y find -L /
+    y find . -type f # somente Files
+    obs: -L para considerar SymbolicLink, ex: y find / -L
+    obs2: -type contem as opcoes f e d
 [y ls]
     y ls
     y ls pasta1
