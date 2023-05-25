@@ -10590,7 +10590,7 @@ class XML extends Util{
 /* class by manual */                + "    y find . -mtime -1  # arquivos recentes de 1 dia para menos\n"
 /* class by manual */                + "    y find . -mtime 0.5 # arquivos recentes a mais de 12 horas\n"
 /* class by manual */                + "    y find . -type f # somente Files    \n"
-/* class by manual */                + "    y find -type f -pre \"y cat\" -pos \"| y grep -e 'PESQUISA AQUI'\" \n"
+/* class by manual */                + "    y find -type f -pre \"y cat\" -pos \"| y grep 'PESQUISA AQUI'\" \n"
 /* class by manual */                + "    obs: -L para considerar SymbolicLink, ex: y find / -L\n"
 /* class by manual */                + "    obs2: -type contem as opcoes f e d\n"
 /* class by manual */                + "[y ls]\n"
@@ -10746,7 +10746,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
 
 
