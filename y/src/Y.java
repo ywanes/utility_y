@@ -1344,7 +1344,6 @@ cat buffer.log
             return;            
         }
         if ( args[0].equals("find") && args.length >= 1 && args.length <= 7 ){                        
-            ///////////
             Object [] parm_path_symbol_mtime_type_pre_pos=get_parm_path_symbol_mtime_type_pre_pos(args);
             if ( parm_path_symbol_mtime_type_pre_pos != null ){
                 String path=(String)parm_path_symbol_mtime_type_pre_pos[0];
@@ -6303,9 +6302,8 @@ System.out.println("BB" + retorno);
         String sqlTextBKP=sqlText;
         String sqlTextWhere = "";        
         
-        sqlText=sqlText.trim();
-        // trata limit
-        // pedente trata limit
+        sqlText=sqlText.replace("\t"," ").replace("\r\n"," ").replace("\n"," ").trim();
+        sqlText=setLimit(sqlText);
         
         int p_from=sqlText.indexOf(" from this");
         if ( p_from == -1 ){
@@ -6361,6 +6359,28 @@ System.out.println("BB" + retorno);
             gw=new grammarsWhere(selectCSV_camposName, sqlTextWhere);
     }
 
+    private String setLimit(String a){
+        try{
+            int p=a.indexOf(" limit ");
+            while(a.indexOf(" limit ",p+1) >= 0)
+                p=a.indexOf(" limit ",p+1);
+            if ( p >= 0 ){
+                p++;
+                String tail=a.substring(p);
+                String [] partes=tail.split(" ");
+                if ( partes.length == 2 && partes[0].equals("limit") ){
+                    sqlLimit=Integer.parseInt(partes[1]);
+                    if ( sqlLimit < 0 ){
+                        System.out.println("limit inválido");
+                        System.exit(1);
+                    }
+                    return a.substring(0, a.length() - tail.length()).trim();
+                }
+            }
+        }catch(Exception e){}
+        return a;
+    }
+    
     private void processaRegistroSqlParaSelectCSV(OutputStream out) throws Exception {
         StringBuilder sb=new StringBuilder();
         boolean achou=false;
@@ -6390,7 +6410,7 @@ System.out.println("BB" + retorno);
         }
         if ( gw == null || gw.ok(selectCSV_camposValue) ){
             if ( sqlLimit == -1 || sqlCount++ < sqlLimit )
-            out.write(sb.toString().getBytes());
+                out.write(sb.toString().getBytes());
         }
     }
 
