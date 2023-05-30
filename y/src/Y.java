@@ -585,10 +585,6 @@ cat buffer.log
         */
         if ( args[0].equals("zip") ){
             try{
-                if ( args.length == 2 && args[1].equals("add") ){
-                    zip_add(null,null);
-                    return;
-                }
                 if ( args.length == 3 && args[1].equals("add") ){
                     zip_add(args[2],null);
                     return;
@@ -3087,30 +3083,21 @@ cat buffer.log
         return null;
     }
     
-    /*
-    y zip add File1.txt > saida.zip
-    cat File1.txt | y zip add -name File1.txt > saida.zip
-    y zip add /pasta1 > saida.zip
-    y zip list arquivo.zip
-    cat arquivo.zip | y zip list
-    y zip extract entrada.zip
-    cat entrada.zip | y zip extract
-    y zip extract entrada.zip -out /destino
-    cat entrada.zip | y zip extract -out /destino
-    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt -out /destino
-    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
-    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
-    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
-    */
-    private void zip_add(String a,String dummy_name) throws Exception {
-        if ( a != null ){            
+    private void zip_add(String a, String dummy_name) throws Exception {
+        this.dummy_name = dummy_name;                
+        zip_output = new java.util.zip.ZipOutputStream(System.out);        
+        if ( a == null ){
+            zip_add("", null, -1);
+        }else{
             valida_leitura_arquivo(a);
-            if ( a.equals(".") || a.equals("..") ){
-                System.err.println("Erro, esse tipo de diretório não é válido!: "+a);
-                System.exit(1);
-            }
-        }
-        zip_add(a,dummy_name,System.out);
+            File f_a=new File(a);
+            if ( !f_a.exists() )
+                erroFatal(56);
+            zip_add(a, f_a, f_a.lastModified());
+        }        
+        zip_output.closeEntry();
+        zip_output.flush();
+        zip_output.close();        
     }
 
     private void valida_leitura_arquivo(String a){
@@ -3122,57 +3109,64 @@ cat buffer.log
     
     private java.util.zip.ZipOutputStream zip_output=null;
     private ArrayList<String> zip_elementos=null;
-    private void zip_add(String a, String dummy_name, OutputStream os) throws Exception {
-        zip_output = new java.util.zip.ZipOutputStream(os);        
-        File elem=null;
-        String dummy="dummy";
-        if ( dummy_name != null && dummy_name.length() > 0 )
-            dummy=dummy_name;
-        if ( a!=null )
-            elem=new File(a);        
-        if ( elem==null || elem.isFile() ){            
+    private String dummy_name;
+    private void zip_add(String relative_path, File elem, long lastModified) throws Exception {
+        if ( elem == null || elem.isFile() ){            
             java.util.zip.ZipEntry e=null;
-            if ( elem == null )
-                e=new java.util.zip.ZipEntry(dummy);
-            else
+            if ( elem == null ){
+                e=new java.util.zip.ZipEntry(dummy_name);
+            }else{
                 e=new java.util.zip.ZipEntry(elem.getName());
+                e.setTime(lastModified);
+            }            
             zip_output.putNextEntry(e);
             if ( elem!=null )
                 readBytes(elem);
             byte[] buf = new byte[BUFFER_SIZE];                                    
             int len;
-            while ((len = readBytes(buf)) > -1)
+            long size_alert=-1;
+            long size=0;
+            if ( elem != null )
+                size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
+            while ((len = readBytes(buf)) > -1){
                 zip_output.write(buf, 0, len);
+                size+=len;
+                if ( elem != null && size > size_alert ){
+                    System.err.println("Erro, sistema anti loop ativado!");
+                    System.exit(1);
+                }
+            }
             closeBytes();
         }else{
-            String path=elem.getAbsolutePath().replace("\\","/");
-            if ( ! path.endsWith("/") )
-                path+="/";
-            zip_elementos=new ArrayList<String>();
-            if ( !a.contains("/") && !a.contains("\\") ){
-                path+="../";
-                zip_elementos.add(a+"/");
-                zip_navega(elem,a+"/");
-            }else{
+            zip_elementos=new ArrayList<String>();            
+            if ( !relative_path.startsWith("/") && !relative_path.contains(":") ) // verifica se é relative path
+                zip_navega(elem,relative_path+"/");
+            else
                 zip_navega(elem,"");
-            }
             int lenB=zip_elementos.size();
             for ( int i=0;i<lenB;i++ ){
                 java.util.zip.ZipEntry e=new java.util.zip.ZipEntry( zip_elementos.get(i) );
                 zip_output.putNextEntry(e);
                 if ( ! zip_elementos.get(i).endsWith("/") ){                    
-                    readBytes(path+zip_elementos.get(i));
+                    File tmp = new File(zip_elementos.get(i));
+                    long size_alert=-1;
+                    long size=0;
+                    size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
+                    readBytes(tmp);
                     byte[] buf = new byte[BUFFER_SIZE];                        
                     int len;
-                    while ((len = readBytes(buf)) > -1)
+                    while ((len = readBytes(buf)) > -1){
                         zip_output.write(buf, 0, len);                
+                        size+=len;
+                        if ( elem != null && size > size_alert ){
+                            System.err.println("Erro, sistema anti loop ativado!");
+                            System.exit(1);
+                        }
+                    }
                     closeBytes();            
                 }
             }
         }        
-        zip_output.closeEntry();
-        zip_output.flush();
-        zip_output.close();
     }
     
     private void zip_navega(File a, String caminho) {
@@ -3180,7 +3174,7 @@ cat buffer.log
         for ( int i=0;i<filhos.length;i++ ){
             if ( filhos[i].isFile() )
                 zip_elementos.add(caminho+filhos[i].getName());
-            if ( filhos[i].isDirectory() ){
+            if ( filhos[i].isDirectory() && !filhos[i].getName().equals(".") && !filhos[i].getName().equals("..") ){
                 zip_elementos.add(caminho+filhos[i].getName()+"/");
                 zip_navega(filhos[i],caminho+filhos[i].getName()+"/");
             }
@@ -3240,9 +3234,9 @@ cat buffer.log
             ZipEntry entry=null;
             while( (entry=zis.getNextEntry()) != null ){                                
                 if ( entry.getName().endsWith("/") ){
-                    zip_extract_grava(pre_dir,entry.getName(),null,filtro);
+                    zip_extract_grava(pre_dir,entry.getName(),null,filtro, entry.getTime());
                 }else{
-                    zip_extract_grava(pre_dir,entry.getName(),zis,filtro);
+                    zip_extract_grava(pre_dir,entry.getName(),zis,filtro, entry.getTime());
                 }
             }
         }else{
@@ -3251,9 +3245,9 @@ cat buffer.log
             while(entries.hasMoreElements()){
                 ZipEntry entry = entries.nextElement();            
                 if ( entry.getName().endsWith("/") ){
-                    zip_extract_grava(pre_dir,entry.getName(),null,filtro);
+                    zip_extract_grava(pre_dir,entry.getName(),null,filtro,entry.getTime());
                 }else{
-                    zip_extract_grava(pre_dir,entry.getName(),zipFile.getInputStream(entry),filtro);
+                    zip_extract_grava(pre_dir,entry.getName(),zipFile.getInputStream(entry),filtro,entry.getTime());
                 }
             }                
         }
@@ -3263,7 +3257,7 @@ cat buffer.log
         }
     }
 
-    private void zip_extract_grava(String pre_dir, String name, InputStream is,String filtro) throws Exception {
+    private void zip_extract_grava(String pre_dir, String name, InputStream is,String filtro, long lastModified) throws Exception {
         String [] partes=name.split("/");
         String dir="";
         File tmp=null;
@@ -3283,8 +3277,10 @@ cat buffer.log
                                 System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+pre_dir+dir);
                                 System.exit(1);
                             }
-                        }else
+                        }else{
                             tmp.mkdir();
+                            tmp.setLastModified(lastModified);
+                        }
                     }
                 }else{
                     dir+=partes[i];
@@ -3300,14 +3296,18 @@ cat buffer.log
                         }
                     }
                     if ( filtro == null ){
-                        copiaByStream(is,new FileOutputStream(new File(pre_dir+dir)));
+                        tmp=new File(pre_dir+dir);
+                        copiaByStream(is,new FileOutputStream(tmp));
+                        tmp.setLastModified(lastModified);
                     }else{
                         if ( filtro.equals(dir) ){
                             zip_extract_count_encontrados++;
                             if ( out_console ){
                                 copiaByStream(is,System.out);
                             }else{
-                                copiaByStream(is,new FileOutputStream(new File(pre_dir+dir)));
+                                tmp=new File(pre_dir+dir);
+                                copiaByStream(is,new FileOutputStream(tmp));
+                                tmp.setLastModified(lastModified);
                             }
                         }
                     }
