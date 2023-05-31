@@ -96,6 +96,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipOutputStream;
 import javax.swing.JOptionPane;
 
 
@@ -586,11 +587,19 @@ cat buffer.log
         if ( args[0].equals("zip") ){
             try{
                 if ( args.length == 3 && args[1].equals("add") ){
-                    zip_add(args[2],null);
+                    zip_add(args[2], null, false);
                     return;
                 }
+                if ( args.length == 4 && args[1].equals("add") && args[3].equals("-lvlStore")){
+                    zip_add(args[2], null, true);
+                    return;
+                }                
                 if ( args.length == 4 && args[1].equals("add") && args[2].equals("-name")){
-                    zip_add(null,args[3]);
+                    zip_add(null, args[3], false);
+                    return;
+                }
+                if ( args.length == 5 && args[1].equals("add") && args[2].equals("-name") && args[4].equals("-lvlStore")){
+                    zip_add(null, args[3], true);
                     return;
                 }
                 if ( args.length == 2 && args[1].equals("list") ){
@@ -600,8 +609,7 @@ cat buffer.log
                 if ( args.length == 3 && args[1].equals("list") ){
                     zip_list(args[2]);
                     return;
-                }
-                
+                }                
                 if ( args.length == 2 && args[1].equals("extract") ){
                     zip_extract(null,null,null);
                     return;
@@ -3083,9 +3091,11 @@ cat buffer.log
         return null;
     }
     
-    private void zip_add(String a, String dummy_name) throws Exception {
+    private void zip_add(String a, String dummy_name, boolean isLvlStore) throws Exception {
         this.dummy_name = dummy_name;                
-        zip_output = new java.util.zip.ZipOutputStream(System.out);        
+        zip_output = new java.util.zip.ZipOutputStream(System.out);   
+        if ( isLvlStore )
+            zip_output.setLevel(ZipOutputStream.STORED);        
         if ( a == null ){
             zip_add("", null, -1);
         }else{
@@ -10340,6 +10350,7 @@ class XML extends Util{
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
 /* class by manual */                + "    y zip add /pasta1 > saida.zip\n"
+/* class by manual */                + "    y zip add pasta2 -lvlStore > saida.zip\n"
 /* class by manual */                + "    y zip list arquivo.zip\n"
 /* class by manual */                + "    cat arquivo.zip | y zip list\n"
 /* class by manual */                + "    y zip extract entrada.zip\n"
@@ -10767,6 +10778,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

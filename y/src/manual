@@ -147,6 +147,7 @@ Exemplos...
     y zip add File1.txt > saida.zip
     cat File1.txt | y zip add -name File1.txt > saida.zip
     y zip add /pasta1 > saida.zip
+    y zip add pasta2 -lvlStore > saida.zip
     y zip list arquivo.zip
     cat arquivo.zip | y zip list
     y zip extract entrada.zip
