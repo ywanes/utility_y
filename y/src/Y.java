@@ -717,6 +717,10 @@ cat buffer.log
             printf(args);
             return;
         }              
+        if ( args[0].equals("print") ){
+            System.err.println("O correto nao seria printf?");
+            System.exit(1);
+        }              
         if ( args[0].equals("cat") ){
             cat(args);
             return;
