@@ -280,6 +280,17 @@ cat buffer.log
             );
             return;
         }
+        if ( args[0].equals("take") && args.length == 2 ){            
+            if ( args[1].equals("s") ){
+                take(0);
+                return;
+            }
+            if ( args[1].equals("c") ){
+                take(1);
+                return;
+            }
+        }
+        
         if ( args[0].equals("banco") ){            
             if ( args.length == 1 ){
                 System.err.println(
@@ -1511,7 +1522,60 @@ cat buffer.log
         comando_invalido(args);
         return;
     }
-
+    
+    private void socket_1_file(String host, int port, boolean server, boolean send, InputStream in, OutputStream out){
+        try{
+            byte [] buffer= new byte[Util.BUFFER_SIZE];
+            int len=0;
+            if ( server ){
+                Socket s = null;
+                ServerSocket ss=new ServerSocket(port, 1,InetAddress.getByName(host));
+                s = ss.accept();
+                OutputStream os = s.getOutputStream();
+                InputStream is = s.getInputStream();
+                if ( send ){
+                    while( (len=in.read(buffer, 0, Util.BUFFER_SIZE)) > 0 )
+                        os.write(buffer, 0, len);
+                    os.flush();
+                    os.close();
+                }else{
+                    while( (len=is.read(buffer, 0, Util.BUFFER_SIZE)) > 0 )
+                        out.write(buffer, 0, len);
+                    out.flush();
+                    out.close();
+                }
+                s.close();
+                ss.close();
+            }else{
+                Socket s = new Socket(InetAddress.getByName(host), port);                        
+                OutputStream os = s.getOutputStream();
+                InputStream is = s.getInputStream();
+                if ( send ){
+                    while( (len=in.read(buffer, 0, Util.BUFFER_SIZE)) > 0 )
+                        os.write(buffer, 0, len);
+                    os.flush();
+                    os.close();
+                }else{
+                    while( (len=is.read(buffer, 0, Util.BUFFER_SIZE)) > 0 )
+                        out.write(buffer, 0, len);
+                    out.flush();
+                    out.close();
+                }
+                s.close();
+            }
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }            
+    }
+    
+    private void take(int parm){
+        if ( parm == 0 )
+            socket_1_file("192.168.0.35", 222, true, true, System.in, null);
+        else
+            socket_1_file("192.168.0.35", 222, false, false, null, System.out);
+    }
+    
     public String [] getConnAppParm(String [] args){
         
         //[y banco -conn ... select]
@@ -9539,6 +9603,10 @@ class XML extends Util{
 /* class AES */ // creditos: https://github.com/chmduquesne/minibackup/blob/master/samples/OpensslAES.java
 /* class AES */ // new AES().encrypt(bytes,password);
 /* class AES */ // new AES().decrypt(bytes,password);
+/* class AES */ // txt=base64_B_S(new AES().encrypt(txt.getBytes(),senha,null,null) ,true);
+/* class AES */ // new AES().encrypt(System.in,System.out,senha,null,null);
+/* class AES */ // new AES().decrypt(System.in,System.out,senha,null);
+
 /* class AES */ class AES{ byte [] deriveKeyAndIV(byte[] password, String md, byte[] salt) throws Exception{        if ( md == null || md.equals("") ) md="MD5"; byte[] res = new byte[48]; final java.security.MessageDigest md5 = java.security.MessageDigest.getInstance(md); md5.update(password); md5.update(salt); byte[] hash1 = md5.digest(); md5.reset(); md5.update(hash1); md5.update(password); md5.update(salt); byte[] hash2 = md5.digest(); md5.reset(); md5.update(hash2); md5.update(password); md5.update(salt); byte[] hash3 = md5.digest(); if ( md == null || md.equals("MD5")){ System.arraycopy(hash1, 0, res, 0, 16); System.arraycopy(hash2, 0, res, 16, 16); System.arraycopy(hash3, 0, res, 32, 16); }else{ System.arraycopy(hash1, 0, res, 0, 32); System.arraycopy(hash2, 0, res, 32, 16); } return res; } public void encrypt(java.io.InputStream pipe_in, java.io.OutputStream pipe_out, String senha, String md, byte[] salt) throws Exception { try{ byte[] salt_ = new byte[8]; java.security.SecureRandom sr = new java.security.SecureRandom(); sr.nextBytes(salt_); if ( salt==null ) salt=salt_; byte[] keyAndIV = deriveKeyAndIV(senha.getBytes(),md,salt); byte[] key = java.util.Arrays.copyOfRange(keyAndIV, 0, 32); byte[] iv = java.util.Arrays.copyOfRange(keyAndIV, 32, 48); javax.crypto.spec.SecretKeySpec skeySpec = new javax.crypto.spec.SecretKeySpec(key, "AES"); javax.crypto.spec.IvParameterSpec ivspec = new javax.crypto.spec.IvParameterSpec(iv); javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding"); cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, skeySpec, ivspec); int BUFFER_SIZE=1024; byte[] buff=new byte[BUFFER_SIZE]; int len=0; pipe_out.write("Salted__".getBytes()); pipe_out.write(salt); while ( (len=pipe_in.read(buff,0,BUFFER_SIZE)) > 0 ) pipe_out.write( cipher.update(buff,0,len) ); pipe_out.write(cipher.doFinal()); pipe_out.flush(); }catch(Exception e){ if(e.toString().contains("java.security.InvalidKeyException: Illegal key size")) System.out.println("Erro conhecido no windows! - Considere utilizar outro jdk -> https://mega.nz/file/md4jwRJB#39KHfD4hk8MwqIvrPMR3spbccoYVfmwxtpepqpKhqvs"); throw e; } } public byte[] encrypt(byte[] data, String senha, String md, byte[] salt) throws Exception{ java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(data); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); encrypt(bais,baos,senha,md,salt); return baos.toByteArray(); } public void decrypt(java.io.InputStream pipe_in,java.io.OutputStream pipe_out,String senha,String md) throws Exception { try{ int p=0; p=pipe_in.read(new byte[8]); if ( p != 8 ){ System.err.println("Erro fatal 0!"); System.exit(1); } byte[] salt=new byte[8]; p=pipe_in.read(salt); if ( p != 8 ){ System.err.println("Erro fatal 0!"); System.exit(1); }        byte[] keyAndIV=deriveKeyAndIV(senha.getBytes(),md,salt); byte[] key=java.util.Arrays.copyOfRange(keyAndIV, 0, 32); byte[] iv=java.util.Arrays.copyOfRange(keyAndIV, 32, 48); javax.crypto.spec.SecretKeySpec skeySpec = new javax.crypto.spec.SecretKeySpec(key, "AES"); javax.crypto.spec.IvParameterSpec ivspec = new javax.crypto.spec.IvParameterSpec(iv); javax.crypto.Cipher cipher; cipher=javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding"); cipher.init(javax.crypto.Cipher.DECRYPT_MODE, skeySpec, ivspec); int BUFFER_SIZE=1024; byte[] buff=new byte[BUFFER_SIZE]; int len=0; while ( (len=pipe_in.read(buff,0,BUFFER_SIZE)) > 0 ) pipe_out.write( cipher.update(buff,0,len) ); pipe_out.write(cipher.doFinal()); pipe_out.flush(); }catch(Exception e){ if(e.toString().contains("java.security.InvalidKeyException: Illegal key size")) System.out.println("Erro conhecido no windows! - Considere utilizar outro jdk -> https://mega.nz/file/md4jwRJB#39KHfD4hk8MwqIvrPMR3spbccoYVfmwxtpepqpKhqvs"); throw e; } } public byte[] decrypt(byte[] data, String senha, String md) throws Exception{ java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(data); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); decrypt(bais,baos,senha,md); return baos.toByteArray(); } private static String bytesToHex(byte[] a){ StringBuilder sb = new StringBuilder(); for (byte b : a) { sb.append(String.format("%02X", b)); } return sb.toString(); } private static byte[] hexTobytes(String s) { int len = s.length(); byte[] data = new byte[len / 2]; for (int i = 0; i < len; i += 2) { data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i+1), 16)); } return data;}}
 
 
