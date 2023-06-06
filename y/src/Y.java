@@ -1397,7 +1397,8 @@ cat buffer.log
             if ( Util.isWindows() )
                 find(args.length>1?args[1]:null, true, 0, true, null, null, null, true);
             else
-                lss_linux(args.length>1?args[1]:null);            
+                if ( ! lss_linux(args.length>1?args[1]:null) )
+                    lss_mac(args.length>1?args[1]:null);
             return;
         }
         if ( args[0].equals("sleep") && (args.length == 1 || args.length == 2) ){
@@ -6808,7 +6809,7 @@ System.out.println("BB" + retorno);
         }
     }
     
-    private void lss_linux(String parm){
+    private boolean lss_linux(String parm){
         try{
             boolean error;
             if ( parm == null )
@@ -6826,13 +6827,42 @@ System.out.println("BB" + retorno);
             while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 )
                 error=true;
             if ( !ok ){
-                System.err.println("Erro fatal 99!");
-                System.exit(1);
+                return false;
             }
         }catch(Exception e){
             System.err.println(e.toString());
             System.exit(1);
         }
+        return true;
+    }
+    
+    private boolean lss_mac(String parm){
+        try{
+            boolean error;
+            if ( parm == null )
+                parm="stat -l -t '%F%T' * | tr ' ' \\\\t";
+            else{
+                System.err.println("comando nao implementado!");
+                System.exit(1);
+            }
+            Process proc = Runtime.getRuntime().exec(parm);
+            int len=0;
+            byte[] b=new byte[1024];
+            boolean ok=false;                    
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                System.out.write(b, 0, len);
+                ok=true;
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 )
+                error=true;
+            if ( !ok ){
+                return false;
+            }
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }
+        return true;
     }
     
     private void sleep(Float a){
