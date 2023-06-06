@@ -1371,7 +1371,7 @@ cat buffer.log
                 String type=(String)parm_path_symbol_mtime_type_pre_pos[3];
                 String pre=(String)parm_path_symbol_mtime_type_pre_pos[4];
                 String pos=(String)parm_path_symbol_mtime_type_pre_pos[5];
-                find(path, false, mtime, acceptSymbolicLink, type, pre, pos);
+                find(path, false, mtime, acceptSymbolicLink, type, pre, pos, false);
                 return;                
             }
         }
@@ -1379,18 +1379,25 @@ cat buffer.log
             int len_antes=args.length;
             args = bind_asterisk(args);
             if ( args.length == 1 ){
-                find(null, true, 0, true, null, null, null);
+                find(null, true, 0, true, null, null, null, false);
                 return;
             }
             if ( args.length == 2 ){
-                find(args[1], true, 0, true, null, null, null);
+                find(args[1], true, 0, true, null, null, null, false);
                 return;
             }
             for( int i=1;i<args.length;i++ ){
                 if ( len_antes > 2 )
                     System.out.println("\n"+args[i]+":");
-                find(args[i], true, 0, true, null, null, null);                
+                find(args[i], true, 0, true, null, null, null, false);                
             }
+            return;
+        }
+        if ( args[0].equals("lss") ){            
+            if ( Util.isWindows() )
+                find(args.length>1?args[1]:null, true, 0, true, null, null, null, true);
+            else
+                lss_linux(args.length>1?args[1]:null);            
             return;
         }
         if ( args[0].equals("sleep") && (args.length == 1 || args.length == 2) ){
@@ -4288,10 +4295,6 @@ System.out.println("BB" + retorno);
             System.out.println(e.toString());
         }
     }
-        
-    public Boolean checkWindows(){
-        return new File("c:/").exists();
-    }
     
     public void bytesToInts(boolean dif_128)
     {      
@@ -6694,7 +6697,7 @@ System.out.println("BB" + retorno);
         return new Object[]{path,acceptSymbolicLink,mtime,type,pre,pos};
     }    
 
-    private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, String pos){
+    private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss){
         String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
         File f=null;
         if (path == null){
@@ -6713,17 +6716,17 @@ System.out.println("BB" + retorno);
             System.exit(1);
         }
         if ( !f.isDirectory() )
-            showfind(path, mtime, type, pre, pos);
+            showfind(path, mtime, type, pre, pos, format_lss);
         else
             if ( f.isDirectory())
-                find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type, pre, pos);
+                find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss);
     }
     
-    private void find_nav(File f, String sep, String hist, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, String pos){
+    private void find_nav(File f, String sep, String hist, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss){
         if (superficial || hist.equals("") || hist.equals("/") || (hist.contains(":") && hist.length() <= 3) ){
             // faz nada
         }else{
-            showfind(hist, mtime, type, pre, pos);
+            showfind(hist, mtime, type, pre, pos, format_lss);
             hist+=sep;
         }
         try{
@@ -6731,9 +6734,9 @@ System.out.println("BB" + retorno);
             for ( int i=0;i<files.length;i++ )
                 if ( !files[i].isDirectory() )
                     if ( superficial )
-                        showfind(files[i].getName(), mtime, type, pre, pos);
+                        showfind(files[i].getName(), mtime, type, pre, pos, format_lss);
                     else
-                        showfind(hist+files[i].getName(), mtime, type, pre, pos);
+                        showfind(hist+files[i].getName(), mtime, type, pre, pos, format_lss);
             for ( int i=0;i<files.length;i++ )
                 if ( files[i].isDirectory() ){
                     if ( !acceptSymbolicLink && f.getPath().contains("\\") && !(f.getAbsolutePath()+"\\"+files[i].getName()).replace(":\\\\",":\\").toUpperCase().equals(files[i].toPath().toRealPath().toString().toUpperCase()) )
@@ -6741,16 +6744,21 @@ System.out.println("BB" + retorno);
                     if (!acceptSymbolicLink && Files.isSymbolicLink(files[i].toPath()))
                         continue;
                     if ( superficial )
-                        showfind(files[i].getName(), mtime, type, pre, pos);
+                        showfind(files[i].getName(), mtime, type, pre, pos, format_lss);
                     else
-                        find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos);
+                        find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss);
                 }
         }catch(Exception e){}
     }
     
     long findnow = 0;
-    private void showfind(String a, float mtime, String type, String pre, String pos){
+    private void showfind(String a, float mtime, String type, String pre, String pos, boolean format_lss){
         boolean print=false;
+        String type_a = null;
+        String type_lss = null;
+        String format_lss_="";
+        File file_=null;
+        
         if ( mtime == 0 ){
             print = true;
         }else{
@@ -6766,21 +6774,64 @@ System.out.println("BB" + retorno);
                 print = true;
             }
         }         
-        if ( print && type != null ){
-            String type_a = "f";
-            if ( new File(a).isDirectory() )
+        if ( print && (type != null || format_lss) ){
+            type_a="f";
+            type_lss="-";
+            file_=new File(a);
+            if ( file_.isDirectory() ){
                 type_a = "d";
-            if ( !type.equals(type_a) )
-                print = false;
-        }            
+                type_lss="d";
+            }        
+        }
+        if ( print && type != null && !type.equals(type_a) )
+            print = false;
         if ( print ){
+            if ( format_lss ){
+                Date d = new Date(file_.lastModified());
+                format_lss_ = file_.length() + " " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(d) + " ";                
+                String space_="                                                       ";
+                int len_=35;//55
+                format_lss_ = type_lss + space_.substring(0, len_-format_lss_.length()) + format_lss_;
+            }           
             if ( pre != null || pos != null )
                 a="\""+a+"\"";
             if ( pre != null )
                 a=pre+" "+a;
             if ( pos != null )
                 a=a+" "+pos;
-            System.out.println(a);
+            if ( a.contains(" ") ) 
+                if ( Util.isWindows() )
+                    a="\"" + a + "\"";
+                else
+                    a="'" + a + "'";
+            System.out.println(format_lss_ + a);
+        }
+    }
+    
+    private void lss_linux(String parm){
+        try{
+            boolean error;
+            if ( parm == null )
+                parm="ls -ltr --time-style=long-iso";
+            else
+                parm="ls -ltr --time-style=long-iso \"" + parm + "\"";
+            Process proc = Runtime.getRuntime().exec(parm);
+            int len=0;
+            byte[] b=new byte[1024];
+            boolean ok=false;                    
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                System.out.write(b, 0, len);
+                ok=true;
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 )
+                error=true;
+            if ( !ok ){
+                System.err.println("Erro fatal 99!");
+                System.exit(1);
+            }
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
         }
     }
     
@@ -8219,6 +8270,16 @@ class Util{
             write1Byte_n=0;
         }
     }    
+
+    private static boolean isWindows_cached=false;
+    private static boolean isWindows_=false;
+    public static Boolean isWindows(){
+        if ( !isWindows_cached ){
+            isWindows_=new File("c:/").exists();
+            isWindows_cached=true;
+        }
+        return isWindows_;
+    }
     
     public static void erroFatal(int n) {
         System.err.println("Erro Fatal " + n + "!!!!");

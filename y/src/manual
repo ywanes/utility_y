@@ -65,6 +65,7 @@ usage:
   [y pwd]
   [y find]
   [y ls]
+  [y lss]
   [y split]
   [y regua]
   [y link]
@@ -426,6 +427,9 @@ Exemplos...
     y ls
     y ls pasta1
     y ls "pas*"
+[y lss]
+    y lss
+    y lss parta1
 [y sleep]
     y sleep
     y sleep 0.22 # 0.22 seconds
