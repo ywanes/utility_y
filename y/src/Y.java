@@ -598,19 +598,19 @@ cat buffer.log
         if ( args[0].equals("zip") ){
             try{
                 if ( args.length == 3 && args[1].equals("add") ){
-                    zip_add(args[2], null, false);
+                    zip_add(args[2], null, false, System.out);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("add") && args[3].equals("-lvlStore")){
-                    zip_add(args[2], null, true);
+                    zip_add(args[2], null, true, System.out);
                     return;
                 }                
                 if ( args.length == 4 && args[1].equals("add") && args[2].equals("-name")){
-                    zip_add(null, args[3], false);
+                    zip_add(null, args[3], false, System.out);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("add") && args[2].equals("-name") && args[4].equals("-lvlStore")){
-                    zip_add(null, args[3], true);
+                    zip_add(null, args[3], true, System.out);
                     return;
                 }
                 if ( args.length == 2 && args[1].equals("list") ){
@@ -622,35 +622,35 @@ cat buffer.log
                     return;
                 }                
                 if ( args.length == 2 && args[1].equals("extract") ){
-                    zip_extract(null,null,null);
+                    zip_extract(System.in, null,null,null);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("extract") ){
-                    zip_extract(args[2],null,null);
+                    zip_extract(System.in, args[2],null,null);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("extract") && args[2].equals("-out")){
-                    zip_extract(null,args[3],null);
+                    zip_extract(System.in, null,args[3],null);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("extract") && args[3].equals("-out")){
-                    zip_extract(args[2],args[4],null);
+                    zip_extract(System.in, args[2],args[4],null);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("extractSelected") ){
-                    zip_extract(null,null,args[2]);
+                    zip_extract(System.in, null,null,args[2]);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("extractSelected") ){
-                    zip_extract(args[2],null,args[3]);
+                    zip_extract(System.in, args[2],null,args[3]);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("extractSelected") && args[3].equals("-out")){
-                    zip_extract(null,args[4],args[2]);
+                    zip_extract(System.in, null,args[4],args[2]);
                     return;
                 }
                 if ( args.length == 6 && args[1].equals("extractSelected") && args[4].equals("-out")){
-                    zip_extract(args[2],args[5],args[3]);
+                    zip_extract(System.in, args[2],args[5],args[3]);
                     return;
                 }
             }catch(Exception e){
@@ -1578,10 +1578,108 @@ cat buffer.log
     }
     
     private void take(int parm){
-        if ( parm == 0 )
-            socket_1_file("192.168.0.35", 222, true, true, System.in, null);
-        else
-            socket_1_file("192.168.0.35", 222, false, false, null, System.out);
+        // zip_add(".", null, true, System.out);
+        // new AES().encrypt(System.in,System.out,"SENHA",null,null);
+        // socket_1_file("10.0.2.15", 222, true, true, System.in, null);
+        
+        // socket_1_file("10.0.2.15", 222, false, false, null, System.out);
+        // new AES().decrypt(System.in,System.out,"SENHA",null);
+        // zip_extract(System.in, null,null,null);
+
+        try{        
+            final PipedOutputStream pos1=new PipedOutputStream();
+            final PipedInputStream pis1=new PipedInputStream();
+            final PipedOutputStream pos2=new PipedOutputStream();
+            final PipedInputStream pis2=new PipedInputStream();
+            Thread step1 = null;
+            Thread step2 = null;
+            Thread step3 = null;
+            
+            pis1.connect(pos1);
+            pis2.connect(pos2);
+
+            if ( parm == 0 ){            
+                step1=new Thread(new Runnable() {
+                    public void run() {
+                        try{
+                            zip_add(".", null, true, pos1);
+                            pos1.flush();
+                            pos1.close();
+                        }catch(Exception e){
+                            System.err.println("Erro zip - " + e.toString());
+                            System.exit(1);
+                        }
+                    }
+                });
+
+                step2=new Thread(new Runnable() {
+                    public void run() {
+                        try{
+                            new AES().encrypt(pis1,pos2,"SENHA",null,null);
+                            pos2.flush();
+                            pos2.close();
+                        }catch(Exception e){
+                            System.err.println("Erro aes - " + e.toString());
+                            System.exit(1);
+                        }
+                    }
+                });
+
+                step3=new Thread(new Runnable() {
+                    public void run() {
+                        socket_1_file("10.0.2.15", 222, true, true, pis2, null);                        
+                    }
+                });
+            }else{
+                step3=new Thread(new Runnable() {
+                    public void run() {
+                        try{
+                            socket_1_file("10.0.2.15", 222, false, false, null, pos1);
+                            pos1.flush();
+                            pos1.close();
+                        }catch(Exception e){
+                            System.err.println("Erro socket_1_file - " + e.toString());
+                            System.exit(1);
+                        }                            
+                    }
+                });
+
+                step2=new Thread(new Runnable() {
+                    public void run() {
+                        try{
+                            new AES().decrypt(pis1,pos2,"SENHA",null);
+                            pos2.flush();
+                            pos2.close();
+                        }catch(Exception e){
+                            System.err.println("Erro aes - " + e.toString());
+                            System.exit(1);
+                        }
+                    }
+                });
+
+                step1=new Thread(new Runnable() {
+                    public void run() {
+                        try{
+                            zip_extract(pis2, null,null,null);
+                        }catch(Exception e){
+                            System.err.println("Erro extract zip - " + e.toString());
+                            System.exit(1);
+                        }
+                    }
+                });
+            }
+            
+            step1.start();
+            step2.start();
+            step3.start();
+
+            step1.join();
+            step2.join();
+            step3.join();
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+            System.exit(1);
+        }            
     }
     
     public String [] getConnAppParm(String [] args){
@@ -3167,9 +3265,9 @@ cat buffer.log
         return null;
     }
     
-    private void zip_add(String a, String dummy_name, boolean isLvlStore) throws Exception {
+    private void zip_add(String a, String dummy_name, boolean isLvlStore, OutputStream out) throws Exception {
         this.dummy_name = dummy_name;                
-        zip_output = new java.util.zip.ZipOutputStream(System.out);   
+        zip_output = new java.util.zip.ZipOutputStream(out);   
         if ( isLvlStore )
             zip_output.setLevel(ZipOutputStream.STORED);        
         if ( a == null ){
@@ -3286,7 +3384,7 @@ cat buffer.log
     }
 
     private int zip_extract_count_encontrados=0;
-    private void zip_extract(String a, String pre_dir, String filtro) throws Exception {
+    private void zip_extract(InputStream in, String a, String pre_dir, String filtro) throws Exception {
         zip_extract_count_encontrados=0;
         if ( filtro != null && filtro.endsWith("/") ){
             System.err.println("Erro, o item selecionado não pode ser uma pasta!: "+filtro);
@@ -3316,7 +3414,7 @@ cat buffer.log
         if ( a != null )
             valida_leitura_arquivo(a);
         if ( a == null ){
-            ZipInputStream zis=new ZipInputStream(System.in);
+            ZipInputStream zis=new ZipInputStream(in);
             ZipEntry entry=null;
             while( (entry=zis.getNextEntry()) != null ){                                
                 if ( entry.getName().endsWith("/") ){
