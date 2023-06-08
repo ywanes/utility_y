@@ -281,25 +281,8 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("take") ){          
-            //Object [] parm_ip_port_server_send=get_parm_ip_port_server_send(args);
-            String [] ipv4_ipv6=show_ips(true, 15, false, false);; // "10.0.2.15";
-            String host = ipv4_ipv6[1];
-            if ( host == null )
-                host = ipv4_ipv6[0];
-            if ( host == null ){
-                System.err.println("Nenhum ip foi encontrado!");
-                System.exit(1);
-            }                
-            int port = 222;
-            String senha = "SENHA";
-            boolean server=false;
-            boolean send=false;
-            if ( args[1].equals("s") )
-                server=send=true;
-            if ( args[1].equals("c") )
-                server=send=false;            
-            take(host, port, server, send, senha);
-            return;
+            if ( take(args) )
+                return;
         }
         
         if ( args[0].equals("banco") ){            
@@ -573,8 +556,7 @@ cat buffer.log
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
             
-            Object [] objs=new Object[3];
-            args2 = get_parms_json_listOn_noHeader_parm(objs, args2);
+            Object [] objs = get_parms_json_listOn_noHeader_parm(args2);
             boolean listOn=(Boolean)objs[0];
             boolean noHeader=(Boolean)objs[1];
             String parm=(String)objs[2];
@@ -847,8 +829,7 @@ cat buffer.log
             String [] args2 = new String[args.length];            
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
-            Object [] objs=new Object[5];
-            args2 = get_parms_curl_header_method_verbose_raw_host(objs, args2);
+            Object [] objs = get_parms_curl_header_method_verbose_raw_host(args2);
             String header=(String)objs[0];
             String method=(String)objs[1];
             boolean verbose=(Boolean)objs[2];
@@ -864,19 +845,17 @@ cat buffer.log
             String [] args2 = new String[args.length];            
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
-            Object [] objsCurl=new Object[5];
-            args2 = get_parms_curl_header_method_verbose_raw_host(objsCurl, args2);
+            Object [] objsCurl = get_parms_curl_header_method_verbose_raw_host(args2);
             String header=(String)objsCurl[0];
             String method=(String)objsCurl[1];
             boolean verbose=(Boolean)objsCurl[2];
             boolean raw=(Boolean)objsCurl[3];
             String host=(String)objsCurl[4];            
             
-            Object [] objsJson=new Object[3];
-            args2 = get_parms_json_listOn_noHeader_parm(objsJson, args2);
-            boolean listOn=(Boolean)objsJson[0];
-            boolean noHeader=(Boolean)objsJson[1];
-            String parm=(String)objsJson[2];
+            Object [] objs = get_parms_json_listOn_noHeader_parm(args2);
+            boolean listOn=(Boolean)objs[0];
+            boolean noHeader=(Boolean)objs[1];
+            String parm=(String)objs[2];
 
             if ( args2 != null && args2.length == 0 ){
                 boolean mostraTabela=parm.equals("mostraTabela");
@@ -1587,8 +1566,56 @@ cat buffer.log
             System.exit(1);
         }            
     }
+
+    private boolean take(String [] args){
+        Object [] objs=get_parm_ip_port_server_send_pass_token(args);
+        if ( objs == null )
+            return false;
+        String ip=(String)objs[0];
+        int port=(Integer)objs[1];
+        boolean server=(Boolean)objs[2];
+        boolean send=(Boolean)objs[3];
+        String pass=(String)objs[4];
+        String token=(String)objs[5];
+
+        if ( port == -1 )
+            port = 222;
+        if ( send ){
+            File f_ = new File(".");
+            if ( f_.listFiles().length == 0 ){
+                System.err.println("Diretorio vazio!");
+                System.exit(1);
+            }
+        }
+        if ( server ){
+            if ( ip == null ){
+                String [] ipv4_ipv6=show_ips(true, 15, false, false); // "10.0.2.15";
+                if ( ip == null )
+                    ip = ipv4_ipv6[1];
+                if ( ip == null )
+                    ip = ipv4_ipv6[0];
+            }
+            if ( pass == null ){
+                pass = Util.random_int(0, 9999) + "";
+            }
+        }
+        if ( ip == null ){
+            System.err.println("Nenhum ip foi encontrado!");
+            System.exit(1);
+        }                
+        if ( server ){
+            System.out.println("# cliente command:");
+            if ( !send )
+                System.out.println("# y take -client -ip " + ip + " -port " + port + " -pass " + pass + " -send" );
+            else
+                System.out.println("# y take -client -ip " + ip + " -port " + port + " -pass " + pass );
+        }
+       
+        take(ip, port, server, send, pass);
+        return true;
+    }
     
-    private void take(String ip, int port, boolean server, boolean send, String senha){
+    private void take(String ip, int port, boolean server, boolean send, String pass){
         // zip_add(".", null, true, System.out);
         // new AES().encrypt(System.in,System.out,"SENHA",null,null);
         // socket_1_file("10.0.2.15", 222, true, true, System.in, null);
@@ -1626,7 +1653,7 @@ cat buffer.log
                 step2=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            new AES().encrypt(pis1,pos2,senha,null,null);
+                            new AES().encrypt(pis1,pos2, pass, null,null);
                             pos2.flush();
                             pos2.close();
                         }catch(Exception e){
@@ -1659,7 +1686,7 @@ cat buffer.log
                 step2=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            new AES().decrypt(pis1,pos2,senha,null);
+                            new AES().decrypt(pis1,pos2, pass,null);
                             pos2.flush();
                             pos2.close();
                         }catch(Exception e){
@@ -6678,7 +6705,8 @@ System.out.println("BB" + retorno);
         }
     }
 
-    private String [] get_parms_curl_header_method_verbose_raw_host(Object [] objs, String [] args){
+    private String [] get_parms_curl_header_method_verbose_raw_host(String [] args){
+        Object [] objs=new Object[5];        
         String header="";
         String method="GET";
         boolean verbose=false;
@@ -6725,7 +6753,8 @@ System.out.println("BB" + retorno);
         return args;
     }
     
-    private String [] get_parms_json_listOn_noHeader_parm(Object [] objs, String [] args){
+    private Object [] get_parms_json_listOn_noHeader_parm(String [] args){
+        Object [] objs=new Object[3];
         boolean listOn=false;
         boolean noHeader=false;
         String parm = "";
@@ -6753,7 +6782,91 @@ System.out.println("BB" + retorno);
         objs[2] = (Object)parm;
         return args;   
     }
-            
+    
+    private Object [] get_parm_ip_port_server_send_pass_token(String [] args){
+        Object [] objs=new Object[6];        
+        String ip=null;
+        int port=-1;
+        Boolean server=false;
+        Boolean client=false;
+        Boolean send=false;
+        Boolean receive=false;
+        String pass=null;
+        String token=null;
+        
+        args=sliceParm(1, args);
+        
+        while(true){
+            if ( args.length > 1 && args[0].equals("-ip")){
+                args=sliceParm(1, args);
+                ip=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-port")){
+                args=sliceParm(1, args);
+                port=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-server")){
+                server=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-client")){
+                client=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-send")){
+                send=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-receive")){
+                receive=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-pass")){
+                args=sliceParm(1, args);
+                pass=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && token == null ){
+                token=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }            
+            if ( args.length > 0 )
+                return null;
+            break;
+        }
+        
+        if ( server && client )
+            return null;
+        if ( send && receive )
+            return null;        
+        if ( !server && !client )
+            server=true;
+        if ( !send && !receive ){
+            if ( server )
+                send=true;
+            else
+                receive=true;
+        }
+        
+        objs[0] = (Object)ip;
+        objs[1] = (Object)port;
+        objs[2] = (Object)server;
+        objs[3] = (Object)send;
+        objs[4] = (Object)pass;
+        objs[5] = (Object)token;
+        return objs;           
+    }
+    
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
         String path=null;
         boolean acceptSymbolicLink=false;
@@ -7548,9 +7661,9 @@ System.out.println("BB" + retorno);
                                     System.out.println(iface.getDisplayName()+":");
                             }
                             String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
-                            if ( ipv4 == null && ip.equals(".") )
+                            if ( ipv4 == null && ip.contains(".") )
                                 ipv4=ip;
-                            if ( ipv6 == null && ip.equals(":") )
+                            if ( ipv6 == null && ip.contains(":") )
                                 ipv6=ip;
                             String ping_=null;
                             if ( ping )
@@ -8216,6 +8329,9 @@ class Util{
         return result;
     }
     
+    public static int random_int(int min, int max){
+        return java.util.concurrent.ThreadLocalRandom.current().nextInt(min, max + 1);        
+    }
     static void testOn() {
         try{
             inputStream_pipe=new FileInputStream("c:/tmp/file.json");
@@ -10486,6 +10602,7 @@ class XML extends Util{
 /* class by manual */            if ( caminho.equals("/y/manual") )
 /* class by manual */                return ""
 /* class by manual */                + "usage:\n"
+/* class by manual */                + "  [y take]\n"
 /* class by manual */                + "  [y banco fromCSV -outTable tabelaA selectInsert]\n"
 /* class by manual */                + "  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
 /* class by manual */                + "  [y banco conn,hash executeInsert]\n"
@@ -10552,6 +10669,7 @@ class XML extends Util{
 /* class by manual */                + "  [y pwd]\n"
 /* class by manual */                + "  [y find]\n"
 /* class by manual */                + "  [y ls]\n"
+/* class by manual */                + "  [y lss]\n"
 /* class by manual */                + "  [y split]\n"
 /* class by manual */                + "  [y regua]\n"
 /* class by manual */                + "  [y link]\n"
@@ -10565,6 +10683,10 @@ class XML extends Util{
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
 /* class by manual */                + "\n"
+/* class by manual */                + "[y take]\n"
+/* class by manual */                + "    y take\n"
+/* class by manual */                + "    Obs: envia o conteudo desta para para outro computador ou pasta\n"
+/* class by manual */                + "    Obs2: apos digitar y take, ele ira mostrar o comando que sera utilizado na outra ponta\n"
 /* class by manual */                + "[y banco fromCSV -outTable tabelaA selectInsert]\n"
 /* class by manual */                + "    cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert\n"
 /* class by manual */                + "[y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
@@ -10913,6 +11035,9 @@ class XML extends Util{
 /* class by manual */                + "    y ls\n"
 /* class by manual */                + "    y ls pasta1\n"
 /* class by manual */                + "    y ls \"pas*\"\n"
+/* class by manual */                + "[y lss]\n"
+/* class by manual */                + "    y lss\n"
+/* class by manual */                + "    y lss parta1\n"
 /* class by manual */                + "[y sleep]\n"
 /* class by manual */                + "    y sleep\n"
 /* class by manual */                + "    y sleep 0.22 # 0.22 seconds\n"
@@ -11062,6 +11187,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

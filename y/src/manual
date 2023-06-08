@@ -1,4 +1,5 @@
 usage:
+  [y take]
   [y banco fromCSV -outTable tabelaA selectInsert]
   [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]
   [y banco conn,hash executeInsert]
@@ -79,6 +80,10 @@ usage:
 
 Exemplos...
 
+[y take]
+    y take
+    Obs: envia o conteudo desta para para outro computador ou pasta
+    Obs2: após digitar y take, ele irá mostrar o comando que será utilizado na outra ponta
 [y banco fromCSV -outTable tabelaA selectInsert]
     cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert
 [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]
