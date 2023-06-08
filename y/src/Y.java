@@ -280,8 +280,16 @@ cat buffer.log
             );
             return;
         }
-        if ( args[0].equals("take") && args.length == 2 ){          
-            String host = "10.0.2.15";
+        if ( args[0].equals("take") ){          
+            //Object [] ip_port_server_send=get_ip_port_server_send(args);
+            String [] ipv4_ipv6=show_ips(true, 15, false, false);; // "10.0.2.15";
+            String host = ipv4_ipv6[1];
+            if ( host == null )
+                host = ipv4_ipv6[0];
+            if ( host == null ){
+                System.err.println("Nenhum ip foi encontrado!");
+                System.exit(1);
+            }                
             int port = 222;
             String senha = "SENHA";
             boolean server=false;
@@ -1502,15 +1510,15 @@ cat buffer.log
                 if ( args.length == 3 && args[1].equals("-t") )
                     timeout=Integer.parseInt(args[2]);
             }catch(Exception e){}
-            show_ips(true, timeout, false);
+            show_ips(true, timeout, false, true);
             return;
         }
         if ( args[0].equals("ips") ){
             int timeout=15;
             if (args.length == 2 && args[1].equals("list"))
-                show_ips(false, timeout, true);
+                show_ips(false, timeout, true, true);
             else
-                show_ips(false, timeout, false);
+                show_ips(false, timeout, false, true);
             return;
         }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
@@ -7514,7 +7522,9 @@ System.out.println("BB" + retorno);
     }
     
     
-    private void show_ips(boolean ping, int timeout, boolean list){
+    private String [] show_ips(boolean ping, int timeout, boolean list, boolean printOn){
+        String ipv4=null;
+        String ipv6=null;
         try {
             int count=0;
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
@@ -7530,27 +7540,36 @@ System.out.println("BB" + retorno);
                         java.net.InetAddress addr = addresses.nextElement();
                         if(addr.getHostAddress().contains(partes[i])){
                             if ( list && ++count == 1 )
-                                System.out.println("a=$(\ncat << 'EOF'");
+                                if ( printOn )
+                                    System.out.println("a=$(\ncat << 'EOF'");
                             if ( first ){
                                 first=false;
-                                System.out.println(iface.getDisplayName()+":");
+                                if ( printOn )
+                                    System.out.println(iface.getDisplayName()+":");
                             }
                             String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
+                            if ( ipv4 == null && ip.equals(".") )
+                                ipv4=ip;
+                            if ( ipv6 == null && ip.equals(":") )
+                                ipv6=ip;
+                            String ping_=null;
                             if ( ping )
-                                format_show_ip(ip, ping(ip, timeout));
-                            else
-                                format_show_ip(ip, null);
+                                ping_=ping(ip, timeout);
+                            if ( printOn )
+                                format_show_ip(ip, ping_);
                         }
                     }
                 }
             }
             if( list && count > 0 )
-                System.out.println("EOF\n)\necho \"$a\" | y ping list");
+                if ( printOn )
+                    System.out.println("EOF\n)\necho \"$a\" | y ping list");
         } catch (java.net.SocketException e) {
             throw new RuntimeException(e);
         } 
+        return new String[]{ipv4, ipv6};
     }           
-        
+
     private void format_show_ip(String a, String b){
         if ( b != null ){
             String s1="                                                                ".substring(0, 40-a.length());
