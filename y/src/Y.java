@@ -1521,13 +1521,14 @@ cat buffer.log
         return;
     }
     
-    private void socket_1_file(String host, int port, boolean server, boolean send, InputStream in, OutputStream out){
+    private void socket_1_file(String host, int port, boolean server, boolean send, InputStream in, OutputStream out, String print_after){
         try{
             byte [] buffer= new byte[Util.BUFFER_SIZE];
             int len=0;
             if ( server ){
                 Socket s = null;
                 ServerSocket ss=new ServerSocket(port, 1,InetAddress.getByName(host));
+                System.out.println(print_after);
                 s = ss.accept();
                 OutputStream os = s.getOutputStream();
                 InputStream is = s.getInputStream();
@@ -1577,7 +1578,8 @@ cat buffer.log
         boolean send=(Boolean)objs[3];
         String pass=(String)objs[4];
         String token=(String)objs[5];
-
+        String print_after=null;
+        
         if ( port == -1 )
             port = 222;
         if ( send ){
@@ -1603,19 +1605,17 @@ cat buffer.log
             System.err.println("Nenhum ip foi encontrado!");
             System.exit(1);
         }                
-        if ( server ){
-            System.out.println("# cliente command:");
+        if ( server )
             if ( !send )
-                System.out.println("# y take -client -ip " + ip + " -port " + port + " -pass " + pass + " -send" );
+                print_after="# cliente command:\n# y take -client -ip " + ip + " -port " + port + " -pass " + pass + " -send";
             else
-                System.out.println("# y take -client -ip " + ip + " -port " + port + " -pass " + pass );
-        }
+                print_after="# cliente command:\n# y take -client -ip " + ip + " -port " + port + " -pass " + pass;
        
-        take(ip, port, server, send, pass);
+        take(ip, port, server, send, pass, print_after);
         return true;
     }
     
-    private void take(String ip, int port, boolean server, boolean send, String pass){
+    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer){
         // zip_add(".", null, true, System.out);
         // new AES().encrypt(System.in,System.out,"SENHA",null,null);
         // socket_1_file("10.0.2.15", 222, true, true, System.in, null);
@@ -1665,7 +1665,7 @@ cat buffer.log
 
                 step3=new Thread(new Runnable() {
                     public void run() {
-                        socket_1_file(ip, port, true, true, pis2, null);                        
+                        socket_1_file(ip, port, true, true, pis2, null, print_afer);                        
                     }
                 });
             }
@@ -1673,7 +1673,7 @@ cat buffer.log
                 step3=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            socket_1_file(ip, port, false, false, null, pos1);
+                            socket_1_file(ip, port, false, false, null, pos1, print_afer);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
