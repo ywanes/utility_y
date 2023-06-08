@@ -280,15 +280,18 @@ cat buffer.log
             );
             return;
         }
-        if ( args[0].equals("take") && args.length == 2 ){            
-            if ( args[1].equals("s") ){
-                take(0);
-                return;
-            }
-            if ( args[1].equals("c") ){
-                take(1);
-                return;
-            }
+        if ( args[0].equals("take") && args.length == 2 ){          
+            String host = "10.0.2.15";
+            int port = 222;
+            String senha = "SENHA";
+            boolean server=false;
+            boolean send=false;
+            if ( args[1].equals("s") )
+                server=send=true;
+            if ( args[1].equals("c") )
+                server=send=false;            
+            take(host, port, server, send, senha);
+            return;
         }
         
         if ( args[0].equals("banco") ){            
@@ -1577,7 +1580,7 @@ cat buffer.log
         }            
     }
     
-    private void take(int parm){
+    private void take(String ip, int port, boolean server, boolean send, String senha){
         // zip_add(".", null, true, System.out);
         // new AES().encrypt(System.in,System.out,"SENHA",null,null);
         // socket_1_file("10.0.2.15", 222, true, true, System.in, null);
@@ -1598,7 +1601,7 @@ cat buffer.log
             pis1.connect(pos1);
             pis2.connect(pos2);
 
-            if ( parm == 0 ){            
+            if ( server && send ){            
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
@@ -1615,7 +1618,7 @@ cat buffer.log
                 step2=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            new AES().encrypt(pis1,pos2,"SENHA",null,null);
+                            new AES().encrypt(pis1,pos2,senha,null,null);
                             pos2.flush();
                             pos2.close();
                         }catch(Exception e){
@@ -1627,14 +1630,15 @@ cat buffer.log
 
                 step3=new Thread(new Runnable() {
                     public void run() {
-                        socket_1_file("10.0.2.15", 222, true, true, pis2, null);                        
+                        socket_1_file(ip, port, true, true, pis2, null);                        
                     }
                 });
-            }else{
+            }
+            if ( !server && !send ){
                 step3=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            socket_1_file("10.0.2.15", 222, false, false, null, pos1);
+                            socket_1_file(ip, port, false, false, null, pos1);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -1647,7 +1651,7 @@ cat buffer.log
                 step2=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            new AES().decrypt(pis1,pos2,"SENHA",null);
+                            new AES().decrypt(pis1,pos2,senha,null);
                             pos2.flush();
                             pos2.close();
                         }catch(Exception e){
