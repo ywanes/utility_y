@@ -7396,7 +7396,7 @@ System.out.println("BB" + retorno);
                 return "OK";
             }
         } catch (Exception e){
-            System.out.println("Error: " + e.toString());
+            //System.out.println("Error: " + e.toString());
         }        
         return "NOK";
     }
