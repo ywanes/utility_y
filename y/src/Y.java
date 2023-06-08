@@ -281,7 +281,7 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("take") ){          
-            //Object [] ip_port_server_send=get_ip_port_server_send(args);
+            //Object [] parm_ip_port_server_send=get_parm_ip_port_server_send(args);
             String [] ipv4_ipv6=show_ips(true, 15, false, false);; // "10.0.2.15";
             String host = ipv4_ipv6[1];
             if ( host == null )
