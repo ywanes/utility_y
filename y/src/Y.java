@@ -1616,14 +1616,6 @@ cat buffer.log
     }
     
     private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer){
-        // zip_add(".", null, true, System.out);
-        // new AES().encrypt(System.in,System.out,"SENHA",null,null);
-        // socket_1_file("10.0.2.15", 222, true, true, System.in, null);
-        
-        // socket_1_file("10.0.2.15", 222, false, false, null, System.out);
-        // new AES().decrypt(System.in,System.out,"SENHA",null);
-        // zip_extract(System.in, null,null,null);
-
         try{        
             final PipedOutputStream pos1=new PipedOutputStream();
             final PipedInputStream pis1=new PipedInputStream();
@@ -1636,7 +1628,7 @@ cat buffer.log
             pis1.connect(pos1);
             pis2.connect(pos2);
 
-            if ( server && send ){            
+            if ( send ){            
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
@@ -1656,7 +1648,7 @@ cat buffer.log
                             new AES().encrypt(pis1,pos2, pass, null,null);
                             pos2.flush();
                             pos2.close();
-                        }catch(Exception e){
+                        }catch(Exception e){                            
                             System.err.println("Erro aes - " + e.toString());
                             System.exit(1);
                         }
@@ -1665,15 +1657,15 @@ cat buffer.log
 
                 step3=new Thread(new Runnable() {
                     public void run() {
-                        socket_1_file(ip, port, true, true, pis2, null, print_afer);                        
+                        socket_1_file(ip, port, server, send, pis2, null, print_afer);                        
                     }
                 });
             }
-            if ( !server && !send ){
+            if ( !send ){
                 step3=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            socket_1_file(ip, port, false, false, null, pos1, print_afer);
+                            socket_1_file(ip, port, server, send, null, pos1, print_afer);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -1690,7 +1682,10 @@ cat buffer.log
                             pos2.flush();
                             pos2.close();
                         }catch(Exception e){
-                            System.err.println("Erro aes - " + e.toString());
+                            if ( e.toString().equals("java.io.IOException: Read end dead") )
+                                System.err.println("Senha invalida!");
+                            else
+                                System.err.println("Erro aes - " + e.toString());
                             System.exit(1);
                         }
                     }
@@ -1699,7 +1694,8 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_extract(pis2, null,null,null);
+                            zip_extract(pis2, null,null,null);                            
+                            System.out.println("");
                         }catch(Exception e){
                             System.err.println("Erro extract zip - " + e.toString());
                             System.exit(1);
@@ -1715,6 +1711,7 @@ cat buffer.log
             step1.join();
             step2.join();
             step3.join();
+            Util.print_cursor("\nFim!", false);
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
             System.exit(1);
@@ -3374,7 +3371,7 @@ cat buffer.log
                     File tmp = new File(zip_elementos.get(i));
                     long size_alert=-1;
                     long size=0;
-                    size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
+                    size_alert = tmp.length() + 1024*1024*100; // acima de 100MB do planejado
                     readBytes(tmp);
                     byte[] buf = new byte[BUFFER_SIZE];                        
                     int len;
@@ -3382,7 +3379,7 @@ cat buffer.log
                         zip_output.write(buf, 0, len);                
                         size+=len;
                         if ( elem != null && size > size_alert ){
-                            System.err.println("Erro, sistema anti loop ativado!");
+                            System.err.println("Erro, sistema anti loop ativado!!");
                             System.exit(1);
                         }
                     }
@@ -3520,16 +3517,16 @@ cat buffer.log
                     }
                     if ( filtro == null ){
                         tmp=new File(pre_dir+dir);
-                        copiaByStream(is,new FileOutputStream(tmp));
+                        copiaByStream(is,new FileOutputStream(tmp),true);
                         tmp.setLastModified(lastModified);
                     }else{
                         if ( filtro.equals(dir) ){
                             zip_extract_count_encontrados++;
                             if ( out_console ){
-                                copiaByStream(is,System.out);
+                                copiaByStream(is,System.out,false);
                             }else{
                                 tmp=new File(pre_dir+dir);
-                                copiaByStream(is,new FileOutputStream(tmp));
+                                copiaByStream(is,new FileOutputStream(tmp),true);
                                 tmp.setLastModified(lastModified);
                             }
                         }
@@ -4797,7 +4794,10 @@ System.out.println("BB" + retorno);
             System.exit(1);
         }
         try{
-            f.mkdir();
+            if ( ! f.mkdir() ){
+                System.err.println("Acesso negado.");
+                System.exit(1);
+            }                
         }catch(Exception e){
             System.out.println(e.toString());
         }    
@@ -6506,13 +6506,17 @@ System.out.println("BB" + retorno);
         return b;
     }    
 
-
-
-    private void copiaByStream(InputStream pipe_in, OutputStream pipe_out) throws Exception {
+    long copiaByStream_count_print_on=0;
+    private void copiaByStream(InputStream pipe_in, OutputStream pipe_out, boolean print_on) throws Exception {
         byte[] buf = new byte[BUFFER_SIZE];            
         int len;
-        while ((len = pipe_in.read(buf)) > -1)
+        while ((len = pipe_in.read(buf)) > -1){
             pipe_out.write(buf, 0, len);
+            if ( print_on ){
+                copiaByStream_count_print_on+=len;
+                Util.print_cursor(copiaByStream_count_print_on+" bytes...", true);
+            }
+        }
         pipe_out.flush();
         pipe_out.close();
     }
@@ -6809,22 +6813,22 @@ System.out.println("BB" + retorno);
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 1 && args[0].equals("-server")){
+            if ( args.length > 0 && args[0].equals("-server")){
                 server=true;
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 1 && args[0].equals("-client")){
+            if ( args.length > 0 && args[0].equals("-client")){
                 client=true;
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 1 && args[0].equals("-send")){
+            if ( args.length > 0 && args[0].equals("-send")){
                 send=true;
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 1 && args[0].equals("-receive")){
+            if ( args.length > 0 && args[0].equals("-receive")){
                 receive=true;
                 args=sliceParm(1, args);
                 continue;
@@ -6835,7 +6839,7 @@ System.out.println("BB" + retorno);
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 0 && token == null ){
+            if ( args.length > 0 && token == null && !args[0].startsWith("-") ){
                 token=args[0];
                 args=sliceParm(1, args);
                 continue;
@@ -8331,6 +8335,24 @@ class Util{
     
     public static int random_int(int min, int max){
         return java.util.concurrent.ThreadLocalRandom.current().nextInt(min, max + 1);        
+    }
+    private static long print_cursor_timer_mili=-1;
+    public static void print_cursor(String a, boolean on_timer){
+        if ( on_timer ){
+            if ( print_cursor_timer_mili == -1 ){
+                print_cursor_timer_mili=System.currentTimeMillis();
+                return;
+            }else{
+                long tmp=System.currentTimeMillis();
+                if ( tmp > print_cursor_timer_mili + 500 ){
+                    print_cursor_timer_mili=tmp;
+                    System.out.print("\r"+a+"                                             \r");
+                }else
+                    return;
+            }                
+        }else{
+            System.out.print("\r"+a+"                                             \r");
+        }
     }
     static void testOn() {
         try{
