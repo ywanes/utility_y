@@ -1527,7 +1527,19 @@ cat buffer.log
             int len=0;
             if ( server ){
                 Socket s = null;
-                ServerSocket ss=new ServerSocket(port, 1,InetAddress.getByName(host));
+                ServerSocket ss=null;
+                try{
+                    ss=new ServerSocket(port, 1,InetAddress.getByName(host));
+                }catch(Exception ee){
+                    if ( ee.toString().equals("java.net.BindException: Address already in use (Bind failed)") ){
+                        String aux="";
+                        if ( !send )
+                            aux=" -receive"
+                        System.err.println("Porta " + port + " em uso! - Tente: y take -port " + (port+1)+aux);
+                        System.exit(1);                        
+                    }
+                    throw ee;
+                }
                 System.out.println(print_after);
                 s = ss.accept();
                 OutputStream os = s.getOutputStream();
