@@ -1580,8 +1580,6 @@ cat buffer.log
         String token=(String)objs[5];
         String print_after=null;
         
-        if ( port == -1 )
-            port = 222;
         if ( send ){
             File f_ = new File(".");
             if ( f_.listFiles().length == 0 ){
@@ -1605,6 +1603,12 @@ cat buffer.log
             System.err.println("Nenhum ip foi encontrado!");
             System.exit(1);
         }                
+        if ( port == -1 )
+            port = 222;
+        if ( pass == null ){
+            System.err.println("Senha nao encontrada!");
+            System.exit(1);
+        }
         if ( server )
             if ( !send )
                 print_after="# cliente command:\n# y take -client -ip " + ip + " -port " + port + " -pass " + pass + " -send";
