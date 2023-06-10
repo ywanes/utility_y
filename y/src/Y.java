@@ -1534,7 +1534,7 @@ cat buffer.log
                     if ( ee.toString().equals("java.net.BindException: Address already in use (Bind failed)") ){
                         String aux="";
                         if ( !send )
-                            aux=" -receive"
+                            aux=" -receive";
                         System.err.println("Porta " + port + " em uso! - Tente: y take -port " + (port+1)+aux);
                         System.exit(1);                        
                     }
