@@ -1361,7 +1361,7 @@ cat buffer.log
                 String type=(String)parm_path_symbol_mtime_type_pre_pos[3];
                 String pre=(String)parm_path_symbol_mtime_type_pre_pos[4];
                 String pos=(String)parm_path_symbol_mtime_type_pre_pos[5];
-                find(path, false, mtime, acceptSymbolicLink, type, pre, pos, false);
+                find(path, false, mtime, acceptSymbolicLink, type, pre, pos, false, null);
                 return;                
             }
         }
@@ -1369,27 +1369,41 @@ cat buffer.log
             int len_antes=args.length;
             args = bind_asterisk(args);
             if ( args.length == 1 ){
-                find(null, true, 0, true, null, null, null, false);
+                find(null, true, 0, true, null, null, null, false, null);
                 return;
             }
             if ( args.length == 2 ){
-                find(args[1], true, 0, true, null, null, null, false);
+                find(args[1], true, 0, true, null, null, null, false, null);
                 return;
             }
             for( int i=1;i<args.length;i++ ){
                 if ( len_antes > 2 )
                     System.out.println("\n"+args[i]+":");
-                find(args[i], true, 0, true, null, null, null, false);                
+                find(args[i], true, 0, true, null, null, null, false, null);                
             }
             return;
         }
         if ( args[0].equals("lss") ){            
             if ( Util.isWindows() )
-                find(args.length>1?args[1]:null, true, 0, true, null, null, null, true);
+                find(args.length>1?args[1]:null, true, 0, true, null, null, null, true, null);
             else
                 if ( ! lss_linux(args.length>1?args[1]:null) )
                     lss_mac(args.length>1?args[1]:null);
             return;
+        }
+        if ( args[0].equals("du") ){
+            Object [] parm_path_symbol_bkmg=get_parm_path_symbol_bkmg(args);
+            if ( parm_path_symbol_bkmg != null ){
+                String path=(String)parm_path_symbol_bkmg[0];
+                boolean acceptSymbolicLink=(Boolean)parm_path_symbol_bkmg[1];
+                String bkmg=(String)parm_path_symbol_bkmg[2];
+                if ( path == null )
+                    path=".";
+                if ( bkmg == null )
+                    bkmg="k";
+                find(path, false, 0, acceptSymbolicLink, null, null, null, false, bkmg);
+                return;                
+            }
         }
         if ( args[0].equals("sleep") && (args.length == 1 || args.length == 2) ){
             if ( args.length == 2 ){
@@ -6941,9 +6955,39 @@ System.out.println("BB" + retorno);
         return new Object[]{path,acceptSymbolicLink,mtime,type,pre,pos};
     }    
 
-    private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss){
+    private Object [] get_parm_path_symbol_bkmg(String [] args){
+        String path=null;
+        boolean acceptSymbolicLink=false;
+        String bkmg = null; // byte/kilo/mega/giga
+        
+        args=sliceParm(1,args);
+        while(args.length > 0){
+            if ( args[0].equals("-L") ){
+                acceptSymbolicLink=true;                
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args.length > 0 && ( args[0].equals("-b") || args[0].equals("-k") || args[0].equals("-m") || args[0].equals("-g") ) ){
+                bkmg=args[0].substring(1);
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( path == null ){
+                path=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            return null;
+        }
+        return new Object[]{path,acceptSymbolicLink,bkmg};
+    }    
+    
+    private void find
+        (String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, 
+            String pos, boolean format_lss, String format_du){
         String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
         File f=null;
+        long len_du=0;
         if (path == null){
             f=new File(System.getProperty("user.dir"));
             path="";
@@ -6959,44 +7003,71 @@ System.out.println("BB" + retorno);
             System.err.println("Error: \""+path+"\" not found!");
             System.exit(1);
         }
-        if ( !f.isDirectory() )
-            showfind(path, mtime, type, pre, pos, format_lss);
-        else
+        if ( !f.isDirectory() ){
+            if ( format_du != null )
+                len_du = f.length();
+            showfind(path, mtime, type, pre, pos, format_lss, format_du, len_du);
+        }else{
             if ( f.isDirectory())
-                find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss);
+                find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du);
+        }
     }
     
-    private void find_nav(File f, String sep, String hist, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss){
+    private long find_nav(File f, String sep, String hist, Boolean superficial, float mtime, 
+            boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss, String format_du){
+        long len_du=0;
+        long len_du_aux=0;
+        String hist_bkp=hist;
         if (superficial || hist.equals("") || hist.equals("/") || (hist.contains(":") && hist.length() <= 3) ){
             // faz nada
         }else{
-            showfind(hist, mtime, type, pre, pos, format_lss);
+            if ( format_du == null )
+                showfind(hist, mtime, type, pre, pos, format_lss, format_du, 0);
             hist+=sep;
         }
         try{
             File [] files = f.listFiles();
             for ( int i=0;i<files.length;i++ )
-                if ( !files[i].isDirectory() )
-                    if ( superficial )
-                        showfind(files[i].getName(), mtime, type, pre, pos, format_lss);
-                    else
-                        showfind(hist+files[i].getName(), mtime, type, pre, pos, format_lss);
+                if ( !files[i].isDirectory() ){
+                    len_du_aux = 0;
+                    if ( superficial ){
+                        if ( format_du != null )
+                            len_du_aux=files[i].length();
+                        else
+                            showfind(files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                    }else{
+                        if ( format_du != null )
+                            len_du_aux=new File(hist+files[i].getName()).length();
+                        else
+                            showfind(hist+files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                    }
+                    len_du+=len_du_aux;
+                }
             for ( int i=0;i<files.length;i++ )
                 if ( files[i].isDirectory() ){
                     if ( !acceptSymbolicLink && f.getPath().contains("\\") && !(f.getAbsolutePath()+"\\"+files[i].getName()).replace(":\\\\",":\\").toUpperCase().equals(files[i].toPath().toRealPath().toString().toUpperCase()) )
                         continue;
                     if (!acceptSymbolicLink && Files.isSymbolicLink(files[i].toPath()))
                         continue;
-                    if ( superficial )
-                        showfind(files[i].getName(), mtime, type, pre, pos, format_lss);
-                    else
-                        find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss);
+                    if ( superficial ){
+                        len_du_aux = 0;
+                        if ( format_du != null )
+                            len_du_aux=files[i].length();
+                        else
+                            showfind(files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                    }else{
+                        len_du += find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du);
+                    }
                 }
-        }catch(Exception e){}
+            len_du += f.length();
+            if ( format_du != null )
+                showfind(hist_bkp, mtime, type, pre, pos, format_lss, format_du, len_du);            
+        }catch(Exception e){}        
+        return len_du;
     }
     
     long findnow = 0;
-    private void showfind(String a, float mtime, String type, String pre, String pos, boolean format_lss){
+    private void showfind(String a, float mtime, String type, String pre, String pos, boolean format_lss, String format_du, long len_du){
         boolean print=false;
         String type_a = null;
         String type_lss = null;
@@ -7043,12 +7114,24 @@ System.out.println("BB" + retorno);
                 a=pre+" "+a;
             if ( pos != null )
                 a=a+" "+pos;
-            if ( a.contains(" ") ) 
-                if ( Util.isWindows() )
-                    a="\"" + a + "\"";
-                else
-                    a="'" + a + "'";
-            System.out.println(format_lss_ + a);
+            if ( format_du != null ){
+                if ( format_du.equals("b") )
+                    System.out.println(len_du + "\t" + a);
+                if ( format_du.equals("k") )
+                    System.out.println((int)(len_du/1024) + "\t" + a);
+                if ( format_du.equals("m") )
+                    System.out.println((int)(len_du/(1024*1024)) + "\t" + a);
+                if ( format_du.equals("g") )
+                    System.out.println((int)(len_du/(1024*1024*1024)) + "\t" + a);
+                
+            }else{
+                if ( a.contains(" ") ) 
+                    if ( Util.isWindows() )
+                        a="\"" + a + "\"";
+                    else
+                        a="'" + a + "'";
+                System.out.println(format_lss_ + a);
+            }
         }
     }
     
@@ -10708,6 +10791,7 @@ class XML extends Util{
 /* class by manual */                + "  [y find]\n"
 /* class by manual */                + "  [y ls]\n"
 /* class by manual */                + "  [y lss]\n"
+/* class by manual */                + "  [y du]\n"
 /* class by manual */                + "  [y split]\n"
 /* class by manual */                + "  [y regua]\n"
 /* class by manual */                + "  [y link]\n"
@@ -11076,6 +11160,9 @@ class XML extends Util{
 /* class by manual */                + "[y lss]\n"
 /* class by manual */                + "    y lss\n"
 /* class by manual */                + "    y lss parta1\n"
+/* class by manual */                + "[y du]\n"
+/* class by manual */                + "    y du\n"
+/* class by manual */                + "    y du . -g\n"
 /* class by manual */                + "[y sleep]\n"
 /* class by manual */                + "    y sleep\n"
 /* class by manual */                + "    y sleep 0.22 # 0.22 seconds\n"
@@ -11225,6 +11312,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

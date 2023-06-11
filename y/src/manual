@@ -67,6 +67,7 @@ usage:
   [y find]
   [y ls]
   [y lss]
+  [y du]
   [y split]
   [y regua]
   [y link]
@@ -435,6 +436,9 @@ Exemplos...
 [y lss]
     y lss
     y lss parta1
+[y du]
+    y du
+    y du . -g
 [y sleep]
     y sleep
     y sleep 0.22 # 0.22 seconds
