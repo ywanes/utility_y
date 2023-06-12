@@ -9132,7 +9132,7 @@ class Ponte {
             destino.referencia(origem);
             origem.start(); // destino é startado no meio do start da origem;
         }catch(Exception e){
-            System.out.println("termino inexperado de ponte id "+id+" - "+e.toString());
+            //System.out.println("termino inexperado de ponte id "+id+" - "+e.toString());
             origem.destroy();
         }
         System.out.println("finalizando ponte id "+id);
