@@ -9163,7 +9163,7 @@ class Ponte {
                             origem.volta(len,buffer);
                         System.out.println("desconectou"); 
                     }catch(Exception e){
-                        System.out.println("desconectou destino "+e.toString());
+                        //System.out.println("desconectou destino "+e.toString());
                     }
                     origem.destroy(); 
                 }
