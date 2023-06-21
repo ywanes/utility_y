@@ -7170,7 +7170,7 @@ System.out.println("BB" + retorno);
             byte t_="\t".getBytes()[0];
             boolean literalOn=false;
             String [] parm=new String []{};
-            if ( parm == null ){
+            if ( parm_ == null ){
                 File [] files=new File(".").listFiles();
                 parm=new String[files.length+4];
                 parm[0]="stat";
