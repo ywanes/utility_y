@@ -7162,18 +7162,23 @@ System.out.println("BB" + retorno);
         return true;
     }
     
-    private boolean lss_mac(String parm){
+    private boolean lss_mac(String parm_){
         try{
             boolean error;
             int aspeta="'".getBytes()[0];
             int espaco=" ".getBytes()[0];
             byte t_="\t".getBytes()[0];
             boolean literalOn=false;
+            String [] parm=new String []{};
             if ( parm == null ){
-                parm="stat -l -t '%F%T'";
                 File [] files=new File(".").listFiles();
+                parm=new String[files.length+4];
+                parm[0]="stat";
+                parm[1]="-l";
+                parm[2]="-t";
+                parm[3]="%F%T";
                 for ( int i=0;i<files.length;i++ )
-                    parm+=" '"+files[i].getName()+"'";
+                    parm[i+4]=files[i].getName();
             }else{
                 System.err.println("comando nao implementado!");
                 System.exit(1);
