@@ -7165,9 +7165,16 @@ System.out.println("BB" + retorno);
     private boolean lss_mac(String parm){
         try{
             boolean error;
-            if ( parm == null )
-                parm="stat -l -t '%F%T' * | tr ' ' \\\\t";
-            else{
+            int aspeta="'".getBytes()[0];
+            int espaco=" ".getBytes()[0];
+            byte t_="\t".getBytes()[0];
+            boolean literalOn=false;
+            if ( parm == null ){
+                parm="stat -l -t '%F%T'";
+                File [] files=new File(".").listFiles();
+                for ( int i=0;i<files.length;i++ )
+                    parm+=" '"+files[i].getName()+"'";
+            }else{
                 System.err.println("comando nao implementado!");
                 System.exit(1);
             }
@@ -7176,6 +7183,14 @@ System.out.println("BB" + retorno);
             byte[] b=new byte[1024];
             boolean ok=false;                    
             while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                for ( int i=0;i<len;i++ ){
+                    if ( b[i] == aspeta ){
+                        literalOn=!literalOn;
+                        continue;
+                    }
+                    if ( b[i] == espaco && !literalOn )
+                        b[i] = t_;
+                }
                 System.out.write(b, 0, len);
                 ok=true;
             }
