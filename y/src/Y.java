@@ -1589,8 +1589,10 @@ cat buffer.log
                 s.close();
             }
         }catch(Exception e){
-            System.err.println(e.toString());
-            System.exit(1);
+            if ( copiaByStream_count_print_on == 0 ){
+                System.err.println("Erro socket_1_file: "+ e.toString());
+                System.exit(1);
+            }
         }            
     }
 
@@ -1711,12 +1713,17 @@ cat buffer.log
                             new AES().decrypt(pis1,pos2, pass,null);
                             pos2.flush();
                             pos2.close();
-                        }catch(Exception e){
-                            if ( e.toString().equals("java.io.IOException: Read end dead") )
-                                System.err.println("Senha invalida!");
-                            else
+                        }catch(Exception e){                                     
+                            if ( e.toString().equals("java.io.IOException: Read end dead") ){
+                                if ( copiaByStream_count_print_on == 0 ){
+                                    System.err.println("Senha invalida!");
+                                    System.exit(1);
+                                }
+                            }else{
                                 System.err.println("Erro aes - " + e.toString());
-                            System.exit(1);
+                                System.exit(1);
+                            }
+                            
                         }
                     }
                 });
@@ -6536,7 +6543,7 @@ System.out.println("BB" + retorno);
         return b;
     }    
 
-    long copiaByStream_count_print_on=0;
+    public long copiaByStream_count_print_on=0;
     private void copiaByStream(InputStream pipe_in, OutputStream pipe_out, boolean print_on) throws Exception {
         byte[] buf = new byte[BUFFER_SIZE];            
         int len;
