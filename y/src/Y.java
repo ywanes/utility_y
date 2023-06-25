@@ -18,7 +18,7 @@ y.bat(c:/windows)
 ^
 
 )
-if "%1" equ "echo2" (
+if "%1" equ "echo" (
 echo %*
 ) else (
 java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
@@ -5556,8 +5556,12 @@ System.out.println("BB" + retorno);
             }
             entrada=byte_to_int_java(buf[0],false);
             // suprimindo \r\n
-            if ( entrada == 10 || entrada == 13 || entrada == 32 )
+            // no windows, o y echo sem aspeta pode dar problema
+            // assim da problema =>     y echo YQo= | y base64 -d
+            // assim nao da problema => y echo "YQo=" | y base64 -d
+            if ( entrada == 10 || entrada == 13 || entrada == 32 ){
                 continue;
+            }
             entrada=txtBase64.indexOf((char)entrada);
             if ( entrada == -1 ){
                 System.err.println(erroSequenciaIlegal);
