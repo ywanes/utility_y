@@ -10174,9 +10174,37 @@ class XML extends Util{
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  click_faixa(e);\n" +
 /* class texto_longo */         "}\n" +
+/* class texto_longo */         "let cache_digest=null;\n" +
+/* class texto_longo */         "function getDigest(){\n" +
+/* class texto_longo */         "  if ( cache_digest != null )\n" +
+/* class texto_longo */         "    return cache_digest;\n" +
+/* class texto_longo */         "  let digest = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];\n" +
+/* class texto_longo */         "  let p_digest = 0;\n" +
+/* class texto_longo */         "  function updateDigest(a){\n" +
+/* class texto_longo */         "    for ( var i=0;i<a.length;i++ ){\n" +
+/* class texto_longo */         "      digest[p_digest]=(digest[p_digest]+a.charCodeAt(i))%52;\n" +
+/* class texto_longo */         "      p_digest++;\n" +
+/* class texto_longo */         "      if ( p_digest >= digest.length )\n" +
+/* class texto_longo */         "        p_digest=0;\n" +
+/* class texto_longo */         "    }\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  var a = document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  for ( var i=0;i<a.children.length;i++ )\n" +
+/* class texto_longo */         "    updateDigest(a.children[i].children[0].innerText);\n" +
+/* class texto_longo */         "  var a='';\n" +
+/* class texto_longo */         "  for ( var i=0;i<digest.length;i++ ){\n" +
+/* class texto_longo */         "    if ( digest[i] >= 26 )\n" +
+/* class texto_longo */         "      a+=String.fromCharCode(digest[i]-26+97);\n" +
+/* class texto_longo */         "    else\n" +
+/* class texto_longo */         "      a+=String.fromCharCode(digest[i]+65);\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  cache_digest = a;\n" +
+/* class texto_longo */         "  return cache_digest;\n" +
+/* class texto_longo */         "}\n" +
 /* class texto_longo */         "function preparacao(){\n" +
 /* class texto_longo */         "  document.body.style.backgroundColor = '#000';\n" +
 /* class texto_longo */         "  create_playlist();\n" +
+/* class texto_longo */         "  console.log('playlistHash ' + getDigest());\n" +         
 /* class texto_longo */         "  add_listener();\n" +
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
 /* class texto_longo */         "  trySetParm(window.location.href);\n" +
