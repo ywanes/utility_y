@@ -10205,15 +10205,46 @@ class XML extends Util{
 /* class texto_longo */         "  if ( get_playing() != null && getDigest() != null ){\n" +
 /* class texto_longo */         "    let digest = getDigest();\n" +
 /* class texto_longo */         "    let playing = get_playing().innerHTML;\n" +
-/* class texto_longo */         "    let duration=document.getElementById('p').duration\n" +
+/* class texto_longo */         "    let currentTime=document.getElementById('p').currentTime;\n" +
+/* class texto_longo */         "    let volume=document.getElementById('p').volume;\n" +
 /* class texto_longo */         "    let a = document.getElementById('tablebase').children[0];\n" +
 /* class texto_longo */         "    let flags = '';\n" +
 /* class texto_longo */         "    for ( let i=0;i<a.children.length;i++ ){\n" +
-/* class texto_longo */         "      b = a.children[i].children[0].innerText.substr(0,1);\n" +
+/* class texto_longo */         "      let b = a.children[i].children[0].innerText.substr(0,1);\n" +
 /* class texto_longo */         "      if ( b == '+' || b == '-' )\n" +
 /* class texto_longo */         "        flags+=b;\n" +
 /* class texto_longo */         "    }\n" +
-/* class texto_longo */         "    localStorage.setItem('playlist-'+digest,JSON.stringify({'playing': playing, 'duration': duration, 'flags': flags}));\n" +
+/* class texto_longo */         "    localStorage.setItem('playlist-'+digest,JSON.stringify({'playing': playing, 'currentTime': currentTime, 'volume': volume, 'flags': flags}));\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function load_station(){\n" +
+/* class texto_longo */         "  if ( getDigest() != null ){\n" +
+/* class texto_longo */         "    let a = localStorage.getItem('playlist-'+getDigest());\n" +
+/* class texto_longo */         "    if ( a != null ){\n" +
+/* class texto_longo */         "      let b = JSON.parse(a);\n" +
+/* class texto_longo */         "      let playing = b['playing'];\n" +
+/* class texto_longo */         "      let currentTime = b['currentTime'];\n" +
+/* class texto_longo */         "      let volume = b['volume'];\n" +
+/* class texto_longo */         "      let flags= b['flags'];\n" +
+/* class texto_longo */         "      a = document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "      for ( let i=0;i<a.children.length;i++ ){\n" +
+/* class texto_longo */         "        b = a.children[i].children[0].innerText.substr(0,1);\n" +
+/* class texto_longo */         "        if ( ( b == '+' || b == '-' ) ){\n" +
+/* class texto_longo */         "          let c = flags.substr(0,1);\n" +
+/* class texto_longo */         "          flags = flags.substr(1);\n" +
+/* class texto_longo */         "          if ( c != b )\n" +
+/* class texto_longo */         "            a.children[i].children[0].innerText = c + a.children[i].children[0].innerText.substr(1);\n" +
+/* class texto_longo */         "  	    }\n" +
+/* class texto_longo */         "      }\n" +
+/* class texto_longo */         "      for ( let i=0;i<a.children.length;i++ ){\n" +
+/* class texto_longo */         "        if ( playing == a.children[i].children[0].innerText ){\n" +
+/* class texto_longo */         "          click_faixa(a.children[i].children[0]);\n" +
+/* class texto_longo */         "          break;\n" +
+/* class texto_longo */         "        }\n" +
+/* class texto_longo */         "      }\n" +
+/* class texto_longo */         "      document.getElementById('p').currentTime = currentTime;\n" +
+/* class texto_longo */         "      document.getElementById('p').volume = volume;\n" +
+/* class texto_longo */         "    }\n" +
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function preparacao(){\n" +
@@ -10224,6 +10255,7 @@ class XML extends Util{
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
 /* class texto_longo */         "  trySetParm(window.location.href);\n" +
 /* class texto_longo */         "  click_faixa(t.children[0].children[0]);\n" +
+/* class texto_longo */         "  load_station();\n" + 
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function trySetParm(url){\n" +
 /* class texto_longo */         "  if ( url.indexOf('?')  > -1 && url.split('?')[1].trim().length > 0 ){\n" +
@@ -10393,10 +10425,10 @@ class XML extends Util{
 /* class texto_longo */         "  	  setForActive(e);\n" +
 /* class texto_longo */         "  	  return;\n" +
 /* class texto_longo */         "    }\n" +
-/* class texto_longo */         "  setForNotActive(e);\n" +
-/* class texto_longo */         "}else{\n" +
-/* class texto_longo */         "  setForActive(e);\n" +
-/* class texto_longo */         "}\n" +
+/* class texto_longo */         "    setForNotActive(e);\n" +
+/* class texto_longo */         "  }else{\n" +
+/* class texto_longo */         "    setForActive(e);\n" +
+/* class texto_longo */         "  }\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function tryUpdateStateChildren(){\n" +
 /* class texto_longo */         "  if ( document.getElementById('p') == null || document.getElementById('p').currentTime == null )\n" +
@@ -10424,6 +10456,7 @@ class XML extends Util{
 /* class texto_longo */         "  return null;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "setInterval(tryUpdateStateChildren, 100);\n" +
+/* class texto_longo */         "setInterval(save_station, 1000);\n" +
 /* class texto_longo */         "</script>\n" +
 /* class texto_longo */         "</body></head></html>\n";
 /* class texto_longo */     }
