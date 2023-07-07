@@ -8074,6 +8074,7 @@ class grammarsWhere {
         setCampos(selectCSV_camposValue);
         int limit=100000;
         //mostrandoNodes(nodes);        
+
         while(limit-->0 && (nodes.size()>1 || !nodes.get(0).is_this.equals("root") ) ){
             if(transfere())
                 continue;
@@ -8247,8 +8248,8 @@ class grammarsWhere {
         return null;
     }
     
-    public static void setCampos(String [] selectCSV_camposValue){
-        nodes=nodesTemplate;
+    public static void setCampos(String [] selectCSV_camposValue){        
+        nodes=copyListNodes(nodesTemplate);        
         for( int i=0;i<nodes.size();i++ ){
             if(nodes.get(i).nome_campo != null)
                 nodes.get(i).value = selectCSV_camposValue[nodes.get(i).nome_campo_index];
@@ -8401,9 +8402,15 @@ class grammarsWhere {
                 s+=tail;
             addNode(s.trim(), "");
         }
-        nodesTemplate=nodes;
+        nodesTemplate=copyListNodes(nodes);
         if(nodes.size()==0)
             erroFatal("erro na interpretacao do where");
+    }
+    
+    private static ArrayList<Node> copyListNodes(ArrayList<Node> a){
+        ArrayList<Node> b=new ArrayList<Node>();
+        b.addAll(a);
+        return b;
     }
     
     static class Node{
