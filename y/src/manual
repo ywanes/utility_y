@@ -119,7 +119,9 @@ Exemplos...
     echo "select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert
 [y selectCSV]
     y cat file.csv | y selectCSV "select * from this"
+    y cat file.csv | y selectCSV "select * from this where a = '3'"
     y cat file.csv | y selectCSV "select * from this limit 10"
+    echo '[{"a":"3" },{"a": "4"}]' | y json "[elem for elem in data]" | y selectCSV "select * from this where a = '3'"
     y selectCSV -csv file.csv "select * from this"
     y selectCSV -csv file.csv -sql consulta.sql
 [y xlsxToCSV]
