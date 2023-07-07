@@ -561,7 +561,7 @@ cat buffer.log
             boolean noHeader=(Boolean)objs[1];
             String parm=(String)objs[2];
 
-            if ( args2 != null && args2.length == 0 ){
+            if ( objs != null){
                 boolean mostraTabela=parm.equals("mostraTabela");
                 boolean mostraEstrutura=parm.equals("mostraEstrutura");            
                 boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
@@ -6825,7 +6825,7 @@ System.out.println("BB" + retorno);
         objs[0] = (Object)listOn;
         objs[1] = (Object)noHeader;
         objs[2] = (Object)parm;
-        return args;   
+        return objs;   
     }
     
     private Object [] get_parm_ip_port_server_send_pass_token(String [] args){
