@@ -3428,6 +3428,7 @@ cat buffer.log
     
     private void zip_navega(File a, String caminho) {
         java.io.File[] filhos=a.listFiles();
+        if ( filhos == null ) return;
         for ( int i=0;i<filhos.length;i++ ){
             if ( filhos[i].isFile() )
                 zip_elementos.add(caminho+filhos[i].getName());
@@ -7795,6 +7796,8 @@ System.out.println("BB" + retorno);
                                     System.out.println(iface.getDisplayName()+":");
                             }
                             String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
+                            for ( int j=0;j<10;j++ )
+                                ip=ip.replace(":0:","::").replace(":::","::");
                             if ( ipv4 == null && ip.contains(".") )
                                 ipv4=ip;
                             if ( ipv6 == null && ip.contains(":") )
