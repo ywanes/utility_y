@@ -8042,12 +8042,14 @@ class grammarsWhere {
        ,"    valor_txt >= valor_txt            "
        ,"    valor_txt <= valor_txt            "
        ,"    valor_txt != valor_txt            "
+       ,"    valor_txt <> valor_txt            "
        ,"    valor_int = valor_int             "
        ,"    valor_int > valor_int             "
        ,"    valor_int < valor_int             "
        ,"    valor_int >= valor_int            "
        ,"    valor_int <= valor_int            "
        ,"    valor_int != valor_int            "
+       ,"    valor_int <> valor_int            "
        ,"    ( boolean )                       "
        ,"    boolean and boolean               "
        ,"    boolean or boolean                "
@@ -8167,7 +8169,15 @@ class grammarsWhere {
             if ( checkImplementation ) return new Node("","");
             return new Node(!nodes.get(pos_node).value.equals(nodes.get(pos_node+2).value)?"S":"N",pai);        
         }
+        if ( filhoStr.equals("valor_txt <> valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(!nodes.get(pos_node).value.equals(nodes.get(pos_node+2).value)?"S":"N",pai);        
+        }
         if ( filhoStr.equals("valor_int != valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(!nodes.get(pos_node).value_decimal.equals(nodes.get(pos_node+2).value_decimal)?"S":"N",pai);        
+        }
+        if ( filhoStr.equals("valor_int <> valor_int") ){
             if ( checkImplementation ) return new Node("","");
             return new Node(!nodes.get(pos_node).value_decimal.equals(nodes.get(pos_node+2).value_decimal)?"S":"N",pai);        
         }
