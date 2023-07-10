@@ -8282,9 +8282,9 @@ class grammarsWhere {
         System.out.println("mostrando fim");
     }
     public static void mostrandoNodes(ArrayList<Node> a){
-        System.out.println("mostrando inicio:");
+        System.out.println("mostrando inicio node:");
         for(int i=0;i<a.size();i++)
-            System.out.println("value: >>"+a.get(i).value+"<< tipo >>"+a.get(i).is_this+"<< nome_campo >>"+a.get(i).nome_campo+"<<");
+            System.out.println("value: "+a.get(i).value+" is_this: "+a.get(i).is_this+" nome_campo: "+a.get(i).nome_campo);
         System.out.println("mostrando fim");
     }
     public static void mostrandoTransfer(String [] transferPai, String [] transferFilhoStr){
@@ -8352,13 +8352,13 @@ class grammarsWhere {
                         continue;
                     }
                     if(t.equals(" ")){
-                        addNode(s.trim(),"");
+                        addNode(s.trim(),"valor_txt");
                         literal_on=false;
                         s="";
                         tail="";
                         continue;
                     }
-                    addNode(s.trim(), "");
+                    addNode(s.trim(), "valor_txt");
                     literal_on=false;
                     s="";
                     tail=t;
