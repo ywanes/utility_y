@@ -8024,7 +8024,6 @@ class grammarsWhere {
        ,"    valor_int / valor_int             "
        ,"    valor_int + valor_int             "
        ,"    valor_int - valor_int             "
-       ,"    ( valor_int )                     "
        ,"                                      "
        ,"valor_txt                             "
        ,"    valor_txt + valor_txt             "
@@ -8032,11 +8031,12 @@ class grammarsWhere {
        ,"    valor_txt + valor_int             "
        ,"    substr( valor_txt , valor_int )   "
        ,"    substr( valor_txt , valor_int , valor_int )   "
-       ,"    ( valor_txt )                     "
        ,"                                      "
        ,"boolean                               "
        ,"    not boolean                       "
        ,"    valor_txt = valor_txt             "
+       ,"    valor_int = valor_txt             "
+       ,"    valor_txt = valor_int             "
        ,"    valor_txt > valor_txt             "
        ,"    valor_txt < valor_txt             "
        ,"    valor_txt >= valor_txt            "
@@ -8053,9 +8053,14 @@ class grammarsWhere {
        ,"    ( boolean )                       "
        ,"    boolean and boolean               "
        ,"    boolean or boolean                "
-       // implementação complicada da lista
-       //,"    valor_int in ( valor_int )        " // aceita lista
-       //,"    valor_txt in ( valor_txt )        " // aceita lista
+       ,"    valor_int in ( valor_int ... )    "
+       ,"    valor_txt in ( valor_txt ... )    "
+       ,"                                      "
+       ,"valor_txt                             "
+       ,"    ( valor_txt )                     "
+       ,"                                      "
+       ,"valor_txt                             "
+       ,"    ( valor_txt )                     "
        ,"                                      "
        ,"root                                  "
        ,"    where boolean                     "
@@ -8098,9 +8103,19 @@ class grammarsWhere {
                 Node node=transfere(pos_transfer, pos_node);
                 if ( node == null )
                     continue;
-                int qnt=transferFilho[pos_transfer].length;
-                for ( int i=0;i<qnt;i++ )
-                    nodes.remove(pos_node);
+                // dynamic list remove
+                if ( transferFilho[pos_transfer].length > 1 && transferFilho[pos_transfer][1].equals("in") ){ 
+                    while(nodes.size() > pos_node){
+                        String aux = nodes.get(pos_node).is_this;
+                        nodes.remove(pos_node);
+                        if ( aux.equals(")") )
+                            break;
+                    }
+                }else{
+                    int qnt=transferFilho[pos_transfer].length;
+                    for ( int i=0;i<qnt;i++ )
+                        nodes.remove(pos_node);
+                }
                 nodes.add(pos_node, node);
                 return true;
             }            
@@ -8108,10 +8123,12 @@ class grammarsWhere {
         return false;
     }
     public static Node transfere(int pos_transfer, int pos_node){
-        for(int i=0;i<transferFilho[pos_transfer].length;i++){
-            if(pos_node+i >= nodes.size() || !nodes.get(pos_node+i).is_this.equals(transferFilho[pos_transfer][i])){
-                //if ( transferFilhoStr[pos_transfer].equals("valor_int + valor_txt")) System.out.println("pos_node " + pos_node + " " + nodes.get(pos_node+i).is_this + " " + transferFilho[pos_transfer][i]);                
-                return null;
+        if ( dynamicDetectList(pos_transfer, pos_node) ){
+            // ok
+        }else{
+            for(int i=0;i<transferFilho[pos_transfer].length;i++){
+                if(pos_node+i >= nodes.size() || !nodes.get(pos_node+i).is_this.equals(transferFilho[pos_transfer][i]))
+                    return null;
             }
         }
         return transfere(transferPai[pos_transfer], transferFilhoStr[pos_transfer], pos_transfer, pos_node, false);
@@ -8131,11 +8148,11 @@ class grammarsWhere {
         }
         if ( filhoStr.equals("valor_txt + valor_int") ){
             if ( checkImplementation ) return new Node("","");
-            return new Node(nodes.get(pos_node).value_decimal.toString()+nodes.get(pos_node+2).value,pai);        
+            return new Node(nodes.get(pos_node).value.toString()+nodes.get(pos_node+2).value_decimal,pai);        
         }
         if ( filhoStr.equals("valor_txt + valor_txt") ){
             if ( checkImplementation ) return new Node("","");
-            return new Node(nodes.get(pos_node).value_decimal.toString()+nodes.get(pos_node+2).value,pai);        
+            return new Node(nodes.get(pos_node).value.toString()+nodes.get(pos_node+2).value,pai);        
         }
         if ( filhoStr.equals("( valor_int )") ){
             if ( checkImplementation ) return new Node("","");
@@ -8157,6 +8174,46 @@ class grammarsWhere {
             if ( checkImplementation ) return new Node("","");
             return new Node((nodes.get(pos_node).value.equals("S")||nodes.get(pos_node+2).value.equals("S"))?"S":"N",pai);
         }
+        if ( filhoStr.equals("valor_int in ( valor_int ... )") ){
+            if ( checkImplementation ) return new Node("","");
+            String result="N";
+            for ( int i=3;i<nodes.size()-pos_node;i++ ){
+                if ( i%2==1 ){
+                    if ( nodes.get(pos_node).value_decimal.toString().equals(nodes.get(pos_node+i).value_decimal.toString() ) ){
+                        result="S";
+                        break;
+                    }                        
+                }else{
+                    if ( nodes.get(pos_node+i).is_this.equals(",") )
+                        continue;
+                    if ( nodes.get(pos_node+i).is_this.equals(")") ){
+                        result="N";
+                        break;
+                    }
+                }
+            }
+            return new Node(result,pai);        
+        }
+        if ( filhoStr.startsWith("valor_txt in ( valor_txt ... )") ){
+            if ( checkImplementation ) return new Node("","");
+            String result="N";
+            for ( int i=3;i<nodes.size()-pos_node;i++ ){
+                if ( i%2==1 ){
+                    if ( nodes.get(pos_node).value.toString().equals(nodes.get(pos_node+i).value.toString() ) ){
+                        result="S";
+                        break;
+                    }                        
+                }else{
+                    if ( nodes.get(pos_node+i).is_this.equals(",") )
+                        continue;
+                    if ( nodes.get(pos_node+i).is_this.equals(")") ){
+                        result="N";
+                        break;
+                    }
+                }
+            }
+            return new Node(result,pai);        
+        }
         if ( filhoStr.equals("valor_int - valor_int") ){
             if ( checkImplementation ) return new Node("","");
             return new Node(nodes.get(pos_node).value_decimal.subtract(nodes.get(pos_node+2).value_decimal).toString(),pai);
@@ -8164,6 +8221,14 @@ class grammarsWhere {
         if ( filhoStr.equals("valor_txt = valor_txt") ){
             if ( checkImplementation ) return new Node("","");
             return new Node(nodes.get(pos_node).value.equals(nodes.get(pos_node+2).value)?"S":"N",pai);        
+        }
+        if ( filhoStr.equals("valor_int = valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node((nodes.get(pos_node).value_decimal+"").equals(nodes.get(pos_node+2).value)?"S":"N",pai);        
+        }
+        if ( filhoStr.equals("valor_txt = valor_int") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node).value.equals(nodes.get(pos_node+2).value_decimal+"")?"S":"N",pai);        
         }
         if ( filhoStr.equals("valor_txt != valor_txt") ){
             if ( checkImplementation ) return new Node("","");
@@ -8259,6 +8324,30 @@ class grammarsWhere {
             return new Node((nodes.get(pos_node).value.compareTo(nodes.get(pos_node+2).value))<=0?"S":"N",pai);
         }
         return null;
+    }
+    
+    public static boolean dynamicDetectList(int pos_transfer, int pos_node){        
+        if ( transferFilho[pos_transfer].length > 1 && transferFilho[pos_transfer][1].equals("in") ){
+            String tipo = transferFilho[pos_transfer][0];
+            for(int i=0;i<nodes.size()-pos_node;i++){
+                if (i == 0 && nodes.get(pos_node+i).is_this.equals(tipo) )
+                    continue;
+                if (i == 1 && nodes.get(pos_node+i).is_this.equals("in") )
+                    continue;
+                if (i == 2 && nodes.get(pos_node+i).is_this.equals("(") )
+                    continue;
+                if (i == 3 && nodes.get(pos_node+i).is_this.equals(tipo) )
+                    continue;
+                if (i > 3 && nodes.get(pos_node+i).is_this.equals(tipo) && nodes.get(pos_node+i-1).is_this.equals(",") )
+                    continue;
+                if (i > 3 && nodes.get(pos_node+i).is_this.equals(",") && nodes.get(pos_node+i-1).is_this.equals(tipo) )
+                    continue;
+                if (i > 3 && nodes.get(pos_node+i).is_this.equals(")") && nodes.get(pos_node+i-1).is_this.equals(tipo) )
+                    return true;
+                return false;
+            }
+        }
+        return false;
     }
     
     public static void setCampos(String [] selectCSV_camposValue){        
