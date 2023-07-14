@@ -167,6 +167,7 @@ else
     echo '. /opt/env_' >> ~/.profile
 fi
 
+pro config set apt_news=False
 echo
 echo rode o comando abaixo e considere tudo finalizado:
 echo . /opt/env_
