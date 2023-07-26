@@ -8843,15 +8843,10 @@ class Util{
         return isWindows_;
     }
 
-    public static String [] listWordEnv = null;
-    private static String [] listEnv = null;
-    public static void initListWordEnv(){
-        listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
+    public static String [] listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
             "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y"};  
-        listEnv = new String [listWordEnv.length];        
-    }
+    private static String [] listEnv = null;
     public static String[] initEnvByParm(String[] args) {
-        if ( listWordEnv == null ) initListWordEnv();
         int len=args.length;
         boolean resize=false;
         for ( int i=0;i<args.length;i++ ){
@@ -8888,7 +8883,6 @@ class Util{
     }
 
     public static void setEnv(String env, String value) {
-        if ( listWordEnv == null ) initListWordEnv();
         for ( int i=0;i<listWordEnv.length;i++ ){
             if ( listWordEnv[i].equals(env) ){
                 if ( listEnv == null )
@@ -8901,7 +8895,6 @@ class Util{
     }
 
     public static String getEnv(String env) {
-        if ( listWordEnv == null ) initListWordEnv();
         for ( int i=0;i<listWordEnv.length;i++ ){
             if ( listWordEnv[i].equals(env) ){
                 if ( listEnv != null && listEnv[i] != null ){
