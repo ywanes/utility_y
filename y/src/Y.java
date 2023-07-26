@@ -269,6 +269,7 @@ cat buffer.log
     }
 
     public void go(String[] args){    
+        args=Util.initEnvByParm(args);
         System.setProperty("https.protocols", "TLSv1.1");
         System.setProperty("line.separator", "\n");
         try_load_libraries();
@@ -279,7 +280,7 @@ cat buffer.log
                 somente_mini("/y/manual")
             );
             return;
-        }
+        }        
         if ( args[0].equals("take") ){          
             if ( take(args) )
                 return;
@@ -520,7 +521,7 @@ cat buffer.log
                 + "\n  return value");
                 return;
             }
-            String dir_token=getenv();
+            String dir_token=getenvtoken();
             if ( ! env_ok(dir_token) )
                 return;
             String value=args[1];
@@ -2139,7 +2140,7 @@ cat buffer.log
         String dataT=" ";
         String dataZ=" ";
         boolean flag_natal=false;
-        String format_data=System.getenv("FORMAT_DATA_Y");
+        String format_data=Util.getEnv("FORMAT_DATA_Y");
         if ( format_data != null && format_data.equals("TZ") ){
             dataT="T";
             dataZ="Z";
@@ -2241,7 +2242,7 @@ cat buffer.log
         String dataT=" ";
         String dataZ=" ";
         boolean flag_natal=false;
-        String format_data=System.getenv("FORMAT_DATA_Y");
+        String format_data=Util.getEnv("FORMAT_DATA_Y");
         if ( format_data != null && format_data.equals("TZ") ){
             dataT="T";
             dataZ="Z";
@@ -2481,7 +2482,7 @@ cat buffer.log
                 {
                     selectCSV_camposName=getCamposCSV(line);
                     for(int i=0;i<selectCSV_camposName.length;i++)
-                        selectCSV_camposName[i]=selectCSV_camposName[i].replace(" ","_");
+                        selectCSV_camposName[i]=selectCSV_camposName[i].replace(" ","_").replaceAll("[^\\x00-\\x7F]", "");
                     qntCamposCSV=selectCSV_camposName.length;
                     selectCSV_camposValue=new String[selectCSV_camposName.length];
                     interpretaSqlParaSelectCSV(sqlText);
@@ -2533,15 +2534,15 @@ cat buffer.log
     public void selectCSV(String conn,String parm){
         
         boolean onlychar=false;
-        String onlychar_=System.getenv("CSV_ONLYCHAR_Y");
+        String onlychar_=Util.getEnv("CSV_ONLYCHAR_Y");
         if ( onlychar_ != null && onlychar_.equals("S") )
             onlychar=true;
         boolean com_separador_final=false;
-        String com_separador_final_=System.getenv("COM_SEPARADOR_FINAL_CSV_Y");
+        String com_separador_final_=Util.getEnv("COM_SEPARADOR_FINAL_CSV_Y");
         if ( com_separador_final_ != null && com_separador_final_.equals("S") )
             com_separador_final=true;
         boolean semHeader=false;
-        String semHeader_=System.getenv("SEM_HEADER_CSV_Y");
+        String semHeader_=Util.getEnv("SEM_HEADER_CSV_Y");
         if ( semHeader_ != null && semHeader_.equals("S") )
             semHeader=true;
         
@@ -2551,7 +2552,7 @@ cat buffer.log
         String dataZ=" ";
         boolean flag_natal=false;
         boolean flag_ymd=false;
-        String format_data=System.getenv("FORMAT_DATA_Y");
+        String format_data=Util.getEnv("FORMAT_DATA_Y");
         if ( format_data != null && format_data.equals("TZ") ){
             dataT="T";
             dataZ="Z";
@@ -2618,12 +2619,12 @@ cat buffer.log
                                 header+="\""+campos.get(i)+"\"";
                                 first_detail+="\"\"";
                             }else{
-                                header+="\""+campos.get(i)+"\""+sepCSV;
-                                first_detail+="\"\""+sepCSV;
+                                header+="\""+campos.get(i)+"\""+getSeparadorCSV();
+                                first_detail+="\"\""+getSeparadorCSV();
                             }
                         }else{
                             sb.append("\"\"");
-                            sb.append(sepCSV);
+                            sb.append(getSeparadorCSV());
                         }
                         continue;
                     }
@@ -2652,11 +2653,11 @@ cat buffer.log
                                     first_detail+="\""+tmp+"\"";
                                 }
                             }else{
-                                header+="\""+campos.get(i)+"\""+sepCSV;
+                                header+="\""+campos.get(i)+"\""+getSeparadorCSV();
                                 if ( onlychar && tipo_numerico(tipos.get(i)) ){
-                                    first_detail+=tmp+sepCSV;
+                                    first_detail+=tmp+getSeparadorCSV();
                                 }else{
-                                    first_detail+="\""+tmp+"\""+sepCSV;
+                                    first_detail+="\""+tmp+"\""+getSeparadorCSV();
                                 }
                             }
                         }else{
@@ -2672,7 +2673,7 @@ cat buffer.log
                             }
                             if ( i == campos.size()-1 && !com_separador_final ){
                             }else{
-                                sb.append(sepCSV);
+                                sb.append(getSeparadorCSV());
                             }
                         }
 
@@ -3136,7 +3137,7 @@ cat buffer.log
 
     public String gettoken(String hash){
         
-        String dir_token=getenv();
+        String dir_token=getenvtoken();
         if ( ! env_ok(dir_token) )
             return null;
         return lendo_token(dir_token,hash);
@@ -3216,7 +3217,7 @@ cat buffer.log
         ORAs=lendo_arquivo_pacote("/y/ORAs").split("\n");
         
         try{
-            String caminho=System.getenv("ORAs_Y");
+            String caminho=Util.getEnv("ORAs_Y");
             if ( ! new File(caminho).exists() ) return;
             ArrayList<String> lista=new ArrayList<String>();
             String line;
@@ -3244,10 +3245,10 @@ cat buffer.log
             return caminho+"\\";
         return caminho;
     }
-    public String getenv(){
+    public String getenvtoken(){
         if ( local_env != null && new File(local_env).exists() )
             return local_env;
-        return System.getenv("TOKEN_Y");
+        return Util.getEnv("TOKEN_Y");
     }
 
     public String getTableByParm(String parm){
@@ -5992,8 +5993,8 @@ System.out.println("BB" + retorno);
 
     private void try_finish_and_count(long count) {
         // grava em arquivo uma sinalização de sim e count
-        String caminho_status_fim=System.getenv("STATUS_FIM_Y");
-        String caminho_count=System.getenv("COUNT_Y");
+        String caminho_status_fim=Util.getEnv("STATUS_FIM_Y");
+        String caminho_count=Util.getEnv("COUNT_Y");
         if ( caminho_status_fim != null && ! caminho_status_fim.equals("") ){
             salvando_file("FIM\n",new File(caminho_status_fim));
         }
@@ -6105,9 +6106,9 @@ System.out.println("BB" + retorno);
         // HEADER_CAMPO1;BB;CC;3;4;5
         
         txt=txt.trim();
-        if ( txt.endsWith(sepCSV) )
+        if ( txt.endsWith(getSeparadorCSV()) )
             txt=txt.substring(0, txt.length()-1);
-        return txt.replace("\"","").split( sepCSV.equals("|")?"\\|":sepCSV ); // split nao funciona com |, tem que usar \\|
+        return txt.replace("\"","").split( getSeparadorCSV().equals("|")?"\\|":getSeparadorCSV() ); // split nao funciona com |, tem que usar \\|
     }
 
     private void readColunaCSV(String line) {
@@ -6170,13 +6171,13 @@ System.out.println("BB" + retorno);
     }
     
     private String readColunaCSVSimples() {
-        if ( linhaCSV.indexOf(sepCSV,ponteiroLinhaCSV) == ponteiroLinhaCSV )
+        if ( linhaCSV.indexOf(getSeparadorCSV(),ponteiroLinhaCSV) == ponteiroLinhaCSV )
         {
             ponteiroLinhaCSV++;
             return "";
         }
         
-        int pos=linhaCSV.indexOf(sepCSV,ponteiroLinhaCSV+1);
+        int pos=linhaCSV.indexOf(getSeparadorCSV(),ponteiroLinhaCSV+1);
         int ini=ponteiroLinhaCSV;
         int fim=-1;
         if ( pos == -1 )
@@ -8007,7 +8008,6 @@ System.out.println("BB" + retorno);
             d = new Date();
         return d.toInstant().toEpochMilli();
     }
-
 }
 
 class grammarsWhere {
@@ -8035,6 +8035,7 @@ class grammarsWhere {
        ,"boolean                               "
        ,"    not boolean                       "
        ,"    valor_txt = valor_txt             "
+       ,"    valor_txt like valor_txt          "
        ,"    valor_int = valor_txt             "
        ,"    valor_txt = valor_int             "
        ,"    valor_txt > valor_txt             "
@@ -8221,6 +8222,36 @@ class grammarsWhere {
         if ( filhoStr.equals("valor_txt = valor_txt") ){
             if ( checkImplementation ) return new Node("","");
             return new Node(nodes.get(pos_node).value.equals(nodes.get(pos_node+2).value)?"S":"N",pai);        
+        }
+        if ( filhoStr.equals("valor_txt like valor_txt") ){
+            if ( checkImplementation ) return new Node("","");
+            String a = nodes.get(pos_node).value;
+            String b = nodes.get(pos_node+2).value;
+            boolean flag1 = b.startsWith("%");
+            boolean flag2 = b.endsWith("%");
+            if ( b.length() > 0 && flag1 )
+                b=b.substring(1);
+            if ( b.length() > 0 && flag2 )
+                b=b.substring(0, b.length()-1);
+            String result="N";
+            if ( flag1 ){
+                if( flag2 ){
+                    if ( a.contains(b) )
+                        result="S";
+                }else{
+                    if ( a.endsWith(b) )
+                        result="S";
+                }
+            }else{
+                if( flag2 ){
+                    if ( a.startsWith(b) )
+                        result="S";                    
+                }else{
+                    if ( a.equals(b) )
+                        result="S";                    
+                }
+            }
+            return new Node(result,pai);        
         }
         if ( filhoStr.equals("valor_int = valor_txt") ){
             if ( checkImplementation ) return new Node("","");
@@ -8600,13 +8631,16 @@ class Util{
             erroFatal(404);
         }
     }
-    public static String sepCSV=getSeparadorCSV(); // ";";
+    //public static String sepCSV=getSeparadorCSV(); // ";";
     public static int BUFFER_SIZE=1024;
     
-    private static String getSeparadorCSV(){
-        String sep_=System.getenv("CSV_SEP_Y");
+    private static String separadorCSVCache=null;
+    public static String getSeparadorCSV(){
+        if ( separadorCSVCache != null )
+            return separadorCSVCache;
+        String sep_=getEnv("CSV_SEP_Y");
         if ( sep_ == null || sep_.trim().equals("") )
-            sep_=";";
+            separadorCSVCache=sep_=";";
         return sep_;
     }
     
@@ -8807,6 +8841,77 @@ class Util{
             isWindows_cached=true;
         }
         return isWindows_;
+    }
+
+    public static String [] listWordEnv = null;
+    private static String [] listEnv = null;
+    public static void initListWordEnv(){
+        listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
+            "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y"};  
+        listEnv = new String [listWordEnv.length];        
+    }
+    public static String[] initEnvByParm(String[] args) {
+        if ( listWordEnv == null ) initListWordEnv();
+        int len=args.length;
+        boolean resize=false;
+        for ( int i=0;i<args.length;i++ ){
+            for ( int j=0;j<listWordEnv.length;j++ ){
+                if ( args[i].equals("-"+listWordEnv[j]) && i+1 < args.length ){
+                    setEnv(listWordEnv[j], args[i+1]);
+                    len-=2;
+                    resize=true;
+                    i++;
+                    break;
+                }
+            }
+        }
+        if ( resize ){
+            String[] args2=new String[len];
+            int seq=0;
+            for ( int i=0;i<args.length;i++ ){
+                boolean achou=false;
+                for ( int j=0;j<listWordEnv.length;j++ ){
+                    if ( args[i].equals("-"+listWordEnv[j]) && i+1 < args.length ){
+                        achou=true;
+                        break;
+                    }
+                }
+                if ( achou ){
+                    i++;
+                }else{
+                    args2[seq++]=args[i];
+                }
+            }            
+            return args2;
+        }
+        return args;
+    }
+
+    public static void setEnv(String env, String value) {
+        if ( listWordEnv == null ) initListWordEnv();
+        for ( int i=0;i<listWordEnv.length;i++ ){
+            if ( listWordEnv[i].equals(env) ){
+                if ( listEnv == null )
+                    listEnv = new String[listWordEnv.length];
+                listEnv[i] = value;
+                return;
+            }
+        }
+        erroFatal(70);
+    }
+
+    public static String getEnv(String env) {
+        if ( listWordEnv == null ) initListWordEnv();
+        for ( int i=0;i<listWordEnv.length;i++ ){
+            if ( listWordEnv[i].equals(env) ){
+                if ( listEnv != null && listEnv[i] != null ){
+                    return listEnv[i];
+                }
+                return System.getenv(env);
+            }
+        }
+        erroFatal(71);
+        return null;
     }
     
     public static void erroFatal(int n) {
@@ -9122,7 +9227,7 @@ class JSON extends Util{
                     if ( list_on )
                         detail+=", ";
                     else
-                        detail+=sepCSV;
+                        detail+=getSeparadorCSV();
                 detail+="\""+value+"\"";
             }
         }
@@ -9135,7 +9240,7 @@ class JSON extends Util{
         if ( list_on == false && noHeader == false){
             for ( int i=0;i<count_campos;i++ ){
                 if ( i != 0 )
-                    System.out.print(sepCSV);
+                    System.out.print(getSeparadorCSV());
                 System.out.print("\""+campos[i]+"\"");
             }
             System.out.println();        
@@ -11455,6 +11560,7 @@ class XML extends Util{
 /* class by manual */                + "export FORMAT_DATA_Y=\"YYYY-MM-DD\" 2010-07-07 12:12:12\n"
 /* class by manual */                + "export COM_SEPARADOR_FINAL_CSV_Y=\"S\" ex: \"a\";\"a\"; o padrao seria \"a\";\"a\"\n"
 /* class by manual */                + "export SEM_HEADER_CSV_Y=\"S\"\n"
+/* class by manual */                + "todos os comandos acima podem ser usados como parametro, ex: -CSV_SEP_Y \",\"\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;\n"
 /* class by manual */                + "Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*\n"
@@ -11523,6 +11629,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

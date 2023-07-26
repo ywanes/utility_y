@@ -515,6 +515,7 @@ export FORMAT_DATA_Y="NATAL" toda data será na data do natal ex 25/12/2010 10:1
 export FORMAT_DATA_Y="YYYY-MM-DD" 2010-07-07 12:12:12
 export COM_SEPARADOR_FINAL_CSV_Y="S" ex: "a";"a"; o padrao seria "a";"a"
 export SEM_HEADER_CSV_Y="S"
+todos os comandos acima podem ser usados como parametro, ex: -CSV_SEP_Y ","
 
 Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;
 Dica2: vendo os tokens: grep ":" $TOKEN_Y/*
