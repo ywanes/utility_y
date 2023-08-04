@@ -6992,6 +6992,10 @@ System.out.println("BB" + retorno);
             }
             return null;
         }
+        if ( ! acceptSymbolicLink && Util.isWindows() ){
+            System.out.println("Warnning: -L foi considerado para o windows.");
+            acceptSymbolicLink=true;
+        }
         return new Object[]{path,acceptSymbolicLink,bkmg};
     }    
     
