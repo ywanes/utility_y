@@ -4042,39 +4042,18 @@ cat buffer.log
             String path="/";
             String protocol="HTTP";
             int len=0;
-            int port = 80;            
-            
-            if ( host.toUpperCase().startsWith("HTTP://") ){
-                host=host.substring(7);
-                port = 80;
-                protocol="HTTP";
-            }
-            if ( host.toUpperCase().startsWith("HTTPS://") ){
-                host=host.substring(8);
-                port = 443;
+            int port = 80;    
+            URL url=new URL(host);
+            if ( url.getProtocol().equals("https") ){
                 protocol="HTTPS";
+                port = 443;
             }
-            int p=host.indexOf(":");
-            int p_aux=host.indexOf("/");
-            if ( p > -1 && p_aux > -1 && p_aux < p )
-                p=-1;
-            if ( p > -1 ){
-                path=host.substring(p+1);
-                host=host.substring(0,p);            
-                String port_aux="";
-                String numbers="0123456789";
-                while(path.length()>0&&numbers.contains(path.substring(0,1))){
-                    port_aux+=path.substring(0,1);
-                    path=path.substring(1);
-                }
-                port=Integer.parseInt(port_aux);
-            }else{
-                p=host.indexOf("/");
-                if ( p > -1 ){
-                    path=host.substring(p);
-                    host=host.substring(0,p);                            
-                }    
-            }
+            host = url.getHost();
+            if ( url.getPort() != -1 )
+                port = url.getPort();
+            path = url.getPath();
+            if ( url.getQuery() != null )
+                path += "?" + url.getQuery();
             
             Socket socket=null;
             if ( protocol.equals("HTTP") ){
