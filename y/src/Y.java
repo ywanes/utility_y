@@ -837,7 +837,7 @@ cat buffer.log
             boolean raw=(Boolean)objs[3];
             String host=(String)objs[4];
 
-            if ( args2 != null && args2.length == 0 ){
+            if ( host != null ){
                 curl(System.out, header, method, verbose, raw, host);
                 return;
             }
@@ -858,7 +858,7 @@ cat buffer.log
             boolean noHeader=(Boolean)objs[1];
             String parm=(String)objs[2];
 
-            if ( args2 != null && args2.length == 0 ){
+           if ( host != null ){
                 boolean mostraTabela=parm.equals("mostraTabela");
                 boolean mostraEstrutura=parm.equals("mostraEstrutura");            
                 boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
@@ -4055,8 +4055,9 @@ cat buffer.log
                 protocol="HTTPS";
             }
             int p=host.indexOf(":");
-            while(host.indexOf(":",p+1) > -1)
-                p=host.indexOf(":",p+1);
+            int p_aux=host.indexOf("/");
+            if ( p > -1 && p_aux > -1 && p_aux < p )
+                p=-1;
             if ( p > -1 ){
                 path=host.substring(p+1);
                 host=host.substring(0,p);            
@@ -4181,7 +4182,7 @@ cat buffer.log
                 os_print.write(("\nError "+e.toString()).getBytes());
             }
         }catch(UnknownHostException e){
-            System.err.println("Error UnknownHost: " + host);
+            System.err.println("Error UnknownHost: " + host + " " + e.toString());
         }catch(Exception e){
             System.err.println("Error: " + e.toString());
         }
@@ -6752,7 +6753,7 @@ System.out.println("BB" + retorno);
         }
     }
 
-    private String [] get_parms_curl_header_method_verbose_raw_host(String [] args){
+    private Object [] get_parms_curl_header_method_verbose_raw_host(String [] args){
         Object [] objs=new Object[5];        
         String header="";
         String method="GET";
@@ -6797,7 +6798,7 @@ System.out.println("BB" + retorno);
         objs[2] = (Object)verbose;
         objs[3] = (Object)raw;
         objs[4] = (Object)host;
-        return args;
+        return objs;
     }
     
     private Object [] get_parms_json_listOn_noHeader_parm(String [] args){
