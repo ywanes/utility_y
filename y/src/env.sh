@@ -74,7 +74,7 @@ then
 	echo digite uu
   done
 fi
-if [ "1" == "0" ] # verify new ubuntu and LTS
+if [ "1" == "1" ] # verify new ubuntu and LTS
 then
   if [ `whoami` == "root" ] && [ -e /etc/os-release ]
   then
