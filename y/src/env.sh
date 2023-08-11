@@ -131,7 +131,7 @@ then
 fi
 if [ ! -e jsch-0.1.55.jar ]
 then
-    curl https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar > jsch-0.1.55.jar
+    curl https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar > jsch-0.1.55.jar
 fi
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
