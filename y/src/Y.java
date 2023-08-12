@@ -10312,7 +10312,8 @@ class XML extends Util{
 /* class texto_longo */         };
 /* class texto_longo */         return "<html>\n" +
 /* class texto_longo */         "<head>\n" +
-/* class texto_longo */         "<body onload=\"preparacao();\">\n" +
+/* class texto_longo */         "<body id=\"cursor\" onload=\"preparacao();\">\n" +
+/* class texto_longo */         "<div id=\"f11\">\n" +
 /* class texto_longo */         "<meta charset=\"utf-8\">\n" +
 /* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
 /* class texto_longo */         "<div id=\"master\"></div>\n" +
@@ -10328,9 +10329,12 @@ class XML extends Util{
 /* class texto_longo */         "function create_playlist(){\n" +
 /* class texto_longo */         "  document.getElementById('master').innerHTML=`\n" +
 /* class texto_longo */         "    <audio id='p' controls='controls' preload='metadata'>\n" +
-/* class texto_longo */         "	<source src='' type='audio/mp3' />\n" +
-/* class texto_longo */         "	seu navegador não suporta HTML5\n" +
-/* class texto_longo */         "	</audio>\n" +
+/* class texto_longo */         "      <source src='' type='audio/mp3' />\n" +
+/* class texto_longo */         "      seu navegador não suporta HTML5\n" +
+/* class texto_longo */         "    </audio>\n" +
+/* class texto_longo */         "     <input type=\"button\" value=\"FULL_SCREEN\" " +
+/* class texto_longo */         "       onclick=\"Fullscreen();\" style=\"color: #333; " +
+/* class texto_longo */         "       font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +                
 /* class texto_longo */         "  `;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function pause(){\n" +
@@ -10463,7 +10467,7 @@ class XML extends Util{
 /* class texto_longo */         "	}\n" +
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function pause_play(){\n" +
+/* class texto_longo */         "function pause_play(force){\n" +
 /* class texto_longo */         "  if ( document.getElementById('p').paused )\n" +
 /* class texto_longo */         "    play();\n" +
 /* class texto_longo */         "  else\n" +
@@ -10474,12 +10478,20 @@ class XML extends Util{
 /* class texto_longo */         "    troca_de_faixa();\n" +
 /* class texto_longo */         "  };\n" +
 /* class texto_longo */         "  document.addEventListener('click', function(e) {  \n" +
-/* class texto_longo */         "    if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' ){\n" +
-/* class texto_longo */         "	  pause_play();  	  \n" +
+/* class texto_longo */         "      if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' ){\n" +
+/* class texto_longo */         "         if ( document.getElementById(\"f11\").style.display == \"\" ){\n" +
+/* class texto_longo */         "           pause_play(\"pause\");\n" +
+/* class texto_longo */         "         }else{\n" +
+/* class texto_longo */         "           DisableFullscreen();\n" +
+/* class texto_longo */         "         }\n" +
 /* class texto_longo */         "	}else{\n" +
-/* class texto_longo */         "	  if ( transfer_e != null ){\n" +
-/* class texto_longo */         "	    click_faixa(transfer_e,true,e.x);\n" +
-/* class texto_longo */         "		transfer_e=null;\n" +
+/* class texto_longo */         "         if ( e.target.tagName == 'INPUT' ){\n" +
+/* class texto_longo */         "           //nada\n" +
+/* class texto_longo */         "         }else{\n" +
+/* class texto_longo */         "	    if ( transfer_e != null ){\n" +
+/* class texto_longo */         "	      click_faixa(transfer_e,true,e.x);\n" +
+/* class texto_longo */         "             transfer_e=null;\n" +
+/* class texto_longo */         "           }\n" +
 /* class texto_longo */         "	  }\n" +
 /* class texto_longo */         "	}\n" +
 /* class texto_longo */         "  },false);  \n" +
@@ -10524,7 +10536,6 @@ class XML extends Util{
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function getStart(e){\n" +
 /* class texto_longo */         "  if ( e.innerText.trim().split(' ')[1].length != 8 ){\n" +
-/* class texto_longo */         "    console.log('Alert, formato invalido ' + e.innerText.trim().split(' ')[1] + '. exemplo 00:37:46');\n" +
 /* class texto_longo */         "	return 0;\n" +
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  return getFaixaChildrenToSeconds(e.innerText.trim());\n" +
@@ -10646,9 +10657,27 @@ class XML extends Util{
 /* class texto_longo */         "	  return t.children[i].children[0];\n" +
 /* class texto_longo */         "  return null;\n" +
 /* class texto_longo */         "}\n" +
+/* class texto_longo */         "function Fullscreen() {\n" +
+/* class texto_longo */         "  element=document.children[0];\n" +
+/* class texto_longo */         "  if(element.requestFullscreen) element.requestFullscreen();\n" +
+/* class texto_longo */         "  else if(element.mozRequestFullScreen) element.mozRequestFullScreen();\n" +
+/* class texto_longo */         "  else if(element.webkitRequestFullscreen) element.webkitRequestFullscreen();\n" +
+/* class texto_longo */         "  else if(element.msRequestFullscreen) element.msRequestFullscreen();\n" +
+/* class texto_longo */         "  document.getElementById(\"f11\").style.display=\"none\";\n" + 
+/* class texto_longo */         "  document.getElementById(\"cursor\").style.cursor=\"none\";\n" + 
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function DisableFullscreen() {\n" +
+/* class texto_longo */         "  if(document.exitFullscreen) document.exitFullscreen();\n" +
+/* class texto_longo */         "  else if(document.mozCancelFullScreen) document.mozCancelFullScreen();\n" +
+/* class texto_longo */         "  else if(document.webkitExitFullscreen) document.webkitExitFullscreen();\n" +
+/* class texto_longo */         "  else if(document.msExitFullscreen) document.msExitFullscreen();\n" +
+/* class texto_longo */         "  document.getElementById(\"f11\").style.display=\"\";\n" + 
+/* class texto_longo */         "  document.getElementById(\"cursor\").style.cursor=\"\";\n" + 
+/* class texto_longo */         "}\n" +
 /* class texto_longo */         "setInterval(tryUpdateStateChildren, 100);\n" +
 /* class texto_longo */         "setInterval(save_station, 1000);\n" +
 /* class texto_longo */         "</script>\n" +
+/* class texto_longo */         "</div>\n" +
 /* class texto_longo */         "</body></head></html>\n";
 /* class texto_longo */     }
 /* class texto_longo */ }
