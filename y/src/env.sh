@@ -116,6 +116,13 @@ javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0
 EOF
 chmod 777 /opt/y/compila
 
+cat <<'EOF'> /opt/y/compila2
+rm -f Y.java >/dev/null
+wget http://renato:7070/Y.java
+javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
+EOF
+chmod 777 /opt/y/compila2
+
 cat <<'EOF'> /opt/y/compilaCurl
 if [ ! -e ojdbc6.jar ]
 then

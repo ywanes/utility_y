@@ -1515,6 +1515,14 @@ cat buffer.log
                 show_ips(false, timeout, false, true);
             return;
         }
+        if ( args[0].equals("test") ){
+            test();
+            return;
+        }
+        if ( args[0].equals("update") || args[0].equals("u") ){
+            update();
+            return;
+        }
         if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
             String retorno=null;
             if ( args.length == 2 )
@@ -7992,6 +8000,60 @@ System.out.println("BB" + retorno);
             d = new Date();
         return d.toInstant().toEpochMilli();
     }
+    
+    private void test(){
+        System.out.println("test nao implementado!");
+    }
+    
+    private void update(){        
+        try{
+            boolean error=false;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Process proc = null;
+            if ( new File("c:\\y\\compila2.cmd").exists() )
+                proc = Runtime.getRuntime().exec("cmd /c compila2.cmd", null, new File("c:\\y"));
+            else{
+                if ( new File("/opt/y/compila2").exists() )
+                    proc = Runtime.getRuntime().exec("compila2", null, new File("/opt/y"));
+                else{
+                    System.out.print("compila2 não encontrado!");
+                    System.exit(1);
+                }
+            }
+            int len=0;
+            byte[] b=new byte[1024];
+            String s="";
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){}
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+                error=true;
+            }       
+            baos.flush();
+            s=baos.toString("UTF-8").trim();
+            if ( 
+                (
+                    s.split("\n").length == 2 
+                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
+                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
+                ) || (
+                    s.split("\n").length > 2 
+                    && s.contains("‘Y.java’ saved")
+                    && ! s.contains("error")                    
+                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
+                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
+                )
+            )
+                System.out.println("ok");
+            else{
+                System.err.println(s);
+                System.out.println("ERROR!!");
+                System.exit(1);
+            }
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }        
+    }
 }
 
 class grammarsWhere {
@@ -10313,7 +10375,7 @@ class XML extends Util{
 /* class texto_longo */         return "<html>\n" +
 /* class texto_longo */         "<head>\n" +
 /* class texto_longo */         "<body id=\"cursor\" onload=\"preparacao();\">\n" +
-/* class texto_longo */         "<div id=\"f11\">\n" +
+/* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" onmousef11=\"n\" ocorr=\"0\" >\n" +
 /* class texto_longo */         "<meta charset=\"utf-8\">\n" +
 /* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
 /* class texto_longo */         "<div id=\"master\"></div>\n" +
@@ -10479,10 +10541,10 @@ class XML extends Util{
 /* class texto_longo */         "  };\n" +
 /* class texto_longo */         "  document.addEventListener('click', function(e) {  \n" +
 /* class texto_longo */         "      if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' ){\n" +
-/* class texto_longo */         "         if ( document.getElementById(\"f11\").style.display == \"\" ){\n" +
-/* class texto_longo */         "           pause_play(\"pause\");\n" +
-/* class texto_longo */         "         }else{\n" +
+/* class texto_longo */         "         if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
 /* class texto_longo */         "           DisableFullscreen();\n" +
+/* class texto_longo */         "         }else{\n" +
+/* class texto_longo */         "           pause_play(\"pause\");\n" +
 /* class texto_longo */         "         }\n" +
 /* class texto_longo */         "	}else{\n" +
 /* class texto_longo */         "         if ( e.target.tagName == 'INPUT' ){\n" +
@@ -10495,6 +10557,15 @@ class XML extends Util{
 /* class texto_longo */         "	  }\n" +
 /* class texto_longo */         "	}\n" +
 /* class texto_longo */         "  },false);  \n" +
+/* class texto_longo */         "  document.addEventListener(\n" +
+/* class texto_longo */         "    \"mouseover\",function(e){\n" +
+/* class texto_longo */         "      if ( e.target.getAttribute(\"value\") && e.target.getAttribute(\"value\") == \"FULL_SCREEN\" )\n" +
+/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"tailmousef11\",\"s\");\n" +
+/* class texto_longo */         "      else\n" +
+/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"tailmousef11\",\"n\");\n" +
+/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"s\");\n" +
+/* class texto_longo */         "    },false\n" +
+/* class texto_longo */         "  );\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function limpa_click_faixa(){\n" +
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
@@ -10674,8 +10745,45 @@ class XML extends Util{
 /* class texto_longo */         "  document.getElementById(\"f11\").style.display=\"\";\n" + 
 /* class texto_longo */         "  document.getElementById(\"cursor\").style.cursor=\"\";\n" + 
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "setInterval(tryUpdateStateChildren, 100);\n" +
-/* class texto_longo */         "setInterval(save_station, 1000);\n" +
+/* class texto_longo */         "function mouseInFullscreen(e){\n" +
+/* class texto_longo */         "  if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
+/* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
+/* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
+/* class texto_longo */         "  }else{\n" +
+/* class texto_longo */         "    if ( e && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"n\" ){\n" +
+/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"s\");\n" +
+/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
+/* class texto_longo */         "    }else{\n" +
+/* class texto_longo */         "      if ( !e && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"s\" ){\n" +
+/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
+/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
+/* class texto_longo */         "      }\n" +
+/* class texto_longo */         "    }\n" +
+/* class texto_longo */         "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"2\" )\n" +
+/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"3\");\n" +
+/* class texto_longo */         "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"1\" )\n" +
+/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"2\");\n" +
+/* class texto_longo */         "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"0\" )\n" +
+/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"1\");\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function check_fullscreen(){\n" +
+/* class texto_longo */         "  if ( document.getElementById(\"f11\").style.display == \"\" && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"s\" && document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"3\" ){\n" +
+/* class texto_longo */         "    Fullscreen();\n" +
+/* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
+/* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function interval_1000(){\n" +
+/* class texto_longo */         "  save_station();\n" +        
+/* class texto_longo */         "  mouseInFullscreen( document.getElementById(\"f11\").getAttribute(\"tailmousef11\") == \"s\" );\n" +
+/* class texto_longo */         "  check_fullscreen();\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function interval_100(){\n" +
+/* class texto_longo */         "  tryUpdateStateChildren();\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "setInterval(interval_100, 100);\n" +
+/* class texto_longo */         "setInterval(interval_1000, 1000);\n" +
 /* class texto_longo */         "</script>\n" +
 /* class texto_longo */         "</div>\n" +
 /* class texto_longo */         "</body></head></html>\n";
@@ -11127,7 +11235,9 @@ class XML extends Util{
 /* class by manual */                + "  [y cronometro]\n"
 /* class by manual */                + "  [y clear]\n"
 /* class by manual */                + "  [y cls]\n"
-/* class by manual */                + "  [t ips]\n"
+/* class by manual */                + "  [y ips]\n"
+/* class by manual */                + "  [y test]\n"
+/* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
@@ -11635,6 +11745,10 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
 
 
 

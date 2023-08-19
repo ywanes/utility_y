@@ -76,7 +76,9 @@ usage:
   [y cronometro]
   [y clear]
   [y cls]
-  [t ips]
+  [y ips]
+  [y test]
+  [y [update|u]]
   [y help]
 
 Exemplos...
