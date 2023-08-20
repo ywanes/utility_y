@@ -8041,6 +8041,12 @@ System.out.println("BB" + retorno);
                     && ! s.contains("error")                    
                     && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
                     && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
+                ) || (
+                    s.split("\n").length > 2 
+                    && s.startsWith("% Total")
+                    && s.contains("\r100 ")
+                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
+                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
                 )
             )
                 System.out.println("ok");
