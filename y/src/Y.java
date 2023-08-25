@@ -10612,10 +10612,10 @@ class XML extends Util{
 /* class texto_longo */         "  return parseInt(p[2])+parseInt(p[1])*60+parseInt(p[0])*60*60;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function getStart(e){\n" +
-/* class texto_longo */         "  if ( e.innerText.trim().split(' ')[1].length != 8 ){\n" +
-/* class texto_longo */         "	return 0;\n" +
+/* class texto_longo */         "  if ( ( e.innerText.trim().indexOf('-') == 0 || e.innerText.trim().indexOf('+') == 0 ) && e.innerText.trim().split(' ').length > 1 && e.innerText.trim().split(' ')[1].length == 8 && e.innerText.trim().split(' ')[1].split(':').length == 3 ){\n" +
+/* class texto_longo */         "	return getFaixaChildrenToSeconds(e.innerText.trim());\n" +
 /* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  return getFaixaChildrenToSeconds(e.innerText.trim());\n" +
+/* class texto_longo */         "  return 0;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function QtyChildrenByChildren(e){\n" +
 /* class texto_longo */         "  var qty=1;\n" +
