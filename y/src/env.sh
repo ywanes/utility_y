@@ -90,6 +90,10 @@ then
       echo Alerta LTS, roda o comando abaixo!!:
       echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
     fi
+    if [ `cat /etc/hosts | grep 4201:4201:4201:4201::100 | wc -l` -eq 0 ]
+    then
+      echo '4201:4201:4201:4201::100 renato' >> /etc/hosts
+    fi
   fi
   alias u1='echo u1/u7..;apt update'
   alias u2='echo u2/u7..;apt upgrade'
