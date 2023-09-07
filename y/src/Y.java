@@ -592,19 +592,19 @@ cat buffer.log
         if ( args[0].equals("zip") ){
             try{
                 if ( args.length == 3 && args[1].equals("add") ){
-                    zip_add(args[2], null, false, System.out);
+                    zip_add_router(args[2], null, false, System.out);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("add") && args[3].equals("-lvlStore")){
-                    zip_add(args[2], null, true, System.out);
+                    zip_add_router(args[2], null, true, System.out);
                     return;
                 }                
                 if ( args.length == 4 && args[1].equals("add") && args[2].equals("-name")){
-                    zip_add(null, args[3], false, System.out);
+                    zip_add_router(null, args[3], false, System.out);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("add") && args[2].equals("-name") && args[4].equals("-lvlStore")){
-                    zip_add(null, args[3], true, System.out);
+                    zip_add_router(null, args[3], true, System.out);
                     return;
                 }
                 if ( args.length == 2 && args[1].equals("list") ){
@@ -1673,7 +1673,7 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_add(".", null, true, pos1);
+                            zip_add_router(".", null, true, pos1);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -3347,19 +3347,19 @@ cat buffer.log
         return null;
     }
     
-    private void zip_add(String a, String dummy_name, boolean isLvlStore, OutputStream out) throws Exception {
+    private void zip_add_router(String relative_path, String dummy_name, boolean isLvlStore, OutputStream out) throws Exception {
         this.dummy_name = dummy_name;                
         zip_output = new java.util.zip.ZipOutputStream(out);   
         if ( isLvlStore )
             zip_output.setLevel(ZipOutputStream.STORED);        
-        if ( a == null ){
+        if ( relative_path == null ){
             zip_add("", null, -1);
         }else{
-            valida_leitura_arquivo(a);
-            File f_a=new File(a);
+            valida_leitura_arquivo(relative_path);
+            File f_a=new File(relative_path);
             if ( !f_a.exists() )
                 erroFatal(56);
-            zip_add(a, f_a, f_a.lastModified());
+            zip_add(relative_path, f_a, f_a.lastModified());
         }        
         zip_output.closeEntry();
         zip_output.flush();
@@ -3375,6 +3375,7 @@ cat buffer.log
     
     private java.util.zip.ZipOutputStream zip_output=null;
     private ArrayList<String> zip_elementos=null;
+    private ArrayList<Long> zip_elementos_lastModified=null;
     private String dummy_name;
     private void zip_add(String relative_path, File elem, long lastModified) throws Exception {
         if ( elem == null || elem.isFile() ){            
@@ -3405,13 +3406,15 @@ cat buffer.log
             closeBytes();
         }else{
             zip_elementos=new ArrayList<String>();            
+            zip_elementos_lastModified=new ArrayList<Long>();            
             if ( !relative_path.startsWith("/") && !relative_path.contains(":") ) // verifica se é relative path
                 zip_navega(elem,relative_path+"/");
             else
                 zip_navega(elem,"");
-            int lenB=zip_elementos.size();
-            for ( int i=0;i<lenB;i++ ){
+            int len_cache=zip_elementos.size();
+            for ( int i=0;i<len_cache;i++ ){
                 java.util.zip.ZipEntry e=new java.util.zip.ZipEntry( zip_elementos.get(i) );
+                e.setTime(zip_elementos_lastModified.get(i));
                 zip_output.putNextEntry(e);
                 if ( ! zip_elementos.get(i).endsWith("/") ){                    
                     File tmp = new File(zip_elementos.get(i));
@@ -3439,10 +3442,13 @@ cat buffer.log
         java.io.File[] filhos=a.listFiles();
         if ( filhos == null ) return;
         for ( int i=0;i<filhos.length;i++ ){
-            if ( filhos[i].isFile() )
+            if ( filhos[i].isFile() ){
                 zip_elementos.add(caminho+filhos[i].getName());
+                zip_elementos_lastModified.add(filhos[i].lastModified());
+            }
             if ( filhos[i].isDirectory() && !filhos[i].getName().equals(".") && !filhos[i].getName().equals("..") ){
                 zip_elementos.add(caminho+filhos[i].getName()+"/");
+                zip_elementos_lastModified.add(filhos[i].lastModified());
                 zip_navega(filhos[i],caminho+filhos[i].getName()+"/");
             }
         }
