@@ -620,7 +620,7 @@ cat buffer.log
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("extract") ){
-                    zip_extract(System.in, args[2],null,null);
+                    zip_extract(null, args[2],null,null);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("extract") && args[2].equals("-out")){
@@ -628,7 +628,7 @@ cat buffer.log
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("extract") && args[3].equals("-out")){
-                    zip_extract(System.in, args[2],args[4],null);
+                    zip_extract(null, args[2],args[4],null);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("extractSelected") ){
@@ -636,7 +636,7 @@ cat buffer.log
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("extractSelected") ){
-                    zip_extract(System.in, args[2],null,args[3]);
+                    zip_extract(null, args[2],null,args[3]);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("extractSelected") && args[3].equals("-out")){
@@ -644,7 +644,7 @@ cat buffer.log
                     return;
                 }
                 if ( args.length == 6 && args[1].equals("extractSelected") && args[4].equals("-out")){
-                    zip_extract(System.in, args[2],args[5],args[3]);
+                    zip_extract(null, args[2],args[5],args[3]);
                     return;
                 }
             }catch(Exception e){
@@ -3471,7 +3471,7 @@ cat buffer.log
     }
 
     private int zip_extract_count_encontrados=0;
-    private void zip_extract(InputStream in, String a, String pre_dir, String filtro) throws Exception {
+    private void zip_extract(InputStream in, String name_file_zip, String pre_dir, String filtro) throws Exception {
         zip_extract_count_encontrados=0;
         if ( filtro != null && filtro.endsWith("/") ){
             System.err.println("Erro, o item selecionado não pode ser uma pasta!: "+filtro);
@@ -3498,9 +3498,9 @@ cat buffer.log
                 pre_dir+="/";
         }else
             pre_dir="";
-        if ( a != null )
-            valida_paths(new String[]{a});
-        if ( a == null ){
+        if ( name_file_zip != null )
+            valida_paths(new String[]{name_file_zip});
+        if ( name_file_zip == null ){
             ZipInputStream zis=new ZipInputStream(in);
             ZipEntry entry=null;
             while( (entry=zis.getNextEntry()) != null ){                                
@@ -3511,7 +3511,7 @@ cat buffer.log
                 }
             }
         }else{
-            ZipFile zipFile = new ZipFile(a);
+            ZipFile zipFile = new ZipFile(name_file_zip);
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
             while(entries.hasMoreElements()){
                 ZipEntry entry = entries.nextElement();            
@@ -8932,7 +8932,7 @@ class Util{
                 }else{
                     args2[seq++]=args[i];
                 }
-            }            
+            }           
             return args2;
         }
         return args;
