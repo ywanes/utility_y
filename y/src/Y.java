@@ -11638,6 +11638,7 @@ class XML extends Util{
 /* class by manual */                + "    y date\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\"\n"
 /* class by manual */                + "[y uptime]\n"
 /* class by manual */                + "    y uptime\n"
 /* class by manual */                + "    y uptime -ms\n"

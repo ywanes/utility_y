@@ -469,6 +469,7 @@ Exemplos...
     y date
     y date "+%Y%m%d_%H%M%S"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
+    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N"
 [y uptime]
     y uptime
     y uptime -ms
