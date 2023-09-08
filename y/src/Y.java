@@ -592,19 +592,19 @@ cat buffer.log
         if ( args[0].equals("zip") ){
             try{
                 if ( args.length == 3 && args[1].equals("add") ){
-                    zip_add_router(args[2], null, false, System.out);
+                    zip_add_router(new String[]{args[2]}, "", false, System.out);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("add") && args[3].equals("-lvlStore")){
-                    zip_add_router(args[2], null, true, System.out);
+                    zip_add_router(new String[]{args[2]}, "", true, System.out);
                     return;
                 }                
                 if ( args.length == 4 && args[1].equals("add") && args[2].equals("-name")){
-                    zip_add_router(null, args[3], false, System.out);
+                    zip_add_router(new String[]{}, args[3], false, System.out);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("add") && args[2].equals("-name") && args[4].equals("-lvlStore")){
-                    zip_add_router(null, args[3], true, System.out);
+                    zip_add_router(new String[]{}, args[3], true, System.out);
                     return;
                 }
                 if ( args.length == 2 && args[1].equals("list") ){
@@ -1673,7 +1673,7 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_add_router(".", null, true, pos1);
+                            zip_add_router(new String[]{"."}, "", true, pos1);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -3347,95 +3347,93 @@ cat buffer.log
         return null;
     }
     
-    private void zip_add_router(String relative_path, String dummy_name, boolean isLvlStore, OutputStream out) throws Exception {
-        this.dummy_name = dummy_name;                
+    private void zip_add_router(String [] paths, String virtual_name, boolean isLvlStore, OutputStream out) throws Exception {
+        this.virtual_name = virtual_name;                
         zip_output = new java.util.zip.ZipOutputStream(out);   
         if ( isLvlStore )
             zip_output.setLevel(ZipOutputStream.STORED);        
-        if ( relative_path == null ){
-            zip_add("", null, -1);
-        }else{
-            valida_leitura_arquivo(relative_path);
-            File f_a=new File(relative_path);
-            if ( !f_a.exists() )
-                erroFatal(56);
-            zip_add(relative_path, f_a, f_a.lastModified());
-        }        
+        valida_paths(paths);
+        zip_add(paths);
         zip_output.closeEntry();
         zip_output.flush();
         zip_output.close();        
     }
 
-    private void valida_leitura_arquivo(String a){
-        if ( ! new File(a).exists() ){
-            System.err.println("Erro, esse conteudo nao existe: "+a);
-            System.exit(1);
-        }
+    private void valida_paths(String [] paths){
+        for ( int i=0; i<paths.length; i++ )
+            if ( ! new File(paths[i]).exists() ){
+                System.err.println("Erro, esse conteudo nao existe: "+paths[i]);
+                System.exit(1);
+            }
     }
     
     private java.util.zip.ZipOutputStream zip_output=null;
     private ArrayList<String> zip_elementos=null;
     private ArrayList<Long> zip_elementos_lastModified=null;
-    private String dummy_name;
-    private void zip_add(String relative_path, File elem, long lastModified) throws Exception {
-        if ( elem == null || elem.isFile() ){            
-            java.util.zip.ZipEntry e=null;
-            if ( elem == null ){
-                e=new java.util.zip.ZipEntry(dummy_name);
-            }else{
-                e=new java.util.zip.ZipEntry(elem.getName());
-                e.setTime(lastModified);
-            }            
+    private String virtual_name;
+    private void zip_add(String [] paths) throws Exception {
+        int len;
+        java.util.zip.ZipEntry e=null;
+        if ( paths.length == 0 ){            
+            e=new java.util.zip.ZipEntry(virtual_name);
             zip_output.putNextEntry(e);
-            if ( elem!=null )
-                readBytes(elem);
             byte[] buf = new byte[BUFFER_SIZE];                                    
-            int len;
-            long size_alert=-1;
-            long size=0;
-            if ( elem != null )
-                size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
-            while ((len = readBytes(buf)) > -1){
+            while ((len = readBytes(buf)) > -1)
                 zip_output.write(buf, 0, len);
-                size+=len;
-                if ( elem != null && size > size_alert ){
-                    System.err.println("Erro, sistema anti loop ativado!");
-                    System.exit(1);
-                }
-            }
             closeBytes();
         }else{
-            zip_elementos=new ArrayList<String>();            
-            zip_elementos_lastModified=new ArrayList<Long>();            
-            if ( !relative_path.startsWith("/") && !relative_path.contains(":") ) // verifica se é relative path
-                zip_navega(elem,relative_path+"/");
-            else
-                zip_navega(elem,"");
-            int len_cache=zip_elementos.size();
-            for ( int i=0;i<len_cache;i++ ){
-                java.util.zip.ZipEntry e=new java.util.zip.ZipEntry( zip_elementos.get(i) );
-                e.setTime(zip_elementos_lastModified.get(i));
-                zip_output.putNextEntry(e);
-                if ( ! zip_elementos.get(i).endsWith("/") ){                    
-                    File tmp = new File(zip_elementos.get(i));
+            for ( int i_=0; i_<paths.length;i_++ ){
+                File elem=new File(paths[i_]);
+                if ( elem.isFile() ){            
+                    e=new java.util.zip.ZipEntry(elem.getName());
+                    e.setTime(elem.lastModified());
+                    zip_output.putNextEntry(e);
+                    readBytes(elem);
+                    byte[] buf = new byte[BUFFER_SIZE];                                    
                     long size_alert=-1;
                     long size=0;
-                    size_alert = tmp.length() + 1024*1024*100; // acima de 100MB do planejado
-                    readBytes(tmp);
-                    byte[] buf = new byte[BUFFER_SIZE];                        
-                    int len;
+                    size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
                     while ((len = readBytes(buf)) > -1){
-                        zip_output.write(buf, 0, len);                
+                        zip_output.write(buf, 0, len);
                         size+=len;
                         if ( elem != null && size > size_alert ){
-                            System.err.println("Erro, sistema anti loop ativado!!");
+                            System.err.println("Erro, sistema anti loop ativado!");
                             System.exit(1);
                         }
                     }
-                    closeBytes();            
-                }
+                    closeBytes();
+                }else{
+                    zip_elementos=new ArrayList<String>();            
+                    zip_elementos_lastModified=new ArrayList<Long>();            
+                    if ( !paths[i_].startsWith("/") && !paths[i_].contains(":") ) // verifica se é relative path
+                        zip_navega(elem,paths[i_]+"/");
+                    else
+                        zip_navega(elem,"");
+                    int len_cache=zip_elementos.size();
+                    for ( int i=0;i<len_cache;i++ ){
+                        e=new java.util.zip.ZipEntry( zip_elementos.get(i) );
+                        e.setTime(zip_elementos_lastModified.get(i));
+                        zip_output.putNextEntry(e);
+                        if ( ! zip_elementos.get(i).endsWith("/") ){                    
+                            File tmp = new File(zip_elementos.get(i));
+                            long size_alert=tmp.length() + 1024*1024*100; // acima de 100MB do planejado
+                            long size=0;
+                            readBytes(tmp);
+                            byte[] buf = new byte[BUFFER_SIZE];                        
+                            while ((len = readBytes(buf)) > -1){
+                                zip_output.write(buf, 0, len);                
+                                size+=len;
+                                if ( elem != null && size > size_alert ){
+                                    System.err.println("Erro, sistema anti loop ativado!!");
+                                    System.exit(1);
+                                }
+                            }
+                            closeBytes();            
+                        }
+                    }
+                }  
             }
-        }        
+        }
     }
     
     private void zip_navega(File a, String caminho) {
@@ -3455,7 +3453,7 @@ cat buffer.log
     }
     
     private void zip_list(String a) throws Exception {
-        valida_leitura_arquivo(a);
+        valida_paths(new String[]{a});
         if ( a == null ){
             ZipInputStream zis=new ZipInputStream(System.in);
             ZipEntry entry=null;
@@ -3501,7 +3499,7 @@ cat buffer.log
         }else
             pre_dir="";
         if ( a != null )
-            valida_leitura_arquivo(a);
+            valida_paths(new String[]{a});
         if ( a == null ){
             ZipInputStream zis=new ZipInputStream(in);
             ZipEntry entry=null;
