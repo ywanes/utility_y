@@ -577,7 +577,9 @@ cat buffer.log
         /*
         y zip add File1.txt > saida.zip
         cat File1.txt | y zip add -name File1.txt > saida.zip
-        y zip add /pasta1 > saida.zip
+        y zip add /pasta1/pasta2 > saida.zip
+        y zip add pasta2 -lvlStore > saida.zip
+        y zip add pasta1 pasta2 file3 -lvlStore > saida.zip
         y zip list arquivo.zip
         cat arquivo.zip | y zip list
         y zip extract entrada.zip
@@ -588,24 +590,19 @@ cat buffer.log
         cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
         y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
         cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
+        obs: se add pasta e a descricao de pasta tem "/" ou "\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.
         */
         if ( args[0].equals("zip") ){
             try{
-                if ( args.length == 3 && args[1].equals("add") ){
-                    zip_add_router(new String[]{args[2]}, "", false, System.out);
-                    return;
-                }
-                if ( args.length == 4 && args[1].equals("add") && args[3].equals("-lvlStore")){
-                    zip_add_router(new String[]{args[2]}, "", true, System.out);
-                    return;
-                }                
-                if ( args.length == 4 && args[1].equals("add") && args[2].equals("-name")){
-                    zip_add_router(new String[]{}, args[3], false, System.out);
-                    return;
-                }
-                if ( args.length == 5 && args[1].equals("add") && args[2].equals("-name") && args[4].equals("-lvlStore")){
-                    zip_add_router(new String[]{}, args[3], true, System.out);
-                    return;
+                if ( args.length >= 3 && args[1].equals("add") ){
+                    Object [] objs = get_parms_paths_virtualname_lvlStore(args);
+                    if ( objs != null ){
+                        String [] paths=(String [])objs[0];
+                        String virtualname=(String)objs[1];
+                        boolean lvlStore=(Boolean)objs[2];
+                        zip_add_router(paths, virtualname, lvlStore, System.out);
+                        return;
+                    }
                 }
                 if ( args.length == 2 && args[1].equals("list") ){
                     zip_list(null);
@@ -6991,6 +6988,44 @@ System.out.println("BB" + retorno);
         return new Object[]{path,acceptSymbolicLink,bkmg};
     }    
     
+    private Object [] get_parms_paths_virtualname_lvlStore(String [] args){
+        String [] paths=new String[]{};
+        String virtualname="";
+        boolean lvlStore=false;
+        ArrayList<String> tmp=new ArrayList<String>();
+        
+        args=sliceParm(2,args);
+        while(args.length > 0){
+            if ( args[0].equals("-lvlStore") ){
+                lvlStore=true;                
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-name") ){
+                virtualname=args[1];
+                args=sliceParm(2,args);
+                continue;
+            }
+            if ( args.length > 0 ){
+                tmp.add(args[0]);
+                args=sliceParm(1,args);
+                continue;
+            }
+            return null;
+        }
+        if ( !virtualname.equals("") && tmp.size() > 0 )
+            return null;
+        if ( virtualname.equals("") && tmp.size() == 0 )
+            return null;
+        if ( tmp.size() > 0 ){
+            paths=new String[tmp.size()];
+            for ( int i=0;i<tmp.size();i++ )
+                paths[i]=tmp.get(i);
+        }
+        return new Object[]{paths, virtualname, lvlStore};
+    }
+            
+            
     private void find
         (String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, 
             String pos, boolean format_lss, String format_du){
@@ -11326,8 +11361,9 @@ class XML extends Util{
 /* class by manual */                + "[y zip]\n"
 /* class by manual */                + "    y zip add File1.txt > saida.zip\n"
 /* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
-/* class by manual */                + "    y zip add /pasta1 > saida.zip\n"
+/* class by manual */                + "    y zip add /pasta1/pasta2 > saida.zip\n"
 /* class by manual */                + "    y zip add pasta2 -lvlStore > saida.zip\n"
+/* class by manual */                + "    y zip add pasta1 pasta2 file3 -lvlStore > saida.zip\n"
 /* class by manual */                + "    y zip list arquivo.zip\n"
 /* class by manual */                + "    cat arquivo.zip | y zip list\n"
 /* class by manual */                + "    y zip extract entrada.zip\n"
@@ -11756,6 +11792,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
