@@ -2447,6 +2447,7 @@ cat buffer.log
     public grammarsWhere gw=null;
     public long sqlCount = 0;
     public long sqlLimit = -1;
+    public String csv_sep_output=",";
     public void selectCSV(String[] args) throws Exception {        
         String [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText(args);
         if ( csvFile_sqlFile_sqlText == null ){
@@ -2480,10 +2481,8 @@ cat buffer.log
             int qntCamposCSV=0;
             String valorColuna=null;
                 
-            while ( (line=readLine()) != null ){
-                // tratando header
-                if ( qntCamposCSV == 0 )
-                {         
+            while ( (line=readLine()) != null ){                
+                if ( qntCamposCSV == 0 ){ // tratando header
                     // automatic change CSV_SEP_Y ; to ,
                     if ( line.contains(",") && !line.contains(";") && ( getEnv("CSV_SEP_Y") == null || getEnv("CSV_SEP_Y").equals(";") ) )
                         setEnv("CSV_SEP_Y", ",");
@@ -2498,10 +2497,9 @@ cat buffer.log
                     for ( int i=0;i<selectCSV_camposNameSaidaAlias.length;i++ ){                    
                         sb.append("\"");
                         sb.append(selectCSV_camposNameSaidaAlias[i]);
+                        sb.append("\"");
                         if ( i < selectCSV_camposNameSaidaAlias.length-1 )
-                            sb.append("\";");
-                        else
-                            sb.append("\"");
+                            sb.append(csv_sep_output);
                     }
                     sb.append("\n");
                     selectCSV_header=sb.toString();
@@ -2683,7 +2681,6 @@ cat buffer.log
                                 sb.append(getSeparadorCSV());
                             }
                         }
-
                         continue;
                     }
                     close(rs,stmt,con);
@@ -6655,10 +6652,9 @@ System.out.println("BB" + retorno);
             }
             if ( ! achou )
                 throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo: "+selectCSV_camposNameSaida[i]);
+            sb.append("\"");
             if ( i < selectCSV_camposNameSaida.length-1 )
-                sb.append("\";");
-            else
-                sb.append("\"");
+                sb.append(csv_sep_output);
         }
         sb.append("\n");
         if ( !selectCSV_headerPrinted ){
