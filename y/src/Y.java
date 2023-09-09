@@ -1603,7 +1603,7 @@ cat buffer.log
     }
 
     private boolean take(String [] args){
-        Object [] objs=get_parm_ip_port_server_send_pass_token(args);
+        Object [] objs=get_parm_ip_port_server_send_pass_paths(args);
         if ( objs == null )
             return false;
         String ip=(String)objs[0];
@@ -1611,14 +1611,17 @@ cat buffer.log
         boolean server=(Boolean)objs[2];
         boolean send=(Boolean)objs[3];
         String pass=(String)objs[4];
-        String token=(String)objs[5];
+        String [] paths=(String [])objs[5];
         String print_after=null;
         
         if ( send ){
-            File f_ = new File(".");
-            if ( f_.listFiles().length == 0 ){
-                System.err.println("Diretorio vazio!");
-                System.exit(1);
+            valida_paths(paths);
+            if ( paths.length == 1 && paths[0].equals(".") ){
+                File f_ = new File(".");
+                if ( f_.listFiles().length == 0 ){
+                    System.err.println("Diretorio vazio!");
+                    System.exit(1);
+                }                
             }
         }
         if ( server ){
@@ -1649,11 +1652,11 @@ cat buffer.log
             else
                 print_after="# cliente command:\n# y take -client -ip " + ip + " -port " + port + " -pass " + pass;
        
-        take(ip, port, server, send, pass, print_after);
+        take(ip, port, server, send, pass, print_after, paths);
         return true;
     }
     
-    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer){
+    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer, String [] paths){
         try{        
             final PipedOutputStream pos1=new PipedOutputStream();
             final PipedInputStream pis1=new PipedInputStream();
@@ -1670,7 +1673,7 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_add_router(new String[]{"."}, "", true, pos1);
+                            zip_add_router(paths, "", true, pos1);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -6740,7 +6743,6 @@ System.out.println("BB" + retorno);
     }
 
     private Object [] get_parms_curl_header_method_verbose_raw_host(String [] args){
-        Object [] objs=new Object[5];        
         String header="";
         String method="GET";
         boolean verbose=false;
@@ -6778,17 +6780,10 @@ System.out.println("BB" + retorno);
             break;
         }
         header+="\r\n";            
-
-        objs[0] = (Object)header;
-        objs[1] = (Object)method;
-        objs[2] = (Object)verbose;
-        objs[3] = (Object)raw;
-        objs[4] = (Object)host;
-        return objs;
+        return new Object []{header, method, verbose, raw, host};
     }
     
     private Object [] get_parms_json_listOn_noHeader_parm(String [] args){
-        Object [] objs=new Object[3];
         boolean listOn=false;
         boolean noHeader=false;
         String parm = "";
@@ -6811,14 +6806,10 @@ System.out.println("BB" + retorno);
             }
             break;
         }
-        objs[0] = (Object)listOn;
-        objs[1] = (Object)noHeader;
-        objs[2] = (Object)parm;
-        return objs;   
+        return new Object []{listOn, noHeader, parm};
     }
     
-    private Object [] get_parm_ip_port_server_send_pass_token(String [] args){
-        Object [] objs=new Object[6];        
+    private Object [] get_parm_ip_port_server_send_pass_paths(String [] args){
         String ip=null;
         int port=-1;
         Boolean server=false;
@@ -6826,7 +6817,8 @@ System.out.println("BB" + retorno);
         Boolean send=false;
         Boolean receive=false;
         String pass=null;
-        String token=null;
+        String [] paths=new String[]{};
+        ArrayList<String> tmp=new ArrayList<String>();
         
         args=sliceParm(1, args);
         
@@ -6869,13 +6861,11 @@ System.out.println("BB" + retorno);
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 0 && token == null && !args[0].startsWith("-") ){
-                token=args[0];
+            if ( args.length > 0 ){
+                tmp.add(args[0]);
                 args=sliceParm(1, args);
                 continue;
-            }            
-            if ( args.length > 0 )
-                return null;
+            }
             break;
         }
         
@@ -6891,14 +6881,18 @@ System.out.println("BB" + retorno);
             else
                 receive=true;
         }
-        
-        objs[0] = (Object)ip;
-        objs[1] = (Object)port;
-        objs[2] = (Object)server;
-        objs[3] = (Object)send;
-        objs[4] = (Object)pass;
-        objs[5] = (Object)token;
-        return objs;           
+        if ( tmp.size() > 0 ){
+            paths=new String[tmp.size()];
+            for ( int i=0;i<tmp.size();i++ )
+                paths[i]=tmp.get(i);
+        }
+        if ( send && paths.length == 0 )
+            paths=new String[]{"."};
+        if ( !send && paths.length > 0 ){
+            System.err.println("Nao é possível usar -receive e descrever paths, ex: "+paths[0]);
+            System.exit(1);
+        }
+        return new Object []{ip, port, server, send, pass, paths};
     }
     
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
@@ -11287,6 +11281,7 @@ class XML extends Util{
 /* class by manual */                + "\n"
 /* class by manual */                + "[y take]\n"
 /* class by manual */                + "    y take\n"
+/* class by manual */                + "    y take file1 pasta2\n"
 /* class by manual */                + "    Obs: envia o conteudo desta para para outro computador ou pasta\n"
 /* class by manual */                + "    Obs2: apos digitar y take, ele ira mostrar o comando que sera utilizado na outra ponta\n"
 /* class by manual */                + "[y banco fromCSV -outTable tabelaA selectInsert]\n"
@@ -11790,6 +11785,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

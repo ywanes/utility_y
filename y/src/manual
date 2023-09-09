@@ -85,6 +85,7 @@ Exemplos...
 
 [y take]
     y take
+    y take file1 pasta2
     Obs: envia o conteudo desta para para outro computador ou pasta
     Obs2: após digitar y take, ele irá mostrar o comando que será utilizado na outra ponta
 [y banco fromCSV -outTable tabelaA selectInsert]
