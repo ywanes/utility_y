@@ -322,7 +322,7 @@ cat buffer.log
                     selectInsert(conn,"",parm,null,"","");
                     return;
                 }
-                if ( app.equals("selectCSV") ){
+                if ( app.equals("selectCSV") ){ // y banco
                     selectCSV(conn,parm);
                     return;
                 }
@@ -2448,7 +2448,6 @@ cat buffer.log
     public long sqlCount = 0;
     public long sqlLimit = -1;
     public void selectCSV(String[] args) throws Exception {        
-        
         String [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText(args);
         if ( csvFile_sqlFile_sqlText == null ){
             comando_invalido(args);
@@ -2484,7 +2483,10 @@ cat buffer.log
             while ( (line=readLine()) != null ){
                 // tratando header
                 if ( qntCamposCSV == 0 )
-                {
+                {         
+                    // automatic change CSV_SEP_Y ; to ,
+                    if ( line.contains(",") && !line.contains(";") && ( getEnv("CSV_SEP_Y") == null || getEnv("CSV_SEP_Y").equals(";") ) )
+                        setEnv("CSV_SEP_Y", ",");
                     selectCSV_camposName=getCamposCSV(line);
                     for(int i=0;i<selectCSV_camposName.length;i++)
                         selectCSV_camposName[i]=selectCSV_camposName[i].replace(" ","_").replaceAll("[^\\x00-\\x7F]", "");
