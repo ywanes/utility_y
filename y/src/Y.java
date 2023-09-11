@@ -10765,7 +10765,7 @@ class XML extends Util{
 /* class texto_longo */         "	  return t.children[i].children[0];\n" +
 /* class texto_longo */         "  return null;\n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function Fullscreen() {\n" +
+/* class texto_longo */         "function Fullscreen() { // ocorre um erro se for invocado sem interação de tela(bloqueio nativo do browser)\n" +
 /* class texto_longo */         "  element=document.children[0];\n" +
 /* class texto_longo */         "  if(element.requestFullscreen) element.requestFullscreen();\n" +
 /* class texto_longo */         "  else if(element.mozRequestFullScreen) element.mozRequestFullScreen();\n" +
