@@ -1446,21 +1446,34 @@ cat buffer.log
             return;            
         }
         if ( args[0].equals("os")){
-            os();
+            System.out.println(os(false));
             return;            
         }
         if ( args[0].equals("pss")){
-            if ( Util.isWindows() ){
+            if ( os(true).endsWith("Windows") ){
                 load_pss_windows();
                 pss_windows(false);
                 return;
+            }else{
+                if ( os(true).endsWith("Linux") ){
+                    load_pss_linux();
+                    pss_linux(false);
+                    return;
+                }
             }
             System.err.println("Nao implementado para esse sistema operacional!");
             System.exit(1);
         }
         if ( args[0].equals("pid") && args.length == 2 ){
-            pid(args[1]);
-            return;            
+            if ( os(true).endsWith("Windows") ){
+                pid_windows(args[1]);
+                return;            
+            }else{
+                if ( os(true).endsWith("Linux") ){
+                    pid_linux(args[1]);
+                    return;                                
+                }
+            }
         }
         if ( args[0].equals("date")){
             date(args);
@@ -7487,27 +7500,41 @@ System.out.println("BB" + retorno);
         }            
     }
     
-    private void os() {
+    String osGetTypeTrueCache=null;
+    String osGetTypeFalseCache=null;
+    private String os(boolean getType) {
+        if ( getType && osGetTypeTrueCache != null )
+            return osGetTypeTrueCache;
+        if ( !getType && osGetTypeFalseCache != null )
+            return osGetTypeFalseCache;        
         boolean show=false;
-        
-        for ( String command : new String[]{
+        String [] commands = new String[]{
             "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
             "system_profiler SPSoftwareDataType",
             "oslevel;cat /proc/version",
             "lsb_release -a;cat /proc/version",
             "cat /etc/os-release;cat /proc/version",
-        } ){
+        };
+        String [] types = new String[]{
+            "Windows",
+            "Mac",
+            "Linux",
+            "Linux",
+            "Linux",
+        };
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        for ( int i=0;i<commands.length;i++ ){
             try {
-                String [] command_p = command.split(";");
+                String [] command_p = commands[i].split(";");
                 boolean error=false;
-                for ( int i=0;i<command_p.length;i++ ){
+                for ( int j=0;j<command_p.length;j++ ){
                     Process proc;
-                    proc = Runtime.getRuntime().exec(command_p[i]);
+                    proc = Runtime.getRuntime().exec(command_p[j]);
                     int len=0;
                     byte[] b=new byte[1024];
                     boolean ok=false;                    
                     while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                        System.out.write(b, 0, len);
+                        baos.write(b, 0, len);
                         ok=true;
                     }
                     while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
@@ -7521,14 +7548,23 @@ System.out.println("BB" + retorno);
                 }
                 if ( error ) continue;
                 show=true;
-                    break;
-                        
+                if ( getType ){
+                    osGetTypeTrueCache=types[i];
+                    return osGetTypeTrueCache;
+                }
+                break;
             } catch (Exception ex) {
                 continue;
             }        
         }
-        if ( !show )
-            System.out.println("Nenhum sistema foi detectado!");
+        if ( show ){
+            osGetTypeFalseCache=baos.toString();
+            return osGetTypeFalseCache;
+        }else{
+            System.err.println("Nenhum sistema foi detectado!");
+            System.exit(1);
+        }
+        return null;
     }
     
     private String getLocalDateTime_windows(){
@@ -7656,17 +7692,76 @@ System.out.println("BB" + retorno);
         }
     }
       
+    private void load_pss_linux() {        
+        try{
+            Process proc;
+            proc = Runtime.getRuntime().exec("ps -ef");
+            int len=0;
+            byte[] b=new byte[1024];
+            boolean ok=false;                    
+            boolean error=false;                    
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+                ok=true;
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                error=true;
+            }    
+            if ( error ){
+                System.err.println("Erro fatal 99!");
+                System.exit(1);
+            }
+            String [] lines=baos.toString().split("\n");
+            ArrayList<Integer> list_p = new ArrayList<>();
+            for ( int i=0;i<lines.length;i++ ){
+                String [] partes_=lines[i].split(" ");
+                String [] partes=new String[3];
+                int count=0;
+                for ( int j=0;j<partes_.length;j++ ){
+                    if ( partes_[j].equals("") )
+                        continue;
+                    partes[count++]=partes_[j];
+                    if ( count >= 3 )
+                        break;
+                }
+                if ( partes[1].equals("PID") )
+                    continue;
+                pss_parm1.add(partes[1]);
+                pss_parm2.add(partes[2]);
+                pss_parm3.add(lines[i]);
+                pss_parm4.add("n/a"); // nao remover essa linha
+                pss_flag.add(false);
+            }                            
+        }catch(Exception e){
+            System.err.println("Erro fatal " + e.toString());
+        }
+    }
+          
     private void pss_windows(boolean exigencia_flag){
         for ( int i=0;i<pss_parm1.size();i++ )
             if ( !exigencia_flag || pss_flag.get(i) )
                 System.out.println(pss_parm1.get(i)+"\t"+pss_parm2.get(i)+"\t"+pss_parm3.get(i)+"\t"+pss_parm4.get(i)+"\t"+pss_parm5.get(i));
     }
+          
+    private void pss_linux(boolean exigencia_flag){
+        for ( int i=0;i<pss_parm1.size();i++ )
+            if ( !exigencia_flag || pss_flag.get(i) )
+                System.out.println(pss_parm3.get(i));
+    }
     
-    private void pid(String pid){
+    private void pid_windows(String pid){
         load_pss_windows();
         pid_nav_up(pid);
         pid_nav_down(pid);
         pss_windows(true);
+    }
+    
+    private void pid_linux(String pid){
+        load_pss_linux();
+        pid_nav_up(pid);
+        pid_nav_down(pid);
+        pss_linux(true);
     }
     
     private void pid_nav_up(String pid){
@@ -9086,14 +9181,11 @@ class Util{
         }
     }    
 
-    private static boolean isWindows_cached=false;
-    private static boolean isWindows_=false;
+    private static Boolean isWindowsCache=null;
     public static Boolean isWindows(){
-        if ( !isWindows_cached ){
-            isWindows_=new File("c:/").exists();
-            isWindows_cached=true;
-        }
-        return isWindows_;
+        if ( isWindowsCache = null )
+            isWindowsCache=new File("c:/").exists();
+        return isWindowsCache;
     }
 
     public static String [] listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
