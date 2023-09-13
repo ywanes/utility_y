@@ -1449,6 +1449,19 @@ cat buffer.log
             os();
             return;            
         }
+        if ( args[0].equals("pss")){
+            if ( Util.isWindows() ){
+                load_pss_windows();
+                pss_windows(false);
+                return;
+            }
+            System.err.println("Nao implementado para esse sistema operacional!");
+            System.exit(1);
+        }
+        if ( args[0].equals("pid") && args.length == 2 ){
+            pid(args[1]);
+            return;            
+        }
         if ( args[0].equals("date")){
             date(args);
             return;
@@ -7516,7 +7529,164 @@ System.out.println("BB" + retorno);
         }
         if ( !show )
             System.out.println("Nenhum sistema foi detectado!");
+    }
+    
+    private String getLocalDateTime_windows(){
+        try{
+            Process proc;
+            proc = Runtime.getRuntime().exec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime");
+            int len=0;
+            byte[] b=new byte[1024];
+            boolean ok=false;                    
+            boolean error=false;                    
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+                ok=true;
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                error=true;
+            }    
+            if ( error ){
+                System.err.println("Erro fatal 999!");
+                System.exit(1);
+            }
+            String [] lines=baos.toString().split("\r\n");
+            return lines[1].trim();
+        }catch(Exception e){
+            System.err.println("Erro fatal " + e.toString());
+        }   
+        return null;
+    }
 
+    private String LocalDateTimeCache_windows=null;
+    private String getLocalDateTimeCache_windows(){
+        if ( LocalDateTimeCache_windows == null )
+            LocalDateTimeCache_windows = getLocalDateTime_windows();
+        return LocalDateTimeCache_windows;
+    }
+    
+    private ArrayList<String> pss_parm1 = new ArrayList<>();
+    private ArrayList<String> pss_parm2 = new ArrayList<>();
+    private ArrayList<String> pss_parm3 = new ArrayList<>();
+    private ArrayList<String> pss_parm4 = new ArrayList<>();
+    private ArrayList<String> pss_parm5 = new ArrayList<>();
+    private ArrayList<Boolean> pss_flag = new ArrayList<>();
+    private void load_pss_windows() {        
+        try{
+            Process proc;
+            proc = Runtime.getRuntime().exec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId");
+            int len=0;
+            byte[] b=new byte[1024];
+            boolean ok=false;                    
+            boolean error=false;                    
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+                ok=true;
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                error=true;
+            }    
+            if ( error ){
+                System.err.println("Erro fatal 99!");
+                System.exit(1);
+            }
+            String [] lines=baos.toString().split("\r\n");
+            ArrayList<Integer> list_p = new ArrayList<>();
+            boolean isWord=false;
+            for ( int i=0;i<lines.length;i++ ){
+                String s=lines[i];
+                if(i == 0){
+                    for ( int j=0;j<s.length();j++ ){
+                        String t=s.substring(j, j+1);
+                        if ( isWord == !t.equals(" ") )
+                            continue;
+                        isWord=!isWord;
+                        if ( isWord )
+                            list_p.add(j);
+                    }
+                }else{
+                    if ( s.length() < list_p.get(4) )
+                        continue;
+                    String CommandLine = s.substring(list_p.get(0), list_p.get(1)).trim();
+                    String CreationDate = s.substring(list_p.get(1), list_p.get(2)).trim();
+                    String ExecutablePath = s.substring(list_p.get(2), list_p.get(3)).trim();
+                    String Name = s.substring(list_p.get(3), list_p.get(4)).trim();
+                    String ParentProcessId = s.substring(list_p.get(4), list_p.get(5)).trim();
+                    String ProcessId = s.substring(list_p.get(5)).trim();
+                    
+                    CreationDate = CreationDate.split("\\.")[0];
+                    String LocalDateTime = getLocalDateTimeCache_windows().split("\\.")[0];
+                    long seconds=new SimpleDateFormat("yyyyMMddHHmmss").parse(LocalDateTime).getTime() - new SimpleDateFormat("yyyyMMddHHmmss").parse(CreationDate).getTime();                    
+                    seconds/=1000;
+
+                    long second = 1;
+                    long minute = 60*second;
+                    long hour = 60*minute;
+                    long day = 24*hour;
+                    long minutes=0;
+                    long hours=0;
+                    long days=0;                    
+                    
+                    while(seconds >= day){
+                        seconds-=day;
+                        days++;
+                    }
+                    while(seconds >= hour){
+                        seconds-=hour;
+                        hours++;
+                    }
+                    while(seconds >= minute){
+                        seconds-=minute;
+                        minutes++;
+                    }
+                    String deltaTime=days+":"+(hours<10?"0":"")+hours+":"+(minutes<10?"0":"")+minutes+":"+(seconds<10?"0":"")+seconds;
+                    
+                    pss_parm1.add(ProcessId);
+                    pss_parm2.add(ParentProcessId);
+                    pss_parm3.add(deltaTime);
+                    pss_parm4.add(Name);
+                    pss_parm5.add(CommandLine.length()==0?ExecutablePath:CommandLine);
+                    pss_flag.add(false);
+                }
+            }                            
+        }catch(Exception e){
+            System.err.println("Erro fatal " + e.toString());
+        }
+    }
+      
+    private void pss_windows(boolean exigencia_flag){
+        for ( int i=0;i<pss_parm1.size();i++ )
+            if ( !exigencia_flag || pss_flag.get(i) )
+                System.out.println(pss_parm1.get(i)+"\t"+pss_parm2.get(i)+"\t"+pss_parm3.get(i)+"\t"+pss_parm4.get(i)+"\t"+pss_parm5.get(i));
+    }
+    
+    private void pid(String pid){
+        load_pss_windows();
+        pid_nav_up(pid);
+        pid_nav_down(pid);
+        pss_windows(true);
+    }
+    
+    private void pid_nav_up(String pid){
+        for ( int i=0;i<pss_flag.size();i++ ){
+            if ( pss_parm1.get(i).equals(pid) && !pss_parm4.get(i).equals("svchost.exe") ){
+                pss_flag.set(i, true);
+                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) )
+                    pid_nav_up(pss_parm2.get(i));
+            }
+        }
+    }
+    
+    private void pid_nav_down(String pid){
+        for ( int i=0;i<pss_flag.size();i++ ){
+            if ( pss_parm2.get(i).equals(pid) ){
+                pss_flag.set(i, true);
+                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) )
+                    pid_nav_down(pss_parm1.get(i));
+            }
+        }
     }
     
     private void date(String [] args){
@@ -11268,6 +11438,8 @@ class XML extends Util{
 /* class by manual */                + "  [y regua]\n"
 /* class by manual */                + "  [y link]\n"
 /* class by manual */                + "  [y os]\n"
+/* class by manual */                + "  [y pss]\n"
+/* class by manual */                + "  [y pid]\n"
 /* class by manual */                + "  [y date]\n"
 /* class by manual */                + "  [y cronometro]\n"
 /* class by manual */                + "  [y clear]\n"
@@ -11663,6 +11835,11 @@ class XML extends Util{
 /* class by manual */                + "[y os]\n"
 /* class by manual */                + "    y os\n"
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
+/* class by manual */                + "[y pss]\n"
+/* class by manual */                + "    y pss\n"
+/* class by manual */                + "[y pid]\n"
+/* class by manual */                + "    y pid 222\n"
+/* class by manual */                + "    Obs: onde 222 e o processId encontrado em y pss\n"
 /* class by manual */                + "[y date]\n"
 /* class by manual */                + "    y date\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
@@ -11785,6 +11962,10 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
 
 
 
