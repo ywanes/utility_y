@@ -9183,7 +9183,7 @@ class Util{
 
     private static Boolean isWindowsCache=null;
     public static Boolean isWindows(){
-        if ( isWindowsCache = null )
+        if ( isWindowsCache == null )
             isWindowsCache=new File("c:/").exists();
         return isWindowsCache;
     }
