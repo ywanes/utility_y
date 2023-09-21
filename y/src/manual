@@ -126,6 +126,7 @@ Exemplos...
     y cat file.csv | y selectCSV "select * from this"
     y cat file.csv | y selectCSV "select * from this where a = '3'"
     y cat file.csv | y selectCSV "select * from this limit 10"
+    y cat file.csv | y selectCSV "select * from this limit 10" -outJson
     echo '[{"a":"3" },{"a": "4"}]' | y json "[elem for elem in data]" | y selectCSV "select * from this where a = '3'"
     y selectCSV -csv file.csv "select * from this"
     y selectCSV -csv file.csv -sql consulta.sql

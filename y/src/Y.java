@@ -2040,34 +2040,45 @@ cat buffer.log
         return lista;
     }
     
-    public String[] get_csvFile_sqlFile_sqlText(String[] args) {
+    public Object[] get_csvFile_sqlFile_sqlText_outJson(String[] args) {
         String csvFile="";
         String sqlFile="";
         String sqlText="";
+        Boolean outJson=false;
         
-        if ( args.length > 0 && args[0].equals("selectCSV") )
-            args=sliceParm(1,args);
-        
-        if ( args.length > 1 && args[0].equals("-csv") ){
-            csvFile=args[1];
-            args=sliceParm(2,args);
-        }
-        if ( args.length > 1 && args[0].equals("-sql") ){
-            sqlFile=args[1];
-            args=sliceParm(2,args);
-        }
-        if ( args.length == 1 ){
-            sqlText=args[0];
-            args=sliceParm(1,args);
+        args=sliceParm(1,args);
+        while ( args.length > 0 ){
+            if ( args.length > 1 && args[0].equals("-csv") ){
+                csvFile=args[1];
+                args=sliceParm(2,args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-sql") ){
+                sqlFile=args[1];
+                args=sliceParm(2,args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-outJson") ){
+                outJson=true;
+                args=sliceParm(1,args);
+                continue;
+            }            
+            if ( args.length > 0 && sqlText.equals("") ){
+                sqlText=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args.length > 0 )
+                return null;
         }
         
         if ( sqlFile.equals("") && sqlText.equals("") )
             return null;
         if ( !sqlFile.equals("") && !sqlText.equals("") )
             return null;
-        return new String[]{csvFile,sqlFile,sqlText};        
+        
+        return new Object[]{csvFile, sqlFile, sqlText, outJson};        
     }
-    
     
     public String [] get_senha_isEncoding_md_salt(String [] args){
         String senha=null;
@@ -2473,20 +2484,22 @@ cat buffer.log
     public String [] selectCSV_tratativasWhere=null; 
     public String selectCSV_header=null;
     public boolean selectCSV_headerPrinted=false;
+    public boolean outJson=false;
     public grammarsWhere gw=null;
     public long sqlCount = 0;
     public long sqlLimit = -1;
     public String csv_sep_output=",";
     public void selectCSV(String[] args) throws Exception {        
-        String [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText(args);
+        Object [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText_outJson(args);
         if ( csvFile_sqlFile_sqlText == null ){
             comando_invalido(args);
             return;
         }
         
-        String csvFile=csvFile_sqlFile_sqlText[0];
-        String sqlFile=csvFile_sqlFile_sqlText[1];
-        String sqlText=csvFile_sqlFile_sqlText[2];
+        String csvFile=(String)csvFile_sqlFile_sqlText[0];
+        String sqlFile=(String)csvFile_sqlFile_sqlText[1];
+        String sqlText=(String)csvFile_sqlFile_sqlText[2];
+        outJson=(Boolean)csvFile_sqlFile_sqlText[3];
         OutputStream out=System.out;
         
         if ( !sqlFile.equals("") ){
@@ -2547,10 +2560,16 @@ cat buffer.log
                             linhaCSV=null; // nao precisar ler mais nada    
                     }
                     selectCSV_camposValue[i]=valorColuna;
-                }    
+                }   
                 processaRegistroSqlParaSelectCSV(out);                
             }
             closeLine();
+            if( outJson ){
+                if ( sqlCount == 0 )
+                    out.write("[ ]\n".getBytes());
+                else
+                    out.write("]\n".getBytes());
+            }
         }
         catch(Exception e)
         {
@@ -6668,31 +6687,67 @@ System.out.println("BB" + retorno);
         StringBuilder sb=new StringBuilder();
         boolean achou=false;
         
-        for ( int i=0;i<selectCSV_camposNameSaida.length;i++ ){        
-            sb.append("\"");
-            achou=false;
-            for ( int j=0;j<selectCSV_camposName.length;j++ ){        
-                if ( selectCSV_camposNameSaida[i].equals(selectCSV_camposName[j]) ){
-                    achou=true;
-                    if ( selectCSV_camposValue[j] != null )
+        if(outJson){
+            sb.append("{\n");
+            for ( int i=0;i<selectCSV_camposNameSaida.length;i++ ){        
+                achou=false;
+                for ( int j=0;j<selectCSV_camposName.length;j++ ){                            
+                    if ( selectCSV_camposNameSaida[i].equals(selectCSV_camposName[j]) ){
+                        achou=true;
+                        sb.append("\"");
+                        sb.append(selectCSV_camposNameSaidaAlias[i]);
+                        sb.append("\": \"");
                         sb.append(selectCSV_camposValue[j]);
-                    break;
+                        sb.append("\"");
+                        if ( i < selectCSV_camposNameSaida.length-1 )
+                            sb.append(",");
+                        sb.append("\n");
+                        break;
+                    }
+                }
+                if ( ! achou )
+                    throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo: "+selectCSV_camposNameSaida[i]);                
+            }
+            sb.append("}\n");            
+            if ( gw == null || gw.ok(selectCSV_camposValue) ){
+                if ( sqlLimit == -1 || sqlCount < sqlLimit ){
+                    sqlCount++;
+                    if ( sqlCount == 1 )
+                        out.write("[\n".getBytes());
+                    if ( sqlCount > 1 )
+                        out.write(",".getBytes());
+                    out.write(sb.toString().getBytes());
                 }
             }
-            if ( ! achou )
-                throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo: "+selectCSV_camposNameSaida[i]);
-            sb.append("\"");
-            if ( i < selectCSV_camposNameSaida.length-1 )
-                sb.append(csv_sep_output);
-        }
-        sb.append("\n");
-        if ( !selectCSV_headerPrinted ){
-            selectCSV_headerPrinted=true;
-            out.write(selectCSV_header.toString().getBytes());
-        }
-        if ( gw == null || gw.ok(selectCSV_camposValue) ){
-            if ( sqlLimit == -1 || sqlCount++ < sqlLimit )
-                out.write(sb.toString().getBytes());
+        }else{
+            for ( int i=0;i<selectCSV_camposNameSaida.length;i++ ){        
+                sb.append("\"");
+                achou=false;
+                for ( int j=0;j<selectCSV_camposName.length;j++ ){        
+                    if ( selectCSV_camposNameSaida[i].equals(selectCSV_camposName[j]) ){
+                        achou=true;
+                        if ( selectCSV_camposValue[j] != null )
+                            sb.append(selectCSV_camposValue[j]);
+                        break;
+                    }
+                }
+                if ( ! achou )
+                    throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo: "+selectCSV_camposNameSaida[i]);
+                sb.append("\"");
+                if ( i < selectCSV_camposNameSaida.length-1 )
+                    sb.append(csv_sep_output);
+            }
+            sb.append("\n");
+            if ( !selectCSV_headerPrinted ){
+                selectCSV_headerPrinted=true;
+                out.write(selectCSV_header.toString().getBytes());
+            }
+            if ( gw == null || gw.ok(selectCSV_camposValue) ){                
+                if ( sqlLimit == -1 || sqlCount < sqlLimit ){
+                    sqlCount++;
+                    out.write(sb.toString().getBytes());
+                }
+            }
         }
     }
 
@@ -11584,6 +11639,7 @@ class XML extends Util{
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this\"\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this where a = '3'\"\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this limit 10\"\n"
+/* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this limit 10\" -outJson\n"
 /* class by manual */                + "    echo '[{\"a\":\"3\" },{\"a\": \"4\"}]' | y json \"[elem for elem in data]\" | y selectCSV \"select * from this where a = '3'\"\n"
 /* class by manual */                + "    y selectCSV -csv file.csv \"select * from this\"\n"
 /* class by manual */                + "    y selectCSV -csv file.csv -sql consulta.sql\n"
@@ -12054,6 +12110,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
