@@ -8489,24 +8489,38 @@ class grammarsWhere {
         int limit=100000;
         //mostrandoNodes(nodes);        
 
+        transfere_count=0;
         while(limit-->0 && (nodes.size()>1 || !nodes.get(0).is_this.equals("root") ) ){
             if(transfere())
                 continue;
             mostrandoNodes(nodes);
             erroFatal("nao foi possivel entender o where. debug acima");
-        }        
+        }    
+        if( !transfere_reading )
+            transfere_reading=true;
         if ( limit <= 0 ){
             mostrandoNodes(nodes);
             erroFatal("error anti loop");
         }
         return nodes.get(0).value.equals("S");
     }
+    public static ArrayList<Integer> transfere_cache = new ArrayList<>();
+    public static int transfere_count=0;
+    public static boolean transfere_reading=false;
     public static boolean transfere(){
         for ( int pos_transfer=0;pos_transfer<transferPai.length;pos_transfer++ ){
             for ( int pos_node=0;pos_node<nodes.size();pos_node++ ){
+                if(transfere_reading){
+                    pos_transfer=transfere_cache.get(transfere_count++);
+                    pos_node=transfere_cache.get(transfere_count++);
+                }
                 Node node=transfere(pos_transfer, pos_node);
-                if ( node == null )
+                if ( node == null ){
+                    if(transfere_reading){
+                        erroFatal("transfere_reading error!");
+                    }
                     continue;
+                }
                 // dynamic list remove
                 if ( transferFilho[pos_transfer].length > 1 && transferFilho[pos_transfer][1].equals("in") ){ 
                     while(nodes.size() > pos_node){
@@ -8521,6 +8535,10 @@ class grammarsWhere {
                         nodes.remove(pos_node);
                 }
                 nodes.add(pos_node, node);
+                if(!transfere_reading){
+                    transfere_cache.add(pos_transfer);
+                    transfere_cache.add(pos_node);
+                }
                 return true;
             }            
         }
