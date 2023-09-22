@@ -130,6 +130,7 @@ Exemplos...
     echo '[{"a":"3" },{"a": "4"}]' | y json "[elem for elem in data]" | y selectCSV "select * from this where a = '3'"
     y selectCSV -csv file.csv "select * from this"
     y selectCSV -csv file.csv -sql consulta.sql
+    obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean
 [y xlsxToCSV]
     xlsxToCSV arquivo.xlsx mostraEstrutura
     xlsxToCSV arquivo.xlsx listaAbas

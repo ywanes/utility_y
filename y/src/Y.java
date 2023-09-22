@@ -8421,53 +8421,56 @@ class grammarsWhere {
     public static String [] transferFilhoStr=null;
     public static String [][] transferFilho=null;
     public static String [] grammars=new String []{
-        "valor_int                             "
-       ,"    parseInt( valor_txt )             "
-       ,"    valor_int * valor_int             "
-       ,"    valor_int / valor_int             "
-       ,"    valor_int + valor_int             "
-       ,"    valor_int - valor_int             "
-       ,"                                      "
-       ,"valor_txt                             "
-       ,"    valor_txt + valor_txt             "
-       ,"    valor_int + valor_txt             "
-       ,"    valor_txt + valor_int             "
-       ,"    substr( valor_txt , valor_int )   "
-       ,"    substr( valor_txt , valor_int , valor_int )   "
-       ,"                                      "
-       ,"boolean                               "
-       ,"    not boolean                       "
-       ,"    valor_txt = valor_txt             "
-       ,"    valor_txt like valor_txt          "
-       ,"    valor_int = valor_txt             "
-       ,"    valor_txt = valor_int             "
-       ,"    valor_txt > valor_txt             "
-       ,"    valor_txt < valor_txt             "
-       ,"    valor_txt >= valor_txt            "
-       ,"    valor_txt <= valor_txt            "
-       ,"    valor_txt != valor_txt            "
-       ,"    valor_txt <> valor_txt            "
-       ,"    valor_int = valor_int             "
-       ,"    valor_int > valor_int             "
-       ,"    valor_int < valor_int             "
-       ,"    valor_int >= valor_int            "
-       ,"    valor_int <= valor_int            "
-       ,"    valor_int != valor_int            "
-       ,"    valor_int <> valor_int            "
-       ,"    ( boolean )                       "
-       ,"    boolean and boolean               "
-       ,"    boolean or boolean                "
-       ,"    valor_int in ( valor_int ... )    "
-       ,"    valor_txt in ( valor_txt ... )    "
-       ,"                                      "
-       ,"valor_txt                             "
-       ,"    ( valor_txt )                     "
-       ,"                                      "
-       ,"valor_txt                             "
-       ,"    ( valor_txt )                     "
-       ,"                                      "
-       ,"root                                  "
-       ,"    where boolean                     "
+        "valor_int                                         "
+       ,"    parseInt( valor_txt )                         "
+       ,"    valor_int * valor_int                         "
+       ,"    valor_int / valor_int                         "
+       ,"    valor_int + valor_int                         "
+       ,"    valor_int - valor_int                         "
+       ,"    if( boolean , valor_int , valor_int )         "
+       ,"                                                  "
+       ,"valor_txt                                         "
+       ,"    valor_txt + valor_txt                         "
+       ,"    valor_int + valor_txt                         "
+       ,"    valor_txt + valor_int                         "
+       ,"    substr( valor_txt , valor_int )               "
+       ,"    substr( valor_txt , valor_int , valor_int )   "            
+       ,"    if( boolean , valor_txt , valor_txt )         "
+       ,"    ifnull( valor_txt , valor_txt )               "
+       ,"                                                  "
+       ,"boolean                                           "
+       ,"    not boolean                                   "
+       ,"    valor_txt = valor_txt                         "
+       ,"    valor_txt like valor_txt                      "
+       ,"    valor_int = valor_txt                         "
+       ,"    valor_txt = valor_int                         "
+       ,"    valor_txt > valor_txt                         "
+       ,"    valor_txt < valor_txt                         "
+       ,"    valor_txt >= valor_txt                        "
+       ,"    valor_txt <= valor_txt                        "
+       ,"    valor_txt != valor_txt                        "
+       ,"    valor_txt <> valor_txt                        "
+       ,"    valor_int = valor_int                         "
+       ,"    valor_int > valor_int                         "
+       ,"    valor_int < valor_int                         "
+       ,"    valor_int >= valor_int                        "
+       ,"    valor_int <= valor_int                        "
+       ,"    valor_int != valor_int                        "
+       ,"    valor_int <> valor_int                        "
+       ,"    ( boolean )                                   "
+       ,"    boolean and boolean                           "
+       ,"    boolean or boolean                            "
+       ,"    valor_int in ( valor_int ... )                "
+       ,"    valor_txt in ( valor_txt ... )                "
+       ,"                                                  "
+       ,"valor_txt                                         "
+       ,"    ( valor_txt )                                 "
+       ,"                                                  "
+       ,"valor_txt                                         "
+       ,"    ( valor_txt )                                 "
+       ,"                                                  "
+       ,"root                                              "
+       ,"    where boolean                                 "
     };
     
     // teste:
@@ -8639,6 +8642,18 @@ class grammarsWhere {
         if ( filhoStr.equals("valor_int - valor_int") ){
             if ( checkImplementation ) return new Node("","");
             return new Node(nodes.get(pos_node).value_decimal.subtract(nodes.get(pos_node+2).value_decimal).toString(),pai);
+        }
+        if ( filhoStr.equals("if( boolean , valor_int , valor_int )") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node+1).value.equals("S")?nodes.get(pos_node+3).value_decimal.toString():nodes.get(pos_node+5).value_decimal.toString(),pai);
+        }
+        if ( filhoStr.equals("if( boolean , valor_txt , valor_txt )") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node+1).value.equals("S")?nodes.get(pos_node+3).value.toString():nodes.get(pos_node+5).value.toString(),pai);
+        }
+        if ( filhoStr.equals("ifnull( valor_txt , valor_txt )") ){
+            if ( checkImplementation ) return new Node("","");
+            return new Node(nodes.get(pos_node+1).value.equals("")?nodes.get(pos_node+3).value:nodes.get(pos_node+1).value,pai);
         }
         if ( filhoStr.equals("valor_txt = valor_txt") ){
             if ( checkImplementation ) return new Node("","");
@@ -11661,6 +11676,7 @@ class XML extends Util{
 /* class by manual */                + "    echo '[{\"a\":\"3\" },{\"a\": \"4\"}]' | y json \"[elem for elem in data]\" | y selectCSV \"select * from this where a = '3'\"\n"
 /* class by manual */                + "    y selectCSV -csv file.csv \"select * from this\"\n"
 /* class by manual */                + "    y selectCSV -csv file.csv -sql consulta.sql\n"
+/* class by manual */                + "    obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean\n"
 /* class by manual */                + "[y xlsxToCSV]\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx mostraEstrutura\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx listaAbas\n"
@@ -12128,6 +12144,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
