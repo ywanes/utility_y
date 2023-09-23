@@ -11390,8 +11390,8 @@ class XML extends Util{
 /* class HttpServer */             for (File p: files) {
 /* class HttpServer */                 if (!p.isFile()) continue;
 /* class HttpServer */                 if (!endsWith_OK(p.getName(), endsWiths)) continue;
-/* class HttpServer */                 sb.append("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href='" + p.getName() + "'>" + p.getName() + "</a></td></tr>\n");
-/* class HttpServer */                 System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href='" + p.getName() + "'>" + p.getName() + "</a></td></tr>\n");
+/* class HttpServer */                 sb.append("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
+/* class HttpServer */                 System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
 /* class HttpServer */             }
 /* class HttpServer */             sb.append("</table></html>");
 /* class HttpServer */             System.out.println("</table></html>");
