@@ -112,6 +112,7 @@ export CLOUDSDK_CONFIG="$HOME/.cf"
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missio@mb.com.br/adc.json"
 alias gopen='gcloud cloud-shell ssh'
 alias openzeus='gcloud --project="mb-prod-277215" beta compute ssh "zeus-bi-replica" --zone "us-east4-a"'
+alias destino='bq query --format=csv --use_legacy_sql=false --max_rows=1000000'
 EOF
 chmod 777 /opt/env_
 
