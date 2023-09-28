@@ -11344,7 +11344,8 @@ class XML extends Util{
 /* class HttpServer */         }
 /* class HttpServer */         sb = new StringBuilder();
 /* class HttpServer */         nav = dir + uri.replace("//", "/").trim();
-/* class HttpServer */         nav = nav.replace("//", "/").replace("%20", " ");
+/* class HttpServer */         nav = nav.replace("//", "/");
+/* class HttpServer */         nav = java.net.URLDecoder.decode( nav, "UTF-8" );
 /* class HttpServer */         if (!new File(nav).isFile()) {
 /* class HttpServer */             nav += "/";
 /* class HttpServer */             int c = 9;
