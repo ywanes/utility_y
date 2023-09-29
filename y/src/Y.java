@@ -11304,7 +11304,9 @@ class XML extends Util{
 /* class HttpServer */         StringBuilder sb = new StringBuilder();
 /* class HttpServer */         if (method.equals("OPTIONS")) {
 /* class HttpServer */             for (String line: new String[] {
-/* class HttpServer */                     "HTTP/1.1 501 Not Implemented\r\n" + "\r\n"
+/* class HttpServer */                     "HTTP/1.1 501 Not Implemented\r\n", 
+/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                     "\r\n",
 /* class HttpServer */                 }) {
 /* class HttpServer */                 sb.append(line);
 /* class HttpServer */                 System.out.println("    |---> " + line.replace("\n","\n          "));
@@ -11328,6 +11330,7 @@ class XML extends Util{
 /* class HttpServer */                 for (String line: new String[] {
 /* class HttpServer */                         "HTTP/1.1 200 OK\r\n",
 /* class HttpServer */                         "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                         "\r\n",
 /* class HttpServer */                         texto_longo.get_html_virtual_playlist()
 /* class HttpServer */                     }) {
@@ -11366,6 +11369,7 @@ class XML extends Util{
 /* class HttpServer */             for (String line: new String[] {
 /* class HttpServer */                     "HTTP/1.1 200 OK\r\n",
 /* class HttpServer */                     "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                     "\r\n",
 /* class HttpServer */                     "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
 /* class HttpServer */                     "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
@@ -11410,16 +11414,24 @@ class XML extends Util{
 /* class HttpServer */                     range = -1;
 /* class HttpServer */             }
 /* class HttpServer */             if ( range > -1){
-/* class HttpServer */                 String rangeFormat = "accept-ranges: bytes\r\nContent-Length: " + lenFile + "\r\nContent-Range: bytes " + range + "-" + (lenFile-1) + "/" + lenFile + "\r\n";
 /* class HttpServer */                 for (String line: new String[] {
-/* class HttpServer */                         "HTTP/1.1 206 OK\r\n" + "Content-Type: " + getContentType(nav) + "\r\ncharset=UTF-8\r\n" + rangeFormat + "\r\n"
+/* class HttpServer */                         "HTTP/1.1 206 OK\r\n",
+/* class HttpServer */                         "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
+/* class HttpServer */                         "accept-ranges: bytes\r\n",
+/* class HttpServer */                         "Content-Length: " + lenFile + "\r\n",
+/* class HttpServer */                         "Content-Range: bytes " + range + "-" + (lenFile-1) + "/" + lenFile + "\r\n",
+/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                         "\r\n"
 /* class HttpServer */                     }) {
 /* class HttpServer */                     sb.append(line);
 /* class HttpServer */                     System.out.println("    |---> " + line.replace("\n","\n          "));
 /* class HttpServer */                 }
 /* class HttpServer */             }else{  
 /* class HttpServer */                 for (String line: new String[] {
-/* class HttpServer */                         "HTTP/1.1 200 OK\r\n" + "Content-Type: " + getContentType(nav) + "\r\ncharset=UTF-8\r\n" + "\r\n"
+/* class HttpServer */                         "HTTP/1.1 200 OK\r\n",
+/* class HttpServer */                         "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
+/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                         "\r\n"
 /* class HttpServer */                     }) {
 /* class HttpServer */                     sb.append(line);
 /* class HttpServer */                     System.out.println("    |---> " + line.replace("\n","\n          "));
@@ -11447,8 +11459,9 @@ class XML extends Util{
 /* class HttpServer */         } /* ERROR 404 */
 /* class HttpServer */         sb = new StringBuilder();
 /* class HttpServer */         for (String line: new String[] {
-/* class HttpServer */                 "HTTP/1.1 200 OK\r\n",
+/* class HttpServer */                 "HTTP/1.1 404 OK\r\n",
 /* class HttpServer */                 "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                 "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                 "\r\n",
 /* class HttpServer */                 "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" + "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" + "<title>404 - File or directory not found.</title>\n" + "<style type=\"text/css\">\n" + "<!--\n" + "body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" + "fieldset{padding:0 15px 10px 15px;} \n" +
 /* class HttpServer */                 "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
