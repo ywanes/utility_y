@@ -10762,7 +10762,10 @@ class XML extends Util{
 /* class texto_longo */         return "<html>\n" +
 /* class texto_longo */         "<head>\n" +
 /* class texto_longo */         "<body id=\"cursor\" onload=\"preparacao();\">\n" +
-/* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" onmousef11=\"n\" ocorr=\"0\" >\n" +
+/* class texto_longo */         "<div id=\"f11bg\" style=\"display: none\" >\n" +
+/* class texto_longo */         "  <body style=\"margin: 0px; padding: 0px;\"><video style=\"height: 100%; width: 100%;\" playsinline=\"\" autoplay=\"\" muted=\"\" loop=\"\"><source src=\"http://203.cloudns.cl/bg\" type=\"video/mp4\"></video></body>\n" +
+/* class texto_longo */         "</div>\n" +
+/* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" >\n" +
 /* class texto_longo */         "<meta charset=\"utf-8\">\n" +
 /* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
 /* class texto_longo */         "<div id=\"master\"></div>\n" +
@@ -10781,9 +10784,8 @@ class XML extends Util{
 /* class texto_longo */         "      <source src='' type='audio/mp3' />\n" +
 /* class texto_longo */         "      seu navegador não suporta HTML5\n" +
 /* class texto_longo */         "    </audio>\n" +
-/* class texto_longo */         "     <input type=\"button\" value=\"FULL_SCREEN\" " +
-/* class texto_longo */         "       onclick=\"Fullscreen();\" style=\"color: #333; " +
-/* class texto_longo */         "       font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +                
+/* class texto_longo */         "    <input type=\"button\" value=\"FULL_SCREEN\" onclick=\"Fullscreen(false);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
+/* class texto_longo */         "    <input type=\"button\" value=\"VIDEO\" onclick=\"Fullscreen(true);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
 /* class texto_longo */         "  `;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function pause(){\n" +
@@ -10927,7 +10929,7 @@ class XML extends Util{
 /* class texto_longo */         "    troca_de_faixa();\n" +
 /* class texto_longo */         "  };\n" +
 /* class texto_longo */         "  document.addEventListener('click', function(e) {  \n" +
-/* class texto_longo */         "      if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' ){\n" +
+/* class texto_longo */         "      if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' || e.target.tagName == 'VIDEO' ){\n" +
 /* class texto_longo */         "         if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
 /* class texto_longo */         "           DisableFullscreen();\n" +
 /* class texto_longo */         "         }else{\n" +
@@ -10946,10 +10948,16 @@ class XML extends Util{
 /* class texto_longo */         "  },false);  \n" +
 /* class texto_longo */         "  document.addEventListener(\n" +
 /* class texto_longo */         "    \"mouseover\",function(e){\n" +
-/* class texto_longo */         "      if ( e.target.getAttribute(\"value\") && e.target.getAttribute(\"value\") == \"FULL_SCREEN\" )\n" +
+/* class texto_longo */         "      if ( e.target.getAttribute(\"value\") && ( e.target.getAttribute(\"value\") == \"FULL_SCREEN\" || e.target.getAttribute(\"value\") == \"VIDEO\" ) ){\n" +
 /* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"tailmousef11\",\"s\");\n" +
-/* class texto_longo */         "      else\n" +
+/* class texto_longo */         "        if( e.target.getAttribute(\"value\") == \"VIDEO\" )\n" +
+/* class texto_longo */         "          document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"s\");\n" +
+/* class texto_longo */         "        else\n" +
+/* class texto_longo */         "          document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"n\");\n" +
+/* class texto_longo */         "      }else{\n" +
 /* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"tailmousef11\",\"n\");\n" +
+/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"n\");\n" +
+/* class texto_longo */         "      }\n" +
 /* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"s\");\n" +
 /* class texto_longo */         "    },false\n" +
 /* class texto_longo */         "  );\n" +
@@ -11115,13 +11123,15 @@ class XML extends Util{
 /* class texto_longo */         "	  return t.children[i].children[0];\n" +
 /* class texto_longo */         "  return null;\n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function Fullscreen() { // ocorre um erro se for invocado sem interação de tela(bloqueio nativo do browser)\n" +
+/* class texto_longo */         "function Fullscreen(videoOn) { // ocorre um erro se for invocado sem interação de tela(bloqueio nativo do browser)\n" +
 /* class texto_longo */         "  element=document.children[0];\n" +
 /* class texto_longo */         "  if(element.requestFullscreen) element.requestFullscreen();\n" +
 /* class texto_longo */         "  else if(element.mozRequestFullScreen) element.mozRequestFullScreen();\n" +
 /* class texto_longo */         "  else if(element.webkitRequestFullscreen) element.webkitRequestFullscreen();\n" +
 /* class texto_longo */         "  else if(element.msRequestFullscreen) element.msRequestFullscreen();\n" +
 /* class texto_longo */         "  document.getElementById(\"f11\").style.display=\"none\";\n" + 
+/* class texto_longo */         "  if(videoOn)\n" + 
+/* class texto_longo */         "    document.getElementById(\"f11bg\").style.display=\"\";\n" + 
 /* class texto_longo */         "  document.getElementById(\"cursor\").style.cursor=\"none\";\n" + 
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function DisableFullscreen() {\n" +
@@ -11130,6 +11140,7 @@ class XML extends Util{
 /* class texto_longo */         "  else if(document.webkitExitFullscreen) document.webkitExitFullscreen();\n" +
 /* class texto_longo */         "  else if(document.msExitFullscreen) document.msExitFullscreen();\n" +
 /* class texto_longo */         "  document.getElementById(\"f11\").style.display=\"\";\n" + 
+/* class texto_longo */         "  document.getElementById(\"f11bg\").style.display=\"none\";\n" + 
 /* class texto_longo */         "  document.getElementById(\"cursor\").style.cursor=\"\";\n" + 
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function mouseInFullscreen(e){\n" +
@@ -11156,7 +11167,10 @@ class XML extends Util{
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function check_fullscreen(){\n" +
 /* class texto_longo */         "  if ( document.getElementById(\"f11\").style.display == \"\" && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"s\" && document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"3\" ){\n" +
-/* class texto_longo */         "    Fullscreen();\n" +
+/* class texto_longo */         "    if ( document.getElementById(\"f11\").getAttribute(\"tailvideo\") == \"s\" )\n" +
+/* class texto_longo */         "      Fullscreen(true);\n" +
+/* class texto_longo */         "    else\n" +
+/* class texto_longo */         "      Fullscreen(false);\n" +
 /* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
 /* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
 /* class texto_longo */         "  }\n" +
