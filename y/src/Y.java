@@ -4094,11 +4094,12 @@ cat buffer.log
     }
 
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host){
-        try{            
-            String path="/";
+        try{                        
             String protocol="HTTP";
             int len=0;
-            int port = 80;    
+            int port = 80;  
+            if ( !host.toUpperCase().startsWith("HTTP" ) )
+                host = "http://" + host;
             URL url=new URL(host);
             if ( url.getProtocol().equals("https") ){
                 protocol="HTTPS";
@@ -4107,7 +4108,9 @@ cat buffer.log
             host = url.getHost();
             if ( url.getPort() != -1 )
                 port = url.getPort();
-            path = url.getPath();
+            String path = url.getPath();
+            if ( path.equals("") )
+                path = "/";
             if ( url.getQuery() != null )
                 path += "?" + url.getQuery();
             
@@ -4191,14 +4194,17 @@ cat buffer.log
                             if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){                                
                                 heading=false;
                                 i++;
-                                if ( !raw && header_response.contains("\r\nTransfer-Encoding: chunked"))
+                                if ( !raw && header_response.contains("\r\nTransfer-Encoding: chunked")){
                                     chunked=true;
+                                }
                                 if ( i < len ){
                                     if ( chunked ){
-                                        if ( curl_chunk_write(buffer, i, len-i) )
+                                        if ( curl_chunk_write(buffer, i, len-i) ){
                                             System.exit(0);
-                                    }else
+                                        }
+                                    }else{
                                         os_print.write(buffer, i, len-i); 
+                                    }
                                     break;
                                 }
                             }
