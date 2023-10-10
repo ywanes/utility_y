@@ -10769,7 +10769,7 @@ class XML extends Util{
 /* class texto_longo */         "<head>\n" +
 /* class texto_longo */         "<body id=\"cursor\" onload=\"preparacao();\">\n" +
 /* class texto_longo */         "<div id=\"f11bg\" style=\"display: none\" >\n" +
-/* class texto_longo */         "  <body style=\"margin: 0px; padding: 0px;\"><video style=\"height: 100%; width: 100%;\" playsinline=\"\" autoplay=\"\" muted=\"\" loop=\"\"><source src=\"http://203.cloudns.cl/bg\" type=\"video/mp4\"></video></body>\n" +
+/* class texto_longo */         "  <body style=\"margin: 0px; padding: 0px;\"><video style=\"height: 100%; width: 100%;\" playsinline=\"\" autoplay=\"\" muted=\"\" loop=\"\"><source src=\"http://203.cloudns.cl:88/bg\" type=\"video/mp4\"></video></body>\n" +
 /* class texto_longo */         "</div>\n" +
 /* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" >\n" +
 /* class texto_longo */         "<meta charset=\"utf-8\">\n" +
