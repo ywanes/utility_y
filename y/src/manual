@@ -449,6 +449,7 @@ Exemplos...
 [y du]
     y du
     y du . -g
+    ex: guia para limpeza de disco: D:\>y du -g | y tr ".\\" "" | y grep -v "\\"
 [y sleep]
     y sleep
     y sleep 0.22 # 0.22 seconds
