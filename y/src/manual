@@ -514,7 +514,7 @@ Exemplos...
     obs2: list -> monta uma shell de verificacao de ips para outra maquina
 [y mouse]
     y mouse # mostra as coordenadas do mouse
-    y mouse "move 60 1030 clickDireito sleep 6 move 15 990 clickDireito sleep 6" # away dota
+    y mouse "move 32 1009 clickDireito sleep 9 move 64 1043 clickDireito sleep 9" # away dota
     obs: bloquear a tela faz o programa sair imediatamente
 [y test]
     y test
