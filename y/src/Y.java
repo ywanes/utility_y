@@ -1538,6 +1538,10 @@ cat buffer.log
                 show_ips(false, timeout, false, true);
             return;
         }
+        if ( args[0].equals("mouse") ){
+            mouse(args);
+            return;
+        }
         if ( args[0].equals("test") ){
             test();
             return;
@@ -7105,8 +7109,7 @@ System.out.println("BB" + retorno);
     }
             
             
-    private void find
-        (String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, 
+    private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, 
             String pos, boolean format_lss, String format_du){
         String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
         File f=null;
@@ -7137,7 +7140,7 @@ System.out.println("BB" + retorno);
     }
     
     private long find_nav(File f, String sep, String hist, Boolean superficial, float mtime, 
-            boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss, String format_du){
+        boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss, String format_du){
         long len_du=0;
         long len_du_aux=0;
         String hist_bkp=hist;
@@ -8170,6 +8173,101 @@ System.out.println("BB" + retorno);
         return new String[]{ipv4, ipv6};
     }           
 
+    private void mouse(String [] args){
+        java.awt.Robot robo = null;
+        try{
+            robo = new java.awt.Robot();
+        }catch(Exception e){
+            System.out.println("Erro, não existe sistema grafico!");
+            Util.erroFatal(22);
+        }
+        int BOTAO_ESQ = java.awt.event.InputEvent.BUTTON1_DOWN_MASK;
+        int BOTAO_DIR = java.awt.event.InputEvent.BUTTON3_DOWN_MASK;
+        
+        if ( args.length == 1 ){
+            while(true){
+                sleep_mouse(0.1F);
+                show_xy_mouse();
+            }
+        }else{
+            if ( args.length > 2 )
+                Util.erroFatal(33);
+            args = args[1].split(" ");
+            int p=0;
+            while(true){
+                verify_exit_mouse();
+                if ( p < args.length && args[p].equals("move") && p+3 <= args.length ){
+                    System.out.println(args[p] + " " + args[p+1] + " " + args[p+2]);
+                    robo.mouseMove(Integer.parseInt(args[p+1]),Integer.parseInt(args[p+2]));
+                    robo.delay(20);
+                    p+=3;
+                    continue;
+                }
+                if ( p < args.length && args[p].equals("sleep") && p+2 <= args.length ){
+                    System.out.println(args[p] + " " + args[p+1]);
+                    sleep_mouse(Float.parseFloat(args[p+1]));
+                    p+=2;
+                    continue;
+                }
+                if ( p < args.length && args[p].equals("click") ){
+                    System.out.println(args[p]);
+                    //sleep_mouse(0.01F);
+                    robo.mousePress(BOTAO_ESQ);
+                    //robo.delay(10);
+                    robo.mouseRelease(BOTAO_ESQ);
+                    //robo.delay(10);
+                    //sleep_mouse(0.01F);
+                    p++;
+                    continue;
+                }
+                if ( p < args.length && args[p].equals("clickDireito") ){
+                    System.out.println(args[p]);
+                    //sleep_mouse(0.01F);
+                    robo.mousePress(BOTAO_DIR);
+                    //robo.delay(10);
+                    robo.mouseRelease(BOTAO_DIR);
+                    //robo.delay(10);
+                    //sleep_mouse(0.01F);
+                    p++;
+                    continue;
+                }
+                if ( p == args.length ){
+                    p=0;
+                    continue;
+                }
+                Util.erroFatal(11);
+            }
+        }
+    }
+    
+    private void sleep_mouse(Float n){
+        Float remove=0.1F;
+        if ( n == 0F ){
+            verify_exit_mouse();
+            return;
+        }
+        while ( n > 0F ){
+            verify_exit_mouse();
+            if ( n < 0.1F )
+                remove=n;
+            long mili = (long)(remove*1000);
+            try {Thread.sleep(mili);} catch (InterruptedException e) { }  
+            n-=remove;
+        }        
+    }
+    
+    private void verify_exit_mouse(){
+        if ( java.awt.MouseInfo.getPointerInfo() == null )
+            System.exit(0);        
+    }
+    
+    private void show_xy_mouse(){
+        java.awt.PointerInfo p = java.awt.MouseInfo.getPointerInfo();
+        if ( p == null )
+            System.exit(0);
+        System.out.println("x: " + p.getLocation().x + ", y: " + p.getLocation().y);
+    }
+    
     private void format_show_ip(String a, String b){
         if ( b != null ){
             String s1="                                                                ".substring(0, 40-a.length());
@@ -11573,7 +11671,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -11659,6 +11756,7 @@ class XML extends Util{
 /* class by manual */                + "  [y clear]\n"
 /* class by manual */                + "  [y cls]\n"
 /* class by manual */                + "  [y ips]\n"
+/* class by manual */                + "  [y mouse]\n"
 /* class by manual */                + "  [y test]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
@@ -12029,6 +12127,7 @@ class XML extends Util{
 /* class by manual */                + "[y du]\n"
 /* class by manual */                + "    y du\n"
 /* class by manual */                + "    y du . -g\n"
+/* class by manual */                + "    ex: guia para limpeza de disco: D:\\>y du -g | y tr \".\\\\\" \"\" | y grep -v \"\\\\\"\n"
 /* class by manual */                + "[y sleep]\n"
 /* class by manual */                + "    y sleep\n"
 /* class by manual */                + "    y sleep 0.22 # 0.22 seconds\n"
@@ -12090,6 +12189,12 @@ class XML extends Util{
 /* class by manual */                + "    y ips list\n"
 /* class by manual */                + "    obs: mostra ips da maquina\n"
 /* class by manual */                + "    obs2: list -> monta uma shell de verificacao de ips para outra maquina\n"
+/* class by manual */                + "[y mouse]\n"
+/* class by manual */                + "    y mouse # mostra as coordenadas do mouse\n"
+/* class by manual */                + "    y mouse \"move 60 1030 clickDireito sleep 6 move 15 990 clickDireito sleep 6\" # away dota\n"
+/* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
+/* class by manual */                + "[y test]\n"
+/* class by manual */                + "    y test\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
@@ -12178,27 +12283,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

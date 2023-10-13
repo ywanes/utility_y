@@ -79,6 +79,7 @@ usage:
   [y clear]
   [y cls]
   [y ips]
+  [y mouse]
   [y test]
   [y [update|u]]
   [y help]
@@ -511,6 +512,12 @@ Exemplos...
     y ips list
     obs: mostra ips da maquina
     obs2: list -> monta uma shell de verificacao de ips para outra maquina
+[y mouse]
+    y mouse # mostra as coordenadas do mouse
+    y mouse "move 60 1030 clickDireito sleep 6 move 15 990 clickDireito sleep 6" # away dota
+    obs: bloquear a tela faz o programa sair imediatamente
+[y test]
+    y test
 [y help]
     y help <command>
     y help router
