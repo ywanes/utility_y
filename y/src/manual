@@ -420,7 +420,10 @@ Exemplos...
 [y httpServer]
     y httpServer
     obs: o comando acima irá criar um httpServer temporario com parametros padroes
-    y httpServer localhost pagina_toke_zzz111 "Lista de arquivos" 8888 "/dir" "" "" -log_ips d:/ProgramFiles/log_ips/log_8888.txt
+    y httpServer localhost pagina_toke_zzz111 "Lista de arquivos" 8888 "/dir" "" ""
+    y httpServer "localhost tmp a 7070 . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt"
+    obs: O windows não esta preparado para mais de 9 parametros
+    obs2: _ será substituido por "" internamente
     parametros: host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 [y playlist]
     y playlist

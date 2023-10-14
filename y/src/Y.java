@@ -1279,6 +1279,12 @@ cat buffer.log
         }
         if ( args[0].equals("httpServer"))
         {
+            if ( args.length == 2 && args[1].split(" ").length > 2 ){
+                args = (args[0] + " " + args[1]).split(" ");
+                for ( int i=0;i<args.length;i++ )
+                    if ( args[i].equals("_") )
+                        args[i]="";
+            }
             String host="localhost";
             if ( args.length > 1 )
                 host=args[1];
@@ -1315,8 +1321,10 @@ cat buffer.log
             else
                 System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
             String log=null;
-            if ( args.length > 9 && args[8].equals("-log_ips") )
+            if ( args.length > 9 && args[8].equals("-log_ips") ){
                 log=args[9];
+            }else{
+            }
             new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},false, log);
             return;
         }  
@@ -11724,7 +11732,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -12151,7 +12158,10 @@ class XML extends Util{
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
-/* class by manual */                + "    y httpServer localhost pagina_toke_zzz111 \"Lista de arquivos\" 8888 \"/dir\" \"\" \"\" -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
+/* class by manual */                + "    y httpServer localhost pagina_toke_zzz111 \"Lista de arquivos\" 8888 \"/dir\" \"\" \"\"\n"
+/* class by manual */                + "    y httpServer \"localhost tmp a 7070 . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt\"\n"
+/* class by manual */                + "    obs: O windows nao esta preparado para mais de 9 parametros\n"
+/* class by manual */                + "    obs2: _ sera substituido por \"\" internamente\n"
 /* class by manual */                + "    parametros: host(pode ser \"\"), titulo_url, titulo, port, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
 /* class by manual */                + "[y playlist]\n"
 /* class by manual */                + "    y playlist\n"
@@ -12339,6 +12349,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
