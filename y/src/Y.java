@@ -9458,6 +9458,16 @@ class Util{
         return d.toInstant().toEpochMilli();
     }
     
+    public static String get_ip_origem_by_socket(Socket credencialSocket){
+        String ip_origem=credencialSocket.getRemoteSocketAddress().toString().substring(1);
+        if ( ip_origem.contains(":") ){
+            int p=ip_origem.length()-1;
+            while(ip_origem.charAt(p--) != ':'){}
+            return ip_origem.substring(0,p+1);
+        }        
+        return ip_origem;
+    }
+    
     private static int identify_log=0; // 1 -> File, 2 -> POST    
     private static FileWriter cache_log=null;    
     public static void log_serverRouter(String log, String ip_origem){
@@ -9924,7 +9934,7 @@ class Ponte {
         while(true){
             try{
                 final Socket credencialSocket=ambiente.getCredencialSocket();
-                final String ip_origem = get_ip_origem_by_socket(credencialSocket);
+                final String ip_origem = Util.get_ip_origem_by_socket(credencialSocket);
                 if ( log != null )
                     Util.log_serverRouter(log, ip_origem);
                 new Thread(){
@@ -9954,16 +9964,6 @@ class Ponte {
             origem.destroy();
         }
         System.out.println("finalizando ponte id "+id);
-    }
-
-    private String get_ip_origem_by_socket(Socket credencialSocket){
-        String ip_origem=credencialSocket.getRemoteSocketAddress().toString().substring(1);
-        if ( ip_origem.contains(":") ){
-            int p=ip_origem.length()-1;
-            while(ip_origem.charAt(p--) != ':'){}
-            return ip_origem.substring(0,p+1);
-        }        
-        return ip_origem;
     }
 
     private class Destino {   // |   |<->|
@@ -11379,7 +11379,7 @@ class XML extends Util{
 /* class HttpServer */     }
 /* class HttpServer */     public void serve() throws Exception {
 /* class HttpServer */         ServerSocket serverSocket = null;
-/* class HttpServer */         String origem = "";
+/* class HttpServer */         String ip_origem = "";
 /* class HttpServer */         try {
 /* class HttpServer */             serverSocket = new ServerSocket(port, 1, InetAddress.getByName(host));
 /* class HttpServer */             if (host.contains(":")) System.out.println("Service opened: http://[" + host + "]:" + port + "/" + titulo_url);
@@ -11391,14 +11391,12 @@ class XML extends Util{
 /* class HttpServer */         while (true) {
 /* class HttpServer */             try {
 /* class HttpServer */                 socket = serverSocket.accept();
-/* class HttpServer */                 origem = socket.getRemoteSocketAddress().toString();
+/* class HttpServer */                 ip_origem = Util.get_ip_origem_by_socket(socket);
 /* class HttpServer */                 if ( log != null )
-/* class HttpServer */                     Util.log_serverRouter(log, origem);
-/* class HttpServer */                 if (origem.length() > 2 && origem.startsWith("/")) origem = origem.substring(1);
-/* class HttpServer */                 if (origem.indexOf(":") != -1) origem = origem.substring(0, origem.indexOf(":"));
-/* class HttpServer */                 System.out.println("Conexao de origem: " + origem + ", data:" + (new Date()));
-/* class HttpServer */                 if (ips_banidos.length() > 0 && ("," + ips_banidos + ",").contains("," + origem + ",")) {
-/* class HttpServer */                     System.out.println("Acesso recusado para o ip banido: " + origem);
+/* class HttpServer */                     Util.log_serverRouter(log, ip_origem);
+/* class HttpServer */                 System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
+/* class HttpServer */                 if (ips_banidos.length() > 0 && ("," + ips_banidos + ",").contains("," + ip_origem + ",")) {
+/* class HttpServer */                     System.out.println("Acesso recusado para o ip banido: " + ip_origem);
 /* class HttpServer */                     continue;
 /* class HttpServer */                 }
 /* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths, index_playlist);
