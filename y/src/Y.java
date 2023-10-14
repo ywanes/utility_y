@@ -1314,7 +1314,10 @@ cat buffer.log
                 ips_banidos=args[7];
             else
                 System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
-            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},false);
+            String log=null;
+            if ( args.length > 9 && args[8].equals("-log_ips") )
+                log=args[9];
+            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},false, log);
             return;
         }  
         if ( args[0].equals("playlist")){
@@ -1338,7 +1341,10 @@ cat buffer.log
             System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);     
             String ips_banidos="";
             System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
-            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},true);
+            String log=null;
+            if ( args.length > 4 && args[3].equals("-log_ips") )
+                log=args[4];
+            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},true,log);
             return;            
         }
             
@@ -1476,8 +1482,14 @@ cat buffer.log
             }
         }
         if ( args[0].equals("date")){
-            date(args);
-            return;
+            if ( args.length == 1 ){
+                System.out.println(date_(null));
+                return;
+            }
+            if ( args.length == 2 ){
+                System.out.println(date_(args[1]));
+                return;
+            }
         }
         if ( args[0].equals("uptime")){
             if ( args.length == 2 && args[1].equals("-ms") ){
@@ -6439,17 +6451,20 @@ System.out.println("BB" + retorno);
     }
     
     private void serverRouter(String[] args) {
-        if ( args.length == 5 ){
-            new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),"");
+        String log=null;
+        if ( ( args.length == 7 || args.length == 8 ) && args[args.length-2].equals("-log_ips") )
+            log=args[args.length-1];
+        if ( args.length == 5 || args.length == 7 ){
+            new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),"", log);
             return;
         }
-        if ( args.length == 6 && ( 
+        if ( (args.length == 6 || args.length == 8) && ( 
                 args[5].equals("show") 
                 || args[5].equals("showOnlySend") 
                 || args[5].equals("showOnlyReceive") 
                 || args[5].equals("showSimple") 
         ) ){
-            new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),args[5]);
+            new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),args[5], log);
             return;
         }
         comando_invalido(args);
@@ -7847,73 +7862,7 @@ System.out.println("BB" + retorno);
             }
         }
     }
-    
-    private void date(String [] args){
-        String parm="+%d/%m/%Y %H:%M:%S";
-        if ( args.length > 1 ){
-            parm=args[1];
-            for ( int i=2;i<args.length;i++ )
-                parm+=" "+args[i];
-        }
-        if(parm.startsWith("+"))
-            parm=parm.substring(1);
-        Date d = new Date();
-        String w="";
-        for(int i=0;i<parm.length();i++){
-            w+=parm.substring(i, i+1);
-            if(w.equals("%"))
-                continue;
-            if(w.equals("%d")){
-                System.out.print(new SimpleDateFormat("dd").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%m")){
-                System.out.print(new SimpleDateFormat("MM").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%Y")){
-                System.out.print(new SimpleDateFormat("yyyy").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%H")){
-                System.out.print(new SimpleDateFormat("HH").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%M")){
-                System.out.print(new SimpleDateFormat("mm").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%S")){
-                System.out.print(new SimpleDateFormat("ss").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%N")){
-                System.out.print(new SimpleDateFormat("SSS").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%Z")){
-                System.out.print(new SimpleDateFormat("X").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%s")){
-                System.out.print(epoch(d));
-                w="";
-                continue;
-            }
-            System.out.print(w);
-            w="";
-        }
-        System.out.println();
-    }
-    
+
     private void uptime(boolean ms){
         boolean show=false;
         
@@ -8444,16 +8393,6 @@ System.out.println("BB" + retorno);
         }
         lista.add(tail);
         return arrayList_to_array(lista);
-    }
-    
-    private long epoch(Date d) {
-        return Long.parseLong((epochmili(d)+"").substring(0,10));                
-    }
-    
-    private long epochmili(Date d){
-        if ( d == null )
-            d = new Date();
-        return d.toInstant().toEpochMilli();
     }
     
     private void test(){
@@ -9444,6 +9383,114 @@ class Util{
         return null;
     }
     
+    public static String date_(String parm_){
+        StringBuilder sb=new StringBuilder();
+        String parm="+%d/%m/%Y %H:%M:%S";
+        if ( parm_ != null )
+            parm=parm_;
+        if(parm.startsWith("+"))
+            parm=parm.substring(1);
+        Date d = new Date();
+        String w="";
+        for(int i=0;i<parm.length();i++){
+            w+=parm.substring(i, i+1);
+            if(w.equals("%"))
+                continue;
+            if(w.equals("%d")){
+                sb.append(new SimpleDateFormat("dd").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%m")){
+                sb.append(new SimpleDateFormat("MM").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%Y")){
+                sb.append(new SimpleDateFormat("yyyy").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%H")){
+                sb.append(new SimpleDateFormat("HH").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%M")){
+                sb.append(new SimpleDateFormat("mm").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%S")){
+                sb.append(new SimpleDateFormat("ss").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%N")){
+                sb.append(new SimpleDateFormat("SSS").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%Z")){
+                sb.append(new SimpleDateFormat("X").format(d));
+                w="";
+                continue;
+            }
+            if(w.equals("%s")){
+                sb.append(epoch(d));
+                w="";
+                continue;
+            }
+            //System.out.print(w);
+            sb.append(w);
+            w="";
+        }
+        return sb.toString();
+    }
+        
+    public static long epoch(Date d) {
+        return Long.parseLong((epochmili(d)+"").substring(0,10));                
+    }
+    
+    public static long epochmili(Date d){
+        if ( d == null )
+            d = new Date();
+        return d.toInstant().toEpochMilli();
+    }
+    
+    private static int identify_log=0; // 1 -> File, 2 -> POST    
+    private static FileWriter cache_log=null;    
+    public static void log_serverRouter(String log, String ip_origem){
+        if ( identify_log == 0 ){
+            if(log.toUpperCase().startsWith("HTTP"))
+                identify_log=2;
+            else{
+                identify_log=1;
+                try{
+                    cache_log=new FileWriter(log,true);
+                }catch(Exception e){
+                    System.out.println(e.toString());
+                    erroFatal(55);
+                }
+            }
+        }
+        if ( identify_log == 1 ){
+            try{
+                cache_log.write(date_(null));
+                cache_log.write(" ip: ");
+                cache_log.write(ip_origem);
+                cache_log.write("\n");
+                cache_log.flush();
+            }catch(Exception e){
+                System.out.println(e.toString());
+                erroFatal(56);
+            }
+        }else{
+            System.out.println("Nao implementado!");
+            erroFatal(57);
+        }
+    }
+        
     public static void erroFatal(int n) {
         System.err.println("Erro Fatal " + n + "!!!!");
         System.exit(1);
@@ -9858,7 +9905,7 @@ class Ponte {
     public static boolean displayVolta=false;
     public static boolean displaySimple=false;
 
-    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow){
+    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log){
         Ambiente ambiente=null;
         try{
             ambiente=new Ambiente(host0,port0);
@@ -9877,9 +9924,12 @@ class Ponte {
         while(true){
             try{
                 final Socket credencialSocket=ambiente.getCredencialSocket();
+                final String ip_origem = get_ip_origem_by_socket(credencialSocket);
+                if ( log != null )
+                    Util.log_serverRouter(log, ip_origem);
                 new Thread(){
                     public void run(){
-                        ponte0(credencialSocket,host1,port1);
+                        ponte0(credencialSocket,host1,port1,ip_origem);
                     }
                 }.start();   
             }catch(Exception e){
@@ -9889,15 +9939,8 @@ class Ponte {
         }
     }
 
-    private void ponte0(Socket credencialSocket, String host1, int port1) {
+    private void ponte0(Socket credencialSocket, String host1, int port1, String ip_origem) {
         String id=padLeftZeros(new Random().nextInt(100000)+"",6);
-        // formatando ip
-        String ip_origem=credencialSocket.getRemoteSocketAddress().toString().substring(1);
-        if ( ip_origem.contains(":") ){
-            int p=ip_origem.length()-1;
-            while(ip_origem.charAt(p--) != ':'){}
-            ip_origem=ip_origem.substring(0,p+1);
-        }
         System.out.println("iniciando ponte id "+id+" - ip origem "+ip_origem);
         Origem origem=null;
         try{
@@ -9911,6 +9954,16 @@ class Ponte {
             origem.destroy();
         }
         System.out.println("finalizando ponte id "+id);
+    }
+
+    private String get_ip_origem_by_socket(Socket credencialSocket){
+        String ip_origem=credencialSocket.getRemoteSocketAddress().toString().substring(1);
+        if ( ip_origem.contains(":") ){
+            int p=ip_origem.length()-1;
+            while(ip_origem.charAt(p--) != ':'){}
+            return ip_origem.substring(0,p+1);
+        }        
+        return ip_origem;
     }
 
     private class Destino {   // |   |<->|
@@ -11299,11 +11352,11 @@ class XML extends Util{
 /* class HttpServer */ // new HttpServer(...)
 /* class HttpServer */ // host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 /* class HttpServer */ class HttpServer {
-/* class HttpServer */     String host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos;
+/* class HttpServer */     String host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log;
 /* class HttpServer */     boolean index_playlist=false;
 /* class HttpServer */     int port;
 /* class HttpServer */     Socket socket = null;
-/* class HttpServer */     public HttpServer(String[] args, boolean index_playlist) {
+/* class HttpServer */     public HttpServer(String[] args, boolean index_playlist, String log) {
 /* class HttpServer */         host = args[0];
 /* class HttpServer */         if (args[0] == null || args[0].equals("localhost")) try {
 /* class HttpServer */             host = InetAddress.getLocalHost().getHostName();
@@ -11316,6 +11369,7 @@ class XML extends Util{
 /* class HttpServer */         endsWiths = args[5];
 /* class HttpServer */         ips_banidos = args[6];
 /* class HttpServer */         this.index_playlist = index_playlist;
+/* class HttpServer */         this.log = log;
 /* class HttpServer */         try {
 /* class HttpServer */             serve();
 /* class HttpServer */         } catch (Exception e) {
@@ -11338,6 +11392,8 @@ class XML extends Util{
 /* class HttpServer */             try {
 /* class HttpServer */                 socket = serverSocket.accept();
 /* class HttpServer */                 origem = socket.getRemoteSocketAddress().toString();
+/* class HttpServer */                 if ( log != null )
+/* class HttpServer */                     Util.log_serverRouter(log, origem);
 /* class HttpServer */                 if (origem.length() > 2 && origem.startsWith("/")) origem = origem.substring(1);
 /* class HttpServer */                 if (origem.indexOf(":") != -1) origem = origem.substring(0, origem.indexOf(":"));
 /* class HttpServer */                 System.out.println("Conexao de origem: " + origem + ", data:" + (new Date()));
@@ -12085,6 +12141,7 @@ class XML extends Util{
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showSimple\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 show\n"
 /* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showOnlySend\n"
@@ -12096,12 +12153,13 @@ class XML extends Util{
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
-/* class by manual */                + "    y httpServer localhost pagina_toke_zzz111 \"Lista de arquivos\" 8888 \"/dir\" \"\" \"\"\n"
+/* class by manual */                + "    y httpServer localhost pagina_toke_zzz111 \"Lista de arquivos\" 8888 \"/dir\" \"\" \"\" -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
 /* class by manual */                + "    parametros: host(pode ser \"\"), titulo_url, titulo, port, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
 /* class by manual */                + "[y playlist]\n"
 /* class by manual */                + "    y playlist\n"
 /* class by manual */                + "    y playlist 192.168.0.100\n"
 /* class by manual */                + "    y playlist 192.168.0.100 8888\n"
+/* class by manual */                + "    y playlist 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
 /* class by manual */                + "    obs: na pasta de musicas, criar o arquivo start_.bat contendo y playlist 192.168.0.100, no browser abrir http://192.168.0.100:8888/\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
@@ -12283,5 +12341,9 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
 
 
