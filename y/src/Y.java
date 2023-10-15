@@ -10934,7 +10934,6 @@ class XML extends Util{
 /* class texto_longo */         "<meta charset=\"utf-8\">\n" +
 /* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
 /* class texto_longo */         "<div id=\"master\"></div>\n" +
-/* class texto_longo */         "<a style=\"color: #777; font-size: 8px;\">&nbsp;&nbsp;click no corpo da pagina para pausar/despausar</a></br></br>\n" +
 /* class texto_longo */         "<div><style>.bordered {border: solid #177 3px;border-radius: 6px;}.bordered tr:hover {background: #999;}.bordered td, .bordered th {border-left: 2px solid #177;border-top: 2px solid #177;padding: 10px;}audio::-webkit-media-controls-panel{background-color: #777;}</style>\n" +
 /* class texto_longo */         "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;\"><tbody>\n" +
 /* class texto_longo */         faixas +
@@ -10945,12 +10944,28 @@ class XML extends Util{
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function create_playlist(){\n" +
 /* class texto_longo */         "  document.getElementById('master').innerHTML=`\n" +
-/* class texto_longo */         "    <audio id='p' controls='controls' preload='metadata'>\n" +
-/* class texto_longo */         "      <source src='' type='audio/mp3' />\n" +
+/* class texto_longo */         "    <br/>\n" +
+/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;<a style=\"display: inline-block; cursor: pointer; font-size: 40px;\" onclick=\"troca_de_faixa_anterior()\">&#9194;</a>\n" +
+/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; font-size: 40px;\" onclick=\"troca_de_faixa()\">&#9193;</a>\n" +
+/* class texto_longo */         "    <br/>\n" +
+/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id=\"tocando\" style=\"display: inline-block; color: white; font-size: 32px;\" onclick=\"A_menos()\"></a>\n" +
+/* class texto_longo */         "    <br/>\n" +
+/* class texto_longo */         "    <br/>\n" +
+/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;<input type=\"button\" value=\"FULL_SCREEN\" onclick=\"Fullscreen(false);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
+/* class texto_longo */         "    <input type=\"button\" value=\"VIDEO\" onclick=\"Fullscreen(true);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
+/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"A_mais()\">A+</a>\n" +
+/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"A_menos()\">A-</a>\n" +
+/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"W_mais()\">W+</a>\n" +
+/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"W_menos()\">W-</a>\n" +
+/* class texto_longo */         "    <br/>\n" +
+/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;<a style=\"color: #777; font-size: 8px;\">&nbsp;&nbsp;click no corpo da pagina para pausar/despausar</a>\n" +
+/* class texto_longo */         "    <br/>\n" +
+/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;<audio id=\"p\" controls=\"controls\" preload=\"metadata\">\n" +
+/* class texto_longo */         "      <source src=\"\" type=\"audio/mp3\">\n" +
 /* class texto_longo */         "      seu navegador não suporta HTML5\n" +
 /* class texto_longo */         "    </audio>\n" +
-/* class texto_longo */         "    <input type=\"button\" value=\"FULL_SCREEN\" onclick=\"Fullscreen(false);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
-/* class texto_longo */         "    <input type=\"button\" value=\"VIDEO\" onclick=\"Fullscreen(true);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
+/* class texto_longo */         "    <br/>\n" +
+/* class texto_longo */         "    <br/>\n" +
 /* class texto_longo */         "  `;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function pause(){\n" +
@@ -10966,16 +10981,15 @@ class XML extends Util{
 /* class texto_longo */         "function first(){\n" +
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
 /* class texto_longo */         "  e=t.children[0].children[0];\n" +
-/* class texto_longo */         "  var limit=500;\n" +
-/* class texto_longo */         "  e=dir(e) || first(e);\n" +
-/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
-/* class texto_longo */         "    e=dir(e) || first();\n" +
+/* class texto_longo */         "  var limit=1000;\n" +
+/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) && dir(e) != null )\n" +
+/* class texto_longo */         "    e=dir(e);\n" +
 /* class texto_longo */         "  return e;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function troca_de_faixa(){  \n" +
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
 /* class texto_longo */         "  var e=get_playing() || first();\n" +
-/* class texto_longo */         "  var limit=500;\n" +
+/* class texto_longo */         "  var limit=1000;\n" +
 /* class texto_longo */         "  e=dir(e) || first(e);\n" +
 /* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
 /* class texto_longo */         "    e=dir(e) || first();\n" +
@@ -11236,10 +11250,11 @@ class XML extends Util{
 /* class texto_longo */         "  limpa_click_faixa();\n" +
 /* class texto_longo */         "  e.style.background='#999';  \n" +
 /* class texto_longo */         "  document.getElementById('p').src=getNameHierarchy(e);\n" +
+/* class texto_longo */         "  document.getElementById('tocando').innerText=e.innerText;  \n" +
 /* class texto_longo */         "  document.getElementById('p').currentTime=getStart(e);  \n" +
 /* class texto_longo */         "  play();  \n" +
-/* class texto_longo */         "  if ( humanClick == null )  \n" +
-/* class texto_longo */         "    e.scrollIntoView(false);  \n" +
+/* class texto_longo */         "  //if ( humanClick == null )  \n" +
+/* class texto_longo */         "  //  e.scrollIntoView(false);  \n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function symbol_click(e){\n" +
 /* class texto_longo */         "  var qty=QtyChildrenByChildren(e);\n" +
