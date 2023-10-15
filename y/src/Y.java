@@ -12257,7 +12257,8 @@ class XML extends Util{
 /* class by manual */                + "    obs2: list -> monta uma shell de verificacao de ips para outra maquina\n"
 /* class by manual */                + "[y mouse]\n"
 /* class by manual */                + "    y mouse # mostra as coordenadas do mouse\n"
-/* class by manual */                + "    y mouse \"move 32 1009 clickDireito sleep 9 move 64 1043 clickDireito sleep 9\" # away dota\n"
+/* class by manual */                + "    y mouse \"move 32 1009 clickDireito sleep 9 move 64 1043 clickDireito sleep 9\" # away dota base baixa - Os Iluminados\n"
+/* class by manual */                + "    y mouse \"move 177 879 clickDireito sleep 9 move 209 910 clickDireito sleep 9\" # away dota base alta - Os Temidos\n"
 /* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
@@ -12349,11 +12350,5 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
 
 
