@@ -10935,7 +10935,7 @@ class XML extends Util{
 /* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
 /* class texto_longo */         "<div id=\"master\"></div>\n" +
 /* class texto_longo */         "<div><style>.bordered {border: solid #177 3px;border-radius: 6px;}.bordered tr:hover {background: #999;}.bordered td, .bordered th {border-left: 2px solid #177;border-top: 2px solid #177;padding: 10px;}audio::-webkit-media-controls-panel{background-color: #777;}</style>\n" +
-/* class texto_longo */         "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;\"><tbody>\n" +
+/* class texto_longo */         "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;margin-left: 20px;\"><tbody>\n" +
 /* class texto_longo */         faixas +
 /* class texto_longo */         "</tbody></table></div>\n" +
 /* class texto_longo */         "<script type=\"text/javascript\">\n" +
