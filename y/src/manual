@@ -80,6 +80,7 @@ usage:
   [y cls]
   [y ips]
   [y mouse]
+  [y kill]
   [y test]
   [y [update|u]]
   [y help]
@@ -522,6 +523,10 @@ Exemplos...
     y mouse "move 32 1009 clickDireito sleep 9 move 64 1043 clickDireito sleep 9" # away dota base baixa - Os Iluminados
     y mouse "move 177 879 clickDireito sleep 9 move 209 910 clickDireito sleep 9" # away dota base alta - Os Temidos
     obs: bloquear a tela faz o programa sair imediatamente
+[y kill]
+    y kill 3434
+    y kill 3434 3435
+    obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux
 [y test]
     y test
 [y help]

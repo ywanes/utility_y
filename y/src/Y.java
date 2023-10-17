@@ -1460,16 +1460,16 @@ cat buffer.log
             return;            
         }
         if ( args[0].equals("os")){
-            System.out.println(os(false));
+            System.out.println(Util.os(false));
             return;            
         }
         if ( args[0].equals("pss")){
-            if ( os(true).endsWith("Windows") ){
+            if ( Util.os(true).endsWith("Windows") ){
                 load_pss_windows();
                 pss_windows(false);
                 return;
             }else{
-                if ( os(true).endsWith("Linux") ){
+                if ( Util.os(true).endsWith("Linux") ){
                     load_pss_linux();
                     pss_linux(false);
                     return;
@@ -1560,6 +1560,10 @@ cat buffer.log
         }
         if ( args[0].equals("mouse") ){
             mouse(args);
+            return;
+        }
+        if ( args[0].equals("kill") && args.length >= 2 ){
+            kill(args);
             return;
         }
         if ( args[0].equals("test") ){
@@ -7586,74 +7590,7 @@ System.out.println("BB" + retorno);
             System.exit(1);
         }            
     }
-    
-    String osGetTypeTrueCache=null;
-    String osGetTypeFalseCache=null;
-    private String os(boolean getType) {
-        if ( getType && osGetTypeTrueCache != null )
-            return osGetTypeTrueCache;
-        if ( !getType && osGetTypeFalseCache != null )
-            return osGetTypeFalseCache;        
-        boolean show=false;
-        String [] commands = new String[]{
-            "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
-            "system_profiler SPSoftwareDataType",
-            "oslevel;cat /proc/version",
-            "lsb_release -a;cat /proc/version",
-            "cat /etc/os-release;cat /proc/version",
-        };
-        String [] types = new String[]{
-            "Windows",
-            "Mac",
-            "Linux",
-            "Linux",
-            "Linux",
-        };
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        for ( int i=0;i<commands.length;i++ ){
-            try {
-                String [] command_p = commands[i].split(";");
-                boolean error=false;
-                for ( int j=0;j<command_p.length;j++ ){
-                    Process proc;
-                    proc = Runtime.getRuntime().exec(command_p[j]);
-                    int len=0;
-                    byte[] b=new byte[1024];
-                    boolean ok=false;                    
-                    while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                        baos.write(b, 0, len);
-                        ok=true;
-                    }
-                    while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                        error=true;
-                    }           
-                    if ( !ok ){
-                        System.err.println("Erro fatal 99!");
-                        System.exit(1);
-                    }
-                    if ( error ) break;
-                }
-                if ( error ) continue;
-                show=true;
-                if ( getType ){
-                    osGetTypeTrueCache=types[i];
-                    return osGetTypeTrueCache;
-                }
-                break;
-            } catch (Exception ex) {
-                continue;
-            }        
-        }
-        if ( show ){
-            osGetTypeFalseCache=baos.toString();
-            return osGetTypeFalseCache;
-        }else{
-            System.err.println("Nenhum sistema foi detectado!");
-            System.exit(1);
-        }
-        return null;
-    }
-    
+
     private String getLocalDateTime_windows(){
         try{
             Process proc;
@@ -8223,6 +8160,49 @@ System.out.println("BB" + retorno);
         if ( p == null )
             System.exit(0);
         System.out.println("x: " + p.getLocation().x + ", y: " + p.getLocation().y);
+    }
+    
+    private void kill(String [] parms_){
+        try{
+            String [] parms = null;
+            if (Util.isWindows()){
+                int count = 2;
+                parms=new String[2+(parms_.length-1)*2];
+                parms[0] = "taskkill";
+                parms[1] = "/f";
+                for ( int i=1;i<parms_.length;i++ ){
+                    parms[count++]="/pid";
+                    parms[count++]=parms_[i];
+                }
+            }
+            if (Util.isLinux()){
+                int count = 2;
+                parms=new String[2+(parms_.length-1)];
+                parms[0] = "kill";
+                parms[1] = "-9";                
+                for ( int i=1;i<parms_.length;i++ )
+                    parms[count++]=parms_[i];
+            }
+            if ( parms == null ){
+                System.err.println("Comando nao implementado para esse sistema!");
+                System.exit(1);
+            }
+            Charset.forName("UTF-8");
+            Process proc = Runtime.getRuntime().exec(parms);
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            byte[] b=new byte[1024];
+            int len=0;
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);                    
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+            }               
+            System.out.println(baos.toString());
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }
     }
     
     private void format_show_ip(String a, String b){
@@ -9320,11 +9300,90 @@ class Util{
         }
     }    
 
-    private static Boolean isWindowsCache=null;
-    public static Boolean isWindows(){
-        if ( isWindowsCache == null )
-            isWindowsCache=new File("c:/").exists();
-        return isWindowsCache;
+    private static String osGetTypeTrueCache=null;
+    private static String osGetTypeFalseCache=null;
+    public static String os(boolean getType) {
+        if ( getType && osGetTypeTrueCache != null )
+            return osGetTypeTrueCache;
+        if ( !getType && osGetTypeFalseCache != null )
+            return osGetTypeFalseCache;        
+        boolean show=false;
+        String [] commands = new String[]{
+            "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
+            "system_profiler SPSoftwareDataType",
+            "oslevel;cat /proc/version",
+            "lsb_release -a;cat /proc/version",
+            "cat /etc/os-release;cat /proc/version",
+        };
+        String [] types = new String[]{
+            "Windows",
+            "Mac",
+            "Linux",
+            "Linux",
+            "Linux",
+        };
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        for ( int i=0;i<commands.length;i++ ){
+            try {
+                String [] command_p = commands[i].split(";");
+                boolean error=false;
+                for ( int j=0;j<command_p.length;j++ ){
+                    Process proc;
+                    proc = Runtime.getRuntime().exec(command_p[j]);
+                    int len=0;
+                    byte[] b=new byte[1024];
+                    boolean ok=false;                    
+                    while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                        baos.write(b, 0, len);
+                        ok=true;
+                    }
+                    while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                        error=true;
+                    }           
+                    if ( !ok ){
+                        System.err.println("Erro fatal 99!");
+                        System.exit(1);
+                    }
+                    if ( error ) break;
+                }
+                if ( error ) continue;
+                show=true;
+                if ( getType ){
+                    osGetTypeTrueCache=types[i];
+                    return osGetTypeTrueCache;
+                }
+                break;
+            } catch (Exception ex) {
+                continue;
+            }        
+        }
+        if ( show ){
+            osGetTypeFalseCache=baos.toString();
+            return osGetTypeFalseCache;
+        }else{
+            System.err.println("Nenhum sistema foi detectado!");
+            System.exit(1);
+        }
+        return null;
+    }
+        
+    public static boolean isWindows(){
+        return os(true).equals("Windows");
+    }
+    
+    public static boolean isLinux(){
+        return os(true).equals("Linux");
+    }
+    
+    public static boolean isMac(){
+        return os(true).equals("Mac");
+    }
+    
+    private static Boolean isWindowsCache_old=null;
+    public static Boolean isWindows_old(){
+        if ( isWindowsCache_old == null )
+            isWindowsCache_old=new File("c:/").exists();
+        return isWindowsCache_old;
     }
 
     public static String [] listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
@@ -11833,6 +11892,7 @@ class XML extends Util{
 /* class by manual */                + "  [y cls]\n"
 /* class by manual */                + "  [y ips]\n"
 /* class by manual */                + "  [y mouse]\n"
+/* class by manual */                + "  [y kill]\n"
 /* class by manual */                + "  [y test]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
@@ -12275,6 +12335,10 @@ class XML extends Util{
 /* class by manual */                + "    y mouse \"move 32 1009 clickDireito sleep 9 move 64 1043 clickDireito sleep 9\" # away dota base baixa - Os Iluminados\n"
 /* class by manual */                + "    y mouse \"move 177 879 clickDireito sleep 9 move 209 910 clickDireito sleep 9\" # away dota base alta - Os Temidos\n"
 /* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
+/* class by manual */                + "[y kill]\n"
+/* class by manual */                + "    y kill 3434\n"
+/* class by manual */                + "    y kill 3434 3435\n"
+/* class by manual */                + "    obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y help]\n"
@@ -12365,5 +12429,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
