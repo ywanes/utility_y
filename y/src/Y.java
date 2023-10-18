@@ -10975,12 +10975,12 @@ class XML extends Util{
 /* class texto_longo */         File [] f=new File(".").listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
 /* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){
-/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white;width: 800px;\" onclick=\"click_faixa(this,'humanClick')\">" + f[i].getName() + "</td></tr>\n";
+/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 9px;\" onclick=\"click_faixa(this,'humanClick')\">" + f[i].getName() + "</td></tr>\n";
 /* class texto_longo */                 File f2=new File(f[i].getName()+".cfg");
 /* class texto_longo */                 if ( f2.exists() && f2.isFile() ){
 /* class texto_longo */                     String [] partes=Util.lendo_arquivo(f[i].getName()+".cfg").split("\n");
 /* class texto_longo */                     for ( int j=0;j<partes.length;j++ ){
-/* class texto_longo */                         faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white;width: 800px;\" onclick=\"click_faixa(this,'humanClick')\">" + partes[j] + "</td></tr>\n";
+/* class texto_longo */                         faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px;\" onclick=\"click_faixa(this,'humanClick')\">" + partes[j] + "</td></tr>\n";
 /* class texto_longo */                     }
 /* class texto_longo */                 }
 /* class texto_longo */             }
@@ -10991,7 +10991,7 @@ class XML extends Util{
 /* class texto_longo */         "<div id=\"f11bg\" style=\"display: none\" >\n" +
 /* class texto_longo */         "  <body style=\"margin: 0px; padding: 0px;\"><video style=\"height: 100%; width: 100%;\" playsinline=\"\" autoplay=\"\" muted=\"\" loop=\"\"><source src=\"http://203.cloudns.cl:88/bg\" type=\"video/mp4\"></video></body>\n" +
 /* class texto_longo */         "</div>\n" +
-/* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" >\n" +
+/* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" sz=\"9\" wi=\"800\">\n" +
 /* class texto_longo */         "<meta charset=\"utf-8\">\n" +
 /* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
 /* class texto_longo */         "<div id=\"master\"></div>\n" +
@@ -11087,6 +11087,36 @@ class XML extends Util{
 /* class texto_longo */         "  cache_digest = a;\n" +
 /* class texto_longo */         "  return cache_digest;\n" +
 /* class texto_longo */         "}\n" +
+/* class texto_longo */         "function A_update(sz){\n" +
+/* class texto_longo */         "  let a = document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  for ( let i=0;i<a.children.length;i++ )\n" +
+/* class texto_longo */         "    a.children[i].children[0].style.fontSize = sz + \"px\";\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function A_mais(){\n" +
+/* class texto_longo */         "  let sz = 3 + parseInt(document.getElementById(\"f11\").getAttribute(\"sz\"));\n" +
+/* class texto_longo */         "  document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
+/* class texto_longo */         "  A_update(sz);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function A_menos(){\n" +
+/* class texto_longo */         "  let sz = -3 + parseInt(document.getElementById(\"f11\").getAttribute(\"sz\"));\n" +
+/* class texto_longo */         "  document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
+/* class texto_longo */         "  A_update(sz);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function W_update(wi){\n" +
+/* class texto_longo */         "  let a = document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  for ( let i=0;i<a.children.length;i++ )\n" +
+/* class texto_longo */         "    a.children[i].children[0].style.width = wi + \"px\";\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function W_mais(){\n" +
+/* class texto_longo */         "  let wi = 50 + parseInt(document.getElementById(\"f11\").getAttribute(\"wi\"));\n" +
+/* class texto_longo */         "  document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
+/* class texto_longo */         "  W_update(wi);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function W_menos(){\n" +
+/* class texto_longo */         "  let wi = -50 + parseInt(document.getElementById(\"f11\").getAttribute(\"wi\"));\n" +
+/* class texto_longo */         "  document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
+/* class texto_longo */         "  W_update(wi);\n" +
+/* class texto_longo */         "}\n" +
 /* class texto_longo */         "function save_station(){\n" +
 /* class texto_longo */         "  if ( get_playing() != null && getDigest() != null ){\n" +
 /* class texto_longo */         "    let digest = getDigest();\n" +
@@ -11100,20 +11130,28 @@ class XML extends Util{
 /* class texto_longo */         "      if ( b == '+' || b == '-' )\n" +
 /* class texto_longo */         "        flags+=b;\n" +
 /* class texto_longo */         "    }\n" +
-/* class texto_longo */         "    localStorage.setItem('playlist-'+digest,JSON.stringify({'playing': playing, 'currentTime': currentTime, 'volume': volume, 'flags': flags}));\n" +
+/* class texto_longo */         "    let sz = document.getElementById(\"f11\").getAttribute(\"sz\");\n" +
+/* class texto_longo */         "    let wi = document.getElementById(\"f11\").getAttribute(\"wi\");\n" +
+/* class texto_longo */         "    localStorage.setItem('playlist-v-20231018-'+digest,JSON.stringify({'playing': playing, 'currentTime': currentTime, 'volume': volume, 'flags': flags, 'sz': sz, 'wi': wi}));\n" +
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function load_station(){\n" +
 /* class texto_longo */         "  if ( getDigest() != null ){\n" +
-/* class texto_longo */         "    let a = localStorage.getItem('playlist-'+getDigest());\n" +
+/* class texto_longo */         "    let a = localStorage.getItem('playlist-v-20231018-'+getDigest());\n" +
 /* class texto_longo */         "    if ( a != null ){\n" +
 /* class texto_longo */         "      let b = JSON.parse(a);\n" +
 /* class texto_longo */         "      let playing = b['playing'];\n" +
 /* class texto_longo */         "      let currentTime = b['currentTime'];\n" +
 /* class texto_longo */         "      let volume = b['volume'];\n" +
 /* class texto_longo */         "      let flags= b['flags'];\n" +
+/* class texto_longo */         "      let sz= b['sz'];\n" +
+/* class texto_longo */         "      let wi= b['wi'];\n" +
+/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
+/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
 /* class texto_longo */         "      a = document.getElementById('tablebase').children[0];\n" +
 /* class texto_longo */         "      for ( let i=0;i<a.children.length;i++ ){\n" +
+/* class texto_longo */         "        a.children[i].children[0].style.fontSize = sz + \"px\";\n" + 
+/* class texto_longo */         "        a.children[i].children[0].style.width = wi + \"px\";\n" + 
 /* class texto_longo */         "        b = a.children[i].children[0].innerText.substr(0,1);\n" +
 /* class texto_longo */         "        if ( ( b == '+' || b == '-' ) ){\n" +
 /* class texto_longo */         "          let c = flags.substr(0,1);\n" +
