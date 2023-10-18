@@ -8084,8 +8084,10 @@ System.out.println("BB" + retorno);
                 show_xy_mouse();
             }
         }else{
-            if ( args.length > 2 )
-                Util.erroFatal(33);
+            if ( args.length > 2 ){
+                System.err.println("Excesso de parametros, use um conjunto de parametros usando aspas");
+                System.exit(1);
+            }
             args = args[1].split(" ");
             int p=0;
             while(true){
