@@ -34,6 +34,9 @@ pushd %userprofile%
 pushd %*
 )
 
+lss.bat(c:/windows)
+y lss
+
 arquivo config.ref
 Windows Registry Editor Version 5.00
 
@@ -6974,7 +6977,7 @@ System.out.println("BB" + retorno);
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 0 && args[0].equals("-receive")){
+            if ( args.length > 0 && ( args[0].equals("-receive") || args[0].equals("-r") ) ){
                 receive=true;
                 args=sliceParm(1, args);
                 continue;
