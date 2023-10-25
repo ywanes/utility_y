@@ -828,15 +828,17 @@ cat buffer.log
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
             Object [] objs = get_parms_curl_header_method_verbose_raw_host(args2);
-            String header=(String)objs[0];
-            String method=(String)objs[1];
-            boolean verbose=(Boolean)objs[2];
-            boolean raw=(Boolean)objs[3];
-            String host=(String)objs[4];
+            if ( objs != null ){
+                String header=(String)objs[0];
+                String method=(String)objs[1];
+                boolean verbose=(Boolean)objs[2];
+                boolean raw=(Boolean)objs[3];
+                String host=(String)objs[4];
 
-            if ( host != null ){
-                curl(System.out, header, method, verbose, raw, host);
-                return;
+                if ( host != null ){
+                    curl(System.out, header, method, verbose, raw, host);
+                    return;
+                }
             }
         }
         if ( args[0].equals("curlJson") ){
@@ -844,48 +846,52 @@ cat buffer.log
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
             Object [] objsCurl = get_parms_curl_header_method_verbose_raw_host(args2);
-            String header=(String)objsCurl[0];
-            String method=(String)objsCurl[1];
-            boolean verbose=(Boolean)objsCurl[2];
-            boolean raw=(Boolean)objsCurl[3];
-            String host=(String)objsCurl[4];            
-            
-            Object [] objs = get_parms_json_listOn_noHeader_parm(args2);
-            boolean listOn=(Boolean)objs[0];
-            boolean noHeader=(Boolean)objs[1];
-            String parm=(String)objs[2];
+            if ( objsCurl != null ){
+                String header=(String)objsCurl[0];
+                String method=(String)objsCurl[1];
+                boolean verbose=(Boolean)objsCurl[2];
+                boolean raw=(Boolean)objsCurl[3];
+                String host=(String)objsCurl[4];            
 
-           if ( host != null ){
-                boolean mostraTabela=parm.equals("mostraTabela");
-                boolean mostraEstrutura=parm.equals("mostraEstrutura");            
-                boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
-                String command=parm.contains("for elem in data")?parm:"";
-                if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaDebug ){
-                    try{
-                        final PipedInputStream pipedInputStream=new PipedInputStream();
-                        final PipedOutputStream pipedOutputStream=new PipedOutputStream();
-                        pipedInputStream.connect(pipedOutputStream);
-                        Thread pipeWriter=new Thread(new Runnable() {
-                            public void run() {
-                                curl(pipedOutputStream, header, method, verbose, raw, host);
-                            }
-                        });
-                        Thread pipeReader=new Thread(new Runnable() {
-                            public void run() {
-                                new JSON().go(pipedInputStream, command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn,noHeader);
-                            }
-                        });
-                        pipeWriter.start();
-                        pipeReader.start();
-                        pipeWriter.join();
-                        pipeReader.join();
-                        pipedOutputStream.flush();
-                        pipedOutputStream.close();            
-                        pipedInputStream.close();        
-                    }catch(Exception e){
-                        System.err.println("Erro, "+e.toString());
-                    }            
-                    return;
+                Object [] objs = get_parms_json_listOn_noHeader_parm(args2);
+                if ( objs != null ){
+                    boolean listOn=(Boolean)objs[0];
+                    boolean noHeader=(Boolean)objs[1];
+                    String parm=(String)objs[2];
+
+                    if ( host != null ){
+                        boolean mostraTabela=parm.equals("mostraTabela");
+                        boolean mostraEstrutura=parm.equals("mostraEstrutura");            
+                        boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
+                        String command=parm.contains("for elem in data")?parm:"";
+                        if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaDebug ){
+                            try{
+                                final PipedInputStream pipedInputStream=new PipedInputStream();
+                                final PipedOutputStream pipedOutputStream=new PipedOutputStream();
+                                pipedInputStream.connect(pipedOutputStream);
+                                Thread pipeWriter=new Thread(new Runnable() {
+                                    public void run() {
+                                        curl(pipedOutputStream, header, method, verbose, raw, host);
+                                    }
+                                });
+                                Thread pipeReader=new Thread(new Runnable() {
+                                    public void run() {
+                                        new JSON().go(pipedInputStream, command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn,noHeader);
+                                    }
+                                });
+                                pipeWriter.start();
+                                pipeReader.start();
+                                pipeWriter.join();
+                                pipeReader.join();
+                                pipedOutputStream.flush();
+                                pipedOutputStream.close();            
+                                pipedInputStream.close();        
+                            }catch(Exception e){
+                                System.err.println("Erro, "+e.toString());
+                            }            
+                            return;
+                        }
+                    }
                 }
             }
         }        
@@ -6874,7 +6880,7 @@ System.out.println("BB" + retorno);
                 continue;
             }
             if ( args.length > 1 && args[0].equals("-X") ){                    
-                if ( !args[0].toUpperCase().equals("POST") && !args[0].toUpperCase().equals("GET") )
+                if ( !args[1].toUpperCase().equals("POST") && !args[1].toUpperCase().equals("GET") )
                     return null; // parm not ok
                 method=args[1].toUpperCase();
                 args=sliceParm(2, args);
