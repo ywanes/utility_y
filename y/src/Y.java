@@ -11047,8 +11047,15 @@ class XML extends Util{
 /* class texto_longo */         "    e=dir(e);\n" +
 /* class texto_longo */         "  return e;\n" +
 /* class texto_longo */         "}\n" +
-/* class texto_longo */         "function troca_de_faixa(){  \n" +
+/* class texto_longo */         "function tail(){\n" +
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
+/* class texto_longo */         "  e=t.children[t.children.length-1].children[0];\n" +
+/* class texto_longo */         "  var limit=1000;\n" +
+/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) && esq(e) != null )\n" +
+/* class texto_longo */         "    e=esq(e);\n" +
+/* class texto_longo */         "  return e;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function troca_de_faixa(){\n" +
 /* class texto_longo */         "  var e=get_playing() || first();\n" +
 /* class texto_longo */         "  var limit=1000;\n" +
 /* class texto_longo */         "  e=dir(e) || first(e);\n" +
@@ -11057,6 +11064,18 @@ class XML extends Util{
 /* class texto_longo */         "  if ( limit <= 0 ){\n" +
 /* class texto_longo */         "	console.log('Erro Fatal Loop.');\n" +
 /* class texto_longo */         "	return;\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  click_faixa(e);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "function troca_de_faixa_anterior(){\n" +
+/* class texto_longo */         "  var e=get_playing() || tail();\n" +
+/* class texto_longo */         "  var limit=1000;\n" +
+/* class texto_longo */         "  e=esq(e) || tail(e);\n" +
+/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
+/* class texto_longo */         "    e=esq(e) || tail();\n" +
+/* class texto_longo */         "  if ( limit <= 0 ){\n" +
+/* class texto_longo */         "    console.log('Erro Fatal Loop.');\n" +
+/* class texto_longo */         "    return;\n" +
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "  click_faixa(e);\n" +
 /* class texto_longo */         "}\n" +
