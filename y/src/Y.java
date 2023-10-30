@@ -1575,6 +1575,10 @@ cat buffer.log
             kill(args);
             return;
         }
+        if ( args[0].equals("win") ){
+            win();
+            return;
+        }
         if ( args[0].equals("test") ){
             test();
             return;
@@ -8394,6 +8398,52 @@ System.out.println("BB" + retorno);
         return arrayList_to_array(lista);
     }
     
+    private void win(){
+        try{
+            Process proc;
+            proc = Runtime.getRuntime().exec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus");
+            int len=0;
+            byte[] b=new byte[1024];
+            boolean ok=false;                    
+            boolean error=false;                    
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+                ok=true;
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                error=true;
+            }    
+            if ( error ){
+                System.err.println("Erro fatal 999!");
+                System.exit(1);
+            }
+            String [] lines=baos.toString().split("\r\n");
+            for ( int i=0;i<lines.length;i++ ){
+                if ( lines[i].length() < 70 )
+                    continue;
+                if ( lines[i].substring(70, 71).equals(" ") )
+                    continue;
+                if ( lines[i].substring(55,56).equals("0") )
+                    System.out.println(lines[i].substring(0,55) + " - Unlicensed");
+                if ( lines[i].substring(55,56).equals("1") )
+                    System.out.println(lines[i].substring(0,55) + " - Licensed");
+                if ( lines[i].substring(55,56).equals("2") )
+                    System.out.println(lines[i].substring(0,55) + " - OOBGrace");
+                if ( lines[i].substring(55,56).equals("3") )
+                    System.out.println(lines[i].substring(0,55) + " - OOTGrace");
+                if ( lines[i].substring(55,56).equals("4") )
+                    System.out.println(lines[i].substring(0,55) + " - NonGenuineGrace");
+                if ( lines[i].substring(55,56).equals("5") )
+                    System.out.println(lines[i].substring(0,55) + " - Notification");
+                if ( lines[i].substring(55,56).equals("6") )
+                    System.out.println(lines[i].substring(0,55) + " - ExtendedGrace");
+            }
+        }catch(Exception e){
+            System.err.println("Erro fatal " + e.toString());
+        }   
+    }
+    
     private void test(){
         System.out.println("test nao implementado!");
     }
@@ -11961,6 +12011,7 @@ class XML extends Util{
 /* class by manual */                + "  [y ips]\n"
 /* class by manual */                + "  [y mouse]\n"
 /* class by manual */                + "  [y kill]\n"
+/* class by manual */                + "  [y win]\n"
 /* class by manual */                + "  [y test]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
@@ -12407,6 +12458,10 @@ class XML extends Util{
 /* class by manual */                + "    y kill 3434\n"
 /* class by manual */                + "    y kill 3434 3435\n"
 /* class by manual */                + "    obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux\n"
+/* class by manual */                + "[y win]\n"
+/* class by manual */                + "    y win\n"
+/* class by manual */                + "    obs: mostra se o windows e office estao ativado\n"
+/* class by manual */                + "    obs2: outra forma de verificar pelo cmd -> slmgr -dli\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y help]\n"
@@ -12497,6 +12552,10 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
 
 
 

@@ -81,6 +81,7 @@ usage:
   [y ips]
   [y mouse]
   [y kill]
+  [y win]
   [y test]
   [y [update|u]]
   [y help]
@@ -527,6 +528,10 @@ Exemplos...
     y kill 3434
     y kill 3434 3435
     obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux
+[y win]
+    y win
+    obs: mostra se o windows e office estão ativado
+    obs2: outra forma de verificar pelo cmd -> slmgr -dli
 [y test]
     y test
 [y help]
