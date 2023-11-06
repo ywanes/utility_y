@@ -82,6 +82,7 @@ usage:
   [y mouse]
   [y kill]
   [y win]
+  [y speed]
   [y test]
   [y [update|u]]
   [y help]
@@ -521,8 +522,8 @@ Exemplos...
     obs2: list -> monta uma shell de verificacao de ips para outra maquina
 [y mouse]
     y mouse # mostra as coordenadas do mouse
-    y mouse "move 32 1009 clickDireito sleep 9 move 64 1043 clickDireito sleep 9" # away dota base baixa - Os Iluminados
-    y mouse "move 177 879 clickDireito sleep 9 move 209 910 clickDireito sleep 9" # away dota base alta - Os Temidos
+    y mouse "m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base baixa - Os Iluminados
+    y mouse "m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base alta - Os Temidos
     obs: bloquear a tela faz o programa sair imediatamente
 [y kill]
     y kill 3434
@@ -532,6 +533,8 @@ Exemplos...
     y win
     obs: mostra se o windows e office estão ativado
     obs2: outra forma de verificar pelo cmd -> slmgr -dli
+[y speed]
+    y speed
 [y test]
     y test
 [y help]

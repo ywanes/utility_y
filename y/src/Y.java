@@ -1579,6 +1579,10 @@ cat buffer.log
             win();
             return;
         }
+        if ( args[0].equals("speed") ){
+            if ( speed(args) )
+                return;
+        }
         if ( args[0].equals("test") ){
             test();
             return;
@@ -7025,7 +7029,68 @@ System.out.println("BB" + retorno);
         }
         return new Object []{ip, port, server, send, pass, paths};
     }
-    
+
+    private Object [] get_parm_ip_port_server_send(String [] args){
+        String ip=null;
+        int port=-1;
+        Boolean server=false;
+        Boolean client=false;
+        Boolean send=false;
+        Boolean receive=false;
+        
+        args=sliceParm(1, args);
+        
+        while(true){
+            if ( args.length > 1 && args[0].equals("-ip")){
+                args=sliceParm(1, args);
+                ip=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-port")){
+                args=sliceParm(1, args);
+                port=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-server")){
+                server=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-client")){
+                client=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-send")){
+                send=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && ( args[0].equals("-receive") || args[0].equals("-r") ) ){
+                receive=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            break;
+        }
+        
+        if ( server && client )
+            return null;
+        if ( send && receive )
+            return null;        
+        if ( !server && !client )
+            server=true;
+        if ( !send && !receive ){
+            if ( server )
+                send=true;
+            else
+                receive=true;
+        }
+        return new Object []{ip, port, server, send};
+    }
+        
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
         String path=null;
         boolean acceptSymbolicLink=false;
@@ -8105,20 +8170,20 @@ System.out.println("BB" + retorno);
             int p=0;
             while(true){
                 verify_exit_mouse();
-                if ( p < args.length && args[p].equals("move") && p+3 <= args.length ){
+                if ( p < args.length && ( args[p].equals("move") || args[p].equals("m") ) && p+3 <= args.length ){
                     System.out.println(args[p] + " " + args[p+1] + " " + args[p+2]);
                     robo.mouseMove(Integer.parseInt(args[p+1]),Integer.parseInt(args[p+2]));
                     robo.delay(20);
                     p+=3;
                     continue;
                 }
-                if ( p < args.length && args[p].equals("sleep") && p+2 <= args.length ){
+                if ( p < args.length && ( args[p].equals("sleep") || args[p].equals("s") ) && p+2 <= args.length ){
                     System.out.println(args[p] + " " + args[p+1]);
                     sleep_mouse(Float.parseFloat(args[p+1]));
                     p+=2;
                     continue;
                 }
-                if ( p < args.length && args[p].equals("click") ){
+                if ( p < args.length && ( args[p].equals("click") || args[p].equals("c") ) ){
                     System.out.println(args[p]);
                     //sleep_mouse(0.01F);
                     robo.mousePress(BOTAO_ESQ);
@@ -8129,7 +8194,7 @@ System.out.println("BB" + retorno);
                     p++;
                     continue;
                 }
-                if ( p < args.length && args[p].equals("clickDireito") ){
+                if ( p < args.length && ( args[p].equals("clickDireito") || args[p].equals("cD") ) ){
                     System.out.println(args[p]);
                     //sleep_mouse(0.01F);
                     robo.mousePress(BOTAO_DIR);
@@ -8442,6 +8507,102 @@ System.out.println("BB" + retorno);
         }catch(Exception e){
             System.err.println("Erro fatal " + e.toString());
         }   
+    }
+    
+    private boolean speed(String [] args){
+        Object [] objs=get_parm_ip_port_server_send(args);
+        if ( objs == null )
+            return false;
+        String ip=(String)objs[0];
+        int port=(Integer)objs[1];
+        boolean server=(Boolean)objs[2];
+        boolean send=(Boolean)objs[3];
+        String print_after=null;
+        
+        if ( server ){
+            if ( ip == null ){
+                String [] ipv4_ipv6=show_ips(true, 15, false, false); // "10.0.2.15";
+                if ( ip == null )
+                    ip = ipv4_ipv6[1];
+                if ( ip == null )
+                    ip = ipv4_ipv6[0];
+            }
+        }
+        if ( ip == null ){
+            System.err.println("Nenhum ip foi encontrado!");
+            System.exit(1);
+        }                
+        if ( port == -1 )
+            port = 222;
+        if ( server )
+            if ( !send )
+                print_after="# cliente command:\n# y speed -client -ip " + ip + " -port " + port + " -send";
+            else
+                print_after="# cliente command:\n# y speed -client -ip " + ip + " -port " + port;
+        try{        
+            try{
+                int len_buffer=Util.BUFFER_SIZE*1024;
+                byte [] buffer=new byte[len_buffer];
+                int len=0;
+                if ( server ){
+                    Socket s = null;
+                    ServerSocket ss=null;
+                    try{
+                        ss=new ServerSocket(port, 1,InetAddress.getByName(ip));
+                    }catch(Exception ee){
+                        if ( ee.toString().equals("java.net.BindException: Address already in use (Bind failed)") ){
+                            String aux="";
+                            if ( !send )
+                                aux=" -receive";
+                            System.err.println("Porta " + port + " em uso! - Tente: y speed -port " + (port+1)+aux);
+                            System.exit(1);                        
+                        }
+                        throw ee;
+                    }
+                    System.out.println(print_after);
+                    s = ss.accept();
+                    OutputStream os = s.getOutputStream();
+                    InputStream is = s.getInputStream();
+                    if ( send ){
+                        while( true ){
+                            os.write(buffer, 0, len_buffer);
+                            Util.print_cursor_speed(len_buffer);
+                        }
+                    }else{
+                        while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
+                            Util.print_cursor_speed(len);
+                        }
+                    }
+                    s.close();
+                    ss.close();
+                }else{
+                    Socket s = new Socket(InetAddress.getByName(ip), port);                        
+                    OutputStream os = s.getOutputStream();
+                    InputStream is = s.getInputStream();
+                    if ( send ){
+                        while( true ){
+                            os.write(buffer, 0, len_buffer);
+                            Util.print_cursor_speed(len_buffer);
+                        }
+                    }else{
+                        while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
+                            Util.print_cursor_speed(len);
+                        }
+                    }
+                    s.close();
+                }
+            }catch(Exception e){
+                if ( copiaByStream_count_print_on == 0 ){
+                    System.err.println("Erro socket_1_file: "+ e.toString());
+                    System.exit(1);
+                }
+            }   
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+            System.exit(1);
+        } 
+        
+        return true;
     }
     
     private void test(){
@@ -9151,6 +9312,71 @@ class Util{
         }else{
             System.out.print("\r"+a+"                                             \r");
         }
+    }
+    private static long print_cursor_speed_timer_mili=-1;
+    private static long print_cursor_speed_count_n=0;
+    public static void print_cursor_speed(int n){
+        print_cursor_speed_count_n+=n;
+        if ( print_cursor_speed_timer_mili == -1 ){
+            print_cursor_speed_timer_mili=System.currentTimeMillis();            
+            return;
+        }else{
+            long tmp=System.currentTimeMillis();
+            if ( tmp > print_cursor_speed_timer_mili + 1000 ){
+                print_cursor_speed_timer_mili=tmp;
+                System.out.print("\r"+bits_to_text(print_cursor_speed_count_n)+"/s                                             \r");
+                print_cursor_speed_count_n=0;
+            }else
+                return;
+        }                
+    }
+    public static String bits_to_text(long bytes){
+        long giga=0;
+        long mega=0;
+        long kilo=0;
+        int tmp=0;
+        tmp=(int)(bytes/(1024*1024*1024));
+        if ( tmp > 0 ){
+            bytes-=tmp*1024*1024*1024;
+            giga+=tmp;
+        }
+        tmp=(int)(bytes/(1024*1024));
+        if ( tmp > 0 ){
+            bytes-=tmp*1024*1024;
+            mega+=tmp;
+        }
+        tmp=(int)(bytes/1024);
+        if ( tmp > 0 ){
+            bytes-=tmp*1024;
+            kilo+=tmp;
+        }
+        if ( giga == 0 && mega == 0 && kilo == 0 )
+            return bytes+" b";
+        String tmp1="";
+        String tmp2="";
+        String tmp3="";
+        if ( giga > 0 ){
+            tmp1=giga+"";
+            tmp2=mega+"";
+            tmp3=" Gb";
+        }else{
+            if ( mega > 0 ){
+                tmp1=mega+"";
+                tmp2=kilo+"";
+                tmp3=" Mb";
+            }else{
+                tmp1=kilo+"";
+                tmp2=bytes+"";
+                tmp3=" Kb";
+            }
+        }
+        if ( tmp2.length() == 1 )
+            tmp2="00"+tmp2;
+        else{
+            if ( tmp2.length() == 2 )
+                tmp2="0"+tmp2;
+        }
+        return tmp1+"."+tmp2.substring(0,2)+tmp3;
     }
     static void testOn() {
         try{
@@ -12012,6 +12238,7 @@ class XML extends Util{
 /* class by manual */                + "  [y mouse]\n"
 /* class by manual */                + "  [y kill]\n"
 /* class by manual */                + "  [y win]\n"
+/* class by manual */                + "  [y speed]\n"
 /* class by manual */                + "  [y test]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
@@ -12451,8 +12678,8 @@ class XML extends Util{
 /* class by manual */                + "    obs2: list -> monta uma shell de verificacao de ips para outra maquina\n"
 /* class by manual */                + "[y mouse]\n"
 /* class by manual */                + "    y mouse # mostra as coordenadas do mouse\n"
-/* class by manual */                + "    y mouse \"move 32 1009 clickDireito sleep 9 move 64 1043 clickDireito sleep 9\" # away dota base baixa - Os Iluminados\n"
-/* class by manual */                + "    y mouse \"move 177 879 clickDireito sleep 9 move 209 910 clickDireito sleep 9\" # away dota base alta - Os Temidos\n"
+/* class by manual */                + "    y mouse \"m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base baixa - Os Iluminados\n"
+/* class by manual */                + "    y mouse \"m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base alta - Os Temidos\n"
 /* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
 /* class by manual */                + "[y kill]\n"
 /* class by manual */                + "    y kill 3434\n"
@@ -12462,6 +12689,8 @@ class XML extends Util{
 /* class by manual */                + "    y win\n"
 /* class by manual */                + "    obs: mostra se o windows e office estao ativado\n"
 /* class by manual */                + "    obs2: outra forma de verificar pelo cmd -> slmgr -dli\n"
+/* class by manual */                + "[y speed]\n"
+/* class by manual */                + "    y speed\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y help]\n"
@@ -12552,7 +12781,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
 
 
