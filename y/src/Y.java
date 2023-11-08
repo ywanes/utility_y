@@ -861,7 +861,6 @@ cat buffer.log
                     boolean listOn=(Boolean)objs[0];
                     boolean noHeader=(Boolean)objs[1];
                     String parm=(String)objs[2];
-
                     if ( host != null ){
                         boolean mostraTabela=parm.equals("mostraTabela");
                         boolean mostraEstrutura=parm.equals("mostraEstrutura");            
@@ -6934,7 +6933,7 @@ System.out.println("BB" + retorno);
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 0 && parm.equals("") ){
+            if ( args.length > 0 ){ // pega o ultimo parametro sem problemas
                 parm=args[0];
                 args=sliceParm(1, args);
                 continue;                
