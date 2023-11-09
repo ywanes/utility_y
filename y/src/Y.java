@@ -9210,7 +9210,7 @@ class grammarsWhere {
         }
         if(literal_on){
             if(tail.equals("'")){
-                addNode(s.trim(), "valor_txt");
+                addNode(s, "valor_txt");
                 s="";
             }else
                 erroFatal("error, expected: '");
