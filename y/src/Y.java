@@ -9077,6 +9077,8 @@ class grammarsWhere {
             else
                 if(nodes.get(i).is_this.equals(""))
                     nodes.get(i).is_this=nodes.get(i).value;
+            if ( nodes.get(i).value == null )
+                nodes.get(i).value = "";
         }
     }
     public static void erroFatal(String n) {
@@ -9102,7 +9104,7 @@ class grammarsWhere {
         System.out.println("mostrando fim");
     }
     public static void addNode(String s, String is_this){
-        if ( s.equals("") )
+        if ( s.equals("") && !is_this.equals("valor_txt") )
             return;
         nodes.add(new Node(s, is_this));
     }
@@ -9154,19 +9156,7 @@ class grammarsWhere {
                 continue;
             if(literal_on){
                 if (tail.equals("'")){
-                    if(t.equals("'")){
-                        s+="''";
-                        tail="";
-                        continue;
-                    }
-                    if(t.equals(" ")){
-                        addNode(s.trim(),"valor_txt");
-                        literal_on=false;
-                        s="";
-                        tail="";
-                        continue;
-                    }
-                    addNode(s.trim(), "valor_txt");
+                    addNode(s, "valor_txt");
                     literal_on=false;
                     s="";
                     tail=t;
@@ -9177,6 +9167,12 @@ class grammarsWhere {
                 continue;
             }
             if(!literal_on && tail.equals("'")){
+                if ( t.equals("'") ){
+                    addNode("","valor_txt");
+                    s="";
+                    tail="";
+                    continue;                    
+                }
                 literal_on=true;
                 tail=t;
                 continue;
