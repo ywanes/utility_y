@@ -11268,8 +11268,9 @@ class XML extends Util{
 /* class texto_longo */         return "<html>\n" +
 /* class texto_longo */         "<head>\n" +
 /* class texto_longo */         "<body id=\"cursor\" onload=\"preparacao();\">\n" +
+/* class texto_longo */         "<style>canvas {position: relative;top: 0%;left: 50%;margin-left: -50vmin;width: 100vmin;height: 100vmin;}</style>\n" +
 /* class texto_longo */         "<div id=\"f11bg\" style=\"display: none\" >\n" +
-/* class texto_longo */         "  <body style=\"margin: 0px; padding: 0px;\"><video style=\"height: 100%; width: 100%;\" playsinline=\"\" autoplay=\"\" muted=\"\" loop=\"\"><source src=\"http://203.cloudns.cl:3000/bg\" type=\"video/mp4\"></video></body>\n" +
+/* class texto_longo */         "  <canvas></canvas>\n" +
 /* class texto_longo */         "</div>\n" +
 /* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" sz=\"9\" wi=\"800\">\n" +
 /* class texto_longo */         "<meta charset=\"utf-8\">\n" +
@@ -11506,7 +11507,7 @@ class XML extends Util{
 /* class texto_longo */         "    troca_de_faixa();\n" +
 /* class texto_longo */         "  };\n" +
 /* class texto_longo */         "  document.addEventListener('click', function(e) {  \n" +
-/* class texto_longo */         "      if ( e.target.tagName == 'BODY' || e.target.tagName == 'DIV' || e.target.tagName == 'VIDEO' ){\n" +
+/* class texto_longo */         "      if ( e.target.tagName == 'CANVAS' || e.target.tagName == 'BODY' || e.target.tagName == 'DIV' || e.target.tagName == 'VIDEO' ){\n" +
 /* class texto_longo */         "         if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
 /* class texto_longo */         "           DisableFullscreen();\n" +
 /* class texto_longo */         "         }else{\n" +
@@ -11763,6 +11764,14 @@ class XML extends Util{
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "setInterval(interval_100, 100);\n" +
 /* class texto_longo */         "setInterval(interval_1000, 1000);\n" +
+/* class texto_longo */         "function initbg(){\n" + 
+/* class texto_longo */         "  const MAX = 50;var canvas, ctx;var count = 0;var points = [];function rus() {ctx.globalCompositeOperation = \"source-over\";ctx.fillStyle = \"rgba(0,0,0,0.03)\";ctx.fillRect(0, 0, canvas.width, canvas.height);ctx.globalCompositeOperation = \"lighter\";var tim = count / 5;for (var e = 0; e < 3; e++) {tim *= 1.7;var s = 1 - e / 3;a = tim / 59;var yp = Math.cos(a);\n" + 
+/* class texto_longo */         "  var yp2 = Math.sin(a);a = tim / 23;var xp = Math.cos(a);var xp2 = Math.sin(a);var p2 = [];for (var a = 0; a < points.length; a++) {var x = points[a][0];var y = points[a][1];var z = points[a][2];var y1 = y * yp + z * yp2;var z1 = y * yp2 - z * yp;var x1 = x * xp + z1 * xp2;z = x * xp2 - z1 * xp;z1 = Math.pow(2, z * s);x = x1 * z1;y = y1 * z1;\n" + 
+/* class texto_longo */         "  p2.push([x, y, z]);}s *= 120;for (var d = 0; d < 3; d++) {for (var a = 0; a < MAX; a++) {const b = p2[d * MAX + a];const c = p2[((a + 1) % MAX) + d * MAX];ctx.beginPath();ctx.strokeStyle = \"hsla(\" + (((a / MAX) * 360) | 0) + \",70%,60%,0.15)\";ctx.lineWidth = Math.pow(6, b[2]);ctx.lineTo(b[0] * s + 200, b[1] * s + 200);\n" + 
+/* class texto_longo */         "  ctx.lineTo(c[0] * s + 200, c[1] * s + 200);ctx.stroke();}}}count++;requestAnimationFrame(rus);}canvas = document.getElementsByTagName(\"canvas\")[0];ctx = canvas.getContext(\"2d\");canvas.width = canvas.height = 400;ctx.fillRect(0, 0, 400, 400);var r = 0;for (var a = 0; a < MAX; a++) {points.push([Math.cos(r), Math.sin(r), 0]);\n" + 
+/* class texto_longo */         "  r += (Math.PI * 2) / MAX;}for (var a = 0; a < MAX; a++) {points.push([0, points[a][0], points[a][1]]);}for (var a = 0; a < MAX; a++) {points.push([points[a][1], 0, points[a][0]]);}rus();\n" + 
+/* class texto_longo */         "}\n" + 
+/* class texto_longo */         "initbg();\n" + 
 /* class texto_longo */         "</script>\n" +
 /* class texto_longo */         "</div>\n" +
 /* class texto_longo */         "</body></head></html>\n";

@@ -90,9 +90,18 @@ then
       echo Alerta LTS, roda o comando abaixo!!:
       echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
     fi
-    if [ `cat /etc/hosts | grep 4201:4201:4201:4201::100 | wc -l` -eq 0 ]
+    ip6m=2002:2002:2002:2002
+    ip6b=::100
+    ipn=renato
+    if [ `cat /etc/hosts | grep ${ip6m}${ip6b} | wc -l` -eq 0 ]
     then
-      echo '4201:4201:4201:4201::100 renato' >> /etc/hosts
+      echo ${ip6m}${ip6b}' '${ipn} >> /etc/hosts
+    fi
+    ip6b=:ff:feb3:63e9
+    ipn=local
+    if [ `cat /etc/hosts | grep ${ip6m}${ip6b} | wc -l` -eq 0 ]
+    then
+      echo ${ip6m}${ip6b}' '${ipn} >> /etc/hosts
     fi
   fi
   alias u1='echo u1/u7..;apt update'
