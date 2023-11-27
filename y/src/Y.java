@@ -12079,6 +12079,7 @@ class XML extends Util{
 /* class HttpServer */         if (caminho.endsWith(".css")) return "text/css";
 /* class HttpServer */         if (caminho.endsWith(".png") || caminho.endsWith(".ico") || caminho.endsWith(".jpg")) return "image/png";
 /* class HttpServer */         if (caminho.endsWith(".mkv")) return "video/webm";
+/* class HttpServer */         if (caminho.endsWith(".js")) return "application/javascript";
 /* class HttpServer */         return "application/octet-stream";
 /* class HttpServer */     }
 /* class HttpServer */     public ArrayList < String > lendo_arquivo_display(String caminho) throws Exception {
