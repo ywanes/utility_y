@@ -12075,11 +12075,26 @@ class XML extends Util{
 /* class HttpServer */         output.write(sb.toString().getBytes());
 /* class HttpServer */     }
 /* class HttpServer */     private String getContentType(String caminho) {
+/* class HttpServer */         // https://mimetype.io/all-types
 /* class HttpServer */         if (caminho.endsWith(".html") || caminho.endsWith(".htm")) return "text/html";
 /* class HttpServer */         if (caminho.endsWith(".css")) return "text/css";
-/* class HttpServer */         if (caminho.endsWith(".png") || caminho.endsWith(".ico") || caminho.endsWith(".jpg")) return "image/png";
-/* class HttpServer */         if (caminho.endsWith(".mkv")) return "video/webm";
-/* class HttpServer */         if (caminho.endsWith(".js")) return "application/javascript";
+/* class HttpServer */         if (caminho.endsWith(".js")) return "text/javascript";
+/* class HttpServer */         if (caminho.endsWith(".txt")) return "text/plain";
+/* class HttpServer */         if (caminho.endsWith(".png")) return "image/png";
+/* class HttpServer */         if (caminho.endsWith(".ico")) return "image/x-icon";
+/* class HttpServer */         if (caminho.endsWith(".jpg")) return "image/jpeg";
+/* class HttpServer */         if (caminho.endsWith(".jpeg")) return "image/jpeg";
+/* class HttpServer */         if (caminho.endsWith(".webp")) return "image/webp";
+/* class HttpServer */         if (caminho.endsWith(".gif")) return "image/gif";
+/* class HttpServer */         if (caminho.endsWith(".mkv")) return "video/x-matroska";
+/* class HttpServer */         if (caminho.endsWith(".avi")) return "video/x-msvideo";
+/* class HttpServer */         if (caminho.endsWith(".movie")) return "video/x-sgi-movie";
+/* class HttpServer */         if (caminho.endsWith(".webm")) return "video/webm";
+/* class HttpServer */         if (caminho.endsWith(".mp4")) return "audio/aac";
+/* class HttpServer */         if (caminho.endsWith(".mp3")) return "audio/mpeg";
+/* class HttpServer */         if (caminho.endsWith(".ogg")) return "audio/ogg";
+/* class HttpServer */         if (caminho.endsWith(".wma")) return "audio/x-ms-wma";
+/* class HttpServer */         if (caminho.endsWith(".pdf")) return "application/pdf";
 /* class HttpServer */         return "application/octet-stream";
 /* class HttpServer */     }
 /* class HttpServer */     public ArrayList < String > lendo_arquivo_display(String caminho) throws Exception {
