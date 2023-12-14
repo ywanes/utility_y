@@ -7853,34 +7853,34 @@ System.out.println("BB" + retorno);
     
     private void pid_windows(String pid){
         load_pss_windows();
-        pid_nav_up(pid);
-        pid_nav_down(pid);
+        pid_nav_up(pid, pid+",");
+        pid_nav_down(pid, pid+",");
         pss_windows(true);
     }
     
     private void pid_linux(String pid){
         load_pss_linux();
-        pid_nav_up(pid);
-        pid_nav_down(pid);
+        pid_nav_up(pid, pid+",");
+        pid_nav_down(pid, pid+",");
         pss_linux(true);
     }
     
-    private void pid_nav_up(String pid){
+    private void pid_nav_up(String pid, String path){
         for ( int i=0;i<pss_flag.size();i++ ){
             if ( pss_parm1.get(i).equals(pid) && !pss_parm4.get(i).equals("svchost.exe") ){
                 pss_flag.set(i, true);
-                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) )
-                    pid_nav_up(pss_parm2.get(i));
+                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) && !(","+path).contains(","+pss_parm2.get(i)+",") )
+                    pid_nav_up(pss_parm2.get(i),path+pss_parm2.get(i)+",");
             }
         }
     }
     
-    private void pid_nav_down(String pid){
+    private void pid_nav_down(String pid, String path){
         for ( int i=0;i<pss_flag.size();i++ ){
             if ( pss_parm2.get(i).equals(pid) ){
                 pss_flag.set(i, true);
-                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) )
-                    pid_nav_down(pss_parm1.get(i));
+                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) && !(","+path).contains(","+pss_parm1.get(i)+",") )
+                    pid_nav_down(pss_parm1.get(i),path+pss_parm1.get(i)+",");
             }
         }
     }
