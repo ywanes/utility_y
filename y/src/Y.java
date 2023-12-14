@@ -114,7 +114,7 @@ public class Y extends Util{
     public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8","UTF-8BOM","UCS-2LE","UCS-2LEBOM"};
     public int [] BOM_UTF_8=new int[]{239,187,191};    
     public int [] BOM_UCS_2LE=new int[]{255,254};        
-    public String erroSequenciaIlegal="Erro, sequencia ilegal!";
+    public static String erroSequenciaIlegal=Util.erroSequenciaIlegal;
     
     // octal bytes
     public static String [] OD_BC_B=new String[]{ " 000"," 001"," 002"," 003"," 004"," 005"," 006"," 007"," 010"," 011",
@@ -171,11 +171,8 @@ public class Y extends Util{
         " 234"," 235"," 236"," 237"," 238"," 239"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 248"," 249",
         " 250"," 251"," 252"," 253"," 254"," 255"};
     // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
-    public static int [] indexBase64 = new int []{65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,
-        89,90,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,
-        51,52,53,54,55,56,57,43,47};
-    // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
-    public static String txtBase64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    public static int [] indexBase64 = Util.indexBase64;
+    public static String txtBase64 = Util.txtBase64;
    
     
     int BARRA_R=13;     // \r
@@ -196,17 +193,6 @@ public class Y extends Util{
     int BARRA_F=12;     // \f
     int CHAR_F=102;     // f
     int CHAR_BARRA=92; // \\ => \
-   
-    int V_0b00000011=3; // 0b00000011 (3)
-    int V_0b0000000011=3; // 0b0000000011 (3)
-    int V_0b0000001111=15; // 0b0000001111 (15)
-    int V_0b000000001111=15; // 0b000000001111 (15)
-    int V_0b000000111111=63; // 0b000000111111 (63)
-    int V_0b11111100=252; // 0b11111100 (252)
-    int V_0b1111110000=1008; // 0b1111110000 (1008)
-    int V_0b1111111100=1020; // 0b1111111100 (1020)
-    int V_0b111111000000=4032; // 0b111111000000 (4032)
-    int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
     public static void main(String[] args) {
 
@@ -1123,19 +1109,17 @@ cat buffer.log
                 System.out.println("class M_Dados {");
                 System.out.println("    public static String get(){");
                 for ( int i=1;i<=method_len;i++ ){
-                    if ( i == 1 && method_len == 1 ){
-                        System.out.println("        return M_Dados.get_1();");
+                    if ( i == 1 ){
+                        if ( method_len == 1 )
+                            System.out.println("        return M_Dados_"+i+".get();");
+                        else
+                            System.out.println("        return M_Dados_"+i+".get()");
                     }else{
-                        if ( i == 1 ){
-                            System.out.println("        return M_Dados_1.get()");
-                        }else{
-                            if ( i < method_len ){
-                                System.out.println("        + M_Dados_"+i+".get()");                                
-                            }else{
-                                System.out.println("        + M_Dados_"+i+".get();");
-                            }
-                        }
-                    }                    
+                        if ( i < method_len )
+                            System.out.println("        + M_Dados_"+i+".get()");                                
+                        else
+                            System.out.println("        + M_Dados_"+i+".get();");                            
+                    }
                 }
                 System.out.println("    }");
                 System.out.println("}");
@@ -5499,29 +5483,6 @@ System.out.println("BB" + retorno);
             System.out.write(buf, 0, BUFFER_SIZE);
     }
 
-    public byte[] base64_B_B(byte[] txt,boolean encoding) throws Exception{ // byte in byte out
-        ByteArrayInputStream bais=new ByteArrayInputStream(txt);
-        ByteArrayOutputStream baos=new ByteArrayOutputStream();
-        base64(bais,baos,encoding);
-        return baos.toByteArray();
-    }
-    
-    public String base64_S_S(String txt,boolean encoding) throws Exception{ // String in String out
-        return new String(base64_B_B(txt.getBytes(),encoding));
-    }
-
-    public String base64_B_S(byte[] txt,boolean encoding) throws Exception{ // byte in String out
-        return new String(base64_B_B(txt,encoding));
-    }
-    
-    public byte[] base64_S_B(String txt,boolean encoding) throws Exception{ // String in byte out
-        return base64_B_B(txt.getBytes(),encoding);
-    }
-    
-    public String base64(String txt,boolean encoding) throws Exception{        
-        return base64_S_S(txt,encoding);
-    }
-    
     public void aes(String senha,boolean encoding,String md,byte[] salt){        
         try{
             if ( encoding )
@@ -5553,136 +5514,6 @@ System.out.println("BB" + retorno);
                                  + Character.digit(s.charAt(i+1), 16));
         }
         return data;
-    }
-    
-    public void base64(InputStream pipe_in,OutputStream pipe_out,boolean encoding) throws Exception{        
-        // ex: base64(System.in,System.out,true);
-        if ( encoding )
-            base64encode(pipe_in,pipe_out);
-        else
-            base64decode(pipe_in,pipe_out);                    
-    }
-    
-    public void base64encode(InputStream pipe_in,OutputStream pipe_out) throws Exception{        
-        int BUFFER_SIZE_ = 1;
-        byte [] buf=new byte[BUFFER_SIZE_];
-        int len=-1;
-        int entrada=-1;
-        int agulha=0;
-        int agulha_count=0;
-        int indexPadding=61; // "="
-        while(true){
-            while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){}
-            if ( len == -1 ){
-                if ( agulha_count == 4 ){
-                    pipe_out.write( indexBase64[ agulha<<2 ] );
-                    pipe_out.write( indexPadding );
-                }
-                if ( agulha_count == 2 ){
-                    pipe_out.write( indexBase64[ agulha<<4 ] );
-                    pipe_out.write( indexPadding );
-                    pipe_out.write( indexPadding );
-                }  
-                break;
-            }
-            entrada=byte_to_int_java(buf[0],false);
-            agulha=(agulha<<8)|entrada;
-            agulha_count+=8;
-            while(agulha_count>=6){
-                if ( agulha_count == 6 ){
-                    pipe_out.write( indexBase64[ agulha ] );
-                    agulha=0;
-                    agulha_count-=6;
-                    continue;
-                }
-                if ( agulha_count == 8 ){
-                    pipe_out.write( indexBase64[ (agulha & V_0b11111100)>>2 ] );
-                    agulha&=V_0b00000011;
-                    agulha_count-=6;
-                    continue;
-                }
-                if ( agulha_count == 10 ){
-                    pipe_out.write( indexBase64[ (agulha & V_0b1111110000)>>4 ] );
-                    agulha&=V_0b0000001111;
-                    agulha_count-=6;
-                    continue;
-                }
-                if ( agulha_count == 12 ){
-                    pipe_out.write( indexBase64[ (agulha & V_0b111111000000)>>6 ] );
-                    agulha&=V_0b000000111111;
-                    agulha_count-=6;
-                    continue;
-                }
-            }
-        }    
-        pipe_out.flush();
-    }
-    
-    public void base64decode(InputStream pipe_in,OutputStream pipe_out) throws Exception{        
-        int BUFFER_SIZE_ = 1;
-        byte [] buf=new byte[BUFFER_SIZE_];
-        int len=-1;
-        int entrada=-1;
-        int agulha=0;
-        int agulha_count=0;        
-        int padding_count=0;
-        while(true){
-            while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){}
-            if ( len == -1 ){
-                if ( agulha_count == 0 && padding_count == 0 && agulha == 0 ){
-                    break;
-                }
-                if ( agulha_count == 4 && padding_count == 2 && agulha == 0 ){
-                    break;
-                }
-                if ( agulha_count == 2 && padding_count == 1 && agulha == 0 ){
-                    break;
-                }
-                System.err.println(erroSequenciaIlegal);
-                System.exit(1);
-                break;
-            }
-            entrada=byte_to_int_java(buf[0],false);
-            // suprimindo \r\n
-            // no windows, o y echo sem aspeta pode dar problema
-            // assim da problema =>     y echo YQo= | y base64 -d
-            // assim nao da problema => y echo "YQo=" | y base64 -d
-            if ( entrada == 10 || entrada == 13 || entrada == 32 ){
-                continue;
-            }
-            entrada=txtBase64.indexOf((char)entrada);
-            if ( entrada == -1 ){
-                System.err.println(erroSequenciaIlegal);
-                System.exit(1);
-            }
-            if ( entrada == 64 ){
-                padding_count++;
-                continue;
-            }            
-            agulha=(agulha<<6)|entrada;
-            agulha_count+=6;
-            while(agulha_count>=8){
-                if ( agulha_count == 8 ){
-                    pipe_out.write( agulha );
-                    agulha=0;
-                    agulha_count-=8;
-                    continue;
-                }
-                if ( agulha_count == 10 ){
-                    pipe_out.write( (agulha & V_0b1111111100)>>2 );
-                    agulha&=V_0b0000000011;
-                    agulha_count-=8;
-                    continue;
-                }
-                if ( agulha_count == 12 ){
-                    pipe_out.write( (agulha & V_0b111111110000)>>4 );
-                    agulha&=V_0b000000001111;
-                    agulha_count-=8;
-                    continue;
-                }
-            }
-        }    
-        pipe_out.flush();        
     }
 
     public void comando_invalido(String[] args) {
@@ -6497,17 +6328,6 @@ System.out.println("BB" + retorno);
         }
         comando_invalido(args);
         System.exit(0);
-    }
-
-    public static int byte_to_int_java(byte a,boolean dif_128) {
-        // os bytes em java vem 0..127 e -128..-1 totalizando 256
-        // implementacao manual de Byte.toUnsignedInt(a)
-        // dif_128 true  => -128..127
-        // dif_128 false =>    0..255
-        int i=(int)a;
-        if ( !dif_128 && i < 0 )
-            i+=256;
-        return i;
     }
 
     ArrayList<String> xlsxToCSV_nomes=null;
@@ -9268,6 +9088,189 @@ class grammarsWhere {
 }
 
 class Util{
+    public static String erroSequenciaIlegal="Erro, sequencia ilegal!";
+    
+    int V_0b00000011=3; // 0b00000011 (3)
+    int V_0b0000000011=3; // 0b0000000011 (3)
+    int V_0b0000001111=15; // 0b0000001111 (15)
+    int V_0b000000001111=15; // 0b000000001111 (15)
+    int V_0b000000111111=63; // 0b000000111111 (63)
+    int V_0b11111100=252; // 0b11111100 (252)
+    int V_0b1111110000=1008; // 0b1111110000 (1008)
+    int V_0b1111111100=1020; // 0b1111111100 (1020)
+    int V_0b111111000000=4032; // 0b111111000000 (4032)
+    int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public static int byte_to_int_java(byte a,boolean dif_128) {
+        // os bytes em java vem 0..127 e -128..-1 totalizando 256
+        // implementacao manual de Byte.toUnsignedInt(a)
+        // dif_128 true  => -128..127
+        // dif_128 false =>    0..255
+        int i=(int)a;
+        if ( !dif_128 && i < 0 )
+            i+=256;
+        return i;
+    }
+    
+    public static int [] indexBase64 = new int []{65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,
+        89,90,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,48,49,50,
+        51,52,53,54,55,56,57,43,47};
+    // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
+    public static String txtBase64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+    
+    public void base64(InputStream pipe_in,OutputStream pipe_out,boolean encoding) throws Exception{        
+        // ex: base64(System.in,System.out,true);
+        if ( encoding )
+            base64encode(pipe_in,pipe_out);
+        else
+            base64decode(pipe_in,pipe_out);                    
+    }
+    
+    public void base64encode(InputStream pipe_in,OutputStream pipe_out) throws Exception{        
+        int BUFFER_SIZE_ = 1;
+        byte [] buf=new byte[BUFFER_SIZE_];
+        int len=-1;
+        int entrada=-1;
+        int agulha=0;
+        int agulha_count=0;
+        int indexPadding=61; // "="
+        while(true){
+            while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){}
+            if ( len == -1 ){
+                if ( agulha_count == 4 ){
+                    pipe_out.write( indexBase64[ agulha<<2 ] );
+                    pipe_out.write( indexPadding );
+                }
+                if ( agulha_count == 2 ){
+                    pipe_out.write( indexBase64[ agulha<<4 ] );
+                    pipe_out.write( indexPadding );
+                    pipe_out.write( indexPadding );
+                }  
+                break;
+            }
+            entrada=byte_to_int_java(buf[0],false);
+            agulha=(agulha<<8)|entrada;
+            agulha_count+=8;
+            while(agulha_count>=6){
+                if ( agulha_count == 6 ){
+                    pipe_out.write( indexBase64[ agulha ] );
+                    agulha=0;
+                    agulha_count-=6;
+                    continue;
+                }
+                if ( agulha_count == 8 ){
+                    pipe_out.write( indexBase64[ (agulha & V_0b11111100)>>2 ] );
+                    agulha&=V_0b00000011;
+                    agulha_count-=6;
+                    continue;
+                }
+                if ( agulha_count == 10 ){
+                    pipe_out.write( indexBase64[ (agulha & V_0b1111110000)>>4 ] );
+                    agulha&=V_0b0000001111;
+                    agulha_count-=6;
+                    continue;
+                }
+                if ( agulha_count == 12 ){
+                    pipe_out.write( indexBase64[ (agulha & V_0b111111000000)>>6 ] );
+                    agulha&=V_0b000000111111;
+                    agulha_count-=6;
+                    continue;
+                }
+            }
+        }    
+        pipe_out.flush();
+    }
+    
+    public void base64decode(InputStream pipe_in,OutputStream pipe_out) throws Exception{        
+        int BUFFER_SIZE_ = 1;
+        byte [] buf=new byte[BUFFER_SIZE_];
+        int len=-1;
+        int entrada=-1;
+        int agulha=0;
+        int agulha_count=0;        
+        int padding_count=0;
+        while(true){
+            while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){}
+            if ( len == -1 ){
+                if ( agulha_count == 0 && padding_count == 0 && agulha == 0 ){
+                    break;
+                }
+                if ( agulha_count == 4 && padding_count == 2 && agulha == 0 ){
+                    break;
+                }
+                if ( agulha_count == 2 && padding_count == 1 && agulha == 0 ){
+                    break;
+                }
+                System.err.println(erroSequenciaIlegal);
+                System.exit(1);
+                break;
+            }
+            entrada=byte_to_int_java(buf[0],false);
+            // suprimindo \r\n
+            // no windows, o y echo sem aspeta pode dar problema
+            // assim da problema =>     y echo YQo= | y base64 -d
+            // assim nao da problema => y echo "YQo=" | y base64 -d
+            if ( entrada == 10 || entrada == 13 || entrada == 32 ){
+                continue;
+            }
+            entrada=txtBase64.indexOf((char)entrada);
+            if ( entrada == -1 ){
+                System.err.println(erroSequenciaIlegal);
+                System.exit(1);
+            }
+            if ( entrada == 64 ){
+                padding_count++;
+                continue;
+            }            
+            agulha=(agulha<<6)|entrada;
+            agulha_count+=6;
+            while(agulha_count>=8){
+                if ( agulha_count == 8 ){
+                    pipe_out.write( agulha );
+                    agulha=0;
+                    agulha_count-=8;
+                    continue;
+                }
+                if ( agulha_count == 10 ){
+                    pipe_out.write( (agulha & V_0b1111111100)>>2 );
+                    agulha&=V_0b0000000011;
+                    agulha_count-=8;
+                    continue;
+                }
+                if ( agulha_count == 12 ){
+                    pipe_out.write( (agulha & V_0b111111110000)>>4 );
+                    agulha&=V_0b000000001111;
+                    agulha_count-=8;
+                    continue;
+                }
+            }
+        }    
+        pipe_out.flush();        
+    }
+    
+    public byte[] base64_B_B(byte[] txt,boolean encoding) throws Exception{ // byte in byte out
+        ByteArrayInputStream bais=new ByteArrayInputStream(txt);
+        ByteArrayOutputStream baos=new ByteArrayOutputStream();
+        base64(bais,baos,encoding);
+        return baos.toByteArray();
+    }
+    
+    public String base64_S_S(String txt,boolean encoding) throws Exception{ // String in String out
+        return new String(base64_B_B(txt.getBytes(),encoding));
+    }
+
+    public String base64_B_S(byte[] txt,boolean encoding) throws Exception{ // byte in String out
+        return new String(base64_B_B(txt,encoding));
+    }
+    
+    public byte[] base64_S_B(String txt,boolean encoding) throws Exception{ // String in byte out
+        return base64_B_B(txt.getBytes(),encoding);
+    }
+    
+    public String base64(String txt,boolean encoding) throws Exception{        
+        return base64_S_S(txt,encoding);
+    }
+        
     public static String hex_string="0123456789ABCDEF";
     public static String lendo_arquivo(String caminho) {
         String result="";
@@ -9853,7 +9856,44 @@ class Util{
     public static void erroFatal(int n) {
         System.err.println("Erro Fatal " + n + "!!!!");
         System.exit(1);
-    }      
+    }    
+    
+    public void loadClassByBytes(java.util.HashMap classes, String principal, String [] args_){
+        try{ 
+            ClassLoader classLoader=new ClassLoader() {            
+                @Override protected Class<?> findClass(String name) 
+                throws ClassNotFoundException { 
+                    if ( classes.containsKey(name) ){ 
+                        try { 
+                            ////
+                            //byte[] data=M_Base64.base64((String)classes.get(name),false); 
+                            byte[] data=base64_S_B((String)classes.get(name),false);
+                            return defineClass(name,data,0,data.length);        
+                        }catch(Exception e){ 
+                            System.err.println("Erro no carregamento da classe "+name); 
+                            System.exit(1); 
+                        } 
+                    } 
+                    return super.findClass(name); 
+                } 
+            }; 
+            Class c=classLoader.loadClass(principal); 
+            java.lang.reflect.Method method=c.getDeclaredMethod("main", String[].class );
+            method.invoke(null, new Object[]{ args_ } ); 
+        }catch(Exception e){ 
+            System.err.println("Erro " + e.toString());
+            System.exit(1);
+        } 
+    }
+    
+    public void loadDisableControlC(){
+        //https://rosettacode.org/wiki/Handle_a_signal#Java
+        java.util.HashMap classes=new java.util.HashMap(); 
+        String principal="DisableControlC";
+        classes.put("DisableControlC$1","yv66vgAAADQAGAoAAwAQBwARBwATBwAUAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABmhhbmRsZQEAFChMc3VuL21pc2MvU2lnbmFsOylWAQAKU291cmNlRmlsZQEAFERpc2FibGVDb250cm9sQy5qYXZhAQAPRW5jbG9zaW5nTWV0aG9kBwAVDAAWABcMAAUABgEAEURpc2FibGVDb250cm9sQyQxAQAMSW5uZXJDbGFzc2VzAQAQamF2YS9sYW5nL09iamVjdAEAFnN1bi9taXNjL1NpZ25hbEhhbmRsZXIBAA9EaXNhYmxlQ29udHJvbEMBAARtYWluAQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgAwAAIAAwABAAQAAAACAAAABQAGAAEABwAAAB0AAQABAAAABSq3AAGxAAAAAQAIAAAABgABAAAABQABAAkACgABAAcAAAAZAAAAAgAAAAGxAAAAAQAIAAAABgABAAAABwADAAsAAAACAAwADQAAAAQADgAPABIAAAAKAAEAAgAAAAAACA==");
+        classes.put("DisableControlC","yv66vgAAADQAIQoACQAVBwAWCAAXCgACABgHABkKAAUAFQoAAgAaBwAbBwAcAQAMSW5uZXJDbGFzc2VzAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABG1haW4BABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAHQEAClNvdXJjZUZpbGUBABREaXNhYmxlQ29udHJvbEMuamF2YQwACwAMAQAPc3VuL21pc2MvU2lnbmFsAQADSU5UDAALAB4BABFEaXNhYmxlQ29udHJvbEMkMQwAHwAgAQAPRGlzYWJsZUNvbnRyb2xDAQAQamF2YS9sYW5nL09iamVjdAEAHmphdmEvbGFuZy9JbnRlcnJ1cHRlZEV4Y2VwdGlvbgEAFShMamF2YS9sYW5nL1N0cmluZzspVgEABmhhbmRsZQEAQyhMc3VuL21pc2MvU2lnbmFsO0xzdW4vbWlzYy9TaWduYWxIYW5kbGVyOylMc3VuL21pc2MvU2lnbmFsSGFuZGxlcjsAIQAIAAkAAAAAAAIAAQALAAwAAQANAAAAHQABAAEAAAAFKrcAAbEAAAABAA4AAAAGAAEAAAADAIkADwAQAAIADQAAADEAAwABAAAAFbsAAlkSA7cABLsABVm3AAa4AAdXsQAAAAEADgAAAAoAAgAAAAUAFAAJABEAAAAEAAEAEgACABMAAAACABQACgAAAAoAAQAFAAAAAAAI");    
+        loadClassByBytes(classes, principal, new String []{});
+    }
 }
 
 
@@ -11232,7 +11272,6 @@ class XML extends Util{
 /* class AES */ // txt=base64_B_S(new AES().encrypt(txt.getBytes(),senha,null,null) ,true);
 /* class AES */ // new AES().encrypt(System.in,System.out,senha,null,null);
 /* class AES */ // new AES().decrypt(System.in,System.out,senha,null);
-
 /* class AES */ class AES{ byte [] deriveKeyAndIV(byte[] password, String md, byte[] salt) throws Exception{        if ( md == null || md.equals("") ) md="MD5"; byte[] res = new byte[48]; final java.security.MessageDigest md5 = java.security.MessageDigest.getInstance(md); md5.update(password); md5.update(salt); byte[] hash1 = md5.digest(); md5.reset(); md5.update(hash1); md5.update(password); md5.update(salt); byte[] hash2 = md5.digest(); md5.reset(); md5.update(hash2); md5.update(password); md5.update(salt); byte[] hash3 = md5.digest(); if ( md == null || md.equals("MD5")){ System.arraycopy(hash1, 0, res, 0, 16); System.arraycopy(hash2, 0, res, 16, 16); System.arraycopy(hash3, 0, res, 32, 16); }else{ System.arraycopy(hash1, 0, res, 0, 32); System.arraycopy(hash2, 0, res, 32, 16); } return res; } public void encrypt(java.io.InputStream pipe_in, java.io.OutputStream pipe_out, String senha, String md, byte[] salt) throws Exception { try{ byte[] salt_ = new byte[8]; java.security.SecureRandom sr = new java.security.SecureRandom(); sr.nextBytes(salt_); if ( salt==null ) salt=salt_; byte[] keyAndIV = deriveKeyAndIV(senha.getBytes(),md,salt); byte[] key = java.util.Arrays.copyOfRange(keyAndIV, 0, 32); byte[] iv = java.util.Arrays.copyOfRange(keyAndIV, 32, 48); javax.crypto.spec.SecretKeySpec skeySpec = new javax.crypto.spec.SecretKeySpec(key, "AES"); javax.crypto.spec.IvParameterSpec ivspec = new javax.crypto.spec.IvParameterSpec(iv); javax.crypto.Cipher cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding"); cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, skeySpec, ivspec); int BUFFER_SIZE=1024; byte[] buff=new byte[BUFFER_SIZE]; int len=0; pipe_out.write("Salted__".getBytes()); pipe_out.write(salt); while ( (len=pipe_in.read(buff,0,BUFFER_SIZE)) > 0 ) pipe_out.write( cipher.update(buff,0,len) ); pipe_out.write(cipher.doFinal()); pipe_out.flush(); }catch(Exception e){ if(e.toString().contains("java.security.InvalidKeyException: Illegal key size")) System.out.println("Erro conhecido no windows! - Considere utilizar outro jdk -> https://mega.nz/file/eYYjSTII#OXreG57QM6NQpykXSt5ojXclaBG7AQ8IGlA2oDDPdGo"); throw e; } } public byte[] encrypt(byte[] data, String senha, String md, byte[] salt) throws Exception{ java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(data); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); encrypt(bais,baos,senha,md,salt); return baos.toByteArray(); } public void decrypt(java.io.InputStream pipe_in,java.io.OutputStream pipe_out,String senha,String md) throws Exception { try{ int p=0; p=pipe_in.read(new byte[8]); if ( p != 8 ){ System.err.println("Erro fatal 0!"); System.exit(1); } byte[] salt=new byte[8]; p=pipe_in.read(salt); if ( p != 8 ){ System.err.println("Erro fatal 0!"); System.exit(1); }        byte[] keyAndIV=deriveKeyAndIV(senha.getBytes(),md,salt); byte[] key=java.util.Arrays.copyOfRange(keyAndIV, 0, 32); byte[] iv=java.util.Arrays.copyOfRange(keyAndIV, 32, 48); javax.crypto.spec.SecretKeySpec skeySpec = new javax.crypto.spec.SecretKeySpec(key, "AES"); javax.crypto.spec.IvParameterSpec ivspec = new javax.crypto.spec.IvParameterSpec(iv); javax.crypto.Cipher cipher; cipher=javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding"); cipher.init(javax.crypto.Cipher.DECRYPT_MODE, skeySpec, ivspec); int BUFFER_SIZE=1024; byte[] buff=new byte[BUFFER_SIZE]; int len=0; while ( (len=pipe_in.read(buff,0,BUFFER_SIZE)) > 0 ) pipe_out.write( cipher.update(buff,0,len) ); pipe_out.write(cipher.doFinal()); pipe_out.flush(); }catch(Exception e){ if(e.toString().contains("java.security.InvalidKeyException: Illegal key size")) System.out.println("Erro conhecido no windows! - Considere utilizar outro jdk -> https://mega.nz/file/eYYjSTII#OXreG57QM6NQpykXSt5ojXclaBG7AQ8IGlA2oDDPdGo"); throw e; } } public byte[] decrypt(byte[] data, String senha, String md) throws Exception{ java.io.ByteArrayInputStream bais=new java.io.ByteArrayInputStream(data); java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream(); decrypt(bais,baos,senha,md); return baos.toByteArray(); } private static String bytesToHex(byte[] a){ StringBuilder sb = new StringBuilder(); for (byte b : a) { sb.append(String.format("%02X", b)); } return sb.toString(); } private static byte[] hexTobytes(String s) { int len = s.length(); byte[] data = new byte[len / 2]; for (int i = 0; i < len; i += 2) { data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i+1), 16)); } return data;}}
 
 
