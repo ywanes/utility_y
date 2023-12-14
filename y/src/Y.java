@@ -114,7 +114,6 @@ public class Y extends Util{
     public String [] suportIconv=new String[]{"ISO-8859-1","UTF-8","UTF-8BOM","UCS-2LE","UCS-2LEBOM"};
     public int [] BOM_UTF_8=new int[]{239,187,191};    
     public int [] BOM_UCS_2LE=new int[]{255,254};        
-    public static String erroSequenciaIlegal=Util.erroSequenciaIlegal;
     
     // octal bytes
     public static String [] OD_BC_B=new String[]{ " 000"," 001"," 002"," 003"," 004"," 005"," 006"," 007"," 010"," 011",
@@ -170,10 +169,7 @@ public class Y extends Util{
         " 218"," 219"," 220"," 221"," 222"," 223"," 224"," 225"," 226"," 227"," 228"," 229"," 230"," 231"," 232"," 233",
         " 234"," 235"," 236"," 237"," 238"," 239"," 240"," 241"," 242"," 243"," 244"," 245"," 246"," 247"," 248"," 249",
         " 250"," 251"," 252"," 253"," 254"," 255"};
-    // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
-    public static int [] indexBase64 = Util.indexBase64;
-    public static String txtBase64 = Util.txtBase64;
-   
+    
     
     int BARRA_R=13;     // \r
     int CHAR_R=114;     // r
@@ -1388,7 +1384,7 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("lss") ){            
-            if ( Util.isWindows() )
+            if ( isWindows() )
                 find(args.length>1?args[1]:null, true, 0, true, null, null, null, true, null);
             else
                 if ( ! lss_linux(args.length>1?args[1]:null) )
@@ -1456,12 +1452,12 @@ cat buffer.log
             return;            
         }
         if ( args[0].equals("pss")){
-            if ( Util.os(true).endsWith("Windows") ){
+            if ( os(true).endsWith("Windows") ){
                 load_pss_windows();
                 pss_windows(false);
                 return;
             }else{
-                if ( Util.os(true).endsWith("Linux") ){
+                if ( os(true).endsWith("Linux") ){
                     load_pss_linux();
                     pss_linux(false);
                     return;
@@ -1619,12 +1615,12 @@ cat buffer.log
                 OutputStream os = s.getOutputStream();
                 InputStream is = s.getInputStream();
                 if ( send ){
-                    while( (len=in.read(buffer, 0, Util.BUFFER_SIZE)) > 0 )
+                    while( (len=in.read(buffer, 0, BUFFER_SIZE)) > 0 )
                         os.write(buffer, 0, len);
                     os.flush();
                     os.close();
                 }else{
-                    while( (len=is.read(buffer, 0, Util.BUFFER_SIZE)) > 0 )
+                    while( (len=is.read(buffer, 0, BUFFER_SIZE)) > 0 )
                         out.write(buffer, 0, len);
                     out.flush();
                     out.close();
@@ -3738,7 +3734,6 @@ cat buffer.log
                 }
             }else{
                 InputStream inputStream_pipe=System.in;
-                int BUFFER_SIZE=1024;
                 byte[] buf = new byte[BUFFER_SIZE];
                 int len=0;
                 while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
@@ -3759,7 +3754,6 @@ cat buffer.log
             parm-=256;        
         try{
             InputStream inputStream_pipe=System.in;
-            int BUFFER_SIZE=1024;
             byte[] buf = new byte[BUFFER_SIZE];
             int len=0;
             while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
@@ -3884,7 +3878,6 @@ cat buffer.log
         if ( parm.equals("-l") ){
             try{
                 InputStream inputStream_pipe=System.in;
-                int BUFFER_SIZE=1024;
                 byte[] buf = new byte[BUFFER_SIZE];
                 int count=0;
                 int len=0;
@@ -3937,7 +3930,6 @@ cat buffer.log
     {
         try{
             InputStream inputStream_pipe=System.in;
-            int BUFFER_SIZE=1024;
             byte[] buf = new byte[BUFFER_SIZE];            
             int len=0;
             int count=0;
@@ -5462,7 +5454,6 @@ System.out.println("BB" + retorno);
     {
         try{            
             InputStream inputStream_pipe=System.in;
-            int BUFFER_SIZE=1024;
             byte[] buf = new byte[BUFFER_SIZE];
             while( inputStream_pipe.read(buf,0,BUFFER_SIZE) > 0 ){}
             System.out.flush();
@@ -5474,7 +5465,6 @@ System.out.println("BB" + retorno);
 
     public void dev_in()
     {
-        int BUFFER_SIZE=1024;
         String s="";
         for ( int i=0;i<BUFFER_SIZE/2;i++ )
             s+="0\n";
@@ -7305,7 +7295,6 @@ System.out.println("BB" + retorno);
             else
                 is=new FileInputStream(parm);
             
-            int BUFFER_SIZE=1024;
             byte[] buf = new byte[BUFFER_SIZE];
             int count=0;
             int len=0;
@@ -7836,7 +7825,6 @@ System.out.println("BB" + retorno);
             try{
                 System.out.print("startado. pressione enter para mais flags.");
                 InputStream inputStream_pipe=System.in;
-                int BUFFER_SIZE=1024;
                 byte[] buf = new byte[BUFFER_SIZE];
                 int len=0;
                 ArrayList<Long> lista=new ArrayList<>();
@@ -9383,8 +9371,7 @@ class Util{
             erroFatal(404);
         }
     }
-    //public static String sepCSV=getSeparadorCSV(); // ";";
-    public static int BUFFER_SIZE=1024;
+    public final static int BUFFER_SIZE=1024;
     
     private static String separadorCSVCache=null;
     public static String getSeparadorCSV(){
@@ -11820,7 +11807,7 @@ class XML extends Util{
 /* class HttpServer */ // parametros
 /* class HttpServer */ // new HttpServer(...)
 /* class HttpServer */ // host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
-/* class HttpServer */ class HttpServer {
+/* class HttpServer */ class HttpServer extends Util{
 /* class HttpServer */     String host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log;
 /* class HttpServer */     boolean index_playlist=false;
 /* class HttpServer */     int port;
@@ -11860,9 +11847,9 @@ class XML extends Util{
 /* class HttpServer */         while (true) {
 /* class HttpServer */             try {
 /* class HttpServer */                 socket = serverSocket.accept();
-/* class HttpServer */                 ip_origem = Util.get_ip_origem_by_socket(socket);
+/* class HttpServer */                 ip_origem = get_ip_origem_by_socket(socket);
 /* class HttpServer */                 if ( log != null )
-/* class HttpServer */                     Util.log_serverRouter(log, ip_origem);
+/* class HttpServer */                     log_serverRouter(log, ip_origem);
 /* class HttpServer */                 System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
 /* class HttpServer */                 if (ips_banidos.length() > 0 && ("," + ips_banidos + ",").contains("," + ip_origem + ",")) {
 /* class HttpServer */                     System.out.println("Acesso recusado para o ip banido: " + ip_origem);
