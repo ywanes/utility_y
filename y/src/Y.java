@@ -1671,10 +1671,17 @@ cat buffer.log
     }
 
     private void daemon(String [] args){
-        if(args.length == 2 && args[1].equals("-server")){
-            daemon_server();
-            return;
-        }            
+        if(args.length > 1){
+            if ( args[1].equals("-server") ){
+                daemon_server();
+                return;
+            }
+            if ( !args[1].trim().equals("") ){
+                daemon_command(args);
+                return;
+            }
+        }       
+        
         String tag="y> ";
         try{
             // DisableControlC
@@ -1736,6 +1743,42 @@ cat buffer.log
             System.err.println("Erro " + e.toString());
             System.exit(1);
         }
+    }
+    
+    private void daemon_command(String [] args){
+        String command="";
+        for( int i=1;i<args.length;i++ ){
+            if ( args[i].trim().equals("") ){
+                System.err.println("parametro invalido");
+                System.exit(1);
+            }
+            if ( i > 1 )
+                command+=" ";
+            command+=args[i];
+        }
+        try{
+            Socket socket_ = new Socket("0.0.0.0", 2020);
+            BufferedInputStream bis = new BufferedInputStream(socket_.getInputStream());
+            BufferedOutputStream bos = new BufferedOutputStream(socket_.getOutputStream());
+            byte [] buff = new byte[BUFFER_SIZE];
+            bos.write(command.getBytes());
+            bos.flush();
+            int len = bis.read(buff, 0, buff.length);
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            baos.write(buff, 0, len);     
+            System.out.println(baos.toString().trim());
+            socket_.close();
+        }catch(Exception e){
+            if ( e.toString().equals("java.net.ConnectException: Connection refused: connect") ){
+                System.out.println("daemon offline");
+                return;
+            }
+            if ( e.toString().equals("java.net.SocketException: Connection reset by peer: socket write error") ){
+                System.out.println("daemon desconectado");
+                return;
+            }
+            System.out.println(e.toString());
+        }            
     }
     
     private void daemon_server(){        
