@@ -1681,37 +1681,112 @@ cat buffer.log
             new Util().loadDisableControlC("\n" + tag);
 
             InputStream inputStream_pipe=System.in;        
-            byte[] buf = new byte[BUFFER_SIZE];
-            int len=0;
-            ByteArrayOutputStream out=null;
-            String s=null;
-            System.out.print(tag);
-            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){                
-                out = new ByteArrayOutputStream();
-                out.write(buf, 0, len);
-                s=out.toString().replace("\r\n", "").trim();
-                if ( s.equals("exit") )
-                    System.exit(0);
-                else{
-                    if ( !s.equals("") )
-                        System.out.println("?");
-                }
+            byte[] buff_in = new byte[BUFFER_SIZE];
+            int len_in=0;
+            ByteArrayOutputStream baos_in=null;
+            String s_in=null;
+            boolean fake=false;
+            
+            try{
+                Socket socket_ = new Socket("0.0.0.0", 2020);
+                BufferedInputStream bis = new BufferedInputStream(socket_.getInputStream());
+                BufferedOutputStream bos = new BufferedOutputStream(socket_.getOutputStream());
+                byte [] buff = new byte[BUFFER_SIZE];
                 System.out.print(tag);
-            }
-            System.out.flush();
-            System.out.close();
+                while( (len_in=inputStream_pipe.read(buff_in,0,BUFFER_SIZE)) > 0 ){                
+                    baos_in = new ByteArrayOutputStream();
+                    baos_in.write(buff_in, 0, len_in);
+                    s_in=baos_in.toString().replace("\r\n", "").trim();
+                    if ( s_in.equals("exit") )
+                        System.exit(0);
+                    else{
+                        if ( s_in.equals("") ){
+                            s_in="?"; // força comunicacao para verificar se esta conectado
+                            fake=true;
+                        }else{
+                            fake=false;
+                        }
+                        bos.write(s_in.getBytes());
+                        bos.flush();
+
+                        int len = bis.read(buff, 0, buff.length);
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        baos.write(buff, 0, len);     
+                        s_in=baos.toString().trim();
+                        if ( fake && s_in.equals("?") )
+                            s_in="";
+                        if ( !s_in.equals("") )
+                            System.out.println(tag + baos.toString());
+                    }
+                    System.out.print(tag);
+                }
+                socket_.close();
+            }catch(Exception e){
+                if ( e.toString().equals("java.net.ConnectException: Connection refused: connect") ){
+                    System.out.println("daemon offline");
+                    return;
+                }
+                if ( e.toString().equals("java.net.SocketException: Connection reset by peer: socket write error") ){
+                    System.out.println("daemon desconectado");
+                    return;
+                }
+                System.out.println(e.toString());
+            }            
         }catch(Exception e){
             System.err.println("Erro " + e.toString());
             System.exit(1);
         }
     }
     
-    private void daemon_server(){
-        System.out.println("started");
-        while(true){
-            try{
-                Thread.sleep(1000);
-            }catch(Exception e){}
+    private void daemon_server(){        
+        try{
+            ServerSocket serverSocket = new ServerSocket(2020, 1, InetAddress.getByName("0.0.0.0"));                        
+            System.out.println("started");
+            long inicio=epoch(null);
+            while(true){
+                final Socket socket = serverSocket.accept();
+                new Thread() {
+                    public void run() {
+                        try {
+                            InputStream input = socket.getInputStream();
+                            OutputStream output = socket.getOutputStream(); 
+                            ByteArrayOutputStream baos = null;
+                            String s=null;
+                            byte [] buff = new byte[1024];
+                            if (input == null || output == null){
+                                System.err.println("Error 22");
+                                System.exit(1);
+                            }                  
+                            while(true){
+                                // recebendo
+                                int len=input.read(buff, 0, buff.length);
+                                baos = new ByteArrayOutputStream();
+                                if ( len < 0 )
+                                    return;
+                                baos.write(buff, 0, len);  
+                                s=baos.toString();
+                                // enviando
+                                if ( s.equals("oi") ){
+                                    output.write("oie".getBytes());output.flush();
+                                    continue;
+                                }
+                                if ( s.equals("uptime") ){
+                                    output.write(seconds_to_string(epoch(null)-inicio,"format1").getBytes());output.flush();
+                                    continue;                                    
+                                }
+                                output.write("?".getBytes());output.flush();
+                            }
+                        } catch (Exception e) {
+                            if ( e.toString().equals("java.net.SocketException: Connection reset") )
+                                return;
+                            System.out.println("Erro ao executar servidor:" + e.toString());
+                        }
+                    }
+                }.start();
+            }
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
         }
     }
     
@@ -7627,30 +7702,9 @@ System.out.println("BB" + retorno);
                     
                     CreationDate = CreationDate.split("\\.")[0];
                     String LocalDateTime = getLocalDateTimeCache_windows().split("\\.")[0];
-                    long seconds=new SimpleDateFormat("yyyyMMddHHmmss").parse(LocalDateTime).getTime() - new SimpleDateFormat("yyyyMMddHHmmss").parse(CreationDate).getTime();                    
+                    long seconds=new SimpleDateFormat("yyyyMMddHHmmss").parse(LocalDateTime).getTime() - new SimpleDateFormat("yyyyMMddHHmmss").parse(CreationDate).getTime();
                     seconds/=1000;
-
-                    long second = 1;
-                    long minute = 60*second;
-                    long hour = 60*minute;
-                    long day = 24*hour;
-                    long minutes=0;
-                    long hours=0;
-                    long days=0;                    
-                    
-                    while(seconds >= day){
-                        seconds-=day;
-                        days++;
-                    }
-                    while(seconds >= hour){
-                        seconds-=hour;
-                        hours++;
-                    }
-                    while(seconds >= minute){
-                        seconds-=minute;
-                        minutes++;
-                    }
-                    String deltaTime=days+":"+(hours<10?"0":"")+hours+":"+(minutes<10?"0":"")+minutes+":"+(seconds<10?"0":"")+seconds;
+                    String deltaTime=seconds_to_string(seconds, "format2");
                     
                     pss_parm1.add(ProcessId);
                     pss_parm2.add(ParentProcessId);
@@ -7839,39 +7893,7 @@ System.out.println("BB" + retorno);
                 if ( ms ){
                     System.out.println(seconds+" seconds");
                 }else{
-                    long second = 1;
-                    long minute = 60*second;
-                    long hour = 60*minute;
-                    long day = 24*hour;
-                    long minutes=0;
-                    long hours=0;
-                    long days=0;
-                    while(seconds >= day){
-                        seconds-=day;
-                        days++;
-                    }
-                    while(seconds >= hour){
-                        seconds-=hour;
-                        hours++;
-                    }
-                    while(seconds >= minute){
-                        seconds-=minute;
-                        minutes++;
-                    }
-                    s="up ";
-                    if ( !s.equals("up ") || days > 0 ){
-                        s+=" "+days+" days,";
-                    }
-                    if ( !s.equals("up ") || hours > 0 ){
-                        s+=" "+hours+" hours,";
-                    }
-                    if ( !s.equals("up ") || minute > 0 ){
-                        s+=" "+minutes+" minutes,";
-                    }
-                    if ( !s.equals("up ") || second > 0 ){
-                        s+=" "+seconds+" seconds";
-                    }
-                    System.out.println(s);
+                    System.out.println(seconds_to_string(seconds, "format1"));
                 }
                 show=true;
                 break;                        
@@ -9151,6 +9173,46 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public String seconds_to_string(long seconds, String format){
+        String s=null;
+        long second = 1;
+        long minute = 60*second;
+        long hour = 60*minute;
+        long day = 24*hour;
+        long minutes=0;
+        long hours=0;
+        long days=0;
+        while(seconds >= day){
+            seconds-=day;
+            days++;
+        }
+        while(seconds >= hour){
+            seconds-=hour;
+            hours++;
+        }
+        while(seconds >= minute){
+            seconds-=minute;
+            minutes++;
+        }
+        if ( format.equals("format1") ){
+            s="up ";
+            if ( !s.equals("up ") || days > 0 ){
+                s+=" "+days+" days,";
+            }
+            if ( !s.equals("up ") || hours > 0 ){
+                s+=" "+hours+" hours,";
+            }
+            if ( !s.equals("up ") || minute > 0 ){
+                s+=" "+minutes+" minutes,";
+            }
+            if ( !s.equals("up ") || second > 0 ){
+                s+=" "+seconds+" seconds";
+            }     
+            return s;        
+        }
+        return days+":"+(hours<10?"0":"")+hours+":"+(minutes<10?"0":"")+minutes+":"+(seconds<10?"0":"")+seconds;
+    }
     
     public static int byte_to_int_java(byte a,boolean dif_128) {
         // os bytes em java vem 0..127 e -128..-1 totalizando 256
