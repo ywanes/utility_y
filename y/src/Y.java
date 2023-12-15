@@ -43,6 +43,18 @@ Windows Registry Editor Version 5.00
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Command Processor]
 "Autorun"="doskey cd=cd0 $*"
 
+
+install daemon(cmd adm) // http://nssm.cc/download
+y echo "java.exe -Dfile.encoding=UTF-8 -Dline.separator= -cp c:\y;c:\y\ojdbc6.jar;c:\y\sqljdbc4-3.0.jar;c:\y\jsch-0.1.55.jar Y d -server" > D:\ProgramFiles\yd.bat
+nssm install yd D:\ProgramFiles\yd.bat
+nssm start yd
+nssm status yd
+nssm stop yd
+nssm remove yd
+nssm restart yd
+y pss | y grep -server | y grep Y | y grep -v grep
+
+
     créditos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
     créditos https://github.com/is/jsch/tree/master/examples
 */
@@ -266,7 +278,13 @@ cat buffer.log
             );
             return;
         }        
-        if ( args[0].equals("take") ){          
+        
+        if ( args[0].equals("daemon") || args[0].equals("d") ){
+            daemon(args);
+            return;
+        }
+        
+        if ( args[0].equals("take") ){
             if ( take(args) )
                 return;
         }
@@ -1652,6 +1670,51 @@ cat buffer.log
         }            
     }
 
+    private void daemon(String [] args){
+        if(args.length == 2 && args[1].equals("-server")){
+            daemon_server();
+            return;
+        }            
+        String tag="y> ";
+        try{
+            // DisableControlC
+            new Util().loadDisableControlC("\n" + tag);
+
+            InputStream inputStream_pipe=System.in;        
+            byte[] buf = new byte[BUFFER_SIZE];
+            int len=0;
+            ByteArrayOutputStream out=null;
+            String s=null;
+            System.out.print(tag);
+            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){                
+                out = new ByteArrayOutputStream();
+                out.write(buf, 0, len);
+                s=out.toString().replace("\r\n", "").trim();
+                if ( s.equals("exit") )
+                    System.exit(0);
+                else{
+                    if ( !s.equals("") )
+                        System.out.println("?");
+                }
+                System.out.print(tag);
+            }
+            System.out.flush();
+            System.out.close();
+        }catch(Exception e){
+            System.err.println("Erro " + e.toString());
+            System.exit(1);
+        }
+    }
+    
+    private void daemon_server(){
+        System.out.println("started");
+        while(true){
+            try{
+                Thread.sleep(1000);
+            }catch(Exception e){}
+        }
+    }
+    
     private boolean take(String [] args){
         Object [] objs=get_parm_ip_port_server_send_pass_paths(args);
         if ( objs == null )
@@ -9852,8 +9915,6 @@ class Util{
                 throws ClassNotFoundException { 
                     if ( classes.containsKey(name) ){ 
                         try { 
-                            ////
-                            //byte[] data=M_Base64.base64((String)classes.get(name),false); 
                             byte[] data=base64_S_B((String)classes.get(name),false);
                             return defineClass(name,data,0,data.length);        
                         }catch(Exception e){ 
@@ -9873,13 +9934,33 @@ class Util{
         } 
     }
     
-    public void loadDisableControlC(){
+    public void loadDisableControlC(String parm){
         //https://rosettacode.org/wiki/Handle_a_signal#Java
+        /*
+        import sun.misc.Signal;
+        import sun.misc.SignalHandler;
+        public class DisableControlC {
+            public static void main(String [] args) throws InterruptedException {
+                Signal.handle(new Signal("INT"), new SignalHandler() {
+                    public void handle(Signal sig) {
+                        if(args.length == 1 && args[0] != null )
+                            System.out.print(args[0]);
+                    }
+                }
+            );
+          }
+        }
+        */
         java.util.HashMap classes=new java.util.HashMap(); 
         String principal="DisableControlC";
-        classes.put("DisableControlC$1","yv66vgAAADQAGAoAAwAQBwARBwATBwAUAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABmhhbmRsZQEAFChMc3VuL21pc2MvU2lnbmFsOylWAQAKU291cmNlRmlsZQEAFERpc2FibGVDb250cm9sQy5qYXZhAQAPRW5jbG9zaW5nTWV0aG9kBwAVDAAWABcMAAUABgEAEURpc2FibGVDb250cm9sQyQxAQAMSW5uZXJDbGFzc2VzAQAQamF2YS9sYW5nL09iamVjdAEAFnN1bi9taXNjL1NpZ25hbEhhbmRsZXIBAA9EaXNhYmxlQ29udHJvbEMBAARtYWluAQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgAwAAIAAwABAAQAAAACAAAABQAGAAEABwAAAB0AAQABAAAABSq3AAGxAAAAAQAIAAAABgABAAAABQABAAkACgABAAcAAAAZAAAAAgAAAAGxAAAAAQAIAAAABgABAAAABwADAAsAAAACAAwADQAAAAQADgAPABIAAAAKAAEAAgAAAAAACA==");
-        classes.put("DisableControlC","yv66vgAAADQAIQoACQAVBwAWCAAXCgACABgHABkKAAUAFQoAAgAaBwAbBwAcAQAMSW5uZXJDbGFzc2VzAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABG1haW4BABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAHQEAClNvdXJjZUZpbGUBABREaXNhYmxlQ29udHJvbEMuamF2YQwACwAMAQAPc3VuL21pc2MvU2lnbmFsAQADSU5UDAALAB4BABFEaXNhYmxlQ29udHJvbEMkMQwAHwAgAQAPRGlzYWJsZUNvbnRyb2xDAQAQamF2YS9sYW5nL09iamVjdAEAHmphdmEvbGFuZy9JbnRlcnJ1cHRlZEV4Y2VwdGlvbgEAFShMamF2YS9sYW5nL1N0cmluZzspVgEABmhhbmRsZQEAQyhMc3VuL21pc2MvU2lnbmFsO0xzdW4vbWlzYy9TaWduYWxIYW5kbGVyOylMc3VuL21pc2MvU2lnbmFsSGFuZGxlcjsAIQAIAAkAAAAAAAIAAQALAAwAAQANAAAAHQABAAEAAAAFKrcAAbEAAAABAA4AAAAGAAEAAAADAIkADwAQAAIADQAAADEAAwABAAAAFbsAAlkSA7cABLsABVm3AAa4AAdXsQAAAAEADgAAAAoAAgAAAAUAFAAJABEAAAAEAAEAEgACABMAAAACABQACgAAAAoAAQAFAAAAAAAI");    
-        loadClassByBytes(classes, principal, new String []{});
+        //classes.put("DisableControlC","yv66vgAAADQAIQoACQAVBwAWCAAXCgACABgHABkKAAUAFQoAAgAaBwAbBwAcAQAMSW5uZXJDbGFzc2VzAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABG1haW4BABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAHQEAClNvdXJjZUZpbGUBABREaXNhYmxlQ29udHJvbEMuamF2YQwACwAMAQAPc3VuL21pc2MvU2lnbmFsAQADSU5UDAALAB4BABFEaXNhYmxlQ29udHJvbEMkMQwAHwAgAQAPRGlzYWJsZUNvbnRyb2xDAQAQamF2YS9sYW5nL09iamVjdAEAHmphdmEvbGFuZy9JbnRlcnJ1cHRlZEV4Y2VwdGlvbgEAFShMamF2YS9sYW5nL1N0cmluZzspVgEABmhhbmRsZQEAQyhMc3VuL21pc2MvU2lnbmFsO0xzdW4vbWlzYy9TaWduYWxIYW5kbGVyOylMc3VuL21pc2MvU2lnbmFsSGFuZGxlcjsAIQAIAAkAAAAAAAIAAQALAAwAAQANAAAAHQABAAEAAAAFKrcAAbEAAAABAA4AAAAGAAEAAAADAIkADwAQAAIADQAAADEAAwABAAAAFbsAAlkSA7cABLsABVm3AAa4AAdXsQAAAAEADgAAAAoAAgAAAAUAFAAJABEAAAAEAAEAEgACABMAAAACABQACgAAAAoAAQAFAAAAAAAI");    
+        //classes.put("DisableControlC$1","yv66vgAAADQAGAoAAwAQBwARBwATBwAUAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABmhhbmRsZQEAFChMc3VuL21pc2MvU2lnbmFsOylWAQAKU291cmNlRmlsZQEAFERpc2FibGVDb250cm9sQy5qYXZhAQAPRW5jbG9zaW5nTWV0aG9kBwAVDAAWABcMAAUABgEAEURpc2FibGVDb250cm9sQyQxAQAMSW5uZXJDbGFzc2VzAQAQamF2YS9sYW5nL09iamVjdAEAFnN1bi9taXNjL1NpZ25hbEhhbmRsZXIBAA9EaXNhYmxlQ29udHJvbEMBAARtYWluAQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgAwAAIAAwABAAQAAAACAAAABQAGAAEABwAAAB0AAQABAAAABSq3AAGxAAAAAQAIAAAABgABAAAABQABAAkACgABAAcAAAAZAAAAAgAAAAGxAAAAAQAIAAAABgABAAAABwADAAsAAAACAAwADQAAAAQADgAPABIAAAAKAAEAAgAAAAAACA==");
+        classes.put("DisableControlC","yv66vgAAADQAIgoACQAVBwAWCAAXCgACABgHABkKAAUAGgoAAgAbBwAcBwAdAQAMSW5uZXJDbGFzc2VzAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABG1haW4BABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAHgEAClNvdXJjZUZpbGUBABREaXNhYmxlQ29udHJvbEMuamF2YQwACwAMAQAPc3VuL21pc2MvU2lnbmFsAQADSU5UDAALAB8BABFEaXNhYmxlQ29udHJvbEMkMQwACwAQDAAgACEBAA9EaXNhYmxlQ29udHJvbEMBABBqYXZhL2xhbmcvT2JqZWN0AQAeamF2YS9sYW5nL0ludGVycnVwdGVkRXhjZXB0aW9uAQAVKExqYXZhL2xhbmcvU3RyaW5nOylWAQAGaGFuZGxlAQBDKExzdW4vbWlzYy9TaWduYWw7THN1bi9taXNjL1NpZ25hbEhhbmRsZXI7KUxzdW4vbWlzYy9TaWduYWxIYW5kbGVyOwAhAAgACQAAAAAAAgABAAsADAABAA0AAAAdAAEAAQAAAAUqtwABsQAAAAEADgAAAAYAAQAAAAMACQAPABAAAgANAAAAMgAEAAEAAAAWuwACWRIDtwAEuwAFWSq3AAa4AAdXsQAAAAEADgAAAAoAAgAAAAUAFQALABEAAAAEAAEAEgACABMAAAACABQACgAAAAoAAQAFAAAAAAAI");    
+        classes.put("DisableControlC$1","yv66vgAAADQAKQkABQAWCgAGABcJABgAGQoAGgAbBwAcBwAeBwAfAQAIdmFsJGFyZ3MBABNbTGphdmEvbGFuZy9TdHJpbmc7AQAGPGluaXQ+AQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgEABENvZGUBAA9MaW5lTnVtYmVyVGFibGUBAAZoYW5kbGUBABQoTHN1bi9taXNjL1NpZ25hbDspVgEADVN0YWNrTWFwVGFibGUBAApTb3VyY2VGaWxlAQAURGlzYWJsZUNvbnRyb2xDLmphdmEBAA9FbmNsb3NpbmdNZXRob2QHACAMACEACwwACAAJDAAKACIHACMMACQAJQcAJgwAJwAoAQARRGlzYWJsZUNvbnRyb2xDJDEBAAxJbm5lckNsYXNzZXMBABBqYXZhL2xhbmcvT2JqZWN0AQAWc3VuL21pc2MvU2lnbmFsSGFuZGxlcgEAD0Rpc2FibGVDb250cm9sQwEABG1haW4BAAMoKVYBABBqYXZhL2xhbmcvU3lzdGVtAQADb3V0AQAVTGphdmEvaW8vUHJpbnRTdHJlYW07AQATamF2YS9pby9QcmludFN0cmVhbQEABXByaW50AQAVKExqYXZhL2xhbmcvU3RyaW5nOylWADAABQAGAAEABwABEBAACAAJAAAAAgAAAAoACwABAAwAAAAiAAIAAgAAAAoqK7UAASq3AAKxAAAAAQANAAAABgABAAAABQABAA4ADwABAAwAAABIAAMAAgAAAB8qtAABvgSgABgqtAABAzLGAA+yAAMqtAABAzK2AASxAAAAAgANAAAADgADAAAABwASAAgAHgAJABAAAAADAAEeAAMAEQAAAAIAEgATAAAABAAUABUAHQAAAAoAAQAFAAAAAAAI");
+        String [] args=new String []{};
+        if ( parm != null )
+            args=new String []{parm};
+        loadClassByBytes(classes, principal, args);
     }
 }
 
@@ -12201,6 +12282,7 @@ class XML extends Util{
 /* class by manual */            if ( caminho.equals("/y/manual") )
 /* class by manual */                return ""
 /* class by manual */                + "usage:\n"
+/* class by manual */                + "  [y daemon]\n"
 /* class by manual */                + "  [y take]\n"
 /* class by manual */                + "  [y banco fromCSV -outTable tabelaA selectInsert]\n"
 /* class by manual */                + "  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
@@ -12291,6 +12373,8 @@ class XML extends Util{
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos...\n"
 /* class by manual */                + "\n"
+/* class by manual */                + "[y daemon]\n"
+/* class by manual */                + "    y daemon\n"
 /* class by manual */                + "[y take]\n"
 /* class by manual */                + "    y take\n"
 /* class by manual */                + "    y take file1 pasta2\n"
@@ -12827,6 +12911,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

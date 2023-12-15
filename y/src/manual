@@ -1,4 +1,5 @@
 usage:
+  [y daemon]
   [y take]
   [y banco fromCSV -outTable tabelaA selectInsert]
   [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]
@@ -89,6 +90,8 @@ usage:
 
 Exemplos...
 
+[y daemon]
+    y daemon
 [y take]
     y take
     y take file1 pasta2
