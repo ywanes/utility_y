@@ -7767,8 +7767,15 @@ System.out.println("BB" + retorno);
           
     private void pss_windows(boolean exigencia_flag){
         for ( int i=0;i<pss_parm1.size();i++ )
-            if ( !exigencia_flag || pss_flag.get(i) )
+            if ( !exigencia_flag || pss_flag.get(i) ){
+                if ( pss_parm3.get(i).contains("0:00:00:0") ){ // skip o proprio comando
+                    if ( pss_parm5.get(i).contains("C:\\Windows\\system32\\cmd.exe  /S /D /c\" y grep") )
+                        continue;
+                    if ( pss_parm4.get(i).contains("java.exe") && pss_parm5.get(i).contains(".jar Y grep ") )
+                        continue;
+                }
                 System.out.println(pss_parm1.get(i)+"\t"+pss_parm2.get(i)+"\t"+pss_parm3.get(i)+"\t"+pss_parm4.get(i)+"\t"+pss_parm5.get(i));
+            }
     }
           
     private void pss_linux(boolean exigencia_flag){
