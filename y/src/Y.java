@@ -53,7 +53,7 @@ nssm stop yd
 nssm remove yd
 nssm restart yd
 y pss | y grep -server | y grep Y | y grep -v grep
-
+depois de um tempo o comando de cima some?
 
     créditos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
     créditos https://github.com/is/jsch/tree/master/examples
