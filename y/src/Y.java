@@ -98,6 +98,7 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
@@ -1681,8 +1682,10 @@ cat buffer.log
                 return;
             }
         }       
+
+        String tag_λ="\u03BB";
+        String tag=tag_λ+"> ";
         
-        String tag="y> ";
         try{
             // DisableControlC
             new Util().loadDisableControlC("\n" + tag);
@@ -1690,9 +1693,11 @@ cat buffer.log
             InputStream inputStream_pipe=System.in;        
             byte[] buff_in = new byte[BUFFER_SIZE];
             int len_in=0;
-            ByteArrayOutputStream baos_in=null;
+            ByteArrayOutputStream baos_in = new ByteArrayOutputStream();
             String s_in=null;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
             boolean fake=false;
+            boolean controlC=false;
             
             try{
                 Socket socket_ = new Socket("0.0.0.0", 2020);
@@ -1700,34 +1705,53 @@ cat buffer.log
                 BufferedOutputStream bos = new BufferedOutputStream(socket_.getOutputStream());
                 byte [] buff = new byte[BUFFER_SIZE];
                 System.out.print(tag);
-                while( (len_in=inputStream_pipe.read(buff_in,0,BUFFER_SIZE)) > 0 ){                
-                    baos_in = new ByteArrayOutputStream();
-                    baos_in.write(buff_in, 0, len_in);
-                    s_in=baos_in.toString().replace("\r\n", "").trim();
-                    if ( s_in.equals("exit") )
-                        System.exit(0);
-                    else{
-                        if ( s_in.equals("") ){
-                            s_in="?"; // força comunicacao para verificar se esta conectado
-                            fake=true;
-                        }else{
-                            fake=false;
+                while(true){    
+                    // enviando
+                    controlC=false;
+                    while(true){
+                        len_in=inputStream_pipe.read(buff_in,0,BUFFER_SIZE);
+                        if ( len_in < 0 ){
+                            buff_in[0]=0;
+                            len_in=1;
+                            controlC=true;
                         }
-                        bos.write(s_in.getBytes());
-                        bos.flush();
-
-                        int len = bis.read(buff, 0, buff.length);
-                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        baos.write(buff, 0, len);     
-                        s_in=baos.toString().trim();
-                        if ( fake && s_in.equals("?") )
-                            s_in="";
-                        if ( !s_in.equals("") )
-                            System.out.println(tag + baos.toString());
+                        baos_in.write(buff_in, 0, len_in);
+                        if ( inputStream_pipe.available() > 0 )
+                            continue;
+                        break;
                     }
-                    System.out.print(tag);
+                    s_in=baos_in.toString().trim();
+                    baos_in = new ByteArrayOutputStream();                    
+                    if ( s_in.equals("exit") )
+                        System.exit(1);
+                    if ( !controlC && s_in.equals("") ){
+                        s_in="?"; // força comunicacao para verificar se esta conectado
+                        fake=true;
+                    }else{
+                        fake=false;
+                    }
+                    if ( controlC )
+                        bos.write(new byte[]{0});
+                    else
+                        bos.write(s_in.getBytes());
+                    bos.flush();                        
+                    // recebendo
+                    while(true){
+                        int len = bis.read(buff, 0, buff.length);
+                        baos.write(buff, 0, len);     
+                        if ( bis.available() > 0 )
+                            continue;
+                        break;                        
+                    }
+                    s_in=baos.toString().trim();                    
+                    if ( fake && s_in.equals("?") )
+                        s_in="";
+                    if ( !s_in.equals("") )
+                        System.out.println(tag + baos.toString());
+                    if ( !controlC )
+                        System.out.print(tag);
+                    baos = new ByteArrayOutputStream();
                 }
-                socket_.close();
             }catch(Exception e){
                 if ( e.toString().equals("java.net.ConnectException: Connection refused: connect") ){
                     System.out.println("daemon offline");
@@ -1785,16 +1809,18 @@ cat buffer.log
         try{
             ServerSocket serverSocket = new ServerSocket(2020, 1, InetAddress.getByName("0.0.0.0"));                        
             System.out.println("started");
-            long inicio=epoch(null);
+            long inicio=epoch(null);            
             while(true){
                 final Socket socket = serverSocket.accept();
                 new Thread() {
+                    boolean controlC=false;                    
                     public void run() {
                         try {
                             InputStream input = socket.getInputStream();
                             OutputStream output = socket.getOutputStream(); 
-                            ByteArrayOutputStream baos = null;
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
                             String s=null;
+                            boolean ok=true;
                             byte [] buff = new byte[1024];
                             if (input == null || output == null){
                                 System.err.println("Error 22");
@@ -1802,22 +1828,42 @@ cat buffer.log
                             }                  
                             while(true){
                                 // recebendo
-                                int len=input.read(buff, 0, buff.length);
-                                baos = new ByteArrayOutputStream();
-                                if ( len < 0 )
-                                    return;
-                                baos.write(buff, 0, len);  
+                                controlC=false;
+                                while(true){
+                                    int len=input.read(buff, 0, buff.length);
+                                    if ( len < 0 ){
+                                        ok=false;
+                                        break;
+                                    }
+                                    baos.write(buff, 0, len);  
+                                    if ( input.available() > 0 )
+                                        continue;
+                                    break;
+                                }  
+                                if ( !ok )
+                                    break;
+                                if ( baos.size() == 1 && buff[0] == 0 )
+                                    controlC=true;
                                 s=baos.toString();
+                                baos = new ByteArrayOutputStream();
                                 // enviando
+                                if ( controlC ){
+                                    output.write(new byte[]{0});
+                                    output.flush();
+                                    continue;
+                                }
                                 if ( s.equals("oi") ){
-                                    output.write("oie".getBytes());output.flush();
+                                    output.write("oie".getBytes());
+                                    output.flush();
                                     continue;
                                 }
                                 if ( s.equals("uptime") ){
-                                    output.write(seconds_to_string(epoch(null)-inicio,"format1").getBytes());output.flush();
+                                    output.write(seconds_to_string(epoch(null)-inicio,"format1").getBytes());
+                                    output.flush();
                                     continue;                                    
                                 }
-                                output.write("?".getBytes());output.flush();
+                                output.write("?".getBytes());
+                                output.flush();
                             }
                         } catch (Exception e) {
                             if ( e.toString().equals("java.net.SocketException: Connection reset") )
