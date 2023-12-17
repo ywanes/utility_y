@@ -1728,12 +1728,8 @@ cat buffer.log
                     baos_in = new ByteArrayOutputStream();                    
                     if ( s_in.equals("exit") )
                         System.exit(1);
-                    if ( !controlC && s_in.equals("") ){
-                        s_in="?"; // força comunicacao para verificar se esta conectado
-                        fake=true;
-                    }else{
-                        fake=false;
-                    }
+                    if ( !controlC && s_in.equals("") )
+                        s_in="[FAKE]"; // força comunicacao para verificar se esta conectado
                     if ( controlC )
                         bos.write(new byte[]{0});
                     else
@@ -1748,7 +1744,7 @@ cat buffer.log
                         break;                        
                     }
                     s_in=baos.toString().trim();                    
-                    if ( fake && s_in.equals("?") )
+                    if ( s_in.equals("[FAKE]") )
                         s_in="";
                     if ( !s_in.equals("") )
                         System.out.println(tag + baos.toString());
@@ -1855,6 +1851,16 @@ cat buffer.log
                                     output.write(new byte[]{0});
                                     output.flush();
                                     continue;
+                                }                                
+                                if ( s.equals("?") ){
+                                    output.write("comandos:\noi\nuptime".getBytes());
+                                    output.flush();
+                                    continue;
+                                }
+                                if ( s.equals("[FAKE]") ){
+                                    output.write("[FAKE]".getBytes());
+                                    output.flush();
+                                    continue;
                                 }
                                 if ( s.equals("oi") ){
                                     output.write("oie".getBytes());
@@ -1866,7 +1872,7 @@ cat buffer.log
                                     output.flush();
                                     continue;                                    
                                 }
-                                output.write("?".getBytes());
+                                output.write("??".getBytes());
                                 output.flush();
                             }
                         } catch (Exception e) {
