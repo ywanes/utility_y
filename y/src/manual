@@ -465,6 +465,7 @@ Exemplos...
 [y sleep]
     y sleep
     y sleep 0.22 # 0.22 seconds
+    y sleep infinity
 [y split]
     y cat fileA | y split -b 22
     y cat fileA | y split -l 22

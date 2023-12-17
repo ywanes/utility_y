@@ -1427,7 +1427,11 @@ cat buffer.log
         if ( args[0].equals("sleep") && (args.length == 1 || args.length == 2) ){
             if ( args.length == 2 ){
                 try{
-                    sleep(Float.parseFloat(args[1]));
+                    if ( args[1].equals("infinity") ){
+                        while(true)
+                            Thread.sleep(1000);
+                    }else
+                        sleep(Float.parseFloat(args[1]));
                     return;
                 }catch(Exception e){}                                
             }else{
@@ -8173,23 +8177,15 @@ System.out.println("BB" + retorno);
                 }
                 if ( p < args.length && ( args[p].equals("click") || args[p].equals("c") ) ){
                     System.out.println(args[p]);
-                    //sleep_mouse(0.01F);
                     robo.mousePress(BOTAO_ESQ);
-                    //robo.delay(10);
                     robo.mouseRelease(BOTAO_ESQ);
-                    //robo.delay(10);
-                    //sleep_mouse(0.01F);
                     p++;
                     continue;
                 }
                 if ( p < args.length && ( args[p].equals("clickDireito") || args[p].equals("cD") ) ){
                     System.out.println(args[p]);
-                    //sleep_mouse(0.01F);
                     robo.mousePress(BOTAO_DIR);
-                    //robo.delay(10);
                     robo.mouseRelease(BOTAO_DIR);
-                    //robo.delay(10);
-                    //sleep_mouse(0.01F);
                     p++;
                     continue;
                 }
@@ -12906,6 +12902,7 @@ class XML extends Util{
 /* class by manual */                + "[y sleep]\n"
 /* class by manual */                + "    y sleep\n"
 /* class by manual */                + "    y sleep 0.22 # 0.22 seconds\n"
+/* class by manual */                + "    y sleep infinity\n"
 /* class by manual */                + "[y split]\n"
 /* class by manual */                + "    y cat fileA | y split -b 22\n"
 /* class by manual */                + "    y cat fileA | y split -l 22\n"
@@ -13069,6 +13066,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
