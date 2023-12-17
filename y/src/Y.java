@@ -8090,6 +8090,8 @@ System.out.println("BB" + retorno);
     private String [] show_ips(boolean ping, int timeout, boolean list, boolean printOn){
         String ipv4=null;
         String ipv6=null;
+        String ipv6_nat=null;
+        String ipv6_not_nat=null;
         try {
             int count=0;
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
@@ -8117,8 +8119,10 @@ System.out.println("BB" + retorno);
                                 ip=ip.replace(":0:","::").replace(":::","::");
                             if ( ipv4 == null && ip.contains(".") )
                                 ipv4=ip;
-                            if ( ipv6 == null && ip.contains(":") )
-                                ipv6=ip;
+                            if ( ipv6_nat == null && ip.contains(":") && ip.startsWith("fe") )
+                                ipv6_nat=ip;
+                            if ( ipv6_not_nat == null && ip.contains(":") && !ip.startsWith("fe") )
+                                ipv6_not_nat=ip;
                             String ping_=null;
                             if ( ping )
                                 ping_=ping(ip, timeout);
@@ -8134,6 +8138,9 @@ System.out.println("BB" + retorno);
         } catch (java.net.SocketException e) {
             throw new RuntimeException(e);
         } 
+        ipv6=ipv6_not_nat;
+        if ( ipv6 == null )
+            ipv6=ipv6_nat;
         return new String[]{ipv4, ipv6};
     }           
 
