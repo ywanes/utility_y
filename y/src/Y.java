@@ -1907,7 +1907,7 @@ cat buffer.log
                                         baos=new ByteArrayOutputStream();
                                         break;
                                     }
-                                    result=("? " + s).getBytes();
+                                    result=("? " + s.trim()).getBytes();
                                     baos=new ByteArrayOutputStream();
                                     break;
                                 }
