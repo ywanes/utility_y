@@ -1718,8 +1718,10 @@ cat buffer.log
                     while(true){
                         len_in=inputStream_pipe.read(buff_in,0,BUFFER_SIZE);
                         if ( len_in < 0 ){
+                            // control c
                             baos_in = new ByteArrayOutputStream();
                             baos_in.write(new byte[]{0});
+                            break;
                         }else{
                             baos_in.write(buff_in, 0, len_in);
                         }
@@ -1727,8 +1729,6 @@ cat buffer.log
                             continue;
                         break;
                     }
-                    if ( result == null && baos_in.toString().trim().equals("exit") )
-                        System.exit(1);
                     bos.write(baos_in.toByteArray());
                     bos.flush();                
                     baos_in = new ByteArrayOutputStream();
@@ -1748,6 +1748,8 @@ cat buffer.log
                         print="\n"+tag;                    
                     if ( print == null && s.equals("[NADA]") )
                         print="";
+                    if ( print == null && s.equals("[EXIT]") )
+                        System.exit(0);
                     if ( print == null && !s.equals("") )
                         print=tag + baos.toString() + "\n" + tag;
                     
@@ -1823,7 +1825,7 @@ cat buffer.log
                             OutputStream output = socket.getOutputStream();                                                         
                             ByteArrayOutputStream baos=new ByteArrayOutputStream();
                             String s=null;
-                            byte [] result=null;
+                            String result=null;
                             boolean ok=true;
                             byte [] buff = new byte[1024];
                             if (input == null || output == null){
@@ -1838,6 +1840,8 @@ cat buffer.log
                                         ok=false;
                                         break;
                                     }
+                                    if ( len == 1 && buff[0] == 0 )
+                                        baos=new ByteArrayOutputStream();
                                     baos.write(buff, 0, len);  
                                     if ( input.available() > 0 )
                                         continue;
@@ -1846,35 +1850,19 @@ cat buffer.log
                                 // interrompendo leitura
                                 if ( !ok )
                                     break;
-                                // interpretando
+                                // interpretando e enviando
+                                result="init de seguranca";
                                 while(true){
-                                    if ( baos.size() == 1 && buff[0] == 0 ){
-                                        result="[CONTROLC]".getBytes();
-                                        baos=new ByteArrayOutputStream();
+                                    // analise bit controlC                                    
+                                    if ( baos.size() == 1 && buff[0] == 0 ){                                        
+                                        result="[CONTROLC]";
                                         break;
                                     }
-                                    // fix baos 
-                                    // nao colocar trim no camando abaixo
+                                    // remove \r e resize - nao colocar trim no camando abaixo
                                     s=baos.toString().replace("\r", "");
                                     baos=new ByteArrayOutputStream();
                                     baos.write(s.getBytes());
-                                    
-                                    // enviando
-                                    if ( s.trim().equals("?") ){
-                                        result="\ncomandos:\n oi\n uptime\n define proc".getBytes();
-                                        baos=new ByteArrayOutputStream();
-                                        break;
-                                    }
-                                    if ( s.trim().equals("oi") ){
-                                        result="oie".getBytes();
-                                        baos=new ByteArrayOutputStream();
-                                        break;
-                                    }
-                                    if ( s.trim().equals("uptime") ){
-                                        result=seconds_to_string(epoch(null)-inicio,"format1").getBytes();
-                                        baos=new ByteArrayOutputStream();
-                                        break;
-                                    }
+                                    // interpretacao de bloco
                                     if ( s.startsWith("define proc ") ){
                                         /* 
                                         define proc cry
@@ -1887,8 +1875,7 @@ cat buffer.log
                                         if ( p_EOF > 0 ){
                                             String first_line=s.split("\n")[0];
                                             if ( first_line.length() > p_EOF || first_line.split(" ").length != 3 ){
-                                                result=("? " + s + "\n").getBytes();
-                                                baos=new ByteArrayOutputStream();
+                                                result="? " + s + "\n";
                                                 break;                                                
                                             }
                                             String file_name="D:\\daemon\\procs\\" + first_line.split(" ")[2];
@@ -1896,24 +1883,48 @@ cat buffer.log
                                             baos=delete_baos(baos,0, p_EOF+3);
                                             continue;
                                         }else{
-                                            result="[NADA]".getBytes();
-                                            // o comando de baixo NAO pode ser descomentado, porque é uma continuidade!!!
-                                            //baos=new ByteArrayOutputStream();
+                                            result="[NADA]";
                                             break;
                                         }
-                                    }
-                                    if ( s.trim().equals("") ){ // s.equals("") pode ser resultado dos processamentos de bloco
-                                        result="[QUEBRANDO_LINHA]".getBytes();
-                                        baos=new ByteArrayOutputStream();
+                                    }                                    
+                                    if ( s.trim().equals("?") ){
+                                        result= "\ncomandos:" + 
+                                                "\n oi"  + 
+                                                "\n uptime" + 
+                                                "\n status" + 
+                                                "\n define proc PROCNAME" +
+                                                "\n cat << EOF > procs/PROCNAME" + 
+                                                "\n cat procs/PROCNAME" + 
+                                                "\n pwd" + 
+                                                "\n cd .." + 
+                                                "\n cd" + 
+                                                "\n list";
                                         break;
                                     }
-                                    result=("? " + s.trim()).getBytes();
-                                    baos=new ByteArrayOutputStream();
+                                    if ( s.trim().equals("oi") ){
+                                        result="oie";
+                                        break;
+                                    }
+                                    if ( s.trim().equals("uptime") ){
+                                        result=seconds_to_string(epoch(null)-inicio,"format1");
+                                        break;
+                                    }
+                                    if ( s.trim().equals("exit") ){
+                                        result="[EXIT]";
+                                        break;
+                                    }
+                                    if ( s.trim().equals("") ){ // s.equals("") pode ser resultado dos processamentos de bloco
+                                        result="[QUEBRANDO_LINHA]";
+                                        break;
+                                    }
+                                    result="? " + s.trim();
                                     break;
                                 }
-                                // enviando
-                                output.write(result);
+                                // enviando                                
+                                output.write(result.getBytes());
                                 output.flush();
+                                if ( !result.equals("[NADA]") )
+                                    baos=new ByteArrayOutputStream();
                             }
                         }catch (Exception e) {
                             if ( e.toString().equals("java.net.SocketException: Connection reset") )
