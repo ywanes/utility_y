@@ -1692,10 +1692,9 @@ cat buffer.log
         int tracker=0;
         
         try{
-            
+            String [] controlC_parms = new String []{"\n" + tag, "0"};
             // DisableControlC
-            //new Util().loadDisableControlC("\n" + tag);
-            new Util().loadDisableControlC("");
+            new Util().loadDisableControlC(controlC_parms);
 
             InputStream inputStream_pipe=System.in;        
             byte[] buff_in = new byte[BUFFER_SIZE];
@@ -1719,8 +1718,7 @@ cat buffer.log
                         len_in=inputStream_pipe.read(buff_in,0,BUFFER_SIZE);
                         if ( len_in < 0 ){
                             // control c
-                            baos_in = new ByteArrayOutputStream();
-                            baos_in.write(new byte[]{0});
+                            controlC_parms[1]="1";
                             break;
                         }else{
                             baos_in.write(buff_in, 0, len_in);
@@ -1728,6 +1726,15 @@ cat buffer.log
                         if ( inputStream_pipe.available() > 0 )
                             continue;
                         break;
+                    }
+                    // control C analise
+                    if ( controlC_parms[1].equals("1") ){
+                        bos.write(new byte[]{0});
+                        bos.flush();           
+                        bis.read(buff, 0, buff.length);                        
+                        controlC_parms[1]="0";
+                        if ( baos_in.size() == 0 )
+                            continue;
                     }
                     bos.write(baos_in.toByteArray());
                     bos.flush();                
@@ -1744,8 +1751,10 @@ cat buffer.log
                     print=null;
                     if ( print == null && s.equals("[QUEBRANDO_LINHA]") )
                         print=tag;
-                    if ( print == null && s.equals("[CONTROLC]") )
-                        print="\n"+tag;                    
+                    if ( print == null && s.equals("[CONTROLC]") ){
+                        //print="\n"+tag;                    
+                        print="";
+                    }
                     if ( print == null && s.equals("[NADA]") )
                         print="";
                     if ( print == null && s.equals("[EXIT]") )
@@ -1827,6 +1836,9 @@ cat buffer.log
                             String s=null;
                             String result=null;
                             boolean ok=true;
+                            String dir_daemon="/daemon/procs/";
+                            if ( isWindows() )
+                                dir_daemon="D:\\daemon\\procs\\";
                             byte [] buff = new byte[1024];
                             if (input == null || output == null){
                                 System.err.println("Error 22");
@@ -1878,7 +1890,7 @@ cat buffer.log
                                                 result="? " + s + "\n";
                                                 break;                                                
                                             }
-                                            String file_name="D:\\daemon\\procs\\" + first_line.split(" ")[2];
+                                            String file_name=dir_daemon + first_line.split(" ")[2];
                                             salvando_file(s.substring(first_line.length()+1, p_EOF),new File(file_name));
                                             baos=delete_baos(baos,0, p_EOF+3);
                                             continue;
@@ -9942,13 +9954,6 @@ class Util{
         return os(true).equals("Mac");
     }
     
-    private static Boolean isWindowsCache_old=null;
-    public static Boolean isWindows_old(){
-        if ( isWindowsCache_old == null )
-            isWindowsCache_old=new File("c:/").exists();
-        return isWindowsCache_old;
-    }
-
     public static String [] listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
             "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y"};  
     private static String [] listEnv = null;
@@ -10162,7 +10167,7 @@ class Util{
         } 
     }
     
-    public void loadDisableControlC(String parm){
+    public void loadDisableControlC(String [] args){
         //https://rosettacode.org/wiki/Handle_a_signal#Java
         /*
         import sun.misc.Signal;
@@ -10171,8 +10176,10 @@ class Util{
             public static void main(String [] args) throws InterruptedException {
                 Signal.handle(new Signal("INT"), new SignalHandler() {
                     public void handle(Signal sig) {
-                        if(args.length == 1 && args[0] != null )
+                        if(args.length > 0 && args[0] != null )
                             System.out.print(args[0]);
+                        if(args.length > 1)
+                            args[1]="1";
                     }
                 }
             );
@@ -10183,11 +10190,10 @@ class Util{
         String principal="DisableControlC";
         //classes.put("DisableControlC","yv66vgAAADQAIQoACQAVBwAWCAAXCgACABgHABkKAAUAFQoAAgAaBwAbBwAcAQAMSW5uZXJDbGFzc2VzAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABG1haW4BABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAHQEAClNvdXJjZUZpbGUBABREaXNhYmxlQ29udHJvbEMuamF2YQwACwAMAQAPc3VuL21pc2MvU2lnbmFsAQADSU5UDAALAB4BABFEaXNhYmxlQ29udHJvbEMkMQwAHwAgAQAPRGlzYWJsZUNvbnRyb2xDAQAQamF2YS9sYW5nL09iamVjdAEAHmphdmEvbGFuZy9JbnRlcnJ1cHRlZEV4Y2VwdGlvbgEAFShMamF2YS9sYW5nL1N0cmluZzspVgEABmhhbmRsZQEAQyhMc3VuL21pc2MvU2lnbmFsO0xzdW4vbWlzYy9TaWduYWxIYW5kbGVyOylMc3VuL21pc2MvU2lnbmFsSGFuZGxlcjsAIQAIAAkAAAAAAAIAAQALAAwAAQANAAAAHQABAAEAAAAFKrcAAbEAAAABAA4AAAAGAAEAAAADAIkADwAQAAIADQAAADEAAwABAAAAFbsAAlkSA7cABLsABVm3AAa4AAdXsQAAAAEADgAAAAoAAgAAAAUAFAAJABEAAAAEAAEAEgACABMAAAACABQACgAAAAoAAQAFAAAAAAAI");    
         //classes.put("DisableControlC$1","yv66vgAAADQAGAoAAwAQBwARBwATBwAUAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABmhhbmRsZQEAFChMc3VuL21pc2MvU2lnbmFsOylWAQAKU291cmNlRmlsZQEAFERpc2FibGVDb250cm9sQy5qYXZhAQAPRW5jbG9zaW5nTWV0aG9kBwAVDAAWABcMAAUABgEAEURpc2FibGVDb250cm9sQyQxAQAMSW5uZXJDbGFzc2VzAQAQamF2YS9sYW5nL09iamVjdAEAFnN1bi9taXNjL1NpZ25hbEhhbmRsZXIBAA9EaXNhYmxlQ29udHJvbEMBAARtYWluAQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgAwAAIAAwABAAQAAAACAAAABQAGAAEABwAAAB0AAQABAAAABSq3AAGxAAAAAQAIAAAABgABAAAABQABAAkACgABAAcAAAAZAAAAAgAAAAGxAAAAAQAIAAAABgABAAAABwADAAsAAAACAAwADQAAAAQADgAPABIAAAAKAAEAAgAAAAAACA==");
-        classes.put("DisableControlC","yv66vgAAADQAIgoACQAVBwAWCAAXCgACABgHABkKAAUAGgoAAgAbBwAcBwAdAQAMSW5uZXJDbGFzc2VzAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABG1haW4BABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAHgEAClNvdXJjZUZpbGUBABREaXNhYmxlQ29udHJvbEMuamF2YQwACwAMAQAPc3VuL21pc2MvU2lnbmFsAQADSU5UDAALAB8BABFEaXNhYmxlQ29udHJvbEMkMQwACwAQDAAgACEBAA9EaXNhYmxlQ29udHJvbEMBABBqYXZhL2xhbmcvT2JqZWN0AQAeamF2YS9sYW5nL0ludGVycnVwdGVkRXhjZXB0aW9uAQAVKExqYXZhL2xhbmcvU3RyaW5nOylWAQAGaGFuZGxlAQBDKExzdW4vbWlzYy9TaWduYWw7THN1bi9taXNjL1NpZ25hbEhhbmRsZXI7KUxzdW4vbWlzYy9TaWduYWxIYW5kbGVyOwAhAAgACQAAAAAAAgABAAsADAABAA0AAAAdAAEAAQAAAAUqtwABsQAAAAEADgAAAAYAAQAAAAMACQAPABAAAgANAAAAMgAEAAEAAAAWuwACWRIDtwAEuwAFWSq3AAa4AAdXsQAAAAEADgAAAAoAAgAAAAUAFQALABEAAAAEAAEAEgACABMAAAACABQACgAAAAoAAQAFAAAAAAAI");    
-        classes.put("DisableControlC$1","yv66vgAAADQAKQkABQAWCgAGABcJABgAGQoAGgAbBwAcBwAeBwAfAQAIdmFsJGFyZ3MBABNbTGphdmEvbGFuZy9TdHJpbmc7AQAGPGluaXQ+AQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgEABENvZGUBAA9MaW5lTnVtYmVyVGFibGUBAAZoYW5kbGUBABQoTHN1bi9taXNjL1NpZ25hbDspVgEADVN0YWNrTWFwVGFibGUBAApTb3VyY2VGaWxlAQAURGlzYWJsZUNvbnRyb2xDLmphdmEBAA9FbmNsb3NpbmdNZXRob2QHACAMACEACwwACAAJDAAKACIHACMMACQAJQcAJgwAJwAoAQARRGlzYWJsZUNvbnRyb2xDJDEBAAxJbm5lckNsYXNzZXMBABBqYXZhL2xhbmcvT2JqZWN0AQAWc3VuL21pc2MvU2lnbmFsSGFuZGxlcgEAD0Rpc2FibGVDb250cm9sQwEABG1haW4BAAMoKVYBABBqYXZhL2xhbmcvU3lzdGVtAQADb3V0AQAVTGphdmEvaW8vUHJpbnRTdHJlYW07AQATamF2YS9pby9QcmludFN0cmVhbQEABXByaW50AQAVKExqYXZhL2xhbmcvU3RyaW5nOylWADAABQAGAAEABwABEBAACAAJAAAAAgAAAAoACwABAAwAAAAiAAIAAgAAAAoqK7UAASq3AAKxAAAAAQANAAAABgABAAAABQABAA4ADwABAAwAAABIAAMAAgAAAB8qtAABvgSgABgqtAABAzLGAA+yAAMqtAABAzK2AASxAAAAAgANAAAADgADAAAABwASAAgAHgAJABAAAAADAAEeAAMAEQAAAAIAEgATAAAABAAUABUAHQAAAAoAAQAFAAAAAAAI");
-        String [] args=new String []{};
-        if ( parm != null )
-            args=new String []{parm};
+        //classes.put("DisableControlC","yv66vgAAADQAIgoACQAVBwAWCAAXCgACABgHABkKAAUAGgoAAgAbBwAcBwAdAQAMSW5uZXJDbGFzc2VzAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABG1haW4BABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAHgEAClNvdXJjZUZpbGUBABREaXNhYmxlQ29udHJvbEMuamF2YQwACwAMAQAPc3VuL21pc2MvU2lnbmFsAQADSU5UDAALAB8BABFEaXNhYmxlQ29udHJvbEMkMQwACwAQDAAgACEBAA9EaXNhYmxlQ29udHJvbEMBABBqYXZhL2xhbmcvT2JqZWN0AQAeamF2YS9sYW5nL0ludGVycnVwdGVkRXhjZXB0aW9uAQAVKExqYXZhL2xhbmcvU3RyaW5nOylWAQAGaGFuZGxlAQBDKExzdW4vbWlzYy9TaWduYWw7THN1bi9taXNjL1NpZ25hbEhhbmRsZXI7KUxzdW4vbWlzYy9TaWduYWxIYW5kbGVyOwAhAAgACQAAAAAAAgABAAsADAABAA0AAAAdAAEAAQAAAAUqtwABsQAAAAEADgAAAAYAAQAAAAMACQAPABAAAgANAAAAMgAEAAEAAAAWuwACWRIDtwAEuwAFWSq3AAa4AAdXsQAAAAEADgAAAAoAAgAAAAUAFQALABEAAAAEAAEAEgACABMAAAACABQACgAAAAoAAQAFAAAAAAAI");    
+        //classes.put("DisableControlC$1","yv66vgAAADQAKQkABQAWCgAGABcJABgAGQoAGgAbBwAcBwAeBwAfAQAIdmFsJGFyZ3MBABNbTGphdmEvbGFuZy9TdHJpbmc7AQAGPGluaXQ+AQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgEABENvZGUBAA9MaW5lTnVtYmVyVGFibGUBAAZoYW5kbGUBABQoTHN1bi9taXNjL1NpZ25hbDspVgEADVN0YWNrTWFwVGFibGUBAApTb3VyY2VGaWxlAQAURGlzYWJsZUNvbnRyb2xDLmphdmEBAA9FbmNsb3NpbmdNZXRob2QHACAMACEACwwACAAJDAAKACIHACMMACQAJQcAJgwAJwAoAQARRGlzYWJsZUNvbnRyb2xDJDEBAAxJbm5lckNsYXNzZXMBABBqYXZhL2xhbmcvT2JqZWN0AQAWc3VuL21pc2MvU2lnbmFsSGFuZGxlcgEAD0Rpc2FibGVDb250cm9sQwEABG1haW4BAAMoKVYBABBqYXZhL2xhbmcvU3lzdGVtAQADb3V0AQAVTGphdmEvaW8vUHJpbnRTdHJlYW07AQATamF2YS9pby9QcmludFN0cmVhbQEABXByaW50AQAVKExqYXZhL2xhbmcvU3RyaW5nOylWADAABQAGAAEABwABEBAACAAJAAAAAgAAAAoACwABAAwAAAAiAAIAAgAAAAoqK7UAASq3AAKxAAAAAQANAAAABgABAAAABQABAA4ADwABAAwAAABIAAMAAgAAAB8qtAABvgSgABgqtAABAzLGAA+yAAMqtAABAzK2AASxAAAAAgANAAAADgADAAAABwASAAgAHgAJABAAAAADAAEeAAMAEQAAAAIAEgATAAAABAAUABUAHQAAAAoAAQAFAAAAAAAI");
+        classes.put("DisableControlC","yv66vgAAADQAIgoACQAVBwAWCAAXCgACABgHABkKAAUAGgoAAgAbBwAcBwAdAQAMSW5uZXJDbGFzc2VzAQAGPGluaXQ+AQADKClWAQAEQ29kZQEAD0xpbmVOdW1iZXJUYWJsZQEABG1haW4BABYoW0xqYXZhL2xhbmcvU3RyaW5nOylWAQAKRXhjZXB0aW9ucwcAHgEAClNvdXJjZUZpbGUBABREaXNhYmxlQ29udHJvbEMuamF2YQwACwAMAQAPc3VuL21pc2MvU2lnbmFsAQADSU5UDAALAB8BABFEaXNhYmxlQ29udHJvbEMkMQwACwAQDAAgACEBAA9EaXNhYmxlQ29udHJvbEMBABBqYXZhL2xhbmcvT2JqZWN0AQAeamF2YS9sYW5nL0ludGVycnVwdGVkRXhjZXB0aW9uAQAVKExqYXZhL2xhbmcvU3RyaW5nOylWAQAGaGFuZGxlAQBDKExzdW4vbWlzYy9TaWduYWw7THN1bi9taXNjL1NpZ25hbEhhbmRsZXI7KUxzdW4vbWlzYy9TaWduYWxIYW5kbGVyOwAhAAgACQAAAAAAAgABAAsADAABAA0AAAAdAAEAAQAAAAUqtwABsQAAAAEADgAAAAYAAQAAAAMACQAPABAAAgANAAAAMgAEAAEAAAAWuwACWRIDtwAEuwAFWSq3AAa4AAdXsQAAAAEADgAAAAoAAgAAAAUAFQAOABEAAAAEAAEAEgACABMAAAACABQACgAAAAoAAQAFAAAAAAAI");
+        classes.put("DisableControlC$1","yv66vgAAADQAKwkABgAXCgAHABgJABkAGgoAGwAcCAAdBwAeBwAgBwAhAQAIdmFsJGFyZ3MBABNbTGphdmEvbGFuZy9TdHJpbmc7AQAGPGluaXQ+AQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgEABENvZGUBAA9MaW5lTnVtYmVyVGFibGUBAAZoYW5kbGUBABQoTHN1bi9taXNjL1NpZ25hbDspVgEADVN0YWNrTWFwVGFibGUBAApTb3VyY2VGaWxlAQAURGlzYWJsZUNvbnRyb2xDLmphdmEBAA9FbmNsb3NpbmdNZXRob2QHACIMACMADAwACQAKDAALACQHACUMACYAJwcAKAwAKQAqAQABMQEAEURpc2FibGVDb250cm9sQyQxAQAMSW5uZXJDbGFzc2VzAQAQamF2YS9sYW5nL09iamVjdAEAFnN1bi9taXNjL1NpZ25hbEhhbmRsZXIBAA9EaXNhYmxlQ29udHJvbEMBAARtYWluAQADKClWAQAQamF2YS9sYW5nL1N5c3RlbQEAA291dAEAFUxqYXZhL2lvL1ByaW50U3RyZWFtOwEAE2phdmEvaW8vUHJpbnRTdHJlYW0BAAVwcmludAEAFShMamF2YS9sYW5nL1N0cmluZzspVgAwAAYABwABAAgAARAQAAkACgAAAAIAAAALAAwAAQANAAAAIgACAAIAAAAKKiu1AAEqtwACsQAAAAEADgAAAAYAAQAAAAUAAQAPABAAAQANAAAAYQADAAIAAAAvKrQAAb6eABgqtAABAzLGAA+yAAMqtAABAzK2AAQqtAABvgSkAAsqtAABBBIFU7EAAAACAA4AAAAWAAUAAAAHABEACAAdAAkAJgAKAC4ACwARAAAABAACHRAAAwASAAAAAgATABQAAAAEABUAFgAfAAAACgABAAYAAAAAAAg=");
         loadClassByBytes(classes, principal, args);
     }
 }
