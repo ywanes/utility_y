@@ -1742,6 +1742,10 @@ cat buffer.log
                     // recebendo
                     while(true){
                         int len = bis.read(buff, 0, buff.length);
+                        if ( len == -1 ){
+                            System.err.println("Erro, desconectado");
+                            System.exit(1);
+                        }
                         baos.write(buff, 0, len);     
                         if ( bis.available() > 0 )
                             continue;
@@ -1768,18 +1772,10 @@ cat buffer.log
                     baos = new ByteArrayOutputStream();
                 }
             }catch(Exception e){
-                if ( e.toString().equals("java.net.ConnectException: Connection refused: connect") ){
-                    System.out.println("daemon offline");
-                    return;
-                }
-                if ( e.toString().equals("java.net.SocketException: Connection reset by peer: socket write error") ){
-                    System.out.println("daemon desconectado");
-                    return;
-                }
-                System.out.println("Erro: " + e.toString());
+                System.out.println(erro_amigavel_exception(e));
             }            
         }catch(Exception e){
-            System.err.println("Erro2 " + e.toString() + " tracker:" + tracker);
+            System.err.println(erro_amigavel_exception(e));
             System.exit(1);
         }
     }
@@ -1808,15 +1804,7 @@ cat buffer.log
             System.out.println(baos.toString().trim());
             socket_.close();
         }catch(Exception e){
-            if ( e.toString().equals("java.net.ConnectException: Connection refused: connect") ){
-                System.out.println("daemon offline");
-                return;
-            }
-            if ( e.toString().equals("java.net.SocketException: Connection reset by peer: socket write error") ){
-                System.out.println("daemon desconectado");
-                return;
-            }
-            System.out.println(e.toString());
+            System.out.println(erro_amigavel_exception(e));
         }            
     }
     
@@ -1836,9 +1824,12 @@ cat buffer.log
                             String s=null;
                             String result=null;
                             boolean ok=true;
-                            String dir_daemon="/daemon/procs/";
+                            String dir_base="/daemon";
                             if ( isWindows() )
-                                dir_daemon="D:\\daemon\\procs\\";
+                                dir_base="d:/daemon";
+                            String dir=".";                            
+                            String dir_init=".";
+                            String tail_dir=".";
                             byte [] buff = new byte[1024];
                             if (input == null || output == null){
                                 System.err.println("Error 22");
@@ -1870,10 +1861,24 @@ cat buffer.log
                                         result="[CONTROLC]";
                                         break;
                                     }
-                                    // remove \r e resize - nao colocar trim no camando abaixo
+                                    // resize baos
                                     s=baos.toString().replace("\r", "");
                                     baos=new ByteArrayOutputStream();
                                     baos.write(s.getBytes());
+                                    if ( s.trim().equals("?") ){
+                                        result= "\ncomandos:" +
+                                                "\n define proc PROCNAME" + 
+                                                "\n oi"  + 
+                                                "\n uptime" + 
+                                                "\n status|list" +                                                 
+                                                "\n cat << EOF > procs/PROCNAME" + 
+                                                "\n cat procs/PROCNAME" + 
+                                                "\n pwd" + 
+                                                "\n cd" + 
+                                                "\n ls" + 
+                                                "\n mkdir";
+                                        break;
+                                    }                                    
                                     // interpretacao de bloco
                                     if ( s.startsWith("define proc ") ){
                                         /* 
@@ -1890,7 +1895,7 @@ cat buffer.log
                                                 result="? " + s + "\n";
                                                 break;                                                
                                             }
-                                            String file_name=dir_daemon + first_line.split(" ")[2];
+                                            String file_name=dir_base + "/procs/" + first_line.split(" ")[2];
                                             salvando_file(s.substring(first_line.length()+1, p_EOF),new File(file_name));
                                             baos=delete_baos(baos,0, p_EOF+3);
                                             continue;
@@ -1899,20 +1904,6 @@ cat buffer.log
                                             break;
                                         }
                                     }                                    
-                                    if ( s.trim().equals("?") ){
-                                        result= "\ncomandos:" + 
-                                                "\n oi"  + 
-                                                "\n uptime" + 
-                                                "\n status" + 
-                                                "\n define proc PROCNAME" +
-                                                "\n cat << EOF > procs/PROCNAME" + 
-                                                "\n cat procs/PROCNAME" + 
-                                                "\n pwd" + 
-                                                "\n cd .." + 
-                                                "\n cd" + 
-                                                "\n list";
-                                        break;
-                                    }
                                     if ( s.trim().equals("oi") ){
                                         result="oie";
                                         break;
@@ -1921,18 +1912,131 @@ cat buffer.log
                                         result=seconds_to_string(epoch(null)-inicio,"format1");
                                         break;
                                     }
+                                    if ( s.trim().equals("status") || s.trim().equals("list") ){
+                                        String [] itens=new File(dir_base+"/procs").list();
+                                        String s_="";
+                                        for ( int i=0;i<itens.length;i++ ){
+                                            if ( ! s_.equals("") )
+                                                s_+="\n";
+                                            s_+="offline  - "+itens[i];
+                                        }
+                                        if ( s_.equals("") )
+                                            s_ = "nenhum item encontrado";
+                                        result=s_;
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("cat << EOF > ") && s.trim().length() > "cat << EOF > ".length() ){
+                                        result="nao implementado";
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("cat ") && s.trim().split(" ").length == 2 ){
+                                        result="nao implementado";
+                                        break;
+                                    }
+                                    if ( s.trim().equals("pwd") ){
+                                        result=dir;
+                                        break;
+                                    }
+                                    if ( s.trim().equals("cd") ){
+                                        tail_dir=dir;
+                                        dir=dir_init;
+                                        result="";
+                                        break;
+                                    }
+                                    if ( s.trim().equals("cd .") ){
+                                        tail_dir=dir;
+                                        result="";
+                                        break;
+                                    }
+                                    if ( s.trim().equals("cd ..") ){
+                                        tail_dir=dir;
+                                        int p=dir.lastIndexOf("/");
+                                        if ( p > 0 )
+                                            dir=dir.substring(0, p);
+                                        result="";
+                                        break;
+                                    }
+                                    if ( s.trim().equals("cd /") ){
+                                        tail_dir=dir;
+                                        dir=".";
+                                        result="";
+                                        break;
+                                    }
+                                    if ( s.trim().equals("cd -") ){
+                                        String aux=tail_dir;
+                                        tail_dir=dir;
+                                        dir=aux;
+                                        result="";
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("cd ") ){
+                                        String path=s.trim().substring(3);
+                                        if ( error_back_path(path) )
+                                            result="Error back path";
+                                        else{
+                                            if ( new File(dir_base + "/" + path).exists() ){
+                                                tail_dir=dir;
+                                                dir+="/" + path;
+                                                result="";
+                                            }else
+                                                result="Pasta nao encontrada";
+                                        }
+                                        break;
+                                    }
+                                    if ( s.trim().equals("ls") || s.trim().equals("lss") ){
+                                        String [] itens=new File(dir_base+"/"+dir).list();
+                                        String s_="";
+                                        for ( int i=0;i<itens.length;i++ ){
+                                            if ( ! s_.equals("") )
+                                                s_+="\n";
+                                            s_+=itens[i];
+                                        }
+                                        if ( !s_.equals("") )
+                                            result="\n"+s_;
+                                        break;
+                                    }
+                                    if ( ( s.trim().startsWith("ls ") || s.trim().startsWith("lss ") ) && s.trim().split(" ").length == 2 && !s.trim().split(" ")[1].contains("/") && !s.trim().split(" ")[1].contains("\\") ){
+                                        String s__=s.trim().split(" ")[1];
+                                        if ( new File(dir_base+"/"+dir+"/"+s__).exists() ){
+                                            String [] itens=new File(dir_base+"/"+dir+"/"+s__).list();
+                                            String s_="";
+                                            for ( int i=0;i<itens.length;i++ ){
+                                                if ( ! s_.equals("") )
+                                                    s_+="\n";
+                                                s_+=itens[i];
+                                            }
+                                            result="\n"+s_;
+                                        }else
+                                            result="nao existe essa pasta";
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("mkdir ") && s.trim().split(" ").length == 2 && !s.trim().split(" ")[1].contains("/") && !s.trim().split(" ")[1].contains("\\") ){
+                                        String s_=s.trim().split(" ")[1];
+                                        if ( new File(dir_base+"/"+dir+"/"+s_).exists() ){
+                                            result="essa pasta ja existe";
+                                        }else{
+                                            if ( !new File(dir_base+"/"+dir+"/"+s_).mkdir() ){
+                                                result="nao foi possivel criar essa pasta";
+                                            }else{
+                                                result="";
+                                            }
+                                        }
+                                        break;
+                                    }
                                     if ( s.trim().equals("exit") ){
                                         result="[EXIT]";
                                         break;
                                     }
                                     if ( s.trim().equals("") ){ // s.equals("") pode ser resultado dos processamentos de bloco
-                                        result="[QUEBRANDO_LINHA]";
+                                        result="";
                                         break;
                                     }
                                     result="? " + s.trim();
                                     break;
                                 }
-                                // enviando                                
+                                // enviando   
+                                if ( result.equals("") )
+                                    result="[QUEBRANDO_LINHA]";
                                 output.write(result.getBytes());
                                 output.flush();
                                 if ( !result.equals("[NADA]") )
@@ -1947,9 +2051,19 @@ cat buffer.log
                 }.start();
             }
         }catch(Exception e){
-            System.err.println(e.toString());
+            System.err.println(erro_amigavel_exception(e));
             System.exit(1);
         }
+    }
+    
+    private boolean error_back_path(String a){
+        if ( a.startsWith("/") || a.endsWith("/") || a.contains("\\") )
+            return true;
+        String [] partes=a.split("/");
+        for ( int i=0;i<partes.length;i++ )
+            if ( partes[i].equals("\\.") || partes[i].equals("..") )
+                return true;
+        return false;
     }
     
     private boolean take(String [] args){
@@ -9341,6 +9455,18 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public String erro_amigavel_exception(Exception e){
+        if ( e.toString().equals("java.net.BindException: Address already in use (Bind failed)") )
+            return "Erro, esse servico ja esta aberto";
+        if ( e.toString().equals("java.net.ConnectException: Connection refused: connect") )
+            return "Erro, offline";
+        if ( e.toString().equals("java.net.ConnectException: Connection refused (Connection refused)") )
+            return "Erro, offline";
+        if ( e.toString().equals("java.net.SocketException: Connection reset by peer: socket write error") )
+            return "Erro, desconectado";
+        return e.toString();        
+    }
     
     public static ByteArrayOutputStream delete_baos(ByteArrayOutputStream baos_, int start, int end){
         byte [] bytes_baos_=baos_.toByteArray();
