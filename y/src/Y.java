@@ -11974,7 +11974,8 @@ class XML extends Util{
 /* class texto_longo */         "    troca_de_faixa();\n" +
 /* class texto_longo */         "  };\n" +
 /* class texto_longo */         "  document.addEventListener('click', function(e) {  \n" +
-/* class texto_longo */         "      if ( e.target.tagName == 'CANVAS' || e.target.tagName == 'BODY' || e.target.tagName == 'DIV' || e.target.tagName == 'VIDEO' ){\n" +
+/* class texto_longo */         "       console.log('tagName clicked: ' + e.target.tagName);\n" +
+/* class texto_longo */         "       if ( e.target.tagName == 'CANVAS' || e.target.tagName == 'BODY' || e.target.tagName == 'DIV' || e.target.tagName == 'VIDEO' ){\n" +
 /* class texto_longo */         "         if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
 /* class texto_longo */         "           DisableFullscreen();\n" +
 /* class texto_longo */         "         }else{\n" +
