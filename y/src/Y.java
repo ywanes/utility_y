@@ -1991,8 +1991,9 @@ cat buffer.log
                                                 s_+="\n";
                                             s_+=itens[i];
                                         }
-                                        if ( !s_.equals("") )
-                                            result="\n"+s_;
+                                        result=s_;
+                                        if ( !result.equals("") )
+                                            result="\n"+result;
                                         break;
                                     }
                                     if ( ( s.trim().startsWith("ls ") || s.trim().startsWith("lss ") ) && s.trim().split(" ").length == 2 && !s.trim().split(" ")[1].contains("/") && !s.trim().split(" ")[1].contains("\\") ){
