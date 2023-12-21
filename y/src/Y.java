@@ -1872,6 +1872,7 @@ cat buffer.log
                                                 "\n uptime" + 
                                                 "\n status|list" +                                                 
                                                 "\n cat << EOF > procs/PROCNAME" + 
+                                                "\n cat < procs/PROCNAME" + 
                                                 "\n cat procs/PROCNAME" + 
                                                 "\n pwd" + 
                                                 "\n cd" + 
@@ -1925,7 +1926,11 @@ cat buffer.log
                                         result=s_;
                                         break;
                                     }
-                                    if ( s.trim().startsWith("cat << EOF > ") && s.trim().length() > "cat << EOF > ".length() ){
+                                    if ( s.trim().startsWith("cat << EOF > ") ){
+                                        result="nao implementado";
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("cat < ") ){
                                         result="nao implementado";
                                         break;
                                     }
