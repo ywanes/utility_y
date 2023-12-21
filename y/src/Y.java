@@ -1969,7 +1969,7 @@ cat buffer.log
                                         result="";
                                         break;
                                     }
-                                    if ( s.trim().startsWith("cd ") ){
+                                    if ( s.trim().startsWith("cd ") && s.trim().split(" ").length == 2 && !s.trim().contains("\\") ){
                                         String path=s.trim().substring(3);
                                         if ( error_back_path(path) )
                                             result="Error back path";
@@ -2011,7 +2011,7 @@ cat buffer.log
                                             result="nao existe essa pasta";
                                         break;
                                     }
-                                    if ( s.trim().startsWith("mkdir ") && s.trim().split(" ").length == 2 && !s.trim().split(" ")[1].contains("/") && !s.trim().split(" ")[1].contains("\\") ){
+                                    if ( s.trim().startsWith("mkdir ") && s.trim().split(" ").length == 2 && !s.trim().split(" ")[1].contains("\\") ){
                                         String s_=s.trim().split(" ")[1];
                                         if ( new File(dir_base+"/"+dir+"/"+s_).exists() ){
                                             result="essa pasta ja existe";
