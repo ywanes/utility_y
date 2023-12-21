@@ -1843,8 +1843,14 @@ cat buffer.log
                                         ok=false;
                                         break;
                                     }
-                                    if ( len == 1 && buff[0] == 0 )
+                                    // controlC - apagando
+                                    if ( len == 1 && buff[0] == 0 ){
+                                        // gravacao de cat < por controlC
+                                        String tmp_s=baos.toString().replace("\r", "");
+                                        if ( tmp_s.trim().startsWith("cat < ") && tmp_s.trim().split("\n")[0].split(" ").length == 3 && !error_back_path(tmp_s.trim().split("\n")[0].split(" ")[2]) )
+                                            salvando_file(tmp_s.trim().substring(tmp_s.trim().split("\n")[0].length()+1),new File(dir_base+"/"+dir+"/"+tmp_s.trim().split("\n")[0].split(" ")[2]));
                                         baos=new ByteArrayOutputStream();
+                                    }
                                     baos.write(buff, 0, len);  
                                     if ( input.available() > 0 )
                                         continue;
@@ -1854,9 +1860,9 @@ cat buffer.log
                                 if ( !ok )
                                     break;
                                 // interpretando e enviando
-                                result="init de seguranca";
+                                result="nao foi possivel interpretar essa comando..";
                                 while(true){
-                                    // analise bit controlC                                    
+                                    // analise bit controlC - preparando resposta
                                     if ( baos.size() == 1 && buff[0] == 0 ){                                        
                                         result="[CONTROLC]";
                                         break;
@@ -1868,20 +1874,20 @@ cat buffer.log
                                     if ( s.trim().equals("?") ){
                                         result= "\ncomandos:" +
                                                 "\n define proc PROCNAME" + 
-                                                "\n oi"  + 
-                                                "\n uptime" + 
-                                                "\n status|list" +                                                 
                                                 "\n cat << EOF > procs/PROCNAME" + 
                                                 "\n cat < procs/PROCNAME" + 
                                                 "\n cat procs/PROCNAME" + 
+                                                "\n oi"  + 
+                                                "\n uptime" + 
+                                                "\n status|list" +                                                 
                                                 "\n pwd" + 
                                                 "\n cd" + 
                                                 "\n ls" + 
                                                 "\n mkdir";
                                         break;
-                                    }                                    
+                                    }
                                     // interpretacao de bloco
-                                    if ( s.startsWith("define proc ") ){
+                                    if ( s.trim().startsWith("define proc ") && s.trim().split("\n")[0].split(" ").length == 3 && !error_back_path(s.trim().split("\n")[0].split(" ")[2]) ){
                                         /* 
                                         define proc cry
                                         d:
@@ -1889,15 +1895,14 @@ cat buffer.log
                                         y playlist renato 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt
                                         EOF
                                         */
-                                        int p_EOF=s.indexOf("EOF");
+                                        int p_EOF=s.indexOf("EOF"); // EOF nao pode trim
                                         if ( p_EOF > 0 ){
                                             String first_line=s.split("\n")[0];
-                                            if ( first_line.length() > p_EOF || first_line.split(" ").length != 3 ){
+                                            if ( first_line.length() > p_EOF ){
                                                 result="? " + s + "\n";
                                                 break;                                                
-                                            }
-                                            String file_name=dir_base + "/procs/" + first_line.split(" ")[2];
-                                            salvando_file(s.substring(first_line.length()+1, p_EOF),new File(file_name));
+                                            }                                            
+                                            salvando_file(s.substring(first_line.length()+1, p_EOF),new File(dir_base + "/procs/" + first_line.split(" ")[2]));
                                             baos=delete_baos(baos,0, p_EOF+3);
                                             continue;
                                         }else{
@@ -1905,6 +1910,33 @@ cat buffer.log
                                             break;
                                         }
                                     }                                    
+                                    if ( s.trim().startsWith("cat << EOF > ") && s.trim().split("\n")[0].split(" ").length == 5 && !error_back_path(s.trim().split("\n")[0].split(" ")[4]) ){
+                                        int p_EOF=s.indexOf("EOF",10); // EOF nao pode trim
+                                        if ( p_EOF > 0 ){
+                                            String first_line=s.split("\n")[0];
+                                            if ( first_line.length() > p_EOF ){
+                                                result="? " + s + "\n";
+                                                break;                                                
+                                            }                                            
+                                            salvando_file(s.substring(first_line.length()+1, p_EOF),new File(dir_base + "/" + dir + "/" + first_line.split(" ")[4]));
+                                            baos=delete_baos(baos,0, p_EOF+3);
+                                            continue;
+                                        }else{
+                                            result="[NADA]";
+                                            break;
+                                        }
+                                    }
+                                    if ( s.trim().startsWith("cat < ") && s.trim().split("\n")[0].split(" ").length == 3 && !error_back_path(s.trim().split("\n")[0].split(" ")[2]) ){
+                                        result="[NADA]";
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("cat ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split("\n")[0].split(" ")[1]) ){
+                                        if ( new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).exists() && new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).isFile() )
+                                            result=lendo_arquivo(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]);
+                                        else
+                                            result="arquivo nao encontrado";
+                                        break;
+                                    }
                                     if ( s.trim().equals("oi") ){
                                         result="oie";
                                         break;
@@ -1924,18 +1956,6 @@ cat buffer.log
                                         if ( s_.equals("") )
                                             s_ = "nenhum item encontrado";
                                         result=s_;
-                                        break;
-                                    }
-                                    if ( s.trim().startsWith("cat << EOF > ") ){
-                                        result="nao implementado";
-                                        break;
-                                    }
-                                    if ( s.trim().startsWith("cat < ") ){
-                                        result="nao implementado";
-                                        break;
-                                    }
-                                    if ( s.trim().startsWith("cat ") && s.trim().split(" ").length == 2 ){
-                                        result="nao implementado";
                                         break;
                                     }
                                     if ( s.trim().equals("pwd") ){
@@ -1974,7 +1994,7 @@ cat buffer.log
                                         result="";
                                         break;
                                     }
-                                    if ( s.trim().startsWith("cd ") && s.trim().split(" ").length == 2 && !s.trim().contains("\\") ){
+                                    if ( s.trim().startsWith("cd ") && s.trim().split(" ").length == 2 ){
                                         String path=s.trim().substring(3);
                                         if ( error_back_path(path) )
                                             result="Error back path";
