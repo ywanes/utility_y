@@ -252,11 +252,11 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","numeroAba","1"};        
         //args=new String[]{"xlsxToCSV","C:\\tmp\\tmp\\012020.xlsx","mostraEstrutura"};
         //args=new String[]{"find", "/"};
-        //Util.testOn(); args=new String[]{"json", "[elem for elem in data['items']]"};        
-        //Util.testOn(); args=new String[]{"json", "[elem for elem in data['b']]"};        
-        //Util.testOn(); args=new String[]{"json", "mostraEstrutura"};
-        //Util.testOn(); args=new String[]{"json", "mostraEstruturaDebug"};
-        //Util.testOn(); args=new String[]{"json", "mostraTabela"};
+        //testOn(); args=new String[]{"json", "[elem for elem in data['items']]"};        
+        //testOn(); args=new String[]{"json", "[elem for elem in data['b']]"};        
+        //testOn(); args=new String[]{"json", "mostraEstrutura"};
+        //testOn(); args=new String[]{"json", "mostraEstruturaDebug"};
+        //testOn(); args=new String[]{"json", "mostraTabela"};
         //args=new String[]{"regua"};                
         //args=new String[]{"find", ".", "-mtime", "1"};                
         //args=new String[]{"date","+%m/%d/%Y","%H:%M:%S:%N","%Z","%s"};
@@ -267,7 +267,7 @@ cat buffer.log
     }
 
     public void go(String[] args){    
-        args=Util.initEnvByParm(args);
+        args=initEnvByParm(args);
         System.setProperty("https.protocols", "TLSv1.1");
         System.setProperty("line.separator", "\n");
         try_load_libraries();
@@ -1471,7 +1471,7 @@ cat buffer.log
             return;            
         }
         if ( args[0].equals("os")){
-            System.out.println(Util.os(false));
+            System.out.println(os(false));
             return;            
         }
         if ( args[0].equals("pss")){
@@ -1616,7 +1616,7 @@ cat buffer.log
     
     private void socket_1_file(String host, int port, boolean server, boolean send, InputStream in, OutputStream out, String print_after){
         try{
-            byte [] buffer= new byte[Util.BUFFER_SIZE];
+            byte [] buffer= new byte[BUFFER_SIZE];
             int len=0;
             if ( server ){
                 Socket s = null;
@@ -1655,12 +1655,12 @@ cat buffer.log
                 OutputStream os = s.getOutputStream();
                 InputStream is = s.getInputStream();
                 if ( send ){
-                    while( (len=in.read(buffer, 0, Util.BUFFER_SIZE)) > 0 )
+                    while( (len=in.read(buffer, 0, BUFFER_SIZE)) > 0 )
                         os.write(buffer, 0, len);
                     os.flush();
                     os.close();
                 }else{
-                    while( (len=is.read(buffer, 0, Util.BUFFER_SIZE)) > 0 )
+                    while( (len=is.read(buffer, 0, BUFFER_SIZE)) > 0 )
                         out.write(buffer, 0, len);
                     out.flush();
                     out.close();
@@ -1847,8 +1847,10 @@ cat buffer.log
                                     if ( len == 1 && buff[0] == 0 ){
                                         // gravacao de cat < por controlC
                                         String tmp_s=baos.toString().replace("\r", "");
-                                        if ( tmp_s.trim().startsWith("cat < ") && tmp_s.trim().split("\n")[0].split(" ").length == 3 && !error_back_path(tmp_s.trim().split("\n")[0].split(" ")[2]) )
-                                            salvando_file(tmp_s.trim().substring(tmp_s.trim().split("\n")[0].length()+1),new File(dir_base+"/"+dir+"/"+tmp_s.trim().split("\n")[0].split(" ")[2]));
+                                        if ( tmp_s.trim().startsWith("cat < ") && tmp_s.trim().split("\n")[0].split(" ").length == 3 && !error_back_path(tmp_s.trim().split("\n")[0].split(" ")[2]) ){
+                                            if ( !salvando_file(tmp_s.trim().substring(tmp_s.trim().split("\n")[0].length()+1),new File(dir_base+"/"+dir+"/"+tmp_s.trim().split("\n")[0].split(" ")[2])) )
+                                                result="Nao foi possivel salvar o arquivo";                                            
+                                        }
                                         baos=new ByteArrayOutputStream();
                                     }
                                     baos.write(buff, 0, len);  
@@ -1903,7 +1905,10 @@ cat buffer.log
                                                 result="? " + s + "\n";
                                                 break;                                                
                                             }                                            
-                                            salvando_file(s.substring(first_line.length()+1, p_EOF),new File(dir_base + "/procs/" + first_line.split(" ")[2]));
+                                            if ( !salvando_file(s.substring(first_line.length()+1, p_EOF),new File(dir_base + "/procs/" + first_line.split(" ")[2])) ){
+                                                result="Nao foi possivel salvar o arquivo";
+                                                break;
+                                            }
                                             baos=delete_baos(baos,0, p_EOF+3);
                                             continue;
                                         }else{
@@ -1919,7 +1924,10 @@ cat buffer.log
                                                 result="? " + s + "\n";
                                                 break;                                                
                                             }                                            
-                                            salvando_file(s.substring(first_line.length()+1, p_EOF),new File(dir_base + "/" + dir + "/" + first_line.split(" ")[4]));
+                                            if ( !salvando_file(s.substring(first_line.length()+1, p_EOF),new File(dir_base + "/" + dir + "/" + first_line.split(" ")[4])) ){
+                                                result="Nao foi possivel salvar o arquivo";
+                                                break;
+                                            }
                                             baos=delete_baos(baos,0, p_EOF+3);
                                             continue;
                                         }else{
@@ -2147,7 +2155,7 @@ cat buffer.log
                     ip = ipv4_ipv6[0];
             }
             if ( pass == null ){
-                pass = Util.random_int(0, 9999) + "";
+                pass = random_int(0, 9999) + "";
             }
         }
         if ( ip == null ){
@@ -2271,7 +2279,7 @@ cat buffer.log
             step1.join();
             step2.join();
             step3.join();
-            Util.print_cursor("\nFim!", false);
+            print_cursor("\nFim!", false);
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
             System.exit(1);
@@ -2673,7 +2681,7 @@ cat buffer.log
         String dataT=" ";
         String dataZ=" ";
         boolean flag_natal=false;
-        String format_data=Util.getEnv("FORMAT_DATA_Y");
+        String format_data=getEnv("FORMAT_DATA_Y");
         if ( format_data != null && format_data.equals("TZ") ){
             dataT="T";
             dataZ="Z";
@@ -2775,7 +2783,7 @@ cat buffer.log
         String dataT=" ";
         String dataZ=" ";
         boolean flag_natal=false;
-        String format_data=Util.getEnv("FORMAT_DATA_Y");
+        String format_data=getEnv("FORMAT_DATA_Y");
         if ( format_data != null && format_data.equals("TZ") ){
             dataT="T";
             dataZ="Z";
@@ -3075,15 +3083,15 @@ cat buffer.log
     public void selectCSV(String conn,String parm){
         
         boolean onlychar=false;
-        String onlychar_=Util.getEnv("CSV_ONLYCHAR_Y");
+        String onlychar_=getEnv("CSV_ONLYCHAR_Y");
         if ( onlychar_ != null && onlychar_.equals("S") )
             onlychar=true;
         boolean com_separador_final=false;
-        String com_separador_final_=Util.getEnv("COM_SEPARADOR_FINAL_CSV_Y");
+        String com_separador_final_=getEnv("COM_SEPARADOR_FINAL_CSV_Y");
         if ( com_separador_final_ != null && com_separador_final_.equals("S") )
             com_separador_final=true;
         boolean semHeader=false;
-        String semHeader_=Util.getEnv("SEM_HEADER_CSV_Y");
+        String semHeader_=getEnv("SEM_HEADER_CSV_Y");
         if ( semHeader_ != null && semHeader_.equals("S") )
             semHeader=true;
         
@@ -3093,7 +3101,7 @@ cat buffer.log
         String dataZ=" ";
         boolean flag_natal=false;
         boolean flag_ymd=false;
-        String format_data=Util.getEnv("FORMAT_DATA_Y");
+        String format_data=getEnv("FORMAT_DATA_Y");
         if ( format_data != null && format_data.equals("TZ") ){
             dataT="T";
             dataZ="Z";
@@ -3757,7 +3765,7 @@ cat buffer.log
         ORAs=lendo_arquivo_pacote("/y/ORAs").split("\n");
         
         try{
-            String caminho=Util.getEnv("ORAs_Y");
+            String caminho=getEnv("ORAs_Y");
             if ( ! new File(caminho).exists() ) return;
             ArrayList<String> lista=new ArrayList<String>();
             String line;
@@ -3788,7 +3796,7 @@ cat buffer.log
     public String getenvtoken(){
         if ( local_env != null && new File(local_env).exists() )
             return local_env;
-        return Util.getEnv("TOKEN_Y");
+        return getEnv("TOKEN_Y");
     }
 
     public String getTableByParm(String parm){
@@ -4780,9 +4788,9 @@ System.out.println("AA" + a);
         int lvl=1;
         while(a.length()>0){
             int len=a.length();            
-            int p=Util.hex_string.indexOf(a.substring(len-1,len));
+            int p=hex_string.indexOf(a.substring(len-1,len));
             if ( p == -1 )
-                Util.erroFatal(200);
+                erroFatal(200);
             retorno+=p*lvl;
             a=a.substring(0, len-1);
             lvl*=16;
@@ -6364,8 +6372,8 @@ System.out.println("BB" + retorno);
 
     private void try_finish_and_count(long count) {
         // grava em arquivo uma sinalização de sim e count
-        String caminho_status_fim=Util.getEnv("STATUS_FIM_Y");
-        String caminho_count=Util.getEnv("COUNT_Y");
+        String caminho_status_fim=getEnv("STATUS_FIM_Y");
+        String caminho_count=getEnv("COUNT_Y");
         if ( caminho_status_fim != null && ! caminho_status_fim.equals("") ){
             salvando_file("FIM\n",new File(caminho_status_fim));
         }
@@ -6920,7 +6928,7 @@ System.out.println("BB" + retorno);
             pipe_out.write(buf, 0, len);
             if ( print_on ){
                 copiaByStream_count_print_on+=len;
-                Util.print_cursor(copiaByStream_count_print_on+" bytes...", true);
+                print_cursor(copiaByStream_count_print_on+" bytes...", true);
             }
         }
         pipe_out.flush();
@@ -7442,7 +7450,7 @@ System.out.println("BB" + retorno);
             }
             return null;
         }
-        if ( ! acceptSymbolicLink && Util.isWindows() ){
+        if ( ! acceptSymbolicLink && isWindows() ){
             System.out.println("Warnning: -L foi considerado para o windows.");
             acceptSymbolicLink=true;
         }
@@ -7630,7 +7638,7 @@ System.out.println("BB" + retorno);
                 
             }else{
                 if ( a.contains(" ") ) 
-                    if ( Util.isWindows() )
+                    if ( isWindows() )
                         a="\"" + a + "\"";
                     else
                         a="'" + a + "'";
@@ -8383,7 +8391,7 @@ System.out.println("BB" + retorno);
             robo = new java.awt.Robot();
         }catch(Exception e){
             System.out.println("Erro, não existe sistema grafico!");
-            Util.erroFatal(22);
+            erroFatal(22);
         }
         int BOTAO_ESQ = java.awt.event.InputEvent.BUTTON1_DOWN_MASK;
         int BOTAO_DIR = java.awt.event.InputEvent.BUTTON3_DOWN_MASK;
@@ -8433,7 +8441,7 @@ System.out.println("BB" + retorno);
                     p=0;
                     continue;
                 }
-                Util.erroFatal(11);
+                erroFatal(11);
             }
         }
     }
@@ -8469,7 +8477,7 @@ System.out.println("BB" + retorno);
     private void kill(String [] parms_){
         try{
             String [] parms = null;
-            if (Util.isWindows()){
+            if (isWindows()){
                 int count = 2;
                 parms=new String[2+(parms_.length-1)*2];
                 parms[0] = "taskkill";
@@ -8479,7 +8487,7 @@ System.out.println("BB" + retorno);
                     parms[count++]=parms_[i];
                 }
             }
-            if (Util.isLinux()){
+            if (isLinux()){
                 int count = 2;
                 parms=new String[2+(parms_.length-1)];
                 parms[0] = "kill";
@@ -8765,7 +8773,7 @@ System.out.println("BB" + retorno);
                 print_after="# cliente command:\n# y speed -client -ip " + ip + " -port " + port;
         try{        
             try{
-                int len_buffer=Util.BUFFER_SIZE*1024;
+                int len_buffer=BUFFER_SIZE*1024;
                 byte [] buffer=new byte[len_buffer];
                 int len=0;
                 if ( server ){
@@ -8790,11 +8798,11 @@ System.out.println("BB" + retorno);
                     if ( send ){
                         while( true ){
                             os.write(buffer, 0, len_buffer);
-                            Util.print_cursor_speed(len_buffer);
+                            print_cursor_speed(len_buffer);
                         }
                     }else{
                         while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
-                            Util.print_cursor_speed(len);
+                            print_cursor_speed(len);
                         }
                     }
                     s.close();
@@ -8806,11 +8814,11 @@ System.out.println("BB" + retorno);
                     if ( send ){
                         while( true ){
                             os.write(buffer, 0, len_buffer);
-                            Util.print_cursor_speed(len_buffer);
+                            print_cursor_speed(len_buffer);
                         }
                     }else{
                         while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
-                            Util.print_cursor_speed(len);
+                            print_cursor_speed(len);
                         }
                     }
                     s.close();
@@ -10134,38 +10142,28 @@ class Util{
             "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y"};  
     private static String [] listEnv = null;
     public static String[] initEnvByParm(String[] args) {
-        int len=args.length;
-        boolean resize=false;
+        ArrayList lista=new ArrayList<String>();
         for ( int i=0;i<args.length;i++ ){
+            boolean achou=false;
+            if ( args[i].equals("-ignore") && i+1 < args.length ){
+                i++;
+                continue;
+            }                            
             for ( int j=0;j<listWordEnv.length;j++ ){
                 if ( args[i].equals("-"+listWordEnv[j]) && i+1 < args.length ){
                     setEnv(listWordEnv[j], args[i+1]);
-                    len-=2;
-                    resize=true;
                     i++;
+                    achou=true;
                     break;
                 }
             }
-        }
-        if ( resize ){
-            String[] args2=new String[len];
-            int seq=0;
-            for ( int i=0;i<args.length;i++ ){
-                boolean achou=false;
-                for ( int j=0;j<listWordEnv.length;j++ ){
-                    if ( args[i].equals("-"+listWordEnv[j]) && i+1 < args.length ){
-                        achou=true;
-                        break;
-                    }
-                }
-                if ( achou ){
-                    i++;
-                }else{
-                    args2[seq++]=args[i];
-                }
-            }           
-            return args2;
-        }
+            if ( achou )
+                continue;
+            lista.add(args[i]);
+        }        
+        args = new String[lista.size()];
+        for ( int i=0;i<lista.size();i++ )
+            args[i]=(String)lista.get(i);
         return args;
     }
 
@@ -10771,7 +10769,7 @@ class JSON extends Util{
     }
 }
 
-class Ponte {
+class Ponte extends Util{
     //exemplo
     //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"");                
     //new Ponte().serverRouter("192.168.0.100",8080,"192.168.0.200",9090,"show");                
@@ -10801,9 +10799,9 @@ class Ponte {
         while(true){
             try{
                 final Socket credencialSocket=ambiente.getCredencialSocket();
-                final String ip_origem = Util.get_ip_origem_by_socket(credencialSocket);
+                final String ip_origem = get_ip_origem_by_socket(credencialSocket);
                 if ( log != null )
-                    Util.log_serverRouter(log, ip_origem);
+                    log_serverRouter(log, ip_origem);
                 new Thread(){
                     public void run(){
                         ponte0(credencialSocket,host1,port1,ip_origem);
@@ -11766,7 +11764,7 @@ class XML extends Util{
 /* class JSchCustom */ try { filename = c.readlink(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("realpath")) { if (cmds.size() != 2) continue; String p1 = (String) cmds.elementAt(1); String filename = null; try { filename = c.realpath(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("version")) { out.println("SFTP protocol version " + c.version()); continue; } if (cmd.equals("help") || cmd.equals("?")) { out.println(help); continue; } out.println("unimplemented command: " + cmd); } session.disconnect(); } catch (Exception e) { System.out.println(e); } System.exit(0); } private static String help = "      Available commands:\n" + "      * means unimplemented command.\n" + "cd path                       Change remote directory to 'path'\n" + "lcd path                      Change local directory to 'path'\n" + "chgrp grp path                Change group of file 'path' to 'grp'\n" + "chmod mode path               Change permissions of file 'path' to 'mode'\n" + "chown own path                Change owner of file 'path' to 'own'\n" + "df [path]                     Display statistics for current directory or\n" + "                              filesystem containing 'path'\n" + "help                          Display this help text\n" + "get remote-path [local-path]  Download file\n" + "get-resume remote-path [local-path]  Resume to download file.\n" + "get-append remote-path [local-path]  Append remote file to local file\n" + "hardlink oldpath newpath      Hardlink remote file\n" + "*lls [ls-options [path]]      Display local directory listing\n" + "ln oldpath newpath            Symlink remote file\n" + "*lmkdir path                  Create local directory\n" + "lpwd                          Print local working directory\n" + "ls [path]                     Display remote directory listing\n" + "*lumask umask                 Set local umask to 'umask'\n" + "mkdir path                    Create remote directory\n" + "put local-path [remote-path]  Upload file\n" + "put-resume local-path [remote-path]  Resume to upload file\n" + "put-append local-path [remote-path]  Append local file to remote file.\n" + "pwd                           Display remote working directory\n" + "stat path                     Display info about path\n" + "exit                          Quit sftp\n" + "quit                          Quit sftp\n" + "rename oldpath newpath        Rename remote file\n" + "rmdir path                    Remove remote directory\n" + "rm path                       Delete remote file\n" + "symlink oldpath newpath       Symlink remote file\n" + "readlink path                 Check the target of a symbolic link\n" + "realpath path                 Canonicalize the path\n" + "rekey                         Key re-exchanging\n" + "compression level             Packet compression will be enabled\n" + "version                       Show SFTP version\n" + "?                             Synonym for help"; public static class MyProgressMonitor implements SftpProgressMonitor { ProgressMonitor monitor; long count = 0; long max = 0; public void init(int op, String src, String dest, long max) { this.max = max; monitor = new ProgressMonitor(null, ((op == SftpProgressMonitor.PUT) ? "put" : "get") + ": " + src, "", 0, (int) max); count = 0; percent = -1; monitor.setProgress((int) this.count); 
 /* class JSchCustom */ monitor.setMillisToDecideToPopup(1000); } private long percent = -1; public boolean count(long count) { this.count += count; if (percent >= this.count * 100 / max) { return true; } percent = this.count * 100 / max; monitor.setNote("Completed " + this.count + "(" + percent + "%) out of " + max + "."); monitor.setProgress((int) this.count); return !(monitor.isCanceled()); } public void end() { monitor.close(); } } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 7"); System.exit(1); } final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } 
 
-/* class texto_longo */ class texto_longo{
+/* class texto_longo */ class texto_longo extends Util{
 /* class texto_longo */     public static String get_html_virtual_playlist(){
 /* class texto_longo */         String faixas="";
 /* class texto_longo */         File [] f=new File(".").listFiles();
@@ -11775,7 +11773,7 @@ class XML extends Util{
 /* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 9px;\" onclick=\"click_faixa(this,'humanClick')\">" + f[i].getName() + "</td></tr>\n";
 /* class texto_longo */                 File f2=new File(f[i].getName()+".cfg");
 /* class texto_longo */                 if ( f2.exists() && f2.isFile() ){
-/* class texto_longo */                     String [] partes=Util.lendo_arquivo(f[i].getName()+".cfg").split("\n");
+/* class texto_longo */                     String [] partes=lendo_arquivo(f[i].getName()+".cfg").split("\n");
 /* class texto_longo */                     for ( int j=0;j<partes.length;j++ ){
 /* class texto_longo */                         faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px;\" onclick=\"click_faixa(this,'humanClick')\">" + partes[j] + "</td></tr>\n";
 /* class texto_longo */                     }
