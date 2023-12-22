@@ -1883,7 +1883,8 @@ cat buffer.log
                                                 "\n pwd" + 
                                                 "\n cd" + 
                                                 "\n ls" + 
-                                                "\n mkdir";
+                                                "\n mkdir" + 
+                                                "\n rm";
                                         break;
                                     }
                                     // interpretacao de bloco
@@ -1931,10 +1932,14 @@ cat buffer.log
                                         break;
                                     }
                                     if ( s.trim().startsWith("cat ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split("\n")[0].split(" ")[1]) ){
-                                        if ( new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).exists() && new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).isFile() )
-                                            result=lendo_arquivo(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]);
-                                        else
+                                        if ( !new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).exists() )                                            
                                             result="arquivo nao encontrado";
+                                        else{
+                                            if ( !new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).isFile() )
+                                                result="esse elemanto nao eh um arquivo";
+                                            else
+                                                result="\n"+lendo_arquivo(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]);
+                                        }
                                         break;
                                     }
                                     if ( s.trim().equals("oi") ){
@@ -1994,7 +1999,7 @@ cat buffer.log
                                         result="";
                                         break;
                                     }
-                                    if ( s.trim().startsWith("cd ") && s.trim().split(" ").length == 2 ){
+                                    if ( s.trim().startsWith("cd ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
                                         String path=s.trim().substring(3);
                                         if ( error_back_path(path) )
                                             result="Error back path";
@@ -2008,23 +2013,30 @@ cat buffer.log
                                         }
                                         break;
                                     }
-                                    if ( s.trim().equals("ls") || s.trim().equals("lss") ){
-                                        String [] itens=new File(dir_base+"/"+dir).list();
+                                    if ( s.trim().equals("ls") || s.trim().equals("lss") || s.trim().equals("ls -ltr") ){
+                                        File [] files=new File(dir_base+"/"+dir).listFiles();
                                         String s_="";
-                                        for ( int i=0;i<itens.length;i++ ){
+                                        for ( int i=0;i<files.length;i++ ){
                                             if ( ! s_.equals("") )
                                                 s_+="\n";
-                                            s_+=itens[i];
+                                            if ( files[i].isDirectory() )
+                                                s_+="d ";
+                                            else
+                                                s_+="- ";
+                                            s_+=files[i].getName();
                                         }
                                         result=s_;
                                         if ( !result.equals("") )
                                             result="\n"+result;
                                         break;
                                     }
-                                    if ( ( s.trim().startsWith("ls ") || s.trim().startsWith("lss ") ) && s.trim().split(" ").length == 2 && !s.trim().split(" ")[1].contains("/") && !s.trim().split(" ")[1].contains("\\") ){
-                                        String s__=s.trim().split(" ")[1];
-                                        if ( new File(dir_base+"/"+dir+"/"+s__).exists() ){
-                                            String [] itens=new File(dir_base+"/"+dir+"/"+s__).list();
+                                    if ( ( s.trim().startsWith("ls ") || s.trim().startsWith("lss ") ) && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
+                                        if ( !new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).exists() ){
+                                            result="Diretorio corrente nao existe";
+                                            break;
+                                        }
+                                        if ( new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).exists() ){
+                                            String [] itens=new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).list();
                                             String s_="";
                                             for ( int i=0;i<itens.length;i++ ){
                                                 if ( ! s_.equals("") )
@@ -2036,7 +2048,7 @@ cat buffer.log
                                             result="nao existe essa pasta";
                                         break;
                                     }
-                                    if ( s.trim().startsWith("mkdir ") && s.trim().split(" ").length == 2 && !s.trim().split(" ")[1].contains("\\") ){
+                                    if ( s.trim().startsWith("mkdir ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
                                         String s_=s.trim().split(" ")[1];
                                         if ( new File(dir_base+"/"+dir+"/"+s_).exists() ){
                                             result="essa pasta ja existe";
@@ -2046,6 +2058,18 @@ cat buffer.log
                                             }else{
                                                 result="";
                                             }
+                                        }
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("rm ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
+                                        String s_=s.trim().split(" ")[1];
+                                        if ( !new File(dir_base+"/"+dir+"/"+s_).exists() )
+                                            result="essa pasta ja existe";
+                                        else{
+                                            if ( !new File(dir_base+"/"+dir+"/"+s_).delete() )
+                                                result="Nao foi possivel deletar";
+                                            else
+                                                result="";                                                
                                         }
                                         break;
                                     }
@@ -2087,7 +2111,7 @@ cat buffer.log
             return true;
         String [] partes=a.split("/");
         for ( int i=0;i<partes.length;i++ )
-            if ( partes[i].equals("\\.") || partes[i].equals("..") )
+            if ( partes[i].equals(".") || partes[i].equals("..") )
                 return true;
         return false;
     }
