@@ -2043,7 +2043,9 @@ cat buffer.log
                                             result="Diretorio corrente nao existe";
                                             break;
                                         }
-                                        if ( new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).exists() ){
+                                        if ( !new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).exists() )
+                                            result="nao existe essa pasta";
+                                        else{
                                             String [] itens=new File(dir_base+"/"+dir+"/"+s.trim().split(" ")[1]).list();
                                             String s_="";
                                             for ( int i=0;i<itens.length;i++ ){
@@ -2051,9 +2053,11 @@ cat buffer.log
                                                     s_+="\n";
                                                 s_+=itens[i];
                                             }
-                                            result="\n"+s_;
-                                        }else
-                                            result="nao existe essa pasta";
+                                            if ( s_.equals("") )
+                                                result="[QUEBRANDO_LINHA]";
+                                            else
+                                                result="\n"+s_;
+                                        }                                            
                                         break;
                                     }
                                     if ( s.trim().startsWith("mkdir ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
