@@ -1574,7 +1574,7 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("kill") && args.length >= 2 ){
-            kill(args);
+            kill(args, System.out, 1);
             return;
         }
         if ( args[0].equals("win") ){
@@ -1761,6 +1761,10 @@ cat buffer.log
                     }
                     if ( print == null && s.equals("[NADA]") )
                         print="";
+                    if ( print == null && s.equals("[CLS]") ){
+                        clear_cls();
+                        print="[QUEBRANDO_LINHA]";                    
+                    }
                     if ( print == null && s.equals("[EXIT]") )
                         System.exit(0);
                     if ( print == null && !s.equals("") )
@@ -1812,7 +1816,8 @@ cat buffer.log
         try{
             ServerSocket serverSocket = new ServerSocket(2020, 1, InetAddress.getByName("0.0.0.0"));                        
             System.out.println("started");
-            long inicio=epoch(null);            
+            long inicio=epoch(null); 
+            ArrayList<ProcDaemon> procs=new ArrayList();
             while(true){
                 final Socket socket = serverSocket.accept();
                 new Thread() {                    
@@ -1879,6 +1884,8 @@ cat buffer.log
                                                 "\n cat << EOF > procs/PROCNAME" + 
                                                 "\n cat < procs/PROCNAME" + 
                                                 "\n cat procs/PROCNAME" + 
+                                                "\n start" + 
+                                                "\n stop" + 
                                                 "\n oi"  + 
                                                 "\n uptime" + 
                                                 "\n status|list" +                                                 
@@ -1886,7 +1893,8 @@ cat buffer.log
                                                 "\n cd" + 
                                                 "\n ls" + 
                                                 "\n mkdir" + 
-                                                "\n rm";
+                                                "\n rm" + 
+                                                "\n cls";
                                         break;
                                     }
                                     // interpretacao de bloco
@@ -1950,6 +1958,87 @@ cat buffer.log
                                         }
                                         break;
                                     }
+                                    // netsh interface ipv6 set address Ethernet IPV6_AQUI
+                                    if ( ( s.trim().startsWith("start ") || s.trim().startsWith("restart ") ) && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
+                                        String results="";
+                                        boolean restart=false;
+                                        if ( s.trim().startsWith("restart ") )
+                                            restart=true;
+                                        String nome=s.trim().split(" ")[1];
+                                        String [] nomes=new String []{nome}; 
+                                        if ( nome.equals("all") )
+                                            nomes=new File(dir_base+"/procs").list();
+                                        for ( int z=0;z<nomes.length;z++ ){
+                                            nome=nomes[z];
+                                            if ( !new File(dir_base+"/procs/" + nome).exists() ){
+                                                results+=nome + " - proc nao encontrada\n";
+                                                continue;
+                                            }
+                                            if ( isWindows() && !nome.endsWith(".bat") ){
+                                                results+=nome + " - nome invalido para uma proc windows\n";
+                                                continue;
+                                            }                                                                                        
+                                            if ( restart ){                                                
+                                                String pid=get_pid_by_text(" -ignore DAEMON" + nome + " ");
+                                                if ( pid != null )
+                                                    kill(new String[]{pid}, new ByteArrayOutputStream(), 0);                                                            
+                                            }                                            
+                                            boolean jaEmUso=false;
+                                            for ( int i=0;i<procs.size();i++ ){
+                                                if ( procs.get(i).nome.equals(nome) ){
+                                                    if ( restart )
+                                                        procs.remove(i);
+                                                    else
+                                                        jaEmUso=true;
+                                                    break;
+                                                }
+                                            }
+                                            if ( jaEmUso ){
+                                                results+=nome + " - proc ja esta em execucao\n";
+                                                continue;
+                                            }         
+                                            if ( isWindows() )
+                                                procs.add(new ProcDaemon(nome, new String[]{"cmd", "/c", dir_base+"/procs/" + nome}));
+                                            else
+                                                procs.add(new ProcDaemon(nome, new String[]{dir_base+"/procs/" + nome}));                                            
+                                            if ( restart )
+                                                results+=nome + " restartado\n";                                            
+                                            else
+                                                results+=nome + " startado\n";                                            
+                                        }
+                                        result=results.trim();
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("stop ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
+                                        String results="";
+                                        String nome=s.trim().split(" ")[1];
+                                        String [] nomes=new String []{nome}; 
+                                        if ( nome.equals("all") )
+                                            nomes=new File(dir_base+"/procs").list();
+                                        for ( int z=0;z<nomes.length;z++ ){
+                                            nome=nomes[z];
+                                            boolean jaEmUso=false;
+                                            result=nome + " ??";
+                                            for ( int i=0;i<procs.size();i++ )
+                                                if ( procs.get(i).nome.equals(nome) ){
+                                                    //procs.get(i).t.join(); stop thread not work
+                                                    procs.remove(i);
+                                                    jaEmUso=true;
+                                                    result=nome + " stopado";
+                                                    break;
+                                                }
+                                            if ( !jaEmUso )
+                                                result=nome + " nao esta em execucao";
+                                            String pid=get_pid_by_text(" -ignore DAEMON" + nome + " ");
+                                            if ( pid != null ){
+                                                kill(new String[]{pid}, new ByteArrayOutputStream(), 0);
+                                                result=nome + " stopado";
+                                            }
+                                            results+=result+"\n";
+                                        }
+                                        result=results.trim();
+                                        break;
+                                    }
                                     if ( s.trim().equals("oi") ){
                                         result="oie";
                                         break;
@@ -1964,11 +2053,37 @@ cat buffer.log
                                         for ( int i=0;i<itens.length;i++ ){
                                             if ( ! s_.equals("") )
                                                 s_+="\n";
-                                            s_+="offline  - "+itens[i];
+                                            if ( isWindows() && !itens[i].endsWith(".bat") ){
+                                                s_+="nome irregular para proc windows -> "+itens[i];
+                                            }
+                                            String status="ProntoParaIniciar";
+                                            for ( int j=0;j<procs.size();j++ )
+                                                if ( procs.get(j).nome.equals(itens[i]) ){
+                                                    status=procs.get(j).get_status();
+                                                    break;
+                                                }
+                                            s_+=itens[i] + " " + status;
                                         }
                                         if ( s_.equals("") )
                                             s_ = "nenhum item encontrado";
                                         result=s_;
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("status ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
+                                        if ( isWindows() && !s.trim().split(" ")[1].endsWith(".bat") ){
+                                            result="nome irregular para proc windows -> " + s.trim().split(" ")[1];
+                                            break;
+                                        }
+                                        String status="";
+                                        for ( int i=0;i<procs.size();i++ )
+                                            if ( procs.get(i).nome.equals(s.trim().split(" ")[1]) ){
+                                                status=get_status_proc(procs.get(i));
+                                                break;
+                                            }
+                                        if ( status.equals("") )
+                                            result="proc nao encontrada ou parada";
+                                        else
+                                            result=status;
                                         break;
                                     }
                                     if ( s.trim().equals("pwd") ){
@@ -2089,6 +2204,10 @@ cat buffer.log
                                         result="[EXIT]";
                                         break;
                                     }
+                                    if ( s.trim().equals("cls") ){
+                                        result="[CLS]";
+                                        break;
+                                    }
                                     if ( s.trim().equals("") ){ // s.equals("") pode ser resultado dos processamentos de bloco
                                         result="";
                                         break;
@@ -2115,6 +2234,79 @@ cat buffer.log
         }catch(Exception e){
             System.err.println(erro_amigavel_exception(e));
             System.exit(1);
+        }
+    }
+    
+    public String get_status_proc(ProcDaemon p){
+        String result="";
+        try{
+            result+="Stauts:\n";
+            ByteArrayOutputStream baos=new ByteArrayOutputStream();
+            for( int i=0;i<p.list_out.size();i++ )
+                baos.write((byte[])p.list_out.get(i));
+            result+="out: \n" + baos.toString() + "\n";
+            baos=new ByteArrayOutputStream();
+            for( int i=0;i<p.list_err.size();i++ )
+                baos.write((byte[])p.list_err.get(i));
+            result+="err: \n" + baos.toString() + "\n";
+            result+="\nErro run: " + p.erro + "\n";
+        }catch(Exception e){
+            return "erro fatal 2244";
+        }
+        return result;
+    }
+    
+    class ProcDaemon{
+        public String nome=null;
+        public String [] command=null;
+        public Thread t=null;
+        public int status=0; // 0 parado, 1 rodando, 2 finalizado
+        public String erro="";
+        public ArrayList list_out=new ArrayList();
+        public ArrayList list_err=new ArrayList();   
+        public String get_status(){
+            if ( status == 0 )
+                return "Iniciando";
+            if ( status == 1 )
+                return "Rodando";
+            if ( status == 2 )
+                return "Parado";
+            return "StatusDesconhecido";
+        }
+        public ProcDaemon(String nome_, String [] command_){
+            nome=nome_;
+            command=command_;
+            t=new Thread(new Runnable() {
+                public void run() {
+                    status=0;
+                    try{
+                        status=1;
+                        Process proc = Runtime.getRuntime().exec(command);
+                        int len=0;
+                        byte[] b=new byte[1024];
+                        ByteArrayOutputStream baos_in = null;
+                        ByteArrayOutputStream baos_out = null;
+                        while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                            baos_in = new ByteArrayOutputStream();
+                            baos_in.write(b, 0, len);
+                            list_out.add(baos_in.toByteArray());
+                            if ( list_out.size() > 100 )
+                                list_out.remove(0);
+                        }
+                        while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                            baos_out = new ByteArrayOutputStream();
+                            baos_out.write(b, 0, len);
+                            list_err.add(baos_out.toByteArray());
+                            if ( list_err.size() > 100 )
+                                list_err.remove(0);
+                        }                        
+                    }catch(Exception e){
+                        erro=e.toString();
+                    }
+                    status=2;
+                }
+            });
+            t.start();            
         }
     }
     
@@ -7988,14 +8180,39 @@ System.out.println("BB" + retorno);
         return LocalDateTimeCache_windows;
     }
     
+    public String get_pid_by_text(String a){
+        if ( isWindows() ){
+            load_pss_windows();
+            for ( int i=0;i<pss_parm5.size();i++ )
+                if ( (" "+pss_parm5.get(i)+" ").contains(a) )
+                    return pss_parm1.get(i);
+        }else{
+            load_pss_linux();
+            for ( int i=0;i<pss_parm3.size();i++ )
+                if ( (" "+pss_parm3.get(i)+" ").contains(a) )
+                    return pss_parm1.get(i);
+        }
+        return null;
+    }
+    
     private ArrayList<String> pss_parm1 = new ArrayList<>();
     private ArrayList<String> pss_parm2 = new ArrayList<>();
     private ArrayList<String> pss_parm3 = new ArrayList<>();
     private ArrayList<String> pss_parm4 = new ArrayList<>();
     private ArrayList<String> pss_parm5 = new ArrayList<>();
     private ArrayList<Boolean> pss_flag = new ArrayList<>();
+    public void load_pss_init(){
+        pss_parm1 = new ArrayList<>();
+        pss_parm2 = new ArrayList<>();
+        pss_parm3 = new ArrayList<>();
+        pss_parm4 = new ArrayList<>();
+        pss_parm5 = new ArrayList<>();
+        pss_flag = new ArrayList<>();        
+    }
+    
     private void load_pss_windows() {        
         try{
+            load_pss_init();
             Process proc;
             proc = Runtime.getRuntime().exec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId");
             int len=0;
@@ -8059,6 +8276,7 @@ System.out.println("BB" + retorno);
       
     private void load_pss_linux() {        
         try{
+            load_pss_init();
             Process proc;
             proc = Runtime.getRuntime().exec("ps -ef");
             int len=0;
@@ -8478,46 +8696,51 @@ System.out.println("BB" + retorno);
         System.out.println("x: " + p.getLocation().x + ", y: " + p.getLocation().y);
     }
     
-    private void kill(String [] parms_){
+    public void kill(String [] parms_, OutputStream out, int index){
         try{
+            int len_array=parms_.length;
+            int len_util=len_array-index;
             String [] parms = null;
             if (isWindows()){
                 int count = 2;
-                parms=new String[2+(parms_.length-1)*2];
+                parms=new String[2+(len_util)*2];
                 parms[0] = "taskkill";
                 parms[1] = "/f";
-                for ( int i=1;i<parms_.length;i++ ){
+                for ( int i=index;i<len_array;i++ ){
                     parms[count++]="/pid";
                     parms[count++]=parms_[i];
                 }
             }
             if (isLinux()){
                 int count = 2;
-                parms=new String[2+(parms_.length-1)];
+                parms=new String[2+(len_util)];
                 parms[0] = "kill";
                 parms[1] = "-9";                
-                for ( int i=1;i<parms_.length;i++ )
+                for ( int i=index;i<len_array;i++ )
                     parms[count++]=parms_[i];
             }
             if ( parms == null ){
-                System.err.println("Comando nao implementado para esse sistema!");
-                System.exit(1);
+                out.write("Comando nao implementado para esse sistema!".getBytes());
+                return;
             }
             Charset.forName("UTF-8");
             Process proc = Runtime.getRuntime().exec(parms);
-            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            //java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
             byte[] b=new byte[1024];
             int len=0;
             while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                baos.write(b, 0, len);                    
+                out.write(b, 0, len);                    
             }
             while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                baos.write(b, 0, len);
+                out.write(b, 0, len);
             }               
-            System.out.println(baos.toString());
+            out.write("\n".getBytes());
         }catch(Exception e){
-            System.err.println(e.toString());
-            System.exit(1);
+            try{
+                out.write(e.toString().getBytes());            
+            }catch(Exception e2){
+                System.err.println("Erro desconhecido");
+            }
         }
     }
     
@@ -8579,13 +8802,6 @@ System.out.println("BB" + retorno);
             pivoName.add(97);            
         }
         return result;
-    }
-
-    private String[] arrayList_to_array(ArrayList a){
-        String[] args=new String[a.size()];
-        for(int i=0;i<a.size();i++)
-            args[i]=a.get(i).toString();
-        return args;        
     }
 
     private boolean bind_isSep(String parm){    
@@ -9518,6 +9734,13 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+    public String[] arrayList_to_array(ArrayList a){
+        String[] args=new String[a.size()];
+        for(int i=0;i<a.size();i++)
+            args[i]=a.get(i).toString();
+        return args;        
+    }
+    
     public String erro_amigavel_exception(Exception e){
         if ( e.toString().equals("java.net.BindException: Address already in use (Bind failed)") )
             return "Erro, esse servico ja esta aberto";
@@ -10145,7 +10368,7 @@ class Util{
     public static String [] listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
             "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y"};  
     private static String [] listEnv = null;
-    public static String[] initEnvByParm(String[] args) {
+    public String[] initEnvByParm(String[] args) {
         ArrayList lista=new ArrayList<String>();
         for ( int i=0;i<args.length;i++ ){
             boolean achou=false;
@@ -10164,11 +10387,8 @@ class Util{
             if ( achou )
                 continue;
             lista.add(args[i]);
-        }        
-        args = new String[lista.size()];
-        for ( int i=0;i<lista.size();i++ )
-            args[i]=(String)lista.get(i);
-        return args;
+        }  
+        return arrayList_to_array(lista);
     }
 
     public static void setEnv(String env, String value) {
