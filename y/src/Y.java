@@ -1802,9 +1802,14 @@ cat buffer.log
             byte [] buff = new byte[BUFFER_SIZE];
             bos.write(command.getBytes());
             bos.flush();
-            int len = bis.read(buff, 0, buff.length);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            baos.write(buff, 0, len);     
+            while(true){
+                int len = bis.read(buff, 0, buff.length);            
+                baos.write(buff, 0, len);     
+                if ( bis.available() > 0 )
+                    continue;
+                break;
+            }
             System.out.println(baos.toString().trim());
             socket_.close();
         }catch(Exception e){
@@ -2007,6 +2012,7 @@ cat buffer.log
                                                 results+=nome + " startado\n";                                            
                                         }
                                         result=results.trim();
+                                        result=formata_tabular_palavra(result);
                                         break;
                                     }
                                     if ( s.trim().startsWith("stop ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
@@ -2051,10 +2057,8 @@ cat buffer.log
                                         String [] itens=new File(dir_base+"/procs").list();
                                         String s_="";
                                         for ( int i=0;i<itens.length;i++ ){
-                                            if ( ! s_.equals("") )
-                                                s_+="\n";
                                             if ( isWindows() && !itens[i].endsWith(".bat") ){
-                                                s_+="nome irregular para proc windows -> "+itens[i];
+                                                s_+=itens[i] + " nomeIrregularParaProcWindows\n";
                                             }
                                             String status="ProntoParaIniciar";
                                             for ( int j=0;j<procs.size();j++ )
@@ -2062,11 +2066,12 @@ cat buffer.log
                                                     status=procs.get(j).get_status();
                                                     break;
                                                 }
-                                            s_+=itens[i] + " " + status;
+                                            s_+=itens[i] + " " + status + "\n";
                                         }
                                         if ( s_.equals("") )
-                                            s_ = "nenhum item encontrado";
-                                        result=s_;
+                                            s_ = "nenhum item encontrado\n";
+                                        result=s_.trim();
+                                        result=formata_tabular_palavra(result);
                                         break;
                                     }
                                     if ( s.trim().startsWith("status ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
@@ -2237,6 +2242,29 @@ cat buffer.log
         }
     }
     
+    public String formata_tabular_palavra(String a){
+        String [] frases=a.split("\n");
+        int [] lens=new int[50];
+        String result="";
+        int limit=10000;
+        for ( int i=0;i<frases.length;i++ ){
+            String [] palavras=frases[i].split(" ");
+            for ( int j=0;j<palavras.length;j++ )
+                if ( palavras[j].length() > lens[j] )
+                    lens[j] = palavras[j].length();            
+        }
+        for ( int i=0;i<frases.length;i++ ){
+            String [] palavras=frases[i].split(" ");
+            String frase="";
+            for ( int j=0;j<palavras.length;j++ ){
+                while(palavras[j].length() < lens[j] && limit-- > 0)
+                    palavras[j]+=" ";
+                frase+=palavras[j]+" ";
+            }
+            result+=frase.trim()+"\n";            
+        }
+        return result.trim();
+    }
     public String get_status_proc(ProcDaemon p){
         String result="";
         try{
@@ -2274,6 +2302,8 @@ cat buffer.log
             return "StatusDesconhecido";
         }
         public ProcDaemon(String nome_, String [] command_){
+            if ( !isWindows() && command_.length == 1 && new File(command_[0]).exists() && new File(command_[0]).isFile() )
+                chmod_777(command_[0]);
             nome=nome_;
             command=command_;
             t=new Thread(new Runnable() {
@@ -2310,6 +2340,11 @@ cat buffer.log
         }
     }
     
+    public void chmod_777(String path){
+        try{
+            Runtime.getRuntime().exec(new String[]{"chmod", "777", path});        
+        }catch(Exception e){}
+    }
     private boolean error_back_path(String a){
         if ( a.startsWith("/") || a.endsWith("/") || a.contains("\\") )
             return true;
