@@ -2315,8 +2315,15 @@ cat buffer.log
         public Thread t=null;
         public int status=0; // 0 parado, 1 rodando, 2 finalizado
         public String erro="";
+        /*
+        long n=0;
+        HashMap hm=new HashMap();
+        hm.put(++n, new byte[]{33});
+        long first_key=(long)hm.keySet().toArray()[0];
+        hm.get(first_key);
+        */
         public ArrayList list_out=new ArrayList();
-        public ArrayList list_err=new ArrayList();   
+        public ArrayList list_err=new ArrayList();
         public String get_status(){
             if ( status == 0 )
                 return "Iniciando";
