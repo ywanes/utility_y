@@ -8207,7 +8207,7 @@ System.out.println("BB" + retorno);
 
     private String getLocalDateTime_windows(){
         try{
-            String s=runtimeExec(new String[]{"cmd /c wmic path Win32_OperatingSystem get LocalDateTime"});
+            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime");
             String [] lines=s.split("\n");
             return lines[1].trim();
         }catch(Exception e){
@@ -8256,7 +8256,7 @@ System.out.println("BB" + retorno);
     private void load_pss_windows() {        
         try{
             load_pss_init();
-            String s_=runtimeExec(new String[]{"cmd","/c","wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId"});
+            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId");
             String [] lines=s_.split("\n");
             ArrayList<Integer> list_p = new ArrayList<>();
             boolean isWord=false;
@@ -8419,7 +8419,7 @@ System.out.println("BB" + retorno);
         String s1_aux="";  
         for ( int i=0;i<command.length;i++ ){
             try {          
-                String s = runtimeExec(new String[]{command[i]}).trim();
+                String s = runtimeExec(command[i]).trim();
                 if ( s == null ){
                     if ( runtimeExecError.contains("Permission denied") ){                        
                         System.err.println("Permission denied!");
@@ -8925,7 +8925,7 @@ System.out.println("BB" + retorno);
     
     private void win(){
         try{
-            String s=runtimeExec(new String[]{"cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus"});
+            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus");
             if ( s == null )
                 erroFatal(4311);
             String [] lines=s.split("\n");
@@ -9726,10 +9726,9 @@ class Util{
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
     public String runtimeExecError = "";
-    public String runtimeExec(String [] p){
+    public String runtimeExec(String p_){
         try{
-            if ( p.length == 1 && p[0].startsWith("cmd /c ") )
-                p=new String[]{"cmd","/c",p[0].substring(7)};
+            String [] p=p_.split(" ");
             runtimeExecError="";
             Process proc = Runtime.getRuntime().exec(p);
             int len=0;
@@ -9746,7 +9745,7 @@ class Util{
             }    
             String s=baos.toString("UTF-8").replace("\r\n","\n");
             String [] linhas=s.split("\n");
-            if ( p.length == 3 && p[0].equals("cmd") && linhas[0].endsWith(": 65001")){
+            if ( p.length >= 3 && p[0].equals("cmd") && p[1].equals("/c") && linhas[0].endsWith(": 65001")){
                 s="";
                 for ( int i=1;i<linhas.length;i++ )
                     s+=linhas[i]+"\n";
@@ -10323,9 +10322,7 @@ class Util{
                 "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
                 "system_profiler SPSoftwareDataType",
                 "oslevel",
-                "cat /proc/version",
                 "lsb_release -a",
-                "cat /proc/version",
                 "cat /etc/os-release",
                 "cat /proc/version",
             };
@@ -10336,11 +10333,9 @@ class Util{
                 "Linux",
                 "Linux",
                 "Linux",
-                "Linux",
-                "Linux",
             };
             for ( int i=0;i<commands.length;i++ ){
-                String s=runtimeExec(new String[]{commands[i]});
+                String s=runtimeExec(commands[i]);
                 if ( s == null )
                     continue;
                 if ( getType ){
