@@ -1813,10 +1813,36 @@ cat buffer.log
             socket_.close();
         }catch(Exception e){
             System.out.println(erro_amigavel_exception(e));
-        }            
+        }
     }
     
     private void daemon_server(){        
+        // auto start
+        try{
+            new Thread() {                    
+                public void run() {
+                    try{
+                        Thread.sleep(1000);
+                        String command="restart all";
+                        Socket socket_ = new Socket("0.0.0.0", 2020);
+                        BufferedInputStream bis = new BufferedInputStream(socket_.getInputStream());
+                        BufferedOutputStream bos = new BufferedOutputStream(socket_.getOutputStream());
+                        byte [] buff = new byte[BUFFER_SIZE];
+                        bos.write(command.getBytes());
+                        bos.flush();
+                        while(true){
+                            bis.read(buff, 0, buff.length);            
+                            if ( bis.available() > 0 )
+                                continue;
+                            break;
+                        }
+                        socket_.close();
+                    }catch(Exception e){}                    
+                }
+            }.start();
+        }catch(Exception e){}
+        
+        // daemon_server
         try{
             ServerSocket serverSocket = new ServerSocket(2020, 1, InetAddress.getByName("0.0.0.0"));                        
             System.out.println("started");
@@ -8181,28 +8207,11 @@ System.out.println("BB" + retorno);
 
     private String getLocalDateTime_windows(){
         try{
-            Process proc;
-            proc = Runtime.getRuntime().exec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime");
-            int len=0;
-            byte[] b=new byte[1024];
-            boolean ok=false;                    
-            boolean error=false;                    
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                baos.write(b, 0, len);
-                ok=true;
-            }
-            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                error=true;
-            }    
-            if ( error ){
-                System.err.println("Erro fatal 999!");
-                System.exit(1);
-            }
-            String [] lines=baos.toString().split("\r\n");
+            String s=runtimeExec(new String[]{"cmd /c wmic path Win32_OperatingSystem get LocalDateTime"});
+            String [] lines=s.split("\n");
             return lines[1].trim();
         }catch(Exception e){
-            System.err.println("Erro fatal " + e.toString());
+            System.err.println("Erro fatal 4324" + e.toString());
         }   
         return null;
     }
@@ -8247,30 +8256,13 @@ System.out.println("BB" + retorno);
     private void load_pss_windows() {        
         try{
             load_pss_init();
-            Process proc;
-            proc = Runtime.getRuntime().exec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId");
-            int len=0;
-            byte[] b=new byte[1024];
-            boolean ok=false;                    
-            boolean error=false;                    
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                baos.write(b, 0, len);
-                ok=true;
-            }
-            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                error=true;
-            }    
-            if ( error ){
-                System.err.println("Erro fatal 99!");
-                System.exit(1);
-            }
-            String [] lines=baos.toString().split("\r\n");
+            String s_=runtimeExec(new String[]{"cmd","/c","wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId"});
+            String [] lines=s_.split("\n");
             ArrayList<Integer> list_p = new ArrayList<>();
             boolean isWord=false;
             for ( int i=0;i<lines.length;i++ ){
                 String s=lines[i];
-                if(i == 0){
+                if( i == 0 ){
                     for ( int j=0;j<s.length();j++ ){
                         String t=s.substring(j, j+1);
                         if ( isWord == !t.equals(" ") )
@@ -8279,6 +8271,7 @@ System.out.println("BB" + retorno);
                         if ( isWord )
                             list_p.add(j);
                     }
+                    continue;
                 }else{
                     if ( s.length() < list_p.get(4) )
                         continue;
@@ -8294,7 +8287,7 @@ System.out.println("BB" + retorno);
                     long seconds=new SimpleDateFormat("yyyyMMddHHmmss").parse(LocalDateTime).getTime() - new SimpleDateFormat("yyyyMMddHHmmss").parse(CreationDate).getTime();
                     seconds/=1000;
                     String deltaTime=seconds_to_string(seconds, "format2");
-                    
+
                     pss_parm1.add(ProcessId);
                     pss_parm2.add(ParentProcessId);
                     pss_parm3.add(deltaTime);
@@ -8304,7 +8297,7 @@ System.out.println("BB" + retorno);
                 }
             }                            
         }catch(Exception e){
-            System.err.println("Erro fatal " + e.toString());
+            System.err.println("Erro fatal 44556 " + e.toString());
         }
     }
       
@@ -8351,7 +8344,7 @@ System.out.println("BB" + retorno);
                 pss_flag.add(false);
             }                            
         }catch(Exception e){
-            System.err.println("Erro fatal " + e.toString());
+            System.err.println("Erro fatal 676 " + e.toString());
         }
     }
           
@@ -8426,34 +8419,15 @@ System.out.println("BB" + retorno);
         String s1_aux="";  
         for ( int i=0;i<command.length;i++ ){
             try {          
-                boolean error=false;
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                Process proc = Runtime.getRuntime().exec(command[i]);
-                int len=0;
-                byte[] b=new byte[1024];
-                boolean ok=false;                    
-                while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                    baos.write(b, 0, len);
-                    ok=true;
-                }
-                while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                    baos.write(b, 0, len);
-                    error=true;
-                }          
-                String s = baos.toString("UTF-8");
-                
-                if ( !ok ){
-                    if ( s.contains("No such file") )
-                        continue;
-                    if ( s.contains("Permission denied") ){                        
+                String s = runtimeExec(new String[]{command[i]}).trim();
+                if ( s == null ){
+                    if ( runtimeExecError.contains("Permission denied") ){                        
                         System.err.println("Permission denied!");
                         System.exit(1);
                     }
-                    System.err.println("Erro fatal 99!");
-                    System.exit(1);
+                    continue;
                 }
-                if ( error ) continue;
-                
+
                 long seconds=-1;
                 if ( index_command[i].equals("windows") ){
                     s = s.split("\r\n")[1];
@@ -8951,25 +8925,10 @@ System.out.println("BB" + retorno);
     
     private void win(){
         try{
-            Process proc;
-            proc = Runtime.getRuntime().exec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus");
-            int len=0;
-            byte[] b=new byte[1024];
-            boolean ok=false;                    
-            boolean error=false;                    
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                baos.write(b, 0, len);
-                ok=true;
-            }
-            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                error=true;
-            }    
-            if ( error ){
-                System.err.println("Erro fatal 999!");
-                System.exit(1);
-            }
-            String [] lines=baos.toString().split("\r\n");
+            String s=runtimeExec(new String[]{"cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus"});
+            if ( s == null )
+                erroFatal(4311);
+            String [] lines=s.split("\n");
             for ( int i=0;i<lines.length;i++ ){
                 if ( lines[i].length() < 70 )
                     continue;
@@ -8991,7 +8950,7 @@ System.out.println("BB" + retorno);
                     System.out.println(lines[i].substring(0,55) + " - ExtendedGrace");
             }
         }catch(Exception e){
-            System.err.println("Erro fatal " + e.toString());
+            System.err.println("Erro fatal 789 " + e.toString());
         }   
     }
     
@@ -9152,7 +9111,7 @@ System.out.println("BB" + retorno);
     }
 }
 
-class grammarsWhere {
+class grammarsWhere extends Util{
     // teste:
     // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV "select b c, a from this where b = 'b31'" 
     
@@ -9568,16 +9527,14 @@ class grammarsWhere {
                 nodes.get(i).value = "";
         }
     }
-    public static void erroFatal(String n) {
-        System.err.println("Erro Fatal " + n + "!!!!");
-        System.exit(1);
-    }      
+    
     public static void mostrando(String [] a){
         System.out.println("mostrando inicio:");
         for(int i=0;i<a.length;i++)
             System.out.println(">>"+a[i]+"<<");
         System.out.println("mostrando fim");
     }
+    
     public static void mostrandoNodes(ArrayList<Node> a){
         System.out.println("mostrando inicio node:");
         for(int i=0;i<a.size();i++)
@@ -9767,6 +9724,39 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public String runtimeExecError = "";
+    public String runtimeExec(String [] p){
+        try{
+            if ( p.length == 1 && p[0].startsWith("cmd /c ") )
+                p=new String[]{"cmd","/c",p[0].substring(7)};
+            runtimeExecError="";
+            Process proc = Runtime.getRuntime().exec(p);
+            int len=0;
+            byte[] b=new byte[1024];
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            ByteArrayOutputStream baos_err = new ByteArrayOutputStream();
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                baos_err.write(b, 0, len);
+                runtimeExecError=baos_err.toString("UTF-8");
+                return null;
+            }    
+            String s=baos.toString("UTF-8").replace("\r\n","\n");
+            String [] linhas=s.split("\n");
+            if ( linhas[0].endsWith(": 65001")){
+                s="";
+                for ( int i=1;i<linhas.length;i++ )
+                    s+=linhas[i]+"\n";
+            }
+            return s;
+        }catch(Exception e){
+            runtimeExecError=e.toString();            
+        }
+        return null;
+    }
     
     public String[] arrayList_to_array(ArrayList a){
         String[] args=new String[a.size()];
@@ -10320,82 +10310,61 @@ class Util{
         }
     }    
 
-    private static String osGetTypeTrueCache=null;
-    private static String osGetTypeFalseCache=null;
-    public static String os(boolean getType) {
-        if ( getType && osGetTypeTrueCache != null )
-            return osGetTypeTrueCache;
-        if ( !getType && osGetTypeFalseCache != null )
-            return osGetTypeFalseCache;        
-        boolean show=false;
-        String [] commands = new String[]{
-            "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
-            "system_profiler SPSoftwareDataType",
-            "oslevel;cat /proc/version",
-            "lsb_release -a;cat /proc/version",
-            "cat /etc/os-release;cat /proc/version",
-        };
-        String [] types = new String[]{
-            "Windows",
-            "Mac",
-            "Linux",
-            "Linux",
-            "Linux",
-        };
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        for ( int i=0;i<commands.length;i++ ){
-            try {
-                String [] command_p = commands[i].split(";");
-                boolean error=false;
-                for ( int j=0;j<command_p.length;j++ ){
-                    Process proc;
-                    proc = Runtime.getRuntime().exec(command_p[j]);
-                    int len=0;
-                    byte[] b=new byte[1024];
-                    boolean ok=false;                    
-                    while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                        baos.write(b, 0, len);
-                        ok=true;
-                    }
-                    while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                        error=true;
-                    }           
-                    if ( !ok ){
-                        System.err.println("Erro fatal 99!");
-                        System.exit(1);
-                    }
-                    if ( error ) break;
-                }
-                if ( error ) continue;
-                show=true;
+    private String osGetTypeTrueCache=null;
+    private String osGetTypeFalseCache=null;
+    public String os(boolean getType) {
+        try{
+            if ( getType && osGetTypeTrueCache != null )
+                return osGetTypeTrueCache;
+            if ( !getType && osGetTypeFalseCache != null )
+                return osGetTypeFalseCache;        
+            boolean show=false;
+            String [] commands = new String[]{
+                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
+                "system_profiler SPSoftwareDataType",
+                "oslevel",
+                "cat /proc/version",
+                "lsb_release -a",
+                "cat /proc/version",
+                "cat /etc/os-release",
+                "cat /proc/version",
+            };
+            String [] types = new String[]{
+                "Windows",
+                "Mac",
+                "Linux",
+                "Linux",
+                "Linux",
+                "Linux",
+                "Linux",
+                "Linux",
+            };
+            for ( int i=0;i<commands.length;i++ ){
+                String s=runtimeExec(new String[]{commands[i]});
+                if ( s == null )
+                    continue;
                 if ( getType ){
                     osGetTypeTrueCache=types[i];
-                    return osGetTypeTrueCache;
+                    return osGetTypeTrueCache;                     
                 }
-                break;
-            } catch (Exception ex) {
-                continue;
-            }        
-        }
-        if ( show ){
-            osGetTypeFalseCache=baos.toString();
-            return osGetTypeFalseCache;
-        }else{
-            System.err.println("Nenhum sistema foi detectado!");
-            System.exit(1);
+                osGetTypeFalseCache=s;
+                return osGetTypeFalseCache;                     
+            }
+        }catch(Exception e){
+            erroFatal("Erro 432424 " + e.toString());
         }
         return null;
     }
         
-    public static boolean isWindows(){
+    public boolean isWindows(){
         return os(true).equals("Windows");
     }
     
-    public static boolean isLinux(){
+    public boolean isLinux(){
         return os(true).equals("Linux");
     }
     
-    public static boolean isMac(){
+    public boolean isMac(){
         return os(true).equals("Mac");
     }
     
@@ -10569,9 +10538,14 @@ class Util{
     }
         
     public static void erroFatal(int n) {
-        System.err.println("Erro Fatal " + n + "!!!!");
+        erroFatal("Erro Fatal " + n + "!!!!");
+    }    
+    
+    public static void erroFatal(String a) {
+        System.err.println(a);
         System.exit(1);
     }    
+    
     
     public void loadClassByBytes(java.util.HashMap classes, String principal, String [] args_){
         try{ 
