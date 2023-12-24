@@ -41,7 +41,7 @@ arquivo config.reg
 Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Command Processor]
-"Autorun"="doskey cd=cd0 $*"
+"Autorun"="doskey cd=cd0 $* && chcp 65001"
 
 
 install daemon(cmd adm) // http://nssm.cc/download
@@ -1687,8 +1687,7 @@ cat buffer.log
             }
         }       
 
-        String tag_λ="\u03BB";
-        String tag=tag_λ+"> ";
+        String tag="λ> ";
         int tracker=0;
         
         try{
