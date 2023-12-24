@@ -9746,7 +9746,7 @@ class Util{
             }    
             String s=baos.toString("UTF-8").replace("\r\n","\n");
             String [] linhas=s.split("\n");
-            if ( linhas[0].endsWith(": 65001")){
+            if ( p.length == 3 && p[0].equals("cmd") && linhas[0].endsWith(": 65001")){
                 s="";
                 for ( int i=1;i<linhas.length;i++ )
                     s+=linhas[i]+"\n";
