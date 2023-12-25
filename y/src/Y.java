@@ -1799,8 +1799,8 @@ cat buffer.log
                 command+=args[i];
         }
         try{
-            if ( command.equals("tail_command") || command.split(" ").length != 2){ // faltou parametro
-                System.out.println("parametro invalido de tail");
+            if ( command.equals("tail_command") || ( command.startsWith("tail_command ") && command.split(" ").length != 2 ) ){ // faltou parametro
+                System.out.println("parametro invalido de tail.");
                 return;
             }
             if ( command.startsWith("tail_command ")){
