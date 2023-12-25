@@ -105,8 +105,10 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.security.Security;
 import java.text.ParseException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -2286,10 +2288,25 @@ cat buffer.log
                                         break;
                                     }
                                     if ( s.trim().startsWith("tail_command ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
-                                        // proc nao encontrada responder [ERROR_TAIL]
+                                        ProcDaemon pd=null;
+                                        for ( int i=0;i<procs.size();i++ )
+                                            if ( procs.get(i).nome.equals(s.trim().split(" ")[1]) ){
+                                                pd=procs.get(i);
+                                                break;
+                                            }
+                                        if ( pd == null ){
+                                            result="[ERROR_TAIL]";
+                                            break;
+                                        }
+                                        Long pos=0L;
                                         while(true){ //resposta infinita                                            
-                                            output.write(new byte[]{91});
-                                            output.write(new byte[]{92});
+                                            byte[] out_aux = pd.get_out_n(pos);
+                                            if ( out_aux == null )
+                                                continue;
+                                            pos++;
+                                            if ( out_aux.length == 0 )
+                                                continue;
+                                            output.write(out_aux);
                                             output.flush();                                            
                                         }
                                     }
@@ -2352,14 +2369,8 @@ cat buffer.log
         String result="";
         try{
             result+="Stauts:\n";
-            ByteArrayOutputStream baos=new ByteArrayOutputStream();
-            for( int i=0;i<p.list_out.size();i++ )
-                baos.write((byte[])p.list_out.get(i));
-            result+="out: \n" + baos.toString() + "\n";
-            baos=new ByteArrayOutputStream();
-            for( int i=0;i<p.list_err.size();i++ )
-                baos.write((byte[])p.list_err.get(i));
-            result+="err: \n" + baos.toString() + "\n";
+            result+="out: \n" + p.get_out() + "\n";
+            result+="err: \n" + p.get_err() + "\n";
             result+="\nErro run: " + p.erro + "\n";
         }catch(Exception e){
             return "erro fatal 2244";
@@ -2372,16 +2383,43 @@ cat buffer.log
         public String [] command=null;
         public Thread t=null;
         public int status=0; // 0 parado, 1 rodando, 2 finalizado
+        long n_out=0;
         public String erro="";
-        /*
-        long n=0;
-        HashMap hm=new HashMap();
-        hm.put(++n, new byte[]{33});
-        long first_key=(long)hm.keySet().toArray()[0];
-        hm.get(first_key);
-        */
-        public ArrayList list_out=new ArrayList();
+        public LinkedHashMap hm_out=new LinkedHashMap();
         public ArrayList list_err=new ArrayList();
+        public String get_out(){
+            try{
+                ByteArrayOutputStream baos=new ByteArrayOutputStream();
+                Object [] keys=hm_out.keySet().toArray();
+                for ( int i=0;i<keys.length;i++ ){
+                    Long key = (Long)keys[i];
+                    baos.write((byte[])hm_out.get(key));
+                }            
+                return baos.toString();
+            }catch(Exception e){}
+            return null;
+        }
+        public byte[] get_out_n(Long n){
+            try{                
+                Object [] keys=hm_out.keySet().toArray();
+                if ( keys.length == 0 )
+                    return null;
+                Long first=(Long)keys[0];
+                if ( first > n )
+                    return new byte[]{};
+                return (byte[])hm_out.get(n);
+            }catch(Exception e){}
+            return null;
+        }
+        public String get_err(){
+            try{
+                ByteArrayOutputStream baos=new ByteArrayOutputStream();
+                for( int i=0;i<list_err.size();i++ )
+                    baos.write((byte[])list_err.get(i));
+                return baos.toString();            
+            }catch(Exception e){}
+            return "";
+        }
         public String get_status(){
             if ( status == 0 )
                 return "Iniciando";
@@ -2409,9 +2447,11 @@ cat buffer.log
                         while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
                             baos_in = new ByteArrayOutputStream();
                             baos_in.write(b, 0, len);
-                            list_out.add(baos_in.toByteArray());
-                            if ( list_out.size() > 100 )
-                                list_out.remove(0);
+                            hm_out.put(n_out++,baos_in.toByteArray());
+                            if ( hm_out.size() > 100 ){
+                                long n=(long)hm_out.keySet().toArray()[0];
+                                hm_out.remove(n);
+                            }
                         }
                         while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
                             baos_out = new ByteArrayOutputStream();
@@ -12715,11 +12755,13 @@ class XML extends Util{
 /* class HttpServer */         if (method.equals("OPTIONS")) {
 /* class HttpServer */             for (String line: new String[] {
 /* class HttpServer */                     "HTTP/1.1 501 Not Implemented\r\n", 
-/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                     "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                     "\r\n",
 /* class HttpServer */                 }) {
 /* class HttpServer */                 sb.append(line);
-/* class HttpServer */                 System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */                 //System.out.println("    |---> " + line.replace("\n","\n          "));
+                                       System.out.print("    |---> " + line);
 /* class HttpServer */             }
 /* class HttpServer */             System.out.println("    |");
 /* class HttpServer */             output.write(sb.toString().getBytes());
@@ -12740,12 +12782,14 @@ class XML extends Util{
 /* class HttpServer */                 for (String line: new String[] {
 /* class HttpServer */                         "HTTP/1.1 200 OK\r\n",
 /* class HttpServer */                         "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                         "\r\n",
 /* class HttpServer */                         texto_longo.get_html_virtual_playlist()
 /* class HttpServer */                     }) {
 /* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */                     //System.out.println("    |---> " + line.replace("\n","\n          "));
+                                           System.out.print("    |---> " + line);
 /* class HttpServer */                 }
 /* class HttpServer */                 System.out.println("    |");
 /* class HttpServer */                 output.write(sb.toString().getBytes());
@@ -12779,7 +12823,8 @@ class XML extends Util{
 /* class HttpServer */             for (String line: new String[] {
 /* class HttpServer */                     "HTTP/1.1 200 OK\r\n",
 /* class HttpServer */                     "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                     "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                     "\r\n",
 /* class HttpServer */                     "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
 /* class HttpServer */                     "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
@@ -12788,7 +12833,8 @@ class XML extends Util{
 /* class HttpServer */                     "&nbsp;" + titulo + "<br>\n"
 /* class HttpServer */                 }) {
 /* class HttpServer */                 sb.append(line);
-/* class HttpServer */                 System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */                 //System.out.println("    |---> " + line.replace("\n","\n          "));
+                                       System.out.print("    |---> " + line);
 /* class HttpServer */             }
 /* class HttpServer */             File[] files = new File(dir).listFiles();
 /* class HttpServer */             Arrays.sort(files, new Comparator < File > () {
@@ -12830,21 +12876,25 @@ class XML extends Util{
 /* class HttpServer */                         "accept-ranges: bytes\r\n",
 /* class HttpServer */                         "Content-Length: " + lenFile + "\r\n",
 /* class HttpServer */                         "Content-Range: bytes " + range + "-" + (lenFile-1) + "/" + lenFile + "\r\n",
-/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                         "\r\n"
 /* class HttpServer */                     }) {
 /* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */                     //System.out.println("    |---> " + line.replace("\n","\n          "));
+                                           System.out.print("    |---> " + line);
 /* class HttpServer */                 }
 /* class HttpServer */             }else{  
 /* class HttpServer */                 for (String line: new String[] {
 /* class HttpServer */                         "HTTP/1.1 200 OK\r\n",
 /* class HttpServer */                         "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
-/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                         "\r\n"
 /* class HttpServer */                     }) {
 /* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */                     //System.out.println("    |---> " + line.replace("\n","\n          "));
+                                           System.out.print("    |---> " + line);
 /* class HttpServer */                 }
 /* class HttpServer */             }    
 /* class HttpServer */             System.out.println("    |");
@@ -12871,13 +12921,15 @@ class XML extends Util{
 /* class HttpServer */         for (String line: new String[] {
 /* class HttpServer */                 "HTTP/1.1 404 OK\r\n",
 /* class HttpServer */                 "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                 "Access-Control-Allow-Origin: *\r\nX-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                 "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                 "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                 "\r\n",
 /* class HttpServer */                 "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" + "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" + "<title>404 - File or directory not found.</title>\n" + "<style type=\"text/css\">\n" + "<!--\n" + "body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" + "fieldset{padding:0 15px 10px 15px;} \n" +
 /* class HttpServer */                 "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
 /* class HttpServer */             }) {
 /* class HttpServer */             sb.append(line);
-/* class HttpServer */             System.out.println("    |---> " + line.replace("\n","\n          "));
+/* class HttpServer */             //System.out.println("    |---> " + line.replace("\n","\n          "));
+                                   System.out.print("    |---> " + line);
 /* class HttpServer */         }
 /* class HttpServer */         System.out.println("    |");
 /* class HttpServer */         output.write(sb.toString().getBytes());
