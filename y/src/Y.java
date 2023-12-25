@@ -1688,7 +1688,6 @@ cat buffer.log
         }       
 
         String tag="λ> ";
-        int tracker=0;
         
         try{
             String [] controlC_parms = new String []{"\n" + tag, "0"};
@@ -1792,9 +1791,20 @@ cat buffer.log
             }
             if ( i > 1 )
                 command+=" ";
-            command+=args[i];
+            if ( i == 1 && args[i].equals("tail") )
+                command+="tail_command";
+            else
+                command+=args[i];
         }
         try{
+            if ( command.equals("tail_command") || command.split(" ").length != 2){ // faltou parametro
+                System.out.println("parametro invalido de tail");
+                return;
+            }
+            if ( command.startsWith("tail_command ")){
+                daemon_command_loop_tail(command);
+                return;
+            }
             Socket socket_ = new Socket("0.0.0.0", 2020);
             BufferedInputStream bis = new BufferedInputStream(socket_.getInputStream());
             BufferedOutputStream bos = new BufferedOutputStream(socket_.getOutputStream());
@@ -1816,6 +1826,38 @@ cat buffer.log
         }
     }
     
+    private void daemon_command_loop_tail(String command){
+        try{
+            String [] controlC_parms = new String []{"", "0"};
+            // DisableControlC
+            new Util().loadDisableControlC(controlC_parms);
+
+            Socket socket_ = new Socket("0.0.0.0", 2020);
+            BufferedInputStream bis = new BufferedInputStream(socket_.getInputStream());
+            BufferedOutputStream bos = new BufferedOutputStream(socket_.getOutputStream());
+            byte [] buff = new byte[BUFFER_SIZE];
+            bos.write(command.getBytes());
+            bos.flush();
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            String s="";
+            while(controlC_parms[1].equals("0")){
+                if ( bis.available() > 0 ){
+                    int len = bis.read(buff, 0, buff.length);            
+                    baos.write(buff, 0, len);     
+                    if ( baos.toString().trim().equals("[ERROR_TAIL]") ){
+                        System.out.println("proc invalida ou nao ativa");
+                        break;
+                    }
+                    System.out.print(baos.toString());
+                    baos = new ByteArrayOutputStream();
+                }
+            }
+            socket_.close();
+        }catch(Exception e){
+            System.out.println(erro_amigavel_exception(e));
+        }
+    }
+        
     private void daemon_server(){        
         // auto start
         try{
@@ -1924,7 +1966,8 @@ cat buffer.log
                                                 "\n ls" + 
                                                 "\n mkdir" + 
                                                 "\n rm" + 
-                                                "\n cls";
+                                                "\n cls" + 
+                                                "\n tail(somente terminal)";
                                         break;
                                     }
                                     // interpretacao de bloco
@@ -2238,6 +2281,18 @@ cat buffer.log
                                         result="[CLS]";
                                         break;
                                     }
+                                    if ( s.trim().equals("tail") || s.trim().startsWith("tail ") ){
+                                        result="tail nao permitido por aqui, tente: y d " + s.trim() + " (fora do daemon)";
+                                        break;
+                                    }
+                                    if ( s.trim().startsWith("tail_command ") && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
+                                        // proc nao encontrada responder [ERROR_TAIL]
+                                        while(true){ //resposta infinita                                            
+                                            output.write(new byte[]{91});
+                                            output.write(new byte[]{92});
+                                            output.flush();                                            
+                                        }
+                                    }
                                     if ( s.trim().equals("") ){ // s.equals("") pode ser resultado dos processamentos de bloco
                                         result="";
                                         break;
@@ -2254,9 +2309,12 @@ cat buffer.log
                                     baos=new ByteArrayOutputStream();
                             }
                         }catch (Exception e) {
-                            if ( e.toString().equals("java.net.SocketException: Connection reset") )
+                            if ( e.toString().startsWith("java.net.SocketException: ") ){
+                                System.out.println("warnning.. desconectado.");
                                 return;
+                            }
                             System.out.println("Erro ao executar servidor:" + e.toString());
+                            return;
                         }
                     }
                 }.start();
