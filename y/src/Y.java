@@ -34,15 +34,14 @@ pushd %userprofile%
 pushd %*
 )
 
-lss.bat(c:/windows)
-y lss
-
 arquivo config.reg
 Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Command Processor]
-"Autorun"="doskey cd=cd0 $* && chcp 65001 && doskey cat=y cat $* && doskey grep=y grep $* && doskey printf=y printf $* && doskey sed=y sed $* && doskey ls=y ls $* && doskey lss=y lss $* && doskey pss=y pss $* && doskey du=y du $*"
+"Autorun"="doskey cd=cd0 $* && chcp 65001 && doskey cat=y cat $* && doskey printf=y printf $* && doskey sed=y sed $* && doskey ls=y ls $* && doskey lss=y lss $* && doskey pss=y pss $* && doskey du=y du $*"
 
+Obs:
+doskey grep=y grep nao funciona porque doskey nao funciona apos |
 
 install daemon(cmd adm) // http://nssm.cc/download
 y echo "java.exe -Dfile.encoding=UTF-8 -Dline.separator= -cp c:\y;c:\y\ojdbc6.jar;c:\y\sqljdbc4-3.0.jar;c:\y\jsch-0.1.55.jar Y d -server" > D:\ProgramFiles\yd.bat
