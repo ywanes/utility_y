@@ -41,7 +41,7 @@ arquivo config.reg
 Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Command Processor]
-"Autorun"="doskey cd=cd0 $* && chcp 65001"
+"Autorun"="doskey cd=cd0 $* && chcp 65001 && doskey cat=y cat $* && doskey grep=y grep $* && doskey printf=y printf $* && doskey sed=y sed $* && doskey ls=y ls $* && doskey lss=y lss $* && doskey pss=y pss $* && doskey du=y du $*"
 
 
 install daemon(cmd adm) // http://nssm.cc/download
