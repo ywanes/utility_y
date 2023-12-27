@@ -1867,6 +1867,13 @@ cat buffer.log
                     try{
                         Thread.sleep(1000);
                         String command="restart all";
+                        // Ports
+                        // 2020 daemon
+                        // 2021 conexão por tunelamento
+                        // 2022 comunicação com vizinho até se montar um grafo, obs: nem sempre uma maquina encherga o dns
+                        // duvida... abrir porta para quais ips? todos?
+                        // em -server é informado o ip relevante da maquina, exemplos 192.168.80* ou *::100
+                        // as maquina precisam passar seus seeds iniciais. a procura por vizinhança vai ficar de olho mais nos ipv4 com a exceção da maquina dns
                         Socket socket_ = new Socket("0.0.0.0", 2020);
                         BufferedInputStream bis = new BufferedInputStream(socket_.getInputStream());
                         BufferedOutputStream bos = new BufferedOutputStream(socket_.getOutputStream());
