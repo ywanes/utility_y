@@ -1874,6 +1874,7 @@ cat buffer.log
                         // duvida... abrir porta para quais ips? todos?
                         // em -server é informado o ip relevante da maquina, exemplos 192.168.80* ou *::100
                         // as maquina precisam passar seus seeds iniciais. a procura por vizinhança vai ficar de olho mais nos ipv4 com a exceção da maquina dns
+                        // y d maquina vm cp /a.txt - | y d maquina renato cp - /(sempre zipando, codigo de bytes de erro entre as maquinas 001)
                         Socket socket_ = new Socket("0.0.0.0", 2020);
                         BufferedInputStream bis = new BufferedInputStream(socket_.getInputStream());
                         BufferedOutputStream bos = new BufferedOutputStream(socket_.getOutputStream());
