@@ -8704,8 +8704,14 @@ System.out.println("BB" + retorno);
                                 ipv4=ip;
                             if ( ipv6_nat == null && ip.contains(":") && ip.startsWith("fe") )
                                 ipv6_nat=ip;
-                            if ( ipv6_not_nat == null && ip.contains(":") && !ip.startsWith("fe") )
-                                ipv6_not_nat=ip;
+                            if ( ip.contains(":") && !ip.startsWith("fe") ){
+                                if ( ipv6_not_nat == null ){
+                                    ipv6_not_nat=ip;
+                                }else{
+                                    if ( ip.contains("::") )
+                                        ipv6_not_nat=ip;
+                                }                                
+                            }
                             String ping_=null;
                             if ( ping )
                                 ping_=ping(ip, timeout);
