@@ -6,7 +6,7 @@
     curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
     javac -encoding UTF-8 -cp ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
     javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;jsch-0.1.55.jar;. Y.java
-    alias y='java -Dfile.encoding=UTF-8 -cp /y:/y/ojdbc6.jar:/y/sqljdbc4-3.0.jar:/y/mysql-connector-java-8.0.26.jar:/y/jsch-0.1.55.jar:. Y'
+    alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
     java -XshowSettings 2>&1 | grep "file.encoding "
     configurando terminal windows cmd -> chcp 65001
     rc linux -> echo $?
@@ -76,7 +76,6 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.Statement;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
@@ -88,7 +87,6 @@ import java.util.Random;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
-import javax.swing.JOptionPane;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.ProgressMonitor;
@@ -97,20 +95,15 @@ import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.PosixFilePermission;
-import java.security.Security;
-import java.text.ParseException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipOutputStream;
@@ -742,15 +735,15 @@ cat buffer.log
             }catch(Exception e){}            
         }        
         if ( args[0].equals("md5") ){
-            digest("MD5");
+            System.out.println(digest("MD5", null));
             return;
         }        
         if ( args[0].equals("sha1") ){
-            digest("SHA-1");
+            System.out.println(digest("SHA-1", null));
             return;
         }        
         if ( args[0].equals("sha256") ){
-            digest("SHA-256");
+            System.out.println(digest("SHA-256", null));
             return;
         }        
         if ( args[0].equals("aes") && args.length > 1 ){
@@ -4608,18 +4601,22 @@ cat buffer.log
         }
     }
     
-    public void digest(String tipo){        
+    public String digest(String tipo, String caminho_opcional){        
         try {
+            if ( caminho_opcional != null )
+                readBytes(new File(caminho_opcional));
             MessageDigest digest=MessageDigest.getInstance(tipo);            
             byte[] buf = new byte[BUFFER_SIZE];            
             int len;
             while( (len=readBytes(buf)) > -1 )
                 digest.update(buf, 0, len);
             closeBytes();
-            System.out.println(new String(encodeHex(digest.digest())));
+            return new String(encodeHex(digest.digest()));            
         } catch (Exception ex) {
             System.err.println("Erro: "+ex.toString());
+            System.exit(1);
         }
+        return null;
     }
 
     public String digest_text(String txt,String tipo){
@@ -9168,8 +9165,75 @@ System.out.println("BB" + retorno);
         return true;
     }
     
-    private void test(){
-        System.out.println("test nao implementado!");
+    private String [] tests_name=null;
+    private String [] tests_commands=null;
+    private String [] tests_hash_out=null;
+    private String [] tests_hash_err=null;
+    private String dir_tests="/tmp/tests_y";
+    private String file_command_test=null;
+    private void test(){    
+        try{
+            //init
+            if ( isWindows() ){
+                dir_tests="C:/tmp/tests_y";
+                file_command_test=dir_tests+"/test.cmd";
+            }else
+                file_command_test=dir_tests+"/test";
+            if ( !new File(dir_tests).exists() ){
+                System.out.println("Favor criar a pasta " + dir_tests);
+                return;
+            }
+            tests_name=new String[]{
+                "echo     ", // 1
+                "selectCSV"  // 2
+            };
+            tests_commands=new String[]{
+                "y echo A", // 1                
+                "echo '[{\"a\":\"3\" },{\"a\": \"4\"}]' | y json \"[elem for elem in data]\" | y selectCSV \"select * from this where a != '3'\"" // 2
+            };
+            tests_hash_out=new String[]{
+                "bf072e9119077b4e76437a93986787ef", // 1
+                "5528101eac8ee8cf9fcac85e7825ee0d"  // 2
+            };
+            tests_hash_err=new String[]{                
+            };            
+            System.out.println("iniciando tests...");
+            for ( int i=0;i<tests_name.length;i++ ){ 
+                System.out.print("test " + (i+1) + "/" + tests_name.length + " " + tests_name[i] + "... ");
+                if ( ! salvando_file("", new File(file_command_test + ".out")) ){
+                    System.err.println("Ocorreu um erro ao gravar: " + file_command_test + ".out");
+                    return;
+                }
+                if ( ! salvando_file("", new File(file_command_test + ".err")) ){
+                    System.err.println("Ocorreu um erro ao gravar: " + file_command_test + ".err");
+                    return;
+                }
+                String command=tests_commands[i] + " 1> " + file_command_test + ".out 2> " + file_command_test + ".err";
+                if ( !isWindows() ){
+                    if ( !new File(file_command_test + ".env").exists() )
+                        salvando_file("alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'\n", new File(file_command_test + ".env"));
+                    command = "shopt -s expand_aliases\nsource " + file_command_test + ".env\n" + command;                                    
+                }
+                if ( ! salvando_file(command, new File(file_command_test)) ){
+                    System.err.println("Ocorreu um erro ao gravar: " + file_command_test);
+                    return;
+                }
+                if ( !isWindows() ){
+                    chmod_777(file_command_test);
+                    new ProcessBuilder("bash",file_command_test).start().waitFor();                
+                }else
+                    new ProcessBuilder(file_command_test).start().waitFor();                
+                String str_out=digest("MD5", file_command_test + ".out");
+                String str_err=digest("MD5", file_command_test + ".err");
+                if ( !str_out.equals(tests_hash_out[i]) )
+                    System.out.println("Erro " + str_out + "/" + tests_hash_out[i] );                    
+                else
+                    System.out.println("OK");
+            }
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+            System.exit(1);
+        }
     }
     
     private void update(){        
@@ -10341,8 +10405,7 @@ class Util{
         scanner_pipeB=null;
     }
     
-    public static InputStream inputStream_pipe=null;    
-    
+    public static InputStream inputStream_pipe=null;        
     public void readBytes(String caminho) throws Exception{
         readBytes(new File(caminho));
     }
