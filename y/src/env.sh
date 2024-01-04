@@ -90,6 +90,10 @@ then
       echo Alerta LTS, roda o comando abaixo!!:
       echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
     fi
+    #if [ `cat /etc/update-manager/release-upgrades | grep ^Prompt=lts$ | wc -l` != 1 ]
+    #then
+    #  echo Erro, essa maquina so pode usar LTS.. altere em /etc/update-manager/release-upgrades deixando Prompt=lts
+    #fi
     ip6m=2002:2002:2002:2002
     ip6b=::100
     ipn=renato
