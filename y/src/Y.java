@@ -1525,11 +1525,7 @@ cat buffer.log
                 return;
             }
         }
-        if ( args[0].equals("clean") ){
-            System.out.println("Digite y clear");
-            return;
-        }
-        if ( args[0].equals("clear") || args[0].equals("cls") ){
+        if ( args[0].equals("clear") || args[0].equals("clean") || args[0].equals("cls") ){
             clear_cls();
             return;
         }
@@ -13105,7 +13101,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -13189,8 +13184,7 @@ class XML extends Util{
 /* class by manual */                + "  [y pid]\n"
 /* class by manual */                + "  [y date]\n"
 /* class by manual */                + "  [y cronometro]\n"
-/* class by manual */                + "  [y clear]\n"
-/* class by manual */                + "  [y cls]\n"
+/* class by manual */                + "  [y [cls|clear|clean]]\n"
 /* class by manual */                + "  [y ips]\n"
 /* class by manual */                + "  [y mouse]\n"
 /* class by manual */                + "  [y kill]\n"
