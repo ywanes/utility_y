@@ -12174,7 +12174,7 @@ class XML extends Util{
 /* class texto_longo */         File [] f=new File(".").listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
 /* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){
-/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 9px;\" onclick=\"click_faixa(this,'humanClick')\">" + f[i].getName() + "</td></tr>\n";
+/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 30px;\" onclick=\"click_faixa(this,'humanClick')\">" + f[i].getName() + "</td></tr>\n";
 /* class texto_longo */                 File f2=new File(f[i].getName()+".cfg");
 /* class texto_longo */                 if ( f2.exists() && f2.isFile() ){
 /* class texto_longo */                     String [] partes=lendo_arquivo(f[i].getName()+".cfg").split("\n");
