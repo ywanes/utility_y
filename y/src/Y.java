@@ -1286,7 +1286,7 @@ cat buffer.log
                     if ( args[i].equals("_") )
                         args[i]="";
             }
-            String host="localhost";
+            String host="127.0.0.1";
             if ( args.length > 1 )
                 host=args[1];
             else
@@ -12708,9 +12708,6 @@ class XML extends Util{
 /* class HttpServer */     Socket socket = null;
 /* class HttpServer */     public HttpServer(String[] args, boolean index_playlist, String log) {
 /* class HttpServer */         host = args[0];
-/* class HttpServer */         if (args[0] == null || args[0].equals("localhost")) try {
-/* class HttpServer */             host = InetAddress.getLocalHost().getHostName();
-/* class HttpServer */         } catch (Exception e) {}
 /* class HttpServer */         titulo_url = args[1];
 /* class HttpServer */         titulo = args[2];
 /* class HttpServer */         port = Integer.parseInt(args[3]);
