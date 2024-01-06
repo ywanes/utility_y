@@ -12739,6 +12739,8 @@ class XML extends Util{
 /* class texto_longo */     }
 /* class texto_longo */     public String get_html_virtual_playlistmovie(String id){
 /* class texto_longo */         boolean validando_id=false;
+/* class texto_longo */         String back="";
+/* class texto_longo */         String next="";
 /* class texto_longo */         if ( !id.equals("") )
 /* class texto_longo */             validando_id=true;
 /* class texto_longo */         String txt="";
@@ -12747,8 +12749,15 @@ class XML extends Util{
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
 /* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && !f[i].getName().endsWith(".cfg") ){
 /* class texto_longo */                 if ( validando_id ){
+/* class texto_longo */                     if ( count == 1 && next.equals("") ){
+/* class texto_longo */                         next="next.addEventListener('click', function(){ window.location.replace('/id/" + f[i].getName() + "'); });\n";
+/* class texto_longo */                         next+="video.onended = function(){next.click();};\n";
+/* class texto_longo */                     }
 /* class texto_longo */                     if ( decodeUrl(id).equals(f[i].getName()) )
 /* class texto_longo */                         count++;
+/* class texto_longo */                     if ( count == 0 ){
+/* class texto_longo */                         back="back.addEventListener('click', function(){ window.location.replace('/id/" + f[i].getName() + "'); });\n";
+/* class texto_longo */                     }
 /* class texto_longo */                 }else{
 /* class texto_longo */                     count++;
 /* class texto_longo */                     id=f[i].getName();
@@ -12773,6 +12782,9 @@ class XML extends Util{
 /* class texto_longo */                 "</table></body></html>";
 /* class texto_longo */             }
 /* class texto_longo */         }
+/* class texto_longo */         String id_display=decodeUrl(id);
+/* class texto_longo */         if ( id_display.split("\\.").length == 2 )
+/* class texto_longo */             id_display=id_display.split("\\.")[0];
 /* class texto_longo */         id="/"+id;
 /* class texto_longo */         return "<html lang=\"pt-BR\">\n" +
 /* class texto_longo */         "<head>\n" +
@@ -12829,8 +12841,14 @@ class XML extends Util{
 /* class texto_longo */         "          </svg>\n" +
 /* class texto_longo */         "        </button>\n" +
 /* class texto_longo */         "        <p class=\"title\">\n" +
-/* class texto_longo */         "          <span class=\"series\">S</span> <span class=\"episode\">E01</span>\n" +
+/* class texto_longo */         "          <span class=\"series\"></span><span class=\"episode\">" + id_display + "</span>\n" +
 /* class texto_longo */         "        </p>\n" +
+/* class texto_longo */         "        <button class=\"back\">\n" +
+/* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <line x1=\"5\" y1=\"5\" x2=\"5\" y2=\"19\"></line>\n" +
+/* class texto_longo */         "            <polygon points=\"19 20 9 12 19 4 19 20\"></polygon>\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "        </button>\n" +
 /* class texto_longo */         "        <button class=\"next\">\n" +
 /* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
 /* class texto_longo */         "            <polygon points=\"5 4 15 12 5 20 5 4\"></polygon>\n" +
@@ -12874,7 +12892,10 @@ class XML extends Util{
 /* class texto_longo */         "const progressBar = document.querySelector('.video-container .progress-controls .progress-bar');\n" +
 /* class texto_longo */         "const watchedBar = document.querySelector('.video-container .progress-controls .progress-bar .watched-bar');\n" +
 /* class texto_longo */         "const timeLeft = document.querySelector('.video-container .progress-controls .time-remaining');\n" +
-/* class texto_longo */         "\n" +
+/* class texto_longo */         "const back = document.querySelector('.video-container .controls .back');\n" +
+/* class texto_longo */         "const next = document.querySelector('.video-container .controls .next');\n" +
+/* class texto_longo */         back + 
+/* class texto_longo */         next + 
 /* class texto_longo */         "let controlsTimeout;\n" +
 /* class texto_longo */         "controlsContainer.style.opacity = '0';\n" +
 /* class texto_longo */         "watchedBar.style.width = '0px';\n" +
@@ -13034,8 +13055,6 @@ class XML extends Util{
 /* class texto_longo */         "  display: flex;\n" +
 /* class texto_longo */         "  flex-direction: column;\n" +
 /* class texto_longo */         "  justify-content: flex-end;\n" +
-/* class texto_longo */         "  min-height: 40vh;\n" +
-/* class texto_longo */         "  /* Thanks to theArtifacts */\n" +
 /* class texto_longo */         "  background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.9)); \n" +
 /* class texto_longo */         "  transition: opacity 0.5s linear;\n" +
 /* class texto_longo */         "}\n" +
@@ -14230,7 +14249,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
 
 
