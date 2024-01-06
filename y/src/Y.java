@@ -1280,44 +1280,43 @@ cat buffer.log
         }
         if ( args[0].equals("httpServer"))
         {
-            if ( args.length == 2 && args[1].split(" ").length > 2 ){
+            if ( args.length == 2 && args[1].split(" ").length > 2 )
                 args = (args[0] + " " + args[1]).split(" ");
-                for ( int i=0;i<args.length;i++ )
-                    if ( args[i].equals("_") )
-                        args[i]="";
-            }
+            for ( int i=0;i<args.length;i++ )
+                if ( args[i].equals("_") )
+                    args[i]=null;
             String host="127.0.0.1";
-            if ( args.length > 1 )
+            if ( args.length > 1 && args[1] != null )
                 host=args[1];
             else
                 System.out.println("host preenchido automaticamente => " + host);
+            String port="8888";
+            if ( args.length > 2 && args[2] != null )
+                port=args[2];
+            else
+                System.out.println("porta preenchido automaticamente => " + port);     
             String titulo_url="tmp";
-            if ( args.length > 2 )
-                titulo_url=args[2];
+            if ( args.length > 3 && args[3] != null )
+                titulo_url=args[3];
             else
                 System.out.println("titulo url preenchido automaticamente => " + titulo_url);     
             String titulo="tmp";
-            if ( args.length > 3 )
-                titulo=args[3];
+            if ( args.length > 4 && args[4] != null )
+                titulo=args[4];
             else
                 System.out.println("titulo preenchido automaticamente => " + titulo);        
-            String port="8888";
-            if ( args.length > 4 )
-                port=args[4];
-            else
-                System.out.println("porta preenchido automaticamente => " + port);     
             String dir=".";
-            if ( args.length > 5 )
+            if ( args.length > 5 && args[5] != null )
                 dir=args[5];
             else
                 System.out.println("diretorio preenchido automaticamente => " + dir);     
             String endsWiths="";
-            if ( args.length > 6 )
+            if ( args.length > 6 && args[6] != null )
                 endsWiths=args[6];
             else
                 System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);     
             String ips_banidos="";
-            if ( args.length > 7 )
+            if ( args.length > 7 && args[7] != null )
                 ips_banidos=args[7];
             else
                 System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
@@ -1326,24 +1325,27 @@ cat buffer.log
                 log=args[9];
             }else{
             }
-            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},false, log);
+            new HttpServer(new String[]{host, port, titulo_url, titulo, dir, endsWiths, ips_banidos}, null, log);
             return;
         }  
         if ( args[0].equals("playlist")){
-            String host="localhost";
+            for ( int i=0;i<args.length;i++ )
+                if ( args[i].equals("_") )
+                    args[i]=null;
+            String host="127.0.0.1";
             if ( args.length > 1 )
                 host=args[1];
             else
                 System.out.println("host preenchido automaticamente => " + host);
+            String port="8888";
+            if ( args.length > 2 && args[2] != null )
+                port=args[2];
+            else
+                System.out.println("porta preenchido automaticamente => " + port);     
             String titulo_url="tmp";
             System.out.println("titulo url preenchido automaticamente => " + titulo_url);     
             String titulo="tmp";
             System.out.println("titulo preenchido automaticamente => " + titulo);        
-            String port="8888";
-            if ( args.length > 2 )
-                port=args[2];
-            else
-                System.out.println("porta preenchido automaticamente => " + port);     
             String dir=".";
             System.out.println("diretorio preenchido automaticamente => " + dir);     
             String endsWiths="";
@@ -1353,10 +1355,41 @@ cat buffer.log
             String log=null;
             if ( args.length > 4 && args[3].equals("-log_ips") )
                 log=args[4];
-            new HttpServer(new String[]{host, titulo_url, titulo, port, dir, endsWiths, ips_banidos},true,log);
+            new HttpServer(new String[]{host, port, titulo_url, titulo, dir, endsWiths, ips_banidos}, "playlist", log);
             return;            
         }
             
+        if ( args[0].equals("playlistmovie")){
+            for ( int i=0;i<args.length;i++ )
+                if ( args[i].equals("_") )
+                    args[i]=null;
+            String host="127.0.0.1";
+            if ( args.length > 1 && args[1] != null )
+                host=args[1];
+            else
+                System.out.println("host preenchido automaticamente => " + host);
+            String port="8888";
+            if ( args.length > 2 && args[2] != null )
+                port=args[2];
+            else
+                System.out.println("porta preenchido automaticamente => " + port);     
+            String titulo_url="tmp";
+            System.out.println("titulo url preenchido automaticamente => " + titulo_url);     
+            String titulo="tmp";
+            System.out.println("titulo preenchido automaticamente => " + titulo);        
+            String dir=".";
+            System.out.println("diretorio preenchido automaticamente => " + dir);     
+            String endsWiths="";
+            System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);     
+            String ips_banidos="";
+            System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
+            String log=null;
+            if ( args.length > 4 && args[3].equals("-log_ips") )
+                log=args[4];
+            new HttpServer(new String[]{host, port, titulo_url, titulo, dir, endsWiths, ips_banidos}, "playlistmovie", log);
+            return;            
+        }
+                    
         if ( args[0].equals("wget")){
             wget(args);
             return;            
@@ -9903,6 +9936,14 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+    public String decodeUrl(String a){
+        try{    
+            return java.net.URLDecoder.decode( a, "UTF-8");
+        }catch(Exception e){
+            return "Erro_no_decode_url";
+        }
+    }
+    
     public String runtimeExecError = "";
     public String runtimeExec(String p_){
         try{
@@ -12168,8 +12209,8 @@ class XML extends Util{
 /* class JSchCustom */ try { filename = c.readlink(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("realpath")) { if (cmds.size() != 2) continue; String p1 = (String) cmds.elementAt(1); String filename = null; try { filename = c.realpath(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("version")) { out.println("SFTP protocol version " + c.version()); continue; } if (cmd.equals("help") || cmd.equals("?")) { out.println(help); continue; } out.println("unimplemented command: " + cmd); } session.disconnect(); } catch (Exception e) { System.out.println(e); } System.exit(0); } private static String help = "      Available commands:\n" + "      * means unimplemented command.\n" + "cd path                       Change remote directory to 'path'\n" + "lcd path                      Change local directory to 'path'\n" + "chgrp grp path                Change group of file 'path' to 'grp'\n" + "chmod mode path               Change permissions of file 'path' to 'mode'\n" + "chown own path                Change owner of file 'path' to 'own'\n" + "df [path]                     Display statistics for current directory or\n" + "                              filesystem containing 'path'\n" + "help                          Display this help text\n" + "get remote-path [local-path]  Download file\n" + "get-resume remote-path [local-path]  Resume to download file.\n" + "get-append remote-path [local-path]  Append remote file to local file\n" + "hardlink oldpath newpath      Hardlink remote file\n" + "*lls [ls-options [path]]      Display local directory listing\n" + "ln oldpath newpath            Symlink remote file\n" + "*lmkdir path                  Create local directory\n" + "lpwd                          Print local working directory\n" + "ls [path]                     Display remote directory listing\n" + "*lumask umask                 Set local umask to 'umask'\n" + "mkdir path                    Create remote directory\n" + "put local-path [remote-path]  Upload file\n" + "put-resume local-path [remote-path]  Resume to upload file\n" + "put-append local-path [remote-path]  Append local file to remote file.\n" + "pwd                           Display remote working directory\n" + "stat path                     Display info about path\n" + "exit                          Quit sftp\n" + "quit                          Quit sftp\n" + "rename oldpath newpath        Rename remote file\n" + "rmdir path                    Remove remote directory\n" + "rm path                       Delete remote file\n" + "symlink oldpath newpath       Symlink remote file\n" + "readlink path                 Check the target of a symbolic link\n" + "realpath path                 Canonicalize the path\n" + "rekey                         Key re-exchanging\n" + "compression level             Packet compression will be enabled\n" + "version                       Show SFTP version\n" + "?                             Synonym for help"; public static class MyProgressMonitor implements SftpProgressMonitor { ProgressMonitor monitor; long count = 0; long max = 0; public void init(int op, String src, String dest, long max) { this.max = max; monitor = new ProgressMonitor(null, ((op == SftpProgressMonitor.PUT) ? "put" : "get") + ": " + src, "", 0, (int) max); count = 0; percent = -1; monitor.setProgress((int) this.count); 
 /* class JSchCustom */ monitor.setMillisToDecideToPopup(1000); } private long percent = -1; public boolean count(long count) { this.count += count; if (percent >= this.count * 100 / max) { return true; } percent = this.count * 100 / max; monitor.setNote("Completed " + this.count + "(" + percent + "%) out of " + max + "."); monitor.setProgress((int) this.count); return !(monitor.isCanceled()); } public void end() { monitor.close(); } } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 7"); System.exit(1); } final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } 
 
-/* class texto_longo */ class texto_longo extends Util{
-/* class texto_longo */     public static String get_html_virtual_playlist(){
+/* class texto_longo */ class Texto_longo extends Util{
+/* class texto_longo */     public String get_html_virtual_playlist(){
 /* class texto_longo */         String faixas="";
 /* class texto_longo */         File [] f=new File(".").listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
@@ -12696,26 +12737,457 @@ class XML extends Util{
 /* class texto_longo */         "</div>\n" +
 /* class texto_longo */         "</body></head></html>\n";
 /* class texto_longo */     }
+/* class texto_longo */     public String get_html_virtual_playlistmovie(String id){
+/* class texto_longo */         boolean validando_id=false;
+/* class texto_longo */         if ( !id.equals("") )
+/* class texto_longo */             validando_id=true;
+/* class texto_longo */         String txt="";
+/* class texto_longo */         int count=0;
+/* class texto_longo */         File [] f=new File(".").listFiles();
+/* class texto_longo */         for ( int i=0;i<f.length;i++ ){
+/* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && !f[i].getName().endsWith(".cfg") ){
+/* class texto_longo */                 if ( validando_id ){
+/* class texto_longo */                     if ( decodeUrl(id).equals(f[i].getName()) )
+/* class texto_longo */                         count++;
+/* class texto_longo */                 }else{
+/* class texto_longo */                     count++;
+/* class texto_longo */                     id=f[i].getName();
+/* class texto_longo */                 }
+/* class texto_longo */                 txt += "<tr><td><a style=\"display: inline-block; cursor: pointer; color: white; width: 1570px; font-size: 24px;\" href=\"id/" + f[i].getName() + "\">" + f[i].getName() + "</a></td></tr>\n";
+/* class texto_longo */             }
+/* class texto_longo */         };
+/* class texto_longo */         if ( validando_id ){
+/* class texto_longo */             if ( count != 1 )
+/* class texto_longo */                 return "id invalido";
+/* class texto_longo */         }else{
+/* class texto_longo */             if ( count == 0 )
+/* class texto_longo */                 return "a pasta esta vazia";
+/* class texto_longo */             if ( count > 1 ){
+/* class texto_longo */                 return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
+/* class texto_longo */                 "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +
+/* class texto_longo */                 "<body style=\"background-color: rgb(0, 0, 0);\">" + 
+/* class texto_longo */                 "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n" +
+/* class texto_longo */                 "<br>\n" +
+/* class texto_longo */                 "<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style><table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>\n" +
+/* class texto_longo */                 txt +
+/* class texto_longo */                 "</table></body></html>";
+/* class texto_longo */             }
+/* class texto_longo */         }
+/* class texto_longo */         id="/"+id;
+/* class texto_longo */         return "<html lang=\"pt-BR\">\n" +
+/* class texto_longo */         "<head>\n" +
+/* class texto_longo */         "  <meta charset=\"UTF-8\">\n" +
+/* class texto_longo */         "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+/* class texto_longo */         "  <meta http-equiv=\"X-UA-Compatible\" content=\"ie=edge\">\n" +
+/* class texto_longo */         "  <title>Netflix Video</title>\n" +
+/* class texto_longo */         "  <link href=\"https://fonts.googleapis.com/css?family=Rubik&display=swap\" rel=\"stylesheet\">\n" +
+/* class texto_longo */         "</head>\n" +
+/* class texto_longo */         "<body>\n" +
+/* class texto_longo */         "  <div class=\"video-container\">\n" +
+/* class texto_longo */         "    <video src=\"" + id + "\" onclick=\"pause_play()\" id=\"video\"></video>\n" +
+/* class texto_longo */         "    <div class=\"controls-container\">\n" +
+/* class texto_longo */         "      <div class=\"progress-controls\">\n" +
+/* class texto_longo */         "        <div class=\"progress-bar\">\n" +
+/* class texto_longo */         "          <div class=\"watched-bar\"></div>\n" +
+/* class texto_longo */         "          <div class=\"playhead\"></div>\n" +
+/* class texto_longo */         "        </div>\n" +
+/* class texto_longo */         "        <div class=\"time-remaining\">\n" +
+/* class texto_longo */         "          00:00\n" +
+/* class texto_longo */         "        </div>\n" +
+/* class texto_longo */         "      </div>\n" +
+/* class texto_longo */         "      <div class=\"controls\">\n" +
+/* class texto_longo */         "        <button class=\"play-pause\">\n" +
+/* class texto_longo */         "          <svg class=\"playing\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <polygon points=\"5 3 19 12 5 21 5 3\"></polygon>\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "          <svg class=\"paused\" viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <rect x=\"6\" y=\"4\" width=\"4\" height=\"16\"></rect>\n" +
+/* class texto_longo */         "            <rect x=\"14\" y=\"4\" width=\"4\" height=\"16\"></rect>\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "        </button>\n" +
+/* class texto_longo */         "        <button class=\"rewind\">\n" +
+/* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <path fill=\"#ffffff\"\n" +
+/* class texto_longo */         "              d=\"M12.5,3C17.15,3 21.08,6.03 22.47,10.22L20.1,11C19.05,7.81 16.04,5.5 12.5,5.5C10.54,5.5 8.77,6.22 7.38,7.38L10,10H3V3L5.6,5.6C7.45,4 9.85,3 12.5,3M10,12V22H8V14H6V12H10M18,14V20C18,21.11 17.11,22 16,22H14A2,2 0 0,1 12,20V14A2,2 0 0,1 14,12H16C17.11,12 18,12.9 18,14M14,14V20H16V14H14Z\" />\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "        </button>\n" +
+/* class texto_longo */         "        <button class=\"fast-forward\">\n" +
+/* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <path fill=\"#ffffff\"\n" +
+/* class texto_longo */         "              d=\"M10,12V22H8V14H6V12H10M18,14V20C18,21.11 17.11,22 16,22H14A2,2 0 0,1 12,20V14A2,2 0 0,1 14,12H16C17.11,12 18,12.9 18,14M14,14V20H16V14H14M11.5,3C14.15,3 16.55,4 18.4,5.6L21,3V10H14L16.62,7.38C15.23,6.22 13.46,5.5 11.5,5.5C7.96,5.5 4.95,7.81 3.9,11L1.53,10.22C2.92,6.03 6.85,3 11.5,3Z\" />\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "        </button>\n" +
+/* class texto_longo */         "        <button class=\"volume\">\n" +
+/* class texto_longo */         "          <svg class=\"full-volume\" viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\n" +
+/* class texto_longo */         "            <path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\"></path>\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "          <svg class=\"muted\" viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\n" +
+/* class texto_longo */         "            <line x1=\"23\" y1=\"9\" x2=\"17\" y2=\"15\"></line>\n" +
+/* class texto_longo */         "            <line x1=\"17\" y1=\"9\" x2=\"23\" y2=\"15\"></line>\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "        </button>\n" +
+/* class texto_longo */         "        <p class=\"title\">\n" +
+/* class texto_longo */         "          <span class=\"series\">S</span> <span class=\"episode\">E01</span>\n" +
+/* class texto_longo */         "        </p>\n" +
+/* class texto_longo */         "        <button class=\"next\">\n" +
+/* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <polygon points=\"5 4 15 12 5 20 5 4\"></polygon>\n" +
+/* class texto_longo */         "            <line x1=\"19\" y1=\"5\" x2=\"19\" y2=\"19\"></line>\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "        </button>\n" +
+/* class texto_longo */         "        <button class=\"full-screen\">\n" +
+/* class texto_longo */         "          <svg class=\"maximize\" viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <path d=\"M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3\">\n" +
+/* class texto_longo */         "            </path>\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "          <svg class=\"minimize\" viewBox=\"0 0 24 24\">\n" +
+/* class texto_longo */         "            <path d=\"M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3\">\n" +
+/* class texto_longo */         "            </path>\n" +
+/* class texto_longo */         "          </svg>\n" +
+/* class texto_longo */         "        </button>\n" +
+/* class texto_longo */         "      </div>\n" +
+/* class texto_longo */         "    </div>\n" +
+/* class texto_longo */         "  </div>  \n" +
+/* class texto_longo */         "</body>\n" +
+/* class texto_longo */         "</html>\n" +
+/* class texto_longo */         "<script>\n" +
+/* class texto_longo */         "const videoContainer = document.querySelector('.video-container');\n" +
+/* class texto_longo */         "const video = document.querySelector('.video-container video');\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "const controlsContainer = document.querySelector('.video-container .controls-container');\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "const playPauseButton = document.querySelector('.video-container .controls button.play-pause');\n" +
+/* class texto_longo */         "const rewindButton = document.querySelector('.video-container .controls button.rewind');\n" +
+/* class texto_longo */         "const fastForwardButton = document.querySelector('.video-container .controls button.fast-forward');\n" +
+/* class texto_longo */         "const volumeButton = document.querySelector('.video-container .controls button.volume');\n" +
+/* class texto_longo */         "const fullScreenButton = document.querySelector('.video-container .controls button.full-screen');\n" +
+/* class texto_longo */         "const playButton = playPauseButton.querySelector('.playing');\n" +
+/* class texto_longo */         "const pauseButton = playPauseButton.querySelector('.paused');\n" +
+/* class texto_longo */         "const fullVolumeButton = volumeButton.querySelector('.full-volume');\n" +
+/* class texto_longo */         "const mutedButton = volumeButton.querySelector('.muted');\n" +
+/* class texto_longo */         "const maximizeButton = fullScreenButton.querySelector('.maximize');\n" +
+/* class texto_longo */         "const minimizeButton = fullScreenButton.querySelector('.minimize');\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "const progressBar = document.querySelector('.video-container .progress-controls .progress-bar');\n" +
+/* class texto_longo */         "const watchedBar = document.querySelector('.video-container .progress-controls .progress-bar .watched-bar');\n" +
+/* class texto_longo */         "const timeLeft = document.querySelector('.video-container .progress-controls .time-remaining');\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "let controlsTimeout;\n" +
+/* class texto_longo */         "controlsContainer.style.opacity = '0';\n" +
+/* class texto_longo */         "watchedBar.style.width = '0px';\n" +
+/* class texto_longo */         "pauseButton.style.display = 'none';\n" +
+/* class texto_longo */         "minimizeButton.style.display = 'none';\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "const displayControls = () => {\n" +
+/* class texto_longo */         "  controlsContainer.style.opacity = '1';\n" +
+/* class texto_longo */         "  document.body.style.cursor = 'initial';\n" +
+/* class texto_longo */         "  if (controlsTimeout) {\n" +
+/* class texto_longo */         "    clearTimeout(controlsTimeout);\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  controlsTimeout = setTimeout(() => {\n" +
+/* class texto_longo */         "    controlsContainer.style.opacity = '0';\n" +
+/* class texto_longo */         "    document.body.style.cursor = 'none';\n" +
+/* class texto_longo */         "  }, 5000);\n" +
+/* class texto_longo */         "};\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "const playPause = () => {\n" +
+/* class texto_longo */         "  if (video.paused) {\n" +
+/* class texto_longo */         "    video.play();\n" +
+/* class texto_longo */         "    playButton.style.display = 'none';\n" +
+/* class texto_longo */         "    pauseButton.style.display = '';\n" +
+/* class texto_longo */         "  } else {\n" +
+/* class texto_longo */         "    video.pause();\n" +
+/* class texto_longo */         "    playButton.style.display = '';\n" +
+/* class texto_longo */         "    pauseButton.style.display = 'none';\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "};\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "const toggleMute = () => {\n" +
+/* class texto_longo */         "  video.muted = !video.muted;\n" +
+/* class texto_longo */         "  if (video.muted) {\n" +
+/* class texto_longo */         "    fullVolumeButton.style.display = 'none';\n" +
+/* class texto_longo */         "    mutedButton.style.display = '';\n" +
+/* class texto_longo */         "  } else {\n" +
+/* class texto_longo */         "    fullVolumeButton.style.display = '';\n" +
+/* class texto_longo */         "    mutedButton.style.display = 'none';\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "};\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "const toggleFullScreen = () => {\n" +
+/* class texto_longo */         "  if (!document.fullscreenElement) {\n" +
+/* class texto_longo */         "    videoContainer.requestFullscreen();\n" +
+/* class texto_longo */         "  } else {\n" +
+/* class texto_longo */         "    document.exitFullscreen();\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "};\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "document.addEventListener('click', function(e) {  \n" +
+/* class texto_longo */         "   console.log('tagName clicked: ' + e.target.tagName);\n" +
+/* class texto_longo */         "   if ( e.target.tagName == 'VIDEO' ){\n" +
+/* class texto_longo */         "     if ( document.getElementById('video').paused )\n" +
+/* class texto_longo */         "       document.getElementById('video').play();\n" +
+/* class texto_longo */         "     else\n" +
+/* class texto_longo */         "       document.getElementById('video').pause();\n" +
+/* class texto_longo */         "   }\n" +
+/* class texto_longo */         "},false);  \n" +
+/* class texto_longo */         "  \n" +
+/* class texto_longo */         "document.addEventListener('fullscreenchange', () => {\n" +
+/* class texto_longo */         "  if (!document.fullscreenElement) {\n" +
+/* class texto_longo */         "    maximizeButton.style.display = '';\n" +
+/* class texto_longo */         "    minimizeButton.style.display = 'none';\n" +
+/* class texto_longo */         "  } else {\n" +
+/* class texto_longo */         "    maximizeButton.style.display = 'none';\n" +
+/* class texto_longo */         "    minimizeButton.style.display = '';\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "});\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "document.addEventListener('keyup', (event) => {\n" +
+/* class texto_longo */         "  if (event.code === 'Space') {\n" +
+/* class texto_longo */         "    playPause(); \n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "  if (event.code === 'KeyM') {\n" +
+/* class texto_longo */         "    toggleMute();\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "  if (event.code === 'KeyF') {\n" +
+/* class texto_longo */         "    toggleFullScreen();\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "  displayControls();\n" +
+/* class texto_longo */         "});\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "document.addEventListener('mousemove', () => {\n" +
+/* class texto_longo */         "  displayControls();\n" +
+/* class texto_longo */         "});\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "video.addEventListener('timeupdate', () => {\n" +
+/* class texto_longo */         "  watchedBar.style.width = ((video.currentTime / video.duration) * 100) + '%';\n" +
+/* class texto_longo */         "  // TODO: calculate hours as well...\n" +
+/* class texto_longo */         "  const totalSecondsRemaining = video.duration - video.currentTime;\n" +
+/* class texto_longo */         "  // THANK YOU: BEGANOVICH\n" +
+/* class texto_longo */         "  const time = new Date(null);\n" +
+/* class texto_longo */         "  time.setSeconds(totalSecondsRemaining);\n" +
+/* class texto_longo */         "  let hours = null;\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "  if(totalSecondsRemaining >= 3600) {\n" +
+/* class texto_longo */         "    hours = (time.getHours().toString()).padStart('2', '0');\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "  let minutes = (time.getMinutes().toString()).padStart('2', '0');\n" +
+/* class texto_longo */         "  let seconds = (time.getSeconds().toString()).padStart('2', '0');\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "  timeLeft.textContent = `${hours ? hours : '00'}:${minutes}:${seconds}`;\n" +
+/* class texto_longo */         "});\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "progressBar.addEventListener('click', (event) => {\n" +
+/* class texto_longo */         "  const pos = (event.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;\n" +
+/* class texto_longo */         "  video.currentTime = pos * video.duration;\n" +
+/* class texto_longo */         "});\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "playPauseButton.addEventListener('click', playPause);\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "rewindButton.addEventListener('click', () => {\n" +
+/* class texto_longo */         "  video.currentTime -= 10;\n" +
+/* class texto_longo */         "});\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "fastForwardButton.addEventListener('click', () => {\n" +
+/* class texto_longo */         "  video.currentTime += 10;\n" +
+/* class texto_longo */         "});\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "volumeButton.addEventListener('click', toggleMute);\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "fullScreenButton.addEventListener('click', toggleFullScreen);\n" +
+/* class texto_longo */         "</script>\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "<style>\n" +
+/* class texto_longo */         "body {\n" +
+/* class texto_longo */         "  margin: 0;\n" +
+/* class texto_longo */         "  padding: 0;\n" +
+/* class texto_longo */         "  width: 100vw;\n" +
+/* class texto_longo */         "  height: 100vh;\n" +
+/* class texto_longo */         "  overflow: hidden;\n" +
+/* class texto_longo */         "  background: black;\n" +
+/* class texto_longo */         "  font-family: 'Rubik', sans-serif;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container {\n" +
+/* class texto_longo */         "  width: 100%;\n" +
+/* class texto_longo */         "  height: 100%;\n" +
+/* class texto_longo */         "  display: flex;\n" +
+/* class texto_longo */         "  justify-content: center;\n" +
+/* class texto_longo */         "  align-items: center;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container video {\n" +
+/* class texto_longo */         "  width: 100%;\n" +
+/* class texto_longo */         "  height: 100%;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls-container {\n" +
+/* class texto_longo */         "  position: fixed;\n" +
+/* class texto_longo */         "  bottom: 0px;\n" +
+/* class texto_longo */         "  width: 100%;\n" +
+/* class texto_longo */         "  display: flex;\n" +
+/* class texto_longo */         "  flex-direction: column;\n" +
+/* class texto_longo */         "  justify-content: flex-end;\n" +
+/* class texto_longo */         "  min-height: 40vh;\n" +
+/* class texto_longo */         "  /* Thanks to theArtifacts */\n" +
+/* class texto_longo */         "  background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.9)); \n" +
+/* class texto_longo */         "  transition: opacity 0.5s linear;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .progress-controls {\n" +
+/* class texto_longo */         "  width: 100%;\n" +
+/* class texto_longo */         "  display: flex;\n" +
+/* class texto_longo */         "  justify-content: center;\n" +
+/* class texto_longo */         "  align-items: center;\n" +
+/* class texto_longo */         "  color: white;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .progress-controls .time-remaining {\n" +
+/* class texto_longo */         "  margin: 1vw;\n" +
+/* class texto_longo */         "  width: 4vw;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .progress-controls .progress-bar {\n" +
+/* class texto_longo */         "  width: 90vw;\n" +
+/* class texto_longo */         "  height: 1vw;\n" +
+/* class texto_longo */         "  max-height: 7px;\n" +
+/* class texto_longo */         "  background: #5B5B5B;\n" +
+/* class texto_longo */         "  display: flex;\n" +
+/* class texto_longo */         "  align-items: center;\n" +
+/* class texto_longo */         "  cursor: pointer;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .progress-controls .progress-bar .watched-bar,\n" +
+/* class texto_longo */         ".video-container .progress-controls .progress-bar .playhead {\n" +
+/* class texto_longo */         "  background: #E31221;\n" +
+/* class texto_longo */         "  display: inline-block;\n" +
+/* class texto_longo */         "  transition: all 0.2s;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .progress-controls .progress-bar .watched-bar {\n" +
+/* class texto_longo */         "  height: 110%;\n" +
+/* class texto_longo */         "  width: 20%;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .progress-controls .progress-bar .playhead {\n" +
+/* class texto_longo */         "  height: 3vw;\n" +
+/* class texto_longo */         "  width: 3vw;\n" +
+/* class texto_longo */         "  max-height: 25px;\n" +
+/* class texto_longo */         "  max-width: 25px;\n" +
+/* class texto_longo */         "  border-radius: 50%;\n" +
+/* class texto_longo */         "  transform: translateX(-50%);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls {\n" +
+/* class texto_longo */         "  width: 100%;\n" +
+/* class texto_longo */         "  display: flex;\n" +
+/* class texto_longo */         "  justify-content: space-between;\n" +
+/* class texto_longo */         "  align-items: center;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls button {\n" +
+/* class texto_longo */         "  background: none;\n" +
+/* class texto_longo */         "  outline: none;\n" +
+/* class texto_longo */         "  box-shadow: none;\n" +
+/* class texto_longo */         "  border: none;\n" +
+/* class texto_longo */         "  width: 5vw;\n" +
+/* class texto_longo */         "  height: 5vw;\n" +
+/* class texto_longo */         "  min-width: 50px;\n" +
+/* class texto_longo */         "  min-height: 50px;\n" +
+/* class texto_longo */         "  margin: 0px 1vw;\n" +
+/* class texto_longo */         "  opacity: 0.4;\n" +
+/* class texto_longo */         "  transform: scale(0.9);\n" +
+/* class texto_longo */         "  transition: all 0.2s ease-in-out;\n" +
+/* class texto_longo */         "  cursor: pointer;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls button:hover {\n" +
+/* class texto_longo */         "  opacity: 1;\n" +
+/* class texto_longo */         "  transform: scale(1.2);\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls button svg {\n" +
+/* class texto_longo */         "  fill: white;\n" +
+/* class texto_longo */         "  stroke: white;\n" +
+/* class texto_longo */         "  stroke-width: 2;\n" +
+/* class texto_longo */         "  stroke-linecap: round;\n" +
+/* class texto_longo */         "  stroke-linejoin: round;\n" +
+/* class texto_longo */         "  width: 100%;\n" +
+/* class texto_longo */         "  height: 100%;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls button.volume svg path,\n" +
+/* class texto_longo */         ".video-container .controls button.help svg,\n" +
+/* class texto_longo */         ".video-container .controls button.episodes svg,\n" +
+/* class texto_longo */         ".video-container .controls button.full-screen svg,\n" +
+/* class texto_longo */         ".video-container .controls button.volume svg path,\n" +
+/* class texto_longo */         ".video-container .controls button.cast svg {\n" +
+/* class texto_longo */         "  fill: none;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls button.rewind svg,\n" +
+/* class texto_longo */         ".video-container .controls button.fast-forward svg {\n" +
+/* class texto_longo */         "  stroke: none;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls button.captions svg {\n" +
+/* class texto_longo */         "  stroke: none;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls .title {\n" +
+/* class texto_longo */         "  font-size: 2vw;\n" +
+/* class texto_longo */         "  width: 100%;\n" +
+/* class texto_longo */         "  height: 100%;\n" +
+/* class texto_longo */         "  display: flex;\n" +
+/* class texto_longo */         "  justify-content: flex-start;\n" +
+/* class texto_longo */         "  align-items: center;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         "@media only screen and (max-width: 768px) {\n" +
+/* class texto_longo */         "  .video-container .controls .title {\n" +
+/* class texto_longo */         "    display: none;\n" +
+/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls .title .series {\n" +
+/* class texto_longo */         "  color: #FEFEFE;\n" +
+/* class texto_longo */         "  font-weight: bold;\n" +
+/* class texto_longo */         "  font-size: 1em;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "\n" +
+/* class texto_longo */         ".video-container .controls .title .episode {\n" +
+/* class texto_longo */         "  color: #A1A1A1;\n" +
+/* class texto_longo */         "  font-size: 0.75em;\n" +
+/* class texto_longo */         "  padding-left: 1vw;\n" +
+/* class texto_longo */         "}\n" +
+/* class texto_longo */         "</style>\n";
+/* class texto_longo */     }
 /* class texto_longo */ }
 
 /* class HttpServer */ // parametros
 /* class HttpServer */ // new HttpServer(...)
-/* class HttpServer */ // host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
+/* class HttpServer */ // host(pode ser ""), port, titulo_url, titulo, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 /* class HttpServer */ class HttpServer extends Util{
 /* class HttpServer */     String host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log;
-/* class HttpServer */     boolean index_playlist=false;
+/* class HttpServer */     String mode=null;
 /* class HttpServer */     int port;
 /* class HttpServer */     Socket socket = null;
-/* class HttpServer */     public HttpServer(String[] args, boolean index_playlist, String log) {
+/* class HttpServer */     public HttpServer(String[] args, String mode, String log) {
 /* class HttpServer */         host = args[0];
-/* class HttpServer */         titulo_url = args[1];
-/* class HttpServer */         titulo = args[2];
-/* class HttpServer */         port = Integer.parseInt(args[3]);
+/* class HttpServer */         port = Integer.parseInt(args[1]);
+/* class HttpServer */         titulo_url = args[2];
+/* class HttpServer */         titulo = args[3];
 /* class HttpServer */         dir = args[4].trim();
 /* class HttpServer */         if (!dir.endsWith("/")) dir += "/";
 /* class HttpServer */         endsWiths = args[5];
 /* class HttpServer */         ips_banidos = args[6];
-/* class HttpServer */         this.index_playlist = index_playlist;
+/* class HttpServer */         this.mode = mode;
 /* class HttpServer */         this.log = log;
 /* class HttpServer */         try {
 /* class HttpServer */             serve();
@@ -12729,9 +13201,14 @@ class XML extends Util{
 /* class HttpServer */         String ip_origem = "";
 /* class HttpServer */         try {
 /* class HttpServer */             serverSocket = new ServerSocket(port, 1, InetAddress.getByName(host));
-/* class HttpServer */             if (host.contains(":")) System.out.println("Service opened: http://[" + host + "]:" + port + "/" + titulo_url);
-/* class HttpServer */             else System.out.println("Service opened: http://" + host + ":" + port + "/" + titulo_url);
-/* class HttpServer */             System.out.println("path work: " + dir);
+/* class HttpServer */             String host_display="http://" + host + ":" + port;
+/* class HttpServer */             if (host.contains(":"))
+/* class HttpServer */                 host_display="http://[" + host + "]:" + port;
+/* class HttpServer */             if (mode == null)
+/* class HttpServer */                 System.out.println("Service opened: " + host_display + "/" + titulo_url);
+/* class HttpServer */             else
+/* class HttpServer */                 System.out.println("Service opened: \n" + host_display + "\nFiles:\n" + host_display + "/" + titulo_url);
+/* class HttpServer */             System.out.println("Path work: " + dir + "\n");
 /* class HttpServer */         } catch (Exception e) {
 /* class HttpServer */             throw new Exception("erro na inicialização: " + e.toString());
 /* class HttpServer */         }
@@ -12746,14 +13223,14 @@ class XML extends Util{
 /* class HttpServer */                     System.out.println("Acesso recusado para o ip banido: " + ip_origem);
 /* class HttpServer */                     continue;
 /* class HttpServer */                 }
-/* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths, index_playlist);
+/* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths, mode);
 /* class HttpServer */             } catch (Exception e) {
 /* class HttpServer */                 System.out.println("Erro ao executar servidor:" + e.toString());
 /* class HttpServer */             }
 /* class HttpServer */         }
 /* class HttpServer */     }
 /* class HttpServer */ }
-/* class HttpServer */ class ClientThread {
+/* class HttpServer */ class ClientThread extends Util{
 /* class HttpServer */     String method, uri, protocol, titulo_url, titulo, dir, endsWiths;
 /* class HttpServer */     long range=-1;
 /* class HttpServer */     String nav;
@@ -12763,13 +13240,13 @@ class XML extends Util{
 /* class HttpServer */     Writer writer;
 /* class HttpServer */     InputStreamReader isr = null;
 /* class HttpServer */     Reader reader;
-/* class HttpServer */     boolean index_playlist=false;
-/* class HttpServer */     public ClientThread(final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, boolean index_playlist) {
+/* class HttpServer */     String mode=null;
+/* class HttpServer */     public ClientThread(final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String mode) {
 /* class HttpServer */         this.titulo_url = titulo_url;
 /* class HttpServer */         this.titulo = titulo;
 /* class HttpServer */         this.dir = dir;
 /* class HttpServer */         this.endsWiths = endsWiths;
-/* class HttpServer */         this.index_playlist = index_playlist;
+/* class HttpServer */         this.mode = mode;
 /* class HttpServer */         new Thread() {
 /* class HttpServer */             public void run() {
 /* class HttpServer */                 try {
@@ -12829,14 +13306,21 @@ class XML extends Util{
 /* class HttpServer */                     "\r\n",
 /* class HttpServer */                 }) {
 /* class HttpServer */                 sb.append(line);
-/* class HttpServer */                 //System.out.println("    |---> " + line.replace("\n","\n          "));
-                                       System.out.print("    |---> " + line);
+/* class HttpServer */                 System.out.print("    |---> " + line);
 /* class HttpServer */             }
 /* class HttpServer */             System.out.println("    |");
 /* class HttpServer */             output.write(sb.toString().getBytes());
 /* class HttpServer */             return;
 /* class HttpServer */         }
-/* class HttpServer */         if (uri.equals("/") && nav == null && index_playlist){
+/* class HttpServer */         if ( nav == null && mode != null && ( uri.equals("/") || uri.startsWith("/id/") ) ){
+/* class HttpServer */             String txt="Erro interno 37676.";
+/* class HttpServer */             String id="";
+/* class HttpServer */             if ( uri.startsWith("/id/") )
+/* class HttpServer */                id=uri.substring(4);
+/* class HttpServer */             if ( mode.equals("playlist") )
+/* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlist();
+/* class HttpServer */             if ( mode.equals("playlistmovie") )
+/* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlistmovie(id);
 /* class HttpServer */             // verifica arquivos locais
 /* class HttpServer */             File [] f=new File(".").listFiles();
 /* class HttpServer */             boolean existe=false;
@@ -12854,11 +13338,10 @@ class XML extends Util{
 /* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
 /* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                         "\r\n",
-/* class HttpServer */                         texto_longo.get_html_virtual_playlist()
+/* class HttpServer */                         txt
 /* class HttpServer */                     }) {
 /* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     //System.out.println("    |---> " + line.replace("\n","\n          "));
-                                           System.out.print("    |---> " + line);
+/* class HttpServer */                     System.out.print("    |---> " + line);
 /* class HttpServer */                 }
 /* class HttpServer */                 System.out.println("    |");
 /* class HttpServer */                 output.write(sb.toString().getBytes());
@@ -12871,7 +13354,7 @@ class XML extends Util{
 /* class HttpServer */         sb = new StringBuilder();
 /* class HttpServer */         nav = dir + uri.replace("//", "/").trim();
 /* class HttpServer */         nav = nav.replace("//", "/");
-/* class HttpServer */         nav = java.net.URLDecoder.decode( nav, "UTF-8" );
+/* class HttpServer */         nav = decodeUrl(nav);
 /* class HttpServer */         if (!new File(nav).isFile()) {
 /* class HttpServer */             nav += "/";
 /* class HttpServer */             int c = 9;
@@ -12902,8 +13385,7 @@ class XML extends Util{
 /* class HttpServer */                     "&nbsp;" + titulo + "<br>\n"
 /* class HttpServer */                 }) {
 /* class HttpServer */                 sb.append(line);
-/* class HttpServer */                 //System.out.println("    |---> " + line.replace("\n","\n          "));
-                                       System.out.print("    |---> " + line);
+/* class HttpServer */                 System.out.print("    |---> " + line);
 /* class HttpServer */             }
 /* class HttpServer */             File[] files = new File(dir).listFiles();
 /* class HttpServer */             Arrays.sort(files, new Comparator < File > () {
@@ -12950,8 +13432,7 @@ class XML extends Util{
 /* class HttpServer */                         "\r\n"
 /* class HttpServer */                     }) {
 /* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     //System.out.println("    |---> " + line.replace("\n","\n          "));
-                                           System.out.print("    |---> " + line);
+/* class HttpServer */                     System.out.print("    |---> " + line);
 /* class HttpServer */                 }
 /* class HttpServer */             }else{  
 /* class HttpServer */                 for (String line: new String[] {
@@ -12962,8 +13443,7 @@ class XML extends Util{
 /* class HttpServer */                         "\r\n"
 /* class HttpServer */                     }) {
 /* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     //System.out.println("    |---> " + line.replace("\n","\n          "));
-                                           System.out.print("    |---> " + line);
+/* class HttpServer */                     System.out.print("    |---> " + line);
 /* class HttpServer */                 }
 /* class HttpServer */             }    
 /* class HttpServer */             System.out.println("    |");
@@ -12997,8 +13477,7 @@ class XML extends Util{
 /* class HttpServer */                 "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
 /* class HttpServer */             }) {
 /* class HttpServer */             sb.append(line);
-/* class HttpServer */             //System.out.println("    |---> " + line.replace("\n","\n          "));
-                                   System.out.print("    |---> " + line);
+/* class HttpServer */             System.out.print("    |---> " + line);
 /* class HttpServer */         }
 /* class HttpServer */         System.out.println("    |");
 /* class HttpServer */         output.write(sb.toString().getBytes());
@@ -13095,9 +13574,6 @@ class XML extends Util{
 
 
 
-
-
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -13168,6 +13644,8 @@ class XML extends Util{
 /* class by manual */                + "  [y serverRouter]\n"
 /* class by manual */                + "  [y httpServer]\n"
 /* class by manual */                + "  [y wget]\n"
+/* class by manual */                + "  [y playlist]\n"
+/* class by manual */                + "  [y playlistmovie]\n"
 /* class by manual */                + "  [y pwd]\n"
 /* class by manual */                + "  [y find]\n"
 /* class by manual */                + "  [y ls]\n"
@@ -13512,34 +13990,39 @@ class XML extends Util{
 /* class by manual */                + "    obs: user,pass ou user\n"
 /* class by manual */                + "[y serverRouter]\n"
 /* class by manual */                + "    y serverRouter [ipA] 8080 [ipB] 9090\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 show\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 showSimple\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 localhost 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt\n"
-/* class by manual */                + "    y serverRouter localhost 8080 localhost 9090\n"
-/* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 show\n"
-/* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showOnlySend\n"
-/* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showOnlyReceive\n"
-/* class by manual */                + "    y serverRouter localhost 8080 localhost 9090 showSimple\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 show\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlySend\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlyReceive\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showSimple\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt\n"
+/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090\n"
+/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 show\n"
+/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlySend\n"
+/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlyReceive\n"
+/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showSimple\n"
 /* class by manual */                + "    obs:\n"
 /* class by manual */                + "        [ipA] -> Router -> [ipB]\n"
 /* class by manual */                + "        [ipA] conecta no router que conecta no [ipB]\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
-/* class by manual */                + "    y httpServer localhost pagina_toke_zzz111 \"Lista de arquivos\" 8888 \"/dir\" \"\" \"\"\n"
-/* class by manual */                + "    y httpServer \"localhost tmp a 7070 . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt\"\n"
+/* class by manual */                + "    y httpServer 127.0.0.1 8888 pagina_toke_zzz111 \"Lista de arquivos\" \"/dir\" \"\" \"\"\n"
+/* class by manual */                + "    y httpServer \"127.0.0.1 7070 tmp a . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt\"\n"
 /* class by manual */                + "    obs: O windows nao esta preparado para mais de 9 parametros\n"
 /* class by manual */                + "    obs2: _ sera substituido por \"\" internamente\n"
-/* class by manual */                + "    parametros: host(pode ser \"\"), titulo_url, titulo, port, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
+/* class by manual */                + "    parametros: host(pode ser \"\"), port, titulo_url, titulo, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
 /* class by manual */                + "[y playlist]\n"
 /* class by manual */                + "    y playlist\n"
 /* class by manual */                + "    y playlist 192.168.0.100\n"
 /* class by manual */                + "    y playlist 192.168.0.100 8888\n"
 /* class by manual */                + "    y playlist 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
 /* class by manual */                + "    obs: na pasta de musicas, criar o arquivo start_.bat contendo y playlist 192.168.0.100, no browser abrir http://192.168.0.100:8888/\n"
+/* class by manual */                + "[y playlistmovie]\n"
+/* class by manual */                + "    y playlistmovie\n"
+/* class by manual */                + "    y playlistmovie 192.168.0.100\n"
+/* class by manual */                + "    y playlistmovie 192.168.0.100 8888\n"
+/* class by manual */                + "    y playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "[y pwd]\n"
@@ -13732,6 +14215,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

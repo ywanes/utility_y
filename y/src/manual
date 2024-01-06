@@ -64,6 +64,8 @@ usage:
   [y serverRouter]
   [y httpServer]
   [y wget]
+  [y playlist]
+  [y playlistmovie]
   [y pwd]
   [y find]
   [y ls]
@@ -408,34 +410,39 @@ Exemplos...
     obs: user,pass ou user
 [y serverRouter]
     y serverRouter [ipA] 8080 [ipB] 9090
-    y serverRouter 192.168.0.100 8080 localhost 9090
-    y serverRouter 192.168.0.100 8080 localhost 9090 show
-    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlySend
-    y serverRouter 192.168.0.100 8080 localhost 9090 showOnlyReceive
-    y serverRouter 192.168.0.100 8080 localhost 9090 showSimple
-    y serverRouter 192.168.0.100 8080 localhost 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt
-    y serverRouter localhost 8080 localhost 9090
-    y serverRouter localhost 8080 localhost 9090 show
-    y serverRouter localhost 8080 localhost 9090 showOnlySend
-    y serverRouter localhost 8080 localhost 9090 showOnlyReceive
-    y serverRouter localhost 8080 localhost 9090 showSimple
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 show
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlySend
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlyReceive
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showSimple
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 show
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlySend
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlyReceive
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showSimple
     obs:
         [ipA] -> Router -> [ipB]
         [ipA] conecta no router que conecta no [ipB]
 [y httpServer]
     y httpServer
     obs: o comando acima irá criar um httpServer temporario com parametros padroes
-    y httpServer localhost pagina_toke_zzz111 "Lista de arquivos" 8888 "/dir" "" ""
-    y httpServer "localhost tmp a 7070 . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt"
+    y httpServer 127.0.0.1 8888 pagina_toke_zzz111 "Lista de arquivos" "/dir" "" ""
+    y httpServer "127.0.0.1 7070 tmp a . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt"
     obs: O windows não esta preparado para mais de 9 parametros
     obs2: _ será substituido por "" internamente
-    parametros: host(pode ser ""), titulo_url, titulo, port, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
+    parametros: host(pode ser ""), port, titulo_url, titulo, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 [y playlist]
     y playlist
     y playlist 192.168.0.100
     y playlist 192.168.0.100 8888
     y playlist 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt
     obs: na pasta de musicas, criar o arquivo start_.bat contendo y playlist 192.168.0.100, no browser abrir http://192.168.0.100:8888/
+[y playlistmovie]
+    y playlistmovie
+    y playlistmovie 192.168.0.100
+    y playlistmovie 192.168.0.100 8888
+    y playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt
 [y wget]
     y wget -h
 [y pwd]
