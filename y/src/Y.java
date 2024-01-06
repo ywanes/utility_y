@@ -12782,9 +12782,9 @@ class XML extends Util{
 /* class texto_longo */         "  <title>Netflix Video</title>\n" +
 /* class texto_longo */         "  <link href=\"https://fonts.googleapis.com/css?family=Rubik&display=swap\" rel=\"stylesheet\">\n" +
 /* class texto_longo */         "</head>\n" +
-/* class texto_longo */         "<body>\n" +
+/* class texto_longo */         "<body onload=\"playPause()\">\n" +
 /* class texto_longo */         "  <div class=\"video-container\">\n" +
-/* class texto_longo */         "    <video src=\"" + id + "\" onclick=\"pause_play()\" id=\"video\"></video>\n" +
+/* class texto_longo */         "    <video src=\"" + id + "\" id=\"video\"></video>\n" +
 /* class texto_longo */         "    <div class=\"controls-container\">\n" +
 /* class texto_longo */         "      <div class=\"progress-controls\">\n" +
 /* class texto_longo */         "        <div class=\"progress-bar\">\n" +
@@ -12893,16 +12893,19 @@ class XML extends Util{
 /* class texto_longo */         "  }, 5000);\n" +
 /* class texto_longo */         "};\n" +
 /* class texto_longo */         "\n" +
+
 /* class texto_longo */         "const playPause = () => {\n" +
-/* class texto_longo */         "  if (video.paused) {\n" +
-/* class texto_longo */         "    video.play();\n" +
-/* class texto_longo */         "    playButton.style.display = 'none';\n" +
-/* class texto_longo */         "    pauseButton.style.display = '';\n" +
-/* class texto_longo */         "  } else {\n" +
-/* class texto_longo */         "    video.pause();\n" +
-/* class texto_longo */         "    playButton.style.display = '';\n" +
-/* class texto_longo */         "    pauseButton.style.display = 'none';\n" +
-/* class texto_longo */         "  }\n" +
+/* class texto_longo */         "  try{\n" +
+/* class texto_longo */         "    if (video.paused) {\n" +
+/* class texto_longo */         "      video.play();\n" +
+/* class texto_longo */         "      playButton.style.display = 'none';\n" +
+/* class texto_longo */         "      pauseButton.style.display = '';\n" +
+/* class texto_longo */         "    }else{\n" +
+/* class texto_longo */         "      video.pause();\n" +
+/* class texto_longo */         "      playButton.style.display = '';\n" +
+/* class texto_longo */         "      pauseButton.style.display = 'none';\n" +
+/* class texto_longo */         "    }\n" +
+/* class texto_longo */         "  }catch(e){}\n" +
 /* class texto_longo */         "};\n" +
 /* class texto_longo */         "\n" +
 /* class texto_longo */         "const toggleMute = () => {\n" +
@@ -12927,10 +12930,7 @@ class XML extends Util{
 /* class texto_longo */         "document.addEventListener('click', function(e) {  \n" +
 /* class texto_longo */         "   console.log('tagName clicked: ' + e.target.tagName);\n" +
 /* class texto_longo */         "   if ( e.target.tagName == 'VIDEO' ){\n" +
-/* class texto_longo */         "     if ( document.getElementById('video').paused )\n" +
-/* class texto_longo */         "       document.getElementById('video').play();\n" +
-/* class texto_longo */         "     else\n" +
-/* class texto_longo */         "       document.getElementById('video').pause();\n" +
+/* class texto_longo */         "     playPause();\n" +
 /* class texto_longo */         "   }\n" +
 /* class texto_longo */         "},false);  \n" +
 /* class texto_longo */         "  \n" +
@@ -13071,7 +13071,7 @@ class XML extends Util{
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "\n" +
 /* class texto_longo */         ".video-container .progress-controls .progress-bar .watched-bar {\n" +
-/* class texto_longo */         "  height: 110%;\n" +
+/* class texto_longo */         "  height: 100%;\n" +
 /* class texto_longo */         "  width: 20%;\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "\n" +
@@ -13233,6 +13233,7 @@ class XML extends Util{
 /* class HttpServer */ class ClientThread extends Util{
 /* class HttpServer */     String method, uri, protocol, titulo_url, titulo, dir, endsWiths;
 /* class HttpServer */     long range=-1;
+/* class HttpServer */     long lenTarget=-1;
 /* class HttpServer */     String nav;
 /* class HttpServer */     InputStream input = null;
 /* class HttpServer */     OutputStream output = null;
@@ -13421,12 +13422,15 @@ class XML extends Util{
 /* class HttpServer */                     range = -1;
 /* class HttpServer */             }
 /* class HttpServer */             if ( range > -1){
+/* class HttpServer */                 lenTarget=5000000;
+/* class HttpServer */                 if ( (range + lenTarget) > lenFile )
+/* class HttpServer */                     lenTarget=lenFile-range;
 /* class HttpServer */                 for (String line: new String[] {
 /* class HttpServer */                         "HTTP/1.1 206 OK\r\n",
 /* class HttpServer */                         "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
 /* class HttpServer */                         "accept-ranges: bytes\r\n",
-/* class HttpServer */                         "Content-Length: " + lenFile + "\r\n",
-/* class HttpServer */                         "Content-Range: bytes " + range + "-" + (lenFile-1) + "/" + lenFile + "\r\n",
+/* class HttpServer */                         "Content-Length: " + lenTarget + "\r\n",
+/* class HttpServer */                         "Content-Range: bytes " + range + "-" + (range+lenTarget-1) + "/" + lenFile + "\r\n",
 /* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
 /* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                         "\r\n"
@@ -13450,7 +13454,7 @@ class XML extends Util{
 /* class HttpServer */             output.write(sb.toString().getBytes());
 /* class HttpServer */             try {
 /* class HttpServer */                 System.out.println("iniciando leitura do arquivo: " + nav);
-/* class HttpServer */                 transf_bytes(output, nav, range);
+/* class HttpServer */                 transf_bytes(output, nav, range, lenTarget);
 /* class HttpServer */                 System.out.println("finalizando leitura do arquivo: " + nav);
 /* class HttpServer */                 return;
 /* class HttpServer */             } catch (Exception e) {
@@ -13518,13 +13522,24 @@ class XML extends Util{
 /* class HttpServer */         }
 /* class HttpServer */         return result;
 /* class HttpServer */     }
-/* class HttpServer */     private void transf_bytes(OutputStream output, String nav, long resume) throws Exception {
+/* class HttpServer */     private void transf_bytes(OutputStream output, String nav, long resume, long lenTarget) throws Exception {
 /* class HttpServer */         int count;
 /* class HttpServer */         DataInputStream dis = new DataInputStream(new FileInputStream(nav));
 /* class HttpServer */         byte[] buffer = new byte[8192];
 /* class HttpServer */         if ( resume > 0 ) 
 /* class HttpServer */             dis.skip(resume);
-/* class HttpServer */         while ((count = dis.read(buffer)) > 0) output.write(buffer, 0, count);
+/* class HttpServer */         if ( resume > 0 && lenTarget < buffer.length )
+/* class HttpServer */             buffer = new byte[(int)lenTarget];
+/* class HttpServer */         while ((count = dis.read(buffer)) > 0){
+/* class HttpServer */             output.write(buffer, 0, count);
+/* class HttpServer */             if ( resume > 0 ){
+/* class HttpServer */                 lenTarget-=count;
+/* class HttpServer */                 if ( lenTarget <= 0 )
+/* class HttpServer */                     break;    
+/* class HttpServer */                 if ( lenTarget < buffer.length )
+/* class HttpServer */                     buffer = new byte[(int)lenTarget];
+/* class HttpServer */             }
+/* class HttpServer */         }
 /* class HttpServer */     }
 /* class HttpServer */     private boolean endsWith_OK(String url, String ends) {
 /* class HttpServer */         if (ends.equals("")) return true;
