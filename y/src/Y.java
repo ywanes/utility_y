@@ -12791,7 +12791,7 @@ class XML extends Util{
 /* class texto_longo */         "  <meta charset=\"UTF-8\">\n" +
 /* class texto_longo */         "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
 /* class texto_longo */         "  <meta http-equiv=\"X-UA-Compatible\" content=\"ie=edge\">\n" +
-/* class texto_longo */         "  <title>Netflix Video</title>\n" +
+/* class texto_longo */         "  <title>" + id_display + "</title>\n" +
 /* class texto_longo */         "  <link href=\"https://fonts.googleapis.com/css?family=Rubik&display=swap\" rel=\"stylesheet\">\n" +
 /* class texto_longo */         "</head>\n" +
 /* class texto_longo */         "<body onload=\"playPause()\">\n" +
