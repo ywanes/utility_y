@@ -12215,7 +12215,7 @@ class XML extends Util{
 /* class texto_longo */         File [] f=new File(".").listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
 /* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){
-/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 30px;\" onclick=\"click_faixa(this,'humanClick')\">" + f[i].getName() + "</td></tr>\n";
+/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 40px;\" onclick=\"click_faixa(this,'humanClick')\">" + f[i].getName() + "</td></tr>\n";
 /* class texto_longo */                 File f2=new File(f[i].getName()+".cfg");
 /* class texto_longo */                 if ( f2.exists() && f2.isFile() ){
 /* class texto_longo */                     String [] partes=lendo_arquivo(f[i].getName()+".cfg").split("\n");
@@ -12738,49 +12738,54 @@ class XML extends Util{
 /* class texto_longo */         "</body></head></html>\n";
 /* class texto_longo */     }
 /* class texto_longo */     public String get_html_virtual_playlistmovie(String id){
-/* class texto_longo */         boolean validando_id=false;
+        //////////////////////////
+/* class texto_longo */         String tail_id="";
 /* class texto_longo */         String back="";
 /* class texto_longo */         String next="";
-/* class texto_longo */         if ( !id.equals("") )
-/* class texto_longo */             validando_id=true;
-/* class texto_longo */         String txt="";
-/* class texto_longo */         int count=0;
+/* class texto_longo */         int countSelect=0;
+/* class texto_longo */         int countFile=0;
+/* class texto_longo */         int countDirectory=0;
+/* class texto_longo */         ArrayList<String> elementos=new ArrayList<>();
 /* class texto_longo */         File [] f=new File(".").listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
-/* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && !f[i].getName().endsWith(".cfg") ){
-/* class texto_longo */                 if ( validando_id ){
-/* class texto_longo */                     if ( count == 1 && next.equals("") ){
-/* class texto_longo */                         next="next.addEventListener('click', function(){ window.location.replace('/id/" + f[i].getName() + "'); });\n";
-/* class texto_longo */                         next+="video.onended = function(){next.click();};\n";
-/* class texto_longo */                     }
-/* class texto_longo */                     if ( decodeUrl(id).equals(f[i].getName()) )
-/* class texto_longo */                         count++;
-/* class texto_longo */                     if ( count == 0 ){
-/* class texto_longo */                         back="back.addEventListener('click', function(){ window.location.replace('/id/" + f[i].getName() + "'); });\n";
-/* class texto_longo */                     }
-/* class texto_longo */                 }else{
-/* class texto_longo */                     count++;
-/* class texto_longo */                     id=f[i].getName();
-/* class texto_longo */                 }
-/* class texto_longo */                 txt += "<tr><td><a style=\"display: inline-block; cursor: pointer; color: white; width: 1570px; font-size: 24px;\" href=\"id/" + f[i].getName() + "\">" + f[i].getName() + "</a></td></tr>\n";
+/* class texto_longo */             if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
+/* class texto_longo */                 continue;
+/* class texto_longo */             if ( f[i].isFile() )
+/* class texto_longo */                 countFile++;
+/* class texto_longo */             if ( f[i].isDirectory())
+/* class texto_longo */                 countDirectory++;
+/* class texto_longo */             if ( countSelect == 1 && next.equals("") ){
+/* class texto_longo */                 next="next.addEventListener('click', function(){ window.location.replace('/id/" + f[i].getName() + "'); });\n";
+/* class texto_longo */                 next+="video.onended = function(){next.click();};\n";
 /* class texto_longo */             }
+/* class texto_longo */             if ( f[i].isFile() && decodeUrl(id).equals(f[i].getName()) )
+/* class texto_longo */                 countSelect++;
+/* class texto_longo */             if ( countSelect == 0 )
+/* class texto_longo */                 back="back.addEventListener('click', function(){ window.location.replace('/id/" + f[i].getName() + "'); });\n";
+/* class texto_longo */             elementos.add(f[i].getName());
+/* class texto_longo */             tail_id=f[i].getName();
 /* class texto_longo */         };
-/* class texto_longo */         if ( validando_id ){
-/* class texto_longo */             if ( count != 1 )
-/* class texto_longo */                 return "id invalido";
+/* class texto_longo */         if ( countFile > 0 && countDirectory > 0 )
+/* class texto_longo */             return "Erro interno de estrutura. Existe arquivos e diretorios neste local.";
+/* class texto_longo */         if ( countFile == 0 && countDirectory == 0 )
+/* class texto_longo */             return "id invalido";
+/* class texto_longo */         if ( countSelect == 1 || countFile == 1 ){
+/* class texto_longo */             if ( countFile == 1 )
+/* class texto_longo */                 id=tail_id;
 /* class texto_longo */         }else{
-/* class texto_longo */             if ( count == 0 )
-/* class texto_longo */                 return "a pasta esta vazia";
-/* class texto_longo */             if ( count > 1 ){
-/* class texto_longo */                 return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
-/* class texto_longo */                 "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +
-/* class texto_longo */                 "<body style=\"background-color: rgb(0, 0, 0);\">" + 
-/* class texto_longo */                 "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n" +
-/* class texto_longo */                 "<br>\n" +
-/* class texto_longo */                 "<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style><table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>\n" +
-/* class texto_longo */                 txt +
-/* class texto_longo */                 "</table></body></html>";
-/* class texto_longo */             }
+/* class texto_longo */             String txt="";
+/* class texto_longo */             String prefix="/id/";
+/* class texto_longo */             for ( int i=0;i<elementos.size();i++ )
+/* class texto_longo */                 txt += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.replace('" + prefix + elementos.get(i) + "')\">" + elementos.get(i) + "</td></tr>\n";
+/* class texto_longo */             return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
+/* class texto_longo */             "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +
+/* class texto_longo */             "<body style=\"background-color: rgb(0, 0, 0);\">" + 
+/* class texto_longo */             "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n" +
+/* class texto_longo */             "<br>\n" +
+/* class texto_longo */             "<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>\n" + 
+/* class texto_longo */             "<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>\n" +
+/* class texto_longo */             txt +
+/* class texto_longo */             "</table></body></html>";
 /* class texto_longo */         }
 /* class texto_longo */         String id_display=decodeUrl(id);
 /* class texto_longo */         if ( id_display.split("\\.").length == 2 )
@@ -13341,35 +13346,21 @@ class XML extends Util{
 /* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlist();
 /* class HttpServer */             if ( mode.equals("playlistmovie") )
 /* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlistmovie(id);
-/* class HttpServer */             // verifica arquivos locais
-/* class HttpServer */             File [] f=new File(".").listFiles();
-/* class HttpServer */             boolean existe=false;
-/* class HttpServer */             for ( int i=0;i<f.length;i++ ){
-/* class HttpServer */                 if ( f[i].isFile() ){
-/* class HttpServer */                     existe=true;
-/* class HttpServer */                     break;
-/* class HttpServer */                 }
+/* class HttpServer */             sb = new StringBuilder();
+/* class HttpServer */             for (String line: new String[] {
+/* class HttpServer */                     "HTTP/1.1 200 OK\r\n",
+/* class HttpServer */                     "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                     "X-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                     "\r\n",
+/* class HttpServer */                     txt
+/* class HttpServer */                 }) {
+/* class HttpServer */                 sb.append(line);
+/* class HttpServer */                 System.out.print("    |---> " + line);
 /* class HttpServer */             }
-/* class HttpServer */             if ( existe ){
-/* class HttpServer */                 sb = new StringBuilder();
-/* class HttpServer */                 for (String line: new String[] {
-/* class HttpServer */                         "HTTP/1.1 200 OK\r\n",
-/* class HttpServer */                         "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                         "\r\n",
-/* class HttpServer */                         txt
-/* class HttpServer */                     }) {
-/* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     System.out.print("    |---> " + line);
-/* class HttpServer */                 }
-/* class HttpServer */                 System.out.println("    |");
-/* class HttpServer */                 output.write(sb.toString().getBytes());
-/* class HttpServer */                 return;
-/* class HttpServer */             }else{    
-/* class HttpServer */                 System.out.println("Error, nao foi possivel encontrar nenhum arquivo no diretorio atual!");
-/* class HttpServer */                 return;
-/* class HttpServer */             }
+/* class HttpServer */             System.out.println("    |");
+/* class HttpServer */             output.write(sb.toString().getBytes());
+/* class HttpServer */             return;
 /* class HttpServer */         }
 /* class HttpServer */         sb = new StringBuilder();
 /* class HttpServer */         nav = dir + uri.replace("//", "/").trim();
