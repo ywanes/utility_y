@@ -12738,7 +12738,6 @@ class XML extends Util{
 /* class texto_longo */         "</body></head></html>\n";
 /* class texto_longo */     }
 /* class texto_longo */     public String get_html_virtual_playlistmovie(String id){
-        //////////////////////////
 /* class texto_longo */         String tail_id="";
 /* class texto_longo */         String back="";
 /* class texto_longo */         String next="";
@@ -12746,7 +12745,34 @@ class XML extends Util{
 /* class texto_longo */         int countFile=0;
 /* class texto_longo */         int countDirectory=0;
 /* class texto_longo */         ArrayList<String> elementos=new ArrayList<>();
-/* class texto_longo */         File [] f=new File(".").listFiles();
+/* class texto_longo */         String path=".";
+/* class texto_longo */         String prefix="/id/";
+/* class texto_longo */         int lenPrefixTag=prefix.length();
+/* class texto_longo */         if ( !id.equals("") )
+/* class texto_longo */             path=decodeUrl(id);
+/* class texto_longo */         if ( path.contains("\\") || path.contains(":") || path.startsWith("/") || path.endsWith("/") )
+/* class texto_longo */             return "Parametro invalido";
+/* class texto_longo */         if ( path.split("/").length > 1 ){
+/* class texto_longo */             String [] partes=path.split("/");
+/* class texto_longo */             for ( int i=0;i<partes.length;i++ )
+/* class texto_longo */                 if ( partes[i].equals(".") || partes[i].equals("..") )
+/* class texto_longo */                     return "Parametro invalido";
+/* class texto_longo */         }
+/* class texto_longo */         File f_=new File(path);
+/* class texto_longo */         if ( !f_.exists() )
+/* class texto_longo */             return "Parametro invalido";
+/* class texto_longo */         if ( f_.isFile() ){
+/* class texto_longo */             if ( path.lastIndexOf("/") == -1 )
+/* class texto_longo */                 path=".";
+/* class texto_longo */             else{
+/* class texto_longo */                 path=path.substring(countFile, path.lastIndexOf("/"));
+/* class texto_longo */                 prefix="/id/"+path+"/";
+/* class texto_longo */                 f_=new File(path);
+/* class texto_longo */             }
+/* class texto_longo */             id=id.split("/")[id.split("/").length-1];
+/* class texto_longo */         }else
+/* class texto_longo */             prefix="/id/"+path+"/";
+/* class texto_longo */         File [] f=f_.listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
 /* class texto_longo */             if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
 /* class texto_longo */                 continue;
@@ -12755,26 +12781,30 @@ class XML extends Util{
 /* class texto_longo */             if ( f[i].isDirectory())
 /* class texto_longo */                 countDirectory++;
 /* class texto_longo */             if ( countSelect == 1 && next.equals("") ){
-/* class texto_longo */                 next="next.addEventListener('click', function(){ window.location.replace('/id/" + f[i].getName() + "'); });\n";
+/* class texto_longo */                 next="next.addEventListener('click', function(){ window.location.replace('" + prefix + f[i].getName() + "'); });\n";
 /* class texto_longo */                 next+="video.onended = function(){next.click();};\n";
 /* class texto_longo */             }
 /* class texto_longo */             if ( f[i].isFile() && decodeUrl(id).equals(f[i].getName()) )
 /* class texto_longo */                 countSelect++;
 /* class texto_longo */             if ( countSelect == 0 )
-/* class texto_longo */                 back="back.addEventListener('click', function(){ window.location.replace('/id/" + f[i].getName() + "'); });\n";
+/* class texto_longo */                 back="back.addEventListener('click', function(){ window.location.replace('" + prefix + f[i].getName() + "'); });\n";
 /* class texto_longo */             elementos.add(f[i].getName());
 /* class texto_longo */             tail_id=f[i].getName();
 /* class texto_longo */         };
 /* class texto_longo */         if ( countFile > 0 && countDirectory > 0 )
 /* class texto_longo */             return "Erro interno de estrutura. Existe arquivos e diretorios neste local.";
 /* class texto_longo */         if ( countFile == 0 && countDirectory == 0 )
-/* class texto_longo */             return "id invalido";
+/* class texto_longo */             return "Pasta vazia";
 /* class texto_longo */         if ( countSelect == 1 || countFile == 1 ){
-/* class texto_longo */             if ( countFile == 1 )
+/* class texto_longo */             if ( countFile == 1 ){
 /* class texto_longo */                 id=tail_id;
+/* class texto_longo */                 back="";
+/* class texto_longo */             }
 /* class texto_longo */         }else{
 /* class texto_longo */             String txt="";
-/* class texto_longo */             String prefix="/id/";
+/* class texto_longo */             String h1="<br>";
+/* class texto_longo */             if ( !path.equals(".") )
+/* class texto_longo */                 h1="<a href=\"/\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g clip-path=\"url(#clip0)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z\" fill=\"#293644\"></path> </g> <defs> <clipPath id=\"clip0\"> <rect width=\"24\" height=\"24\" fill=\"white\"></rect> </clipPath> </defs> </svg></a><br><h1 style=\"color: white;\">&nbsp;/" + path + "</h1><br>";
 /* class texto_longo */             for ( int i=0;i<elementos.size();i++ )
 /* class texto_longo */                 txt += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.replace('" + prefix + elementos.get(i) + "')\">" + elementos.get(i) + "</td></tr>\n";
 /* class texto_longo */             return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
@@ -12783,6 +12813,7 @@ class XML extends Util{
 /* class texto_longo */             "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n" +
 /* class texto_longo */             "<br>\n" +
 /* class texto_longo */             "<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>\n" + 
+/* class texto_longo */             h1 + 
 /* class texto_longo */             "<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>\n" +
 /* class texto_longo */             txt +
 /* class texto_longo */             "</table></body></html>";
@@ -12790,7 +12821,7 @@ class XML extends Util{
 /* class texto_longo */         String id_display=decodeUrl(id);
 /* class texto_longo */         if ( id_display.split("\\.").length == 2 )
 /* class texto_longo */             id_display=id_display.split("\\.")[0];
-/* class texto_longo */         id="/"+id;
+/* class texto_longo */         id=prefix.substring(lenPrefixTag-1)+id;
 /* class texto_longo */         return "<html lang=\"pt-BR\">\n" +
 /* class texto_longo */         "<head>\n" +
 /* class texto_longo */         "  <meta charset=\"UTF-8\">\n" +
