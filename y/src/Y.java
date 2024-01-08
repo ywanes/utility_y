@@ -1979,6 +1979,11 @@ cat buffer.log
                                     }
                                     // resize baos
                                     s=baos.toString().replace("\r", "");
+                                    // bind
+                                    if ( s.equals("r a"))
+                                        s="restart all";
+                                    if ( s.equals("s a"))
+                                        s="stop all";
                                     baos=new ByteArrayOutputStream();
                                     baos.write(s.getBytes());
                                     if ( s.trim().equals("?") ){
@@ -1987,6 +1992,7 @@ cat buffer.log
                                                 "\n cat << EOF > procs/PROCNAME" + 
                                                 "\n cat < procs/PROCNAME" + 
                                                 "\n cat procs/PROCNAME" + 
+                                                "\n restart" + 
                                                 "\n start" + 
                                                 "\n stop" + 
                                                 "\n oi"  + 
@@ -1998,7 +2004,9 @@ cat buffer.log
                                                 "\n mkdir" + 
                                                 "\n rm" + 
                                                 "\n cls" + 
-                                                "\n tail(somente terminal)";
+                                                "\n tail(somente terminal)" + 
+                                                "\n obs: r a -> restart all" +
+                                                "\n obs2: s a -> stop all";
                                         break;
                                     }
                                     // interpretacao de bloco
@@ -2062,7 +2070,6 @@ cat buffer.log
                                         }
                                         break;
                                     }
-                                    // netsh interface ipv6 set address Ethernet IPV6_AQUI
                                     if ( ( s.trim().startsWith("start ") || s.trim().startsWith("restart ") ) && s.trim().split(" ").length == 2 && !error_back_path(s.trim().split(" ")[1]) ){
                                         String results="";
                                         boolean restart=false;
@@ -12822,7 +12829,8 @@ class XML extends Util{
 /* class texto_longo */         if ( id_display.split("\\.").length == 2 )
 /* class texto_longo */             id_display=id_display.split("\\.")[0];
 /* class texto_longo */         id=prefix.substring(lenPrefixTag-1)+id;
-/* class texto_longo */         return "<html lang=\"pt-BR\">\n" +
+/* class texto_longo */         return "<!-- creditos https://github.com/CodingGarden/css-challenges/blob/master/netflix-video-player/index.html -->\n" + 
+/* class texto_longo */         "<html lang=\"pt-BR\">\n" +
 /* class texto_longo */         "<head>\n" +
 /* class texto_longo */         "  <meta charset=\"UTF-8\">\n" +
 /* class texto_longo */         "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
@@ -13581,6 +13589,7 @@ class XML extends Util{
 /* class HttpServer */                     buffer = new byte[(int)lenTarget];
 /* class HttpServer */             }
 /* class HttpServer */         }
+/* class HttpServer */         dis.close();
 /* class HttpServer */     }
 /* class HttpServer */     private boolean endsWith_OK(String url, String ends) {
 /* class HttpServer */         if (ends.equals("")) return true;
