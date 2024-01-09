@@ -66,6 +66,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.*;
@@ -9217,6 +9218,7 @@ System.out.println("BB" + retorno);
                 frame.setBackground(Color.black);
                 frame.setUndecorated(true); // tira borda do aplicativo
                 frame.setExtendedState(frame.MAXIMIZED_BOTH);        
+                frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
                 frame.addComponentListener(new ComponentListener(){
                     public void componentResized(ComponentEvent e){
                         e.getComponent().addMouseListener(new MouseListener() {
