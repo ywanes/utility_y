@@ -62,6 +62,10 @@ import com.jcraft.jsch.*;
 import java.awt.*;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.*;
@@ -1607,6 +1611,10 @@ cat buffer.log
         if ( args[0].equals("speed") ){
             if ( speed(args) )
                 return;
+        }
+        if ( args[0].equals("lock") ){
+            lock();
+            return;
         }
         if ( args[0].equals("test") ){
             test();
@@ -9200,7 +9208,38 @@ System.out.println("BB" + retorno);
         
         return true;
     }
-    
+
+    private void lock(){
+        if ( isWindows() ){
+            GraphicsDevice[] gs = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+            for ( int i=0;i<gs.length;i++ ){
+                Frame frame = new Frame();
+                frame.setBackground(Color.black);
+                frame.setUndecorated(true); // tira borda do aplicativo
+                frame.setExtendedState(frame.MAXIMIZED_BOTH);        
+                frame.addComponentListener(new ComponentListener(){
+                    public void componentResized(ComponentEvent e){
+                        e.getComponent().addMouseListener(new MouseListener() {
+                            public void mouseClicked(MouseEvent e){System.exit(1);}
+                            public void mousePressed(MouseEvent e){}
+                            public void mouseReleased(MouseEvent e){}
+                            public void mouseEntered(MouseEvent e){}
+                            public void mouseExited(MouseEvent e){}
+                        });
+                    }
+                    public void componentMoved(ComponentEvent e){}
+                    public void componentShown(ComponentEvent e){}
+                    public void componentHidden(ComponentEvent e){}
+                });
+                try{
+                    Thread.sleep(100);
+                }catch(Exception e){}
+                gs[i].setFullScreenWindow( frame);
+            }            
+        }else
+            erroFatal("Ambiente nao permitido!");
+    }
+        
     private String [] tests_name=null;
     private String [] tests_commands=null;
     private String [] tests_hash_out=null;
@@ -13730,6 +13769,7 @@ class XML extends Util{
 /* class by manual */                + "  [y kill]\n"
 /* class by manual */                + "  [y win]\n"
 /* class by manual */                + "  [y speed]\n"
+/* class by manual */                + "  [y lock]\n"
 /* class by manual */                + "  [y test]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
@@ -14190,6 +14230,9 @@ class XML extends Util{
 /* class by manual */                + "    obs2: outra forma de verificar pelo cmd -> slmgr -dli\n"
 /* class by manual */                + "[y speed]\n"
 /* class by manual */                + "    y speed\n"
+/* class by manual */                + "[y lock]\n"
+/* class by manual */                + "    y lock\n"
+/* class by manual */                + "    obs: gera black screen\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y help]\n"
@@ -14280,6 +14323,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

@@ -85,6 +85,7 @@ usage:
   [y kill]
   [y win]
   [y speed]
+  [y lock]
   [y test]
   [y [update|u]]
   [y help]
@@ -545,6 +546,9 @@ Exemplos...
     obs2: outra forma de verificar pelo cmd -> slmgr -dli
 [y speed]
     y speed
+[y lock]
+    y lock
+    obs: gera black screen
 [y test]
     y test
 [y help]
