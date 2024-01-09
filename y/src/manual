@@ -86,6 +86,7 @@ usage:
   [y win]
   [y speed]
   [y lock]
+  [y mkv]
   [y test]
   [y [update|u]]
   [y help]
@@ -549,6 +550,8 @@ Exemplos...
 [y lock]
     y lock
     obs: gera black screen
+[y mkv]
+    y mkv
 [y test]
     y test
 [y help]

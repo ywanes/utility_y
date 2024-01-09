@@ -1617,6 +1617,10 @@ cat buffer.log
             lock();
             return;
         }
+        if ( args[0].equals("mkv") ){
+            mkv(new File("."));
+            return;
+        }
         if ( args[0].equals("test") ){
             test();
             return;
@@ -8361,7 +8365,7 @@ System.out.println("BB" + retorno);
 
     private String getLocalDateTime_windows(){
         try{
-            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime");
+            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null);
             String [] lines=s.split("\n");
             return lines[1].trim();
         }catch(Exception e){
@@ -8410,7 +8414,7 @@ System.out.println("BB" + retorno);
     private void load_pss_windows() {        
         try{
             load_pss_init();
-            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId");
+            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null);
             String [] lines=s_.split("\n");
             ArrayList<Integer> list_p = new ArrayList<>();
             boolean isWord=false;
@@ -8573,7 +8577,7 @@ System.out.println("BB" + retorno);
         String s1_aux="";  
         for ( int i=0;i<command.length;i++ ){
             try {          
-                String s = runtimeExec(command[i]).trim();
+                String s = runtimeExec(command[i], null).trim();
                 if ( s == null ){
                     if ( runtimeExecError.contains("Permission denied") ){                        
                         System.err.println("Permission denied!");
@@ -9085,7 +9089,7 @@ System.out.println("BB" + retorno);
     
     private void win(){
         try{
-            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus");
+            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus", null);
             if ( s == null )
                 erroFatal(4311);
             String [] lines=s.split("\n");
@@ -9244,6 +9248,69 @@ System.out.println("BB" + retorno);
         }            
     }
         
+    public void mkv(File f){   
+        String edited="_EDITED.mkv";
+        File [] files=f.listFiles();
+        // arquivos
+        for ( int i=0;i<files.length;i++ ){
+            if ( !files[i].isFile() )
+                continue;
+            if ( files[i].getName().endsWith(edited) )
+                continue;            
+            if ( !files[i].getName().endsWith(".mkv") )
+                continue;
+            String item=files[i].getAbsolutePath().replace("\\","/").replace("/./","/");
+            if ( new File(item+edited).exists() ){
+                System.out.println("y mv \"" + item+edited + " \"" + item + "\"");
+                System.exit(0);
+            }            
+            runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""});
+            String msg=runtimeExecError;
+            if ( msg.contains("Cannot run") )
+                erroFatal("Nao foi possivel encontrar o ffmpeg!");
+            if ( msg.contains("ENCODER         : Lav") ) // mkv ja modificado
+                continue;            
+            String [] partes=msg.replace("\r", "").split("\n");
+            boolean inicio=false;
+            String removes="";
+            boolean video=false;
+            boolean audio=false;
+            for ( int j=0;j<partes.length;j++ ){
+                if ( !inicio && partes[j].contains("Stream #0:0") )
+                    inicio=true;
+                if ( !inicio )
+                    continue;
+                if ( partes[j].contains("Video") || partes[j].contains("Stream") ){
+                    String [] partes2=partes[j].trim().split(" ");
+                    String p1=partes2[1].substring(3,4);
+                    String p2=partes2[1];
+                    String p3=partes2[2].replace(":","");
+                    if ( p3.equals("Video") ){
+                        video=true;
+                        continue;
+                    }
+                    if ( p3.equals("Audio") && p2.contains("(por)") ){
+                        audio=true;
+                        continue;
+                    }
+                    removes+=" -map -0:a:" + p1 + " ";
+                    //System.out.println(p1 + " " + p2 + " " + p3);
+                }
+            }
+            if ( !video || !audio ){
+                erroFatal("Nao foi possivel interpretar o arquivo \"" + item + "\"");
+            }
+            if ( removes.equals("") )
+                continue;            
+            System.out.println("ffmpeg -i \"" + item + "\" -map 0 " + removes + " \"" + item + edited + "\"");
+            System.exit(0);
+        }
+        // pastas
+        for ( int i=0;i<files.length;i++ ){
+            if ( files[i].isDirectory() )
+                mkv(files[i]);
+        }
+    }
     private String [] tests_name=null;
     private String [] tests_commands=null;
     private String [] tests_hash_out=null;
@@ -9995,23 +10062,46 @@ class Util{
     }
     
     public String runtimeExecError = "";
-    public String runtimeExec(String p_){
+    public String runtimeExec(String p_, String [] p){
         try{
-            String [] p=p_.split(" ");
+            if ( p == null )
+                p=p_.split(" ");
             runtimeExecError="";
             Process proc = Runtime.getRuntime().exec(p);
-            int len=0;
             byte[] b=new byte[1024];
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ByteArrayOutputStream baos_err = new ByteArrayOutputStream();
-            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                baos.write(b, 0, len);
-            }
-            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                baos_err.write(b, 0, len);
-                runtimeExecError=baos_err.toString("UTF-8");
+            Thread ok=new Thread(){
+                public void run(){
+                    try{
+                        int len=0;
+                        while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                            baos.write(b, 0, len);
+                        }                    
+                    }catch(Exception e1){
+                        runtimeExecError="Erro interno 211";
+                    }
+                }
+            };
+            ok.start();
+            Thread nok=new Thread(){
+                public void run(){
+                    try{
+                        int len=0;
+                        while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                            baos_err.write(b, 0, len);
+                            runtimeExecError=baos_err.toString("UTF-8");                
+                        }  
+                    }catch(Exception e2){
+                        runtimeExecError="Erro interno 212";
+                    }
+                }
+            };
+            nok.start();
+            ok.join();
+            nok.join();
+            if ( !runtimeExecError.equals("") )
                 return null;
-            }    
             String s=baos.toString("UTF-8").replace("\r\n","\n");
             String [] linhas=s.split("\n");
             if ( p.length >= 3 && p[0].equals("cmd") && p[1].equals("/c") && linhas[0].endsWith(": 65001")){
@@ -10603,7 +10693,7 @@ class Util{
                 "Linux",
             };
             for ( int i=0;i<commands.length;i++ ){
-                String s=runtimeExec(commands[i]);
+                String s=runtimeExec(commands[i], null);
                 if ( s == null )
                     continue;
                 if ( getType ){
