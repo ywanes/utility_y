@@ -9211,35 +9211,37 @@ System.out.println("BB" + retorno);
     }
 
     private void lock(){
-        if ( isWindows() ){
-            GraphicsDevice[] gs = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
-            for ( int i=0;i<gs.length;i++ ){
-                Frame frame = new Frame();
-                frame.setBackground(Color.black);
-                frame.setUndecorated(true); // tira borda do aplicativo
-                frame.setExtendedState(frame.MAXIMIZED_BOTH);        
-                frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
-                frame.addComponentListener(new ComponentListener(){
-                    public void componentResized(ComponentEvent e){
-                        e.getComponent().addMouseListener(new MouseListener() {
-                            public void mouseClicked(MouseEvent e){System.exit(1);}
-                            public void mousePressed(MouseEvent e){}
-                            public void mouseReleased(MouseEvent e){}
-                            public void mouseEntered(MouseEvent e){}
-                            public void mouseExited(MouseEvent e){}
-                        });
-                    }
-                    public void componentMoved(ComponentEvent e){}
-                    public void componentShown(ComponentEvent e){}
-                    public void componentHidden(ComponentEvent e){}
-                });
-                try{
-                    Thread.sleep(100);
-                }catch(Exception e){}
-                gs[i].setFullScreenWindow( frame);
-            }            
-        }else
-            erroFatal("Ambiente nao permitido!");
+        GraphicsDevice[] gs=null;
+        try{
+            gs = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+        }catch(Exception e){
+            erroFatal("Esse sistema não tem ambiente grafico.");
+        }
+        for ( int i=0;i<gs.length;i++ ){
+            Frame frame = new Frame();
+            frame.setBackground(Color.black);
+            frame.setUndecorated(true); // tira borda do aplicativo
+            frame.setExtendedState(frame.MAXIMIZED_BOTH);        
+            frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
+            frame.addComponentListener(new ComponentListener(){
+                public void componentResized(ComponentEvent e){
+                    e.getComponent().addMouseListener(new MouseListener() {
+                        public void mouseClicked(MouseEvent e){System.exit(1);}
+                        public void mousePressed(MouseEvent e){}
+                        public void mouseReleased(MouseEvent e){}
+                        public void mouseEntered(MouseEvent e){}
+                        public void mouseExited(MouseEvent e){}
+                    });
+                }
+                public void componentMoved(ComponentEvent e){}
+                public void componentShown(ComponentEvent e){}
+                public void componentHidden(ComponentEvent e){}
+            });
+            try{
+                Thread.sleep(100);
+            }catch(Exception e){}
+            gs[i].setFullScreenWindow( frame);
+        }            
     }
         
     private String [] tests_name=null;
