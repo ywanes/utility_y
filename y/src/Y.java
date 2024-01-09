@@ -44,7 +44,7 @@ Obs:
 doskey grep=y grep nao funciona porque doskey nao funciona apos |
 
 install daemon(cmd adm) // http://nssm.cc/download
-y echo "java.exe -Dfile.encoding=UTF-8 -Dline.separator= -cp c:\y;c:\y\ojdbc6.jar;c:\y\sqljdbc4-3.0.jar;c:\y\jsch-0.1.55.jar Y d -server" > D:\ProgramFiles\yd.bat
+y echo "y d -server" > D:\ProgramFiles\yd.bat
 nssm install yd D:\ProgramFiles\yd.bat
 nssm start yd
 nssm status yd
