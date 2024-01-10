@@ -7932,7 +7932,7 @@ System.out.println("BB" + retorno);
         if ( !f.isDirectory() ){
             if ( format_du != null )
                 len_du = f.length();
-            showfind(path, mtime, type, pre, pos, format_lss, format_du, len_du);
+            showfind(f, path, mtime, type, pre, pos, format_lss, format_du, len_du);
         }else{
             if ( f.isDirectory())
                 find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du);
@@ -7948,7 +7948,7 @@ System.out.println("BB" + retorno);
             // faz nada
         }else{
             if ( format_du == null )
-                showfind(hist, mtime, type, pre, pos, format_lss, format_du, 0);
+                showfind(f, hist, mtime, type, pre, pos, format_lss, format_du, 0);
             hist+=sep;
         }
         try{
@@ -7960,12 +7960,12 @@ System.out.println("BB" + retorno);
                         if ( format_du != null )
                             len_du_aux=files[i].length();
                         else
-                            showfind(files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                            showfind(files[i], files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
                     }else{
                         if ( format_du != null )
                             len_du_aux=new File(hist+files[i].getName()).length();
                         else
-                            showfind(hist+files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                            showfind(files[i], hist+files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
                     }
                     len_du+=len_du_aux;
                 }
@@ -7980,25 +7980,26 @@ System.out.println("BB" + retorno);
                         if ( format_du != null )
                             len_du_aux=files[i].length();
                         else
-                            showfind(files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                            showfind(files[i], files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
                     }else{
                         len_du += find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du);
                     }
                 }
             len_du += f.length();
             if ( format_du != null )
-                showfind(hist_bkp, mtime, type, pre, pos, format_lss, format_du, len_du);            
+                showfind(f, hist_bkp, mtime, type, pre, pos, format_lss, format_du, len_du);            
         }catch(Exception e){}        
         return len_du;
     }
     
     long findnow = 0;
-    private void showfind(String a, float mtime, String type, String pre, String pos, boolean format_lss, String format_du, long len_du){
+    private void showfind(File f, String name, float mtime, String type, String pre, String pos, boolean format_lss, String format_du, long len_du){
+        name=name.replace("\\","/");
         boolean print=false;
         String type_a = null;
         String type_lss = null;
         String format_lss_="";
-        File file_=null;
+        //File file_=null;
         
         if ( mtime == 0 ){
             print = true;
@@ -8006,7 +8007,7 @@ System.out.println("BB" + retorno);
             if ( findnow == 0 ){
                 findnow = java.util.Calendar.getInstance().getTime().getTime();
             }
-            long b = new java.util.Date(new File(a).lastModified()).getTime();
+            long b = new java.util.Date(f.lastModified()).getTime();
             long diffMili = Math.abs(findnow - b);
             if (
                 (mtime > 0 && diffMili >= mtime)
@@ -8018,8 +8019,7 @@ System.out.println("BB" + retorno);
         if ( print && (type != null || format_lss) ){
             type_a="f";
             type_lss="-";
-            file_=new File(a);
-            if ( file_.isDirectory() ){
+            if ( f.isDirectory() ){
                 type_a = "d";
                 type_lss="d";
             }        
@@ -8028,35 +8028,35 @@ System.out.println("BB" + retorno);
             print = false;
         if ( print ){
             if ( format_lss ){
-                Date d = new Date(file_.lastModified());
-                format_lss_ = file_.length() + " " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(d) + " ";                
+                Date d = new Date(f.lastModified());    
+                format_lss_ = f.length() + " " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(d) + " ";                
                 String space_="                                                       ";
                 int len_=35;//55
                 format_lss_ = type_lss + space_.substring(0, len_-format_lss_.length()) + format_lss_;
             }           
             if ( pre != null || pos != null )
-                a="\""+a+"\"";
+                name="\""+name+"\"";
             if ( pre != null )
-                a=pre+" "+a;
+                name=pre+" "+name;
             if ( pos != null )
-                a=a+" "+pos;
+                name=name+" "+pos;
             if ( format_du != null ){
                 if ( format_du.equals("b") )
-                    System.out.println(len_du + "\t" + a);
+                    System.out.println(len_du + "\t" + name);
                 if ( format_du.equals("k") )
-                    System.out.println((int)(len_du/1024) + "\t" + a);
+                    System.out.println((int)(len_du/1024) + "\t" + name);
                 if ( format_du.equals("m") )
-                    System.out.println((int)(len_du/(1024*1024)) + "\t" + a);
+                    System.out.println((int)(len_du/(1024*1024)) + "\t" + name);
                 if ( format_du.equals("g") )
-                    System.out.println((int)(len_du/(1024*1024*1024)) + "\t" + a);
+                    System.out.println((int)(len_du/(1024*1024*1024)) + "\t" + name);
                 
             }else{
-                if ( a.contains(" ") ) 
+                if ( name.contains(" ") ) 
                     if ( isWindows() )
-                        a="\"" + a + "\"";
+                        name="\"" + name + "\"";
                     else
-                        a="'" + a + "'";
-                System.out.println(format_lss_ + a);
+                        name="'" + name + "'";
+                System.out.println(format_lss_ + name);
             }
         }
     }
