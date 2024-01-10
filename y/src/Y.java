@@ -9261,7 +9261,7 @@ System.out.println("BB" + retorno);
                 continue;
             String item=files[i].getAbsolutePath().replace("\\","/").replace("/./","/");
             if ( new File(item+edited).exists() ){
-                System.out.println("y mv \"" + item+edited + " \"" + item + "\"");
+                System.out.println("y mv \"" + item+edited + "\" \"" + item + "\"");
                 System.exit(0);
             }            
             runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""});
