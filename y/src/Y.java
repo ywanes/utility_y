@@ -9293,11 +9293,11 @@ System.out.println("BB" + retorno);
                     String p1=partes2[1].substring(3,4);
                     String p2=partes2[1];
                     String p3=partes2[2].replace(":","");
-                    if ( p3.equals("Video") ){
+                    if ( !video && p3.equals("Video") ){
                         video=true;
                         continue;
                     }
-                    if ( p3.equals("Audio") && p2.contains("(por)") ){
+                    if ( !audio && p3.equals("Audio") && p2.contains("(por)") ){
                         audio=true;
                         continue;
                     }
@@ -9310,7 +9310,7 @@ System.out.println("BB" + retorno);
             }
             if ( removes.equals("") )
                 continue;            
-            System.out.println("ffmpeg -i \"" + item + "\" -map 0 " + removes + " \"" + item + edited + "\"");
+            System.out.println("ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" \"" + item + edited + "\"");
             System.exit(0);
         }
         // pastas
