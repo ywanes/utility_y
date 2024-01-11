@@ -1621,6 +1621,14 @@ cat buffer.log
             mkv(new File("."));
             return;
         }
+        if ( args[0].equals("decodeUrl") && args.length == 1 ){
+            decodeUrl_stream();
+            return;
+        }
+        if ( args[0].equals("encodeUrl") && args.length == 1 ){
+            encodeUrl_stream();
+            return;
+        }
         if ( args[0].equals("test") ){
             test();
             return;
@@ -9311,6 +9319,19 @@ System.out.println("BB" + retorno);
                 mkv(files[i]);
         }
     }
+    
+    private void decodeUrl_stream(){
+        String line=null;
+        while ( (line=readLine()) != null )
+            System.out.println(decodeUrl(line));
+    }
+
+    private void encodeUrl_stream(){
+        String line=null;
+        while ( (line=readLine()) != null )
+            System.out.println(encodeUrl(line));
+    }
+    
     private String [] tests_name=null;
     private String [] tests_commands=null;
     private String [] tests_hash_out=null;
@@ -12913,13 +12934,12 @@ class XML extends Util{
 /* class texto_longo */             if ( path.lastIndexOf("/") == -1 )
 /* class texto_longo */                 path=".";
 /* class texto_longo */             else{
-/* class texto_longo */                 path=path.substring(countFile, path.lastIndexOf("/"));
+/* class texto_longo */                 path=path.substring(0, path.lastIndexOf("/"));
 /* class texto_longo */                 prefix="/id/"+path+"/";
-/* class texto_longo */                 f_=new File(path);
 /* class texto_longo */             }
+/* class texto_longo */             f_=new File(path);
 /* class texto_longo */             id=id.split("/")[id.split("/").length-1];
-/* class texto_longo */         }else
-/* class texto_longo */             prefix="/id/"+path+"/";
+/* class texto_longo */         }
 /* class texto_longo */         File [] f=f_.listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
 /* class texto_longo */             if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
@@ -13872,6 +13892,9 @@ class XML extends Util{
 /* class by manual */                + "  [y win]\n"
 /* class by manual */                + "  [y speed]\n"
 /* class by manual */                + "  [y lock]\n"
+/* class by manual */                + "  [y mkv]\n"
+/* class by manual */                + "  [y decodeUrl]\n"
+/* class by manual */                + "  [y encodeUrl]\n"
 /* class by manual */                + "  [y test]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
@@ -14335,6 +14358,13 @@ class XML extends Util{
 /* class by manual */                + "[y lock]\n"
 /* class by manual */                + "    y lock\n"
 /* class by manual */                + "    obs: gera black screen\n"
+/* class by manual */                + "[y mkv]\n"
+/* class by manual */                + "    y mkv\n"
+/* class by manual */                + "[y decodeUrl]\n"
+/* class by manual */                + "    echo T%C3%B3quio | y decodeUrl\n"
+/* class by manual */                + "[y encodeUrl]\n"
+/* class by manual */                + "    echo Toquio | y encodeUrl\n"
+/* class by manual */                + "    obs: o espaco esta sendo representado como +, o que e uma traducao obsoleta.\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y help]\n"

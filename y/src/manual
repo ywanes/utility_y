@@ -87,6 +87,8 @@ usage:
   [y speed]
   [y lock]
   [y mkv]
+  [y decodeUrl]
+  [y encodeUrl]
   [y test]
   [y [update|u]]
   [y help]
@@ -552,6 +554,11 @@ Exemplos...
     obs: gera black screen
 [y mkv]
     y mkv
+[y decodeUrl]
+    echo T%C3%B3quio | y decodeUrl
+[y encodeUrl]
+    echo Tóquio | y encodeUrl
+    obs: o espaço esta sendo representado como +, o que é uma tradução obsoleta.
 [y test]
     y test
 [y help]
