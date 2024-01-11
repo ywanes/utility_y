@@ -13200,21 +13200,21 @@ class XML extends Util{
 /* class texto_longo */         "\n" +
 /* class texto_longo */         "video.addEventListener('timeupdate', () => {\n" +
 /* class texto_longo */         "  watchedBar.style.width = ((video.currentTime / video.duration) * 100) + '%';\n" +
-/* class texto_longo */         "  // TODO: calculate hours as well...\n" +
-/* class texto_longo */         "  const totalSecondsRemaining = video.duration - video.currentTime;\n" +
-/* class texto_longo */         "  // THANK YOU: BEGANOVICH\n" +
-/* class texto_longo */         "  const time = new Date(null);\n" +
-/* class texto_longo */         "  time.setSeconds(totalSecondsRemaining);\n" +
-/* class texto_longo */         "  let hours = null;\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "  if(totalSecondsRemaining >= 3600) {\n" +
-/* class texto_longo */         "    hours = (time.getHours().toString()).padStart('2', '0');\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "  let minutes = (time.getMinutes().toString()).padStart('2', '0');\n" +
-/* class texto_longo */         "  let seconds = (time.getSeconds().toString()).padStart('2', '0');\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "  timeLeft.textContent = `${hours ? hours : '00'}:${minutes}:${seconds}`;\n" +
+/* class texto_longo */         "  let seconds = parseInt(video.duration - video.currentTime);\n" +
+/* class texto_longo */         "  let hour=parseInt(seconds/(60*60));\n" +
+/* class texto_longo */         "  seconds-=hour*60*60;\n" +
+/* class texto_longo */         "  let minute=parseInt(seconds/60);\n" +
+/* class texto_longo */         "  seconds-=minute*60;\n" +
+/* class texto_longo */         "  second=seconds;\n" +
+/* class texto_longo */         "  if ( minute < 10 )\n" +
+/* class texto_longo */         "    minute='0'+minute;\n" +
+/* class texto_longo */         "  else\n" +
+/* class texto_longo */         "    minute=''+minute;\n" +
+/* class texto_longo */         "  if ( second < 10 )\n" +
+/* class texto_longo */         "    second='0'+second;\n" +
+/* class texto_longo */         "  else\n" +
+/* class texto_longo */         "    second=''+second;\n" +
+/* class texto_longo */         "  timeLeft.textContent = hour+':'+minute+':'+second;\n" +
 /* class texto_longo */         "});\n" +
 /* class texto_longo */         "\n" +
 /* class texto_longo */         "progressBar.addEventListener('click', (event) => {\n" +
