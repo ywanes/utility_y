@@ -12934,12 +12934,14 @@ class XML extends Util{
 /* class texto_longo */             if ( path.lastIndexOf("/") == -1 )
 /* class texto_longo */                 path=".";
 /* class texto_longo */             else{
-/* class texto_longo */                 path=path.substring(0, path.lastIndexOf("/"));
+/* class texto_longo */                 path=path.substring(countFile, path.lastIndexOf("/"));
 /* class texto_longo */                 prefix="/id/"+path+"/";
 /* class texto_longo */             }
 /* class texto_longo */             f_=new File(path);
 /* class texto_longo */             id=id.split("/")[id.split("/").length-1];
-/* class texto_longo */         }
+/* class texto_longo */         }else
+/* class texto_longo */             prefix="/id/"+path+"/";
+/* class texto_longo */         prefix=prefix.replace("/./", "/");
 /* class texto_longo */         File [] f=f_.listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
 /* class texto_longo */             if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
