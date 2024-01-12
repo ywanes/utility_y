@@ -9257,7 +9257,7 @@ System.out.println("BB" + retorno);
     }
     
     public void mkv(File f){  
-        bat_mkv("echo fim");
+        bat_mkv(null);
         String edited="_EDITED.mkv";
         File [] files=f.listFiles();
         // arquivos
@@ -9324,18 +9324,33 @@ System.out.println("BB" + retorno);
                 mkv(files[i]);
         }
     }
-    
+        
+    public boolean bat_mkv_init=false;
+    public boolean bat_mkv_inited=false;
     public void bat_mkv(String a){
+        bat_mkv_init=false;
+        if ( a == null ){            
+            if ( bat_mkv_inited )
+                return;
+            else
+                bat_mkv_inited=true;
+            bat_mkv_init=true;
+        }
         if ( !new File("c:/tmp").exists() || !new File("c:/tmp").isDirectory() ){
             System.out.println("Favor criar a pasta c:/tmp");
+            System.exit(1);
             return;
         }
         String path="c:/tmp/runmkv.bat";
         try{
-            salvando_file(a, new File(path));
-            System.out.println("Execute o comando c:/tmp/runmkv.bat para sua comodidade");
+            if ( ! bat_mkv_init ){
+                salvando_file(a, new File(path));
+                System.out.println("Execute o comando a seguir para sua comodidade: y mkv && c:/tmp/runmkv.bat");
+            }else
+                salvando_file("echo fim", new File(path));            
         }catch(Exception e){
             System.out.println("Nao foi possivel gravar o arquivo " + path + " " + e.toString());
+            System.exit(1);
         }
     }
     private void decodeUrl_stream(){
