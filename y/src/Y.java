@@ -9257,6 +9257,7 @@ System.out.println("BB" + retorno);
     }
     
     public void mkv(File f){  
+        bat_mkv("echo fim");
         String edited="_EDITED.mkv";
         File [] files=f.listFiles();
         // arquivos
