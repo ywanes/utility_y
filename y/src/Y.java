@@ -9239,7 +9239,7 @@ System.out.println("BB" + retorno);
                 public void componentResized(ComponentEvent e){
                     e.getComponent().addMouseListener(new MouseListener() {
                         public void mouseClicked(MouseEvent e){System.exit(1);}
-                        public void mousePressed(MouseEvent e){}
+                        public void mousePressed(MouseEvent e){System.exit(1);}
                         public void mouseReleased(MouseEvent e){}
                         public void mouseEntered(MouseEvent e){}
                         public void mouseExited(MouseEvent e){}
@@ -9300,20 +9300,25 @@ System.out.println("BB" + retorno);
                         video=true;
                         continue;
                     }
-                    if ( !audio && p3.equals("Audio") && (p2.contains("(por)") || partes[j].contains("Audio: mp3") ) ){
-                        audio=true;
-                        continue;
+                    if ( !audio && p3.equals("Audio")){
+                        if (p2.contains("(por)") || partes[j].contains("Audio: mp3") || partes[j].contains("Audio: aac") ) {                            
+                            audio=true;
+                            continue;
+                        }
                     }
                     removes+=" -map -0:a:" + p1 + " ";
                     //System.out.println(p1 + " " + p2 + " " + p3);
                 }
             }
-            if ( !video || !audio ){
-                erroFatal("Nao foi possivel interpretar o arquivo \"" + item + "\"");
+            if ( !video ){
+                erroFatal("Nao foi possivel interpretar o arquivo \"" + item + "\" - Video nao detectado!");
+            }
+            if ( !audio ){
+                erroFatal("Nao foi possivel interpretar o arquivo \"" + item + "\" - Audio nao detectado!");
             }
             if ( removes.equals("") )
                 continue;  
-            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" \"" + item + edited + "\"";
+            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" -max_muxing_queue_size 1024 \"" + item + edited + "\"";
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
             System.exit(0);
