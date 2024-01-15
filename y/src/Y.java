@@ -9235,11 +9235,16 @@ System.out.println("BB" + retorno);
             frame.setUndecorated(true); // tira borda do aplicativo
             frame.setExtendedState(frame.MAXIMIZED_BOTH);        
             frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
+            frame.addWindowListener(new java.awt.event.WindowAdapter() {
+                public void windowClosing(java.awt.event.WindowEvent e) {
+                    System.exit(0);
+                }
+            });
             frame.addComponentListener(new ComponentListener(){
                 public void componentResized(ComponentEvent e){
                     e.getComponent().addMouseListener(new MouseListener() {
-                        public void mouseClicked(MouseEvent e){System.exit(1);}
-                        public void mousePressed(MouseEvent e){System.exit(1);}
+                        public void mouseClicked(MouseEvent e){System.exit(0);}
+                        public void mousePressed(MouseEvent e){System.exit(0);}
                         public void mouseReleased(MouseEvent e){}
                         public void mouseEntered(MouseEvent e){}
                         public void mouseExited(MouseEvent e){}
