@@ -1618,7 +1618,10 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("mkv") ){
-            mkv(new File("."));
+            boolean verbose=false;
+            if ( args.length == 2 && args[1].equals("-v") )
+                verbose=true;
+            mkv(new File("."), verbose);
             return;
         }
         if ( args[0].equals("decodeUrl") && args.length == 1 ){
@@ -9261,12 +9264,14 @@ System.out.println("BB" + retorno);
         }            
     }
     
-    public void mkv(File f){  
+    public void mkv(File f, boolean verbose){  
         bat_mkv(null);
         String edited="_EDITED.mkv";
         File [] files=f.listFiles();
         // arquivos
         for ( int i=0;i<files.length;i++ ){
+            if ( verbose )
+                System.out.println("File: " + files[i].getAbsolutePath());
             if ( !files[i].isFile() )
                 continue;
             if ( files[i].getName().endsWith(edited) )
@@ -9284,8 +9289,8 @@ System.out.println("BB" + retorno);
             String msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
-            if ( msg.contains("ENCODER         : Lav") ) // mkv ja modificado
-                continue;            
+            //if ( msg.contains("ENCODER         : Lav") ) // mkv ja modificado
+            //    continue;            
             String [] partes=msg.replace("\r", "").split("\n");
             boolean inicio=false;
             String removes="";
@@ -9297,17 +9302,25 @@ System.out.println("BB" + retorno);
                 if ( !inicio )
                     continue;
                 if ( partes[j].contains("Video") || partes[j].contains("Stream") ){
+                    if ( verbose )
+                        System.out.println(partes[j]);
                     String [] partes2=partes[j].trim().split(" ");
                     String p1=partes2[1].substring(3,4);
                     String p2=partes2[1];
                     String p3=partes2[2].replace(":","");
+                    if ( verbose )
+                        System.out.println(p1 + " " + p2 + " " + p3);
                     if ( !video && p3.equals("Video") ){
                         video=true;
+                        if ( verbose )
+                            System.out.println("video identificado");
                         continue;
                     }
                     if ( !audio && p3.equals("Audio")){
                         if (p2.contains("(por)") || partes[j].contains("Audio: mp3") || partes[j].contains("Audio: aac") ) {                            
                             audio=true;
+                            if ( verbose )
+                                System.out.println("audio identificado");
                             continue;
                         }
                     }
@@ -9331,7 +9344,7 @@ System.out.println("BB" + retorno);
         // pastas
         for ( int i=0;i<files.length;i++ ){
             if ( files[i].isDirectory() )
-                mkv(files[i]);
+                mkv(files[i], verbose);
         }
     }
         
