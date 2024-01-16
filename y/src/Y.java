@@ -5658,7 +5658,8 @@ System.out.println("BB" + retorno);
                     }
                 }
             }else{
-                f.delete();
+                if ( ! f.delete() )
+                    System.out.println("Nao foi possivel deletar \"" + f.getAbsolutePath()+"\"");
             }
         }catch(Exception e){
             System.out.println(e.toString());
@@ -9305,7 +9306,7 @@ System.out.println("BB" + retorno);
                     if ( verbose )
                         System.out.println(partes[j]);
                     String [] partes2=partes[j].trim().split(" ");
-                    String p1=partes2[1].substring(3,4);
+                    String p1=partes2[1].substring(3,5).replace("(","").replace(" ","");
                     String p2=partes2[1];
                     String p3=partes2[2].replace(":","");
                     if ( verbose )
@@ -9317,7 +9318,7 @@ System.out.println("BB" + retorno);
                         continue;
                     }
                     if ( !audio && p3.equals("Audio")){
-                        if (p2.contains("(por)") || partes[j].contains("Audio: mp3") || partes[j].contains("Audio: aac") ) {                            
+                        if (p2.contains("(por)") || partes[j].contains("Audio: mp3") ){
                             audio=true;
                             if ( verbose )
                                 System.out.println("audio identificado");
@@ -9332,6 +9333,8 @@ System.out.println("BB" + retorno);
                 erroFatal("Nao foi possivel interpretar o arquivo \"" + item + "\" - Video nao detectado!");
             }
             if ( !audio ){
+                if ( msg.split("Audio:").length == 2 ) // contem somente 1 audio
+                    continue;
                 erroFatal("Nao foi possivel interpretar o arquivo \"" + item + "\" - Audio nao detectado!");
             }
             if ( removes.equals("") )
