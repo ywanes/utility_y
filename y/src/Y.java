@@ -9336,7 +9336,8 @@ System.out.println("BB" + retorno);
             }
             if ( removes.equals("") )
                 continue;  
-            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" -max_muxing_queue_size 1024 -metadata newTag=\"newTag\" \"" + item + edited + "\"";
+            //String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" -max_muxing_queue_size 1024 -metadata newTag=\"newTag\" \"" + item + edited + "\"";
+            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -c:a copy -metadata newTag=\"newTag\" \"" + item + edited + "\"";            
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
             System.exit(0);
