@@ -9289,8 +9289,8 @@ System.out.println("BB" + retorno);
             String msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
-            //if ( msg.contains("ENCODER         : Lav") ) // mkv ja modificado
-            //    continue;            
+            if ( msg.contains("NEWTAG          : newTag") ) // mkv ja modificado
+                continue;             
             String [] partes=msg.replace("\r", "").split("\n");
             boolean inicio=false;
             String removes="";
@@ -9336,7 +9336,7 @@ System.out.println("BB" + retorno);
             }
             if ( removes.equals("") )
                 continue;  
-            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" -max_muxing_queue_size 1024 \"" + item + edited + "\"";
+            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" -max_muxing_queue_size 1024 -metadata newTag=\"newTag\" \"" + item + edited + "\"";
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
             System.exit(0);
