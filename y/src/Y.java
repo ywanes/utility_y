@@ -9278,6 +9278,7 @@ System.out.println("BB" + retorno);
         bat_mkv(null);
         String edited="_EDITED.mkv";
         File [] files=f.listFiles();
+        String newTag="newTag20240116";
         // arquivos
         for ( int i=0;i<files.length;i++ ){
             if ( verbose )
@@ -9299,7 +9300,7 @@ System.out.println("BB" + retorno);
             String msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
-            if ( !force && msg.contains("NEWTAG          : newTag20240116") ) // mkv ja modificado
+            if ( !force && msg.contains("NEWTAG          : " + newTag) ) // mkv ja modificado
                 continue;             
             String [] partes=msg.replace("\r", "").split("\n");
             boolean inicio=false;
@@ -9350,7 +9351,7 @@ System.out.println("BB" + retorno);
                 continue;  
             //String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" -max_muxing_queue_size 1024 -metadata newTag=\"newTag\" \"" + item + edited + "\"";
             //String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -c:a copy -metadata newTag=\"newTag\" \"" + item + edited + "\"";            
-            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"newTag\" \"" + item + edited + "\"";            
+            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\" " + newTag + "\" \"" + item + edited + "\"";            
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
             System.exit(0);
