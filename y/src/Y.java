@@ -9299,7 +9299,7 @@ System.out.println("BB" + retorno);
             String msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
-            if ( !force && msg.contains("NEWTAG          : newTag") ) // mkv ja modificado
+            if ( !force && msg.contains("NEWTAG          : newTag20240116") ) // mkv ja modificado
                 continue;             
             String [] partes=msg.replace("\r", "").split("\n");
             boolean inicio=false;
