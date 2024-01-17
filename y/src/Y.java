@@ -1619,9 +1619,18 @@ cat buffer.log
         }
         if ( args[0].equals("mkv") ){
             boolean verbose=false;
-            if ( args.length == 2 && args[1].equals("-v") )
+            boolean force=false;
+            if ( 
+                (args.length == 2 && args[1].equals("-v")) 
+                || (args.length == 3 && args[2].equals("-v"))
+            )
                 verbose=true;
-            mkv(new File("."), verbose);
+            if ( 
+                (args.length == 2 && args[1].equals("-force")) 
+                || (args.length == 3 && args[2].equals("-force"))
+            )
+                force=true;            
+            mkv(new File("."), verbose, force);
             return;
         }
         if ( args[0].equals("decodeUrl") && args.length == 1 ){
@@ -9265,7 +9274,7 @@ System.out.println("BB" + retorno);
         }            
     }
     
-    public void mkv(File f, boolean verbose){  
+    public void mkv(File f, boolean verbose, boolean force){  
         bat_mkv(null);
         String edited="_EDITED.mkv";
         File [] files=f.listFiles();
@@ -9290,7 +9299,7 @@ System.out.println("BB" + retorno);
             String msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
-            if ( msg.contains("NEWTAG          : newTag") ) // mkv ja modificado
+            if ( !force && msg.contains("NEWTAG          : newTag") ) // mkv ja modificado
                 continue;             
             String [] partes=msg.replace("\r", "").split("\n");
             boolean inicio=false;
@@ -9340,7 +9349,8 @@ System.out.println("BB" + retorno);
             if ( removes.equals("") )
                 continue;  
             //String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" -max_muxing_queue_size 1024 -metadata newTag=\"newTag\" \"" + item + edited + "\"";
-            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -c:a copy -metadata newTag=\"newTag\" \"" + item + edited + "\"";            
+            //String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -c:a copy -metadata newTag=\"newTag\" \"" + item + edited + "\"";            
+            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"newTag\" \"" + item + edited + "\"";            
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
             System.exit(0);
@@ -9348,7 +9358,7 @@ System.out.println("BB" + retorno);
         // pastas
         for ( int i=0;i<files.length;i++ ){
             if ( files[i].isDirectory() )
-                mkv(files[i], verbose);
+                mkv(files[i], verbose, force);
         }
     }
         
@@ -13523,7 +13533,7 @@ class XML extends Util{
 /* class HttpServer */     }
 /* class HttpServer */ }
 /* class HttpServer */ class ClientThread extends Util{
-/* class HttpServer */     String method, uri, protocol, titulo_url, titulo, dir, endsWiths;
+/* class HttpServer */     String method, uri, protocol, titulo_url, titulo, dir, endsWiths, userAgent;
 /* class HttpServer */     long range=-1;
 /* class HttpServer */     long lenTarget=-1;
 /* class HttpServer */     String nav;
@@ -13582,6 +13592,8 @@ class XML extends Util{
 /* class HttpServer */                 }
 /* class HttpServer */                 if (line.startsWith("Range: bytes=") && line.endsWith("-") )
 /* class HttpServer */                   this.range = Long.parseLong(line.split("=")[1].replace("-", ""));
+/* class HttpServer */                 if (line.startsWith("User-Agent: ") )
+/* class HttpServer */                   this.userAgent = line.substring(12);
 /* class HttpServer */                 lineNumber++;
 /* class HttpServer */             }
 /* class HttpServer */             System.out.println("    |");
@@ -13700,7 +13712,10 @@ class XML extends Util{
 /* class HttpServer */                     range = -1;
 /* class HttpServer */             }
 /* class HttpServer */             if ( range > -1){
-/* class HttpServer */                 lenTarget=5000000;
+/* class HttpServer */                 if ( userAgent.contains(" TV ") )
+/* class HttpServer */                     lenTarget=lenFile-range;
+/* class HttpServer */                 else
+/* class HttpServer */                     lenTarget=25000000; // 25MB
 /* class HttpServer */                 if ( (range + lenTarget) > lenFile )
 /* class HttpServer */                     lenTarget=lenFile-range;
 /* class HttpServer */                 for (String line: new String[] {
@@ -14428,6 +14443,8 @@ class XML extends Util{
 /* class by manual */                + "    obs: gera black screen\n"
 /* class by manual */                + "[y mkv]\n"
 /* class by manual */                + "    y mkv\n"
+/* class by manual */                + "    y mkv -v\n"
+/* class by manual */                + "    y mkv -force\n"
 /* class by manual */                + "[y decodeUrl]\n"
 /* class by manual */                + "    echo T%C3%B3quio | y decodeUrl\n"
 /* class by manual */                + "[y encodeUrl]\n"

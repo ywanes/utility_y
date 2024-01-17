@@ -554,6 +554,8 @@ Exemplos...
     obs: gera black screen
 [y mkv]
     y mkv
+    y mkv -v
+    y mkv -force
 [y decodeUrl]
     echo T%C3%B3quio | y decodeUrl
 [y encodeUrl]
