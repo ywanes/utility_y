@@ -69,6 +69,7 @@ import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.net.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -1631,6 +1632,20 @@ cat buffer.log
             )
                 force=true;            
             mkv(new File("."), verbose, force);
+            return;
+        }
+        if ( args[0].equals("bmp") ){
+            Integer len_block=null;
+            if ( args.length > 1 ){
+                try{
+                    len_block=Integer.parseInt(args[1]);
+                }catch(Exception e){
+                    erroFatal("Parametro invalido - " + e.toString());
+                }
+                if ( len_block <= 1 )
+                    erroFatal("O valor nao pode ser menor ou igual a 1");
+            }
+            bmp(len_block);
             return;
         }
         if ( args[0].equals("decodeUrl") && args.length == 1 ){
@@ -9360,9 +9375,9 @@ System.out.println("BB" + retorno);
         for ( int i=0;i<files.length;i++ ){
             if ( files[i].isDirectory() )
                 mkv(files[i], verbose, force);
-        }
+        }    
     }
-        
+    
     public boolean bat_mkv_init=false;
     public boolean bat_mkv_inited=false;
     public void bat_mkv(String a){
@@ -9391,6 +9406,94 @@ System.out.println("BB" + retorno);
             System.exit(1);
         }
     }
+
+    public void bmp(Integer len_block){  
+        byte[] entrada_ = new byte[1];
+        int c=0;
+        int rgb=0;
+        int c18=1;
+        int c19=256;
+        int c20=256*256;
+        int c21=256*256*256;
+        int c22=1;
+        int c23=256;
+        int c24=256*256;
+        int c25=256*256*256;
+        int x=0; // posicao temporaria de x
+        int y=0; // posicao temporaria de y
+        int len_x=0; // len total em x
+        int len_y=0; // len total em y
+        int n_block_x=0; // numeros de blocos em x
+        int n_block_y=0; // numeros de blocos em y
+        int len_block_x=0; // len de trabalho em x
+        int len_block_y=0; // len de trabalho em y
+        int [][][] sums=null;   
+        int [][][] counts=null;
+        int count_pixels_block = len_block*len_block;
+        boolean header=true;
+        while ( read1Byte(entrada_) ){
+            int n=entrada_[0];
+            if ( n < 0 ) n+=256;
+            if ( header ){
+                if ( c == 18 ) c18*=n;
+                if ( c == 19 ) c19*=n;
+                if ( c == 20 ) c20*=n;
+                if ( c == 21 ){
+                    c21*=n;
+                    len_x=c18+c19+c20+c21;
+                    System.out.println(len_x);
+                }
+                if ( c == 22 ) c22*=n;
+                if ( c == 23 ) c23*=n;
+                if ( c == 24 ) c24*=n;
+                if ( c == 25 ){
+                    c25*=n;
+                    len_y=c22+c23+c24+c25;
+                    System.out.println(len_y);
+                    if ( len_block != null ){
+                        if (len_x < len_block || len_y < len_block )
+                            erroFatal("Nao eh possivel a assinatura menor que a img!");
+                        n_block_x=(int)(len_x/len_block);
+                        n_block_y=(int)(len_y/len_block);
+                        len_block_x=n_block_x*len_block;
+                        len_block_y=n_block_y*len_block;
+                        sums = new int[n_block_x][n_block_y][3];
+                        counts = new int[n_block_x][n_block_y][3];
+                    }
+                    header=false;
+                    c=0;
+                    continue;
+                }  
+                c++;                
+                continue;
+            }else{
+                if ( len_block == null ){
+                    // sem assinatura
+                    System.out.println(n);
+                    continue;
+                }else{
+                    // com assinatura                    
+                    if ( c%len_x < len_block_x && c < len_x*len_block_y ){ // dentro da area de trabalho
+                        x = (int)((c%len_x)/len_block);
+                        y = (int)((c/len_x)/len_block);
+                        //System.out.println("x: " + x + " y: " + y + " c: " + c + " len_x: " + len_x + " len_y: " + len_y);
+                        sums[x][y][rgb]+=n;
+                        counts[x][y][rgb]+=1;
+                        //System.out.println("sums: " + sums[x][y][rgb] + " counts: " + counts[x][y][rgb]);
+                        if ( counts[x][y][rgb] == count_pixels_block )
+                            System.out.println((int)(sums[x][y][rgb]/counts[x][y][rgb]));                        
+                    }
+                    rgb++;
+                    if ( rgb >= 3 ){
+                        rgb=0;
+                        c++;
+                    }
+                    continue;
+                }
+            }
+        }        
+    }   
+    
     private void decodeUrl_stream(){
         String line=null;
         while ( (line=readLine()) != null )
@@ -13883,7 +13986,6 @@ class XML extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -13977,6 +14079,7 @@ class XML extends Util{
 /* class by manual */                + "  [y speed]\n"
 /* class by manual */                + "  [y lock]\n"
 /* class by manual */                + "  [y mkv]\n"
+/* class by manual */                + "  [y bmp]\n"
 /* class by manual */                + "  [y decodeUrl]\n"
 /* class by manual */                + "  [y encodeUrl]\n"
 /* class by manual */                + "  [y test]\n"
@@ -14446,6 +14549,10 @@ class XML extends Util{
 /* class by manual */                + "    y mkv\n"
 /* class by manual */                + "    y mkv -v\n"
 /* class by manual */                + "    y mkv -force\n"
+/* class by manual */                + "[y bmp]\n"
+/* class by manual */                + "    y cat img.bmp | y bmp\n"
+/* class by manual */                + "    y cat img.bmp | y bmp 64 # modo assinatura de 64 ponto de largura, uso para comparacao entre imagens\n"
+/* class by manual */                + "    # primeira linha x, segunda y, demais r g b\n"
 /* class by manual */                + "[y decodeUrl]\n"
 /* class by manual */                + "    echo T%C3%B3quio | y decodeUrl\n"
 /* class by manual */                + "[y encodeUrl]\n"
@@ -14541,6 +14648,10 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
 
 
 
