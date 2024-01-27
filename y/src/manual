@@ -88,6 +88,7 @@ usage:
   [y lock]
   [y paste]
   [y mkv]
+  [y insta]
   [y bmp]
   [y decodeUrl]
   [y encodeUrl]
@@ -560,6 +561,8 @@ Exemplos...
     y mkv
     y mkv -v
     y mkv -force
+[y insta]
+    y insta [url]
 [y bmp]
     y cat img.bmp | y bmp
     y cat img.bmp | y bmp 64 # modo assinatura de 64 ponto de largura, uso para comparação entre imagens
