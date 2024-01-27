@@ -86,6 +86,7 @@ usage:
   [y win]
   [y speed]
   [y lock]
+  [y paste]
   [y mkv]
   [y bmp]
   [y decodeUrl]
@@ -553,6 +554,8 @@ Exemplos...
 [y lock]
     y lock
     obs: gera black screen
+[y paste]
+    y paste file1 file2
 [y mkv]
     y mkv
     y mkv -v

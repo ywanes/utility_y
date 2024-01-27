@@ -491,22 +491,22 @@ cat buffer.log
         if ( args[0].equals("xml") && ( args.length == 2 || args.length == 3 ) ){
             try{
                 if ( args.length == 2 && args[1].equals("mostraEstrutura") ){
-                    XML.loadIs(System.in,true,false,null,false,null,false);
+                    new XML().loadIs(System.in,true,false,null,false,null,false);
                     return;
                 }            
                 if ( args.length == 2 && args[1].equals("mostraTags") ){
-                    XML.loadIs(System.in,false,true,null,false,null,false);
+                    new XML().loadIs(System.in,false,true,null,false,null,false);
                     return;
                 }            
                 if ( args.length == 3 && new File(args[1]).exists() && args[2].equals("mostraEstrutura") ){
                     FileInputStream is = new FileInputStream(args[1]);
-                    XML.loadIs(is,true,false,null,false,null,false);
+                    new XML().loadIs(is,true,false,null,false,null,false);
                     is.close();                
                     return;
                 }            
                 if ( args.length == 3 && new File(args[1]).exists() && args[2].equals("mostraTags") ){
                     FileInputStream is = new FileInputStream(args[1]);
-                    XML.loadIs(is,false,true,null,false,null,false);
+                    new XML().loadIs(is,false,true,null,false,null,false);
                     is.close();                
                     return;                
                 }          
@@ -1616,6 +1616,10 @@ cat buffer.log
         }
         if ( args[0].equals("lock") ){
             lock();
+            return;
+        }
+        if ( args[0].equals("paste") && args.length == 3 && new File(args[1]).exists() && new File(args[2]).exists() && new File(args[1]).isFile() && new File(args[2]).isFile() ){            
+            paste(new File(args[1]), new File(args[2]));
             return;
         }
         if ( args[0].equals("mkv") ){
@@ -7309,7 +7313,7 @@ System.out.println("BB" + retorno);
                     }
                     
                     is = zipFile.getInputStream(entry);
-                    XML.loadIs(is,mostraEstrutura,false,caminho,exportSheetCSV,out,suprimeHeader);
+                    new XML().loadIs(is,mostraEstrutura,false,caminho,exportSheetCSV,out,suprimeHeader);
                     is.close();
                     
                     // carrega lista de abas
@@ -9289,6 +9293,35 @@ System.out.println("BB" + retorno);
         }            
     }
     
+    public void paste(File file1, File file2){
+        try{
+            readLine(file1);
+            readLineB(file2);
+            String s1="";
+            String s2="";
+            while(true){
+                if ( s1 != null )
+                    s1=readLine();
+                if ( s2 != null )
+                    s2=readLineB();
+                if ( s1 == null && s2 == null )
+                    return;
+                else{
+                    if ( s1 == null )
+                        System.out.println(" "  + s2);
+                    else{
+                        if ( s2 == null )
+                            System.out.println(s1);
+                        else
+                            System.out.println(s1 + " " + s2);
+                    }
+                }
+            }
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+        }
+    }
+    
     public void mkv(File f, boolean verbose, boolean force){  
         bat_mkv(null);
         String edited="_EDITED.mkv";
@@ -10559,7 +10592,7 @@ class Util{
     }
         
     public static String hex_string="0123456789ABCDEF";
-    public static String lendo_arquivo(String caminho) {
+    public String lendo_arquivo(String caminho) {
         String result="";
         String strLine;
         try{
@@ -10682,16 +10715,20 @@ class Util{
         return sep_;
     }
     
-    public static void readLine(String caminho) throws Exception{
-        readLine(new FileInputStream(new File(caminho)));
+    public void readLine(String caminho) throws Exception{
+        readLine(new File(caminho));
     }
     
-    public static java.util.Scanner scanner_pipe=null;
-    public static void readLine(InputStream in){        
+    public void readLine(File f) throws Exception{
+        readLine(new FileInputStream(f));
+    }
+    
+    public java.util.Scanner scanner_pipe=null;
+    public void readLine(InputStream in){        
         readLine(in,null,null);
     }    
     
-    public static void readLine(InputStream in,String encoding,String delimiter){
+    public void readLine(InputStream in,String encoding,String delimiter){
         if ( delimiter == null )
             delimiter="\n";
         if ( encoding == null )
@@ -10701,7 +10738,7 @@ class Util{
         scanner_pipe.useDelimiter(delimiter);        
     }    
     
-    public static String readLine(){
+    public String readLine(){
         try{            
             if ( scanner_pipe == null ){
                 readLine(System.in);                
@@ -10718,7 +10755,7 @@ class Util{
         return null;
     }
 
-    public static String read1String(){
+    public String read1String(){
         while(true){
             try{            
                 if ( scanner_pipe == null )
@@ -10740,7 +10777,7 @@ class Util{
         }
     }
     
-    public static void closeLine(){
+    public void closeLine(){
         try{
             scanner_pipe.close();            
         }catch(Exception e){}
@@ -10749,9 +10786,13 @@ class Util{
     
     public static java.util.Scanner scanner_pipeB=null;
     public void readLineB(String caminho) throws Exception{
-        readLineB(new FileInputStream(new File(caminho)), null, null);
+        readLineB(new File(caminho));
     }
     
+    public void readLineB(File f) throws Exception{
+        readLineB(new FileInputStream(f), null, null);
+    }
+
     public static void readLineB(InputStream in,String encoding,String delimiter){
         if ( delimiter == null )
             delimiter="\n";
@@ -12070,10 +12111,10 @@ class XML extends Util{
         
     public static ArrayList<String> listaTxt=null;
     public static ArrayList<Integer> listaNivel=null;
-    public static void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho, boolean exportSheetCSV,OutputStream out, boolean suprimeHeader) throws Exception {
+    public void loadIs(InputStream is,boolean mostraEstrutura,boolean mostraTags,String caminho, boolean exportSheetCSV,OutputStream out, boolean suprimeHeader) throws Exception {
         resetLista();
         
-        Y.readLine(is,"UTF-8",">");        
+        readLine(is,"UTF-8",">");        
         StringBuilder sb=new StringBuilder();
         String txt=null;
         boolean first=true;
@@ -12096,7 +12137,7 @@ class XML extends Util{
         
         resetControleTags();
         
-        while ( (txt=Y.readLine()) != null ){                        
+        while ( (txt=readLine()) != null ){                        
             txt=txt.replace("\n","")+">";
             len=txt.length();
             
@@ -12206,7 +12247,7 @@ class XML extends Util{
                 continue;            
             }            
         }
-        Y.closeLine();
+        closeLine();
         
         if ( exportSheetCSV )
             processaCelulaFlush(out);
@@ -12570,7 +12611,7 @@ class XML extends Util{
 /* class texto_longo */         };
 /* class texto_longo */         return "<html>\n" +
 /* class texto_longo */         "<head>\n" +
-/* class texto_longo */         "<body id=\"cursor\" onload=\"preparacao();\">\n" +
+/* class texto_longo */         "<body id=\"cursor\" onload=\"preparacao();\" style=\"background-color: rgb(0, 0, 0);\">\n" +
 /* class texto_longo */         "<style>canvas {position: relative;top: 0%;left: 50%;margin-left: -50vmin;width: 100vmin;height: 100vmin;}</style>\n" +
 /* class texto_longo */         "<div id=\"f11bg\" style=\"display: none\" >\n" +
 /* class texto_longo */         "  <canvas></canvas>\n" +
@@ -12580,7 +12621,7 @@ class XML extends Util{
 /* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
 /* class texto_longo */         "<div id=\"master\"></div>\n" +
 /* class texto_longo */         "<div><style>.bordered {border: solid #177 3px;border-radius: 6px;}.bordered tr:hover {background: #999;}.bordered td, .bordered th {border-left: 2px solid #177;border-top: 2px solid #177;padding: 10px;}audio::-webkit-media-controls-panel{background-color: #777;}</style>\n" +
-/* class texto_longo */         "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;margin-left: 20px;\"><tbody>\n" +
+/* class texto_longo */         "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;margin-left: 20px; visibility: hidden;\"><tbody>\n" +
 /* class texto_longo */         faixas +
 /* class texto_longo */         "</tbody></table></div>\n" +
 /* class texto_longo */         "<script type=\"text/javascript\">\n" +
@@ -12775,8 +12816,8 @@ class XML extends Util{
 /* class texto_longo */         "  }\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function preparacao(){\n" +
-/* class texto_longo */         "  document.body.style.backgroundColor = '#000';\n" +
 /* class texto_longo */         "  create_playlist();\n" +
+/* class texto_longo */         "  document.getElementById('tablebase').style.visibility='';\n" +         
 /* class texto_longo */         "  console.log('playlistHash ' + getDigest());\n" +         
 /* class texto_longo */         "  add_listener();\n" +
 /* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
@@ -13986,6 +14027,7 @@ class XML extends Util{
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -14078,6 +14120,7 @@ class XML extends Util{
 /* class by manual */                + "  [y win]\n"
 /* class by manual */                + "  [y speed]\n"
 /* class by manual */                + "  [y lock]\n"
+/* class by manual */                + "  [y paste]\n"
 /* class by manual */                + "  [y mkv]\n"
 /* class by manual */                + "  [y bmp]\n"
 /* class by manual */                + "  [y decodeUrl]\n"
@@ -14545,6 +14588,8 @@ class XML extends Util{
 /* class by manual */                + "[y lock]\n"
 /* class by manual */                + "    y lock\n"
 /* class by manual */                + "    obs: gera black screen\n"
+/* class by manual */                + "[y paste]\n"
+/* class by manual */                + "    y paste file1 file2\n"
 /* class by manual */                + "[y mkv]\n"
 /* class by manual */                + "    y mkv\n"
 /* class by manual */                + "    y mkv -v\n"
@@ -14648,6 +14693,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
