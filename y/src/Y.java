@@ -1644,17 +1644,31 @@ cat buffer.log
         }
         if ( args[0].equals("bmp") ){
             Integer len_block=null;
-            if ( args.length > 1 ){
-                try{
-                    len_block=Integer.parseInt(args[1]);
-                }catch(Exception e){
-                    erroFatal("Parametro invalido - " + e.toString());
+            File path=null;
+            Object [] parm_bmp_file_len=get_parm_bmp_file_len(args);
+            if ( parm_bmp_file_len != null ){
+                String file=(String)parm_bmp_file_len[0];
+                String len=(String)parm_bmp_file_len[1];
+                
+                if ( len != null ){
+                    try{
+                        len_block=Integer.parseInt(len);
+                    }catch(Exception e){
+                        erroFatal("Parametro invalido - " + e.toString());
+                    }
+                    if ( len_block <= 1 )
+                        erroFatal("O valor nao pode ser menor ou igual a 1");
                 }
-                if ( len_block <= 1 )
-                    erroFatal("O valor nao pode ser menor ou igual a 1");
+                if ( file != null ){
+                    path=new File(file);
+                    if ( !path.exists() )
+                        erroFatal("Caminho do -file nao existe");
+                    if ( !path.isFile())
+                        erroFatal("Caminho de -file nao é um arquivo");
+                }
+                bmp(path, len_block);
+                return;
             }
-            bmp(len_block);
-            return;
         }
         if ( args[0].equals("decodeUrl") && args.length == 1 ){
             decodeUrl_stream();
@@ -7894,6 +7908,31 @@ System.out.println("BB" + retorno);
         return new Object[]{path,acceptSymbolicLink,mtime,type,pre,pos};
     }    
 
+    private Object [] get_parm_bmp_file_len(String [] args){
+        String file=null;
+        String len=null;
+        
+        args=sliceParm(1,args);
+        while(args.length > 0){
+            if ( args[0].equals("-file") ){
+                args=sliceParm(1,args);
+                file=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-len") ){
+                args=sliceParm(1,args);
+                len=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args.length > 0 )
+                return null;
+            break;
+        }
+        return new Object[]{file, len};
+    }
+    
     private Object [] get_parm_path_symbol_bkmg(String [] args){
         String path=null;
         boolean acceptSymbolicLink=false;
@@ -8419,7 +8458,7 @@ System.out.println("BB" + retorno);
 
     private String getLocalDateTime_windows(){
         try{
-            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null);
+            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null, null);
             String [] lines=s.split("\n");
             return lines[1].trim();
         }catch(Exception e){
@@ -8468,7 +8507,7 @@ System.out.println("BB" + retorno);
     private void load_pss_windows() {        
         try{
             load_pss_init();
-            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null);
+            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null, null);
             String [] lines=s_.split("\n");
             ArrayList<Integer> list_p = new ArrayList<>();
             boolean isWord=false;
@@ -8631,7 +8670,7 @@ System.out.println("BB" + retorno);
         String s1_aux="";  
         for ( int i=0;i<command.length;i++ ){
             try {          
-                String s = runtimeExec(command[i], null).trim();
+                String s = runtimeExec(command[i], null, null).trim();
                 if ( s == null ){
                     if ( runtimeExecError.contains("Permission denied") ){                        
                         System.err.println("Permission denied!");
@@ -9143,7 +9182,7 @@ System.out.println("BB" + retorno);
     
     private void win(){
         try{
-            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus", null);
+            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus", null, null);
             if ( s == null )
                 erroFatal(4311);
             String [] lines=s.split("\n");
@@ -9358,7 +9397,7 @@ System.out.println("BB" + retorno);
                 bat_mkv(display_mkv);
                 System.exit(0);
             }            
-            runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""});
+            runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""}, null);
             String msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
@@ -9483,9 +9522,69 @@ System.out.println("BB" + retorno);
             if ( !new File(dir+"/"+id+"/"+id+".mp4").exists() )
                 erroFatal("Ocorreu um erro ao tentar gravar o arquivo " + dir+"/"+id+"/"+id+".mp4");
         }
+        if ( !new File(dir+"/"+id+"/out-0001.bmp").exists() ){
+            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -r 1 -i " + id + ".mp4 -r 1 out-%04d.bmp"}, new File(dir+"/"+id));
+            if ( !new File(dir+"/"+id+"/out-0001.bmp").exists() )
+                erroFatal("Nao foi possivel encontrar o utilitario ffmpef");
+        }
+        File [] files=new File(dir+"/"+id).listFiles();
+        for ( int i=0;i<files.length;i++ ){
+            if ( ! files[i].getName().endsWith(".bmp") )
+                continue;
+            if ( new File(dir+"/"+id+"/"+files[i].getName()+".assinatura.txt").exists() )
+                continue;
+            String txt = runtimeExec(null, new String[]{"cmd", "/c", "y bmp -file " + files[i].getName() + " -len 64"}, new File(dir+"/"+id));
+            if ( ! salvando_file(txt, new File(dir+"/"+id+"/"+files[i].getName()+".assinatura.txt")) )
+                erroFatal("Nao foi possivel gravar o arquivo " + dir+"/"+id+"/"+files[i].getName()+".assinatura.txt");
+        }
+        if ( !new File(dir+"/"+id+".html").exists() ){
+            String pre_saida="<html xmlns=\"http://www.w3.org/1999/xhtml\"><head></head><body style=\"background-color: rgb(0, 0, 0);\"><meta charset=\"UTF-8\" http-equiv=\"X-UA-Compatible\" content=\"IE=9\"><style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style><table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;\"><tbody><tr>";
+            String pos_saida="</tr></tbody></table></body></html>";            
+            String saida="<td><img src=\"" + id + "/" + "out-0001.bmp\"></td>";            
+            files=new File(dir+"/"+id).listFiles();
+            String [] partes1=null;
+            String [] partes2=null;
+            boolean alter=true;
+            int corte=50;
+            for ( int i=0;i<files.length;i++ ){
+                if ( ! files[i].getName().endsWith(".assinatura.txt") )
+                    continue;
+                partes2=lendo_arquivo(dir+"/"+id+"/"+files[i].getName()).split("\n");
+                if ( partes1 != null ){
+                    int diff=insta_diff(partes1, partes2, corte);
+                    if ( diff > 100 ){
+                        if ( alter ){
+                            saida+="<td><img src=\"" + id + "/" + files[i].getName().replace(".assinatura.txt", "") + "\"></td>";                            
+                        }
+                        alter=!alter;
+                    }
+                }
+                partes1=partes2;
+            }
+            if ( ! salvando_file(pre_saida + saida + pos_saida, new File(dir+"/"+id+".html")) )
+                erroFatal("Ocorreu um erro na gravacao do arquivo " + dir+"/"+id+".html");
+        }
+        runtimeExec(null, new String[]{"cmd", "/c", dir+"/"+id+".html"}, null);
     }
     
-    public void bmp(Integer len_block){  
+    public int insta_diff(String [] partes1, String [] partes2, int corte){
+        int a=Integer.parseInt(partes1[2]);
+        int b=Integer.parseInt(partes2[2]);
+        int c=a-b;
+        int count=0;
+        for ( int i=2;i<partes1.length&&i<partes2.length;i++ ){
+            a=Integer.parseInt(partes1[i]);
+            b=Integer.parseInt(partes2[i]);
+            c=a-b;
+            if ( c < 0 )
+                c=c*-1;
+            if ( c >= corte )
+                count++;
+        }
+        return count;
+    }
+    
+    public void bmp(File path, Integer len_block){  
         byte[] entrada_ = new byte[1];
         int c=0;
         int rgb=0;
@@ -9507,8 +9606,16 @@ System.out.println("BB" + retorno);
         int len_block_y=0; // len de trabalho em y
         int [][][] sums=null;   
         int [][][] counts=null;
-        int count_pixels_block = len_block*len_block;
+        int count_pixels_block = 0;
+        if ( len_block != null )
+            count_pixels_block=len_block*len_block;;
         boolean header=true;
+        try{
+            if ( path != null )
+                readBytes(path);
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+        }
         while ( read1Byte(entrada_) ){
             int n=entrada_[0];
             if ( n < 0 ) n+=256;
@@ -10343,12 +10450,12 @@ class Util{
     }
     
     public String runtimeExecError = "";
-    public String runtimeExec(String p_, String [] p){
+    public String runtimeExec(String line_commands, String [] commands,File file_path){
         try{
-            if ( p == null )
-                p=p_.split(" ");
+            if ( commands == null )
+                commands=line_commands.split(" ");
             runtimeExecError="";
-            Process proc = Runtime.getRuntime().exec(p);
+            Process proc = Runtime.getRuntime().exec(commands, null, file_path);
             byte[] b=new byte[1024];
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ByteArrayOutputStream baos_err = new ByteArrayOutputStream();
@@ -10385,7 +10492,7 @@ class Util{
                 return null;
             String s=baos.toString("UTF-8").replace("\r\n","\n");
             String [] linhas=s.split("\n");
-            if ( p.length >= 3 && p[0].equals("cmd") && p[1].equals("/c") && linhas[0].endsWith(": 65001")){
+            if ( commands.length >= 3 && commands[0].equals("cmd") && commands[1].equals("/c") && linhas[0].endsWith(": 65001")){
                 s="";
                 for ( int i=1;i<linhas.length;i++ )
                     s+=linhas[i]+"\n";
@@ -10986,7 +11093,7 @@ class Util{
                 "Linux",
             };
             for ( int i=0;i<commands.length;i++ ){
-                String s=runtimeExec(commands[i], null);
+                String s=runtimeExec(commands[i], null, null);
                 if ( s == null )
                     continue;
                 if ( getType ){

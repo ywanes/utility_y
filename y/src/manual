@@ -565,7 +565,8 @@ Exemplos...
     y insta [url]
 [y bmp]
     y cat img.bmp | y bmp
-    y cat img.bmp | y bmp 64 # modo assinatura de 64 ponto de largura, uso para comparação entre imagens
+    y bmp -file a.bmp -len 64
+    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparação entre imagens
     # primeira linha x, segunda y, demais r g b
 [y decodeUrl]
     echo T%C3%B3quio | y decodeUrl
