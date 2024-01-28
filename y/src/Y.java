@@ -9548,8 +9548,8 @@ System.out.println("BB" + retorno);
             String txt = runtimeExec(null, new String[]{"cmd", "/c", "y bmp -file " + files[i].getName() + " -len 64"}, new File(dir+"/"+id));
             if ( ! salvando_file(txt, new File(dir+"/"+id+"/"+files[i].getName()+".assinatura.txt")) )
                 erroFatal("Nao foi possivel gravar o arquivo " + dir+"/"+id+"/"+files[i].getName()+".assinatura.txt");
-            //if ( ! salvando_file("", new File(dir+"/"+id+"/"+files[i].getName()) ) )
-            //    erroFatal("Nao foi possivel gravar o arquivo " + dir+"/"+id+"/"+files[i].getName());            
+            if ( ! salvando_file("", new File(dir+"/"+id+"/"+files[i].getName()) ) )
+                erroFatal("Nao foi possivel gravar o arquivo " + dir+"/"+id+"/"+files[i].getName());            
         }
         if ( !new File(dir+"/"+id+".html").exists() ){
             String pre_saida="<html xmlns=\"http://www.w3.org/1999/xhtml\"><head></head><body style=\"background-color: rgb(0, 0, 0);\"><meta charset=\"UTF-8\" http-equiv=\"X-UA-Compatible\" content=\"IE=9\"><style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style><table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;\"><tbody><tr>";
