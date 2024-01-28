@@ -1638,11 +1638,15 @@ cat buffer.log
             mkv(new File("."), verbose, force);
             return;
         }
-        if ( args[0].equals("insta") && args.length == 2 && args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/", "").length() == 11 ){
-            insta(
-                    args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/", "")                    
-            );
-            return;
+        if ( args[0].equals("insta") && args.length >= 2 ){
+            if ( args.length == 3 )
+                args=new String[]{args[0], args[1]+"="+args[2]};
+            if ( args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/?hl=en", "").replace("/", "").length() == 11 ){
+                insta(
+                        args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/?hl=en", "").replace("/", "")                    
+                );
+                return;
+            }
         }
         if ( args[0].equals("bmp") ){
             Integer len_block=null;
@@ -9452,8 +9456,6 @@ System.out.println("BB" + retorno);
             }
             if ( removes.equals("") )
                 continue;  
-            //String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -vf \"pad=ceil(iw/2)*2:ceil(ih/2)*2\" -max_muxing_queue_size 1024 -metadata newTag=\"newTag\" \"" + item + edited + "\"";
-            //String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -c:a copy -metadata newTag=\"newTag\" \"" + item + edited + "\"";            
             String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
@@ -9510,8 +9512,12 @@ System.out.println("BB" + retorno);
                 erro_amigavel_exception(e);
             }
             String [] partes=txt.split("\"");
-            if ( !txt.contains("\"videoUrl\":") || partes.length < 22 || !partes[21].startsWith("https://") )
-                erroFatal("Nao foi possivel encontrar o video no servico: http://localhost:3000/api/video?url=[URL]");
+            if ( !txt.contains("\"videoUrl\":") || partes.length < 22 || !partes[21].startsWith("https://") ){
+                if ( txt.contains("\"This post does not exist\"") )
+                    erroFatal("Esse servico disse que o post nao existe: http://localhost:3000/api/video?url="+url);
+                else
+                    erroFatal("Nao foi possivel encontrar o video no servico: http://localhost:3000/api/video?url="+url);
+            }
             if ( !new File(dir+"/"+id).exists() ){
                 if ( ! new File(dir+"/"+id).mkdir() )
                     erroFatal("Nao foi possivel criar o diretorio " + dir+"/"+id);            
@@ -9526,6 +9532,7 @@ System.out.println("BB" + retorno);
         }
         if ( !new File(dir+"/"+id+"/out-0001.bmp").exists() ){
             runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -r 1 -i " + id + ".mp4 -r 1 out-%04d.bmp"}, new File(dir+"/"+id));
+            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -i " + id + ".mp4 -qscale:v 2 out-%04d.jpg"}, new File(dir+"/"+id));
             if ( !new File(dir+"/"+id+"/out-0001.bmp").exists() )
                 erroFatal("Nao foi possivel encontrar o utilitario ffmpef");
         }
@@ -9538,16 +9545,18 @@ System.out.println("BB" + retorno);
             String txt = runtimeExec(null, new String[]{"cmd", "/c", "y bmp -file " + files[i].getName() + " -len 64"}, new File(dir+"/"+id));
             if ( ! salvando_file(txt, new File(dir+"/"+id+"/"+files[i].getName()+".assinatura.txt")) )
                 erroFatal("Nao foi possivel gravar o arquivo " + dir+"/"+id+"/"+files[i].getName()+".assinatura.txt");
+            //if ( ! salvando_file("", new File(dir+"/"+id+"/"+files[i].getName()) ) )
+            //    erroFatal("Nao foi possivel gravar o arquivo " + dir+"/"+id+"/"+files[i].getName());            
         }
         if ( !new File(dir+"/"+id+".html").exists() ){
             String pre_saida="<html xmlns=\"http://www.w3.org/1999/xhtml\"><head></head><body style=\"background-color: rgb(0, 0, 0);\"><meta charset=\"UTF-8\" http-equiv=\"X-UA-Compatible\" content=\"IE=9\"><style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style><table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;\"><tbody><tr>";
             String pos_saida="</tr></tbody></table></body></html>";            
-            String saida="<td><img src=\"" + id + "/" + "out-0001.bmp\"></td>";            
+            String saida="<td><img src=\"" + id + "/" + "out-0001.jpg\"></td>";            
             files=new File(dir+"/"+id).listFiles();
             String [] partes1=null;
             String [] partes2=null;
             boolean alter=true;
-            int corte=50;
+            int corte=20;
             for ( int i=0;i<files.length;i++ ){
                 if ( ! files[i].getName().endsWith(".assinatura.txt") )
                     continue;
@@ -9556,7 +9565,7 @@ System.out.println("BB" + retorno);
                     int diff=insta_diff(partes1, partes2, corte);
                     if ( diff > 100 ){
                         if ( alter ){
-                            saida+="<td><img src=\"" + id + "/" + files[i].getName().replace(".assinatura.txt", "") + "\"></td>";                            
+                            saida+="<td><img src=\"" + id + "/" + files[i].getName().replace(".bmp.assinatura.txt", ".jpg") + "\"></td>";                            
                         }
                         alter=!alter;
                     }
