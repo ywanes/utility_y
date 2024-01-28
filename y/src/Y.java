@@ -1638,8 +1638,10 @@ cat buffer.log
             mkv(new File("."), verbose, force);
             return;
         }
-        if ( args[0].equals("insta") && args.length == 2 && args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("/", "").length() == 11 ){
-            insta(args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("/", ""));
+        if ( args[0].equals("insta") && args.length == 2 && args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/", "").length() == 11 ){
+            insta(
+                    args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/", "")                    
+            );
             return;
         }
         if ( args[0].equals("bmp") ){
