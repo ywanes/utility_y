@@ -1655,7 +1655,6 @@ cat buffer.log
             if ( parm_bmp_file_len != null ){
                 String file=(String)parm_bmp_file_len[0];
                 String len=(String)parm_bmp_file_len[1];
-                
                 if ( len != null ){
                     try{
                         len_block=Integer.parseInt(len);
@@ -1672,7 +1671,11 @@ cat buffer.log
                     if ( !path.isFile())
                         erroFatal("Caminho de -file nao é um arquivo");
                 }
-                bmp(path, len_block);
+                try{
+                    bmp(path, len_block, System.out);
+                }catch(Exception e){
+                    erro_amigavel_exception(e);
+                }
                 return;
             }
         }
@@ -9595,7 +9598,8 @@ System.out.println("BB" + retorno);
         return count;
     }
     
-    public void bmp(File path, Integer len_block){  
+    public void bmp(File path, Integer len_block, OutputStream os) throws Exception{  
+        /////////////
         byte[] entrada_ = new byte[1];
         int c=0;
         int rgb=0;
@@ -9626,7 +9630,7 @@ System.out.println("BB" + retorno);
                 readBytes(path);
         }catch(Exception e){
             erro_amigavel_exception(e);
-        }
+        }        
         while ( read1Byte(entrada_) ){
             int n=entrada_[0];
             if ( n < 0 ) n+=256;
@@ -9637,7 +9641,8 @@ System.out.println("BB" + retorno);
                 if ( c == 21 ){
                     c21*=n;
                     len_x=c18+c19+c20+c21;
-                    System.out.println(len_x);
+                    os.write((len_x+"").getBytes());
+                    os.write("\n".getBytes());
                 }
                 if ( c == 22 ) c22*=n;
                 if ( c == 23 ) c23*=n;
@@ -9645,7 +9650,8 @@ System.out.println("BB" + retorno);
                 if ( c == 25 ){
                     c25*=n;
                     len_y=c22+c23+c24+c25;
-                    System.out.println(len_y);
+                    os.write((len_y+"").getBytes());
+                    os.write("\n".getBytes());
                     if ( len_block != null ){
                         if (len_x < len_block || len_y < len_block )
                             erroFatal("Nao eh possivel a assinatura menor que a img!");
@@ -9665,19 +9671,20 @@ System.out.println("BB" + retorno);
             }else{
                 if ( len_block == null ){
                     // sem assinatura
-                    System.out.println(n);
+                    os.write((n+"").getBytes());
+                    os.write("\n".getBytes());
                     continue;
                 }else{
                     // com assinatura                    
                     if ( c%len_x < len_block_x && c < len_x*len_block_y ){ // dentro da area de trabalho
                         x = (int)((c%len_x)/len_block);
                         y = (int)((c/len_x)/len_block);
-                        //System.out.println("x: " + x + " y: " + y + " c: " + c + " len_x: " + len_x + " len_y: " + len_y);
                         sums[x][y][rgb]+=n;
                         counts[x][y][rgb]+=1;
-                        //System.out.println("sums: " + sums[x][y][rgb] + " counts: " + counts[x][y][rgb]);
-                        if ( counts[x][y][rgb] == count_pixels_block )
-                            System.out.println((int)(sums[x][y][rgb]/counts[x][y][rgb]));                        
+                        if ( counts[x][y][rgb] == count_pixels_block ){
+                            os.write(((int)(sums[x][y][rgb]/counts[x][y][rgb])+"").getBytes());
+                            os.write("\n".getBytes());
+                        }
                     }
                     rgb++;
                     if ( rgb >= 3 ){
@@ -9687,7 +9694,8 @@ System.out.println("BB" + retorno);
                     continue;
                 }
             }
-        }        
+        } 
+        os.flush();
     }   
     
     private void decodeUrl_stream(){
