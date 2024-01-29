@@ -19,9 +19,13 @@ y.bat(c:/windows)
 
 )
 if "%1" equ "echo" (
-echo %*
+echo %* | y trataEcho -ignore "Se Vc esta lendo esta msg, significa que ocorreu o bug de " na quantidade impar"
+) else (
+if "%1" equ "printf" (
+echo %* | y trataPrintf -ignore "Se Vc esta lendo esta msg, significa que ocorreu o bug de " na quantidade impar"
 ) else (
 java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
+)
 )
 
 cd0.bat(c:/windows)
@@ -719,8 +723,16 @@ cat buffer.log
             echo(args);
             return;
         }      
+        if ( args[0].equals("trataEcho") ){
+            trataEcho();
+            return;
+        }      
+        if ( args[0].equals("trataPrintf") ){
+            trataPrintf();
+            return;
+        }      
         if ( args[0].equals("printf") ){
-            printf(args);
+            System.out.print(printf(args));
             return;
         }              
         if ( args[0].equals("print") ){
@@ -4643,20 +4655,46 @@ cat buffer.log
             System.out.println(e.toString());
         }
     }
-
+    
+    public void trataEcho()
+    {
+        String [] args = bind_asterisk(new String[]{"echo", readString().substring(5).trim()});
+        String result=printf(args);
+        if ( 
+            (result.startsWith("'") && result.endsWith("'"))
+            || (result.startsWith("\"") && result.endsWith("\""))
+        )
+            System.out.println(result.substring(1, result.length()-1));
+        else
+            System.out.println(result);
+    }
+            
     public void echo(String [] args)
     {
-        args = bind_asterisk(args);
-        printf(args);
-        System.out.println();
+        args = bind_asterisk(args);        
+        System.out.println(printf(args));
     }
 
-    public void printf(String [] args)
+    public void trataPrintf(){
+        String [] args = bind_asterisk(new String[]{"printf", readString().substring(7).trim()});
+        String result=printf(args);
+        if ( 
+            (result.startsWith("'") && result.endsWith("'"))
+            || (result.startsWith("\"") && result.endsWith("\""))
+        )
+            System.out.print(result.substring(1, result.length()-1));
+        else
+            System.out.print(result);        
+    }
+            
+    public String printf(String [] args)
     {
+        String result="";
         if ( args.length > 1 )
-            System.out.print(args[1]);
+            result=args[1];
         for ( int i=2;i<args.length;i++ )
-            System.out.print(" "+args[i]);        
+            result+=" "+args[i];        
+        return result;
     }
     
     public void cat(String [] caminhos)
@@ -9608,8 +9646,7 @@ System.out.println("BB" + retorno);
         return count;
     }
     
-    public void bmp(File path, Integer len_block, OutputStream os) throws Exception{  
-        /////////////
+    public void bmp(File path, Integer len_block, OutputStream os) throws Exception{          
         byte[] entrada_ = new byte[1];
         int c=0;
         int rgb=0;
@@ -10909,7 +10946,7 @@ class Util{
     }
     
     public java.util.Scanner scanner_pipe=null;
-    public void readLine(InputStream in){        
+    public void readLine(InputStream in){            
         readLine(in,null,null);
     }    
     
@@ -10923,7 +10960,7 @@ class Util{
         scanner_pipe.useDelimiter(delimiter);        
     }    
     
-    public String readLine(){
+    public String readLine(){        
         try{            
             if ( scanner_pipe == null ){
                 readLine(System.in);                
@@ -10960,6 +10997,20 @@ class Util{
             }
             return null;
         }
+    }
+    
+    public String readString(){
+        StringBuilder sb=new StringBuilder();
+        String aux="";
+        boolean first=true;
+        while ( (aux=readLine()) != null ){
+            if ( first )
+                first=false;
+            else
+                sb.append("\n");
+            sb.append(aux);
+        }
+        return sb.toString();
     }
     
     public void closeLine(){
