@@ -1641,9 +1641,10 @@ cat buffer.log
         if ( args[0].equals("insta") && args.length >= 2 ){
             if ( args.length == 3 )
                 args=new String[]{args[0], args[1]+"="+args[2]};
-            if ( args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/?hl=en", "").replace("/", "").length() == 11 ){
+            args[1]=args[1].split("\\?")[0];
+            if ( args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/", "").length() == 11 ){
                 insta(
-                        args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/?hl=en", "").replace("/", "")                    
+                        args[1].replace("https://www.instagram.com/reels/","").replace("https://www.instagram.com/reel/","").replace("https://www.instagram.com/p/", "").replace("/", "")                    
                 );
                 return;
             }
@@ -8822,7 +8823,8 @@ System.out.println("BB" + retorno);
         String ipv4=null;
         String ipv6=null;
         String ipv6_nat=null;
-        String ipv6_not_nat=null;
+        String ipv6_my=null;
+        String ipv6_other=null;
         try {
             int count=0;
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
@@ -8848,17 +8850,25 @@ System.out.println("BB" + retorno);
                             String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
                             for ( int j=0;j<10;j++ )
                                 ip=ip.replace(":0:","::").replace(":::","::");
-                            if ( ipv4 == null && ip.contains(".") )
-                                ipv4=ip;
-                            if ( ipv6_nat == null && ip.contains(":") && ip.startsWith("fe") )
-                                ipv6_nat=ip;
-                            if ( ip.contains(":") && !ip.startsWith("fe") ){
-                                if ( ipv6_not_nat == null ){
-                                    ipv6_not_nat=ip;
+                            if ( ip.contains(".") ){ // ipv4
+                                if ( ipv4 == null )
+                                    ipv4=ip;
+                            }else{ 
+                                if ( ip.contains(":") ){ // ipv6
+                                    if ( ip.startsWith("fe") ){
+                                        if ( ipv6_nat == null )
+                                            ipv6_nat=ip;
+                                    }else{
+                                        if ( ip.contains("::") ){
+                                            if ( ipv6_other == null )
+                                                ipv6_my=ip;
+                                        }else{
+                                            ipv6_other=ip;
+                                        }
+                                    }
                                 }else{
-                                    if ( ip.contains("::") )
-                                        ipv6_not_nat=ip;
-                                }                                
+                                    // desconhecido
+                                }
                             }
                             String ping_=null;
                             if ( ping )
@@ -8875,7 +8885,7 @@ System.out.println("BB" + retorno);
         } catch (java.net.SocketException e) {
             throw new RuntimeException(e);
         } 
-        ipv6=ipv6_not_nat;
+        ipv6=ipv6_my;
         if ( ipv6 == null )
             ipv6=ipv6_nat;
         return new String[]{ipv4, ipv6};
