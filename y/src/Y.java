@@ -9608,9 +9608,10 @@ System.out.println("BB" + retorno);
             String [] partes2=null;
             boolean alter=true;
             int corte=20;
-            int nivel=100;            
-            corte=10; // ajuste
-            nivel=50; // ajuste
+            int nivel=100;    
+            boolean disableAlter=true;
+            //corte=10; // ajuste
+            //nivel=50; // ajuste
             for ( int i=0;i<files.length;i++ ){
                 if ( ! files[i].getName().endsWith(".assinatura.txt") )
                     continue;
@@ -9618,7 +9619,7 @@ System.out.println("BB" + retorno);
                 if ( partes1 != null ){
                     int diff=insta_diff(partes1, partes2, corte);
                     if ( diff > nivel ){
-                        if ( alter ){
+                        if ( alter || disableAlter ){
                             saida+="<td><img src=\"" + id + "/" + files[i].getName().replace(".bmp.assinatura.txt", ".jpg") + "\"></td>";                            
                         }
                         alter=!alter;
