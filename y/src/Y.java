@@ -1704,6 +1704,10 @@ cat buffer.log
             test();
             return;
         }
+        if ( args[0].equals("random") && args.length == 3 ){
+            random(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
+            return;
+        }
         if ( args[0].equals("update") || args[0].equals("u") ){
             update();
             return;
@@ -9832,6 +9836,10 @@ System.out.println("BB" + retorno);
         }
     }
     
+    private void random(int a, int b){    
+        System.out.println(random_int(a,b));
+    }
+    
     private void update(){        
         try{
             boolean error=false;
@@ -14382,6 +14390,7 @@ class XML extends Util{
 /* class by manual */                + "  [y decodeUrl]\n"
 /* class by manual */                + "  [y encodeUrl]\n"
 /* class by manual */                + "  [y test]\n"
+/* class by manual */                + "  [y random]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -14854,7 +14863,8 @@ class XML extends Util{
 /* class by manual */                + "    y insta [url]\n"
 /* class by manual */                + "[y bmp]\n"
 /* class by manual */                + "    y cat img.bmp | y bmp\n"
-/* class by manual */                + "    y cat img.bmp | y bmp 64 # modo assinatura de 64 ponto de largura, uso para comparacao entre imagens\n"
+/* class by manual */                + "    y bmp -file a.bmp -len 64\n"
+/* class by manual */                + "    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparacao entre imagens\n"
 /* class by manual */                + "    # primeira linha x, segunda y, demais r g b\n"
 /* class by manual */                + "[y decodeUrl]\n"
 /* class by manual */                + "    echo T%C3%B3quio | y decodeUrl\n"
@@ -14863,6 +14873,8 @@ class XML extends Util{
 /* class by manual */                + "    obs: o espaco esta sendo representado como +, o que e uma traducao obsoleta.\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
+/* class by manual */                + "[y random]\n"
+/* class by manual */                + "    y random 1 2\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
@@ -14951,6 +14963,7 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

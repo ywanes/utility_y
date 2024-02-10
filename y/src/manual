@@ -93,6 +93,7 @@ usage:
   [y decodeUrl]
   [y encodeUrl]
   [y test]
+  [y random]
   [y [update|u]]
   [y help]
 
@@ -575,6 +576,8 @@ Exemplos...
     obs: o espaço esta sendo representado como +, o que é uma tradução obsoleta.
 [y test]
     y test
+[y random]
+    y random 1 2
 [y help]
     y help <command>
     y help router
