@@ -9621,7 +9621,13 @@ System.out.println("BB" + retorno);
                     continue;
                 partes2=lendo_arquivo(dir+"/"+id+"/"+files[i].getName()).split("\n");
                 if ( partes1 != null ){
-                    int diff=insta_diff(partes1, partes2, corte);
+                    int diff=0;
+                    try{
+                        diff=insta_diff(partes1, partes2, corte);
+                    }catch(Exception e){
+                        System.err.println("Erro " + dir+"/"+id+"/"+files[i].getName() + " " + e.toString());
+                        throw e;
+                    }
                     if ( diff > nivel ){
                         if ( alter || disableAlter ){
                             saida+="<td><img src=\"" + id + "/" + files[i].getName().replace(".bmp.assinatura.txt", ".jpg") + "\"></td>";                            
@@ -12882,7 +12888,7 @@ class XML extends Util{
 /* class texto_longo */         "    &nbsp;&nbsp;&nbsp;<a style=\"display: inline-block; cursor: pointer; font-size: 40px;\" onclick=\"troca_de_faixa_anterior()\">&#9194;</a>\n" +
 /* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; font-size: 40px;\" onclick=\"troca_de_faixa()\">&#9193;</a>\n" +
 /* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id=\"tocando\" style=\"display: inline-block; color: white; font-size: 32px;\" onclick=\"A_menos()\"></a>\n" +
+/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id=\"tocando\" style=\"display: inline-block; color: white; font-size: 32px;\"></a>\n" +
 /* class texto_longo */         "    <br/>\n" +
 /* class texto_longo */         "    <br/>\n" +
 /* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;<input type=\"button\" value=\"FULL_SCREEN\" onclick=\"Fullscreen(false);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
@@ -14850,6 +14856,8 @@ class XML extends Util{
 /* class by manual */                + "    obs2: outra forma de verificar pelo cmd -> slmgr -dli\n"
 /* class by manual */                + "[y speed]\n"
 /* class by manual */                + "    y speed\n"
+/* class by manual */                + "    y speed -ip 192.168.0.100\n"
+/* class by manual */                + "    Obs: -ip -port -server -client -send -receive|-r\n"
 /* class by manual */                + "[y lock]\n"
 /* class by manual */                + "    y lock\n"
 /* class by manual */                + "    obs: gera black screen\n"
@@ -14963,8 +14971,6 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
 
 
 

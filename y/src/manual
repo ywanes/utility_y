@@ -553,6 +553,8 @@ Exemplos...
     obs2: outra forma de verificar pelo cmd -> slmgr -dli
 [y speed]
     y speed
+    y speed -ip 192.168.0.100
+    Obs: -ip -port -server -client -send -receive|-r
 [y lock]
     y lock
     obs: gera black screen
