@@ -11210,6 +11210,10 @@ class Util{
     public boolean isWindows(){
         return os(true).equals("Windows");
     }
+
+    public boolean isWindowsAdm(){
+        return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null) != null;
+    }
     
     public boolean isLinux(){
         return os(true).equals("Linux");
