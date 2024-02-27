@@ -12853,7 +12853,13 @@ class XML extends Util{
 /* class texto_longo */         File [] f=new File(".").listFiles();
 /* class texto_longo */         for ( int i=0;i<f.length;i++ ){
 /* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){
-/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 40px;\" onclick=\"click_faixa(this,'humanClick')\">" + f[i].getName() + "</td></tr>\n";
+/* class texto_longo */                 String name_file = f[i].getName();
+/* class texto_longo */                 int len_partes = name_file.split("\\.").length;
+/* class texto_longo */                 int len_extension = name_file.split("\\.")[len_partes-1].length()+1;
+/* class texto_longo */                 int len_tag = 12;
+/* class texto_longo */                 if ( len_partes > 1 && name_file.length() > (len_extension+len_tag) && name_file.split("\\.")[len_partes-2].length() >= 12 && name_file.split("\\.")[len_partes-2].substring(name_file.split("\\.")[len_partes-2].length()-12, name_file.split("\\.")[len_partes-2].length()-11).equals("-") )
+/* class texto_longo */                     name_file=name_file.substring(0, name_file.length()-len_extension-len_tag);
+/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 40px;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + f[i].getName() + "\" >" + name_file + "</td></tr>\n";
 /* class texto_longo */                 File f2=new File(f[i].getName()+".cfg");
 /* class texto_longo */                 if ( f2.exists() && f2.isFile() ){
 /* class texto_longo */                     String [] partes=lendo_arquivo(f[i].getName()+".cfg").split("\n");
@@ -12870,7 +12876,7 @@ class XML extends Util{
 /* class texto_longo */         "<div id=\"f11bg\" style=\"display: none\" >\n" +
 /* class texto_longo */         "  <canvas></canvas>\n" +
 /* class texto_longo */         "</div>\n" +
-/* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" sz=\"9\" wi=\"800\">\n" +
+/* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" sz=\"40\" wi=\"800\">\n" +
 /* class texto_longo */         "<meta charset=\"utf-8\">\n" +
 /* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
 /* class texto_longo */         "<div id=\"master\"></div>\n" +
@@ -13171,7 +13177,10 @@ class XML extends Util{
 /* class texto_longo */         "    return 'null';\n" +
 /* class texto_longo */         "  if ( isChildrenMusic(e) )\n" +
 /* class texto_longo */         "    return getNameHierarchy(esq(e));\n" +
-/* class texto_longo */         "  return e.innerText.trim(); \n" +
+/* class texto_longo */         "  if ( e.getAttribute('name') == null )\n" +
+/* class texto_longo */         "    return e.innerText.trim();\n" +
+/* class texto_longo */         "  else\n" +
+/* class texto_longo */         "    return e.getAttribute('name').trim();\n" +
 /* class texto_longo */         "}\n" +
 /* class texto_longo */         "function getFaixaChildrenToSeconds(p){\n" +
 /* class texto_longo */         "  p=p.split(' ')[1].split(':');\n" +
@@ -13456,7 +13465,7 @@ class XML extends Util{
 /* class texto_longo */                     curl += "curl \"" + (prefix + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
 /* class texto_longo */                     txt_item = elementos.get(i);
 /* class texto_longo */                 }else
-/* class texto_longo */                         txt_item = "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><path style=\"fill:#D9D58F;stroke:#222;stroke-width:2\" d=\"m 2,88 c 0,-1 0,-63 0,-63 0,0 -0.6,-5 4.4,-5 -1,0 5.6,0 5.6,0 l 0,-6 c 0,0 0,-3 3,-3 l 17,0 c 0,0 3,0 3,3 l 0,6 43,0 c 0,0 4,0 4,4 l 0,64 z\"></path><path style=\"fill:#E8DC88;stroke:#222;stroke-width:2;fill-opacity:0.7\" d=\"M 2,88 17,54 c 0,0 1,-5 9,-5 11,0 65,0 65,0 0,0 9,0 7,5 -2,5 -14,34 -14,34 z\"></path></svg><a> </a>" + elementos.get(i);
+/* class texto_longo */                     txt_item = "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><path style=\"fill:#D9D58F;stroke:#222;stroke-width:2\" d=\"m 2,88 c 0,-1 0,-63 0,-63 0,0 -0.6,-5 4.4,-5 -1,0 5.6,0 5.6,0 l 0,-6 c 0,0 0,-3 3,-3 l 17,0 c 0,0 3,0 3,3 l 0,6 43,0 c 0,0 4,0 4,4 l 0,64 z\"></path><path style=\"fill:#E8DC88;stroke:#222;stroke-width:2;fill-opacity:0.7\" d=\"M 2,88 17,54 c 0,0 1,-5 9,-5 11,0 65,0 65,0 0,0 9,0 7,5 -2,5 -14,34 -14,34 z\"></path></svg><a> </a>" + elementos.get(i);
 /* class texto_longo */                 trs += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.replace('" + prefix + encodeUrl(elementos.get(i)) + "')\">" + txt_item + "</td></tr>\n";
 /* class texto_longo */             }
 /* class texto_longo */             return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
