@@ -82,6 +82,7 @@ usage:
   [y [cls|clear|clean]]
   [y ips]
   [y mouse]
+  [y gravador]
   [y kill]
   [y win]
   [y speed]
@@ -543,6 +544,8 @@ Exemplos...
     y mouse "m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base baixa - Os Iluminados
     y mouse "m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base alta - Os Temidos
     obs: bloquear a tela faz o programa sair imediatamente
+[y gravador]
+    y gravador file.wav
 [y kill]
     y kill 3434
     y kill 3434 3435

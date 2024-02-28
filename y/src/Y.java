@@ -1474,13 +1474,12 @@ cat buffer.log
                 try{
                     if ( args[1].equals("infinity") ){
                         while(true)
-                            Thread.sleep(1000);
+                            sleepSeconds(1);
                     }else
-                        sleep(Float.parseFloat(args[1]));
+                        sleepFloatSeconds(Float.parseFloat(args[1]));
                     return;
                 }catch(Exception e){}                                
             }else{
-                sleep(null);
                 return;
             }
         }
@@ -1612,6 +1611,10 @@ cat buffer.log
         }
         if ( args[0].equals("mouse") ){
             mouse(args);
+            return;
+        }
+        if ( args[0].equals("gravador") && args.length == 2 ){
+            gravador(args[1]);
             return;
         }
         if ( args[0].equals("kill") && args.length >= 2 ){
@@ -1982,7 +1985,7 @@ cat buffer.log
             new Thread() {                    
                 public void run() {
                     try{
-                        Thread.sleep(1000);
+                        sleepSeconds(1);
                         String command="restart all";
                         // Ports
                         // 2020 daemon
@@ -4068,7 +4071,7 @@ cat buffer.log
                                     out[0].println( formatter.format(new Date()) + " - linhas/s[in]: " + lpad(countIn,sizeMaskSpeedCount," ") + " - linhas/s[out]: " + lpad(countOut,sizeMaskSpeedCount," ") + " - buffer: " + lpad(lista.size(),sizeMaskBufferCount," ") );
                                     out[0].flush();
                                 }
-                                Thread.sleep(100);
+                                sleepMillis(100);
                             }
                         }catch(Exception e){
                             caminhoLog[0]=null;
@@ -8282,10 +8285,6 @@ System.out.println("BB" + retorno);
         return true;
     }
     
-    private void sleep(Float a){
-        try { Thread.sleep((int)(a*1000)); } catch (Exception ee) {}
-    }
-    
     private void split(String bytes, String lines, String prefix, String parm){
         int q_bytes=0;
         int q_lines=0;
@@ -8934,92 +8933,72 @@ System.out.println("BB" + retorno);
     }           
 
     private void mouse(String [] args){
-        java.awt.Robot robo = null;
         try{
-            robo = new java.awt.Robot();
+            if ( args.length == 1 ){
+                while(true){
+                    robotMouseSleep(0.1F);                
+                    robotMouseShowXY();
+                }
+            }else{
+                if ( args.length > 2 ){
+                    System.err.println("Excesso de parametros, use um conjunto de parametros usando aspas");
+                    System.exit(1);
+                }
+                args = args[1].split(" ");
+                int p=0;
+                while(true){
+                    robotMouseVerifyExit();                
+                    if ( p < args.length && ( args[p].equals("move") || args[p].equals("m") ) && p+3 <= args.length ){
+                        System.out.println(args[p] + " " + args[p+1] + " " + args[p+2]);
+                        robotMouseMove(Integer.parseInt(args[p+1]),Integer.parseInt(args[p+2]));
+                        robotDelay(20);
+                        p+=3;
+                        continue;
+                    }
+                    if ( p < args.length && ( args[p].equals("sleep") || args[p].equals("s") ) && p+2 <= args.length ){
+                        System.out.println(args[p] + " " + args[p+1]);
+                        robotMouseSleep(Float.parseFloat(args[p+1]));
+                        p+=2;
+                        continue;
+                    }
+                    if ( p < args.length && ( args[p].equals("click") || args[p].equals("c") ) ){
+                        System.out.println(args[p]);
+                        robotMouseClickEsq();
+                        p++;
+                        continue;
+                    }
+                    if ( p < args.length && ( args[p].equals("clickDireito") || args[p].equals("cD") ) ){
+                        System.out.println(args[p]);
+                        robotMouseClickDir();
+                        p++;
+                        continue;
+                    }
+                    if ( p == args.length ){
+                        p=0;
+                        continue;
+                    }
+                    erroFatal(11);
+                }
+            }
         }catch(Exception e){
-            System.out.println("Erro, não existe sistema grafico!");
-            erroFatal(22);
-        }
-        int BOTAO_ESQ = java.awt.event.InputEvent.BUTTON1_DOWN_MASK;
-        int BOTAO_DIR = java.awt.event.InputEvent.BUTTON3_DOWN_MASK;
-        
-        if ( args.length == 1 ){
-            while(true){
-                sleep_mouse(0.1F);
-                show_xy_mouse();
-            }
-        }else{
-            if ( args.length > 2 ){
-                System.err.println("Excesso de parametros, use um conjunto de parametros usando aspas");
-                System.exit(1);
-            }
-            args = args[1].split(" ");
-            int p=0;
-            while(true){
-                verify_exit_mouse();
-                if ( p < args.length && ( args[p].equals("move") || args[p].equals("m") ) && p+3 <= args.length ){
-                    System.out.println(args[p] + " " + args[p+1] + " " + args[p+2]);
-                    robo.mouseMove(Integer.parseInt(args[p+1]),Integer.parseInt(args[p+2]));
-                    robo.delay(20);
-                    p+=3;
-                    continue;
-                }
-                if ( p < args.length && ( args[p].equals("sleep") || args[p].equals("s") ) && p+2 <= args.length ){
-                    System.out.println(args[p] + " " + args[p+1]);
-                    sleep_mouse(Float.parseFloat(args[p+1]));
-                    p+=2;
-                    continue;
-                }
-                if ( p < args.length && ( args[p].equals("click") || args[p].equals("c") ) ){
-                    System.out.println(args[p]);
-                    robo.mousePress(BOTAO_ESQ);
-                    robo.mouseRelease(BOTAO_ESQ);
-                    p++;
-                    continue;
-                }
-                if ( p < args.length && ( args[p].equals("clickDireito") || args[p].equals("cD") ) ){
-                    System.out.println(args[p]);
-                    robo.mousePress(BOTAO_DIR);
-                    robo.mouseRelease(BOTAO_DIR);
-                    p++;
-                    continue;
-                }
-                if ( p == args.length ){
-                    p=0;
-                    continue;
-                }
-                erroFatal(11);
-            }
+            erroFatal("robot nao encontrado!");
         }
     }
-    
-    private void sleep_mouse(Float n){
-        Float remove=0.1F;
-        if ( n == 0F ){
-            verify_exit_mouse();
-            return;
-        }
-        while ( n > 0F ){
-            verify_exit_mouse();
-            if ( n < 0.1F )
-                remove=n;
-            long mili = (long)(remove*1000);
-            try {Thread.sleep(mili);} catch (InterruptedException e) { }  
-            n-=remove;
+
+    public void gravador(String caminho){
+        try {
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 1, true, true);
+            javax.sound.sampled.DataLine.Info info = new javax.sound.sampled.DataLine.Info(javax.sound.sampled.TargetDataLine.class, format);
+            javax.sound.sampled.Line line = javax.sound.sampled.AudioSystem.getLine(info);
+            javax.sound.sampled.TargetDataLine targetLine = (javax.sound.sampled.TargetDataLine)line;            
+            targetLine.open(format);
+            targetLine.start();
+            javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(targetLine);
+            System.out.println("gravando...");
+            javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));
+        } catch (Exception e) {
+            erroFatal(e.toString());
         }        
-    }
-    
-    private void verify_exit_mouse(){
-        if ( java.awt.MouseInfo.getPointerInfo() == null )
-            System.exit(0);        
-    }
-    
-    private void show_xy_mouse(){
-        java.awt.PointerInfo p = java.awt.MouseInfo.getPointerInfo();
-        if ( p == null )
-            System.exit(0);
-        System.out.println("x: " + p.getLocation().x + ", y: " + p.getLocation().y);
     }
     
     public void kill(String [] parms_, OutputStream out, int index){
@@ -9371,7 +9350,7 @@ System.out.println("BB" + retorno);
     private void lock(){
         GraphicsDevice[] gs=null;
         try{
-            gs = GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+            gs = robotGetScreenDevices();
         }catch(Exception e){
             erroFatal("Esse sistema não tem ambiente grafico.");
         }
@@ -9401,7 +9380,7 @@ System.out.println("BB" + retorno);
                 public void componentHidden(ComponentEvent e){}
             });
             try{
-                Thread.sleep(100);
+                sleepMillis(100);
             }catch(Exception e){}
             gs[i].setFullScreenWindow( frame);
         }            
@@ -11457,6 +11436,116 @@ class Util{
         classes.put("DisableControlC$1","yv66vgAAADQAKwkABgAXCgAHABgJABkAGgoAGwAcCAAdBwAeBwAgBwAhAQAIdmFsJGFyZ3MBABNbTGphdmEvbGFuZy9TdHJpbmc7AQAGPGluaXQ+AQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgEABENvZGUBAA9MaW5lTnVtYmVyVGFibGUBAAZoYW5kbGUBABQoTHN1bi9taXNjL1NpZ25hbDspVgEADVN0YWNrTWFwVGFibGUBAApTb3VyY2VGaWxlAQAURGlzYWJsZUNvbnRyb2xDLmphdmEBAA9FbmNsb3NpbmdNZXRob2QHACIMACMADAwACQAKDAALACQHACUMACYAJwcAKAwAKQAqAQABMQEAEURpc2FibGVDb250cm9sQyQxAQAMSW5uZXJDbGFzc2VzAQAQamF2YS9sYW5nL09iamVjdAEAFnN1bi9taXNjL1NpZ25hbEhhbmRsZXIBAA9EaXNhYmxlQ29udHJvbEMBAARtYWluAQADKClWAQAQamF2YS9sYW5nL1N5c3RlbQEAA291dAEAFUxqYXZhL2lvL1ByaW50U3RyZWFtOwEAE2phdmEvaW8vUHJpbnRTdHJlYW0BAAVwcmludAEAFShMamF2YS9sYW5nL1N0cmluZzspVgAwAAYABwABAAgAARAQAAkACgAAAAIAAAALAAwAAQANAAAAIgACAAIAAAAKKiu1AAEqtwACsQAAAAEADgAAAAYAAQAAAAUAAQAPABAAAQANAAAAYQADAAIAAAAvKrQAAb6eABgqtAABAzLGAA+yAAMqtAABAzK2AAQqtAABvgSkAAsqtAABBBIFU7EAAAACAA4AAAAWAAUAAAAHABEACAAdAAkAJgAKAC4ACwARAAAABAACHRAAAwASAAAAAgATABQAAAAEABUAFgAfAAAACgABAAYAAAAAAAg=");
         loadClassByBytes(classes, principal, args);
     }
+
+    public void sleepFloatSeconds(Float a){
+        sleepMillis((long)(a*1000));  
+    }
+    
+    public void sleepSeconds(int seconds){
+        sleepMillis((long)(seconds*1000));        
+    }
+
+    public void sleepMillis(long mili){
+        try {Thread.sleep(mili);} catch (InterruptedException e) { }  
+    }
+    
+    java.awt.Robot robot_local=null;
+    public java.awt.Robot robotGet() throws Exception{
+        if ( robot_local == null )
+            robot_local=new java.awt.Robot();
+        return robot_local;
+    }
+
+    public BufferedImage robotGetImgScreen(int monitor_id){
+        // use
+        // System.out.println(getImgScreen(-1).getHeight());
+        // ImageIO.write(getImgScreen(-1), "bmp", new File("c:/tmp/s.jpg"));
+        try{
+            java.awt.Robot robot=robotGet();
+            java.awt.Rectangle rec=null;
+            if ( monitor_id == -1 )
+                rec = new java.awt.Rectangle(java.awt.Toolkit.getDefaultToolkit().getScreenSize());
+            else
+                rec = robotGetScreenDevices()[monitor_id].getConfigurations()[0].getBounds();
+            return robot.createScreenCapture(rec);
+        }catch(Exception e){
+            System.out.println("Erro " + e.toString());
+        }
+        return null;
+    }
+    
+    public java.awt.GraphicsDevice[] robotGetScreenDevices(){
+        return java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+    }            
+    
+    public void robotMouseSleep(Float n) throws Exception{
+        Float remove=0.1F;
+        if ( n == 0F ){
+            robotMouseVerifyExit();
+            return;
+        }
+        while ( n > 0F ){
+            robotMouseVerifyExit();
+            if ( n < 0.1F )
+                remove=n;
+            sleepFloatSeconds(remove);
+            n-=remove;
+        }        
+    }
+    
+    public void robotMouseVerifyExit() throws Exception{
+        if ( java.awt.MouseInfo.getPointerInfo() == null )
+            System.exit(0);        
+    }
+                
+    public Integer[] robotMouseGetXY() throws Exception{
+        java.awt.PointerInfo p = java.awt.MouseInfo.getPointerInfo();        
+        if ( p == null )
+            System.exit(0);
+        java.awt.Point location=p.getLocation();
+        return new Integer[]{location.x, location.y};
+    }
+
+    public void robotMouseShowXY() throws Exception{
+        Integer[] xy=robotMouseGetXY();
+        System.out.println("x: " + xy[0] + ", y: " + xy[1]);
+    }
+    
+    public void robotMouseMove(int a, int b) throws Exception{
+        robotGet().mouseMove(a, b);
+    }
+    
+    public void robotDelay(int a) throws Exception{
+        robotGet().delay(a);
+    }
+    
+    public void robotMouseClickEsq() throws Exception{
+        robotMousePressEsq();
+        robotMouseReleaseEsq();
+    }
+    
+    public void robotMouseClickDir() throws Exception{
+        robotMousePressDir();
+        robotMouseReleaseDir();
+    }
+    
+    public void robotMousePressEsq() throws Exception{
+        robotGet().mousePress(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
+    }        
+    
+    public void robotMousePressDir() throws Exception{
+        robotGet().mousePress(java.awt.event.InputEvent.BUTTON3_DOWN_MASK);
+    }        
+
+    public void robotMouseReleaseEsq() throws Exception{
+        robotGet().mouseRelease(java.awt.event.InputEvent.BUTTON1_DOWN_MASK);
+    }        
+    
+    public void robotMouseReleaseDir() throws Exception{
+        robotGet().mouseRelease(java.awt.event.InputEvent.BUTTON3_DOWN_MASK);
+    }        
+
+    
 }
 
 
@@ -14402,6 +14491,7 @@ class XML extends Util{
 /* class by manual */                + "  [y [cls|clear|clean]]\n"
 /* class by manual */                + "  [y ips]\n"
 /* class by manual */                + "  [y mouse]\n"
+/* class by manual */                + "  [y gravador]\n"
 /* class by manual */                + "  [y kill]\n"
 /* class by manual */                + "  [y win]\n"
 /* class by manual */                + "  [y speed]\n"
@@ -14863,6 +14953,8 @@ class XML extends Util{
 /* class by manual */                + "    y mouse \"m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base baixa - Os Iluminados\n"
 /* class by manual */                + "    y mouse \"m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base alta - Os Temidos\n"
 /* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
+/* class by manual */                + "[y gravador]\n"
+/* class by manual */                + "    y gravador file.wav\n"
 /* class by manual */                + "[y kill]\n"
 /* class by manual */                + "    y kill 3434\n"
 /* class by manual */                + "    y kill 3434 3435\n"
@@ -14988,6 +15080,8 @@ class XML extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
