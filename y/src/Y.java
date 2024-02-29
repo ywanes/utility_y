@@ -13523,13 +13523,13 @@ class XML extends Util{
 /* class texto_longo */             if ( f[i].isDirectory())
 /* class texto_longo */                 countDirectory++;
 /* class texto_longo */             if ( countSelect == 1 && next.equals("") ){
-/* class texto_longo */                 next="next.addEventListener('click', function(){ window.location.replace('" + prefix + encodeUrl(f[i].getName()) + "'); });\n";
+/* class texto_longo */                 next="next.addEventListener('click', function(){ window.location.href='" + prefix + encodeUrl(f[i].getName()) + "'; });\n";
 /* class texto_longo */                 next+="video.onended = function(){next.click();};\n";
 /* class texto_longo */             }
 /* class texto_longo */             if ( f[i].isFile() && decodeUrl(id).equals(f[i].getName()) )
 /* class texto_longo */                 countSelect++;
 /* class texto_longo */             if ( countSelect == 0 )
-/* class texto_longo */                 back="back.addEventListener('click', function(){ window.location.replace('" + prefix + encodeUrl(f[i].getName()) + "'); });\n";
+/* class texto_longo */                 back="back.addEventListener('click', function(){ window.location.href='" + prefix + encodeUrl(f[i].getName()) + "'; });\n";
 /* class texto_longo */             elementos.add(f[i].getName());
 /* class texto_longo */             if ( f[i].isFile() )
 /* class texto_longo */                 elementosIsFile.add("S");
@@ -13559,7 +13559,7 @@ class XML extends Util{
 /* class texto_longo */                     txt_item = elementos.get(i);
 /* class texto_longo */                 }else
 /* class texto_longo */                     txt_item = "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><path style=\"fill:#D9D58F;stroke:#222;stroke-width:2\" d=\"m 2,88 c 0,-1 0,-63 0,-63 0,0 -0.6,-5 4.4,-5 -1,0 5.6,0 5.6,0 l 0,-6 c 0,0 0,-3 3,-3 l 17,0 c 0,0 3,0 3,3 l 0,6 43,0 c 0,0 4,0 4,4 l 0,64 z\"></path><path style=\"fill:#E8DC88;stroke:#222;stroke-width:2;fill-opacity:0.7\" d=\"M 2,88 17,54 c 0,0 1,-5 9,-5 11,0 65,0 65,0 0,0 9,0 7,5 -2,5 -14,34 -14,34 z\"></path></svg><a> </a>" + elementos.get(i);
-/* class texto_longo */                 trs += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.replace('" + prefix + encodeUrl(elementos.get(i)) + "')\">" + txt_item + "</td></tr>\n";
+/* class texto_longo */                 trs += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.href='" + prefix + encodeUrl(elementos.get(i)) + "'\">" + txt_item + "</td></tr>\n";
 /* class texto_longo */             }
 /* class texto_longo */             return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
 /* class texto_longo */             "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +
