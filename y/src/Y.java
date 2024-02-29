@@ -12914,6 +12914,172 @@ class XML extends Util{
       
 }
 
+/* 
+//WASAPI C#
+// install dotnet windows
+winget install Microsoft.DotNet.SDK.8
+
+y mkdir wasapi
+cd wasapi
+dotnet new console
+
+dotnet add package NAudio.Wasapi --version 2.2.1
+
+inclua a linha abaixo depois de TagetFramework em wasapi.csproj:
+<PublishSingleFile>true</PublishSingleFile>
+
+// roda
+dotnet run > file.wav
+
+// publishs
+dotnet publish
+dotnet publish -c Release -r ubuntu.16.10-x64
+dotnet publish -c Release -r win10-x64
+dotnet publish -c Release -r osx.10.11-x64
+
+
+salve o conteudo abaixo em Program.cs:
+using NAudio.CoreAudioApi;
+using NAudio.Wave;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading;
+
+namespace LoopbackWithMic
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+			bool flag_system=true;
+			bool flag_mic=true;
+			if ( args.Length > 0 )
+			{
+				if ( args[0] == "only_system" )
+				{
+					flag_mic=false;
+				}
+				else
+				{
+					if ( args[0] == "only_mic" )
+					{
+						flag_system=false;
+					}
+					else
+					{
+						Console.WriteLine("\nParametro incorreto, veja as opções:\nwasapi > file.wav\nwasapi only_mic > file.wav\nwasapi only_system > file.wav\nObs: only_system só envia dados enquanto houve som sendo propagado");
+						return;
+					}
+				}
+			}			
+            var enumerator = new MMDeviceEnumerator();
+            var output = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
+            var output_false = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).Where(x => x != output).FirstOrDefault();
+			var input=enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+			List<IWaveProvider> pp = new List<IWaveProvider>();
+			List<WasapiCapture> capture = new List<WasapiCapture>();
+
+			if ( flag_system )
+				capture.Add(new WasapiLoopbackCapture(output));			
+			if ( flag_mic )
+				capture.Add(new WasapiCapture(input));
+			List<BufferedWaveProvider> provider = new List<BufferedWaveProvider>();
+			for ( var i=0;i<capture.Count;i++ )
+			{
+				provider.Add(new BufferedWaveProvider(capture.ElementAt(i).WaveFormat));
+				if(capture.ElementAt(i).WaveFormat.Channels > 1)
+				{
+					var mon = new NAudio.Wave.SampleProviders.StereoToMonoSampleProvider(provider.ElementAt(i).ToSampleProvider());
+					pp.Add(mon.ToWaveProvider());
+				}
+				else
+				{
+					pp.Add(provider.ElementAt(i));
+				}
+			}
+            MixingWaveProvider32 mix = new MixingWaveProvider32(pp);						
+			MemoryStream ms=new MemoryStream();
+			WaveRecorderMemory record = new WaveRecorderMemory(mix, ms);
+            var speaker = new WasapiOut(output_false, AudioClientShareMode.Shared, true, 15);			
+            speaker.Init(record);
+            List<byte> bytes = new List<byte>();
+			for ( var i=0;i<capture.Count;i++ )
+			{
+				var tmp=provider.ElementAt(i);
+				capture.ElementAt(i).DataAvailable += (s, a) =>
+				{
+					tmp.AddSamples(a.Buffer, 0, a.BytesRecorded);
+				};
+				capture.ElementAt(i).StartRecording();
+			}
+            speaker.Play();
+            bool first=true;
+			Stream stream_=Console.OpenStandardOutput();
+			Byte [] buff;
+			while(true)
+			{
+				if ( first )
+				{
+					if ( ms.Length >= 1920*10 )
+					{
+						buff = ms.ToArray();						
+						ms.SetLength(0);
+						stream_.Write(buff, 0, buff.Length);
+						stream_.Flush();
+						first=false;
+					}
+				}
+				else
+				{
+					if ( ms.Length >= 1920*4 )
+					{
+						buff = ms.ToArray();						
+						ms.SetLength(0);
+						stream_.Write(buff, 0, buff.Length);	
+						stream_.Flush();
+					}
+				}
+				Thread.Sleep(1);
+			}			
+        }
+    }
+	
+    class WaveRecorderMemory : IWaveProvider, IDisposable
+    {
+        private WaveFileWriter writer;
+        private IWaveProvider source;
+
+		public WaveRecorderMemory(IWaveProvider source, Stream out_)
+        {			
+            this.source = source;
+			this.writer = new WaveFileWriter(out_, source.WaveFormat);			
+        }
+
+        public int Read(byte[] buffer, int offset, int count)
+        {
+            int bytesRead = source.Read(buffer, offset, count);
+            writer.Write(buffer, offset, bytesRead);
+            return bytesRead;
+        }
+
+        public WaveFormat WaveFormat
+        {
+            get { return source.WaveFormat; }
+        }
+
+        public void Dispose()
+        {
+            if (writer != null)
+            {
+                writer.Dispose();
+            }
+        }
+    }	
+}
+*/
+
 
 /* class AES */ // echo TXT | openssl aes-256-cbc -base64 -pass pass:SENHA -md md5 -e
 /* class AES */ // y echo PPP | openssl aes-256-cbc -md md5 -k SENHA -e | y base64
