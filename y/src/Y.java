@@ -9027,28 +9027,32 @@ System.out.println("BB" + retorno);
             int countB=0;
             long now = epochmili(null);
             long tmp_now=0;
+            boolean filter=true;
             while( (len=targetLine.read(buff, 0, BUFFER_SIZE)) > 0 ){
-                lenMix=0;
-                for ( int i=0;i<len;i++ ){
-                    tmp=buff[i];
-                    tmp += 128;
-                    lenMix+=tmp;
-                }
-                if ( lenMix < 120000){
-                    countB=0;
-                }else{
-                    countB++;
-                }
-                if ( countB >= 10){
-                    now = epochmili(null);
-                    out.write(buff, 0, len);
-                }else{
-                    tmp_now = epochmili(null);
-                    if ( tmp_now < now+1000 )
+                if ( filter ){
+                    lenMix=0;
+                    for ( int i=0;i<len;i++ ){
+                        tmp=buff[i];
+                        tmp += 128;
+                        lenMix+=tmp;
+                    }
+                    if ( lenMix < 120000){
+                        countB=0;
+                    }else{
+                        countB++;
+                    }
+                    if ( countB >= 10){
+                        now = epochmili(null);
                         out.write(buff, 0, len);
-                    else
-                        out.write(buff2, 0, len);
-                }
+                    }else{
+                        tmp_now = epochmili(null);
+                        if ( tmp_now < now+1000 )
+                            out.write(buff, 0, len);
+                        else
+                            out.write(buff2, 0, len);
+                    }
+                }else
+                    out.write(buff, 0, len);
                 out.flush();
             }
         } catch (Exception e) {
