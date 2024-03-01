@@ -9062,7 +9062,10 @@ System.out.println("BB" + retorno);
 
     public void playLine(InputStream in){
         try{
+            // wasapi   -> Stream #0:0: Audio: pcm_f32le ([3][0][0][0] / 0x0003), 48000 Hz, mono, flt, 1536 kb/s
+            // gravador -> Stream #0:0: Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, mono, s16, 705 kb/s
             javax.sound.sampled.AudioFormat audioFormat=new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false);
+            //javax.sound.sampled.AudioFormat audioFormat=new javax.sound.sampled.AudioFormat(48000, 16, 2, true, false);
             javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.SourceDataLine.class, audioFormat);
             javax.sound.sampled.SourceDataLine sourceLine=(javax.sound.sampled.SourceDataLine)javax.sound.sampled.AudioSystem.getLine(info);            
             sourceLine.open(audioFormat);
@@ -9162,7 +9165,7 @@ System.out.println("BB" + retorno);
         int z=1;
         try {
             z=2;
-            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 1, true, false);
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false);
             javax.sound.sampled.DataLine.Info info = new javax.sound.sampled.DataLine.Info(javax.sound.sampled.TargetDataLine.class, format);
             javax.sound.sampled.Line line = javax.sound.sampled.AudioSystem.getLine(info);
             javax.sound.sampled.TargetDataLine targetLine = (javax.sound.sampled.TargetDataLine)line;            
@@ -9188,34 +9191,62 @@ System.out.println("BB" + retorno);
         }        
     }
     
-    public void gravador2(String caminho){
+    public void gravadorMixer(String caminho){
         try {
             javax.sound.sampled.Mixer.Info info=null;
             javax.sound.sampled.Mixer mix=null;
             javax.sound.sampled.Mixer.Info[] mixers = javax.sound.sampled.AudioSystem.getMixerInfo();
             for (int i=0;i<mixers.length;i++){
-                // "Driver de captura de som primário"
-                // "Microfone (HUSKY)"
-                if( mixers[i].getName().equals("Microfone (HUSKY)")){
-                    //ok
-                }else
+                /*
+                // lista devices
+                if ( 1 == 1 ){
+                    System.out.println(mixers[i].getName());
                     continue;
-                //System.out.println(mixers[i].getName());
+                }
+                */
+                
+                /*
+? Driver de som primário
+? Alto-falantes (HUSKY)
+? Digital Audio (S/PDIF) (High Definition Audio Device)
+? Alto-falantes (High Definition Audio Device)
+Driver de captura de som primário
+Microfone (HUSKY)
+Port Alto-falantes (HUSKY)
+Port Digital Audio (S/PDIF) (High De
+Port Alto-falantes (High Definition
+Port Microfone (HUSKY)                
+Obs: com.sun.media.sound.PortMixer$PortMixerPort cannot be cast to javax.sound.sampled.TargetDataLine                
+                
+                */
+                // principais:
+                // Driver de captura de som primário
+                // Microfone (HUSKY)
+                // Alto-falantes (HUSKY)
+                if( mixers[i].getName().equals("Driver de captura de som primário")){
+                    //ok
+                }else{
+                    continue;
+                }                
                 info=mixers[i];
                 mix = javax.sound.sampled.AudioSystem.getMixer(mixers[i]);
-                int len = mix.getTargetLineInfo().length;
-                if ( len > 0 ){
-                    //System.out.println(len + " " + mixers[i].getName());
-                    break;
+                if ( mix.getTargetLineInfo().length > 0 || mix.getTargetLines().length > 0 ){
+                    System.out.println("ok " + mixers[i].getName());
+                }else{
+                    System.out.println("nada para " + mixers[i].getName());
                 }
             }
-            javax.sound.sampled.Line.Info [] targetLineInfo = mix.getTargetLineInfo();
+            System.out.println("gravador mixer");            
+            javax.sound.sampled.Line.Info [] targetLineInfo = mix.getTargetLineInfo();            
+            System.out.println("getTargetLines " + mix.getTargetLines().length);
+            System.out.println("getTargetLineInfo " + mix.getTargetLineInfo().length);            
             javax.sound.sampled.Line line = mix.getLine(targetLineInfo[0]);           
             javax.sound.sampled.TargetDataLine targetLine = (javax.sound.sampled.TargetDataLine)line;           
             if (line == null)
                 throw new UnsupportedOperationException("No recording device found");           
-            targetLine.open(new javax.sound.sampled.AudioFormat(44100, 16, 1, true, false));
+            targetLine.open(new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false));
             targetLine.start();
+            System.out.println("gravador mixer line startada");
             javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(targetLine);
             if ( caminho == null ){
                 javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, System.out);                            
