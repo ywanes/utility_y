@@ -84,7 +84,10 @@ usage:
   [y mouse]
   [y gravador]
   [y gravadorLine]
+  [y gravadorMixerLine]
   [y playWav]
+  [y playLine]
+  [y call]
   [y playLine]
   [y kill]
   [y win]
@@ -552,11 +555,16 @@ Exemplos...
     y gravador > file.wav # com problema
 [y gravadorLine]
     y gravadorLine | y playLine
+[y gravadorMixerLine]
+    y gravadorMixerLine | y playLine
+    Obs: nao foi possivel implementar o mixer alto-falante, somente o mic
 [y playWav]
     y playWav file.wav
-    y cat file.wav | y playWav    
+    y cat file.wav | y playWav  # somente Wave dessa configuração até agora.
 [y playLine]
     y gravadorLine | y playLine
+[y call]
+    y call
 [y kill]
     y kill 3434
     y kill 3434 3435

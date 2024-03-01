@@ -1621,6 +1621,13 @@ cat buffer.log
                 gravador(null);
             return;
         }
+        if ( args[0].equals("gravadorMixer") ){
+            if ( args.length > 1 )
+                gravadorMixer(args[1]);
+            else
+                gravadorMixer(null);
+            return;
+        }
         if ( args[0].equals("playWav") ){
             if ( args.length > 1 )
                 playWav(args[1]);
@@ -1630,6 +1637,10 @@ cat buffer.log
         }
         if ( args[0].equals("gravadorLine") ){
             gravadorLine(System.out);
+            return;
+        }
+        if ( args[0].equals("gravadorMixerLine") ){
+            gravadorMixerLine(System.out);
             return;
         }
         if ( args[0].equals("playLine") ){
@@ -9014,52 +9025,101 @@ System.out.println("BB" + retorno);
         try {
             javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false);
             javax.sound.sampled.DataLine.Info info = new javax.sound.sampled.DataLine.Info(javax.sound.sampled.TargetDataLine.class, format);
-            javax.sound.sampled.Line line = javax.sound.sampled.AudioSystem.getLine(info);
-            javax.sound.sampled.TargetDataLine targetLine = (javax.sound.sampled.TargetDataLine)line;                        
-            targetLine.open(format);
-            targetLine.start();            
-            int BUFFER_SIZE = 1024;            
-            byte[] buff = new byte[BUFFER_SIZE];            
-            byte[] buff2 = new byte[BUFFER_SIZE];            
-            int len = 0;   
-            int tmp=0;
-            long lenMix=0;
-            int countB=0;
-            long now = epochmili(null);
-            long tmp_now=0;
-            boolean filter=true;
-            while( (len=targetLine.read(buff, 0, BUFFER_SIZE)) > 0 ){
-                if ( filter ){
-                    lenMix=0;
-                    for ( int i=0;i<len;i++ ){
-                        tmp=buff[i];
-                        tmp += 128;
-                        lenMix+=tmp;
-                    }
-                    if ( lenMix < 120000){
-                        countB=0;
-                    }else{
-                        countB++;
-                    }
-                    if ( countB >= 10){
-                        now = epochmili(null);
-                        out.write(buff, 0, len);
-                    }else{
-                        tmp_now = epochmili(null);
-                        if ( tmp_now < now+1000 )
-                            out.write(buff, 0, len);
-                        else
-                            out.write(buff2, 0, len);
-                    }
-                }else
-                    out.write(buff, 0, len);
-                out.flush();
-            }
+            javax.sound.sampled.Line line_ = javax.sound.sampled.AudioSystem.getLine(info);
+            javax.sound.sampled.TargetDataLine line = (javax.sound.sampled.TargetDataLine)line_;
+            line.open(format);
+            line.start(); 
+            filterLine(line, out);         
         } catch (Exception e) {
-            erroFatal(e.toString());
+            erro_amigavel_exception(e);
         }    
     }
 
+    public void gravadorMixerLine(OutputStream out){
+        try {
+            boolean mic=true;
+            //mic=false; mic false da erro -> java.lang.ClassCastException: com.sun.media.sound.DirectAudioDevice$DirectSDL cannot be cast to javax.sound.sampled.TargetDataLine
+            
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false);
+            javax.sound.sampled.Mixer.Info info=null;
+            javax.sound.sampled.Mixer mix=null;
+            javax.sound.sampled.Mixer.Info[] mixers = javax.sound.sampled.AudioSystem.getMixerInfo();
+            for (int i=0;i<mixers.length;i++){
+                if ( mixers[i].getName().equals("Driver de som primário") )
+                    continue;
+                info = mixers[i];
+                mix = javax.sound.sampled.AudioSystem.getMixer(mixers[i]);                
+                if ( 
+                    (mic && mix.getTargetLineInfo().length > 0)
+                    ||(!mic && mix.getSourceLineInfo().length > 0)
+                ){
+                    System.err.println("device -> " + mixers[i].getName());
+                    break;
+                }
+            }
+            if ( info == null ){
+                System.err.println("nenhum mixer foi selecionado!");
+                return;
+            }
+            System.err.println("gravadorMixerLine");            
+            javax.sound.sampled.Line.Info [] infos = null;
+            if ( mic )
+                infos = mix.getTargetLineInfo();
+            else
+                infos = mix.getSourceLineInfo();
+            javax.sound.sampled.Line line_ = mix.getLine(infos[0]);                       
+            javax.sound.sampled.TargetDataLine line = (javax.sound.sampled.TargetDataLine)line_;           
+            if (line == null)
+                throw new UnsupportedOperationException("No recording device found");           
+            line.open(format);
+            line.start();
+            filterLine(line, out);         
+        } catch (Exception e) {
+            erro_amigavel_exception(e);
+        }        
+    }
+    
+    public void filterLine(javax.sound.sampled.TargetDataLine line, OutputStream out) throws Exception{
+        int BUFFER_SIZE = 1024;            
+        byte[] buff = new byte[BUFFER_SIZE];            
+        byte[] buff2 = new byte[BUFFER_SIZE];            
+        int len = 0;   
+        int tmp=0;
+        long lenMix=0;
+        int countB=0;
+        long now = epochmili(null);
+        long tmp_now=0;
+        boolean filter=true;
+        while( (len=line.read(buff, 0, BUFFER_SIZE)) > 0 ){
+            if ( filter ){
+                lenMix=0;
+                for ( int i=0;i<len;i++ ){
+                    tmp=buff[i];
+                    tmp += 128;
+                    lenMix+=tmp;
+                }
+                if ( lenMix < 120000){
+                    countB=0;
+                }else{
+                    countB++;
+                }
+                if ( countB >= 10){
+                    now = epochmili(null);
+                    out.write(buff, 0, len);
+                }else{
+                    tmp_now = epochmili(null);
+                    if ( tmp_now < now+1000 )
+                        out.write(buff, 0, len);
+                    else
+                        out.write(buff2, 0, len);
+                }
+            }else
+                out.write(buff, 0, len);
+            out.flush();
+        }          
+        
+    }
+    
     public void playLine(InputStream in){
         try{
             // wasapi   -> Stream #0:0: Audio: pcm_f32le ([3][0][0][0] / 0x0003), 48000 Hz, mono, flt, 1536 kb/s
@@ -9081,86 +9141,6 @@ System.out.println("BB" + retorno);
         }        
     }
     
-    public void call(String [] args){
-        try{        
-            Object [] objs=get_parm_ip_port_server_send(args);
-            if ( objs == null )
-                erroFatal("Parametro invalido");
-            String ip=(String)objs[0];
-            int port=(Integer)objs[1];
-            boolean server=(Boolean)objs[2];
-            boolean send=(Boolean)objs[3];
-            String print_after="";
-
-            if ( server ){
-                if ( ip == null ){
-                    String [] ipv4_ipv6=show_ips(true, 15, false, false);
-                    if ( ip == null )
-                        ip = ipv4_ipv6[1];
-                    if ( ip == null )
-                        ip = ipv4_ipv6[0];
-                }
-            }
-            if ( ip == null ){
-                System.err.println("Nenhum ip foi encontrado!");
-                System.exit(1);
-            }                
-            if ( port == -1 )
-                port = 222;
-            if ( server )
-                if ( !send )
-                    print_after="# cliente command:\n# y call -client -ip " + ip + " -port " + port + " -send";
-                else
-                    print_after="# cliente command:\n# y call -client -ip " + ip + " -port " + port;            
-            try{
-                int len_buffer=BUFFER_SIZE*1024;
-                byte [] buffer=new byte[len_buffer];
-                int len=0;
-                if ( server ){
-                    Socket s = null;
-                    ServerSocket ss=null;
-                    try{
-                        ss=new ServerSocket(port, 1,InetAddress.getByName(ip));
-                    }catch(Exception ee){
-                        if ( ee.toString().equals("java.net.BindException: Address already in use (Bind failed)") ){
-                            String aux="";
-                            if ( !send )
-                                aux=" -receive";
-                            System.err.println("Porta " + port + " em uso! - Tente: y call -port " + (port+1)+aux);
-                            System.exit(1);                        
-                        }
-                        throw ee;
-                    }
-                    System.out.println(print_after);
-                    s = ss.accept();
-                    OutputStream os = s.getOutputStream();
-                    InputStream is = s.getInputStream();
-                    if ( send ){
-                        gravadorLine(os);
-                    }else{
-                        playLine(is);
-                    }
-                    s.close();
-                    ss.close();
-                }else{
-                    Socket s = new Socket(InetAddress.getByName(ip), port);                        
-                    OutputStream os = s.getOutputStream();
-                    InputStream is = s.getInputStream();
-                    if ( send ){
-                        gravadorLine(os);
-                    }else{
-                        playLine(is);
-                    }
-                    s.close();
-                }
-            }catch(Exception e){
-                erro_amigavel_exception(e);
-            }   
-        }catch(Exception e){
-            erro_amigavel_exception(e);
-        } 
-    }
-    
     public void gravador(String caminho){
         int z=1;
         try {
@@ -9173,10 +9153,10 @@ System.out.println("BB" + retorno);
             z=3;
             targetLine.start();
             z=4;            
-            javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(targetLine);            
+            javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(targetLine);                        
             z=5;
-            if ( caminho == null ){
-                z=6;                                
+            if ( caminho == null ){ // java.io.IOException: stream length not specified ---> o problema esta no ais!!
+                z=6;          
                 javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, System.out);                            
                 z=7;
             }else{
@@ -9197,13 +9177,10 @@ System.out.println("BB" + retorno);
             javax.sound.sampled.Mixer mix=null;
             javax.sound.sampled.Mixer.Info[] mixers = javax.sound.sampled.AudioSystem.getMixerInfo();
             for (int i=0;i<mixers.length;i++){
-                /*
+                
                 // lista devices
-                if ( 1 == 1 ){
-                    System.out.println(mixers[i].getName());
-                    continue;
-                }
-                */
+                //if ( 1 == 1 ){System.out.println(mixers[i].getName());continue;}
+                
                 
                 /*
 ? Driver de som primário
@@ -9223,20 +9200,25 @@ Obs: com.sun.media.sound.PortMixer$PortMixerPort cannot be cast to javax.sound.s
                 // Driver de captura de som primário
                 // Microfone (HUSKY)
                 // Alto-falantes (HUSKY)
-                if( mixers[i].getName().equals("Driver de captura de som primário")){
+                if( mixers[i].getName().startsWith("Microfone (HUSKY)")){
                     //ok
                 }else{
                     continue;
                 }                
                 info=mixers[i];
                 mix = javax.sound.sampled.AudioSystem.getMixer(mixers[i]);
-                if ( mix.getTargetLineInfo().length > 0 || mix.getTargetLines().length > 0 ){
+                if ( mix.getTargetLineInfo().length > 0 || mix.getTargetLines().length > 0 || mix.getSourceLineInfo().length > 0 ){
                     System.out.println("ok " + mixers[i].getName());
                 }else{
                     System.out.println("nada para " + mixers[i].getName());
                 }
             }
+            if ( info == null ){
+                System.out.println("nenhum mixer foi selecionado!");
+                return;
+            }
             System.out.println("gravador mixer");            
+            
             javax.sound.sampled.Line.Info [] targetLineInfo = mix.getTargetLineInfo();            
             System.out.println("getTargetLines " + mix.getTargetLines().length);
             System.out.println("getTargetLineInfo " + mix.getTargetLineInfo().length);            
@@ -9247,8 +9229,8 @@ Obs: com.sun.media.sound.PortMixer$PortMixerPort cannot be cast to javax.sound.s
             targetLine.open(new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false));
             targetLine.start();
             System.out.println("gravador mixer line startada");
-            javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(targetLine);
-            if ( caminho == null ){
+            javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(targetLine);            
+            if ( caminho == null ){ // erro java.io.IOException: stream length not specified
                 javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, System.out);                            
             }else{
                 System.out.println("gravando...");            
@@ -9315,6 +9297,88 @@ Obs: com.sun.media.sound.PortMixer$PortMixerPort cannot be cast to javax.sound.s
             //erro_amigavel_exception(e);
             erroFatal(z + " " + e.toString());
         }        
+    }
+    
+    
+    public void call(String [] args){
+        try{        
+            Object [] objs=get_parm_ip_port_server_send(args);
+            if ( objs == null )
+                erroFatal("Parametro invalido");
+            String ip=(String)objs[0];
+            int port=(Integer)objs[1];
+            boolean server=(Boolean)objs[2];
+            //boolean send=(Boolean)objs[3];
+            String print_after="";
+
+            if ( server ){
+                if ( ip == null ){
+                    String [] ipv4_ipv6=show_ips(true, 15, false, false);
+                    if ( ip == null )
+                        ip = ipv4_ipv6[1];
+                    if ( ip == null )
+                        ip = ipv4_ipv6[0];
+                }
+            }
+            if ( ip == null ){
+                System.err.println("Nenhum ip foi encontrado!");
+                System.exit(1);
+            }                
+            if ( port == -1 )
+                port = 222;
+            if ( server )
+                print_after="# cliente command:\n# y call -client -ip " + ip + " -port " + port;            
+            try{
+                int len_buffer=BUFFER_SIZE*1024;
+                byte [] buffer=new byte[len_buffer];
+                int len=0;
+                if ( server ){
+                    Socket s = null;
+                    ServerSocket ss=null;
+                    try{
+                        ss=new ServerSocket(port, 1,InetAddress.getByName(ip));
+                    }catch(Exception ee){
+                        if ( ee.toString().equals("java.net.BindException: Address already in use (Bind failed)") ){
+                            String aux="";
+                            System.err.println("Porta " + port + " em uso! - Tente: y call -port " + (port+1)+aux);
+                            System.exit(1);                        
+                        }
+                        throw ee;
+                    }
+                    System.out.println(print_after);
+                    s = ss.accept();
+                    OutputStream os = s.getOutputStream();
+                    InputStream is = s.getInputStream();
+                    new Thread(){
+                        public void run(){
+                            try{
+                                gravadorLine(os);
+                            }catch(Exception e1){}
+                        }
+                    }.start();                    
+                    playLine(is);
+                    s.close();
+                    ss.close();
+                }else{
+                    Socket s = new Socket(InetAddress.getByName(ip), port);                        
+                    OutputStream os = s.getOutputStream();
+                    InputStream is = s.getInputStream();
+                    new Thread(){
+                        public void run(){
+                            try{
+                                gravadorLine(os);
+                            }catch(Exception e1){}
+                        }
+                    }.start();                    
+                    playLine(is);
+                    s.close();
+                }
+            }catch(Exception e){
+                erro_amigavel_exception(e);
+            }   
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+        } 
     }
     
     public void kill(String [] parms_, OutputStream out, int index){
@@ -10902,7 +10966,9 @@ class Util{
         if ( e.toString().equals("java.net.ConnectException: Connection refused (Connection refused)") )
             return "Erro, offline";
         if ( e.toString().equals("java.net.SocketException: Connection reset by peer: socket write error") )
-            return "Erro, desconectado";
+            return "Desconectou-se!";
+        if ( e.toString().equals("java.net.SocketException: Connection reset") )
+            return "Desconectou-se!";
         return e.toString();        
     }
     
@@ -14977,7 +15043,10 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y mouse]\n"
 /* class by manual */                + "  [y gravador]\n"
 /* class by manual */                + "  [y gravadorLine]\n"
+/* class by manual */                + "  [y gravadorMixerLine]\n"
 /* class by manual */                + "  [y playWav]\n"
+/* class by manual */                + "  [y playLine]\n"
+/* class by manual */                + "  [y call]\n"
 /* class by manual */                + "  [y playLine]\n"
 /* class by manual */                + "  [y kill]\n"
 /* class by manual */                + "  [y win]\n"
@@ -15445,11 +15514,16 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y gravador > file.wav # com problema\n"
 /* class by manual */                + "[y gravadorLine]\n"
 /* class by manual */                + "    y gravadorLine | y playLine\n"
+/* class by manual */                + "[y gravadorMixerLine]\n"
+/* class by manual */                + "    y gravadorMixerLine | y playLine\n"
+/* class by manual */                + "    Obs: nao foi possivel implementar o mixer alto-falante, somente o mic\n"
 /* class by manual */                + "[y playWav]\n"
 /* class by manual */                + "    y playWav file.wav\n"
-/* class by manual */                + "    y cat file.wav | y playWav    \n"
+/* class by manual */                + "    y cat file.wav | y playWav  # somente Wave dessa configuracao ate agora.\n"
 /* class by manual */                + "[y playLine]\n"
 /* class by manual */                + "    y gravadorLine | y playLine\n"
+/* class by manual */                + "[y call]\n"
+/* class by manual */                + "    y call\n"
 /* class by manual */                + "[y kill]\n"
 /* class by manual */                + "    y kill 3434\n"
 /* class by manual */                + "    y kill 3434 3435\n"
@@ -15575,6 +15649,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
