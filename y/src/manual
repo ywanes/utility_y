@@ -83,6 +83,9 @@ usage:
   [y ips]
   [y mouse]
   [y gravador]
+  [y gravadorLine]
+  [y playWav]
+  [y playLine]
   [y kill]
   [y win]
   [y speed]
@@ -546,6 +549,14 @@ Exemplos...
     obs: bloquear a tela faz o programa sair imediatamente
 [y gravador]
     y gravador file.wav
+    y gravador > file.wav # com problema
+[y gravadorLine]
+    y gravadorLine | y playLine
+[y playWav]
+    y playWav file.wav
+    y cat file.wav | y playWav    
+[y playLine]
+    y gravadorLine | y playLine
 [y kill]
     y kill 3434
     y kill 3434 3435

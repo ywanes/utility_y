@@ -117,6 +117,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipOutputStream;
+import javax.sound.sampled.AudioFileFormat;
 import javax.swing.JOptionPane;
 
 
@@ -1613,8 +1614,30 @@ cat buffer.log
             mouse(args);
             return;
         }
-        if ( args[0].equals("gravador") && args.length == 2 ){
-            gravador(args[1]);
+        if ( args[0].equals("gravador") ){
+            if ( args.length > 1 )
+                gravador(args[1]);
+            else
+                gravador(null);
+            return;
+        }
+        if ( args[0].equals("playWav") ){
+            if ( args.length > 1 )
+                playWav(args[1]);
+            else
+                playWav(null);
+            return;
+        }
+        if ( args[0].equals("gravadorLine") ){
+            gravadorLine(System.out);
+            return;
+        }
+        if ( args[0].equals("playLine") ){
+            playLine(System.in);
+            return;
+        }
+        if ( args[0].equals("call") ){
+            call(args);
             return;
         }
         if ( args[0].equals("kill") && args.length >= 2 ){
@@ -7762,6 +7785,7 @@ System.out.println("BB" + retorno);
         return new Object []{listOn, noHeader, parm};
     }
     
+    // usado para take
     private Object [] get_parm_ip_port_server_send_pass_paths(String [] args){
         String ip=null;
         int port=-1;
@@ -7848,6 +7872,7 @@ System.out.println("BB" + retorno);
         return new Object []{ip, port, server, send, pass, paths};
     }
 
+    // usado para speed e call
     private Object [] get_parm_ip_port_server_send(String [] args){
         String ip=null;
         int port=-1;
@@ -8985,19 +9010,275 @@ System.out.println("BB" + retorno);
         }
     }
 
-    public void gravador(String caminho){
+    public void gravadorLine(OutputStream out){
         try {
-            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 1, true, true);
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false);
+            javax.sound.sampled.DataLine.Info info = new javax.sound.sampled.DataLine.Info(javax.sound.sampled.TargetDataLine.class, format);
+            javax.sound.sampled.Line line = javax.sound.sampled.AudioSystem.getLine(info);
+            javax.sound.sampled.TargetDataLine targetLine = (javax.sound.sampled.TargetDataLine)line;                        
+            targetLine.open(format);
+            targetLine.start();            
+            int BUFFER_SIZE = 1024;            
+            byte[] buff = new byte[BUFFER_SIZE];            
+            byte[] buff2 = new byte[BUFFER_SIZE];            
+            int len = 0;   
+            int tmp=0;
+            long lenMix=0;
+            int countB=0;
+            long now = epochmili(null);
+            long tmp_now=0;
+            while( (len=targetLine.read(buff, 0, BUFFER_SIZE)) > 0 ){
+                lenMix=0;
+                for ( int i=0;i<len;i++ ){
+                    tmp=buff[i];
+                    tmp += 128;
+                    lenMix+=tmp;
+                }
+                if ( lenMix < 120000){
+                    countB=0;
+                }else{
+                    countB++;
+                }
+                if ( countB >= 10){
+                    now = epochmili(null);
+                    out.write(buff, 0, len);
+                }else{
+                    tmp_now = epochmili(null);
+                    if ( tmp_now < now+1000 )
+                        out.write(buff, 0, len);
+                    else
+                        out.write(buff2, 0, len);
+                }
+                out.flush();
+            }
+        } catch (Exception e) {
+            erroFatal(e.toString());
+        }    
+    }
+
+    public void playLine(InputStream in){
+        try{
+            javax.sound.sampled.AudioFormat audioFormat=new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false);
+            javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.SourceDataLine.class, audioFormat);
+            javax.sound.sampled.SourceDataLine sourceLine=(javax.sound.sampled.SourceDataLine)javax.sound.sampled.AudioSystem.getLine(info);            
+            sourceLine.open(audioFormat);
+            sourceLine.start();
+            int BUFFER_SIZE = 1024;
+            byte[] buff = new byte[BUFFER_SIZE];
+            int len = 0;    
+            while ( (len=in.read(buff, 0, BUFFER_SIZE)) != -1 ){
+                sourceLine.write(buff, 0, len);
+            }
+        }catch(Exception e){
+            erroFatal(e.toString());
+        }        
+    }
+    
+    public void call(String [] args){
+        try{        
+            Object [] objs=get_parm_ip_port_server_send(args);
+            if ( objs == null )
+                erroFatal("Parametro invalido");
+            String ip=(String)objs[0];
+            int port=(Integer)objs[1];
+            boolean server=(Boolean)objs[2];
+            boolean send=(Boolean)objs[3];
+            String print_after="";
+
+            if ( server ){
+                if ( ip == null ){
+                    String [] ipv4_ipv6=show_ips(true, 15, false, false);
+                    if ( ip == null )
+                        ip = ipv4_ipv6[1];
+                    if ( ip == null )
+                        ip = ipv4_ipv6[0];
+                }
+            }
+            if ( ip == null ){
+                System.err.println("Nenhum ip foi encontrado!");
+                System.exit(1);
+            }                
+            if ( port == -1 )
+                port = 222;
+            if ( server )
+                if ( !send )
+                    print_after="# cliente command:\n# y call -client -ip " + ip + " -port " + port + " -send";
+                else
+                    print_after="# cliente command:\n# y call -client -ip " + ip + " -port " + port;            
+            try{
+                int len_buffer=BUFFER_SIZE*1024;
+                byte [] buffer=new byte[len_buffer];
+                int len=0;
+                if ( server ){
+                    Socket s = null;
+                    ServerSocket ss=null;
+                    try{
+                        ss=new ServerSocket(port, 1,InetAddress.getByName(ip));
+                    }catch(Exception ee){
+                        if ( ee.toString().equals("java.net.BindException: Address already in use (Bind failed)") ){
+                            String aux="";
+                            if ( !send )
+                                aux=" -receive";
+                            System.err.println("Porta " + port + " em uso! - Tente: y call -port " + (port+1)+aux);
+                            System.exit(1);                        
+                        }
+                        throw ee;
+                    }
+                    System.out.println(print_after);
+                    s = ss.accept();
+                    OutputStream os = s.getOutputStream();
+                    InputStream is = s.getInputStream();
+                    if ( send ){
+                        gravadorLine(os);
+                    }else{
+                        playLine(is);
+                    }
+                    s.close();
+                    ss.close();
+                }else{
+                    Socket s = new Socket(InetAddress.getByName(ip), port);                        
+                    OutputStream os = s.getOutputStream();
+                    InputStream is = s.getInputStream();
+                    if ( send ){
+                        gravadorLine(os);
+                    }else{
+                        playLine(is);
+                    }
+                    s.close();
+                }
+            }catch(Exception e){
+                erro_amigavel_exception(e);
+            }   
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+        } 
+    }
+    
+    public void gravador(String caminho){
+        int z=1;
+        try {
+            z=2;
+            javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 1, true, false);
             javax.sound.sampled.DataLine.Info info = new javax.sound.sampled.DataLine.Info(javax.sound.sampled.TargetDataLine.class, format);
             javax.sound.sampled.Line line = javax.sound.sampled.AudioSystem.getLine(info);
             javax.sound.sampled.TargetDataLine targetLine = (javax.sound.sampled.TargetDataLine)line;            
             targetLine.open(format);
+            z=3;
+            targetLine.start();
+            z=4;            
+            javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(targetLine);            
+            z=5;
+            if ( caminho == null ){
+                z=6;                                
+                javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, System.out);                            
+                z=7;
+            }else{
+                z=8;
+                System.out.println("gravando...");            
+                z=9;
+                javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));            
+                z=1;
+            }
+        } catch (Exception e) {
+            erroFatal(z + " " + e.toString());
+        }        
+    }
+    
+    public void gravador2(String caminho){
+        try {
+            javax.sound.sampled.Mixer.Info info=null;
+            javax.sound.sampled.Mixer mix=null;
+            javax.sound.sampled.Mixer.Info[] mixers = javax.sound.sampled.AudioSystem.getMixerInfo();
+            for (int i=0;i<mixers.length;i++){
+                // "Driver de captura de som primário"
+                // "Microfone (HUSKY)"
+                if( mixers[i].getName().equals("Microfone (HUSKY)")){
+                    //ok
+                }else
+                    continue;
+                //System.out.println(mixers[i].getName());
+                info=mixers[i];
+                mix = javax.sound.sampled.AudioSystem.getMixer(mixers[i]);
+                int len = mix.getTargetLineInfo().length;
+                if ( len > 0 ){
+                    //System.out.println(len + " " + mixers[i].getName());
+                    break;
+                }
+            }
+            javax.sound.sampled.Line.Info [] targetLineInfo = mix.getTargetLineInfo();
+            javax.sound.sampled.Line line = mix.getLine(targetLineInfo[0]);           
+            javax.sound.sampled.TargetDataLine targetLine = (javax.sound.sampled.TargetDataLine)line;           
+            if (line == null)
+                throw new UnsupportedOperationException("No recording device found");           
+            targetLine.open(new javax.sound.sampled.AudioFormat(44100, 16, 1, true, false));
             targetLine.start();
             javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(targetLine);
-            System.out.println("gravando...");
-            javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));
+            if ( caminho == null ){
+                javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, System.out);                            
+            }else{
+                System.out.println("gravando...");            
+                javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));            
+            }
         } catch (Exception e) {
             erroFatal(e.toString());
+        }        
+    }
+    
+    public void playWav(String caminho){
+        int z=0;
+        try{            
+            z=1;
+            javax.sound.sampled.AudioInputStream audioStream=null;
+            z=2;
+            if ( caminho == null ){
+                z=3;                
+                audioStream = javax.sound.sampled.AudioSystem.getAudioInputStream(System.in);
+                z=4;
+            }else{
+                z=5;
+                audioStream = javax.sound.sampled.AudioSystem.getAudioInputStream(new File(caminho));                
+                z=6;
+            }
+            z=7;
+            javax.sound.sampled.AudioFormat audioFormat=null;
+            z=8;
+            if ( caminho == null ){
+                z=9;                
+                audioFormat=new javax.sound.sampled.AudioFormat(44100, 16, 1, true, false);                
+                z=10;
+            }else{
+                z=11;
+                audioFormat = audioStream.getFormat();
+                z=12;
+                //System.out.println("format detected:");
+                //z=13;
+                //System.out.println(audioFormat);
+                //z=14;
+            }
+            z=15;
+            //audioFormat = audioStream.getFormat();
+            //System.out.println(audioFormat);
+            //PCM_SIGNED 44100.0 Hz, 16 bit, mono, 2 bytes/frame, little-endian            
+            javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.SourceDataLine.class, audioFormat);
+            z=16;
+            javax.sound.sampled.SourceDataLine sourceLine=(javax.sound.sampled.SourceDataLine)javax.sound.sampled.AudioSystem.getLine(info);
+            z=17;
+            sourceLine.open(audioFormat);
+            z=18;
+            sourceLine.start();
+            z=19;
+
+            int BUFFER_SIZE = 1024;
+            byte[] buff = new byte[BUFFER_SIZE];
+            int len = 0;            
+            while ( (len=audioStream.read(buff, 0, BUFFER_SIZE)) != -1 ){
+                sourceLine.write(buff, 0, len);
+            }
+            sourceLine.drain();
+            sourceLine.close();
+        }catch(Exception e){
+            //erro_amigavel_exception(e);
+            erroFatal(z + " " + e.toString());
         }        
     }
     
@@ -12930,6 +13211,8 @@ inclua a linha abaixo depois de TagetFramework em wasapi.csproj:
 
 // roda
 dotnet run > file.wav
+// ouvindo mic em tempo real, delay 1 segundo
+wasapi only_mic | "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe" -I null --play-and-exit -
 
 // publishs
 dotnet publish
@@ -12953,108 +13236,108 @@ namespace LoopbackWithMic
     {
         static void Main(string[] args)
         {
-			bool flag_system=true;
-			bool flag_mic=true;
-			if ( args.Length > 0 )
-			{
-				if ( args[0] == "only_system" )
-				{
-					flag_mic=false;
-				}
-				else
-				{
-					if ( args[0] == "only_mic" )
-					{
-						flag_system=false;
-					}
-					else
-					{
-						Console.WriteLine("\nParametro incorreto, veja as opções:\nwasapi > file.wav\nwasapi only_mic > file.wav\nwasapi only_system > file.wav\nObs: only_system só envia dados enquanto houve som sendo propagado");
-						return;
-					}
-				}
-			}			
+            bool flag_system=true;
+            bool flag_mic=true;
+            if ( args.Length > 0 )
+            {
+                if ( args[0] == "only_system" )
+                {
+                    flag_mic=false;
+                }
+                else
+                {
+                    if ( args[0] == "only_mic" )
+                    {
+                        flag_system=false;
+                    }
+                    else
+                    {
+                        Console.WriteLine("\nParametro incorreto, veja as opções:\nwasapi > file.wav\nwasapi only_mic > file.wav\nwasapi only_system > file.wav\nObs: only_system só envia dados enquanto houve som sendo propagado");
+                        return;
+                    }
+                }
+            }           
             var enumerator = new MMDeviceEnumerator();
             var output = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
             var output_false = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).Where(x => x != output).FirstOrDefault();
-			var input=enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
-			List<IWaveProvider> pp = new List<IWaveProvider>();
-			List<WasapiCapture> capture = new List<WasapiCapture>();
+            var input=enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
+            List<IWaveProvider> pp = new List<IWaveProvider>();
+            List<WasapiCapture> capture = new List<WasapiCapture>();
 
-			if ( flag_system )
-				capture.Add(new WasapiLoopbackCapture(output));			
-			if ( flag_mic )
-				capture.Add(new WasapiCapture(input));
-			List<BufferedWaveProvider> provider = new List<BufferedWaveProvider>();
-			for ( var i=0;i<capture.Count;i++ )
-			{
-				provider.Add(new BufferedWaveProvider(capture.ElementAt(i).WaveFormat));
-				if(capture.ElementAt(i).WaveFormat.Channels > 1)
-				{
-					var mon = new NAudio.Wave.SampleProviders.StereoToMonoSampleProvider(provider.ElementAt(i).ToSampleProvider());
-					pp.Add(mon.ToWaveProvider());
-				}
-				else
-				{
-					pp.Add(provider.ElementAt(i));
-				}
-			}
-            MixingWaveProvider32 mix = new MixingWaveProvider32(pp);						
-			MemoryStream ms=new MemoryStream();
-			WaveRecorderMemory record = new WaveRecorderMemory(mix, ms);
-            var speaker = new WasapiOut(output_false, AudioClientShareMode.Shared, true, 15);			
+            if ( flag_system )
+                capture.Add(new WasapiLoopbackCapture(output));           
+            if ( flag_mic )
+                capture.Add(new WasapiCapture(input));
+            List<BufferedWaveProvider> provider = new List<BufferedWaveProvider>();
+            for ( var i=0;i<capture.Count;i++ )
+            {
+                provider.Add(new BufferedWaveProvider(capture.ElementAt(i).WaveFormat));
+                if(capture.ElementAt(i).WaveFormat.Channels > 1)
+                {
+                    var mon = new NAudio.Wave.SampleProviders.StereoToMonoSampleProvider(provider.ElementAt(i).ToSampleProvider());
+                    pp.Add(mon.ToWaveProvider());
+                }
+                else
+                {
+                    pp.Add(provider.ElementAt(i));
+                }
+            }
+            MixingWaveProvider32 mix = new MixingWaveProvider32(pp);                       
+            MemoryStream ms=new MemoryStream();
+            WaveRecorderMemory record = new WaveRecorderMemory(mix, ms);
+            var speaker = new WasapiOut(output_false, AudioClientShareMode.Shared, true, 15);           
             speaker.Init(record);
             List<byte> bytes = new List<byte>();
-			for ( var i=0;i<capture.Count;i++ )
-			{
-				var tmp=provider.ElementAt(i);
-				capture.ElementAt(i).DataAvailable += (s, a) =>
-				{
-					tmp.AddSamples(a.Buffer, 0, a.BytesRecorded);
-				};
-				capture.ElementAt(i).StartRecording();
-			}
+            for ( var i=0;i<capture.Count;i++ )
+            {
+                var tmp=provider.ElementAt(i);
+                capture.ElementAt(i).DataAvailable += (s, a) =>
+                {
+                    tmp.AddSamples(a.Buffer, 0, a.BytesRecorded);
+                };
+                capture.ElementAt(i).StartRecording();
+            }
             speaker.Play();
             bool first=true;
-			Stream stream_=Console.OpenStandardOutput();
-			Byte [] buff;
-			while(true)
-			{
-				if ( first )
-				{
-					if ( ms.Length >= 1920*10 )
-					{
-						buff = ms.ToArray();						
-						ms.SetLength(0);
-						stream_.Write(buff, 0, buff.Length);
-						stream_.Flush();
-						first=false;
-					}
-				}
-				else
-				{
-					if ( ms.Length >= 1920*4 )
-					{
-						buff = ms.ToArray();						
-						ms.SetLength(0);
-						stream_.Write(buff, 0, buff.Length);	
-						stream_.Flush();
-					}
-				}
-				Thread.Sleep(1);
-			}			
+            Stream stream_=Console.OpenStandardOutput();
+            Byte [] buff;
+            while(true)
+            {
+                if ( first )
+                {
+                    if ( ms.Length >= 1920*10 )
+                    {
+                        buff = ms.ToArray();                       
+                        ms.SetLength(0);
+                        stream_.Write(buff, 0, buff.Length);
+                        stream_.Flush();
+                        first=false;
+                    }
+                }
+                else
+                {
+                    if ( ms.Length >= 1920*4 )
+                    {
+                        buff = ms.ToArray();                       
+                        ms.SetLength(0);
+                        stream_.Write(buff, 0, buff.Length);   
+                        stream_.Flush();
+                    }
+                }
+                Thread.Sleep(1);
+            }           
         }
     }
-	
+   
     class WaveRecorderMemory : IWaveProvider, IDisposable
     {
         private WaveFileWriter writer;
         private IWaveProvider source;
 
-		public WaveRecorderMemory(IWaveProvider source, Stream out_)
-        {			
+        public WaveRecorderMemory(IWaveProvider source, Stream out_)
+        {           
             this.source = source;
-			this.writer = new WaveFileWriter(out_, source.WaveFormat);			
+            this.writer = new WaveFileWriter(out_, source.WaveFormat);           
         }
 
         public int Read(byte[] buffer, int offset, int count)
@@ -13076,7 +13359,7 @@ namespace LoopbackWithMic
                 writer.Dispose();
             }
         }
-    }	
+    }   
 }
 */
 
@@ -14658,6 +14941,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y ips]\n"
 /* class by manual */                + "  [y mouse]\n"
 /* class by manual */                + "  [y gravador]\n"
+/* class by manual */                + "  [y gravadorLine]\n"
+/* class by manual */                + "  [y playWav]\n"
+/* class by manual */                + "  [y playLine]\n"
 /* class by manual */                + "  [y kill]\n"
 /* class by manual */                + "  [y win]\n"
 /* class by manual */                + "  [y speed]\n"
@@ -15121,6 +15407,14 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
 /* class by manual */                + "[y gravador]\n"
 /* class by manual */                + "    y gravador file.wav\n"
+/* class by manual */                + "    y gravador > file.wav # com problema\n"
+/* class by manual */                + "[y gravadorLine]\n"
+/* class by manual */                + "    y gravadorLine | y playLine\n"
+/* class by manual */                + "[y playWav]\n"
+/* class by manual */                + "    y playWav file.wav\n"
+/* class by manual */                + "    y cat file.wav | y playWav    \n"
+/* class by manual */                + "[y playLine]\n"
+/* class by manual */                + "    y gravadorLine | y playLine\n"
 /* class by manual */                + "[y kill]\n"
 /* class by manual */                + "    y kill 3434\n"
 /* class by manual */                + "    y kill 3434 3435\n"
@@ -15246,6 +15540,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
