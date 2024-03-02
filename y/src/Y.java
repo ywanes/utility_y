@@ -14290,7 +14290,7 @@ namespace LoopbackWithMic
 /* class texto_longo */         "  controlsTimeout = setTimeout(() => {\n" +
 /* class texto_longo */         "    controlsContainer.style.opacity = '0';\n" +
 /* class texto_longo */         "    document.body.style.cursor = 'none';\n" +
-/* class texto_longo */         "  }, 5000);\n" +
+/* class texto_longo */         "  }, 2500);\n" +
 /* class texto_longo */         "};\n" +
 /* class texto_longo */         "\n" +
 
