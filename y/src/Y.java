@@ -10925,8 +10925,54 @@ class Util{
         }catch(Exception e){
             erro_amigavel_exception(e);
         }
+        result=add_principais(result);
         return result;
     }
+    public String add_principais(String a){
+        if ( a.split(";;;").length > 1 ){
+            String primeira_interface=a.split(";;;")[0];
+            if ( primeira_interface.contains("::") ){
+                String [] ips=primeira_interface.split(";;")[1].split(";");
+                String achou="";
+                for ( int i=0;i<ips.length;i++ ){
+                    for ( int j=0;j<ips.length;j++ ){
+                        if ( ips[j].contains("::") && ips[i].contains(":") && !ips[i].contains("::") ){
+                            //ok
+                        }else                            
+                            continue;
+                        if ( ips[i].startsWith(ips[j].split("::")[0]) ){
+                            achou=ips[j];
+                            break;
+                        }
+                    }
+                    if ( !achou.equals("") )
+                        break;
+                }
+                if ( achou.equals("") )
+                    achou="NAO_ACHOU";
+                String result="";
+                int count_ips=0;
+                boolean other_preenchido=false;
+                for ( int i=0;i<ips.length;i++ ){
+                    if( ips[i].contains("::") && !ips[i].equals(achou) )
+                        continue;
+                    if ( ips[i].contains(":") && !ips[i].contains("::") ){
+                        if ( !other_preenchido )
+                            other_preenchido=true;
+                        else
+                            continue;
+                    }
+                    if ( count_ips > 0 )
+                        result+=";";
+                    result+=ips[i];
+                    count_ips++;
+                }
+                return "Principais;;"+result+";;;"+a;
+            }
+        }
+        return a;
+    }
+    
     public String runtimeExecError = "";
     public String runtimeExec(String line_commands, String [] commands,File file_path){
         try{
@@ -14290,10 +14336,9 @@ namespace LoopbackWithMic
 /* class texto_longo */         "  controlsTimeout = setTimeout(() => {\n" +
 /* class texto_longo */         "    controlsContainer.style.opacity = '0';\n" +
 /* class texto_longo */         "    document.body.style.cursor = 'none';\n" +
-/* class texto_longo */         "  }, 2500);\n" +
+/* class texto_longo */         "  }, 1100);\n" +
 /* class texto_longo */         "};\n" +
 /* class texto_longo */         "\n" +
-
 /* class texto_longo */         "const playPause = () => {\n" +
 /* class texto_longo */         "  try{\n" +
 /* class texto_longo */         "    if (video.paused) {\n" +
