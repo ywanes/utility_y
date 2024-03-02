@@ -1599,15 +1599,15 @@ cat buffer.log
                 if ( args.length == 3 && args[1].equals("-t") )
                     timeout=Integer.parseInt(args[2]);
             }catch(Exception e){}
-            show_ips(true, timeout, false, true);
+            ips(true, 15, false, true);
             return;
         }
         if ( args[0].equals("ips") ){
             int timeout=15;
             if (args.length == 2 && args[1].equals("list"))
-                show_ips(false, timeout, true, true);
+                ips(false, timeout, true, true);
             else
-                show_ips(false, timeout, false, true);
+                ips(false, timeout, false, true);
             return;
         }
         if ( args[0].equals("mouse") ){
@@ -2676,7 +2676,7 @@ cat buffer.log
         }
         if ( server ){
             if ( ip == null ){
-                String [] ipv4_ipv6=show_ips(true, 15, false, false); // "10.0.2.15";
+                String [] ipv4_ipv6=ips(true, 15, false, false); // "10.0.2.15";
                 if ( ip == null )
                     ip = ipv4_ipv6[1];
                 if ( ip == null )
@@ -8895,79 +8895,69 @@ System.out.println("BB" + retorno);
         }
     }
     
-    
-    private String [] show_ips(boolean ping, int timeout, boolean list, boolean printOn){
+    private String [] ips(boolean ping, int timeout, boolean list, boolean printOn){
         String ipv4=null;
         String ipv6=null;
         String ipv6_nat=null;
         String ipv6_my=null;
         String ipv6_other=null;
-        try {
-            int count=0;
-            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                java.net.NetworkInterface iface = interfaces.nextElement();
-                if (iface.isLoopback() || !iface.isUp())
-                    continue;
-                String [] partes=new String[]{".", ":"};
-                boolean first=true;
-                for(int i=0;i<partes.length;i++){
-                    java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();                    
-                    while(addresses.hasMoreElements()) {
-                        java.net.InetAddress addr = addresses.nextElement();
-                        if(addr.getHostAddress().contains(partes[i])){
-                            if ( list && ++count == 1 )
-                                if ( printOn )
-                                    System.out.println("a=$(\ncat << 'EOF'");
-                            if ( first ){
-                                first=false;
-                                if ( printOn )
-                                    System.out.println(iface.getDisplayName()+":");
+        
+        int count=0;
+        String ips_string=ipsString();
+        String [] tuplas = ips_string.split(";;;");            
+        for ( String tupla : tuplas ){
+            String [] tupla_partes=tupla.split(";;");
+            String iface=tupla_partes[0];
+            String [] ips=tupla_partes[1].split(";");
+            boolean first=true;
+            for ( String ip : ips ){
+                if ( list && ++count == 1 )
+                    if ( printOn )
+                        System.out.println("a=$(\ncat << 'EOF'");
+                if ( first ){
+                    first=false;
+                    if ( printOn )
+                        System.out.println(iface+":");
+                }
+                if ( ip.contains(".") ){ // ipv4
+                    if ( ipv4 == null )
+                        ipv4=ip;
+                }else{ 
+                    if ( ip.contains(":") ){ // ipv6
+                        if ( ip.startsWith("fe") ){
+                            if ( ipv6_nat == null )
+                                ipv6_nat=ip;
+                        }else{
+                            if ( ip.contains("::") ){
+                                if ( ipv6_other == null )
+                                    ipv6_my=ip;
+                            }else{
+                                ipv6_other=ip;
                             }
-                            String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
-                            for ( int j=0;j<10;j++ )
-                                ip=ip.replace(":0:","::").replace(":::","::");
-                            if ( ip.contains(".") ){ // ipv4
-                                if ( ipv4 == null )
-                                    ipv4=ip;
-                            }else{ 
-                                if ( ip.contains(":") ){ // ipv6
-                                    if ( ip.startsWith("fe") ){
-                                        if ( ipv6_nat == null )
-                                            ipv6_nat=ip;
-                                    }else{
-                                        if ( ip.contains("::") ){
-                                            if ( ipv6_other == null )
-                                                ipv6_my=ip;
-                                        }else{
-                                            ipv6_other=ip;
-                                        }
-                                    }
-                                }else{
-                                    // desconhecido
-                                }
-                            }
-                            String ping_=null;
-                            if ( ping )
-                                ping_=ping(ip, timeout);
-                            if ( printOn )
-                                format_show_ip(ip, ping_);
                         }
+                    }else{
+                        // desconhecido
                     }
                 }
-            }
-            if( list && count > 0 )
+                String ping_=null;
+                if ( ping )
+                    ping_=ping(ip, timeout);
                 if ( printOn )
-                    System.out.println("EOF\n)\necho \"$a\" | y ping list");
-        } catch (java.net.SocketException e) {
-            throw new RuntimeException(e);
-        } 
+                    format_show_ip(ip, ping_);
+            }
+        }
+        if( list && count > 0 )
+            if ( printOn )
+                System.out.println("EOF\n)\necho \"$a\" | y ping list");
+
         ipv6=ipv6_my;
+        if ( ipv6 == null )
+            ipv6=ipv6_other;        
         if ( ipv6 == null )
             ipv6=ipv6_nat;
         return new String[]{ipv4, ipv6};
-    }           
-
+    }   
+    
     private void mouse(String [] args){
         try{
             if ( args.length == 1 ){
@@ -9313,7 +9303,7 @@ Obs: com.sun.media.sound.PortMixer$PortMixerPort cannot be cast to javax.sound.s
 
             if ( server ){
                 if ( ip == null ){
-                    String [] ipv4_ipv6=show_ips(true, 15, false, false);
+                    String [] ipv4_ipv6=ips(true, 15, false, false);
                     if ( ip == null )
                         ip = ipv4_ipv6[1];
                     if ( ip == null )
@@ -9343,7 +9333,12 @@ Obs: com.sun.media.sound.PortMixer$PortMixerPort cannot be cast to javax.sound.s
                             System.err.println("Porta " + port + " em uso! - Tente: y call -port " + (port+1)+aux);
                             System.exit(1);                        
                         }
-                        throw ee;
+                        if ( ee.toString().equals("java.net.BindException: Cannot assign requested address: JVM_Bind") ){
+                            String aux="";
+                            System.err.println("ip com problema: " + InetAddress.getByName(ip).toString().replace("/", ""));
+                            System.exit(1);                        
+                        }
+                        erro_amigavel_exception(ee);
                     }
                     System.out.println(print_after);
                     s = ss.accept();
@@ -9643,7 +9638,7 @@ Obs: com.sun.media.sound.PortMixer$PortMixerPort cannot be cast to javax.sound.s
         
         if ( server ){
             if ( ip == null ){
-                String [] ipv4_ipv6=show_ips(true, 15, false, false); // "10.0.2.15";
+                String [] ipv4_ipv6=ips(true, 15, false, false); // "10.0.2.15";
                 if ( ip == null )
                     ip = ipv4_ipv6[1];
                 if ( ip == null )
@@ -10892,6 +10887,46 @@ class Util{
         }
     }
     
+    public String ipsString(){
+        // return fake test:
+        //if ( 1 == 1 ) return "Realtek PCIe GbE Family Controller;;192.168.15.11;2804:1b2:1002:3473:921:b978:fa99:9cd;2804:1b2:1002:3473:2119:9128:824e:f2d5;fe80::2ff8:c289:c063:8686";
+        
+        String result="";
+        try{
+            int count_interface=0;
+            int count_address_in_interface=0;
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp())
+                    continue;
+                if (count_interface > 0)
+                    result+=";;;";
+                result+=iface.getDisplayName()+";;";
+                count_interface++;
+                count_address_in_interface=0;
+                String [] filter=new String[]{".", ":"};
+                for(int i=0;i<filter.length;i++){
+                    java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();                    
+                    while(addresses.hasMoreElements()){
+                        java.net.InetAddress addr = addresses.nextElement();
+                        String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
+                        for ( int j=0;j<10;j++ )
+                            ip=ip.replace(":0:","::").replace(":::","::");
+                        if (!ip.contains(filter[i]))
+                            continue;
+                        if ( count_address_in_interface > 0 )
+                            result+=";";
+                        result+=ip;
+                        count_address_in_interface++;
+                    }
+                }            
+            }
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+        }
+        return result;
+    }
     public String runtimeExecError = "";
     public String runtimeExec(String line_commands, String [] commands,File file_path){
         try{
