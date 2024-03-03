@@ -1630,9 +1630,13 @@ cat buffer.log
         }
         if ( args[0].equals("playWav") ){
             if ( args.length > 1 )
-                playWav(args[1]);
+                playWav(false, args[1]);
             else
-                playWav(null);
+                playWav(false, null);
+            return;
+        }
+        if ( args[0].equals("playLine") ){
+            playLine(false, System.in);
             return;
         }
         if ( args[0].equals("gravadorLine") ){
@@ -1641,10 +1645,6 @@ cat buffer.log
         }
         if ( args[0].equals("gravadorMixerLine") ){
             gravador(true, true, null, System.out);
-            return;
-        }
-        if ( args[0].equals("playLine") ){
-            playLine(System.in);
             return;
         }
         if ( args[0].equals("call") ){
@@ -9072,6 +9072,12 @@ System.out.println("BB" + retorno);
         }          
     }
 
+    public boolean evitarDeviceAudio(String a){
+        if ( a.contains("som primário") )
+            return true;
+        return false;
+    }
+    
     public javax.sound.sampled.TargetDataLine getLineReader(boolean usingMixer){
         try{
             boolean mic=true;
@@ -9081,12 +9087,14 @@ System.out.println("BB" + retorno);
                     javax.sound.sampled.Mixer mix = javax.sound.sampled.AudioSystem.getMixer(mixers[i]);                
                     if ( mix.getTargetLineInfo().length == 0 ) 
                         continue;
+                    if ( evitarDeviceAudio(mixers[i].getName()) )
+                        continue;
                     System.err.println("LineReaderDevice -> " + mixers[i].getName());
                     System.err.flush();
                     javax.sound.sampled.Line.Info [] infos = mix.getTargetLineInfo();
                     javax.sound.sampled.Line line_ = mix.getLine(infos[0]);                       
-                    javax.sound.sampled.TargetDataLine line = (javax.sound.sampled.TargetDataLine)line_;           
-                    line.open(getAudioFormatBase());
+                    javax.sound.sampled.TargetDataLine line = (javax.sound.sampled.TargetDataLine)line_;                               
+                    line.open(line.getFormat());
                     line.start();
                     return line;
                 }
@@ -9094,11 +9102,11 @@ System.out.println("BB" + retorno);
             }else{                            
                 javax.sound.sampled.AudioFormat format=getAudioFormatBase();
                 javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.TargetDataLine.class, format);
-                javax.sound.sampled.Line line=javax.sound.sampled.AudioSystem.getLine(info);
-                javax.sound.sampled.TargetDataLine result=(javax.sound.sampled.TargetDataLine)line;
-                result.open(format);
-                result.start();
-                return result;
+                javax.sound.sampled.Line line_=javax.sound.sampled.AudioSystem.getLine(info);
+                javax.sound.sampled.TargetDataLine line=(javax.sound.sampled.TargetDataLine)line_;
+                line.open(line.getFormat());
+                line.start();
+                return line;
             }
         }catch(Exception e){
             erro_amigavel_exception(e);
@@ -9114,23 +9122,25 @@ System.out.println("BB" + retorno);
                     javax.sound.sampled.Mixer mix = javax.sound.sampled.AudioSystem.getMixer(mixers[i]);                
                     if ( mix.getSourceLineInfo().length == 0 ) 
                         continue;
+                    if ( evitarDeviceAudio(mixers[i].getName()) )
+                        continue;
                     System.err.println("LineWriterDevice -> " + mixers[i].getName());
                     System.err.flush();
                     javax.sound.sampled.Line.Info [] infos = mix.getSourceLineInfo();
                     javax.sound.sampled.Line line_ = mix.getLine(infos[0]);                       
                     javax.sound.sampled.SourceDataLine line = (javax.sound.sampled.SourceDataLine)line_;           
-                    line.open(getAudioFormatBase());
+                    line.open(line.getFormat());
                     line.start();
                     return line;
                 }
                 erroFatal("Nenhum mixer encontrado!");
             }else{
                 javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.SourceDataLine.class, getAudioFormatBase());
-                javax.sound.sampled.Line line=javax.sound.sampled.AudioSystem.getLine(info);
-                javax.sound.sampled.SourceDataLine result=(javax.sound.sampled.SourceDataLine)line;
-                result.open(getAudioFormatBase());
-                result.start();
-                return result;
+                javax.sound.sampled.Line line_=javax.sound.sampled.AudioSystem.getLine(info);
+                javax.sound.sampled.SourceDataLine line=(javax.sound.sampled.SourceDataLine)line_;
+                line.open(line.getFormat());
+                line.start();
+                return line;
             }
         }catch(Exception e){
             erro_amigavel_exception(e);
@@ -9140,9 +9150,8 @@ System.out.println("BB" + retorno);
     
     public javax.sound.sampled.AudioFormat getAudioFormatBase(){
         javax.sound.sampled.AudioFormat result=null;
-        //result=new javax.sound.sampled.AudioFormat(javax.sound.sampled.AudioFormat.Encoding.PCM_FLOAT, 48000, 16, 2, 4, 48000, false);
-        //result=new javax.sound.sampled.AudioFormat(javax.sound.sampled.AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 2, 4, 44100, false);
         result=new javax.sound.sampled.AudioFormat(48000, 16, 2, true, false);
+        //result=new javax.sound.sampled.AudioFormat(javax.sound.sampled.AudioFormat.Encoding.PCM_FLOAT, 48000, 16, 2, 4, 48000, false);
         return result;
     }
 
@@ -9173,9 +9182,9 @@ System.out.println("BB" + retorno);
     AudioFloatConversion16S
     https://github.com/jaudiolibs/audioservers/blob/master/audioservers-javasound/src/main/java/org/jaudiolibs/audioservers/javasound/AudioFloatConverter.java
     */
-    public void playLine(InputStream in){
+    public void playLine(boolean usingMixer, InputStream in){
         try{
-            javax.sound.sampled.SourceDataLine line=getLineWriter(false);
+            javax.sound.sampled.SourceDataLine line=getLineWriter(usingMixer);
             int BUFFER_SIZE = 1024;
             byte[] buff = new byte[BUFFER_SIZE];
             int len = 0;    
@@ -9195,7 +9204,7 @@ System.out.println("BB" + retorno);
                     out=new FileOutputStream(new File(caminho));
                 filterLine(line, out);
             }else{
-                javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                        
+                javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                    
                 if ( caminho == null ){ // java.io.IOException: stream length not specified ---> o problema esta no ais!!
                     javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, out);                            
                 }else{
@@ -9209,7 +9218,7 @@ System.out.println("BB" + retorno);
         }        
     }
     
-    public void playWav(String caminho){
+    public void playWav(boolean usingMixer, String caminho){
         try{            
             javax.sound.sampled.AudioInputStream audioStream=null;
             if ( caminho == null ){
@@ -9218,7 +9227,7 @@ System.out.println("BB" + retorno);
                 audioStream = javax.sound.sampled.AudioSystem.getAudioInputStream(new File(caminho));                
                 //System.out.println(audioStream.getFormat());
             }
-            javax.sound.sampled.SourceDataLine line=getLineWriter(false);
+            javax.sound.sampled.SourceDataLine line=getLineWriter(usingMixer);
             int BUFFER_SIZE = 1024;
             byte[] buff = new byte[BUFFER_SIZE];
             int len = 0;            
@@ -9294,7 +9303,7 @@ System.out.println("BB" + retorno);
                             }catch(Exception e1){}
                         }
                     }.start();                    
-                    playLine(is);
+                    playLine(false, is);
                     s.close();
                     ss.close();
                 }else{
@@ -9308,7 +9317,7 @@ System.out.println("BB" + retorno);
                             }catch(Exception e1){}
                         }
                     }.start();                    
-                    playLine(is);
+                    playLine(false, is);
                     s.close();
                 }
             }catch(Exception e){
