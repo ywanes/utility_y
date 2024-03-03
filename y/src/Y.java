@@ -1616,16 +1616,16 @@ cat buffer.log
         }
         if ( args[0].equals("gravador") ){
             if ( args.length > 1 )
-                gravador(args[1]);
+                gravador(false, false, args[1], null);                
             else
-                gravador(null);
+                gravador(false, false, null, System.out);
             return;
         }
         if ( args[0].equals("gravadorMixer") ){
             if ( args.length > 1 )
-                gravadorMixer(args[1]);
+                gravador(false, true, args[1], null);
             else
-                gravadorMixer(null);
+                gravador(false, true, null, System.out);
             return;
         }
         if ( args[0].equals("playWav") ){
@@ -1636,11 +1636,11 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("gravadorLine") ){
-            gravadorLine(System.out);
+            gravador(true, false, null, System.out);
             return;
         }
         if ( args[0].equals("gravadorMixerLine") ){
-            gravadorMixerLine(System.out);
+            gravador(true, true, null, System.out);
             return;
         }
         if ( args[0].equals("playLine") ){
@@ -9187,49 +9187,23 @@ System.out.println("BB" + retorno);
         }        
     }
         
-    public void gravador(String caminho){ // erro em stdout -> y gravador > a.wav
+    public void gravador(boolean onlyLine, boolean usingMixer, String caminho, OutputStream out){ // erro em stdout -> y gravador > a.wav
         try {
-            javax.sound.sampled.TargetDataLine line=getLineReader(false);
-            javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                        
-            if ( caminho == null ){ // java.io.IOException: stream length not specified ---> o problema esta no ais!!
-                javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, System.out);                            
+            javax.sound.sampled.TargetDataLine line=getLineReader(usingMixer);
+            if ( onlyLine ){
+                if ( out == null )
+                    out=new FileOutputStream(new File(caminho));
+                filterLine(line, out);
             }else{
-                System.out.println("gravando...");            
-                javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));            
+                javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                        
+                if ( caminho == null ){ // java.io.IOException: stream length not specified ---> o problema esta no ais!!
+                    javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, out);                            
+                }else{
+                    System.err.println("gravando...");            
+                    System.err.flush();
+                    javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));            
+                }
             }
-        } catch (Exception e) {
-            erro_amigavel_exception(e);
-        }        
-    }
-    
-    public void gravadorLine(OutputStream out){
-        try {
-            javax.sound.sampled.TargetDataLine line=getLineReader(false);
-            filterLine(line, out);         
-        } catch (Exception e) {
-            erro_amigavel_exception(e);
-        }    
-    }
-    
-    public void gravadorMixer(String caminho){ // erro em stdout -> y gravador > a.wav
-        try {
-            javax.sound.sampled.TargetDataLine line=getLineReader(false);
-            javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);            
-            if ( caminho == null ){ // java.io.IOException: stream length not specified ---> o problema esta no ais!!
-                javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, System.out);                            
-            }else{
-                System.out.println("gravando...");            
-                javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));            
-            }
-        } catch (Exception e) {
-            erroFatal(e.toString());
-        }        
-    }
-
-    public void gravadorMixerLine(OutputStream out){
-        try {
-            javax.sound.sampled.TargetDataLine line=getLineReader(true);
-            filterLine(line, out);         
         } catch (Exception e) {
             erro_amigavel_exception(e);
         }        
@@ -9316,7 +9290,7 @@ System.out.println("BB" + retorno);
                     new Thread(){
                         public void run(){
                             try{
-                                gravadorLine(os);
+                                gravador(true, false, null, os);
                             }catch(Exception e1){}
                         }
                     }.start();                    
@@ -9330,7 +9304,7 @@ System.out.println("BB" + retorno);
                     new Thread(){
                         public void run(){
                             try{
-                                gravadorLine(os);
+                                gravador(true, false, null, os);
                             }catch(Exception e1){}
                         }
                     }.start();                    
