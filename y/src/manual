@@ -81,14 +81,14 @@ usage:
   [y cronometro]
   [y [cls|clear|clean]]
   [y ips]
-  [y mouse]
+  [y mouse]  
   [y gravador]
   [y gravadorLine]
   [y gravadorMixerLine]
   [y playWav]
   [y playLine]
   [y call]
-  [y playLine]
+  [y injectMicLine]
   [y kill]
   [y win]
   [y speed]
@@ -565,6 +565,8 @@ Exemplos...
     y gravadorLine | y playLine
 [y call]
     y call
+[y injectMicLine]
+    y cat file.line | y injectMicLine
 [y kill]
     y kill 3434
     y kill 3434 3435

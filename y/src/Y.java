@@ -1651,6 +1651,10 @@ cat buffer.log
             call(args);
             return;
         }
+        if ( args[0].equals("injectMicLine") ){
+            injectMicLine(System.in);
+            return;
+        }
         if ( args[0].equals("kill") && args.length >= 2 ){
             kill(args, System.out, 1);
             return;
@@ -9011,6 +9015,23 @@ System.out.println("BB" + retorno);
         }
     }
 
+    public void injectMicLine(InputStream is){
+        try {
+            javax.sound.sampled.Port.Info info = new javax.sound.sampled.Port.Info(javax.sound.sampled.Port.class,"MICROPHONE", true);
+            javax.sound.sampled.Line line_ = javax.sound.sampled.AudioSystem.getLine(info);
+            //com.sun.media.sound.
+            //java.lang.ClassCastException: com.sun.media.sound.PortMixer$PortMixerPort cannot be cast to javax.sound.sampled.SourceDataLine
+            javax.sound.sampled.SourceDataLine line = (javax.sound.sampled.SourceDataLine)line_;
+            int BUFFER_SIZE = 1024;            
+            byte[] buff = new byte[BUFFER_SIZE];            
+            int len = 0;   
+            while( (len=is.read(buff, 0, BUFFER_SIZE)) > 0 )
+                line.write(buff, 0, len);
+        } catch (Exception e) {
+            erro_amigavel_exception(e);
+        } 
+    }
+    
     public void gravadorLine(OutputStream out){
         try {
             javax.sound.sampled.AudioFormat format = new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false);
@@ -9107,15 +9128,32 @@ System.out.println("BB" + retorno);
                 out.write(buff, 0, len);
             out.flush();
         }          
-        
     }
     
     public void playLine(InputStream in){
         try{
+            /*
             // wasapi   -> Stream #0:0: Audio: pcm_f32le ([3][0][0][0] / 0x0003), 48000 Hz, mono, flt, 1536 kb/s
             // gravador -> Stream #0:0: Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, mono, s16, 705 kb/s
+            // testar depois, olhar PCM_SIGNED e PCM_UNSIGNED:
+            
+            //PCM_SIGNED
+            // new javax.sound.sampled.AudioFormat(javax.sound.sampled.AudioFormat.Encoding.PCM_SIGNED, 44100, 16, 2, 4, 44100, false);
+            
+            //PCM_FLOAT
+            // new javax.sound.sampled.AudioFormat(javax.sound.sampled.AudioFormat.Encoding.PCM_FLOAT, 44100, 16, 2, 4, 44100, false);
+                        
+            //https://www.metadata2go.com/file-info/sample-fmt
+            u16 – unsigned 16 bits
+            s16 – signed 16 bits
+            s16p – signed 16 bits, planar
+            flt – float
+            fltp – float, planar
+            dbl – double
+            dblp – double, planar            
+            */
+            
             javax.sound.sampled.AudioFormat audioFormat=new javax.sound.sampled.AudioFormat(44100, 16, 2, true, false);
-            //javax.sound.sampled.AudioFormat audioFormat=new javax.sound.sampled.AudioFormat(48000, 16, 2, true, false);
             javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.SourceDataLine.class, audioFormat);
             javax.sound.sampled.SourceDataLine sourceLine=(javax.sound.sampled.SourceDataLine)javax.sound.sampled.AudioSystem.getLine(info);            
             sourceLine.open(audioFormat);
@@ -15120,14 +15158,14 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y cronometro]\n"
 /* class by manual */                + "  [y [cls|clear|clean]]\n"
 /* class by manual */                + "  [y ips]\n"
-/* class by manual */                + "  [y mouse]\n"
+/* class by manual */                + "  [y mouse]  \n"
 /* class by manual */                + "  [y gravador]\n"
 /* class by manual */                + "  [y gravadorLine]\n"
 /* class by manual */                + "  [y gravadorMixerLine]\n"
 /* class by manual */                + "  [y playWav]\n"
 /* class by manual */                + "  [y playLine]\n"
 /* class by manual */                + "  [y call]\n"
-/* class by manual */                + "  [y playLine]\n"
+/* class by manual */                + "  [y injectMicLine]\n"
 /* class by manual */                + "  [y kill]\n"
 /* class by manual */                + "  [y win]\n"
 /* class by manual */                + "  [y speed]\n"
@@ -15604,6 +15642,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y gravadorLine | y playLine\n"
 /* class by manual */                + "[y call]\n"
 /* class by manual */                + "    y call\n"
+/* class by manual */                + "[y injectMicLine]\n"
+/* class by manual */                + "    y cat file.line | y injectMicLine\n"
 /* class by manual */                + "[y kill]\n"
 /* class by manual */                + "    y kill 3434\n"
 /* class by manual */                + "    y kill 3434 3435\n"
@@ -15729,6 +15769,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
