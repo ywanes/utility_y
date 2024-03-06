@@ -9732,16 +9732,23 @@ System.out.println("BB" + retorno);
 
     private void lock(){
         GraphicsDevice[] gs=null;
+        boolean hasConfigurationDevice=true;
         try{
             gs = robotGetScreenDevices();
         }catch(Exception e){
             erroFatal("Esse sistema não tem ambiente grafico.");
         }
         for ( int i=0;i<gs.length;i++ ){
-            Frame frame = new Frame();
+            Frame frame = null;
+            if ( hasConfigurationDevice )
+                frame = new Frame(gs[i].getDefaultConfiguration());
+            else
+                frame = new Frame();
             frame.setBackground(Color.black);
-            frame.setUndecorated(true); // tira borda do aplicativo
-            frame.setExtendedState(frame.MAXIMIZED_BOTH);        
+            if ( !hasConfigurationDevice ){
+                frame.setUndecorated(true); // tira borda do aplicativo
+                frame.setExtendedState(frame.MAXIMIZED_BOTH);        
+            }
             frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
             frame.addWindowListener(new java.awt.event.WindowAdapter() {
                 public void windowClosing(java.awt.event.WindowEvent e) {
@@ -9762,10 +9769,10 @@ System.out.println("BB" + retorno);
                 public void componentShown(ComponentEvent e){}
                 public void componentHidden(ComponentEvent e){}
             });
+            gs[i].setFullScreenWindow( frame);
             try{
                 sleepMillis(100);
             }catch(Exception e){}
-            gs[i].setFullScreenWindow( frame);
         }            
     }
     
