@@ -13602,6 +13602,8 @@ namespace LoopbackWithMic
 /* class WebSocket */                     conn.send("2");
 /* class WebSocket */                 if ( message.equals("3") )
 /* class WebSocket */                     conn.send("4");
+/* class WebSocket */                 //enviando pequeno bmp
+/* class WebSocket */                 //conn.send(new byte[]{(byte)66,(byte)77,(byte)90,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)54,(byte)0,(byte)0,(byte)0,(byte)40,(byte)0,(byte)0,(byte)0,(byte)3,(byte)0,(byte)0,(byte)0,(byte)3,(byte)0,(byte)0,(byte)0,(byte)1,(byte)0,(byte)24,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)36,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0});
 /* class WebSocket */             }
 /* class WebSocket */             public void onError(WebSocket conn, Exception ex) {
 /* class WebSocket */                 System.out.println("error: " + ex.toString());
@@ -13612,19 +13614,28 @@ namespace LoopbackWithMic
 /* class WebSocket */         wss.start();
 /* class WebSocket */     }
 /* class WebSocket */ }
-/* class WebSocket */ // // browser
-/* class WebSocket */ // const socket = new WebSocket("ws://localhost:7777");
-/* class WebSocket */ // socket.addEventListener("open", (event) => {
-/* class WebSocket */ // socket.send("1");
-/* class WebSocket */ // });
-/* class WebSocket */ // socket.addEventListener("message", (event) => {
-/* class WebSocket */ // console.log("message " + event.data);
-/* class WebSocket */ // if ( event.data == '2' )
-/* class WebSocket */ // socket.send('3');
-/* class WebSocket */ // });
-/* class WebSocket */ // // socket.readyState == WebSocket.CLOSED
-/* class WebSocket */ // // socket.readyState == WebSocket.OPEN
-/* class WebSocket */
+/* class WebSocket 
+        // browser
+        const socket = new WebSocket("ws://localhost:7777");
+        socket.binaryType = "blob";
+        socket.addEventListener("open", (event) => {
+        socket.send("1");
+        });
+        socket.addEventListener("message", (event) => {
+          console.log("message " + event.data);
+          // recebendo pequeno bmp
+          if ( event.data instanceof Blob ){
+              var s = event.data;
+              s = s.slice(0, s.size, "image/bmp");
+              var link = window.URL.createObjectURL(s);
+              document.getElementById("imgId").src = link;    
+          }
+          if ( event.data == '2' )
+          socket.send('3');
+        });
+        // socket.readyState == WebSocket.CLOSED
+        // socket.readyState == WebSocket.OPEN
+*/
 /* class WebSocket */ // // creditos: https://github.com/TooTallNate/Java-WebSocket/tree/master
 /* class WebSocket */ abstract class AbstractWebSocket extends WebSocketAdapter { private boolean tcpNoDelay; private boolean reuseAddr; private ScheduledExecutorService connectionLostCheckerService; private ScheduledFuture<?> connectionLostCheckerFuture; private long connectionLostTimeout = TimeUnit.SECONDS.toNanos(60); private boolean websocketRunning = false; private boolean daemon = false; private final Object syncConnectionLost = new Object(); public int getConnectionLostTimeout() { synchronized (syncConnectionLost) { return (int) TimeUnit.NANOSECONDS.toSeconds(connectionLostTimeout); } } public void setConnectionLostTimeout(int connectionLostTimeout) { synchronized (syncConnectionLost) { this.connectionLostTimeout = TimeUnit.SECONDS.toNanos(connectionLostTimeout); if (this.connectionLostTimeout <= 0) { cancelConnectionLostTimer(); return; } if (this.websocketRunning) { try { ArrayList<WebSocket> connections = new ArrayList<>(getConnections()); WebSocketImpl webSocketImpl; for (WebSocket conn : connections) { if (conn instanceof WebSocketImpl) { webSocketImpl = (WebSocketImpl) conn; webSocketImpl.updateLastPong(); } } } catch (Exception e) { } restartConnectionLostTimer(); } } } protected void stopConnectionLostTimer() { synchronized (syncConnectionLost) { if (connectionLostCheckerService != null || connectionLostCheckerFuture != null) { this.websocketRunning = false; cancelConnectionLostTimer(); } } } protected void startConnectionLostTimer() { synchronized (syncConnectionLost) { if (this.connectionLostTimeout <= 0) { return; } this.websocketRunning = true; restartConnectionLostTimer(); } } private void restartConnectionLostTimer() { cancelConnectionLostTimer(); connectionLostCheckerService = Executors .newSingleThreadScheduledExecutor(new NamedThreadFactory("connectionLostChecker", daemon)); Runnable connectionLostChecker = new Runnable() { private ArrayList<WebSocket> connections = new ArrayList<>(); public void run() { connections.clear(); try { connections.addAll(getConnections()); long minimumPongTime; synchronized (syncConnectionLost) { minimumPongTime = (long) (System.nanoTime() - (connectionLostTimeout * 1.5)); } for (WebSocket conn : connections) { executeConnectionLostDetection(conn, minimumPongTime); } } catch (Exception e) { } connections.clear(); } }; connectionLostCheckerFuture = connectionLostCheckerService .scheduleAtFixedRate(connectionLostChecker, connectionLostTimeout, connectionLostTimeout, TimeUnit.NANOSECONDS); } private void executeConnectionLostDetection(WebSocket webSocket, long minimumPongTime) { if (!(webSocket instanceof WebSocketImpl)) { return; } WebSocketImpl webSocketImpl = (WebSocketImpl) webSocket; if (webSocketImpl.getLastPong() < minimumPongTime) { webSocketImpl.closeConnection(CloseFrame.ABNORMAL_CLOSE, "The connection was closed because the other endpoint did not respond with a pong in time. For more information check: https://github.com/TooTallNate/Java-WebSocket/wiki/Lost-connection-detection"); } else { if (webSocketImpl.isOpen()) { webSocketImpl.sendPing(); } else { } } } protected abstract Collection<WebSocket> getConnections(); private void cancelConnectionLostTimer() { if (connectionLostCheckerService != null) { connectionLostCheckerService.shutdownNow(); connectionLostCheckerService = null; } if (connectionLostCheckerFuture != null) { connectionLostCheckerFuture.cancel(false); connectionLostCheckerFuture = null; } } public boolean isTcpNoDelay() { return tcpNoDelay; } public void setTcpNoDelay(boolean tcpNoDelay) { 
 /* class WebSocket */ this.tcpNoDelay = tcpNoDelay; } public boolean isReuseAddr() { return reuseAddr; } public void setReuseAddr(boolean reuseAddr) { this.reuseAddr = reuseAddr; } public boolean isDaemon() { return daemon; } public void setDaemon(boolean daemon) { this.daemon = daemon; } } class AbstractWrappedByteChannel implements WrappedByteChannel { private final ByteChannel channel;  @Deprecated  public AbstractWrappedByteChannel(ByteChannel towrap) { this.channel = towrap; } @Deprecated public AbstractWrappedByteChannel(WrappedByteChannel towrap) { this.channel = towrap; } public int read(ByteBuffer dst) throws IOException { return channel.read(dst); } public boolean isOpen() { return channel.isOpen(); } public void close() throws IOException { channel.close(); } public int write(ByteBuffer src) throws IOException { return channel.write(src); } public boolean isNeedWrite() { return channel instanceof WrappedByteChannel && ((WrappedByteChannel) channel).isNeedWrite(); } public void writeMore() throws IOException { if (channel instanceof WrappedByteChannel) { ((WrappedByteChannel) channel).writeMore(); } } public boolean isNeedRead() { return channel instanceof WrappedByteChannel && ((WrappedByteChannel) channel).isNeedRead(); } public int readMore(ByteBuffer dst) throws IOException { return channel instanceof WrappedByteChannel ? ((WrappedByteChannel) channel).readMore(dst) : 0; } public boolean isBlocking() { if (channel instanceof SocketChannel) { return ((SocketChannel) channel).isBlocking(); } else if (channel instanceof WrappedByteChannel) { return ((WrappedByteChannel) channel).isBlocking(); } return false; } } class WS_Base64 { public static final int NO_OPTIONS = 0; public static final int ENCODE = 1; public static final int GZIP = 2; public static final int DO_BREAK_LINES = 8; public static final int URL_SAFE = 16; public static final int ORDERED = 32; private static final int MAX_LINE_LENGTH = 76; private static final byte EQUALS_SIGN = (byte) '='; private static final byte NEW_LINE = (byte) '\n'; private static final String PREFERRED_ENCODING = "US-ASCII"; private static final byte WHITE_SPACE_ENC = -5; private static final byte[] _STANDARD_ALPHABET = { (byte) 'A', (byte) 'B', (byte) 'C', (byte) 'D', (byte) 'E', (byte) 'F', (byte) 'G', (byte) 'H', (byte) 'I', (byte) 'J', (byte) 'K', (byte) 'L', (byte) 'M', (byte) 'N', (byte) 'O', (byte) 'P', (byte) 'Q', (byte) 'R', (byte) 'S', (byte) 'T', (byte) 'U', (byte) 'V', (byte) 'W', (byte) 'X', (byte) 'Y', (byte) 'Z', (byte) 'a', (byte) 'b', (byte) 'c', (byte) 'd', (byte) 'e', (byte) 'f', (byte) 'g', (byte) 'h', (byte) 'i', (byte) 'j', (byte) 'k', (byte) 'l', (byte) 'm', (byte) 'n', (byte) 'o', (byte) 'p', (byte) 'q', (byte) 'r', (byte) 's', (byte) 't', (byte) 'u', (byte) 'v', (byte) 'w', (byte) 'x', (byte) 'y', (byte) 'z', (byte) '0', (byte) '1', (byte) '2', (byte) '3', (byte) '4', (byte) '5', (byte) '6', (byte) '7', (byte) '8', (byte) '9', (byte) '+', (byte) '/' }; private static final byte[] _STANDARD_DECODABET = {-9,-9,-9,-9,-9,-9,-9,-9,-9,-5,-5,-9,-9,-5,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-5,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,62,-9,-9,-9,63,52,53,54,55,56,57,58,59,60,61,-9,-9,-9,-1,-9,-9,-9,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,-9,-9,-9,-9,-9,-9,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,-9,
