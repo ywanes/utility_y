@@ -14710,7 +14710,11 @@ namespace LoopbackWithMic
 /* class HttpServer */             output.write(sb.toString().getBytes());
 /* class HttpServer */             return;
 /* class HttpServer */         }
-/* class HttpServer */         if ( nav == null && mode != null && ( uri.equals("/") || uri.startsWith("/id/") ) ){
+/* class HttpServer */         if ( nav == null && mode != null && ( uri.equals("/") || uri.equals("/id") || uri.equals("/id/") || uri.startsWith("/id/") ) ){
+/* class HttpServer */             if ( uri.equals("/id") || uri.equals("/id/") ){
+/* class HttpServer */                 redirect(output, "/");
+/* class HttpServer */                 return;
+/* class HttpServer */             }
 /* class HttpServer */             String txt="Erro interno 37676.";
 /* class HttpServer */             String id="";
 /* class HttpServer */             if ( uri.startsWith("/id/") )
@@ -14934,6 +14938,9 @@ namespace LoopbackWithMic
 /* class HttpServer */         for (int i = 0; i < partes.length; i++)
 /* class HttpServer */             if (url.endsWith("." + partes[i])) return true;
 /* class HttpServer */         return false;
+/* class HttpServer */     }
+/* class HttpServer */     private void redirect(OutputStream output, String url) throws Exception{
+/* class HttpServer */         output.write("HTTP/1.1 301 Moved Permanently\nLocation: /\nredirecting....".getBytes());
 /* class HttpServer */     }
 /* class HttpServer */ }
 
