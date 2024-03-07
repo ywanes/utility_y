@@ -11935,9 +11935,16 @@ class Util{
     }
 
     public BufferedImage robotGetImgScreen(int monitor_id){
-        // use
-        // System.out.println(getImgScreen(-1).getHeight());
-        // ImageIO.write(getImgScreen(-1), "bmp", new File("c:/tmp/s.jpg"));
+        /* 
+           //use
+           javax.imageio.ImageIO.write(robotGetImgScreen(-1), "bmp", new File("c:/tmp/s.bmp"));
+           //use2
+           ByteArrayOutputStream baos = new ByteArrayOutputStream();
+           javax.imageio.ImageIO.write(robotGetImgScreen(-1), "bmp", baos);
+           byte[] bytes = baos.toByteArray();
+           //use3
+           System.out.println(robotGetImgScreen(-1).getHeight());
+        */
         try{
             java.awt.Robot robot=robotGet();
             java.awt.Rectangle rec=null;
@@ -13587,54 +13594,57 @@ namespace LoopbackWithMic
 /* class JSchCustom */ monitor.setMillisToDecideToPopup(1000); } private long percent = -1; public boolean count(long count) { this.count += count; if (percent >= this.count * 100 / max) { return true; } percent = this.count * 100 / max; monitor.setNote("Completed " + this.count + "(" + percent + "%) out of " + max + "."); monitor.setProgress((int) this.count); return !(monitor.isCanceled()); } public void end() { monitor.close(); } } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 7"); System.exit(1); } final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } 
 
 
-/* class WebSocket */ class WebSocketModelo {
-/* class WebSocket */     public static void main(String[] args) {
-/* class WebSocket */         WebSocketServer wss=new WebSocketServer(new InetSocketAddress("localhost", 7777)) {
-/* class WebSocket */             public void onOpen(WebSocket conn, ClientHandshake handshake) {
-/* class WebSocket */                 System.out.println("onOpen");
-/* class WebSocket */             }
-/* class WebSocket */             public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-/* class WebSocket */                 System.out.println("onClose");
-/* class WebSocket */             }
-/* class WebSocket */             public void onMessage(WebSocket conn, String message) {
-/* class WebSocket */                 System.out.println("message: " + message);
-/* class WebSocket */                 if ( message.equals("1") )
-/* class WebSocket */                     conn.send("2");
-/* class WebSocket */                 if ( message.equals("3") )
-/* class WebSocket */                     conn.send("4");
-/* class WebSocket */                 //enviando pequeno bmp
-/* class WebSocket */                 //conn.send(new byte[]{(byte)66,(byte)77,(byte)90,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)54,(byte)0,(byte)0,(byte)0,(byte)40,(byte)0,(byte)0,(byte)0,(byte)3,(byte)0,(byte)0,(byte)0,(byte)3,(byte)0,(byte)0,(byte)0,(byte)1,(byte)0,(byte)24,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)36,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0});
-/* class WebSocket */             }
-/* class WebSocket */             public void onError(WebSocket conn, Exception ex) {
-/* class WebSocket */                 System.out.println("error: " + ex.toString());
-/* class WebSocket */             }
-/* class WebSocket */             public void onStart() {
-/* class WebSocket */             }
-/* class WebSocket */         };
-/* class WebSocket */         wss.start();
-/* class WebSocket */     }
-/* class WebSocket */ }
+/* class WebSocket */
+/* class WebSocket */
 /* class WebSocket 
-        // browser
-        const socket = new WebSocket("ws://localhost:7777");
-        socket.binaryType = "blob";
-        socket.addEventListener("open", (event) => {
-        socket.send("1");
-        });
-        socket.addEventListener("message", (event) => {
-          console.log("message " + event.data);
-          // recebendo pequeno bmp
-          if ( event.data instanceof Blob ){
-              var s = event.data;
-              s = s.slice(0, s.size, "image/bmp");
-              var link = window.URL.createObjectURL(s);
-              document.getElementById("imgId").src = link;    
-          }
-          if ( event.data == '2' )
-          socket.send('3');
-        });
-        // socket.readyState == WebSocket.CLOSED
-        // socket.readyState == WebSocket.OPEN
+                        class WebSocketModelo {
+                            public static void main(String[] args) {
+                                WebSocketServer wss=new WebSocketServer(new InetSocketAddress("localhost", 7777)) {
+                                    public void onOpen(WebSocket conn, ClientHandshake handshake) {
+                                        System.out.println("onOpen");
+                                    }
+                                    public void onClose(WebSocket conn, int code, String reason, boolean remote) {
+                                        System.out.println("onClose");
+                                    }
+                                    public void onMessage(WebSocket conn, String message) {
+                                        System.out.println("message: " + message);
+                                        if ( message.equals("1") )
+                                            conn.send("2");
+                                        if ( message.equals("3") )
+                                            conn.send("4");
+                                        //enviando pequeno bmp
+                                        //conn.send(new byte[]{(byte)66,(byte)77,(byte)90,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)54,(byte)0,(byte)0,(byte)0,(byte)40,(byte)0,(byte)0,(byte)0,(byte)3,(byte)0,(byte)0,(byte)0,(byte)3,(byte)0,(byte)0,(byte)0,(byte)1,(byte)0,(byte)24,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)36,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0});
+                                    }
+                                    public void onError(WebSocket conn, Exception ex) {
+                                        System.out.println("error: " + ex.toString());
+                                    }
+                                    public void onStart() {
+                                    }
+                                };
+                                wss.start();
+                            }
+                        }
+                        // browser - http://localhost:7777/
+                        document.children[0].innerHTML='<html><img id="imgId"></img></html>';
+                        const socket = new WebSocket("ws://localhost:7777");
+                        socket.binaryType = "blob";
+                        socket.addEventListener("open", (event) => {
+                        socket.send("1");
+                        });
+                        socket.addEventListener("message", (event) => {
+                          console.log("message " + event.data);
+                          // recebendo pequeno bmp
+                          if ( event.data instanceof Blob ){
+                                  var s = event.data;
+                                  s = s.slice(0, s.size, "image/bmp");
+                                  var link = window.URL.createObjectURL(s);
+                                  document.getElementById("imgId").src = link;    
+                          }
+                          if ( event.data == '2' )
+                          socket.send('3');
+                        });
+                        // socket.readyState == WebSocket.CLOSED
+                        // socket.readyState == WebSocket.OPEN
 */
 /* class WebSocket */ // // creditos: https://github.com/TooTallNate/Java-WebSocket/tree/master
 /* class WebSocket */ abstract class AbstractWebSocket extends WebSocketAdapter { private boolean tcpNoDelay; private boolean reuseAddr; private ScheduledExecutorService connectionLostCheckerService; private ScheduledFuture<?> connectionLostCheckerFuture; private long connectionLostTimeout = TimeUnit.SECONDS.toNanos(60); private boolean websocketRunning = false; private boolean daemon = false; private final Object syncConnectionLost = new Object(); public int getConnectionLostTimeout() { synchronized (syncConnectionLost) { return (int) TimeUnit.NANOSECONDS.toSeconds(connectionLostTimeout); } } public void setConnectionLostTimeout(int connectionLostTimeout) { synchronized (syncConnectionLost) { this.connectionLostTimeout = TimeUnit.SECONDS.toNanos(connectionLostTimeout); if (this.connectionLostTimeout <= 0) { cancelConnectionLostTimer(); return; } if (this.websocketRunning) { try { ArrayList<WebSocket> connections = new ArrayList<>(getConnections()); WebSocketImpl webSocketImpl; for (WebSocket conn : connections) { if (conn instanceof WebSocketImpl) { webSocketImpl = (WebSocketImpl) conn; webSocketImpl.updateLastPong(); } } } catch (Exception e) { } restartConnectionLostTimer(); } } } protected void stopConnectionLostTimer() { synchronized (syncConnectionLost) { if (connectionLostCheckerService != null || connectionLostCheckerFuture != null) { this.websocketRunning = false; cancelConnectionLostTimer(); } } } protected void startConnectionLostTimer() { synchronized (syncConnectionLost) { if (this.connectionLostTimeout <= 0) { return; } this.websocketRunning = true; restartConnectionLostTimer(); } } private void restartConnectionLostTimer() { cancelConnectionLostTimer(); connectionLostCheckerService = Executors .newSingleThreadScheduledExecutor(new NamedThreadFactory("connectionLostChecker", daemon)); Runnable connectionLostChecker = new Runnable() { private ArrayList<WebSocket> connections = new ArrayList<>(); public void run() { connections.clear(); try { connections.addAll(getConnections()); long minimumPongTime; synchronized (syncConnectionLost) { minimumPongTime = (long) (System.nanoTime() - (connectionLostTimeout * 1.5)); } for (WebSocket conn : connections) { executeConnectionLostDetection(conn, minimumPongTime); } } catch (Exception e) { } connections.clear(); } }; connectionLostCheckerFuture = connectionLostCheckerService .scheduleAtFixedRate(connectionLostChecker, connectionLostTimeout, connectionLostTimeout, TimeUnit.NANOSECONDS); } private void executeConnectionLostDetection(WebSocket webSocket, long minimumPongTime) { if (!(webSocket instanceof WebSocketImpl)) { return; } WebSocketImpl webSocketImpl = (WebSocketImpl) webSocket; if (webSocketImpl.getLastPong() < minimumPongTime) { webSocketImpl.closeConnection(CloseFrame.ABNORMAL_CLOSE, "The connection was closed because the other endpoint did not respond with a pong in time. For more information check: https://github.com/TooTallNate/Java-WebSocket/wiki/Lost-connection-detection"); } else { if (webSocketImpl.isOpen()) { webSocketImpl.sendPing(); } else { } } } protected abstract Collection<WebSocket> getConnections(); private void cancelConnectionLostTimer() { if (connectionLostCheckerService != null) { connectionLostCheckerService.shutdownNow(); connectionLostCheckerService = null; } if (connectionLostCheckerFuture != null) { connectionLostCheckerFuture.cancel(false); connectionLostCheckerFuture = null; } } public boolean isTcpNoDelay() { return tcpNoDelay; } public void setTcpNoDelay(boolean tcpNoDelay) { 
