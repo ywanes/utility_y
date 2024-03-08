@@ -13601,19 +13601,21 @@ namespace LoopbackWithMic
                             public static void main(String[] args) {
                                 WebSocketServer wss=new WebSocketServer(new InetSocketAddress("localhost", 7777), null) {
                                     public void onOpen(WebSocket conn, ClientHandshake handshake) {
-                                        System.out.println("onOpen");
+                                        //System.out.println("onOpen");
                                     }
                                     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-                                        System.out.println("onClose");
+                                        //System.out.println("onClose");
                                     }
                                     public void onMessage(WebSocket conn, String message) {
-                                        System.out.println("message: " + message);
+                                        //System.out.println("message: " + message);
                                         if ( message.equals("1") )
                                             conn.send("2");
-                                        if ( message.equals("3") )
-                                            conn.send("4");
-                                        //enviando pequeno bmp
-                                        //conn.send(new byte[]{(byte)66,(byte)77,(byte)90,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)54,(byte)0,(byte)0,(byte)0,(byte)40,(byte)0,(byte)0,(byte)0,(byte)3,(byte)0,(byte)0,(byte)0,(byte)3,(byte)0,(byte)0,(byte)0,(byte)1,(byte)0,(byte)24,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)36,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)0,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)255,(byte)0,(byte)0,(byte)0});
+                                        try{
+                                            if ( message.equals("3") )
+                                                conn.send(getImg(-1));
+                                        }catch(Exception e){
+                                            System.err.println("Error " + e.toString());
+                                        }
                                     }
                                     public void onError(WebSocket conn, Exception ex) {
                                         System.out.println("error: " + ex.toString());
@@ -13621,7 +13623,7 @@ namespace LoopbackWithMic
                                     public void onStart() {
                                     }
                                 };
-                                wss.start();
+                                wss.start();        
                             }
                         }
                         // browser - http://localhost:7777/
@@ -13629,19 +13631,20 @@ namespace LoopbackWithMic
                         const socket = new WebSocket("ws://localhost:7777");
                         socket.binaryType = "blob";
                         socket.addEventListener("open", (event) => {
-                        socket.send("1");
+                          socket.send("1");
                         });
                         socket.addEventListener("message", (event) => {
-                          console.log("message " + event.data);
+                          //console.log("message " + event.data);
                           // recebendo pequeno bmp
                           if ( event.data instanceof Blob ){
                                   var s = event.data;
                                   s = s.slice(0, s.size, "image/bmp");
                                   var link = window.URL.createObjectURL(s);
                                   document.getElementById("imgId").src = link;    
+                                  socket.send('3');
                           }
                           if ( event.data == '2' )
-                          socket.send('3');
+                            socket.send('3');
                         });
                         // socket.readyState == WebSocket.CLOSED
                         // socket.readyState == WebSocket.OPEN
