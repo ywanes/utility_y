@@ -88,6 +88,7 @@ usage:
   [y playWav]
   [y playLine]
   [y call]
+  [y remote]
   [y injectMicLine]
   [y kill]
   [y win]
@@ -565,6 +566,8 @@ Exemplos...
     y gravadorLine | y playLine
 [y call]
     y call
+[y remote]
+    y remote
 [y injectMicLine]
     y cat file.line | y injectMicLine
 [y kill]

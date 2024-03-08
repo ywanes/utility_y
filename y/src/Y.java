@@ -1707,6 +1707,10 @@ cat buffer.log
             call(args);
             return;
         }
+        if ( args[0].equals("remote") ){
+            remote(args);
+            return;
+        }
         if ( args[0].equals("injectMicLine") ){
             injectMicLine(System.in);
             return;
@@ -9384,6 +9388,47 @@ System.out.println("BB" + retorno);
         } 
     }
     
+    public void remote(String [] args){
+        String ip=null;
+        if ( args.length == 3 && args[1].equals("-ip") )
+            ip=args[2];
+        String [] ipv4_ipv6=ips(true, 15, false, false);
+        if ( ip == null )
+            ip = ipv4_ipv6[1];
+        if ( ip == null )
+            ip = ipv4_ipv6[0];        
+        int port = 7777;      
+        if ( ip.contains(":") )
+            ip="["+ip+"]";
+        System.out.println("http://"+ip+":"+port);
+        String format_web="jpg";
+        WebSocketServer wss=new WebSocketServer(new InetSocketAddress(ip, port), new Texto_longo().get_html_and_header_remote("webm")){
+            public void onOpen(WebSocket conn, ClientHandshake handshake) {
+                //System.out.println("onOpen");
+            }
+            public void onClose(WebSocket conn, int code, String reason, boolean remote) {
+                //System.out.println("onClose");
+            }
+            public void onMessage(WebSocket conn, String message) {
+                //System.out.println("message: " + message);
+                if ( message.equals("1") )
+                    conn.send("2");
+                try{
+                    if ( message.equals("3") )
+                        conn.send(robotGetImgScreenBmpBytes(-1, format_web));
+                }catch(Exception e){
+                    System.err.println("Error " + e.toString());
+                }
+            }
+            public void onError(WebSocket conn, Exception ex) {
+                System.out.println("error: " + ex.toString());
+            }
+            public void onStart() {
+            }
+        };
+        wss.start();           
+    }
+    
     public void kill(String [] parms_, OutputStream out, int index){
         try{
             int len_array=parms_.length;
@@ -11934,6 +11979,12 @@ class Util{
         return robot_local;
     }
 
+    public byte[] robotGetImgScreenBmpBytes(int monitor_id, String format_web) throws Exception{
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(robotGetImgScreen(-1), format_web, baos);
+        return baos.toByteArray();
+    }
+    
     public BufferedImage robotGetImgScreen(int monitor_id){
         /* 
            //use
@@ -13395,9 +13446,1145 @@ class XML extends Util{
     
     public ArrayList<XML> getFilhos(){
         return filhos;
-    }
-      
+    }      
 }
+
+class Texto_longo extends Util{
+    public String get_html_and_header_remote(String format_web){
+        String result="HTTP/1.1 200 OK\n" +
+"Content-Type: text/html; charset=UTF-8\n" +
+"Access-Control-Allow-Origin: *\n" +
+"X-Frame-Options: SAMEORIGIN\n" +
+"Content-Length: ?\n" +
+"\n" +
+"<script type=\"text/javascript\">\n" +
+"window.onload = function(){        \n" +
+"    var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';\n" +
+"    var finish_msg='<html><h1>Conexao encerrada!</h1></html>';\n" +
+"    document.children[0].innerHTML='<html><body style=\"background-color: rgb(68, 87, 96);\"><img id=\"imgId\" style=\"height: 100%;\"></img></body></html>';\n" +
+"    var socket = null;\n" +
+"    try{\n" +
+"      socket = new WebSocket(\"ws://\"+window.location.href.split('://')[1].replace('/',''));\n" +
+"      socket.binaryType = \"blob\";\n" +
+"      socket.addEventListener(\"open\", (event) => {\n" +
+"        socket.send(\"1\");\n" +
+"      });\n" +
+"      socket.addEventListener(\"message\", (event) => {\n" +
+"        try{\n" +
+"          if ( event.data instanceof Blob ){\n" +
+"            var s = event.data;\n" +
+"            s = s.slice(0, s.size, \"image/[FORMATWEB]\");\n" +
+"            var link = window.URL.createObjectURL(s);\n" +
+"            document.getElementById(\"imgId\").src = link;    \n" +
+"            socket.send('3');\n" +
+"          }\n" +
+"          if ( event.data == '2' )\n" +
+"            socket.send('3');\n" +
+"        }catch(error){console.log('.');}\n" +
+"      });\n" +
+"      socket.addEventListener(\"error\", (event) => {\n" +
+"        document.children[0].innerHTML=error_msg;\n" +
+"      });\n" +
+"    }catch(error){\n" +
+"      document.children[0].innerHTML=error_msg;                          \n" +
+"    }\n" +
+"    setInterval(function(){\n" +
+"      if ( socket != null && socket.readyState == WebSocket.CLOSED )\n" +
+"        document.children[0].innerHTML=finish_msg;\n" +
+"    }, 100);\n" +
+"};      \n" +
+"</script>";
+        result=result.replace("[FORMATWEB]", format_web);
+        int len=result.split("Content-Length: \\?\n\n")[1].length();
+        return result.replace("Content-Length: ?","Content-Length: "+len)+"// 123";
+        
+/*
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=UTF-8
+Access-Control-Allow-Origin: *
+X-Frame-Options: SAMEORIGIN
+Content-Length: ?
+
+<script type="text/javascript">
+window.onload = function(){        
+    var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';
+    var finish_msg='<html><h1>Conexao encerrada!</h1></html>';
+    document.children[0].innerHTML='<html><body style="background-color: rgb(68, 87, 96);"><img id="imgId" style="height: 100%;"></img></body></html>';
+    var socket = null;
+    try{
+      socket = new WebSocket("ws://"+window.location.href.split('://')[1].replace('/',''));
+      socket.binaryType = "blob";
+      socket.addEventListener("open", (event) => {
+        socket.send("1");
+      });
+      socket.addEventListener("message", (event) => {
+        try{
+          if ( event.data instanceof Blob ){
+            var s = event.data;
+            s = s.slice(0, s.size, "image/[FORMATWEB]");
+            var link = window.URL.createObjectURL(s);
+            document.getElementById("imgId").src = link;    
+            socket.send('3');
+          }
+          if ( event.data == '2' )
+            socket.send('3');
+        }catch(error){console.log('.');}
+      });
+      socket.addEventListener("error", (event) => {
+        document.children[0].innerHTML=error_msg;
+      });
+    }catch(error){
+      document.children[0].innerHTML=error_msg;                          
+    }
+    setInterval(function(){
+      if ( socket != null && socket.readyState == WebSocket.CLOSED )
+        document.children[0].innerHTML=finish_msg;
+    }, 100);
+};      
+</script>
+*/        
+    }
+    public String get_html_virtual_playlist(){
+        String faixas="";
+        File [] f=new File(".").listFiles();
+        for ( int i=0;i<f.length;i++ ){
+            if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){
+                String name_file = f[i].getName();
+                int len_partes = name_file.split("\\.").length;
+                int len_extension = name_file.split("\\.")[len_partes-1].length()+1;
+                int len_tag = 12;
+                if ( len_partes > 1 && name_file.length() > (len_extension+len_tag) && name_file.split("\\.")[len_partes-2].length() >= 12 && name_file.split("\\.")[len_partes-2].substring(name_file.split("\\.")[len_partes-2].length()-12, name_file.split("\\.")[len_partes-2].length()-11).equals("-") )
+                    name_file=name_file.substring(0, name_file.length()-len_extension-len_tag);
+                faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 40px;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + f[i].getName() + "\" >" + name_file + "</td></tr>\n";
+                File f2=new File(f[i].getName()+".cfg");
+                if ( f2.exists() && f2.isFile() ){
+                    String [] partes=lendo_arquivo(f[i].getName()+".cfg").split("\n");
+                    for ( int j=0;j<partes.length;j++ ){
+                        faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px;\" onclick=\"click_faixa(this,'humanClick')\">" + partes[j] + "</td></tr>\n";
+                    }
+                }
+            }
+        };
+        return "<html>\n" +
+        "<head>\n" +
+        "<body id=\"cursor\" onload=\"preparacao();\" style=\"background-color: rgb(0, 0, 0);\">\n" +
+        "<style>canvas {position: relative;top: 0%;left: 50%;margin-left: -50vmin;width: 100vmin;height: 100vmin;}</style>\n" +
+        "<div id=\"f11bg\" style=\"display: none\" >\n" +
+        "  <canvas></canvas>\n" +
+        "</div>\n" +
+        "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" sz=\"40\" wi=\"800\">\n" +
+        "<meta charset=\"utf-8\">\n" +
+        "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
+        "<div id=\"master\"></div>\n" +
+        "<div><style>.bordered {border: solid #177 3px;border-radius: 6px;}.bordered tr:hover {background: #999;}.bordered td, .bordered th {border-left: 2px solid #177;border-top: 2px solid #177;padding: 10px;}audio::-webkit-media-controls-panel{background-color: #777;}</style>\n" +
+        "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;margin-left: 20px; visibility: hidden;\"><tbody>\n" +
+        faixas +
+        "</tbody></table></div>\n" +
+        "<script type=\"text/javascript\">\n" +
+        "function remove_playlist(){\n" +
+        "  document.getElementById('master').innerHTML='';\n" +
+        "}\n" +
+        "function create_playlist(){\n" +
+        "  document.getElementById('master').innerHTML=`\n" +
+        "    <br/>\n" +
+        "    &nbsp;&nbsp;&nbsp;<a style=\"display: inline-block; cursor: pointer; font-size: 40px;\" onclick=\"troca_de_faixa_anterior()\">&#9194;</a>\n" +
+        "    <a style=\"display: inline-block; cursor: pointer; font-size: 40px;\" onclick=\"troca_de_faixa()\">&#9193;</a>\n" +
+        "    <br/>\n" +
+        "    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id=\"tocando\" style=\"display: inline-block; color: white; font-size: 32px;\"></a>\n" +
+        "    <br/>\n" +
+        "    <br/>\n" +
+        "    &nbsp;&nbsp;&nbsp;&nbsp;<input type=\"button\" value=\"FULL_SCREEN\" onclick=\"Fullscreen(false);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
+        "    <input type=\"button\" value=\"VIDEO\" onclick=\"Fullscreen(true);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
+        "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"A_mais()\">A+</a>\n" +
+        "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"A_menos()\">A-</a>\n" +
+        "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"W_mais()\">W+</a>\n" +
+        "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"W_menos()\">W-</a>\n" +
+        "    <br/>\n" +
+        "    &nbsp;&nbsp;&nbsp;&nbsp;<a style=\"color: #777; font-size: 8px;\">&nbsp;&nbsp;click no corpo da pagina para pausar/despausar</a>\n" +
+        "    <br/>\n" +
+        "    &nbsp;&nbsp;&nbsp;&nbsp;<audio id=\"p\" controls=\"controls\" preload=\"metadata\">\n" +
+        "      <source src=\"\" type=\"audio/mp3\">\n" +
+        "      seu navegador não suporta HTML5\n" +
+        "    </audio>\n" +
+        "    <br/>\n" +
+        "    <br/>\n" +
+        "  `;\n" +
+        "}\n" +
+        "function pause(){\n" +
+        "  document.getElementById('p').pause();\n" +
+        "}\n" +
+        "function play(){\n" +
+        "  var playPromise=document.getElementById('p').play();\n" +
+        "}\n" +
+        "function vai_pro_fim_da_faixa(){\n" +
+        "  var d=document.getElementById('p').duration-1;\n" +
+        "  document.getElementById('p').currentTime=d;\n" +
+        "}\n" +
+        "function first(){\n" +
+        "  var t=document.getElementById('tablebase').children[0];\n" +
+        "  e=t.children[0].children[0];\n" +
+        "  var limit=1000;\n" +
+        "  while( limit-- > 0 && isChildrenMusicNotActive(e) && dir(e) != null )\n" +
+        "    e=dir(e);\n" +
+        "  return e;\n" +
+        "}\n" +
+        "function tail(){\n" +
+        "  var t=document.getElementById('tablebase').children[0];\n" +
+        "  e=t.children[t.children.length-1].children[0];\n" +
+        "  var limit=1000;\n" +
+        "  while( limit-- > 0 && isChildrenMusicNotActive(e) && esq(e) != null )\n" +
+        "    e=esq(e);\n" +
+        "  return e;\n" +
+        "}\n" +
+        "function troca_de_faixa(){\n" +
+        "  var e=get_playing() || first();\n" +
+        "  var limit=1000;\n" +
+        "  e=dir(e) || first(e);\n" +
+        "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
+        "    e=dir(e) || first();\n" +
+        "  if ( limit <= 0 ){\n" +
+        "	console.log('Erro Fatal Loop.');\n" +
+        "	return;\n" +
+        "  }\n" +
+        "  click_faixa(e);\n" +
+        "}\n" +
+        "function troca_de_faixa_anterior(){\n" +
+        "  var e=get_playing() || tail();\n" +
+        "  var limit=1000;\n" +
+        "  e=esq(e) || tail(e);\n" +
+        "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
+        "    e=esq(e) || tail();\n" +
+        "  if ( limit <= 0 ){\n" +
+        "    console.log('Erro Fatal Loop.');\n" +
+        "    return;\n" +
+        "  }\n" +
+        "  click_faixa(e);\n" +
+        "}\n" +
+        "let cache_digest=null;\n" +
+        "function getDigest(){\n" +
+        "  if ( cache_digest != null )\n" +
+        "    return cache_digest;\n" +
+        "  let digest = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];\n" +
+        "  let p_digest = 0;\n" +
+        "  function updateDigest(a){\n" +
+        "    for ( var i=0;i<a.length;i++ ){\n" +
+        "      digest[p_digest]=(digest[p_digest]+a.charCodeAt(i))%52;\n" +
+        "      p_digest++;\n" +
+        "      if ( p_digest >= digest.length )\n" +
+        "        p_digest=0;\n" +
+        "    }\n" +
+        "  }\n" +
+        "  var a = document.getElementById('tablebase').children[0];\n" +
+        "  for ( var i=0;i<a.children.length;i++ )\n" +
+        "    updateDigest(a.children[i].children[0].innerText);\n" +
+        "  var a='';\n" +
+        "  for ( var i=0;i<digest.length;i++ ){\n" +
+        "    if ( digest[i] >= 26 )\n" +
+        "      a+=String.fromCharCode(digest[i]-26+97);\n" +
+        "    else\n" +
+        "      a+=String.fromCharCode(digest[i]+65);\n" +
+        "  }\n" +
+        "  cache_digest = a;\n" +
+        "  return cache_digest;\n" +
+        "}\n" +
+        "function A_update(sz){\n" +
+        "  let a = document.getElementById('tablebase').children[0];\n" +
+        "  for ( let i=0;i<a.children.length;i++ )\n" +
+        "    a.children[i].children[0].style.fontSize = sz + \"px\";\n" +
+        "}\n" +
+        "function A_mais(){\n" +
+        "  let sz = 3 + parseInt(document.getElementById(\"f11\").getAttribute(\"sz\"));\n" +
+        "  document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
+        "  A_update(sz);\n" +
+        "}\n" +
+        "function A_menos(){\n" +
+        "  let sz = -3 + parseInt(document.getElementById(\"f11\").getAttribute(\"sz\"));\n" +
+        "  document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
+        "  A_update(sz);\n" +
+        "}\n" +
+        "function W_update(wi){\n" +
+        "  let a = document.getElementById('tablebase').children[0];\n" +
+        "  for ( let i=0;i<a.children.length;i++ )\n" +
+        "    a.children[i].children[0].style.width = wi + \"px\";\n" +
+        "}\n" +
+        "function W_mais(){\n" +
+        "  let wi = 50 + parseInt(document.getElementById(\"f11\").getAttribute(\"wi\"));\n" +
+        "  document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
+        "  W_update(wi);\n" +
+        "}\n" +
+        "function W_menos(){\n" +
+        "  let wi = -50 + parseInt(document.getElementById(\"f11\").getAttribute(\"wi\"));\n" +
+        "  document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
+        "  W_update(wi);\n" +
+        "}\n" +
+        "function save_station(){\n" +
+        "  if ( get_playing() != null && getDigest() != null ){\n" +
+        "    let digest = getDigest();\n" +
+        "    let playing = get_playing().innerHTML;\n" +
+        "    let currentTime=document.getElementById('p').currentTime;\n" +
+        "    let volume=document.getElementById('p').volume;\n" +
+        "    let a = document.getElementById('tablebase').children[0];\n" +
+        "    let flags = '';\n" +
+        "    for ( let i=0;i<a.children.length;i++ ){\n" +
+        "      let b = a.children[i].children[0].innerText.substr(0,1);\n" +
+        "      if ( b == '+' || b == '-' )\n" +
+        "        flags+=b;\n" +
+        "    }\n" +
+        "    let sz = document.getElementById(\"f11\").getAttribute(\"sz\");\n" +
+        "    let wi = document.getElementById(\"f11\").getAttribute(\"wi\");\n" +
+        "    localStorage.setItem('playlist-v-20231018-'+digest,JSON.stringify({'playing': playing, 'currentTime': currentTime, 'volume': volume, 'flags': flags, 'sz': sz, 'wi': wi}));\n" +
+        "  }\n" +
+        "}\n" +
+        "function load_station(){\n" +
+        "  if ( getDigest() != null ){\n" +
+        "    let a = localStorage.getItem('playlist-v-20231018-'+getDigest());\n" +
+        "    if ( a != null ){\n" +
+        "      let b = JSON.parse(a);\n" +
+        "      let playing = b['playing'];\n" +
+        "      let currentTime = b['currentTime'];\n" +
+        "      let volume = b['volume'];\n" +
+        "      let flags= b['flags'];\n" +
+        "      let sz= b['sz'];\n" +
+        "      let wi= b['wi'];\n" +
+        "      document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
+        "      document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
+        "      a = document.getElementById('tablebase').children[0];\n" +
+        "      for ( let i=0;i<a.children.length;i++ ){\n" +
+        "        a.children[i].children[0].style.fontSize = sz + \"px\";\n" + 
+        "        a.children[i].children[0].style.width = wi + \"px\";\n" + 
+        "        b = a.children[i].children[0].innerText.substr(0,1);\n" +
+        "        if ( ( b == '+' || b == '-' ) ){\n" +
+        "          let c = flags.substr(0,1);\n" +
+        "          flags = flags.substr(1);\n" +
+        "          if ( c != b )\n" +
+        "            a.children[i].children[0].innerText = c + a.children[i].children[0].innerText.substr(1);\n" +
+        "  	    }\n" +
+        "      }\n" +
+        "      for ( let i=0;i<a.children.length;i++ ){\n" +
+        "        if ( playing == a.children[i].children[0].innerText ){\n" +
+        "          click_faixa(a.children[i].children[0]);\n" +
+        "          break;\n" +
+        "        }\n" +
+        "      }\n" +
+        "      document.getElementById('p').currentTime = currentTime;\n" +
+        "      document.getElementById('p').volume = volume;\n" +
+        "    }\n" +
+        "  }\n" +
+        "}\n" +
+        "function preparacao(){\n" +
+        "  create_playlist();\n" +
+        "  document.getElementById('tablebase').style.visibility='';\n" +         
+        "  console.log('playlistHash ' + getDigest());\n" +         
+        "  add_listener();\n" +
+        "  var t=document.getElementById('tablebase').children[0];\n" +
+        "  trySetParm(window.location.href);\n" +
+        "  click_faixa(t.children[0].children[0]);\n" +
+        "  load_station();\n" + 
+        "}\n" +
+        "function trySetParm(url){\n" +
+        "  if ( url.indexOf('?')  > -1 && url.split('?')[1].trim().length > 0 ){\n" +
+        "    url=decodeURI(url.split('?')[1].trim())\n" +
+        "    var t=document.getElementById('tablebase').children[0];\n" +
+        "    e=t.children[0].children[0];\n" +
+        "    var limit=500;\n" +
+        "    while( limit-- > 0 && e != null){\n" +
+        "	  if ( isChildrenMusic(e) && e.innerText.trim().substring('+ 00:00:00 '.length) == url ){\n" +
+        "	    symbol_click(e);\n" +
+        "	    break;\n" +
+        "	  }\n" +
+        "	  e=dir(e);\n" +
+        "	}\n" +
+        "  }\n" +
+        "}\n" +
+        "function pause_play(force){\n" +
+        "  if ( document.getElementById('p').paused )\n" +
+        "    play();\n" +
+        "  else\n" +
+        "    pause();\n" +
+        "}\n" +
+        "function add_listener(){\n" +
+        "  document.getElementById('p').onended = function(){\n" +
+        "    troca_de_faixa();\n" +
+        "  };\n" +
+        "  document.addEventListener('click', function(e) {  \n" +
+        "       console.log('tagName clicked: ' + e.target.tagName);\n" +
+        "       if ( e.target.tagName == 'CANVAS' || e.target.tagName == 'BODY' || e.target.tagName == 'DIV' || e.target.tagName == 'VIDEO' ){\n" +
+        "         if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
+        "           DisableFullscreen();\n" +
+        "         }else{\n" +
+        "           pause_play(\"pause\");\n" +
+        "         }\n" +
+        "	}else{\n" +
+        "         if ( e.target.tagName == 'INPUT' ){\n" +
+        "           //nada\n" +
+        "         }else{\n" +
+        "	    if ( transfer_e != null ){\n" +
+        "	      click_faixa(transfer_e,true,e.x);\n" +
+        "             transfer_e=null;\n" +
+        "           }\n" +
+        "	  }\n" +
+        "	}\n" +
+        "  },false);  \n" +
+        "  document.addEventListener(\n" +
+        "    \"mouseover\",function(e){\n" +
+        "      if ( e.target.getAttribute(\"value\") && ( e.target.getAttribute(\"value\") == \"FULL_SCREEN\" || e.target.getAttribute(\"value\") == \"VIDEO\" ) ){\n" +
+        "        document.getElementById(\"f11\").setAttribute(\"tailmousef11\",\"s\");\n" +
+        "        if( e.target.getAttribute(\"value\") == \"VIDEO\" )\n" +
+        "          document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"s\");\n" +
+        "        else\n" +
+        "          document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"n\");\n" +
+        "      }else{\n" +
+        "        document.getElementById(\"f11\").setAttribute(\"tailmousef11\",\"n\");\n" +
+        "        document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"n\");\n" +
+        "      }\n" +
+        "      document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"s\");\n" +
+        "    },false\n" +
+        "  );\n" +
+        "}\n" +
+        "function limpa_click_faixa(){\n" +
+        "  var t=document.getElementById('tablebase').children[0];\n" +
+        "  for ( var i=0;i<t.children.length;i++ )\n" +
+        "    t.children[i].children[0].style.background='';\n" +
+        "}\n" +
+        "function isChildrenMusic(e){\n" +
+        "  return e.innerText.trim().indexOf('+') == 0 || e.innerText.indexOf('-') == 0;\n" +
+        "}\n" +
+        "function isMasterMusic(e){\n" +
+        "  return !isChildrenMusic(e);\n" +
+        "}\n" +
+        "function isChildrenMusicActive(e){\n" +
+        "  return e.innerText.trim().indexOf('+') == 0;\n" +
+        "}\n" +
+        "function isChildrenMusicNotActive(e){\n" +
+        "  return e.innerText.trim().indexOf('-') == 0;\n" +
+        "}\n" +
+        "function esq(e){\n" +
+        "  if ( e.parentElement.previousElementSibling != null )\n" +
+        "	return e.parentElement.previousElementSibling.children[0];\n" +
+        "  return null;\n" +
+        "}\n" +
+        "function dir(e){\n" +
+        "  if ( e.parentElement.nextElementSibling != null )\n" +
+        "	return e.parentElement.nextElementSibling.children[0];\n" +
+        "  return null;\n" +
+        "}\n" +
+        "function getNameHierarchy(e){\n" +
+        "  if ( e.innerText == null )\n" +
+        "    return 'null';\n" +
+        "  if ( isChildrenMusic(e) )\n" +
+        "    return getNameHierarchy(esq(e));\n" +
+        "  if ( e.getAttribute('name') == null )\n" +
+        "    return e.innerText.trim();\n" +
+        "  else\n" +
+        "    return e.getAttribute('name').trim();\n" +
+        "}\n" +
+        "function getFaixaChildrenToSeconds(p){\n" +
+        "  p=p.split(' ')[1].split(':');\n" +
+        "  return parseInt(p[2])+parseInt(p[1])*60+parseInt(p[0])*60*60;\n" +
+        "}\n" +
+        "function getStart(e){\n" +
+        "  if ( ( e.innerText.trim().indexOf('-') == 0 || e.innerText.trim().indexOf('+') == 0 ) && e.innerText.trim().split(' ').length > 1 && e.innerText.trim().split(' ')[1].length == 8 && e.innerText.trim().split(' ')[1].split(':').length == 3 ){\n" +
+        "	return getFaixaChildrenToSeconds(e.innerText.trim());\n" +
+        "  }\n" +
+        "  return 0;\n" +
+        "}\n" +
+        "function QtyChildrenByChildren(e){\n" +
+        "  var qty=1;\n" +
+        "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
+        "    e=esq(e);\n" +
+        "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
+        "	qty++;\n" +
+        "    e=dir(e);\n" +
+        "  }\n" +
+        "  return qty;\n" +
+        "}\n" +
+        "function QtyChildrenActiveByChildren(e){\n" +
+        "  var qty=0;\n" +
+        "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
+        "    e=esq(e);\n" +
+        "  if ( isChildrenMusicActive(e) )\n" +
+        "	qty++;\n" +
+        "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
+        "    e=dir(e);\n" +
+        "    if ( isChildrenMusicActive(e) )\n" +
+        "	  qty++;\n" +
+        "  }\n" +
+        "  return qty;\n" +
+        "}\n" +
+        "function setForActive(e){\n" +
+        "  e.innerText='+'+e.innerText.trim().substr(1);\n" +
+        "}\n" +
+        "function setForNotActive(e){\n" +
+        "  e.innerText='-'+e.innerText.trim().substr(1);\n" +
+        "}\n" +
+        "function setAllForActive(e){\n" +
+        "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
+        "    e=esq(e);\n" +
+        "  setForActive(e);\n" +
+        "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
+        "    e=dir(e);\n" +
+        "	setForActive(e);\n" +
+        "  }	\n" +
+        "}\n" +
+        "function setAllForNotActive(e){\n" +
+        "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
+        "    e=esq(e);\n" +
+        "  setForNotActive(e);\n" +
+        "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
+        "    e=dir(e);\n" +
+        "	setForNotActive(e);\n" +
+        "  }		\n" +
+        "}\n" +
+        "var transfer_e=null;\n" +
+        "function click_faixa(e,humanClick,humanClick_x){ // click td\n" +
+        "  if ( humanClick && humanClick_x == null ){\n" +
+        "    transfer_e=e;\n" +
+        "    return;\n" +
+        "  }\n" +
+        "  if ( humanClick != null && isChildrenMusic(e) && humanClick_x <= 35 ){\n" +
+        "    symbol_click(e);\n" +
+        "	return;\n" +
+        "  }\n" +
+        "  // this is root and exists children +\n" +
+        "  if ( isMasterMusic(e) && dir(e) != null && isChildrenMusic(dir(e)) ){    \n" +
+        "    click_faixa(dir(e));\n" +
+        "	return;\n" +
+        "  }\n" +
+        "  limpa_click_faixa();\n" +
+        "  e.style.background='#999';  \n" +
+        "  document.getElementById('p').src=getNameHierarchy(e);\n" +
+        "  document.getElementById('tocando').innerText=e.innerText;  \n" +
+        "  document.getElementById('p').currentTime=getStart(e);  \n" +
+        "  play();  \n" +
+        "  //if ( humanClick == null )  \n" +
+        "  //  e.scrollIntoView(false);  \n" +
+        "}\n" +
+        "function symbol_click(e){\n" +
+        "  var qty=QtyChildrenByChildren(e);\n" +
+        "  var qtyActive=QtyChildrenActiveByChildren(e);\n" +
+        "  var qtyNotActive=qty-qtyActive;\n" +
+        "  var isActive=isChildrenMusicActive(e);\n" +
+        "  if ( isActive ){\n" +
+        "    if ( qty == 1 )\n" +
+        "  	  return;\n" +
+        "    if ( qtyActive == 1 ){\n" +
+        "  	  setAllForActive(e);\n" +
+        "  	  return;\n" +
+        "    }\n" +
+        "    if ( qtyActive == qty ){\n" +
+        "  	  setAllForNotActive(e);\n" +
+        "  	  setForActive(e);\n" +
+        "  	  return;\n" +
+        "    }\n" +
+        "    setForNotActive(e);\n" +
+        "  }else{\n" +
+        "    setForActive(e);\n" +
+        "  }\n" +
+        "}\n" +
+        "function tryUpdateStateChildren(){\n" +
+        "  if ( document.getElementById('p') == null || document.getElementById('p').currentTime == null )\n" +
+        "    return;\n" +
+        "  e=get_playing() || first();\n" +
+        "  while ( isChildrenMusic(e) && esq(e) != null && isChildrenMusic(esq(e)) && document.getElementById('p').currentTime < getFaixaChildrenToSeconds(e.innerText.trim()) ){\n" +
+        "	e.style.background='';  \n" +
+        "	esq(e).style.background='#999';  \n" +
+        "	e=esq(e);\n" +
+        "  }\n" +
+        "  while ( isChildrenMusic(e) && dir(e) != null && isChildrenMusic(dir(e)) && document.getElementById('p').currentTime >= getFaixaChildrenToSeconds(dir(e).innerText.trim()) ){\n" +
+        "	e.style.background='';  \n" +
+        "	dir(e).style.background='#999';  \n" +
+        "	e=dir(e);\n" +
+        "  }\n" +
+        "  if ( isChildrenMusicNotActive(e) ){\n" +
+        "	troca_de_faixa();\n" +
+        "  }\n" +
+        "}\n" +
+        "function get_playing(){\n" +
+        "  var t=document.getElementById('tablebase').children[0];\n" +
+        "  for ( var i=0;i<t.children.length;i++ )\n" +
+        "    if ( t.children[i].children[0].style.background != '')\n" +
+        "	  return t.children[i].children[0];\n" +
+        "  return null;\n" +
+        "}\n" +
+        "function Fullscreen(videoOn) { // ocorre um erro se for invocado sem interação de tela(bloqueio nativo do browser)\n" +
+        "  element=document.children[0];\n" +
+        "  if(element.requestFullscreen) element.requestFullscreen();\n" +
+        "  else if(element.mozRequestFullScreen) element.mozRequestFullScreen();\n" +
+        "  else if(element.webkitRequestFullscreen) element.webkitRequestFullscreen();\n" +
+        "  else if(element.msRequestFullscreen) element.msRequestFullscreen();\n" +
+        "  document.getElementById(\"f11\").style.display=\"none\";\n" + 
+        "  if(videoOn)\n" + 
+        "    document.getElementById(\"f11bg\").style.display=\"\";\n" + 
+        "  document.getElementById(\"cursor\").style.cursor=\"none\";\n" + 
+        "}\n" +
+        "function DisableFullscreen() {\n" +
+        "  if(document.exitFullscreen) document.exitFullscreen();\n" +
+        "  else if(document.mozCancelFullScreen) document.mozCancelFullScreen();\n" +
+        "  else if(document.webkitExitFullscreen) document.webkitExitFullscreen();\n" +
+        "  else if(document.msExitFullscreen) document.msExitFullscreen();\n" +
+        "  document.getElementById(\"f11\").style.display=\"\";\n" + 
+        "  document.getElementById(\"f11bg\").style.display=\"none\";\n" + 
+        "  document.getElementById(\"cursor\").style.cursor=\"\";\n" + 
+        "}\n" +
+        "function mouseInFullscreen(e){\n" +
+        "  if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
+        "    document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
+        "    document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
+        "  }else{\n" +
+        "    if ( e && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"n\" ){\n" +
+        "      document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"s\");\n" +
+        "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
+        "    }else{\n" +
+        "      if ( !e && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"s\" ){\n" +
+        "        document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
+        "        document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
+        "      }\n" +
+        "    }\n" +
+        "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"2\" )\n" +
+        "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"3\");\n" +
+        "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"1\" )\n" +
+        "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"2\");\n" +
+        "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"0\" )\n" +
+        "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"1\");\n" +
+        "  }\n" +
+        "}\n" +
+        "function check_fullscreen(){\n" +
+        "  if ( document.getElementById(\"f11\").style.display == \"\" && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"s\" && document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"3\" ){\n" +
+        "    if ( document.getElementById(\"f11\").getAttribute(\"tailvideo\") == \"s\" )\n" +
+        "      Fullscreen(true);\n" +
+        "    else\n" +
+        "      Fullscreen(false);\n" +
+        "    document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
+        "    document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
+        "  }\n" +
+        "}\n" +
+        "function interval_1000(){\n" +
+        "  save_station();\n" +        
+        "  mouseInFullscreen( document.getElementById(\"f11\").getAttribute(\"tailmousef11\") == \"s\" );\n" +
+        "  check_fullscreen();\n" +
+        "}\n" +
+        "function interval_100(){\n" +
+        "  tryUpdateStateChildren();\n" +
+        "}\n" +
+        "setInterval(interval_100, 100);\n" +
+        "setInterval(interval_1000, 1000);\n" +
+        "function initbg(){\n" + 
+        "  const MAX = 50;var canvas, ctx;var count = 0;var points = [];function rus() {ctx.globalCompositeOperation = \"source-over\";ctx.fillStyle = \"rgba(0,0,0,0.03)\";ctx.fillRect(0, 0, canvas.width, canvas.height);ctx.globalCompositeOperation = \"lighter\";var tim = count / 5;for (var e = 0; e < 3; e++) {tim *= 1.7;var s = 1 - e / 3;a = tim / 59;var yp = Math.cos(a);\n" + 
+        "  var yp2 = Math.sin(a);a = tim / 23;var xp = Math.cos(a);var xp2 = Math.sin(a);var p2 = [];for (var a = 0; a < points.length; a++) {var x = points[a][0];var y = points[a][1];var z = points[a][2];var y1 = y * yp + z * yp2;var z1 = y * yp2 - z * yp;var x1 = x * xp + z1 * xp2;z = x * xp2 - z1 * xp;z1 = Math.pow(2, z * s);x = x1 * z1;y = y1 * z1;\n" + 
+        "  p2.push([x, y, z]);}s *= 120;for (var d = 0; d < 3; d++) {for (var a = 0; a < MAX; a++) {const b = p2[d * MAX + a];const c = p2[((a + 1) % MAX) + d * MAX];ctx.beginPath();ctx.strokeStyle = \"hsla(\" + (((a / MAX) * 360) | 0) + \",70%,60%,0.15)\";ctx.lineWidth = Math.pow(6, b[2]);ctx.lineTo(b[0] * s + 200, b[1] * s + 200);\n" + 
+        "  ctx.lineTo(c[0] * s + 200, c[1] * s + 200);ctx.stroke();}}}count++;requestAnimationFrame(rus);}canvas = document.getElementsByTagName(\"canvas\")[0];ctx = canvas.getContext(\"2d\");canvas.width = canvas.height = 400;ctx.fillRect(0, 0, 400, 400);var r = 0;for (var a = 0; a < MAX; a++) {points.push([Math.cos(r), Math.sin(r), 0]);\n" + 
+        "  r += (Math.PI * 2) / MAX;}for (var a = 0; a < MAX; a++) {points.push([0, points[a][0], points[a][1]]);}for (var a = 0; a < MAX; a++) {points.push([points[a][1], 0, points[a][0]]);}rus();\n" + 
+        "}\n" + 
+        "initbg();\n" + 
+        "</script>\n" +
+        "</div>\n" +
+        "</body></head></html>\n";
+    }
+    public String get_html_virtual_playlistmovie(String id){
+        String tail_id="";
+        String back="";
+        String next="";
+        int countSelect=0;
+        int countFile=0;
+        int countDirectory=0;
+        ArrayList<String> elementos=new ArrayList<>();
+        ArrayList<String> elementosIsFile=new ArrayList<>();
+        String path=".";
+        String prefix="/id/";
+        int lenPrefixTag=prefix.length();
+        if ( !id.equals("") )
+            path=decodeUrl(id); 
+        if ( path.contains("\\") || path.contains(":") || path.startsWith("/") || path.endsWith("/") )
+            return "Parametro invalido";
+        if ( path.split("/").length > 1 ){
+            String [] partes=path.split("/");
+            for ( int i=0;i<partes.length;i++ )
+                if ( partes[i].equals(".") || partes[i].equals("..") )
+                    return "Parametro invalido";
+        }
+        File f_=new File(path);
+        if ( !f_.exists() )
+            return "Parametro invalido";
+        if ( f_.isFile() ){
+            if ( path.lastIndexOf("/") == -1 )
+                path=".";
+            else{
+                path=path.substring(countFile, path.lastIndexOf("/"));
+                prefix="/id/"+path+"/";
+            }
+            f_=new File(path);
+            id=id.split("/")[id.split("/").length-1];
+        }else
+            prefix="/id/"+path+"/";
+        prefix=prefix.replace("/./", "/");
+        File [] f=f_.listFiles();
+        for ( int i=0;i<f.length;i++ ){
+            if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
+                continue;
+            if ( f[i].isFile() )
+                countFile++;
+            if ( f[i].isDirectory())
+                countDirectory++;
+            if ( countSelect == 1 && next.equals("") ){
+                next="next.addEventListener('click', function(){ window.location.href='" + prefix + encodeUrl(f[i].getName()) + "'; });\n";
+                next+="video.onended = function(){next.click();};\n";
+            }
+            if ( f[i].isFile() && decodeUrl(id).equals(f[i].getName()) )
+                countSelect++;
+            if ( countSelect == 0 )
+                back="back.addEventListener('click', function(){ window.location.href='" + prefix + encodeUrl(f[i].getName()) + "'; });\n";
+            elementos.add(f[i].getName());
+            if ( f[i].isFile() )
+                elementosIsFile.add("S");
+            else
+                elementosIsFile.add("N");
+            tail_id=f[i].getName();
+        };
+        if ( countFile > 0 && countDirectory > 0 )
+            return "Erro interno de estrutura. Existe arquivos e diretorios neste local.";
+        if ( countFile == 0 && countDirectory == 0 )
+            return "Pasta vazia";
+        if ( countSelect == 1 || countFile == 1 ){
+            if ( countFile == 1 ){
+                id=tail_id;
+                back="";
+            }
+        }else{
+            String trs="";
+            String curl="";
+            String h1="<br>";
+            String txt_item="";
+            if ( !path.equals(".") )
+                h1="<a href=\"/\"><svg width=\"44\" height=\"44\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g clip-path=\"url(#clip0)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z\" fill=\"#293644\"></path> </g> <defs> <clipPath id=\"clip0\"> <rect width=\"24\" height=\"24\" fill=\"white\"></rect> </clipPath> </defs> </svg></a><br><h1 style=\"color: white;\">&nbsp;/" + path + "</h1><br>";
+            for ( int i=0;i<elementos.size();i++ ){
+                if ( elementosIsFile.get(i).equals("S") ){
+                    curl += "curl \"" + (prefix + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
+                    txt_item = elementos.get(i);
+                }else
+                    txt_item = "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><path style=\"fill:#D9D58F;stroke:#222;stroke-width:2\" d=\"m 2,88 c 0,-1 0,-63 0,-63 0,0 -0.6,-5 4.4,-5 -1,0 5.6,0 5.6,0 l 0,-6 c 0,0 0,-3 3,-3 l 17,0 c 0,0 3,0 3,3 l 0,6 43,0 c 0,0 4,0 4,4 l 0,64 z\"></path><path style=\"fill:#E8DC88;stroke:#222;stroke-width:2;fill-opacity:0.7\" d=\"M 2,88 17,54 c 0,0 1,-5 9,-5 11,0 65,0 65,0 0,0 9,0 7,5 -2,5 -14,34 -14,34 z\"></path></svg><a> </a>" + elementos.get(i);
+                trs += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.href='" + prefix + encodeUrl(elementos.get(i)) + "'\">" + txt_item + "</td></tr>\n";
+            }
+            return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
+            "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +
+            "<body style=\"background-color: rgb(0, 0, 0);\">" + 
+            "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n" +
+            "<br>\n" +
+            "<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>\n" + 
+            h1 + 
+            "<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>\n" +
+            "<!--\n" + 
+            curl +
+            "-->\n" + 
+            trs +
+            "</table></body></html>";
+        }
+        String id_display=decodeUrl(id);
+        if ( id_display.split("\\.").length == 2 )
+            id_display=id_display.split("\\.")[0];
+        id=prefix.substring(lenPrefixTag-1)+id;
+        return "<!-- creditos https://github.com/CodingGarden/css-challenges/blob/master/netflix-video-player/index.html -->\n" + 
+        "<html lang=\"pt-BR\">\n" +
+        "<head>\n" +
+        "  <meta charset=\"UTF-8\">\n" +
+        "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
+        "  <meta http-equiv=\"X-UA-Compatible\" content=\"ie=edge\">\n" +
+        "  <title>" + id_display + "</title>\n" +
+        "  <link href=\"https://fonts.googleapis.com/css?family=Rubik&display=swap\" rel=\"stylesheet\">\n" +
+        "</head>\n" +
+        "<body onload=\"playPause()\">\n" +
+        "  <div class=\"video-container\">\n" +
+        "    <video src=\"" + id + "\" id=\"video\"></video>\n" +
+        "    <div class=\"controls-container\">\n" +
+        "      <div class=\"progress-controls\">\n" +
+        "        <div class=\"progress-bar\">\n" +
+        "          <div class=\"watched-bar\"></div>\n" +
+        "          <div class=\"playhead\"></div>\n" +
+        "        </div>\n" +
+        "        <div class=\"time-remaining\">\n" +
+        "          00:00\n" +
+        "        </div>\n" +
+        "      </div>\n" +
+        "      <div class=\"controls\">\n" +
+        "        <button class=\"play-pause\">\n" +
+        "          <svg class=\"playing\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n" +
+        "            <polygon points=\"5 3 19 12 5 21 5 3\"></polygon>\n" +
+        "          </svg>\n" +
+        "          <svg class=\"paused\" viewBox=\"0 0 24 24\">\n" +
+        "            <rect x=\"6\" y=\"4\" width=\"4\" height=\"16\"></rect>\n" +
+        "            <rect x=\"14\" y=\"4\" width=\"4\" height=\"16\"></rect>\n" +
+        "          </svg>\n" +
+        "        </button>\n" +
+        "        <button class=\"rewind\">\n" +
+        "          <svg viewBox=\"0 0 24 24\">\n" +
+        "            <path fill=\"#ffffff\"\n" +
+        "              d=\"M12.5,3C17.15,3 21.08,6.03 22.47,10.22L20.1,11C19.05,7.81 16.04,5.5 12.5,5.5C10.54,5.5 8.77,6.22 7.38,7.38L10,10H3V3L5.6,5.6C7.45,4 9.85,3 12.5,3M10,12V22H8V14H6V12H10M18,14V20C18,21.11 17.11,22 16,22H14A2,2 0 0,1 12,20V14A2,2 0 0,1 14,12H16C17.11,12 18,12.9 18,14M14,14V20H16V14H14Z\" />\n" +
+        "          </svg>\n" +
+        "        </button>\n" +
+        "        <button class=\"fast-forward\">\n" +
+        "          <svg viewBox=\"0 0 24 24\">\n" +
+        "            <path fill=\"#ffffff\"\n" +
+        "              d=\"M10,12V22H8V14H6V12H10M18,14V20C18,21.11 17.11,22 16,22H14A2,2 0 0,1 12,20V14A2,2 0 0,1 14,12H16C17.11,12 18,12.9 18,14M14,14V20H16V14H14M11.5,3C14.15,3 16.55,4 18.4,5.6L21,3V10H14L16.62,7.38C15.23,6.22 13.46,5.5 11.5,5.5C7.96,5.5 4.95,7.81 3.9,11L1.53,10.22C2.92,6.03 6.85,3 11.5,3Z\" />\n" +
+        "          </svg>\n" +
+        "        </button>\n" +
+        "        <button class=\"volume\">\n" +
+        "          <svg class=\"full-volume\" viewBox=\"0 0 24 24\">\n" +
+        "            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\n" +
+        "            <path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\"></path>\n" +
+        "          </svg>\n" +
+        "          <svg class=\"muted\" viewBox=\"0 0 24 24\">\n" +
+        "            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\n" +
+        "            <line x1=\"23\" y1=\"9\" x2=\"17\" y2=\"15\"></line>\n" +
+        "            <line x1=\"17\" y1=\"9\" x2=\"23\" y2=\"15\"></line>\n" +
+        "          </svg>\n" +
+        "        </button>\n" +
+        "        <p class=\"title\">\n" +
+        "          <span class=\"series\"></span><span class=\"episode\">" + id_display + "</span>\n" +
+        "        </p>\n" +
+        "        <button class=\"back\">\n" +
+        "          <svg viewBox=\"0 0 24 24\">\n" +
+        "            <line x1=\"5\" y1=\"5\" x2=\"5\" y2=\"19\"></line>\n" +
+        "            <polygon points=\"19 20 9 12 19 4 19 20\"></polygon>\n" +
+        "          </svg>\n" +
+        "        </button>\n" +
+        "        <button class=\"next\">\n" +
+        "          <svg viewBox=\"0 0 24 24\">\n" +
+        "            <polygon points=\"5 4 15 12 5 20 5 4\"></polygon>\n" +
+        "            <line x1=\"19\" y1=\"5\" x2=\"19\" y2=\"19\"></line>\n" +
+        "          </svg>\n" +
+        "        </button>\n" +
+        "        <button class=\"full-screen\">\n" +
+        "          <svg class=\"maximize\" viewBox=\"0 0 24 24\">\n" +
+        "            <path d=\"M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3\">\n" +
+        "            </path>\n" +
+        "          </svg>\n" +
+        "          <svg class=\"minimize\" viewBox=\"0 0 24 24\">\n" +
+        "            <path d=\"M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3\">\n" +
+        "            </path>\n" +
+        "          </svg>\n" +
+        "        </button>\n" +
+        "      </div>\n" +
+        "    </div>\n" +
+        "  </div>  \n" +
+        "</body>\n" +
+        "</html>\n" +
+        "<script>\n" +
+        "const videoContainer = document.querySelector('.video-container');\n" +
+        "const video = document.querySelector('.video-container video');\n" +
+        "\n" +
+        "const controlsContainer = document.querySelector('.video-container .controls-container');\n" +
+        "\n" +
+        "const playPauseButton = document.querySelector('.video-container .controls button.play-pause');\n" +
+        "const rewindButton = document.querySelector('.video-container .controls button.rewind');\n" +
+        "const fastForwardButton = document.querySelector('.video-container .controls button.fast-forward');\n" +
+        "const volumeButton = document.querySelector('.video-container .controls button.volume');\n" +
+        "const fullScreenButton = document.querySelector('.video-container .controls button.full-screen');\n" +
+        "const playButton = playPauseButton.querySelector('.playing');\n" +
+        "const pauseButton = playPauseButton.querySelector('.paused');\n" +
+        "const fullVolumeButton = volumeButton.querySelector('.full-volume');\n" +
+        "const mutedButton = volumeButton.querySelector('.muted');\n" +
+        "const maximizeButton = fullScreenButton.querySelector('.maximize');\n" +
+        "const minimizeButton = fullScreenButton.querySelector('.minimize');\n" +
+        "\n" +
+        "\n" +
+        "const progressBar = document.querySelector('.video-container .progress-controls .progress-bar');\n" +
+        "const watchedBar = document.querySelector('.video-container .progress-controls .progress-bar .watched-bar');\n" +
+        "const timeLeft = document.querySelector('.video-container .progress-controls .time-remaining');\n" +
+        "const back = document.querySelector('.video-container .controls .back');\n" +
+        "const next = document.querySelector('.video-container .controls .next');\n" +
+        back + 
+        next + 
+        "let controlsTimeout;\n" +
+        "controlsContainer.style.opacity = '0';\n" +
+        "watchedBar.style.width = '0px';\n" +
+        "pauseButton.style.display = 'none';\n" +
+        "minimizeButton.style.display = 'none';\n" +
+        "\n" +
+        "const displayControls = () => {\n" +
+        "  controlsContainer.style.opacity = '1';\n" +
+        "  document.body.style.cursor = 'initial';\n" +
+        "  if (controlsTimeout) {\n" +
+        "    clearTimeout(controlsTimeout);\n" +
+        "  }\n" +
+        "  controlsTimeout = setTimeout(() => {\n" +
+        "    controlsContainer.style.opacity = '0';\n" +
+        "    document.body.style.cursor = 'none';\n" +
+        "  }, 1100);\n" +
+        "};\n" +
+        "\n" +
+        "const playPause = () => {\n" +
+        "  try{\n" +
+        "    if (video.paused) {\n" +
+        "      video.play();\n" +
+        "      playButton.style.display = 'none';\n" +
+        "      pauseButton.style.display = '';\n" +
+        "    }else{\n" +
+        "      video.pause();\n" +
+        "      playButton.style.display = '';\n" +
+        "      pauseButton.style.display = 'none';\n" +
+        "    }\n" +
+        "  }catch(e){}\n" +
+        "};\n" +
+        "\n" +
+        "const toggleMute = () => {\n" +
+        "  video.muted = !video.muted;\n" +
+        "  if (video.muted) {\n" +
+        "    fullVolumeButton.style.display = 'none';\n" +
+        "    mutedButton.style.display = '';\n" +
+        "  } else {\n" +
+        "    fullVolumeButton.style.display = '';\n" +
+        "    mutedButton.style.display = 'none';\n" +
+        "  }\n" +
+        "};\n" +
+        "\n" +
+        "const toggleFullScreen = () => {\n" +
+        "  if (!document.fullscreenElement) {\n" +
+        "    videoContainer.requestFullscreen();\n" +
+        "  } else {\n" +
+        "    document.exitFullscreen();\n" +
+        "  }\n" +
+        "};\n" +
+        "\n" +
+        "document.addEventListener('click', function(e) {  \n" +
+        "   console.log('tagName clicked: ' + e.target.tagName);\n" +
+        "   if ( e.target.tagName == 'VIDEO' ){\n" +
+        "     playPause();\n" +
+        "   }\n" +
+        "},false);  \n" +
+        "  \n" +
+        "document.addEventListener('fullscreenchange', () => {\n" +
+        "  if (!document.fullscreenElement) {\n" +
+        "    maximizeButton.style.display = '';\n" +
+        "    minimizeButton.style.display = 'none';\n" +
+        "  } else {\n" +
+        "    maximizeButton.style.display = 'none';\n" +
+        "    minimizeButton.style.display = '';\n" +
+        "  }\n" +
+        "});\n" +
+        "\n" +
+        "document.addEventListener('keyup', (event) => {\n" +
+        "  if (event.code === 'Space') {\n" +
+        "    playPause(); \n" +
+        "  }\n" +
+        "\n" +
+        "  if (event.code === 'KeyM') {\n" +
+        "    toggleMute();\n" +
+        "  }\n" +
+        "\n" +
+        "  if (event.code === 'KeyF') {\n" +
+        "    toggleFullScreen();\n" +
+        "  }\n" +
+        "\n" +
+        "  displayControls();\n" +
+        "});\n" +
+        "\n" +
+        "document.addEventListener('mousemove', () => {\n" +
+        "  displayControls();\n" +
+        "});\n" +
+        "\n" +
+        "video.addEventListener('timeupdate', () => {\n" +
+        "  watchedBar.style.width = ((video.currentTime / video.duration) * 100) + '%';\n" +
+        "  let seconds = parseInt(video.duration - video.currentTime);\n" +
+        "  let hour=parseInt(seconds/(60*60));\n" +
+        "  seconds-=hour*60*60;\n" +
+        "  let minute=parseInt(seconds/60);\n" +
+        "  seconds-=minute*60;\n" +
+        "  second=seconds;\n" +
+        "  if ( minute < 10 )\n" +
+        "    minute='0'+minute;\n" +
+        "  else\n" +
+        "    minute=''+minute;\n" +
+        "  if ( second < 10 )\n" +
+        "    second='0'+second;\n" +
+        "  else\n" +
+        "    second=''+second;\n" +
+        "  timeLeft.textContent = hour+':'+minute+':'+second;\n" +
+        "});\n" +
+        "\n" +
+        "progressBar.addEventListener('click', (event) => {\n" +
+        "  const pos = (event.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;\n" +
+        "  video.currentTime = pos * video.duration;\n" +
+        "});\n" +
+        "\n" +
+        "playPauseButton.addEventListener('click', playPause);\n" +
+        "\n" +
+        "rewindButton.addEventListener('click', () => {\n" +
+        "  video.currentTime -= 10;\n" +
+        "});\n" +
+        "\n" +
+        "fastForwardButton.addEventListener('click', () => {\n" +
+        "  video.currentTime += 10;\n" +
+        "});\n" +
+        "\n" +
+        "volumeButton.addEventListener('click', toggleMute);\n" +
+        "\n" +
+        "fullScreenButton.addEventListener('click', toggleFullScreen);\n" +
+        "</script>\n" +
+        "\n" +
+        "<style>\n" +
+        "body {\n" +
+        "  margin: 0;\n" +
+        "  padding: 0;\n" +
+        "  width: 100vw;\n" +
+        "  height: 100vh;\n" +
+        "  overflow: hidden;\n" +
+        "  background: black;\n" +
+        "  font-family: 'Rubik', sans-serif;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container {\n" +
+        "  width: 100%;\n" +
+        "  height: 100%;\n" +
+        "  display: flex;\n" +
+        "  justify-content: center;\n" +
+        "  align-items: center;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container video {\n" +
+        "  width: 100%;\n" +
+        "  height: 100%;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls-container {\n" +
+        "  position: fixed;\n" +
+        "  bottom: 0px;\n" +
+        "  width: 100%;\n" +
+        "  display: flex;\n" +
+        "  flex-direction: column;\n" +
+        "  justify-content: flex-end;\n" +
+        "  background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.9)); \n" +
+        "  transition: opacity 0.5s linear;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .progress-controls {\n" +
+        "  width: 100%;\n" +
+        "  display: flex;\n" +
+        "  justify-content: center;\n" +
+        "  align-items: center;\n" +
+        "  color: white;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .progress-controls .time-remaining {\n" +
+        "  margin: 1vw;\n" +
+        "  width: 4vw;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .progress-controls .progress-bar {\n" +
+        "  width: 90vw;\n" +
+        "  height: 1vw;\n" +
+        "  max-height: 7px;\n" +
+        "  background: #5B5B5B;\n" +
+        "  display: flex;\n" +
+        "  align-items: center;\n" +
+        "  cursor: pointer;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .progress-controls .progress-bar .watched-bar,\n" +
+        ".video-container .progress-controls .progress-bar .playhead {\n" +
+        "  background: #E31221;\n" +
+        "  display: inline-block;\n" +
+        "  transition: all 0.2s;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .progress-controls .progress-bar .watched-bar {\n" +
+        "  height: 100%;\n" +
+        "  width: 20%;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .progress-controls .progress-bar .playhead {\n" +
+        "  height: 3vw;\n" +
+        "  width: 3vw;\n" +
+        "  max-height: 25px;\n" +
+        "  max-width: 25px;\n" +
+        "  border-radius: 50%;\n" +
+        "  transform: translateX(-50%);\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls {\n" +
+        "  width: 100%;\n" +
+        "  display: flex;\n" +
+        "  justify-content: space-between;\n" +
+        "  align-items: center;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls button {\n" +
+        "  background: none;\n" +
+        "  outline: none;\n" +
+        "  box-shadow: none;\n" +
+        "  border: none;\n" +
+        "  width: 5vw;\n" +
+        "  height: 5vw;\n" +
+        "  min-width: 50px;\n" +
+        "  min-height: 50px;\n" +
+        "  margin: 0px 1vw;\n" +
+        "  opacity: 0.4;\n" +
+        "  transform: scale(0.9);\n" +
+        "  transition: all 0.2s ease-in-out;\n" +
+        "  cursor: pointer;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls button:hover {\n" +
+        "  opacity: 1;\n" +
+        "  transform: scale(1.2);\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls button svg {\n" +
+        "  fill: white;\n" +
+        "  stroke: white;\n" +
+        "  stroke-width: 2;\n" +
+        "  stroke-linecap: round;\n" +
+        "  stroke-linejoin: round;\n" +
+        "  width: 100%;\n" +
+        "  height: 100%;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls button.volume svg path,\n" +
+        ".video-container .controls button.help svg,\n" +
+        ".video-container .controls button.episodes svg,\n" +
+        ".video-container .controls button.full-screen svg,\n" +
+        ".video-container .controls button.volume svg path,\n" +
+        ".video-container .controls button.cast svg {\n" +
+        "  fill: none;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls button.rewind svg,\n" +
+        ".video-container .controls button.fast-forward svg {\n" +
+        "  stroke: none;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls button.captions svg {\n" +
+        "  stroke: none;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls .title {\n" +
+        "  font-size: 2vw;\n" +
+        "  width: 100%;\n" +
+        "  height: 100%;\n" +
+        "  display: flex;\n" +
+        "  justify-content: flex-start;\n" +
+        "  align-items: center;\n" +
+        "}\n" +
+        "\n" +
+        "@media only screen and (max-width: 768px) {\n" +
+        "  .video-container .controls .title {\n" +
+        "    display: none;\n" +
+        "  }\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls .title .series {\n" +
+        "  color: #FEFEFE;\n" +
+        "  font-weight: bold;\n" +
+        "  font-size: 1em;\n" +
+        "}\n" +
+        "\n" +
+        ".video-container .controls .title .episode {\n" +
+        "  color: #A1A1A1;\n" +
+        "  font-size: 0.75em;\n" +
+        "  padding-left: 1vw;\n" +
+        "}\n" +
+        "</style>\n";
+    }
+}
+
 
 /* 
 //WASAPI C#
@@ -13695,1048 +14882,6 @@ namespace LoopbackWithMic
 /* class WebSocket */ public abstract void onMessage(WebSocket conn, String message); public abstract void onError(WebSocket conn, Exception ex); public abstract void onStart(); public void onMessage(WebSocket conn, ByteBuffer message) { } public void broadcast(String text) { broadcast(text, connections); } public void broadcast(byte[] data) { broadcast(data, connections); } public void broadcast(ByteBuffer data) { broadcast(data, connections); } public void broadcast(byte[] data, Collection<WebSocket> clients) { if (data == null || clients == null) { throw new IllegalArgumentException(); } broadcast(ByteBuffer.wrap(data), clients); } public void broadcast(ByteBuffer data, Collection<WebSocket> clients) { if (data == null || clients == null) { throw new IllegalArgumentException(); } doBroadcast(data, clients); } public void broadcast(String text, Collection<WebSocket> clients) { if (text == null || clients == null) { throw new IllegalArgumentException(); } doBroadcast(text, clients); } private void doBroadcast(Object data, Collection<WebSocket> clients) { String strData = null; if (data instanceof String) { strData = (String) data; } ByteBuffer byteData = null; if (data instanceof ByteBuffer) { byteData = (ByteBuffer) data; } if (strData == null && byteData == null) { return; } Map<Draft, List<Framedata>> draftFrames = new HashMap<>(); List<WebSocket> clientCopy; synchronized (clients) { clientCopy = new ArrayList<>(clients); } for (WebSocket client : clientCopy) { if (client != null) { Draft draft = client.getDraft(); fillFrames(draft, draftFrames, strData, byteData); try { client.sendFrame(draftFrames.get(draft)); } catch (WebsocketNotConnectedException e) { } } } } private void fillFrames(Draft draft, Map<Draft, List<Framedata>> draftFrames, String strData, ByteBuffer byteData) { if (!draftFrames.containsKey(draft)) { List<Framedata> frames = null; if (strData != null) { frames = draft.createFrames(strData, false); } if (byteData != null) { frames = draft.createFrames(byteData, false); } if (frames != null) { draftFrames.put(draft, frames); } } } class WebSocketWorker extends Thread { private BlockingQueue<WebSocketImpl> iqueue; public WebSocketWorker() { iqueue = new LinkedBlockingQueue<>(); setName("WebSocketWorker-" + getId()); setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() { public void uncaughtException(Thread t, Throwable e) { } }); } public void put(WebSocketImpl ws) throws InterruptedException { iqueue.put(ws); } public void run() { WebSocketImpl ws = null; try { while (true) { ByteBuffer buf; ws = iqueue.take(); buf = ws.inQueue.poll(); assert (buf != null); doDecode(ws, buf); ws = null; } } catch (InterruptedException e) { Thread.currentThread().interrupt(); } catch (VirtualMachineError | ThreadDeath | LinkageError e) { Exception exception = new Exception(e); handleFatal(ws, exception); } catch (Throwable e) { if (ws != null) { Exception exception = new Exception(e); onWebsocketError(ws, exception); ws.close(); } } } private void doDecode(WebSocketImpl ws, ByteBuffer buf) throws InterruptedException { try { ws.decode(buf); } catch (Exception e) { } finally { pushBuffer(buf); } } } } interface WebSocketServerFactory extends WebSocketFactory { WebSocketImpl createWebSocket(WebSocketAdapter a, Draft d); WebSocketImpl createWebSocket(WebSocketAdapter a, List<Draft> drafts); ByteChannel wrapChannel(SocketChannel channel, SelectionKey key) throws IOException; void close(); } interface WrappedByteChannel extends ByteChannel { boolean isNeedWrite(); 
 /* class WebSocket */ void writeMore() throws IOException; boolean isNeedRead(); int readMore(ByteBuffer dst) throws IOException; boolean isBlocking(); } class WrappedIOException extends Exception { private final transient WebSocket connection; private final IOException ioException; public WrappedIOException(WebSocket connection, IOException ioException) { this.connection = connection; this.ioException = ioException; } public WebSocket getConnection() { return connection; } public IOException getIOException() { return ioException; } } 
 
-
-/* class texto_longo */ class Texto_longo extends Util{
-/* class texto_longo */     public String get_html_virtual_playlist(){
-/* class texto_longo */         String faixas="";
-/* class texto_longo */         File [] f=new File(".").listFiles();
-/* class texto_longo */         for ( int i=0;i<f.length;i++ ){
-/* class texto_longo */             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){
-/* class texto_longo */                 String name_file = f[i].getName();
-/* class texto_longo */                 int len_partes = name_file.split("\\.").length;
-/* class texto_longo */                 int len_extension = name_file.split("\\.")[len_partes-1].length()+1;
-/* class texto_longo */                 int len_tag = 12;
-/* class texto_longo */                 if ( len_partes > 1 && name_file.length() > (len_extension+len_tag) && name_file.split("\\.")[len_partes-2].length() >= 12 && name_file.split("\\.")[len_partes-2].substring(name_file.split("\\.")[len_partes-2].length()-12, name_file.split("\\.")[len_partes-2].length()-11).equals("-") )
-/* class texto_longo */                     name_file=name_file.substring(0, name_file.length()-len_extension-len_tag);
-/* class texto_longo */                 faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 40px;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + f[i].getName() + "\" >" + name_file + "</td></tr>\n";
-/* class texto_longo */                 File f2=new File(f[i].getName()+".cfg");
-/* class texto_longo */                 if ( f2.exists() && f2.isFile() ){
-/* class texto_longo */                     String [] partes=lendo_arquivo(f[i].getName()+".cfg").split("\n");
-/* class texto_longo */                     for ( int j=0;j<partes.length;j++ ){
-/* class texto_longo */                         faixas += "<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px;\" onclick=\"click_faixa(this,'humanClick')\">" + partes[j] + "</td></tr>\n";
-/* class texto_longo */                     }
-/* class texto_longo */                 }
-/* class texto_longo */             }
-/* class texto_longo */         };
-/* class texto_longo */         return "<html>\n" +
-/* class texto_longo */         "<head>\n" +
-/* class texto_longo */         "<body id=\"cursor\" onload=\"preparacao();\" style=\"background-color: rgb(0, 0, 0);\">\n" +
-/* class texto_longo */         "<style>canvas {position: relative;top: 0%;left: 50%;margin-left: -50vmin;width: 100vmin;height: 100vmin;}</style>\n" +
-/* class texto_longo */         "<div id=\"f11bg\" style=\"display: none\" >\n" +
-/* class texto_longo */         "  <canvas></canvas>\n" +
-/* class texto_longo */         "</div>\n" +
-/* class texto_longo */         "<div id=\"f11\" tailmousef11=\"n\" tailvideo=\"n\" onmousef11=\"n\" ocorr=\"0\" sz=\"40\" wi=\"800\">\n" +
-/* class texto_longo */         "<meta charset=\"utf-8\">\n" +
-/* class texto_longo */         "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n" +
-/* class texto_longo */         "<div id=\"master\"></div>\n" +
-/* class texto_longo */         "<div><style>.bordered {border: solid #177 3px;border-radius: 6px;}.bordered tr:hover {background: #999;}.bordered td, .bordered th {border-left: 2px solid #177;border-top: 2px solid #177;padding: 10px;}audio::-webkit-media-controls-panel{background-color: #777;}</style>\n" +
-/* class texto_longo */         "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;margin-left: 20px; visibility: hidden;\"><tbody>\n" +
-/* class texto_longo */         faixas +
-/* class texto_longo */         "</tbody></table></div>\n" +
-/* class texto_longo */         "<script type=\"text/javascript\">\n" +
-/* class texto_longo */         "function remove_playlist(){\n" +
-/* class texto_longo */         "  document.getElementById('master').innerHTML='';\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function create_playlist(){\n" +
-/* class texto_longo */         "  document.getElementById('master').innerHTML=`\n" +
-/* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;<a style=\"display: inline-block; cursor: pointer; font-size: 40px;\" onclick=\"troca_de_faixa_anterior()\">&#9194;</a>\n" +
-/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; font-size: 40px;\" onclick=\"troca_de_faixa()\">&#9193;</a>\n" +
-/* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id=\"tocando\" style=\"display: inline-block; color: white; font-size: 32px;\"></a>\n" +
-/* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;<input type=\"button\" value=\"FULL_SCREEN\" onclick=\"Fullscreen(false);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
-/* class texto_longo */         "    <input type=\"button\" value=\"VIDEO\" onclick=\"Fullscreen(true);\" style=\"color: #333; font-size: 18px; background-color: rgb(0, 0, 0);\">\n" +
-/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"A_mais()\">A+</a>\n" +
-/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"A_menos()\">A-</a>\n" +
-/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"W_mais()\">W+</a>\n" +
-/* class texto_longo */         "    <a style=\"display: inline-block; cursor: pointer; color: #333; font-size: 24px;\" onclick=\"W_menos()\">W-</a>\n" +
-/* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;<a style=\"color: #777; font-size: 8px;\">&nbsp;&nbsp;click no corpo da pagina para pausar/despausar</a>\n" +
-/* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "    &nbsp;&nbsp;&nbsp;&nbsp;<audio id=\"p\" controls=\"controls\" preload=\"metadata\">\n" +
-/* class texto_longo */         "      <source src=\"\" type=\"audio/mp3\">\n" +
-/* class texto_longo */         "      seu navegador não suporta HTML5\n" +
-/* class texto_longo */         "    </audio>\n" +
-/* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "    <br/>\n" +
-/* class texto_longo */         "  `;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function pause(){\n" +
-/* class texto_longo */         "  document.getElementById('p').pause();\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function play(){\n" +
-/* class texto_longo */         "  var playPromise=document.getElementById('p').play();\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function vai_pro_fim_da_faixa(){\n" +
-/* class texto_longo */         "  var d=document.getElementById('p').duration-1;\n" +
-/* class texto_longo */         "  document.getElementById('p').currentTime=d;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function first(){\n" +
-/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  e=t.children[0].children[0];\n" +
-/* class texto_longo */         "  var limit=1000;\n" +
-/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) && dir(e) != null )\n" +
-/* class texto_longo */         "    e=dir(e);\n" +
-/* class texto_longo */         "  return e;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function tail(){\n" +
-/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  e=t.children[t.children.length-1].children[0];\n" +
-/* class texto_longo */         "  var limit=1000;\n" +
-/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) && esq(e) != null )\n" +
-/* class texto_longo */         "    e=esq(e);\n" +
-/* class texto_longo */         "  return e;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function troca_de_faixa(){\n" +
-/* class texto_longo */         "  var e=get_playing() || first();\n" +
-/* class texto_longo */         "  var limit=1000;\n" +
-/* class texto_longo */         "  e=dir(e) || first(e);\n" +
-/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
-/* class texto_longo */         "    e=dir(e) || first();\n" +
-/* class texto_longo */         "  if ( limit <= 0 ){\n" +
-/* class texto_longo */         "	console.log('Erro Fatal Loop.');\n" +
-/* class texto_longo */         "	return;\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  click_faixa(e);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function troca_de_faixa_anterior(){\n" +
-/* class texto_longo */         "  var e=get_playing() || tail();\n" +
-/* class texto_longo */         "  var limit=1000;\n" +
-/* class texto_longo */         "  e=esq(e) || tail(e);\n" +
-/* class texto_longo */         "  while( limit-- > 0 && isChildrenMusicNotActive(e) )\n" +
-/* class texto_longo */         "    e=esq(e) || tail();\n" +
-/* class texto_longo */         "  if ( limit <= 0 ){\n" +
-/* class texto_longo */         "    console.log('Erro Fatal Loop.');\n" +
-/* class texto_longo */         "    return;\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  click_faixa(e);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "let cache_digest=null;\n" +
-/* class texto_longo */         "function getDigest(){\n" +
-/* class texto_longo */         "  if ( cache_digest != null )\n" +
-/* class texto_longo */         "    return cache_digest;\n" +
-/* class texto_longo */         "  let digest = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];\n" +
-/* class texto_longo */         "  let p_digest = 0;\n" +
-/* class texto_longo */         "  function updateDigest(a){\n" +
-/* class texto_longo */         "    for ( var i=0;i<a.length;i++ ){\n" +
-/* class texto_longo */         "      digest[p_digest]=(digest[p_digest]+a.charCodeAt(i))%52;\n" +
-/* class texto_longo */         "      p_digest++;\n" +
-/* class texto_longo */         "      if ( p_digest >= digest.length )\n" +
-/* class texto_longo */         "        p_digest=0;\n" +
-/* class texto_longo */         "    }\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  var a = document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  for ( var i=0;i<a.children.length;i++ )\n" +
-/* class texto_longo */         "    updateDigest(a.children[i].children[0].innerText);\n" +
-/* class texto_longo */         "  var a='';\n" +
-/* class texto_longo */         "  for ( var i=0;i<digest.length;i++ ){\n" +
-/* class texto_longo */         "    if ( digest[i] >= 26 )\n" +
-/* class texto_longo */         "      a+=String.fromCharCode(digest[i]-26+97);\n" +
-/* class texto_longo */         "    else\n" +
-/* class texto_longo */         "      a+=String.fromCharCode(digest[i]+65);\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  cache_digest = a;\n" +
-/* class texto_longo */         "  return cache_digest;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function A_update(sz){\n" +
-/* class texto_longo */         "  let a = document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  for ( let i=0;i<a.children.length;i++ )\n" +
-/* class texto_longo */         "    a.children[i].children[0].style.fontSize = sz + \"px\";\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function A_mais(){\n" +
-/* class texto_longo */         "  let sz = 3 + parseInt(document.getElementById(\"f11\").getAttribute(\"sz\"));\n" +
-/* class texto_longo */         "  document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
-/* class texto_longo */         "  A_update(sz);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function A_menos(){\n" +
-/* class texto_longo */         "  let sz = -3 + parseInt(document.getElementById(\"f11\").getAttribute(\"sz\"));\n" +
-/* class texto_longo */         "  document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
-/* class texto_longo */         "  A_update(sz);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function W_update(wi){\n" +
-/* class texto_longo */         "  let a = document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  for ( let i=0;i<a.children.length;i++ )\n" +
-/* class texto_longo */         "    a.children[i].children[0].style.width = wi + \"px\";\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function W_mais(){\n" +
-/* class texto_longo */         "  let wi = 50 + parseInt(document.getElementById(\"f11\").getAttribute(\"wi\"));\n" +
-/* class texto_longo */         "  document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
-/* class texto_longo */         "  W_update(wi);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function W_menos(){\n" +
-/* class texto_longo */         "  let wi = -50 + parseInt(document.getElementById(\"f11\").getAttribute(\"wi\"));\n" +
-/* class texto_longo */         "  document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
-/* class texto_longo */         "  W_update(wi);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function save_station(){\n" +
-/* class texto_longo */         "  if ( get_playing() != null && getDigest() != null ){\n" +
-/* class texto_longo */         "    let digest = getDigest();\n" +
-/* class texto_longo */         "    let playing = get_playing().innerHTML;\n" +
-/* class texto_longo */         "    let currentTime=document.getElementById('p').currentTime;\n" +
-/* class texto_longo */         "    let volume=document.getElementById('p').volume;\n" +
-/* class texto_longo */         "    let a = document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "    let flags = '';\n" +
-/* class texto_longo */         "    for ( let i=0;i<a.children.length;i++ ){\n" +
-/* class texto_longo */         "      let b = a.children[i].children[0].innerText.substr(0,1);\n" +
-/* class texto_longo */         "      if ( b == '+' || b == '-' )\n" +
-/* class texto_longo */         "        flags+=b;\n" +
-/* class texto_longo */         "    }\n" +
-/* class texto_longo */         "    let sz = document.getElementById(\"f11\").getAttribute(\"sz\");\n" +
-/* class texto_longo */         "    let wi = document.getElementById(\"f11\").getAttribute(\"wi\");\n" +
-/* class texto_longo */         "    localStorage.setItem('playlist-v-20231018-'+digest,JSON.stringify({'playing': playing, 'currentTime': currentTime, 'volume': volume, 'flags': flags, 'sz': sz, 'wi': wi}));\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function load_station(){\n" +
-/* class texto_longo */         "  if ( getDigest() != null ){\n" +
-/* class texto_longo */         "    let a = localStorage.getItem('playlist-v-20231018-'+getDigest());\n" +
-/* class texto_longo */         "    if ( a != null ){\n" +
-/* class texto_longo */         "      let b = JSON.parse(a);\n" +
-/* class texto_longo */         "      let playing = b['playing'];\n" +
-/* class texto_longo */         "      let currentTime = b['currentTime'];\n" +
-/* class texto_longo */         "      let volume = b['volume'];\n" +
-/* class texto_longo */         "      let flags= b['flags'];\n" +
-/* class texto_longo */         "      let sz= b['sz'];\n" +
-/* class texto_longo */         "      let wi= b['wi'];\n" +
-/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"sz\", sz);\n" +
-/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"wi\", wi);\n" +
-/* class texto_longo */         "      a = document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "      for ( let i=0;i<a.children.length;i++ ){\n" +
-/* class texto_longo */         "        a.children[i].children[0].style.fontSize = sz + \"px\";\n" + 
-/* class texto_longo */         "        a.children[i].children[0].style.width = wi + \"px\";\n" + 
-/* class texto_longo */         "        b = a.children[i].children[0].innerText.substr(0,1);\n" +
-/* class texto_longo */         "        if ( ( b == '+' || b == '-' ) ){\n" +
-/* class texto_longo */         "          let c = flags.substr(0,1);\n" +
-/* class texto_longo */         "          flags = flags.substr(1);\n" +
-/* class texto_longo */         "          if ( c != b )\n" +
-/* class texto_longo */         "            a.children[i].children[0].innerText = c + a.children[i].children[0].innerText.substr(1);\n" +
-/* class texto_longo */         "  	    }\n" +
-/* class texto_longo */         "      }\n" +
-/* class texto_longo */         "      for ( let i=0;i<a.children.length;i++ ){\n" +
-/* class texto_longo */         "        if ( playing == a.children[i].children[0].innerText ){\n" +
-/* class texto_longo */         "          click_faixa(a.children[i].children[0]);\n" +
-/* class texto_longo */         "          break;\n" +
-/* class texto_longo */         "        }\n" +
-/* class texto_longo */         "      }\n" +
-/* class texto_longo */         "      document.getElementById('p').currentTime = currentTime;\n" +
-/* class texto_longo */         "      document.getElementById('p').volume = volume;\n" +
-/* class texto_longo */         "    }\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function preparacao(){\n" +
-/* class texto_longo */         "  create_playlist();\n" +
-/* class texto_longo */         "  document.getElementById('tablebase').style.visibility='';\n" +         
-/* class texto_longo */         "  console.log('playlistHash ' + getDigest());\n" +         
-/* class texto_longo */         "  add_listener();\n" +
-/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  trySetParm(window.location.href);\n" +
-/* class texto_longo */         "  click_faixa(t.children[0].children[0]);\n" +
-/* class texto_longo */         "  load_station();\n" + 
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function trySetParm(url){\n" +
-/* class texto_longo */         "  if ( url.indexOf('?')  > -1 && url.split('?')[1].trim().length > 0 ){\n" +
-/* class texto_longo */         "    url=decodeURI(url.split('?')[1].trim())\n" +
-/* class texto_longo */         "    var t=document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "    e=t.children[0].children[0];\n" +
-/* class texto_longo */         "    var limit=500;\n" +
-/* class texto_longo */         "    while( limit-- > 0 && e != null){\n" +
-/* class texto_longo */         "	  if ( isChildrenMusic(e) && e.innerText.trim().substring('+ 00:00:00 '.length) == url ){\n" +
-/* class texto_longo */         "	    symbol_click(e);\n" +
-/* class texto_longo */         "	    break;\n" +
-/* class texto_longo */         "	  }\n" +
-/* class texto_longo */         "	  e=dir(e);\n" +
-/* class texto_longo */         "	}\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function pause_play(force){\n" +
-/* class texto_longo */         "  if ( document.getElementById('p').paused )\n" +
-/* class texto_longo */         "    play();\n" +
-/* class texto_longo */         "  else\n" +
-/* class texto_longo */         "    pause();\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function add_listener(){\n" +
-/* class texto_longo */         "  document.getElementById('p').onended = function(){\n" +
-/* class texto_longo */         "    troca_de_faixa();\n" +
-/* class texto_longo */         "  };\n" +
-/* class texto_longo */         "  document.addEventListener('click', function(e) {  \n" +
-/* class texto_longo */         "       console.log('tagName clicked: ' + e.target.tagName);\n" +
-/* class texto_longo */         "       if ( e.target.tagName == 'CANVAS' || e.target.tagName == 'BODY' || e.target.tagName == 'DIV' || e.target.tagName == 'VIDEO' ){\n" +
-/* class texto_longo */         "         if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
-/* class texto_longo */         "           DisableFullscreen();\n" +
-/* class texto_longo */         "         }else{\n" +
-/* class texto_longo */         "           pause_play(\"pause\");\n" +
-/* class texto_longo */         "         }\n" +
-/* class texto_longo */         "	}else{\n" +
-/* class texto_longo */         "         if ( e.target.tagName == 'INPUT' ){\n" +
-/* class texto_longo */         "           //nada\n" +
-/* class texto_longo */         "         }else{\n" +
-/* class texto_longo */         "	    if ( transfer_e != null ){\n" +
-/* class texto_longo */         "	      click_faixa(transfer_e,true,e.x);\n" +
-/* class texto_longo */         "             transfer_e=null;\n" +
-/* class texto_longo */         "           }\n" +
-/* class texto_longo */         "	  }\n" +
-/* class texto_longo */         "	}\n" +
-/* class texto_longo */         "  },false);  \n" +
-/* class texto_longo */         "  document.addEventListener(\n" +
-/* class texto_longo */         "    \"mouseover\",function(e){\n" +
-/* class texto_longo */         "      if ( e.target.getAttribute(\"value\") && ( e.target.getAttribute(\"value\") == \"FULL_SCREEN\" || e.target.getAttribute(\"value\") == \"VIDEO\" ) ){\n" +
-/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"tailmousef11\",\"s\");\n" +
-/* class texto_longo */         "        if( e.target.getAttribute(\"value\") == \"VIDEO\" )\n" +
-/* class texto_longo */         "          document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"s\");\n" +
-/* class texto_longo */         "        else\n" +
-/* class texto_longo */         "          document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"n\");\n" +
-/* class texto_longo */         "      }else{\n" +
-/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"tailmousef11\",\"n\");\n" +
-/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"tailvideo\",\"n\");\n" +
-/* class texto_longo */         "      }\n" +
-/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"s\");\n" +
-/* class texto_longo */         "    },false\n" +
-/* class texto_longo */         "  );\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function limpa_click_faixa(){\n" +
-/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  for ( var i=0;i<t.children.length;i++ )\n" +
-/* class texto_longo */         "    t.children[i].children[0].style.background='';\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function isChildrenMusic(e){\n" +
-/* class texto_longo */         "  return e.innerText.trim().indexOf('+') == 0 || e.innerText.indexOf('-') == 0;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function isMasterMusic(e){\n" +
-/* class texto_longo */         "  return !isChildrenMusic(e);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function isChildrenMusicActive(e){\n" +
-/* class texto_longo */         "  return e.innerText.trim().indexOf('+') == 0;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function isChildrenMusicNotActive(e){\n" +
-/* class texto_longo */         "  return e.innerText.trim().indexOf('-') == 0;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function esq(e){\n" +
-/* class texto_longo */         "  if ( e.parentElement.previousElementSibling != null )\n" +
-/* class texto_longo */         "	return e.parentElement.previousElementSibling.children[0];\n" +
-/* class texto_longo */         "  return null;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function dir(e){\n" +
-/* class texto_longo */         "  if ( e.parentElement.nextElementSibling != null )\n" +
-/* class texto_longo */         "	return e.parentElement.nextElementSibling.children[0];\n" +
-/* class texto_longo */         "  return null;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function getNameHierarchy(e){\n" +
-/* class texto_longo */         "  if ( e.innerText == null )\n" +
-/* class texto_longo */         "    return 'null';\n" +
-/* class texto_longo */         "  if ( isChildrenMusic(e) )\n" +
-/* class texto_longo */         "    return getNameHierarchy(esq(e));\n" +
-/* class texto_longo */         "  if ( e.getAttribute('name') == null )\n" +
-/* class texto_longo */         "    return e.innerText.trim();\n" +
-/* class texto_longo */         "  else\n" +
-/* class texto_longo */         "    return e.getAttribute('name').trim();\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function getFaixaChildrenToSeconds(p){\n" +
-/* class texto_longo */         "  p=p.split(' ')[1].split(':');\n" +
-/* class texto_longo */         "  return parseInt(p[2])+parseInt(p[1])*60+parseInt(p[0])*60*60;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function getStart(e){\n" +
-/* class texto_longo */         "  if ( ( e.innerText.trim().indexOf('-') == 0 || e.innerText.trim().indexOf('+') == 0 ) && e.innerText.trim().split(' ').length > 1 && e.innerText.trim().split(' ')[1].length == 8 && e.innerText.trim().split(' ')[1].split(':').length == 3 ){\n" +
-/* class texto_longo */         "	return getFaixaChildrenToSeconds(e.innerText.trim());\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  return 0;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function QtyChildrenByChildren(e){\n" +
-/* class texto_longo */         "  var qty=1;\n" +
-/* class texto_longo */         "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
-/* class texto_longo */         "    e=esq(e);\n" +
-/* class texto_longo */         "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
-/* class texto_longo */         "	qty++;\n" +
-/* class texto_longo */         "    e=dir(e);\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  return qty;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function QtyChildrenActiveByChildren(e){\n" +
-/* class texto_longo */         "  var qty=0;\n" +
-/* class texto_longo */         "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
-/* class texto_longo */         "    e=esq(e);\n" +
-/* class texto_longo */         "  if ( isChildrenMusicActive(e) )\n" +
-/* class texto_longo */         "	qty++;\n" +
-/* class texto_longo */         "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
-/* class texto_longo */         "    e=dir(e);\n" +
-/* class texto_longo */         "    if ( isChildrenMusicActive(e) )\n" +
-/* class texto_longo */         "	  qty++;\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  return qty;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function setForActive(e){\n" +
-/* class texto_longo */         "  e.innerText='+'+e.innerText.trim().substr(1);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function setForNotActive(e){\n" +
-/* class texto_longo */         "  e.innerText='-'+e.innerText.trim().substr(1);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function setAllForActive(e){\n" +
-/* class texto_longo */         "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
-/* class texto_longo */         "    e=esq(e);\n" +
-/* class texto_longo */         "  setForActive(e);\n" +
-/* class texto_longo */         "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
-/* class texto_longo */         "    e=dir(e);\n" +
-/* class texto_longo */         "	setForActive(e);\n" +
-/* class texto_longo */         "  }	\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function setAllForNotActive(e){\n" +
-/* class texto_longo */         "  while( esq(e) != null && isChildrenMusic(esq(e)) )\n" +
-/* class texto_longo */         "    e=esq(e);\n" +
-/* class texto_longo */         "  setForNotActive(e);\n" +
-/* class texto_longo */         "  while( dir(e) != null && isChildrenMusic(dir(e)) ){\n" +
-/* class texto_longo */         "    e=dir(e);\n" +
-/* class texto_longo */         "	setForNotActive(e);\n" +
-/* class texto_longo */         "  }		\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "var transfer_e=null;\n" +
-/* class texto_longo */         "function click_faixa(e,humanClick,humanClick_x){ // click td\n" +
-/* class texto_longo */         "  if ( humanClick && humanClick_x == null ){\n" +
-/* class texto_longo */         "    transfer_e=e;\n" +
-/* class texto_longo */         "    return;\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  if ( humanClick != null && isChildrenMusic(e) && humanClick_x <= 35 ){\n" +
-/* class texto_longo */         "    symbol_click(e);\n" +
-/* class texto_longo */         "	return;\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  // this is root and exists children +\n" +
-/* class texto_longo */         "  if ( isMasterMusic(e) && dir(e) != null && isChildrenMusic(dir(e)) ){    \n" +
-/* class texto_longo */         "    click_faixa(dir(e));\n" +
-/* class texto_longo */         "	return;\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  limpa_click_faixa();\n" +
-/* class texto_longo */         "  e.style.background='#999';  \n" +
-/* class texto_longo */         "  document.getElementById('p').src=getNameHierarchy(e);\n" +
-/* class texto_longo */         "  document.getElementById('tocando').innerText=e.innerText;  \n" +
-/* class texto_longo */         "  document.getElementById('p').currentTime=getStart(e);  \n" +
-/* class texto_longo */         "  play();  \n" +
-/* class texto_longo */         "  //if ( humanClick == null )  \n" +
-/* class texto_longo */         "  //  e.scrollIntoView(false);  \n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function symbol_click(e){\n" +
-/* class texto_longo */         "  var qty=QtyChildrenByChildren(e);\n" +
-/* class texto_longo */         "  var qtyActive=QtyChildrenActiveByChildren(e);\n" +
-/* class texto_longo */         "  var qtyNotActive=qty-qtyActive;\n" +
-/* class texto_longo */         "  var isActive=isChildrenMusicActive(e);\n" +
-/* class texto_longo */         "  if ( isActive ){\n" +
-/* class texto_longo */         "    if ( qty == 1 )\n" +
-/* class texto_longo */         "  	  return;\n" +
-/* class texto_longo */         "    if ( qtyActive == 1 ){\n" +
-/* class texto_longo */         "  	  setAllForActive(e);\n" +
-/* class texto_longo */         "  	  return;\n" +
-/* class texto_longo */         "    }\n" +
-/* class texto_longo */         "    if ( qtyActive == qty ){\n" +
-/* class texto_longo */         "  	  setAllForNotActive(e);\n" +
-/* class texto_longo */         "  	  setForActive(e);\n" +
-/* class texto_longo */         "  	  return;\n" +
-/* class texto_longo */         "    }\n" +
-/* class texto_longo */         "    setForNotActive(e);\n" +
-/* class texto_longo */         "  }else{\n" +
-/* class texto_longo */         "    setForActive(e);\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function tryUpdateStateChildren(){\n" +
-/* class texto_longo */         "  if ( document.getElementById('p') == null || document.getElementById('p').currentTime == null )\n" +
-/* class texto_longo */         "    return;\n" +
-/* class texto_longo */         "  e=get_playing() || first();\n" +
-/* class texto_longo */         "  while ( isChildrenMusic(e) && esq(e) != null && isChildrenMusic(esq(e)) && document.getElementById('p').currentTime < getFaixaChildrenToSeconds(e.innerText.trim()) ){\n" +
-/* class texto_longo */         "	e.style.background='';  \n" +
-/* class texto_longo */         "	esq(e).style.background='#999';  \n" +
-/* class texto_longo */         "	e=esq(e);\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  while ( isChildrenMusic(e) && dir(e) != null && isChildrenMusic(dir(e)) && document.getElementById('p').currentTime >= getFaixaChildrenToSeconds(dir(e).innerText.trim()) ){\n" +
-/* class texto_longo */         "	e.style.background='';  \n" +
-/* class texto_longo */         "	dir(e).style.background='#999';  \n" +
-/* class texto_longo */         "	e=dir(e);\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  if ( isChildrenMusicNotActive(e) ){\n" +
-/* class texto_longo */         "	troca_de_faixa();\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function get_playing(){\n" +
-/* class texto_longo */         "  var t=document.getElementById('tablebase').children[0];\n" +
-/* class texto_longo */         "  for ( var i=0;i<t.children.length;i++ )\n" +
-/* class texto_longo */         "    if ( t.children[i].children[0].style.background != '')\n" +
-/* class texto_longo */         "	  return t.children[i].children[0];\n" +
-/* class texto_longo */         "  return null;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function Fullscreen(videoOn) { // ocorre um erro se for invocado sem interação de tela(bloqueio nativo do browser)\n" +
-/* class texto_longo */         "  element=document.children[0];\n" +
-/* class texto_longo */         "  if(element.requestFullscreen) element.requestFullscreen();\n" +
-/* class texto_longo */         "  else if(element.mozRequestFullScreen) element.mozRequestFullScreen();\n" +
-/* class texto_longo */         "  else if(element.webkitRequestFullscreen) element.webkitRequestFullscreen();\n" +
-/* class texto_longo */         "  else if(element.msRequestFullscreen) element.msRequestFullscreen();\n" +
-/* class texto_longo */         "  document.getElementById(\"f11\").style.display=\"none\";\n" + 
-/* class texto_longo */         "  if(videoOn)\n" + 
-/* class texto_longo */         "    document.getElementById(\"f11bg\").style.display=\"\";\n" + 
-/* class texto_longo */         "  document.getElementById(\"cursor\").style.cursor=\"none\";\n" + 
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function DisableFullscreen() {\n" +
-/* class texto_longo */         "  if(document.exitFullscreen) document.exitFullscreen();\n" +
-/* class texto_longo */         "  else if(document.mozCancelFullScreen) document.mozCancelFullScreen();\n" +
-/* class texto_longo */         "  else if(document.webkitExitFullscreen) document.webkitExitFullscreen();\n" +
-/* class texto_longo */         "  else if(document.msExitFullscreen) document.msExitFullscreen();\n" +
-/* class texto_longo */         "  document.getElementById(\"f11\").style.display=\"\";\n" + 
-/* class texto_longo */         "  document.getElementById(\"f11bg\").style.display=\"none\";\n" + 
-/* class texto_longo */         "  document.getElementById(\"cursor\").style.cursor=\"\";\n" + 
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function mouseInFullscreen(e){\n" +
-/* class texto_longo */         "  if ( document.getElementById(\"f11\").style.display == \"none\" ){\n" +
-/* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
-/* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
-/* class texto_longo */         "  }else{\n" +
-/* class texto_longo */         "    if ( e && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"n\" ){\n" +
-/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"s\");\n" +
-/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
-/* class texto_longo */         "    }else{\n" +
-/* class texto_longo */         "      if ( !e && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"s\" ){\n" +
-/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
-/* class texto_longo */         "        document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
-/* class texto_longo */         "      }\n" +
-/* class texto_longo */         "    }\n" +
-/* class texto_longo */         "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"2\" )\n" +
-/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"3\");\n" +
-/* class texto_longo */         "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"1\" )\n" +
-/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"2\");\n" +
-/* class texto_longo */         "    if ( document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"0\" )\n" +
-/* class texto_longo */         "      document.getElementById(\"f11\").setAttribute(\"ocorr\",\"1\");\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function check_fullscreen(){\n" +
-/* class texto_longo */         "  if ( document.getElementById(\"f11\").style.display == \"\" && document.getElementById(\"f11\").getAttribute(\"onmousef11\") == \"s\" && document.getElementById(\"f11\").getAttribute(\"ocorr\") == \"3\" ){\n" +
-/* class texto_longo */         "    if ( document.getElementById(\"f11\").getAttribute(\"tailvideo\") == \"s\" )\n" +
-/* class texto_longo */         "      Fullscreen(true);\n" +
-/* class texto_longo */         "    else\n" +
-/* class texto_longo */         "      Fullscreen(false);\n" +
-/* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"onmousef11\",\"n\");\n" +
-/* class texto_longo */         "    document.getElementById(\"f11\").setAttribute(\"ocorr\",\"0\");\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function interval_1000(){\n" +
-/* class texto_longo */         "  save_station();\n" +        
-/* class texto_longo */         "  mouseInFullscreen( document.getElementById(\"f11\").getAttribute(\"tailmousef11\") == \"s\" );\n" +
-/* class texto_longo */         "  check_fullscreen();\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "function interval_100(){\n" +
-/* class texto_longo */         "  tryUpdateStateChildren();\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "setInterval(interval_100, 100);\n" +
-/* class texto_longo */         "setInterval(interval_1000, 1000);\n" +
-/* class texto_longo */         "function initbg(){\n" + 
-/* class texto_longo */         "  const MAX = 50;var canvas, ctx;var count = 0;var points = [];function rus() {ctx.globalCompositeOperation = \"source-over\";ctx.fillStyle = \"rgba(0,0,0,0.03)\";ctx.fillRect(0, 0, canvas.width, canvas.height);ctx.globalCompositeOperation = \"lighter\";var tim = count / 5;for (var e = 0; e < 3; e++) {tim *= 1.7;var s = 1 - e / 3;a = tim / 59;var yp = Math.cos(a);\n" + 
-/* class texto_longo */         "  var yp2 = Math.sin(a);a = tim / 23;var xp = Math.cos(a);var xp2 = Math.sin(a);var p2 = [];for (var a = 0; a < points.length; a++) {var x = points[a][0];var y = points[a][1];var z = points[a][2];var y1 = y * yp + z * yp2;var z1 = y * yp2 - z * yp;var x1 = x * xp + z1 * xp2;z = x * xp2 - z1 * xp;z1 = Math.pow(2, z * s);x = x1 * z1;y = y1 * z1;\n" + 
-/* class texto_longo */         "  p2.push([x, y, z]);}s *= 120;for (var d = 0; d < 3; d++) {for (var a = 0; a < MAX; a++) {const b = p2[d * MAX + a];const c = p2[((a + 1) % MAX) + d * MAX];ctx.beginPath();ctx.strokeStyle = \"hsla(\" + (((a / MAX) * 360) | 0) + \",70%,60%,0.15)\";ctx.lineWidth = Math.pow(6, b[2]);ctx.lineTo(b[0] * s + 200, b[1] * s + 200);\n" + 
-/* class texto_longo */         "  ctx.lineTo(c[0] * s + 200, c[1] * s + 200);ctx.stroke();}}}count++;requestAnimationFrame(rus);}canvas = document.getElementsByTagName(\"canvas\")[0];ctx = canvas.getContext(\"2d\");canvas.width = canvas.height = 400;ctx.fillRect(0, 0, 400, 400);var r = 0;for (var a = 0; a < MAX; a++) {points.push([Math.cos(r), Math.sin(r), 0]);\n" + 
-/* class texto_longo */         "  r += (Math.PI * 2) / MAX;}for (var a = 0; a < MAX; a++) {points.push([0, points[a][0], points[a][1]]);}for (var a = 0; a < MAX; a++) {points.push([points[a][1], 0, points[a][0]]);}rus();\n" + 
-/* class texto_longo */         "}\n" + 
-/* class texto_longo */         "initbg();\n" + 
-/* class texto_longo */         "</script>\n" +
-/* class texto_longo */         "</div>\n" +
-/* class texto_longo */         "</body></head></html>\n";
-/* class texto_longo */     }
-/* class texto_longo */     public String get_html_virtual_playlistmovie(String id){
-/* class texto_longo */         String tail_id="";
-/* class texto_longo */         String back="";
-/* class texto_longo */         String next="";
-/* class texto_longo */         int countSelect=0;
-/* class texto_longo */         int countFile=0;
-/* class texto_longo */         int countDirectory=0;
-/* class texto_longo */         ArrayList<String> elementos=new ArrayList<>();
-/* class texto_longo */         ArrayList<String> elementosIsFile=new ArrayList<>();
-/* class texto_longo */         String path=".";
-/* class texto_longo */         String prefix="/id/";
-/* class texto_longo */         int lenPrefixTag=prefix.length();
-/* class texto_longo */         if ( !id.equals("") )
-/* class texto_longo */             path=decodeUrl(id); 
-/* class texto_longo */         if ( path.contains("\\") || path.contains(":") || path.startsWith("/") || path.endsWith("/") )
-/* class texto_longo */             return "Parametro invalido";
-/* class texto_longo */         if ( path.split("/").length > 1 ){
-/* class texto_longo */             String [] partes=path.split("/");
-/* class texto_longo */             for ( int i=0;i<partes.length;i++ )
-/* class texto_longo */                 if ( partes[i].equals(".") || partes[i].equals("..") )
-/* class texto_longo */                     return "Parametro invalido";
-/* class texto_longo */         }
-/* class texto_longo */         File f_=new File(path);
-/* class texto_longo */         if ( !f_.exists() )
-/* class texto_longo */             return "Parametro invalido";
-/* class texto_longo */         if ( f_.isFile() ){
-/* class texto_longo */             if ( path.lastIndexOf("/") == -1 )
-/* class texto_longo */                 path=".";
-/* class texto_longo */             else{
-/* class texto_longo */                 path=path.substring(countFile, path.lastIndexOf("/"));
-/* class texto_longo */                 prefix="/id/"+path+"/";
-/* class texto_longo */             }
-/* class texto_longo */             f_=new File(path);
-/* class texto_longo */             id=id.split("/")[id.split("/").length-1];
-/* class texto_longo */         }else
-/* class texto_longo */             prefix="/id/"+path+"/";
-/* class texto_longo */         prefix=prefix.replace("/./", "/");
-/* class texto_longo */         File [] f=f_.listFiles();
-/* class texto_longo */         for ( int i=0;i<f.length;i++ ){
-/* class texto_longo */             if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
-/* class texto_longo */                 continue;
-/* class texto_longo */             if ( f[i].isFile() )
-/* class texto_longo */                 countFile++;
-/* class texto_longo */             if ( f[i].isDirectory())
-/* class texto_longo */                 countDirectory++;
-/* class texto_longo */             if ( countSelect == 1 && next.equals("") ){
-/* class texto_longo */                 next="next.addEventListener('click', function(){ window.location.href='" + prefix + encodeUrl(f[i].getName()) + "'; });\n";
-/* class texto_longo */                 next+="video.onended = function(){next.click();};\n";
-/* class texto_longo */             }
-/* class texto_longo */             if ( f[i].isFile() && decodeUrl(id).equals(f[i].getName()) )
-/* class texto_longo */                 countSelect++;
-/* class texto_longo */             if ( countSelect == 0 )
-/* class texto_longo */                 back="back.addEventListener('click', function(){ window.location.href='" + prefix + encodeUrl(f[i].getName()) + "'; });\n";
-/* class texto_longo */             elementos.add(f[i].getName());
-/* class texto_longo */             if ( f[i].isFile() )
-/* class texto_longo */                 elementosIsFile.add("S");
-/* class texto_longo */             else
-/* class texto_longo */                 elementosIsFile.add("N");
-/* class texto_longo */             tail_id=f[i].getName();
-/* class texto_longo */         };
-/* class texto_longo */         if ( countFile > 0 && countDirectory > 0 )
-/* class texto_longo */             return "Erro interno de estrutura. Existe arquivos e diretorios neste local.";
-/* class texto_longo */         if ( countFile == 0 && countDirectory == 0 )
-/* class texto_longo */             return "Pasta vazia";
-/* class texto_longo */         if ( countSelect == 1 || countFile == 1 ){
-/* class texto_longo */             if ( countFile == 1 ){
-/* class texto_longo */                 id=tail_id;
-/* class texto_longo */                 back="";
-/* class texto_longo */             }
-/* class texto_longo */         }else{
-/* class texto_longo */             String trs="";
-/* class texto_longo */             String curl="";
-/* class texto_longo */             String h1="<br>";
-/* class texto_longo */             String txt_item="";
-/* class texto_longo */             if ( !path.equals(".") )
-/* class texto_longo */                 h1="<a href=\"/\"><svg width=\"44\" height=\"44\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g clip-path=\"url(#clip0)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z\" fill=\"#293644\"></path> </g> <defs> <clipPath id=\"clip0\"> <rect width=\"24\" height=\"24\" fill=\"white\"></rect> </clipPath> </defs> </svg></a><br><h1 style=\"color: white;\">&nbsp;/" + path + "</h1><br>";
-/* class texto_longo */             for ( int i=0;i<elementos.size();i++ ){
-/* class texto_longo */                 if ( elementosIsFile.get(i).equals("S") ){
-/* class texto_longo */                     curl += "curl \"" + (prefix + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
-/* class texto_longo */                     txt_item = elementos.get(i);
-/* class texto_longo */                 }else
-/* class texto_longo */                     txt_item = "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><path style=\"fill:#D9D58F;stroke:#222;stroke-width:2\" d=\"m 2,88 c 0,-1 0,-63 0,-63 0,0 -0.6,-5 4.4,-5 -1,0 5.6,0 5.6,0 l 0,-6 c 0,0 0,-3 3,-3 l 17,0 c 0,0 3,0 3,3 l 0,6 43,0 c 0,0 4,0 4,4 l 0,64 z\"></path><path style=\"fill:#E8DC88;stroke:#222;stroke-width:2;fill-opacity:0.7\" d=\"M 2,88 17,54 c 0,0 1,-5 9,-5 11,0 65,0 65,0 0,0 9,0 7,5 -2,5 -14,34 -14,34 z\"></path></svg><a> </a>" + elementos.get(i);
-/* class texto_longo */                 trs += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.href='" + prefix + encodeUrl(elementos.get(i)) + "'\">" + txt_item + "</td></tr>\n";
-/* class texto_longo */             }
-/* class texto_longo */             return "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" +
-/* class texto_longo */             "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" +
-/* class texto_longo */             "<body style=\"background-color: rgb(0, 0, 0);\">" + 
-/* class texto_longo */             "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n" +
-/* class texto_longo */             "<br>\n" +
-/* class texto_longo */             "<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>\n" + 
-/* class texto_longo */             h1 + 
-/* class texto_longo */             "<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>\n" +
-/* class texto_longo */             "<!--\n" + 
-/* class texto_longo */             curl +
-/* class texto_longo */             "-->\n" + 
-/* class texto_longo */             trs +
-/* class texto_longo */             "</table></body></html>";
-/* class texto_longo */         }
-/* class texto_longo */         String id_display=decodeUrl(id);
-/* class texto_longo */         if ( id_display.split("\\.").length == 2 )
-/* class texto_longo */             id_display=id_display.split("\\.")[0];
-/* class texto_longo */         id=prefix.substring(lenPrefixTag-1)+id;
-/* class texto_longo */         return "<!-- creditos https://github.com/CodingGarden/css-challenges/blob/master/netflix-video-player/index.html -->\n" + 
-/* class texto_longo */         "<html lang=\"pt-BR\">\n" +
-/* class texto_longo */         "<head>\n" +
-/* class texto_longo */         "  <meta charset=\"UTF-8\">\n" +
-/* class texto_longo */         "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n" +
-/* class texto_longo */         "  <meta http-equiv=\"X-UA-Compatible\" content=\"ie=edge\">\n" +
-/* class texto_longo */         "  <title>" + id_display + "</title>\n" +
-/* class texto_longo */         "  <link href=\"https://fonts.googleapis.com/css?family=Rubik&display=swap\" rel=\"stylesheet\">\n" +
-/* class texto_longo */         "</head>\n" +
-/* class texto_longo */         "<body onload=\"playPause()\">\n" +
-/* class texto_longo */         "  <div class=\"video-container\">\n" +
-/* class texto_longo */         "    <video src=\"" + id + "\" id=\"video\"></video>\n" +
-/* class texto_longo */         "    <div class=\"controls-container\">\n" +
-/* class texto_longo */         "      <div class=\"progress-controls\">\n" +
-/* class texto_longo */         "        <div class=\"progress-bar\">\n" +
-/* class texto_longo */         "          <div class=\"watched-bar\"></div>\n" +
-/* class texto_longo */         "          <div class=\"playhead\"></div>\n" +
-/* class texto_longo */         "        </div>\n" +
-/* class texto_longo */         "        <div class=\"time-remaining\">\n" +
-/* class texto_longo */         "          00:00\n" +
-/* class texto_longo */         "        </div>\n" +
-/* class texto_longo */         "      </div>\n" +
-/* class texto_longo */         "      <div class=\"controls\">\n" +
-/* class texto_longo */         "        <button class=\"play-pause\">\n" +
-/* class texto_longo */         "          <svg class=\"playing\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <polygon points=\"5 3 19 12 5 21 5 3\"></polygon>\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "          <svg class=\"paused\" viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <rect x=\"6\" y=\"4\" width=\"4\" height=\"16\"></rect>\n" +
-/* class texto_longo */         "            <rect x=\"14\" y=\"4\" width=\"4\" height=\"16\"></rect>\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "        </button>\n" +
-/* class texto_longo */         "        <button class=\"rewind\">\n" +
-/* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <path fill=\"#ffffff\"\n" +
-/* class texto_longo */         "              d=\"M12.5,3C17.15,3 21.08,6.03 22.47,10.22L20.1,11C19.05,7.81 16.04,5.5 12.5,5.5C10.54,5.5 8.77,6.22 7.38,7.38L10,10H3V3L5.6,5.6C7.45,4 9.85,3 12.5,3M10,12V22H8V14H6V12H10M18,14V20C18,21.11 17.11,22 16,22H14A2,2 0 0,1 12,20V14A2,2 0 0,1 14,12H16C17.11,12 18,12.9 18,14M14,14V20H16V14H14Z\" />\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "        </button>\n" +
-/* class texto_longo */         "        <button class=\"fast-forward\">\n" +
-/* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <path fill=\"#ffffff\"\n" +
-/* class texto_longo */         "              d=\"M10,12V22H8V14H6V12H10M18,14V20C18,21.11 17.11,22 16,22H14A2,2 0 0,1 12,20V14A2,2 0 0,1 14,12H16C17.11,12 18,12.9 18,14M14,14V20H16V14H14M11.5,3C14.15,3 16.55,4 18.4,5.6L21,3V10H14L16.62,7.38C15.23,6.22 13.46,5.5 11.5,5.5C7.96,5.5 4.95,7.81 3.9,11L1.53,10.22C2.92,6.03 6.85,3 11.5,3Z\" />\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "        </button>\n" +
-/* class texto_longo */         "        <button class=\"volume\">\n" +
-/* class texto_longo */         "          <svg class=\"full-volume\" viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\n" +
-/* class texto_longo */         "            <path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\"></path>\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "          <svg class=\"muted\" viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\n" +
-/* class texto_longo */         "            <line x1=\"23\" y1=\"9\" x2=\"17\" y2=\"15\"></line>\n" +
-/* class texto_longo */         "            <line x1=\"17\" y1=\"9\" x2=\"23\" y2=\"15\"></line>\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "        </button>\n" +
-/* class texto_longo */         "        <p class=\"title\">\n" +
-/* class texto_longo */         "          <span class=\"series\"></span><span class=\"episode\">" + id_display + "</span>\n" +
-/* class texto_longo */         "        </p>\n" +
-/* class texto_longo */         "        <button class=\"back\">\n" +
-/* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <line x1=\"5\" y1=\"5\" x2=\"5\" y2=\"19\"></line>\n" +
-/* class texto_longo */         "            <polygon points=\"19 20 9 12 19 4 19 20\"></polygon>\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "        </button>\n" +
-/* class texto_longo */         "        <button class=\"next\">\n" +
-/* class texto_longo */         "          <svg viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <polygon points=\"5 4 15 12 5 20 5 4\"></polygon>\n" +
-/* class texto_longo */         "            <line x1=\"19\" y1=\"5\" x2=\"19\" y2=\"19\"></line>\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "        </button>\n" +
-/* class texto_longo */         "        <button class=\"full-screen\">\n" +
-/* class texto_longo */         "          <svg class=\"maximize\" viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <path d=\"M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3\">\n" +
-/* class texto_longo */         "            </path>\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "          <svg class=\"minimize\" viewBox=\"0 0 24 24\">\n" +
-/* class texto_longo */         "            <path d=\"M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3\">\n" +
-/* class texto_longo */         "            </path>\n" +
-/* class texto_longo */         "          </svg>\n" +
-/* class texto_longo */         "        </button>\n" +
-/* class texto_longo */         "      </div>\n" +
-/* class texto_longo */         "    </div>\n" +
-/* class texto_longo */         "  </div>  \n" +
-/* class texto_longo */         "</body>\n" +
-/* class texto_longo */         "</html>\n" +
-/* class texto_longo */         "<script>\n" +
-/* class texto_longo */         "const videoContainer = document.querySelector('.video-container');\n" +
-/* class texto_longo */         "const video = document.querySelector('.video-container video');\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "const controlsContainer = document.querySelector('.video-container .controls-container');\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "const playPauseButton = document.querySelector('.video-container .controls button.play-pause');\n" +
-/* class texto_longo */         "const rewindButton = document.querySelector('.video-container .controls button.rewind');\n" +
-/* class texto_longo */         "const fastForwardButton = document.querySelector('.video-container .controls button.fast-forward');\n" +
-/* class texto_longo */         "const volumeButton = document.querySelector('.video-container .controls button.volume');\n" +
-/* class texto_longo */         "const fullScreenButton = document.querySelector('.video-container .controls button.full-screen');\n" +
-/* class texto_longo */         "const playButton = playPauseButton.querySelector('.playing');\n" +
-/* class texto_longo */         "const pauseButton = playPauseButton.querySelector('.paused');\n" +
-/* class texto_longo */         "const fullVolumeButton = volumeButton.querySelector('.full-volume');\n" +
-/* class texto_longo */         "const mutedButton = volumeButton.querySelector('.muted');\n" +
-/* class texto_longo */         "const maximizeButton = fullScreenButton.querySelector('.maximize');\n" +
-/* class texto_longo */         "const minimizeButton = fullScreenButton.querySelector('.minimize');\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "const progressBar = document.querySelector('.video-container .progress-controls .progress-bar');\n" +
-/* class texto_longo */         "const watchedBar = document.querySelector('.video-container .progress-controls .progress-bar .watched-bar');\n" +
-/* class texto_longo */         "const timeLeft = document.querySelector('.video-container .progress-controls .time-remaining');\n" +
-/* class texto_longo */         "const back = document.querySelector('.video-container .controls .back');\n" +
-/* class texto_longo */         "const next = document.querySelector('.video-container .controls .next');\n" +
-/* class texto_longo */         back + 
-/* class texto_longo */         next + 
-/* class texto_longo */         "let controlsTimeout;\n" +
-/* class texto_longo */         "controlsContainer.style.opacity = '0';\n" +
-/* class texto_longo */         "watchedBar.style.width = '0px';\n" +
-/* class texto_longo */         "pauseButton.style.display = 'none';\n" +
-/* class texto_longo */         "minimizeButton.style.display = 'none';\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "const displayControls = () => {\n" +
-/* class texto_longo */         "  controlsContainer.style.opacity = '1';\n" +
-/* class texto_longo */         "  document.body.style.cursor = 'initial';\n" +
-/* class texto_longo */         "  if (controlsTimeout) {\n" +
-/* class texto_longo */         "    clearTimeout(controlsTimeout);\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "  controlsTimeout = setTimeout(() => {\n" +
-/* class texto_longo */         "    controlsContainer.style.opacity = '0';\n" +
-/* class texto_longo */         "    document.body.style.cursor = 'none';\n" +
-/* class texto_longo */         "  }, 1100);\n" +
-/* class texto_longo */         "};\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "const playPause = () => {\n" +
-/* class texto_longo */         "  try{\n" +
-/* class texto_longo */         "    if (video.paused) {\n" +
-/* class texto_longo */         "      video.play();\n" +
-/* class texto_longo */         "      playButton.style.display = 'none';\n" +
-/* class texto_longo */         "      pauseButton.style.display = '';\n" +
-/* class texto_longo */         "    }else{\n" +
-/* class texto_longo */         "      video.pause();\n" +
-/* class texto_longo */         "      playButton.style.display = '';\n" +
-/* class texto_longo */         "      pauseButton.style.display = 'none';\n" +
-/* class texto_longo */         "    }\n" +
-/* class texto_longo */         "  }catch(e){}\n" +
-/* class texto_longo */         "};\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "const toggleMute = () => {\n" +
-/* class texto_longo */         "  video.muted = !video.muted;\n" +
-/* class texto_longo */         "  if (video.muted) {\n" +
-/* class texto_longo */         "    fullVolumeButton.style.display = 'none';\n" +
-/* class texto_longo */         "    mutedButton.style.display = '';\n" +
-/* class texto_longo */         "  } else {\n" +
-/* class texto_longo */         "    fullVolumeButton.style.display = '';\n" +
-/* class texto_longo */         "    mutedButton.style.display = 'none';\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "};\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "const toggleFullScreen = () => {\n" +
-/* class texto_longo */         "  if (!document.fullscreenElement) {\n" +
-/* class texto_longo */         "    videoContainer.requestFullscreen();\n" +
-/* class texto_longo */         "  } else {\n" +
-/* class texto_longo */         "    document.exitFullscreen();\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "};\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "document.addEventListener('click', function(e) {  \n" +
-/* class texto_longo */         "   console.log('tagName clicked: ' + e.target.tagName);\n" +
-/* class texto_longo */         "   if ( e.target.tagName == 'VIDEO' ){\n" +
-/* class texto_longo */         "     playPause();\n" +
-/* class texto_longo */         "   }\n" +
-/* class texto_longo */         "},false);  \n" +
-/* class texto_longo */         "  \n" +
-/* class texto_longo */         "document.addEventListener('fullscreenchange', () => {\n" +
-/* class texto_longo */         "  if (!document.fullscreenElement) {\n" +
-/* class texto_longo */         "    maximizeButton.style.display = '';\n" +
-/* class texto_longo */         "    minimizeButton.style.display = 'none';\n" +
-/* class texto_longo */         "  } else {\n" +
-/* class texto_longo */         "    maximizeButton.style.display = 'none';\n" +
-/* class texto_longo */         "    minimizeButton.style.display = '';\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "});\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "document.addEventListener('keyup', (event) => {\n" +
-/* class texto_longo */         "  if (event.code === 'Space') {\n" +
-/* class texto_longo */         "    playPause(); \n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "  if (event.code === 'KeyM') {\n" +
-/* class texto_longo */         "    toggleMute();\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "  if (event.code === 'KeyF') {\n" +
-/* class texto_longo */         "    toggleFullScreen();\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "  displayControls();\n" +
-/* class texto_longo */         "});\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "document.addEventListener('mousemove', () => {\n" +
-/* class texto_longo */         "  displayControls();\n" +
-/* class texto_longo */         "});\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "video.addEventListener('timeupdate', () => {\n" +
-/* class texto_longo */         "  watchedBar.style.width = ((video.currentTime / video.duration) * 100) + '%';\n" +
-/* class texto_longo */         "  let seconds = parseInt(video.duration - video.currentTime);\n" +
-/* class texto_longo */         "  let hour=parseInt(seconds/(60*60));\n" +
-/* class texto_longo */         "  seconds-=hour*60*60;\n" +
-/* class texto_longo */         "  let minute=parseInt(seconds/60);\n" +
-/* class texto_longo */         "  seconds-=minute*60;\n" +
-/* class texto_longo */         "  second=seconds;\n" +
-/* class texto_longo */         "  if ( minute < 10 )\n" +
-/* class texto_longo */         "    minute='0'+minute;\n" +
-/* class texto_longo */         "  else\n" +
-/* class texto_longo */         "    minute=''+minute;\n" +
-/* class texto_longo */         "  if ( second < 10 )\n" +
-/* class texto_longo */         "    second='0'+second;\n" +
-/* class texto_longo */         "  else\n" +
-/* class texto_longo */         "    second=''+second;\n" +
-/* class texto_longo */         "  timeLeft.textContent = hour+':'+minute+':'+second;\n" +
-/* class texto_longo */         "});\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "progressBar.addEventListener('click', (event) => {\n" +
-/* class texto_longo */         "  const pos = (event.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;\n" +
-/* class texto_longo */         "  video.currentTime = pos * video.duration;\n" +
-/* class texto_longo */         "});\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "playPauseButton.addEventListener('click', playPause);\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "rewindButton.addEventListener('click', () => {\n" +
-/* class texto_longo */         "  video.currentTime -= 10;\n" +
-/* class texto_longo */         "});\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "fastForwardButton.addEventListener('click', () => {\n" +
-/* class texto_longo */         "  video.currentTime += 10;\n" +
-/* class texto_longo */         "});\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "volumeButton.addEventListener('click', toggleMute);\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "fullScreenButton.addEventListener('click', toggleFullScreen);\n" +
-/* class texto_longo */         "</script>\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "<style>\n" +
-/* class texto_longo */         "body {\n" +
-/* class texto_longo */         "  margin: 0;\n" +
-/* class texto_longo */         "  padding: 0;\n" +
-/* class texto_longo */         "  width: 100vw;\n" +
-/* class texto_longo */         "  height: 100vh;\n" +
-/* class texto_longo */         "  overflow: hidden;\n" +
-/* class texto_longo */         "  background: black;\n" +
-/* class texto_longo */         "  font-family: 'Rubik', sans-serif;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container {\n" +
-/* class texto_longo */         "  width: 100%;\n" +
-/* class texto_longo */         "  height: 100%;\n" +
-/* class texto_longo */         "  display: flex;\n" +
-/* class texto_longo */         "  justify-content: center;\n" +
-/* class texto_longo */         "  align-items: center;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container video {\n" +
-/* class texto_longo */         "  width: 100%;\n" +
-/* class texto_longo */         "  height: 100%;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls-container {\n" +
-/* class texto_longo */         "  position: fixed;\n" +
-/* class texto_longo */         "  bottom: 0px;\n" +
-/* class texto_longo */         "  width: 100%;\n" +
-/* class texto_longo */         "  display: flex;\n" +
-/* class texto_longo */         "  flex-direction: column;\n" +
-/* class texto_longo */         "  justify-content: flex-end;\n" +
-/* class texto_longo */         "  background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.9)); \n" +
-/* class texto_longo */         "  transition: opacity 0.5s linear;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .progress-controls {\n" +
-/* class texto_longo */         "  width: 100%;\n" +
-/* class texto_longo */         "  display: flex;\n" +
-/* class texto_longo */         "  justify-content: center;\n" +
-/* class texto_longo */         "  align-items: center;\n" +
-/* class texto_longo */         "  color: white;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .progress-controls .time-remaining {\n" +
-/* class texto_longo */         "  margin: 1vw;\n" +
-/* class texto_longo */         "  width: 4vw;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .progress-controls .progress-bar {\n" +
-/* class texto_longo */         "  width: 90vw;\n" +
-/* class texto_longo */         "  height: 1vw;\n" +
-/* class texto_longo */         "  max-height: 7px;\n" +
-/* class texto_longo */         "  background: #5B5B5B;\n" +
-/* class texto_longo */         "  display: flex;\n" +
-/* class texto_longo */         "  align-items: center;\n" +
-/* class texto_longo */         "  cursor: pointer;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .progress-controls .progress-bar .watched-bar,\n" +
-/* class texto_longo */         ".video-container .progress-controls .progress-bar .playhead {\n" +
-/* class texto_longo */         "  background: #E31221;\n" +
-/* class texto_longo */         "  display: inline-block;\n" +
-/* class texto_longo */         "  transition: all 0.2s;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .progress-controls .progress-bar .watched-bar {\n" +
-/* class texto_longo */         "  height: 100%;\n" +
-/* class texto_longo */         "  width: 20%;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .progress-controls .progress-bar .playhead {\n" +
-/* class texto_longo */         "  height: 3vw;\n" +
-/* class texto_longo */         "  width: 3vw;\n" +
-/* class texto_longo */         "  max-height: 25px;\n" +
-/* class texto_longo */         "  max-width: 25px;\n" +
-/* class texto_longo */         "  border-radius: 50%;\n" +
-/* class texto_longo */         "  transform: translateX(-50%);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls {\n" +
-/* class texto_longo */         "  width: 100%;\n" +
-/* class texto_longo */         "  display: flex;\n" +
-/* class texto_longo */         "  justify-content: space-between;\n" +
-/* class texto_longo */         "  align-items: center;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls button {\n" +
-/* class texto_longo */         "  background: none;\n" +
-/* class texto_longo */         "  outline: none;\n" +
-/* class texto_longo */         "  box-shadow: none;\n" +
-/* class texto_longo */         "  border: none;\n" +
-/* class texto_longo */         "  width: 5vw;\n" +
-/* class texto_longo */         "  height: 5vw;\n" +
-/* class texto_longo */         "  min-width: 50px;\n" +
-/* class texto_longo */         "  min-height: 50px;\n" +
-/* class texto_longo */         "  margin: 0px 1vw;\n" +
-/* class texto_longo */         "  opacity: 0.4;\n" +
-/* class texto_longo */         "  transform: scale(0.9);\n" +
-/* class texto_longo */         "  transition: all 0.2s ease-in-out;\n" +
-/* class texto_longo */         "  cursor: pointer;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls button:hover {\n" +
-/* class texto_longo */         "  opacity: 1;\n" +
-/* class texto_longo */         "  transform: scale(1.2);\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls button svg {\n" +
-/* class texto_longo */         "  fill: white;\n" +
-/* class texto_longo */         "  stroke: white;\n" +
-/* class texto_longo */         "  stroke-width: 2;\n" +
-/* class texto_longo */         "  stroke-linecap: round;\n" +
-/* class texto_longo */         "  stroke-linejoin: round;\n" +
-/* class texto_longo */         "  width: 100%;\n" +
-/* class texto_longo */         "  height: 100%;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls button.volume svg path,\n" +
-/* class texto_longo */         ".video-container .controls button.help svg,\n" +
-/* class texto_longo */         ".video-container .controls button.episodes svg,\n" +
-/* class texto_longo */         ".video-container .controls button.full-screen svg,\n" +
-/* class texto_longo */         ".video-container .controls button.volume svg path,\n" +
-/* class texto_longo */         ".video-container .controls button.cast svg {\n" +
-/* class texto_longo */         "  fill: none;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls button.rewind svg,\n" +
-/* class texto_longo */         ".video-container .controls button.fast-forward svg {\n" +
-/* class texto_longo */         "  stroke: none;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls button.captions svg {\n" +
-/* class texto_longo */         "  stroke: none;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls .title {\n" +
-/* class texto_longo */         "  font-size: 2vw;\n" +
-/* class texto_longo */         "  width: 100%;\n" +
-/* class texto_longo */         "  height: 100%;\n" +
-/* class texto_longo */         "  display: flex;\n" +
-/* class texto_longo */         "  justify-content: flex-start;\n" +
-/* class texto_longo */         "  align-items: center;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         "@media only screen and (max-width: 768px) {\n" +
-/* class texto_longo */         "  .video-container .controls .title {\n" +
-/* class texto_longo */         "    display: none;\n" +
-/* class texto_longo */         "  }\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls .title .series {\n" +
-/* class texto_longo */         "  color: #FEFEFE;\n" +
-/* class texto_longo */         "  font-weight: bold;\n" +
-/* class texto_longo */         "  font-size: 1em;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "\n" +
-/* class texto_longo */         ".video-container .controls .title .episode {\n" +
-/* class texto_longo */         "  color: #A1A1A1;\n" +
-/* class texto_longo */         "  font-size: 0.75em;\n" +
-/* class texto_longo */         "  padding-left: 1vw;\n" +
-/* class texto_longo */         "}\n" +
-/* class texto_longo */         "</style>\n";
-/* class texto_longo */     }
-/* class texto_longo */ }
 
 /* class HttpServer */ // parametros
 /* class HttpServer */ // new HttpServer(...)
@@ -15259,6 +15404,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y playWav]\n"
 /* class by manual */                + "  [y playLine]\n"
 /* class by manual */                + "  [y call]\n"
+/* class by manual */                + "  [y remote]\n"
 /* class by manual */                + "  [y injectMicLine]\n"
 /* class by manual */                + "  [y kill]\n"
 /* class by manual */                + "  [y win]\n"
@@ -15736,6 +15882,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y gravadorLine | y playLine\n"
 /* class by manual */                + "[y call]\n"
 /* class by manual */                + "    y call\n"
+/* class by manual */                + "[y remote]\n"
+/* class by manual */                + "    y remote\n"
 /* class by manual */                + "[y injectMicLine]\n"
 /* class by manual */                + "    y cat file.line | y injectMicLine\n"
 /* class by manual */                + "[y kill]\n"
@@ -15863,6 +16011,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
