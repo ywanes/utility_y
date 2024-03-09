@@ -9405,19 +9405,14 @@ System.out.println("BB" + retorno);
             String format_web="jpg";
             robotGetImgScreenBytesParallels_start(format_web);
             WebSocketServer wss=new WebSocketServer(new InetSocketAddress(ip, port), new Texto_longo().get_html_and_header_remote(format_web)){
-                public void onOpen(WebSocket conn, ClientHandshake handshake) {
-                    //System.out.println("onOpen");
-                }
-                public void onClose(WebSocket conn, int code, String reason, boolean remote) {
-                    //System.out.println("onClose");
-                }
+                public void onOpen(WebSocket conn, ClientHandshake handshake) {}
+                public void onClose(WebSocket conn, int code, String reason, boolean remote) {}
                 public void onMessage(WebSocket conn, String message) {
-                    //System.out.println("message: " + message);
                     if ( message.equals("1") )
                         conn.send("2");
                     try{
                         if ( message.equals("3") )                        
-                            conn.send(robotGetImgScreenBytesParallels());// //conn.send(robotGetImgScreenBytes(-1, format_web));
+                            conn.send(robotGetImgScreenBytesParallels());
                     }catch(Exception e){
                         System.err.println("Error " + e.toString());
                     }
@@ -9425,8 +9420,7 @@ System.out.println("BB" + retorno);
                 public void onError(WebSocket conn, Exception ex) {
                     System.out.println("error: " + ex.toString());
                 }
-                public void onStart() {
-                }
+                public void onStart() {}
             };
             wss.start();  
         }catch(Exception e){
@@ -11977,6 +11971,7 @@ class Util{
         try {Thread.sleep(mili);} catch (InterruptedException e) { }  
     }
     
+    /*
     public void arrayCopyBytes(byte [] a, byte [] b){        
         for ( int i=0;i<a.length;i++ ){
             if ( i >= b.length )
@@ -11984,6 +11979,7 @@ class Util{
             b[i]=a[i];        
         }
     }
+    */
     
     java.awt.Robot robot_local=null;
     public java.awt.Robot robotGet() throws Exception{
@@ -12107,11 +12103,6 @@ class Util{
     public void robotGetImgScreenBytesParallels_start(String format_web) throws Exception{
         rGISBP_data=new byte[rGISBP_len][0];        
         rGISBP_control=new boolean[rGISBP_len];
-        //int target_len=(int)(robotGetImgScreenBytes(format_web).length*2);
-        for ( int i=0;i<rGISBP_len;i++ ){
-            //rGISBP_data[i]=new byte[target_len];
-            //rGISBP_control[i]=false;
-        }
         Thread [] workers=new Thread[rGISBP_len];
         for ( int i=0;i<rGISBP_len;i++ ){
             final int n_control=i;
@@ -12126,8 +12117,6 @@ class Util{
                             }
                             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
                             javax.imageio.ImageIO.write(robot.createScreenCapture(rec), format_web, baos);
-                            //byte[] result=baos.toByteArray();
-                            //arrayCopyBytes(result, rGISBP_data[n_control]);
                             rGISBP_data[n_control]=baos.toByteArray();
                             rGISBP_control[n_control]=true;
                         }
@@ -12144,8 +12133,6 @@ class Util{
         while( !rGISBP_control[rGISBP_p] )
             sleepMillis(1);
         int tmp_len=rGISBP_data[rGISBP_p].length;
-        //byte [] result=new byte[tmp_len];    
-        //arrayCopyBytes(rGISBP_data[rGISBP_p],result);
         byte [] result=rGISBP_data[rGISBP_p];
         rGISBP_control[rGISBP_p]=false;
         rGISBP_p++;
