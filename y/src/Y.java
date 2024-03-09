@@ -12097,7 +12097,17 @@ class Util{
 
     int rGISBP_p = 0;
     int rGISBP_len = 6; // melhor configuração
-    
+    /*
+    parallels e fps
+    len=1;//9
+    len=2;//18
+    len=3;//25
+    len=4;//30
+    len=5;//36
+    len=6;//38
+    len=7;//38
+    len=8;//38
+    */    
     byte [][] rGISBP_data=null;
     boolean [] rGISBP_control=null;
     public void robotGetImgScreenBytesParallels_start(String format_web) throws Exception{

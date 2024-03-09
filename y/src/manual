@@ -568,6 +568,7 @@ Exemplos...
     y call
 [y remote]
     y remote
+    y remote -ip localhost
 [y injectMicLine]
     y cat file.line | y injectMicLine
 [y kill]
