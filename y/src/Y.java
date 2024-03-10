@@ -11390,50 +11390,59 @@ class Util{
             long tmp=System.currentTimeMillis();
             if ( tmp > print_cursor_speed_timer_mili + 1000 ){
                 print_cursor_speed_timer_mili=tmp;
-                System.out.print("\r"+bits_to_text(print_cursor_speed_count_n)+"/s                                             \r");
+                System.out.print("\r"+bytes_to_text(print_cursor_speed_count_n)+"/s - "  + bits_to_text(print_cursor_speed_count_n)+"/s                                               \r");
                 print_cursor_speed_count_n=0;
             }else
                 return;
         }                
     }
-    public static String bits_to_text(long bytes){
+    
+    public static String bits_to_text(long a){
+        return valor_to_text(a*8)+"b";
+    }
+    
+    public static String bytes_to_text(long a){
+        return valor_to_text(a)+"B";
+    }
+    
+    public static String valor_to_text(long unit){
         long giga=0;
         long mega=0;
         long kilo=0;
         int tmp=0;
-        tmp=(int)(bytes/(1024*1024*1024));
+        tmp=(int)(unit/(1024*1024*1024));
         if ( tmp > 0 ){
-            bytes-=tmp*1024*1024*1024;
+            unit-=tmp*1024*1024*1024;
             giga+=tmp;
         }
-        tmp=(int)(bytes/(1024*1024));
+        tmp=(int)(unit/(1024*1024));
         if ( tmp > 0 ){
-            bytes-=tmp*1024*1024;
+            unit-=tmp*1024*1024;
             mega+=tmp;
         }
-        tmp=(int)(bytes/1024);
+        tmp=(int)(unit/1024);
         if ( tmp > 0 ){
-            bytes-=tmp*1024;
+            unit-=tmp*1024;
             kilo+=tmp;
         }
         if ( giga == 0 && mega == 0 && kilo == 0 )
-            return bytes+" b";
+            return unit+" ";
         String tmp1="";
         String tmp2="";
         String tmp3="";
         if ( giga > 0 ){
             tmp1=giga+"";
             tmp2=mega+"";
-            tmp3=" Gb";
+            tmp3=" G";
         }else{
             if ( mega > 0 ){
                 tmp1=mega+"";
                 tmp2=kilo+"";
-                tmp3=" Mb";
+                tmp3=" M";
             }else{
                 tmp1=kilo+"";
-                tmp2=bytes+"";
-                tmp3=" Kb";
+                tmp2=unit+"";
+                tmp3=" K";
             }
         }
         if ( tmp2.length() == 1 )
