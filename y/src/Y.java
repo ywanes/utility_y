@@ -13531,6 +13531,7 @@ class Texto_longo extends Util{
 "    var finish_msg='<html><h1>Conexao encerrada!</h1></html>';\n" +
 "    document.children[0].innerHTML='<html><body style=\"background-color: rgb(68, 87, 96);\"><img id=\"imgId\" style=\"height: 100%;\"></img></body></html>';\n" +
 "    var socket = null;\n" +
+"    var count_fps=0;\n" +
 "    try{\n" +
 "      socket = new WebSocket(\"ws://\"+window.location.href.split('://')[1].replace('/',''));\n" +
 "      socket.binaryType = \"blob\";\n" +
@@ -13545,6 +13546,7 @@ class Texto_longo extends Util{
 "            var link = window.URL.createObjectURL(s);\n" +
 "            document.getElementById(\"imgId\").src = link;    \n" +
 "            socket.send('3');\n" +
+"            count_fps++;\n" +
 "          }\n" +
 "          if ( event.data == '2' )\n" +
 "            socket.send('3');\n" +
@@ -13559,7 +13561,12 @@ class Texto_longo extends Util{
 "    setInterval(function(){\n" +
 "      if ( socket != null && socket.readyState == WebSocket.CLOSED )\n" +
 "        document.children[0].innerHTML=finish_msg;\n" +
-"    }, 100);\n" +
+"      else{\n" +
+"        console.log('fps: '+count_fps);\n" +
+"        count_fps=0;\n" +
+"      }\n" +
+"        \n" +
+"    }, 1000);\n" +
 "};      \n" +
 "</script>";
         result=result.replace("[FORMATWEB]", format_web);
@@ -13579,6 +13586,7 @@ window.onload = function(){
     var finish_msg='<html><h1>Conexao encerrada!</h1></html>';
     document.children[0].innerHTML='<html><body style="background-color: rgb(68, 87, 96);"><img id="imgId" style="height: 100%;"></img></body></html>';
     var socket = null;
+    var count_fps=0;
     try{
       socket = new WebSocket("ws://"+window.location.href.split('://')[1].replace('/',''));
       socket.binaryType = "blob";
@@ -13593,6 +13601,7 @@ window.onload = function(){
             var link = window.URL.createObjectURL(s);
             document.getElementById("imgId").src = link;    
             socket.send('3');
+            count_fps++;
           }
           if ( event.data == '2' )
             socket.send('3');
@@ -13607,7 +13616,12 @@ window.onload = function(){
     setInterval(function(){
       if ( socket != null && socket.readyState == WebSocket.CLOSED )
         document.children[0].innerHTML=finish_msg;
-    }, 100);
+      else{
+        console.log('fps: '+count_fps);
+        count_fps=0;
+      }
+        
+    }, 1000);
 };      
 </script>
 */        
