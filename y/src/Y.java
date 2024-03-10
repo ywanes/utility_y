@@ -1692,7 +1692,14 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("playLine") ){
-            playLine(false, System.in);
+            try{
+                if ( args.length == 2 )
+                    playLine(false, new FileInputStream(args[1]));
+                else
+                    playLine(false, System.in);
+            }catch(Exception e){
+                erro_amigavel_exception(e);
+            }
             return;
         }
         if ( args[0].equals("gravadorLine") ){
@@ -12094,7 +12101,6 @@ class Util{
     public void robotMouseReleaseDir() throws Exception{
         robotGet().mouseRelease(java.awt.event.InputEvent.BUTTON3_DOWN_MASK);
     }        
-
     int rGISBP_p = 0;
     int rGISBP_len = 6; // melhor configuração
     /*
@@ -12110,9 +12116,11 @@ class Util{
     */    
     byte [][] rGISBP_data=null;
     boolean [] rGISBP_control=null;
+    long [] rGISBP_control_time=null; // ajuda no sincronismo
     public void robotGetImgScreenBytesParallels_start(String format_web) throws Exception{
         rGISBP_data=new byte[rGISBP_len][0];        
         rGISBP_control=new boolean[rGISBP_len];
+        rGISBP_control_time=new long[rGISBP_len];
         Thread [] workers=new Thread[rGISBP_len];
         for ( int i=0;i<rGISBP_len;i++ ){
             final int n_control=i;
@@ -12126,7 +12134,9 @@ class Util{
                                 sleepMillis(1);
                             }
                             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                            javax.imageio.ImageIO.write(robot.createScreenCapture(rec), format_web, baos);
+                            BufferedImage tmp=robot.createScreenCapture(rec);
+                            rGISBP_control_time[n_control]=epochmili(null);
+                            javax.imageio.ImageIO.write(tmp, format_web, baos);
                             rGISBP_data[n_control]=baos.toByteArray();
                             rGISBP_control[n_control]=true;
                         }
@@ -12150,6 +12160,7 @@ class Util{
             rGISBP_p=0;
         return result;
     }        
+    
 }
 
 
