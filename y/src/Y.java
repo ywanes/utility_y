@@ -14467,20 +14467,26 @@ window.onload = function(){
         "  if (event.code === 'Space') {\n" +
         "    playPause(); \n" +
         "  }\n" +
-        "\n" +
         "  if (event.code === 'KeyM') {\n" +
         "    toggleMute();\n" +
         "  }\n" +
-        "\n" +
         "  if (event.code === 'KeyF') {\n" +
         "    toggleFullScreen();\n" +
         "  }\n" +
-        "\n" +
+        "  if (event.code === 'ArrowLeft') {\n" +
+        "    rewindButton.click();\n" +
+        "  }\n" +
+        "  if (event.code === 'ArrowRight') {\n" +
+        "    fastForwardButton.click();\n" +
+        "  }\n" +
         "  displayControls();\n" +
         "});\n" +
         "\n" +
         "document.addEventListener('mousemove', () => {\n" +
         "  displayControls();\n" +
+        "});\n" +
+        "document.addEventListener('dblclick', () => {\n" +
+        "  toggleFullScreen();\n" +
         "});\n" +
         "\n" +
         "video.addEventListener('timeupdate', () => {\n" +
