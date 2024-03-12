@@ -9263,6 +9263,83 @@ System.out.println("BB" + retorno);
         }        
     }
         
+    /*
+# gravador onlyLine python mic
+import pyaudio
+import wave
+import sys
+
+stream = pyaudio.PyAudio().open(format=pyaudio.paInt16,
+                channels=2,
+                rate=48000,
+                frames_per_buffer=1024,
+                input_device_index=0,
+                input=True)
+
+while True:
+    sys.stdout.buffer.write(stream.read(1024))
+    sys.stdout.flush()
+
+# gravador onlyLine python wasapi_windows - creditos: https://github.com/s0d3s/PyAudioWPatch/blob/master/examples/pawp_record_wasapi_loopback.py#L32
+import pyaudiowpatch as pyaudio
+import time
+import sys
+
+p = pyaudio.PyAudio()
+
+"""
+###### HostAPI TypeId ##### https://github.com/jleb/pyaudio/blob/master/src/pyaudio.py
+paInDevelopment = pa.paInDevelopment #: Still in development
+paDirectSound   = pa.paDirectSound   #: DirectSound (Windows only)
+paMME           = pa.paMME           #: Multimedia Extension (Windows only)
+paASIO          = pa.paASIO          #: Steinberg Audio Stream Input/Output
+paSoundManager  = pa.paSoundManager  #: SoundManager (OSX only)
+paCoreAudio     = pa.paCoreAudio     #: CoreAudio (OSX only)
+paOSS           = pa.paOSS           #: Open Sound System (Linux only)
+paALSA          = pa.paALSA          #: Advanced Linux Sound Architecture (Linux only)
+paAL            = pa.paAL            #: Open Audio Library
+paBeOS          = pa.paBeOS          #: BeOS Sound System
+paWDMKS         = pa.paWDMKS         #: Windows Driver Model (Windows only)
+paJACK          = pa.paJACK          #: JACK Audio Connection Kit
+paWASAPI        = pa.paWASAPI        #: Windows Vista Audio stack architecture
+paNoDevice      = pa.paNoDevice      #: Not actually an audio device
+"""
+
+try:
+    info = p.get_host_api_info_by_type(pyaudio.paWASAPI) # tentar paALSA para linux?
+except OSError:
+    print('ERROR')
+
+default_speakers = p.get_device_info_by_index(info["defaultOutputDevice"])
+
+if not default_speakers["isLoopbackDevice"]:
+    for loopback in p.get_loopback_device_info_generator():
+        if default_speakers["name"] in loopback["name"]:
+            default_speakers = loopback
+            break
+    else:
+        print('Default loopback output device not found')
+        
+def callback(in_data, frame_count, time_info, status):
+    sys.stdout.buffer.write(in_data)
+    sys.stdout.flush()
+    return (in_data, pyaudio.paContinue)
+
+p.open(format=pyaudio.paInt16,
+        channels=default_speakers["maxInputChannels"],
+        rate=int(default_speakers["defaultSampleRate"]),
+        frames_per_buffer=1024,
+        input=True,
+        input_device_index=default_speakers["index"],
+        stream_callback=callback
+)
+while True:
+    pass
+
+# gravador onlyLine python linux(pendente)
+
+    */
+
     public void gravador(boolean onlyLine, boolean usingMixer, String caminho, OutputStream out){ // erro em stdout -> y gravador > a.wav
         try {
             javax.sound.sampled.TargetDataLine line=getLineReader(usingMixer);
@@ -12142,7 +12219,7 @@ class Util{
                             while(rGISBP_control[n_control]){
                                 sleepMillis(1);
                             }
-                            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();                            
                             BufferedImage tmp=robot.createScreenCapture(rec);
                             rGISBP_control_time[n_control]=epochmili(null);
                             javax.imageio.ImageIO.write(tmp, format_web, baos);
