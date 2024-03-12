@@ -9337,7 +9337,7 @@ while True:
     pass
 
 # gravador onlyLine python linux(pendente)
-
+# PyAudioWPatch only works on Windows
     */
 
     public void gravador(boolean onlyLine, boolean usingMixer, String caminho, OutputStream out){ // erro em stdout -> y gravador > a.wav
