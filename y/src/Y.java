@@ -13723,12 +13723,14 @@ window.onload = function(){
 </script>
 */        
     }
-    public String get_html_virtual_playlist(){
+    public String get_html_virtual_playlist(String host_display){
         String faixas="";
+        String curl="";
         File [] f=new File(".").listFiles();
         for ( int i=0;i<f.length;i++ ){
-            if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){
+            if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){                
                 String name_file = f[i].getName();
+                curl += "curl \"" + host_display.replace("//renato:", "//203.cloudns.cl:") + "/" + encodeUrl(name_file) + "\" > \"" + name_file + "\"\n";
                 int len_partes = name_file.split("\\.").length;
                 int len_extension = name_file.split("\\.")[len_partes-1].length()+1;
                 int len_tag = 12;
@@ -13744,6 +13746,25 @@ window.onload = function(){
                 }
             }
         };
+        
+        
+        /*
+            String curl="";
+            String h1="<br>";
+            String txt_item="";
+            if ( !path.equals(".") )
+                h1="<a href=\"/\"><svg width=\"44\" height=\"44\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g clip-path=\"url(#clip0)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z\" fill=\"#293644\"></path> </g> <defs> <clipPath id=\"clip0\"> <rect width=\"24\" height=\"24\" fill=\"white\"></rect> </clipPath> </defs> </svg></a><br><h1 style=\"color: white;\">&nbsp;/" + path + "</h1><br>";
+            for ( int i=0;i<elementos.size();i++ ){
+                if ( elementosIsFile.get(i).equals("S") ){
+                    curl += "curl \"" + (prefix + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
+                    txt_item = elementos.get(i);
+                }else
+                    txt_item = "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><path style=\"fill:#D9D58F;stroke:#222;stroke-width:2\" d=\"m 2,88 c 0,-1 0,-63 0,-63 0,0 -0.6,-5 4.4,-5 -1,0 5.6,0 5.6,0 l 0,-6 c 0,0 0,-3 3,-3 l 17,0 c 0,0 3,0 3,3 l 0,6 43,0 c 0,0 4,0 4,4 l 0,64 z\"></path><path style=\"fill:#E8DC88;stroke:#222;stroke-width:2;fill-opacity:0.7\" d=\"M 2,88 17,54 c 0,0 1,-5 9,-5 11,0 65,0 65,0 0,0 9,0 7,5 -2,5 -14,34 -14,34 z\"></path></svg><a> </a>" + elementos.get(i);
+                trs += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.href='" + prefix + encodeUrl(elementos.get(i)) + "'\">" + txt_item + "</td></tr>\n";
+            }        
+        */
+        
+        
         return "<html>\n" +
         "<head>\n" +
         "<body id=\"cursor\" onload=\"preparacao();\" style=\"background-color: rgb(0, 0, 0);\">\n" +
@@ -13757,6 +13778,9 @@ window.onload = function(){
         "<div id=\"master\"></div>\n" +
         "<div><style>.bordered {border: solid #177 3px;border-radius: 6px;}.bordered tr:hover {background: #999;}.bordered td, .bordered th {border-left: 2px solid #177;border-top: 2px solid #177;padding: 10px;}audio::-webkit-media-controls-panel{background-color: #777;}</style>\n" +
         "<table id=\"tablebase\" class=\"bordered\" style=\"font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;margin-left: 20px; visibility: hidden;\"><tbody>\n" +
+        "<!--\n" + 
+        curl +
+        "-->\n" + 
         faixas +
         "</tbody></table></div>\n" +
         "<script type=\"text/javascript\">\n" +
@@ -15097,9 +15121,10 @@ namespace LoopbackWithMic
 /* class HttpServer */     public void serve() throws Exception {
 /* class HttpServer */         ServerSocket serverSocket = null;
 /* class HttpServer */         String ip_origem = "";
+/* class HttpServer */         String host_display = "";
 /* class HttpServer */         try {
 /* class HttpServer */             serverSocket = new ServerSocket(port, 1, InetAddress.getByName(host));
-/* class HttpServer */             String host_display="http://" + host + ":" + port;
+/* class HttpServer */             host_display="http://" + host + ":" + port;
 /* class HttpServer */             if (host.contains(":"))
 /* class HttpServer */                 host_display="http://[" + host + "]:" + port;
 /* class HttpServer */             if (mode == null)
@@ -15121,7 +15146,7 @@ namespace LoopbackWithMic
 /* class HttpServer */                     System.out.println("Acesso recusado para o ip banido: " + ip_origem);
 /* class HttpServer */                     continue;
 /* class HttpServer */                 }
-/* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths, mode);
+/* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths, mode, host_display);
 /* class HttpServer */             } catch (Exception e) {
 /* class HttpServer */                 System.out.println("Erro ao executar servidor:" + e.toString());
 /* class HttpServer */             }
@@ -15140,12 +15165,14 @@ namespace LoopbackWithMic
 /* class HttpServer */     InputStreamReader isr = null;
 /* class HttpServer */     Reader reader;
 /* class HttpServer */     String mode=null;
-/* class HttpServer */     public ClientThread(final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String mode) {
+/* class HttpServer */     String host_display=null;
+/* class HttpServer */     public ClientThread(final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String mode, String host_display) {
 /* class HttpServer */         this.titulo_url = titulo_url;
 /* class HttpServer */         this.titulo = titulo;
 /* class HttpServer */         this.dir = dir;
 /* class HttpServer */         this.endsWiths = endsWiths;
 /* class HttpServer */         this.mode = mode;
+/* class HttpServer */         this.host_display = host_display;
 /* class HttpServer */         new Thread() {
 /* class HttpServer */             public void run() {
 /* class HttpServer */                 try {
@@ -15223,7 +15250,7 @@ namespace LoopbackWithMic
 /* class HttpServer */             if ( uri.startsWith("/id/") )
 /* class HttpServer */                id=uri.substring(4);
 /* class HttpServer */             if ( mode.equals("playlist") )
-/* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlist();
+/* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlist(host_display);
 /* class HttpServer */             if ( mode.equals("playlistmovie") )
 /* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlistmovie(id);
 /* class HttpServer */             sb = new StringBuilder();
