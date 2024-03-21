@@ -153,7 +153,7 @@ then
 fi
 if [ ! -e mysql-connector-java-8.0.26.jar ]
 then
-    curl http://121.42.227.72:8081/nexus/content/groups/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar > mysql-connector-java-8.0.26.jar
+    curl https://adams.cms.waikato.ac.nz/nexus/repository/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar > mysql-connector-java-8.0.26.jar
 fi
 if [ ! -e jsch-0.1.55.jar ]
 then
