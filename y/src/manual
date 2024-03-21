@@ -585,7 +585,9 @@ Exemplos...
     Obs: -ip -port -server -client -send -receive|-r
 [y lock]
     y lock
+    y lock w
     obs: gera black screen
+    obs2: y lock w -> white screen
 [y paste]
     y paste file1 file2
 [y mkv]

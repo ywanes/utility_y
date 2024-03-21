@@ -1756,8 +1756,14 @@ cat buffer.log
                 return;
         }
         if ( args[0].equals("lock") ){
-            lock();
-            return;
+            if ( args.length == 1 ){
+                lock(null);
+                return;
+            }
+            if ( args.length > 1 && args[1].equals("w") ){
+                lock("w");
+                return;
+            }
         }
         if ( args[0].equals("paste") && args.length == 3 && new File(args[1]).exists() && new File(args[2]).exists() && new File(args[1]).isFile() && new File(args[2]).isFile() ){            
             paste(new File(args[1]), new File(args[2]));
@@ -9900,7 +9906,7 @@ while True:
         return true;
     }
 
-    private void lock(){
+    private void lock(String w){
         GraphicsDevice[] gs=null;
         boolean hasConfigurationDevice=true;
         try{
@@ -9914,12 +9920,18 @@ while True:
                 frame = new Frame(gs[i].getDefaultConfiguration());
             else
                 frame = new Frame();
-            frame.setBackground(Color.black);
+            if ( w == null )
+                frame.setBackground(Color.black);
+            else
+                frame.setBackground(Color.white);
             if ( !hasConfigurationDevice ){
                 frame.setUndecorated(true); // tira borda do aplicativo
                 frame.setExtendedState(frame.MAXIMIZED_BOTH);        
             }
-            frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
+            if ( w == null )
+                frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
+            else
+                frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(2,2,2), new Point( 0, 0), "" ));            
             frame.addWindowListener(new java.awt.event.WindowAdapter() {
                 public void windowClosing(java.awt.event.WindowEvent e) {
                     System.exit(0);
@@ -15568,6 +15580,7 @@ namespace LoopbackWithMic
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -16142,6 +16155,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y call\n"
 /* class by manual */                + "[y remote]\n"
 /* class by manual */                + "    y remote\n"
+/* class by manual */                + "    y remote -ip localhost\n"
 /* class by manual */                + "[y injectMicLine]\n"
 /* class by manual */                + "    y cat file.line | y injectMicLine\n"
 /* class by manual */                + "[y kill]\n"
@@ -16158,7 +16172,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "    Obs: -ip -port -server -client -send -receive|-r\n"
 /* class by manual */                + "[y lock]\n"
 /* class by manual */                + "    y lock\n"
+/* class by manual */                + "    y lock w\n"
 /* class by manual */                + "    obs: gera black screen\n"
+/* class by manual */                + "    obs2: y lock w -> white screen\n"
 /* class by manual */                + "[y paste]\n"
 /* class by manual */                + "    y paste file1 file2\n"
 /* class by manual */                + "[y mkv]\n"
@@ -16269,6 +16285,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
