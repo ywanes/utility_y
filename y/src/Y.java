@@ -60,9 +60,14 @@ depois de um tempo o comando de cima some?
 
     créditos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
     créditos https://github.com/is/jsch/tree/master/examples
+
+Graalvm
+y cat YBase.java | y awk -v start REMOVED_GRAAL_START end REMOVED_GRAAL_END > Y.java
 */
 
+//REMOVED_GRAAL_START
 import com.jcraft.jsch.*;
+//REMOVED_GRAAL_END
 import java.awt.*;
 import java.awt.GridBagConstraints;
 import java.awt.Insets;
@@ -331,8 +336,10 @@ cat buffer.log
         args=initEnvByParm(args);
         System.setProperty("https.protocols", "TLSv1.1");
         System.setProperty("line.separator", "\n");
+		//REMOVED_GRAAL_START
         try_load_libraries();
-        try_load_ORAs();
+        try_load_ORAs();	
+		//REMOVED_GRAAL_END		
 
         if ( args.length == 0 ){
             System.err.println(      
@@ -340,17 +347,17 @@ cat buffer.log
             );
             return;
         }        
-        
+        //REMOVED_GRAAL_START
         if ( args[0].equals("daemon") || args[0].equals("d") ){
             daemon(args);
             return;
         }
-        
+        //REMOVED_GRAAL_END
         if ( args[0].equals("take") ){
             if ( take(args) )
                 return;
         }
-        
+        //REMOVED_GRAAL_START
         if ( args[0].equals("banco") ){            
             if ( args.length == 1 ){
                 System.err.println(
@@ -548,7 +555,7 @@ cat buffer.log
                 System.exit(1);
             }
         }   
-        
+        //REMOVED_GRAAL_END
         if ( args[0].equals("xml") && ( args.length == 2 || args.length == 3 ) ){
             try{
                 if ( args.length == 2 && args[1].equals("mostraEstrutura") ){
@@ -1319,35 +1326,49 @@ cat buffer.log
         if ( args[0].equals("dev_in") ){
             dev_in();
             return;
-        }
+        }		
+		//REMOVED_GRAAL_START
         if ( args[0].equals("scp") ){
             scp(args);
             return;
-        }        
+        }
+		//REMOVED_GRAAL_END
+		//REMOVED_GRAAL_START        
         if ( args[0].equals("execSsh") ){
             execSsh(args);
             return;
-        }        
+        }
+		//REMOVED_GRAAL_END
+		//REMOVED_GRAAL_START
         if ( args[0].equals("ssh") ){
             ssh(args);
             return;
         }    
+		//REMOVED_GRAAL_END
+		//REMOVED_GRAAL_START
         if ( args[0].equals("sshinfo") && args.length == 1){
             sshinfo(null, null);
             return;
         }    
+		//REMOVED_GRAAL_END
+		//REMOVED_GRAAL_START
         if ( args[0].equals("sshinfo") && args.length == 2){
             sshinfo(args[1], null);
             return;
         }    
+		//REMOVED_GRAAL_END
+		//REMOVED_GRAAL_START
         if ( args[0].equals("sshinfo") && args.length == 3){
             sshinfo(args[1], args[2]);
             return;
         }    
+		//REMOVED_GRAAL_END
+		//REMOVED_GRAAL_START
         if ( args[0].equals("sftp") ){
             sftp(args);
             return;
-        }        
+        }  
+		//REMOVED_GRAAL_END	
         if ( args[0].equals("serverRouter"))
         {
             serverRouter(args);
@@ -1902,6 +1923,7 @@ cat buffer.log
         }            
     }
 
+	//REMOVED_GRAAL_START
     private void daemon(String [] args){
         if(args.length > 1){
             if ( args[1].equals("-server") ){
@@ -2007,7 +2029,8 @@ cat buffer.log
             erro_amigavel_exception(e);            
         }
     }
-    
+	//REMOVED_GRAAL_END
+	//REMOVED_GRAAL_START    
     private void daemon_command(String [] args){
         String command="";
         for( int i=1;i<args.length;i++ ){
@@ -2051,7 +2074,8 @@ cat buffer.log
             erro_amigavel_exception(e);
         }
     }
-    
+	//REMOVED_GRAAL_END
+    //REMOVED_GRAAL_START
     private void daemon_command_loop_tail(String command){
         try{
             String [] controlC_parms = new String []{"", "0"};
@@ -2083,7 +2107,8 @@ cat buffer.log
             erro_amigavel_exception(e);
         }
     }
-        
+	//REMOVED_GRAAL_END
+	//REMOVED_GRAAL_START
     private void daemon_server(){        
         // auto start
         try{
@@ -2579,7 +2604,8 @@ cat buffer.log
             erro_amigavel_exception(e);
         }
     }
-    
+    //REMOVED_GRAAL_END
+	
     public String formata_tabular_palavra(String a){
         String [] frases=a.split("\n");
         int [] lens=new int[50];
@@ -4346,6 +4372,7 @@ cat buffer.log
         return false; 
     }
 
+	//REMOVED_GRAAL_START
     public void try_load_libraries(){
         try{
             Class.forName("oracle.jdbc.OracleDriver");
@@ -4359,7 +4386,9 @@ cat buffer.log
             System.err.println("Não foi possível carregar a biblioteca SQL Server");
             System.exit(1);
         }                    
-    }
+    }	
+	//REMOVED_GRAAL_END
+	//REMOVED_GRAAL_START
     public void try_load_ORAs() {        
         ORAs=lendo_arquivo_pacote("/y/ORAs").split("\n");
         
@@ -4384,7 +4413,8 @@ cat buffer.log
             //try_load_ORAs
         }
     }
-    
+    //REMOVED_GRAAL_END
+	
     public String fix_caminho(String caminho){
         if ( ! caminho.endsWith("/") && caminho.contains("/") )
             return caminho+"/";
@@ -7223,6 +7253,7 @@ System.out.println("BB" + retorno);
         return result;
     }
 
+	//REMOVED_GRAAL_START
     private void scp(String[] args) {        
         // créditos
         // https://github.com/is/jsch/tree/master/examples
@@ -7256,7 +7287,9 @@ System.out.println("BB" + retorno);
             new JSchCustom().scpTo(new String[]{args[1],args[2]},senha[0],port);                    
         System.exit(0);
     }
-    
+    //REMOVED_GRAAL_END
+	
+	//REMOVED_GRAAL_START
     private void execSsh(String[] args) {        
         // créditos
         // https://github.com/is/jsch/tree/master/examples
@@ -7285,7 +7318,9 @@ System.out.println("BB" + retorno);
         new JSchCustom().execSsh(new String[]{args[1],args[2]},senha[0],port);
         System.exit(0);
     }
-    
+    //REMOVED_GRAAL_END
+	
+	//REMOVED_GRAAL_START
     private void ssh(String[] args) {        
         // créditos
         // https://github.com/is/jsch/tree/master/examples
@@ -7314,7 +7349,9 @@ System.out.println("BB" + retorno);
         new JSchCustom().ssh(new String[]{args[1]},senha[0],port);
         System.exit(0);
     }
+	//REMOVED_GRAAL_END
     
+	//REMOVED_GRAAL_START
     private void sshinfo(String host_,String port_){
         String host = "localhost";
         int port = 22;
@@ -7338,7 +7375,9 @@ System.out.println("BB" + retorno);
             System.exit(1);
         }
     }
+	//REMOVED_GRAAL_END
     
+	//REMOVED_GRAAL_START
     private void sftp(String[] args) {
         // créditos
         // https://github.com/is/jsch/tree/master/examples
@@ -7367,7 +7406,9 @@ System.out.println("BB" + retorno);
         new JSchCustom().sftp(new String[]{args[1]},senha[0],port);
         System.exit(0);
     }
+	//REMOVED_GRAAL_END
     
+	//REMOVED_GRAAL_START
     public void pedeSenhaCasoNaoTenha(String [] args,String [] senha){
         // ywanes@desktop's password:
         // String password = new String(console.readPassword("Password: "));
@@ -7412,6 +7453,7 @@ System.out.println("BB" + retorno);
             }
         }
     }
+	//REMOVED_GRAAL_END
     
     private void serverRouter(String[] args) {
         String log=null;
@@ -11996,6 +12038,7 @@ class Util{
     }    
     
     
+	//REMOVED_GRAAL_START
     public void loadClassByBytes(java.util.HashMap classes, String principal, String [] args_){
         try{ 
             ClassLoader classLoader=new ClassLoader() {            
@@ -12021,7 +12064,9 @@ class Util{
             System.exit(1);
         } 
     }
+	//REMOVED_GRAAL_END
     
+	//REMOVED_GRAAL_START
     public void loadDisableControlC(String [] args){
         //https://rosettacode.org/wiki/Handle_a_signal#Java
         /*
@@ -12051,7 +12096,8 @@ class Util{
         classes.put("DisableControlC$1","yv66vgAAADQAKwkABgAXCgAHABgJABkAGgoAGwAcCAAdBwAeBwAgBwAhAQAIdmFsJGFyZ3MBABNbTGphdmEvbGFuZy9TdHJpbmc7AQAGPGluaXQ+AQAWKFtMamF2YS9sYW5nL1N0cmluZzspVgEABENvZGUBAA9MaW5lTnVtYmVyVGFibGUBAAZoYW5kbGUBABQoTHN1bi9taXNjL1NpZ25hbDspVgEADVN0YWNrTWFwVGFibGUBAApTb3VyY2VGaWxlAQAURGlzYWJsZUNvbnRyb2xDLmphdmEBAA9FbmNsb3NpbmdNZXRob2QHACIMACMADAwACQAKDAALACQHACUMACYAJwcAKAwAKQAqAQABMQEAEURpc2FibGVDb250cm9sQyQxAQAMSW5uZXJDbGFzc2VzAQAQamF2YS9sYW5nL09iamVjdAEAFnN1bi9taXNjL1NpZ25hbEhhbmRsZXIBAA9EaXNhYmxlQ29udHJvbEMBAARtYWluAQADKClWAQAQamF2YS9sYW5nL1N5c3RlbQEAA291dAEAFUxqYXZhL2lvL1ByaW50U3RyZWFtOwEAE2phdmEvaW8vUHJpbnRTdHJlYW0BAAVwcmludAEAFShMamF2YS9sYW5nL1N0cmluZzspVgAwAAYABwABAAgAARAQAAkACgAAAAIAAAALAAwAAQANAAAAIgACAAIAAAAKKiu1AAEqtwACsQAAAAEADgAAAAYAAQAAAAUAAQAPABAAAQANAAAAYQADAAIAAAAvKrQAAb6eABgqtAABAzLGAA+yAAMqtAABAzK2AAQqtAABvgSkAAsqtAABBBIFU7EAAAACAA4AAAAWAAUAAAAHABEACAAdAAkAJgAKAC4ACwARAAAABAACHRAAAwASAAAAAgATABQAAAAEABUAFgAfAAAACgABAAYAAAAAAAg=");
         loadClassByBytes(classes, principal, args);
     }
-
+	//REMOVED_GRAAL_END
+	
     public void sleepFloatSeconds(Float a){
         sleepMillis((long)(a*1000));  
     }
@@ -14980,7 +15026,7 @@ namespace LoopbackWithMic
 /* class Utilonsole */ // String texto=Utilonsole.getTextConsole("Digite o texto: ");
 /* class Utilonsole */ class Utilonsole{ public static String getPasswordConsole(String txt) { String retorno=""; java.io.Console console=System.console(); if ( console == null ){ System.out.println("Error, input nao suportado nesse ambiente, rodando no netbeans?..."); System.exit(1); } char [] passChar = System.console().readPassword(txt); if ( passChar != null ) retorno=new String(passChar); if ( retorno == null ){ System.out.println("Error, not input found"); System.exit(1); } return retorno;}public static String getTextConsole(String txt) { String retorno=""; java.io.Console console=System.console(); if ( console == null ){ System.out.println("Error, input nao suportado nesse ambiente, rodando no netbeans?..."); System.exit(1); } System.out.print(txt);retorno=System.console().readLine();if ( retorno == null ){ System.out.println("Error, not input found"); System.exit(1); } return retorno;}}
 
-
+//REMOVED_GRAAL_START
 /* class JSchCustom */ class JSchCustom { void scpFrom(String[] args, String senha, int port) { ScpFrom.custom(args, senha, port); } void scpTo(String[] args, String senha, int port) { ScpTo.custom(args, senha, port); } void execSsh(String[] args, String senha, int port) { ExecSsh.custom(args, senha, port); } void ssh(String[] args, String senha, int port) { Ssh.custom(args, senha, port); } void sftp(String[] args, String senha, int port) { Sftp.custom(args, senha, port); } } class ScpFrom { public static void custom(String[] arg, String senha, int port) { if (arg.length != 2 || !arg[0].contains("@")) { System.err.println("usage: y scp user,pass@remotehost:file1 file2"); System.exit(-1); } FileOutputStream fos = null; try { String user = arg[0].substring(0, arg[0].indexOf('@')); arg[0] = arg[0].substring(arg[0].indexOf('@') + 1); String host = arg[0].substring(0, arg[0].indexOf(':'));  String rfile = arg[0].substring(arg[0].indexOf(':') + 1); String lfile = arg[1]; String prefix = null; if (new File(lfile).isDirectory()) { prefix = lfile + File.separator; } JSch jsch = new JSch(); Session session = jsch.getSession(user, host, port); UserInfo ui = new MyUserInfo(senha); session.setUserInfo(ui); session.connect(); String command = "scp -f " + rfile; Channel channel = session.openChannel("exec"); ((ChannelExec) channel).setCommand(command); OutputStream out = channel.getOutputStream(); InputStream in = channel.getInputStream(); channel.connect(); byte[] buf = new byte[1024]; buf[0] = 0; out.write(buf, 0, 1); out.flush(); while (true) { int c = checkAck( in ); if (c != 'C') { break; }  in.read(buf, 0, 5); long filesize = 0L; while (true) { if ( in .read(buf, 0, 1) < 0) { break; } if (buf[0] == ' ') break; filesize = filesize * 10L + (long)(buf[0] - '0'); } String file = null; for (int i = 0;; i++) { in .read(buf, i, 1); if (buf[i] == (byte) 0x0a) { file = new String(buf, 0, i); break; } } buf[0] = 0; out.write(buf, 0, 1); out.flush(); fos = new FileOutputStream(prefix == null ? lfile : prefix + file); int foo; while (true) { if (buf.length < filesize) foo = buf.length; else foo = (int) filesize; foo = in .read(buf, 0, foo); if (foo < 0) { break; } fos.write(buf, 0, foo); filesize -= foo; if (filesize == 0L) break; } fos.close(); fos = null; if (checkAck( in ) != 0) { System.exit(0); } buf[0] = 0; out.write(buf, 0, 1); out.flush(); } session.disconnect(); System.exit(0); } catch (Exception e) { System.out.println(e); try { if (fos != null) fos.close(); } catch (Exception ee) {} } } static int checkAck(InputStream in ) throws IOException { int b = in .read(); if (b == 0) return b; if (b == -1) return b; if (b == 1 || b == 2) { StringBuffer sb = new StringBuffer(); int c; do { c = in .read(); sb.append((char) c); } while (c != '\n'); if (b == 1) { System.out.print(sb.toString()); } if (b == 2) { System.out.print(sb.toString()); } } return b; } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 1"); System.exit(1); } 
 /* class JSchCustom */ final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } class ScpTo { public static void custom(String[] arg, String senha, int port) { if (arg.length != 2 || !arg[1].contains("@")) { System.err.println("usage: y scp file1 user,pass@remotehost:file2"); System.exit(-1); } FileInputStream fis = null; try { String lfile = arg[0]; String user = arg[1].substring(0, arg[1].indexOf('@')); arg[1] = arg[1].substring(arg[1].indexOf('@') + 1); String host = arg[1].substring(0, arg[1].indexOf(':')); String rfile = arg[1].substring(arg[1].indexOf(':') + 1); JSch jsch = new JSch(); Session session = jsch.getSession(user, host, 22); UserInfo ui = new MyUserInfo(senha); session.setUserInfo(ui); session.connect(); boolean ptimestamp = true; String command = "scp " + (ptimestamp ? "-p" : "") + " -t " + rfile; Channel channel = session.openChannel("exec"); ((ChannelExec) channel).setCommand(command); OutputStream out = channel.getOutputStream(); InputStream in = channel.getInputStream(); channel.connect(); if (checkAck( in ) != 0) { System.exit(0); } File _lfile = new File(lfile); if (ptimestamp) { command = "T" + (_lfile.lastModified() / 1000) + " 0"; command += (" " + (_lfile.lastModified() / 1000) + " 0\n"); out.write(command.getBytes()); out.flush(); if (checkAck( in ) != 0) { System.exit(0); } } long filesize = _lfile.length(); command = "C0644 " + filesize + " "; if (lfile.lastIndexOf('/') > 0) { command += lfile.substring(lfile.lastIndexOf('/') + 1); } else { command += lfile; } command += "\n"; out.write(command.getBytes()); out.flush(); if (checkAck( in ) != 0) { System.exit(0); } fis = new FileInputStream(lfile); byte[] buf = new byte[1024]; while (true) { int len = fis.read(buf, 0, buf.length); if (len <= 0) break; out.write(buf, 0, len); } fis.close(); fis = null; buf[0] = 0; out.write(buf, 0, 1); out.flush(); if (checkAck( in ) != 0) { System.exit(0); } out.close(); channel.disconnect(); session.disconnect(); System.exit(0); } catch (Exception e) { System.out.println(e); try { if (fis != null) fis.close(); } catch (Exception ee) {} } } static int checkAck(InputStream in ) throws IOException { int b = in .read(); if (b == 0) return b; if (b == -1) return b; if (b == 1 || b == 2) { StringBuffer sb = new StringBuffer(); int c; do { c = in .read(); sb.append((char) c); } while (c != '\n'); if (b == 1) { System.out.print(sb.toString()); } if (b == 2) { System.out.print(sb.toString()); } } return b; } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 3"); System.exit(1); } final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); 
 /* class JSchCustom */ private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } class ExecSsh { public static void custom(String[] arg, String senha, int port) { try { JSch jsch = new JSch(); if (arg.length != 2 || !arg[0].contains("@")) { System.err.println("usage: y execSsh user,pass@remotehost command"); System.exit(-1); } String user = arg[0].split("@")[0]; String host = arg[0].split("@")[1]; String command = arg[1]; Session session = jsch.getSession(user, host, port); UserInfo ui = new MyUserInfo(senha); session.setUserInfo(ui); session.connect(); Channel channel = session.openChannel("exec"); ((ChannelExec) channel).setCommand(command); channel.setInputStream(null); ((ChannelExec) channel).setErrStream(System.err); InputStream in = channel.getInputStream(); channel.connect(); byte[] tmp = new byte[1024]; while (true) { while ( in .available() > 0) { int i = in .read(tmp, 0, 1024); if (i < 0) break; System.out.print(new String(tmp, 0, i)); } if (channel.isClosed()) { if ( in .available() > 0) continue; break; } try { Thread.sleep(1000); } catch (Exception ee) {} } channel.disconnect(); session.disconnect(); } catch (Exception e) { System.out.println(e); } } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 5"); System.exit(1); } final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } class Ssh { public static void custom(String[] arg, String senha, int port) { Channel channel = null; try { JSch jsch = new JSch(); if (arg.length != 1 || !arg[0].contains("@")) { System.err.println("usage: y ssh user,pass@remotehost"); System.exit(-1); } String user = arg[0].split("@")[0]; String host = arg[0].split("@")[1]; Session session = jsch.getSession(user, host, port); session.setPassword(senha); UserInfo ui = new MyUserInfo() { public void showMessage(String message) { JOptionPane.showMessageDialog(null, message); } public boolean promptYesNo(String message) { return true; } }; session.setUserInfo(ui); session.connect(30000); channel = session.openChannel("shell"); channel.setInputStream(System.in); channel.setOutputStream(System.out); channel.connect(3 * 1000); } catch (Exception e) { System.out.println(e); } while (channel != null && !channel.isEOF()) {} } public static abstract class MyUserInfo implements UserInfo, UIKeyboardInteractive { public String getPassword() { return null; } public boolean promptYesNo(String str) { return false; } public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return false; } 
@@ -14988,7 +15034,7 @@ namespace LoopbackWithMic
 /* class JSchCustom */ if (cmd.equals("pwd") || cmd.equals("lpwd")) { str = (cmd.equals("pwd") ? "Remote" : "Local"); str += " working directory: "; if (cmd.equals("pwd")) str += c.pwd(); else str += c.lpwd(); out.println(str); continue; } if (cmd.equals("ls") || cmd.equals("dir")) { String path = "."; if (cmds.size() == 2) path = (String) cmds.elementAt(1); try { java.util.Vector vv = c.ls(path); if (vv != null) { for (int ii = 0; ii < vv.size(); ii++) { Object obj = vv.elementAt(ii); if (obj instanceof com.jcraft.jsch.ChannelSftp.LsEntry) { out.println(((com.jcraft.jsch.ChannelSftp.LsEntry) obj).getLongname()); } } } } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("lls") || cmd.equals("ldir")) { String path = "."; if (cmds.size() == 2) path = (String) cmds.elementAt(1); try { java.io.File file = new java.io.File(path); if (!file.exists()) { out.println(path + ": No such file or directory"); continue; } if (file.isDirectory()) { String[] list = file.list(); for (int ii = 0; ii < list.length; ii++) { out.println(list[ii]); } continue; } out.println(path); } catch (Exception e) { System.out.println(e); } continue; } if (cmd.equals("get") || cmd.equals("get-resume") || cmd.equals("get-append") || cmd.equals("put") || cmd.equals("put-resume") || cmd.equals("put-append")) { if (cmds.size() != 2 && cmds.size() != 3) continue; String p1 = (String) cmds.elementAt(1); String p2 = "."; if (cmds.size() == 3) p2 = (String) cmds.elementAt(2); try { SftpProgressMonitor monitor = new MyProgressMonitor(); if (cmd.startsWith("get")) { int mode = ChannelSftp.OVERWRITE; if (cmd.equals("get-resume")) { mode = ChannelSftp.RESUME; } else if (cmd.equals("get-append")) { mode = ChannelSftp.APPEND; } c.get(p1, p2, monitor, mode); } else { int mode = ChannelSftp.OVERWRITE; if (cmd.equals("put-resume")) { mode = ChannelSftp.RESUME; } else if (cmd.equals("put-append")) { mode = ChannelSftp.APPEND; } c.put(p1, p2, monitor, mode); } } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("ln") || cmd.equals("symlink") || cmd.equals("rename") || cmd.equals("hardlink")) { if (cmds.size() != 3) continue; String p1 = (String) cmds.elementAt(1); String p2 = (String) cmds.elementAt(2); try { if (cmd.equals("hardlink")) { c.hardlink(p1, p2); } else if (cmd.equals("rename")) c.rename(p1, p2); else c.symlink(p1, p2); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("df")) { if (cmds.size() > 2) continue; String p1 = cmds.size() == 1 ? "." : (String) cmds.elementAt(1); SftpStatVFS stat = c.statVFS(p1); long size = stat.getSize(); long used = stat.getUsed(); long avail = stat.getAvailForNonRoot(); long root_avail = stat.getAvail(); long capacity = stat.getCapacity(); System.out.println("Size: " + size); System.out.println("Used: " + used); System.out.println("Avail: " + avail); System.out.println("(root): " + root_avail); System.out.println("%Capacity: " + capacity); continue; } if (cmd.equals("stat") || cmd.equals("lstat")) { if (cmds.size() != 2) continue; String p1 = (String) cmds.elementAt(1); SftpATTRS attrs = null; try { if (cmd.equals("stat")) attrs = c.stat(p1); else attrs = c.lstat(p1); } catch (SftpException e) { System.out.println(e.toString()); } if (attrs != null) { out.println(attrs); } else {} continue; } if (cmd.equals("readlink")) { if (cmds.size() != 2) continue; String p1 = (String) cmds.elementAt(1); String filename = null; 
 /* class JSchCustom */ try { filename = c.readlink(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("realpath")) { if (cmds.size() != 2) continue; String p1 = (String) cmds.elementAt(1); String filename = null; try { filename = c.realpath(p1); out.println(filename); } catch (SftpException e) { System.out.println(e.toString()); } continue; } if (cmd.equals("version")) { out.println("SFTP protocol version " + c.version()); continue; } if (cmd.equals("help") || cmd.equals("?")) { out.println(help); continue; } out.println("unimplemented command: " + cmd); } session.disconnect(); } catch (Exception e) { System.out.println(e); } System.exit(0); } private static String help = "      Available commands:\n" + "      * means unimplemented command.\n" + "cd path                       Change remote directory to 'path'\n" + "lcd path                      Change local directory to 'path'\n" + "chgrp grp path                Change group of file 'path' to 'grp'\n" + "chmod mode path               Change permissions of file 'path' to 'mode'\n" + "chown own path                Change owner of file 'path' to 'own'\n" + "df [path]                     Display statistics for current directory or\n" + "                              filesystem containing 'path'\n" + "help                          Display this help text\n" + "get remote-path [local-path]  Download file\n" + "get-resume remote-path [local-path]  Resume to download file.\n" + "get-append remote-path [local-path]  Append remote file to local file\n" + "hardlink oldpath newpath      Hardlink remote file\n" + "*lls [ls-options [path]]      Display local directory listing\n" + "ln oldpath newpath            Symlink remote file\n" + "*lmkdir path                  Create local directory\n" + "lpwd                          Print local working directory\n" + "ls [path]                     Display remote directory listing\n" + "*lumask umask                 Set local umask to 'umask'\n" + "mkdir path                    Create remote directory\n" + "put local-path [remote-path]  Upload file\n" + "put-resume local-path [remote-path]  Resume to upload file\n" + "put-append local-path [remote-path]  Append local file to remote file.\n" + "pwd                           Display remote working directory\n" + "stat path                     Display info about path\n" + "exit                          Quit sftp\n" + "quit                          Quit sftp\n" + "rename oldpath newpath        Rename remote file\n" + "rmdir path                    Remove remote directory\n" + "rm path                       Delete remote file\n" + "symlink oldpath newpath       Symlink remote file\n" + "readlink path                 Check the target of a symbolic link\n" + "realpath path                 Canonicalize the path\n" + "rekey                         Key re-exchanging\n" + "compression level             Packet compression will be enabled\n" + "version                       Show SFTP version\n" + "?                             Synonym for help"; public static class MyProgressMonitor implements SftpProgressMonitor { ProgressMonitor monitor; long count = 0; long max = 0; public void init(int op, String src, String dest, long max) { this.max = max; monitor = new ProgressMonitor(null, ((op == SftpProgressMonitor.PUT) ? "put" : "get") + ": " + src, "", 0, (int) max); count = 0; percent = -1; monitor.setProgress((int) this.count); 
 /* class JSchCustom */ monitor.setMillisToDecideToPopup(1000); } private long percent = -1; public boolean count(long count) { this.count += count; if (percent >= this.count * 100 / max) { return true; } percent = this.count * 100 / max; monitor.setNote("Completed " + this.count + "(" + percent + "%) out of " + max + "."); monitor.setProgress((int) this.count); return !(monitor.isCanceled()); } public void end() { monitor.close(); } } public static class MyUserInfo implements UserInfo, UIKeyboardInteractive { String passwd; String senha; private MyUserInfo(String senha) { this.senha = senha; } public String getPassword() { return passwd; } public boolean promptYesNo(String str) { return true; } JTextField passwordField = (JTextField) new JPasswordField(20); public String getPassphrase() { return null; } public boolean promptPassphrase(String message) { return true; } public boolean promptPassword(String message) { passwd = senha; return true; } public void showMessage(String message) { System.err.println("nao implementado! cod 7"); System.exit(1); } final GridBagConstraints gbc = new GridBagConstraints(0, 0, 1, 1, 1, 1, GridBagConstraints.NORTHWEST, GridBagConstraints.NONE, new Insets(0, 0, 0, 0), 0, 0); private Container panel; public String[] promptKeyboardInteractive(String destination, String name, String instruction, String[] prompt, boolean[] echo) { return null; } } } 
-
+//REMOVED_GRAAL_END
 
 /* class WebSocket */
 /* class WebSocket */
