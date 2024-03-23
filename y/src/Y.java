@@ -62,7 +62,10 @@ depois de um tempo o comando de cima some?
     créditos https://github.com/is/jsch/tree/master/examples
 
 Graalvm
-y cat YBase.java | y awk -v start REMOVED_GRAAL_START end REMOVED_GRAAL_END > Y.java
+alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
+curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java | y awk -v start REMOVED_GRAAL_START end REMOVED_GRAAL_END > Y.java
+javac Y.java
+native-image Y
 */
 
 //REMOVED_GRAAL_START
