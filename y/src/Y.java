@@ -24,7 +24,7 @@ echo %* | y trataEcho -ignore "Se Vc esta lendo esta msg, significa que ocorreu 
 if "%1" equ "printf" (
 echo %* | y trataPrintf -ignore "Se Vc esta lendo esta msg, significa que ocorreu o bug de " na quantidade impar"
 ) else (
-java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
+java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
 )
 )
 
