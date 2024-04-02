@@ -14392,7 +14392,7 @@ window.onload = function(){
             if ( countSelect == 1 && next.equals("") ){
                 next="next.addEventListener('click', function(){ window.location.href='" + prefix + encodeUrl(f[i].getName()) + "'; });\n";
                 next+="video.onended = function(){next.click();};\n";
-            }
+            }            
             if ( f[i].isFile() && decodeUrl(id).equals(f[i].getName()) )
                 countSelect++;
             if ( countSelect == 0 )
@@ -14404,6 +14404,10 @@ window.onload = function(){
                 elementosIsFile.add("N");
             tail_id=f[i].getName();
         };
+        if ( next.equals("") )
+            next="next.setAttribute('style', 'filter: blur(4px)');";
+        if ( back.equals("") )
+            back="back.setAttribute('style', 'filter: blur(4px)');";       
         if ( countFile > 0 && countDirectory > 0 )
             return "Erro interno de estrutura. Existe arquivos e diretorios neste local.";
         if ( countFile == 0 && countDirectory == 0 )
