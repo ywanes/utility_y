@@ -7429,12 +7429,10 @@ System.out.println("BB" + retorno);
                 }
                 if ( args[i].contains(",") ){
                     int p_virgula=args[i].indexOf(",");
-                    int p_ultima_arroba=args[i].length()-1;
-                    while(!args[i].substring(p_ultima_arroba,p_ultima_arroba+1).equals("@"))
-                        p_ultima_arroba--;
-                    String user=args[i].substring(0,p_virgula);
-                    senha[0]=args[i].substring(p_virgula+1,p_ultima_arroba);
+                    int p_ultima_arroba=args[i].lastIndexOf("@");
+                    String user=args[i].substring(0,p_virgula);                    
                     String host=args[i].substring(p_ultima_arroba+1,args[i].length());
+                    senha[0]=args[i].substring(p_virgula+1,p_ultima_arroba);
                     args[i]=user+"@"+host;
                 }else{
                     java.io.Console console=System.console();
@@ -14404,10 +14402,6 @@ window.onload = function(){
                 elementosIsFile.add("N");
             tail_id=f[i].getName();
         };
-        if ( next.equals("") )
-            next="next.setAttribute('style', 'filter: blur(4px)');";
-        if ( back.equals("") )
-            back="back.setAttribute('style', 'filter: blur(4px)');";       
         if ( countFile > 0 && countDirectory > 0 )
             return "Erro interno de estrutura. Existe arquivos e diretorios neste local.";
         if ( countFile == 0 && countDirectory == 0 )
@@ -14446,6 +14440,10 @@ window.onload = function(){
             trs +
             "</table></body></html>";
         }
+        if ( back.equals("") )
+            back="back.setAttribute('style', 'filter: blur(4px)');";       
+        if ( next.equals("") )
+            next="next.setAttribute('style', 'filter: blur(4px)');";        
         String id_display=decodeUrl(id);
         if ( id_display.split("\\.").length == 2 )
             id_display=id_display.split("\\.")[0];
