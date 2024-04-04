@@ -9913,30 +9913,31 @@ while True:
         }catch(Exception e){
             erroFatal("Esse sistema não tem ambiente grafico.");
         }
-        for ( int i=0;i<gs.length;i++ ){
-            Frame frame = null;
+        int len=gs.length;
+        Frame [] lock_frames = new Frame[len];
+        for ( int i=0;i<len;i++ ){
             if ( hasConfigurationDevice )
-                frame = new Frame(gs[i].getDefaultConfiguration());
+                lock_frames[i] = new Frame(gs[i].getDefaultConfiguration());
             else
-                frame = new Frame();
+                lock_frames[i] = new Frame();
             if ( w == null )
-                frame.setBackground(Color.black);
+                lock_frames[i].setBackground(Color.black);
             else
-                frame.setBackground(Color.white);
+                lock_frames[i].setBackground(Color.white);
             if ( !hasConfigurationDevice ){
-                frame.setUndecorated(true); // tira borda do aplicativo
-                frame.setExtendedState(frame.MAXIMIZED_BOTH);        
+                lock_frames[i].setUndecorated(true); // tira borda do aplicativo
+                lock_frames[i].setExtendedState(lock_frames[i].MAXIMIZED_BOTH);        
             }
             if ( w == null )
-                frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
+                lock_frames[i].setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
             else
-                frame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(2,2,2), new Point( 0, 0), "" ));            
-            frame.addWindowListener(new java.awt.event.WindowAdapter() {
+                lock_frames[i].setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(2,2,2), new Point( 0, 0), "" ));            
+            lock_frames[i].addWindowListener(new java.awt.event.WindowAdapter() {
                 public void windowClosing(java.awt.event.WindowEvent e) {
                     System.exit(0);
                 }
             });
-            frame.addComponentListener(new ComponentListener(){
+            lock_frames[i].addComponentListener(new ComponentListener(){
                 public void componentResized(ComponentEvent e){
                     e.getComponent().addMouseListener(new MouseListener() {
                         public void mouseClicked(MouseEvent e){System.exit(0);}
@@ -9949,14 +9950,34 @@ while True:
                 public void componentMoved(ComponentEvent e){}
                 public void componentShown(ComponentEvent e){}
                 public void componentHidden(ComponentEvent e){}
-            });
-            gs[i].setFullScreenWindow( frame);
-            try{
-                sleepMillis(100);
-            }catch(Exception e){}
-        }            
+            });            
+            lock_frames[i].addWindowStateListener(new java.awt.event.WindowStateListener() {
+               public void windowStateChanged(java.awt.event.WindowEvent e){
+                   // bug here - dont use this Listener
+               }
+            });            
+            gs[i].setFullScreenWindow(lock_frames[i]);            
+            sleepMillis(100);
+        }  
+        
+        new Thread(){
+            public void run(){
+                try{
+                    while(true){
+                        sleepMillis(100);
+                        if ( lock_frames == null )
+                            continue;
+                        for ( int i=0;i<lock_frames.length;i++ ){
+                            if ( lock_frames[i] == null )
+                                continue;
+                            lock_frames[i].setExtendedState(0);  
+                        }                        
+                    }
+                }catch(Exception e){}
+            }
+        }.start();        
     }
-    
+        
     public void paste(File file1, File file2){
         try{
             readLine(file1);
