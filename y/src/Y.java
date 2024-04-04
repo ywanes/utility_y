@@ -7419,8 +7419,6 @@ System.out.println("BB" + retorno);
     
 	//REMOVED_GRAAL_START
     public void pedeSenhaCasoNaoTenha(String [] args,String [] senha){
-        // ywanes@desktop's password:
-        // String password = new String(console.readPassword("Password: "));
         for( int i=0;i<args.length;i++ ){
             if( args[i].contains("@") ){                
                 if (  args[i].startsWith("@") || args[i].endsWith("@") ){
