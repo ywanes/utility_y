@@ -15308,7 +15308,11 @@ namespace LoopbackWithMic
 /* class HttpServer */             return;
 /* class HttpServer */         }
 /* class HttpServer */         if ( nav == null && mode != null && ( uri.equals("/") || uri.equals("/id") || uri.equals("/id/") || uri.startsWith("/id/") ) ){
-/* class HttpServer */             if ( uri.equals("/id") || uri.equals("/id/") ){
+/* class HttpServer */             if ( uri.length() > 1 && uri.endsWith("/") ){
+/* class HttpServer */                 redirect(output, uri.substring(0, uri.length()-1));
+/* class HttpServer */                 return;
+/* class HttpServer */             }
+/* class HttpServer */             if ( uri.equals("/id") ){
 /* class HttpServer */                 redirect(output, "/");
 /* class HttpServer */                 return;
 /* class HttpServer */             }
@@ -15536,8 +15540,9 @@ namespace LoopbackWithMic
 /* class HttpServer */             if (url.endsWith("." + partes[i])) return true;
 /* class HttpServer */         return false;
 /* class HttpServer */     }
-/* class HttpServer */     private void redirect(OutputStream output, String url) throws Exception{
-/* class HttpServer */         output.write("HTTP/1.1 301 Moved Permanently\nLocation: /\nredirecting....".getBytes());
+/* class HttpServer */     private void redirect(OutputStream output, String uri) throws Exception{
+/* class HttpServer */         // clean cache redirect -> fonte: https://superuser.com/questions/304589/how-can-i-make-chrome-stop-caching-redirects
+/* class HttpServer */         output.write(("HTTP/1.1 301 Moved Permanently\nLocation: " + uri + "\n\n").getBytes());
 /* class HttpServer */     }
 /* class HttpServer */ }
 
