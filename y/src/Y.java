@@ -14462,6 +14462,7 @@ window.onload = function(){
         "  <div class=\"video-container\">\n" +
         "    <video src=\"" + id + "\" id=\"video\"></video>\n" +
         "    <div class=\"controls-container\">\n" +
+        "      <div id=\"cueTimer\" style=\"opacity: 0; left: 90px;\">00:00</div>\n" + 
         "      <div class=\"progress-controls\">\n" +
         "        <div class=\"progress-bar\">\n" +
         "          <div class=\"watched-bar\"></div>\n" +
@@ -14657,9 +14658,15 @@ window.onload = function(){
         "  toggleFullScreen();\n" +
         "});\n" +
         "\n" +
-        "video.addEventListener('timeupdate', () => {\n" +
-        "  watchedBar.style.width = ((video.currentTime / video.duration) * 100) + '%';\n" +
-        "  let seconds = parseInt(video.duration - video.currentTime);\n" +
+        "function cueTime(e){\n" +
+        "  document.getElementById('cueTimer').setAttribute('style', 'opacity: 1; margin: 0px ' + (e.pageX-17) + 'px 0px; color: #FEFEFE;');  \n" +
+        "  const pos = (e.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;\n" +
+        "  document.getElementById('cueTimer').innerText=format_seconds(video.duration-pos*video.duration);\n" +
+        "}\n" +
+        "function format_seconds(seconds_){\n" +
+        "  let seconds = parseInt(seconds_);\n" +
+        "  if (seconds < 0)\n" +
+        "    seconds=0;\n" +
         "  let hour=parseInt(seconds/(60*60));\n" +
         "  seconds-=hour*60*60;\n" +
         "  let minute=parseInt(seconds/60);\n" +
@@ -14673,9 +14680,14 @@ window.onload = function(){
         "    second='0'+second;\n" +
         "  else\n" +
         "    second=''+second;\n" +
-        "  timeLeft.textContent = hour+':'+minute+':'+second;\n" +
+        "  return hour+':'+minute+':'+second;\n" +
+        "}\n" +
+        "video.addEventListener('timeupdate', () => {\n" +
+        "  watchedBar.style.width = ((video.currentTime / video.duration) * 100) + '%';\n" +
+        "  timeLeft.textContent = format_seconds(video.duration - video.currentTime);\n" +
         "});\n" +
-        "\n" +
+        "progressBar.addEventListener('mousemove', function(e) { cueTime(e); });\n" +
+        "progressBar.addEventListener('mouseleave', function(e) { document.getElementById('cueTimer').style.opacity = 0; });\n" +        
         "progressBar.addEventListener('click', (event) => {\n" +
         "  const pos = (event.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;\n" +
         "  video.currentTime = pos * video.duration;\n" +
