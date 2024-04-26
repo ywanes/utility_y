@@ -14659,9 +14659,11 @@ window.onload = function(){
         "});\n" +
         "\n" +
         "function cueTime(e){\n" +
-        "  document.getElementById('cueTimer').setAttribute('style', 'opacity: 1; margin: 0px ' + (e.pageX-17) + 'px 0px; color: #FEFEFE;');  \n" +
         "  const pos = (e.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;\n" +
         "  document.getElementById('cueTimer').innerText=format_seconds(video.duration-pos*video.duration);\n" +
+        "  z=document.createElement(\"canvas\").getContext('2d').measureText(document.getElementById('cueTimer').innerText).width;\n" +
+        "  z=e.pageX-z*0.7;  \n" +
+        "  document.getElementById('cueTimer').setAttribute('style', 'opacity: 1; margin: 0px ' + z + 'px 0px; color: #FEFEFE;');  \n" +
         "}\n" +
         "function format_seconds(seconds_){\n" +
         "  let seconds = parseInt(seconds_);\n" +
