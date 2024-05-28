@@ -667,6 +667,10 @@ cat buffer.log
         cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
         obs: se add pasta e a descricao de pasta tem "/" ou "\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.
         */
+        if ( args.length == 2 && args[0].equals("zip") && args[1].equals("add") ){
+            System.err.println("Erro!\nComando sugerido:\necho a.txt | y zip add -name a.txt > a.zip");
+            System.exit(1);            
+        }
         if ( args[0].equals("zip") ){
             try{
                 if ( args.length >= 3 && args[1].equals("add") ){
