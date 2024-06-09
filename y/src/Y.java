@@ -11870,6 +11870,7 @@ class Util{
                     osGetTypeTrueCache=types[i];
                     return osGetTypeTrueCache;                     
                 }
+                s=tryGetKernellInLinuxByOs(s, types[i]);
                 osGetTypeFalseCache=s;
                 return osGetTypeFalseCache;                     
             }
@@ -11879,6 +11880,17 @@ class Util{
         return null;
     }
         
+    public String tryGetKernellInLinuxByOs(String s, String type){
+        if ( ! type.equals("Linux") )
+            return s+" ..";
+        if ( ! s.contains("Distributor ID:\tUbuntu") )
+            return s+" ...";
+        String tmp=runtimeExec("uname -r", null, null);
+        if ( tmp == null )
+            return s+" ....";
+        return s+"Kernell:\t" + tmp;       
+    }
+    
     public boolean isWindows(){
         return os(true).equals("Windows");
     }
