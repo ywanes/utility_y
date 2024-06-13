@@ -14360,6 +14360,23 @@ window.onload = function(){
         "</body></head></html>\n";
     }
     public String get_html_virtual_playlistmovie(String id){
+        String js_compartilhado="" +
+        "<script>\n" +
+        "function user_click(p){\n" + 
+        "  //aa();\n" + 
+        "}\n" +
+        "function save_station(){\n" + 
+        "  localStorage.setItem('playlistmovie-v-20240612',JSON.stringify({'user': user, 'data': data}));\n" + 
+        "}\n" +
+        "function load_station(){\n" + 
+        "  let a=localStorage.getItem('playlistmovie-v-20240612');\n" + 
+        "  let b=JSON.parse(a);\n" + 
+        "  user=b['user'];\n" + 
+        "  console.log('user ' + user);\n" + 
+        "  data=b['data'];\n" + 
+        "}\n" +
+        "</script>\n";
+        
         String tail_id="";
         String back="";
         String next="";
@@ -14433,8 +14450,21 @@ window.onload = function(){
             String curl="";
             String h1="<br>";
             String txt_item="";
-            if ( !path.equals(".") )
-                h1="<a href=\"/\"><svg width=\"44\" height=\"44\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"> <g clip-path=\"url(#clip0)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z\" fill=\"#293644\"></path> </g> <defs> <clipPath id=\"clip0\"> <rect width=\"24\" height=\"24\" fill=\"white\"></rect> </clipPath> </defs> </svg></a><br><h1 style=\"color: white;\">&nbsp;/" + path + "</h1><br>";
+            String format_h1=path;
+            if ( format_h1.equals(".") )
+                format_h1="";
+            format_h1 = "/" + format_h1;
+            h1="<a href=\"/\">" + 
+               "  <svg width=\"44\" height=\"44\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><g clip-path=\"url(#clip0)\"> <path fill-rule=\"evenodd\" clip-rule=\"evenodd\" d=\"M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z\" fill=\"#293644\"></path> </g> <defs> <clipPath id=\"clip0\"> <rect width=\"24\" height=\"24\" fill=\"white\"></rect> </clipPath> </defs> </svg>" + 
+               "</a>" +
+               "<br>" +
+               "<a style=\"display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"user_click()\">" +
+               "  <div id=\"user_div1\">" + 
+               "    <svg width=\"44\" height=\"44\" viewBox=\"0 0 24 24\" xmlns=\"http://www.w3.org/2000/svg\"><g transform=\"translate(0 -1028.4)\"><path d=\"m8.4062 1041.1c-2.8856 1.3-4.9781 4-5.3437 7.3 0 1.1 0.8329 2 1.9375 2h14c1.105 0 1.938-0.9 1.938-2-0.366-3.3-2.459-6-5.344-7.3-0.649 1.3-2.011 2.3-3.594 2.3s-2.9453-1-3.5938-2.3z\" fill=\"#2c3e50\"/><path d=\"m17 4a5 5 0 1 1 -10 0 5 5 0 1 1 10 0z\" fill=\"#34495e\" transform=\"translate(0 1031.4)\"/><path d=\"m12 11c-1.277 0-2.4943 0.269-3.5938 0.75-2.8856 1.262-4.9781 3.997-5.3437 7.25 0 1.105 0.8329 2 1.9375 2h14c1.105 0 1.938-0.895 1.938-2-0.366-3.253-2.459-5.988-5.344-7.25-1.1-0.481-2.317-0.75-3.594-0.75z\" fill=\"#34495e\" transform=\"translate(0 1028.4)\"/></g></svg>" +
+               "  </div>" + 
+               "  <div id=\"user_div2\">offline</div>" +                   
+               "</a>" +                     
+               "<h1 style=\"color: white;\">&nbsp;" + format_h1 + "</h1>";
             for ( int i=0;i<elementos.size();i++ ){
                 if ( elementosIsFile.get(i).equals("S") ){
                     curl += "curl \"" + (prefix + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
@@ -14455,7 +14485,8 @@ window.onload = function(){
             curl +
             "-->\n" + 
             trs +
-            "</table></body></html>";
+            "</table></body></html>" + 
+            js_compartilhado;
         }
         if ( back.equals("") )
             back="back.setAttribute('style', 'filter: blur(4px)');";       
@@ -14555,6 +14586,7 @@ window.onload = function(){
         "</body>\n" +
         "</html>\n" +
         "<script>\n" +
+        "const data={};\n" + 
         "const videoContainer = document.querySelector('.video-container');\n" +
         "const video = document.querySelector('.video-container video');\n" +
         "\n" +
@@ -14887,7 +14919,8 @@ window.onload = function(){
         "  font-size: 0.75em;\n" +
         "  padding-left: 1vw;\n" +
         "}\n" +
-        "</style>\n";
+        "</style>\n" + 
+        js_compartilhado;
     }
 }
 
