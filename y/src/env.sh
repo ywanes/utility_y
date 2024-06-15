@@ -127,6 +127,8 @@ export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missi
 alias gopen='gcloud cloud-shell ssh'
 alias openzeus='gcloud --project="mb-prod-277215" beta compute ssh "zeus-bi-replica" --zone "us-east4-a"'
 alias destino='bq query --format=csv --use_legacy_sql=false --max_rows=1000000'
+
+#setxkbmap -model abnt2 -layout br
 EOF
 chmod 777 /opt/env_
 
