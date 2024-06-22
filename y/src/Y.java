@@ -9909,6 +9909,21 @@ while True:
         return true;
     }
 
+    private void analise_click_min_ou_exit(int n_buttom, int i_){
+        if ( n_buttom == 3 ) // click direito
+            states_frames[i_]=true;
+        else
+            System.exit(0);        
+        int count_false=0;
+        for ( int i=0; i<states_frames.length;i++ )
+            if ( states_frames[i] == false )
+                count_false++;
+        if ( count_false == 0 )
+            System.exit(0);
+    }
+    
+    Frame [] lock_frames=null;
+    boolean [] states_frames=null;
     private void lock(String w){
         GraphicsDevice[] gs=null;
         boolean hasConfigurationDevice=true;
@@ -9918,7 +9933,8 @@ while True:
             erroFatal("Esse sistema não tem ambiente grafico.");
         }
         int len=gs.length;
-        Frame [] lock_frames = new Frame[len];
+        lock_frames = new Frame[len];
+        states_frames = new boolean[len]; // false => 0 => tela visivel
         for ( int i=0;i<len;i++ ){
             if ( hasConfigurationDevice )
                 lock_frames[i] = new Frame(gs[i].getDefaultConfiguration());
@@ -9941,11 +9957,12 @@ while True:
                     System.exit(0);
                 }
             });
+            final int i_=i;
             lock_frames[i].addComponentListener(new ComponentListener(){
                 public void componentResized(ComponentEvent e){
                     e.getComponent().addMouseListener(new MouseListener() {
-                        public void mouseClicked(MouseEvent e){System.exit(0);}
-                        public void mousePressed(MouseEvent e){System.exit(0);}
+                        public void mouseClicked(MouseEvent e){analise_click_min_ou_exit(e.getButton(), i_);}
+                        public void mousePressed(MouseEvent e){analise_click_min_ou_exit(e.getButton(), i_);}
                         public void mouseReleased(MouseEvent e){}
                         public void mouseEntered(MouseEvent e){}
                         public void mouseExited(MouseEvent e){}
@@ -9974,7 +9991,10 @@ while True:
                         for ( int i=0;i<lock_frames.length;i++ ){
                             if ( lock_frames[i] == null )
                                 continue;
-                            lock_frames[i].setExtendedState(0);  
+                            if ( states_frames[i] )
+                                lock_frames[i].setExtendedState(1);  
+                            else
+                                lock_frames[i].setExtendedState(0);  
                         }                        
                     }
                 }catch(Exception e){}
