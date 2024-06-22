@@ -11188,7 +11188,10 @@ class Util{
                     result+=ips[i];
                     count_ips++;
                 }
-                return "Principais;;"+result+";;;"+a;
+                if ( result.equals("") )
+                    return a;
+                else
+                    return "Principais;;"+result+";;;"+a;
             }
         }
         return a;
