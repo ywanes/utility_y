@@ -1,0 +1,23 @@
+{
+	"name": "node64",
+	"version": "0.0.3",
+	"description": "Simple file to Base64 encoder",
+	"dependencies": {
+		"commander": "~2.1.0"
+	},
+	"devDependencies": {},
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/niusounds/node64.git"
+	},
+	"author": "Yuya Matsuo",
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/niusounds/node64/issues"
+	},
+	"homepage": "https://github.com/niusounds/node64",
+	"bin": "./bin/node64.js"
+}

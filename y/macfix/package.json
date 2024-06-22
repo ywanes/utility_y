@@ -1,0 +1,25 @@
+{
+  "name": "macfix",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "cors": "^2.8.4",
+    "express": "^4.15.4",
+    "fs": "0.0.1-security",
+    "https": "^1.0.0",
+    "https-pem": "^1.0.4",
+    "iconv-lite": "^0.4.18",
+    "node64": "0.0.3",
+    "os": "^0.1.1",
+    "pem": "^1.9.7",
+    "xml2js": "^0.6.2"
+  }
+}
