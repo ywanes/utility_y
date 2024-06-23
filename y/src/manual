@@ -23,6 +23,8 @@ usage:
   [y echo]
   [y printf]
   [y cat]
+  [y lower]
+  [y upper]
   [y xor]
   [y md5]
   [y sha1]
@@ -225,6 +227,10 @@ Exemplos...
     obs2: echo -n AA gera o mesmo efeito que, printf AA
 [y cat]
     y cat arquivo
+[y lower]
+    y echo AA | y lower
+[y upper]
+    y echo aa | y upper
 [y xor]
     y cat file | y xor 100
     y cat file | y xor 100

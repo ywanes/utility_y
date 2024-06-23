@@ -813,7 +813,19 @@ cat buffer.log
         if ( args[0].equals("cat") ){
             cat(args);
             return;
-        }        
+        }     
+        if ( args[0].equals("lower") ){
+            String line=null;
+            while ( (line=readLine()) != null )
+                System.out.println(line.toLowerCase());
+            return;
+        }     
+        if ( args[0].equals("upper") ){
+            String line=null;
+            while ( (line=readLine()) != null )
+                System.out.println(line.toUpperCase());
+            return;
+        }     
         if ( args[0].equals("xor") && args.length <= 2 ){
             try{
                 Integer parm=100;
@@ -4886,7 +4898,7 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
-
+    
     public void xor(int parm){
         while(parm < 0)
             parm+=256;
