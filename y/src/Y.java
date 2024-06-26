@@ -11223,7 +11223,7 @@ class Util{
                 if ( result.equals("") )
                     return a;
                 else
-                    return "Principais;;"+result+";;;"+a;
+                    return "Principais;;"+result+";;;"+a+";;;"+"Principais;;"+result;
             }
         }
         return a;
