@@ -31,6 +31,36 @@ var html_cadastro=`
     <button type="submit" class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
 `;
 
+function gettoken(){
+  var url_string = "http://www.example.com/t.html?a=1&b=3&c=m2-m3-m4-m5"; 
+  var url = new URL(document.location.href).searchParams.get("token");
+}
+
+function ajax_post(url, data, success, error) {
+  try{
+    var http = new XMLHttpRequest();
+    http.open('POST', 
+	  url + '?token='+new URL(document.location.href).searchParams.get("token")
+	, true);
+    http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+    http.onload = function() {
+      if( http.status == 200 )
+        alert('sucesso');
+      else{
+        console.log('Erro: ' + http.responseText );
+        obj=JSON.parse(http.responseText);
+        alert('erro - ' + obj['msg']);
+	  }
+    }
+    http.onerror = function (err) {
+      alert('Ocorreu um erro interno!');
+    };	
+    http.send(data);
+  }catch(err) {
+    alert('Ocorreu um erro interno! ' + err);
+  }
+}
+
 result=null;
 count_result=null;
 function get_form_json(e){
@@ -38,7 +68,7 @@ function get_form_json(e){
     result={};
     count_result=1000;
 	get_form_json( document.getElementById('principal') );
-	return result;
+	return JSON.stringify(result, null, "\t");
   }
   if ( e.tagName != 'DIV' && e.tagName != 'LABEL' && e.tagName != 'BUTTON' ){
     result[++count_result]={"id": e.id, "value": e.value, "tag": e.tagName}
@@ -49,7 +79,10 @@ function get_form_json(e){
 }
 
 function cadastrar(){
-  console.log(get_form_json());
+  obj=get_form_json();
+  //obj=JSON.stringify(obj, null, "\t");
+  console.log(obj);
+  ajax_post('cadastro', obj, null, null);
 }
 
 window.onload = function(){

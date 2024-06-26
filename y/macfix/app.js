@@ -86,8 +86,17 @@ var f_get = function(req,res){
 };
 
 var f_post = function(req,res){
-	//console.log(req);
-	write(res, 404, txt404, 'text/html; charset=utf-8');
+	//console.log(req._parsedUrl.pathname);		
+	if ( tokenErrado(req.query.token) ){
+		write(res, 401, JSON.stringify({"msg": "token inválido"}), 'application/json');
+		return;			
+	}	
+    if ( req._parsedUrl.pathname == '/cadastro' ){
+		console.log(req.body);
+	    write(res, 200, JSON.stringify({"msg": "ok"}), 'application/json');		
+		return;
+	}
+	write(res, 404, JSON.stringify({"msg": "pagina não encontrada!"}), 'application/json');
 	return;
 }
 
