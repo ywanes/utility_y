@@ -31,6 +31,23 @@ var html_cadastro=`
     <button type="submit" class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
 `;
 
+result=null;
+count_result=null;
+function get_form_json(e){
+  if ( e == null ){
+    result={};
+    count_result=1000;
+	get_form_json( document.getElementById('principal') );
+	return result;
+  }
+  if ( e.tagName != 'DIV' && e.tagName != 'LABEL' && e.tagName != 'BUTTON' ){
+    result[++count_result]={"id": e.id, "value": e.value, "tag": e.tagName}
+  }
+  if ( e.children )
+    for ( let i=0;i<e.children.length;i++ )
+	  get_form_json(e.children[i]);
+}
+
 function cadastrar(){
   console.log(get_form_json());
 }
