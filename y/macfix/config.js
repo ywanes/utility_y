@@ -5,8 +5,9 @@
   "port": 7070,
   "paramsValidos": [
      "logo.png",
+	 "favicon.ico",
      "bootstrap.min.css",
-     "bootstrap.bundle.min.js"
+     "bootstrap.bundle.min.js"	 
   ],
   "formulario": "cadastro.html",
   "dir": "."

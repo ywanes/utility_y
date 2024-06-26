@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <title>MacFix - Ordem de serviço</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,15 +12,33 @@
 
 <div class="container mt-3">
   <h2>MacFix - Ordem de serviço</h2>
-  <div class="mb-3 mt-3">
-    <label for="email">Email:</label>
-    <input type="email" class="form-control" id="email" placeholder="Enter email" name="email">
+  <div id="principal">
   </div>
-  <div class="mb-3">
-    <label for="pwd">Password:</label>
-    <input type="password" class="form-control" id="pwd" placeholder="Enter password" name="pswd">
-  </div>
-  <button type="submit" class="btn btn-primary">Submit</button>
 </div>
 </body>
 </html>
+
+<script type="text/javascript">
+var html_cadastro=`
+    <div class="mb-3 mt-3">
+      <label for="email">Email:</label>
+      <input type="email" class="form-control" id="email" placeholder="Enter email" name="email">
+    </div>
+    <div class="mb-3">
+      <label for="pwd">Password:</label>
+      <input type="password" class="form-control" id="pwd" placeholder="Enter password" name="pswd">
+    </div>
+    <button type="submit" class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
+`;
+
+function cadastrar(){
+  console.log(get_form_json());
+}
+
+window.onload = function(){
+  document.getElementById('principal').innerHTML=html_cadastro;
+};
+
+</script>
+
+
