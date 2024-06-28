@@ -32,7 +32,6 @@ function write(res, status, txt, type){
 		,'X-XSS-Protection': '1; mode=block'
 		,'X-Content-Type-Options': 'nosniff'
 		,'Strict-Transport-Security': 'max-age=15552000; includeSubDomains'
-		//,'Content-Security-Policy':"default-src 'self' style-src 'self' 'unsafe-inline';"
 		,'X-Frame-Options': 'deny'
 	});
 	res.end(txt);
@@ -54,6 +53,18 @@ function paramsValidoFile(p){
 		if ( paramsValidos[i] == p )
 			return true;
 	return false;
+}
+
+function resolve_dir(a){
+	if ( ! fs.existsSync(a) )
+		fs.mkdirSync(a);	
+}
+//fs.existsSync
+
+function resolve_dir_by_os(a){
+	resolve_dir(dir+'/'+a[0]+a[1]);
+	resolve_dir(dir+'/'+a[0]+a[1]+'/'+a[2]+a[3]);
+	return dir+'/'+a[0]+a[1]+'/'+a[2]+a[3]+'/'+a;
 }
 
 function getMine(p){
@@ -86,13 +97,25 @@ var f_get = function(req,res){
 };
 
 var f_post = function(req,res){
-	//console.log(req._parsedUrl.pathname);		
+	//console.log(req);
 	if ( tokenErrado(req.query.token) ){
 		write(res, 401, JSON.stringify({"msg": "token inválido"}), 'application/json');
 		return;			
 	}	
-    if ( req._parsedUrl.pathname == '/cadastro' ){
-		console.log(req.body);
+    if ( req._parsedUrl.pathname == '/cadastro' ){		
+		data=req.body; // ja esta json
+		if ( data == null || data['1001']['id'] != 'os' || data['1001']['value'] == null || data['1001']['value'].trim() == '' ){
+			write(res, 401, JSON.stringify({"msg": "Ordem de serviço não preenchido!"}), 'application/json');
+			return;						
+		}		
+		data['1001']['value'] = data['1001']['value'].padStart(6, '0');
+		os=data['1001']['value'];
+		dir_os=resolve_dir_by_os(os);
+		if ( fs.existsSync(dir_os) ){
+			write(res, 401, JSON.stringify({"msg": "Ordem de serviço " + os  + " já existe!"}), 'application/json');
+			return;						
+		}
+		fs.writeFileSync(dir_os, JSON.stringify(data, null, "\t"), "UTF-8");
 	    write(res, 200, JSON.stringify({"msg": "ok"}), 'application/json');		
 		return;
 	}
@@ -104,6 +127,7 @@ config = JSON.parse(fs.readFileSync('config.js'), 'utf8');
 token_requerido=config['token'];
 paramsValidos=config['paramsValidos'];
 formulario=config['formulario'];
+dir=config['dir'].replaceAll('\\', '/');
 
 console.log('Server ' + config['logo'] + ': https://[' + config['ip'] + ']:' + config['port'] + '/?token=' + config['token']);
 

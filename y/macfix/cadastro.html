@@ -21,12 +21,12 @@
 <script type="text/javascript">
 var html_cadastro=`
     <div class="mb-3 mt-3">
-      <label for="email">Email:</label>
-      <input type="email" class="form-control" id="email" placeholder="Enter email" name="email">
+      <label for="text">Ordem de Serviço:</label>
+      <input type="text" class="form-control" id="os" placeholder="Ordem de Serviço" value="22">
     </div>
     <div class="mb-3">
       <label for="pwd">Password:</label>
-      <input type="password" class="form-control" id="pwd" placeholder="Enter password" name="pswd">
+      <input type="password" class="form-control" id="pwd" placeholder="Enter password">
     </div>
     <button type="submit" class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
 `;
@@ -42,14 +42,18 @@ function ajax_post(url, data, success, error) {
     http.open('POST', 
 	  url + '?token='+new URL(document.location.href).searchParams.get("token")
 	, true);
-    http.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+	http.setRequestHeader('Content-type', 'application/json');
     http.onload = function() {
       if( http.status == 200 )
         alert('sucesso');
       else{
         console.log('Erro: ' + http.responseText );
-        obj=JSON.parse(http.responseText);
-        alert('erro - ' + obj['msg']);
+		try{
+          obj=JSON.parse(http.responseText);
+		  alert('Erro - ' + obj['msg']);
+		}catch(err){
+		  alert('Erro interno! - verifique a msg de erro no servidor!');
+		}        
 	  }
     }
     http.onerror = function (err) {
@@ -68,7 +72,8 @@ function get_form_json(e){
     result={};
     count_result=1000;
 	get_form_json( document.getElementById('principal') );
-	return JSON.stringify(result, null, "\t");
+	//return JSON.stringify(result, null, "\t");	
+	return result;
   }
   if ( e.tagName != 'DIV' && e.tagName != 'LABEL' && e.tagName != 'BUTTON' ){
     result[++count_result]={"id": e.id, "value": e.value, "tag": e.tagName}
@@ -80,7 +85,7 @@ function get_form_json(e){
 
 function cadastrar(){
   obj=get_form_json();
-  //obj=JSON.stringify(obj, null, "\t");
+  obj=JSON.stringify(obj);
   console.log(obj);
   ajax_post('cadastro', obj, null, null);
 }
