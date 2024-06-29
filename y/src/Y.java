@@ -14697,11 +14697,27 @@ window.onload = function(){
         "    document.exitFullscreen();\n" +
         "  }\n" +
         "};\n" +
-        "\n" +
+        "function clickVideo(){\n" +
+        "  playPause();\n" +
+        "}\n" +
+        "var mili_click=0;\n" +
+        "var mili_dclick=0;\n" +
+        "function clickingVideo(n){\n" +
+        "  if ( n == 1 ){\n" +
+        "    mili_click=Date.now();\n" +
+        "    setTimeout(\n" +
+        "      function (){\n" +
+        "	    if ( mili_dclick < (mili_click - 250) )\n" +
+        "          clickVideo();\n" +
+        "      },\n" +
+        "    250);\n" +
+        "  }else\n" +
+        "    mili_dclick=Date.now();\n" +
+        "}" +                
         "document.addEventListener('click', function(e) {  \n" +
         "   console.log('tagName clicked: ' + e.target.tagName);\n" +
         "   if ( e.target.tagName == 'VIDEO' ){\n" +
-        "     playPause();\n" +
+        "     clickingVideo(e.detail); // 1 - click, 2 - doubleclick\n" +
         "   }\n" +
         "},false);  \n" +
         "  \n" +

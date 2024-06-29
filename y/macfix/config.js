@@ -7,8 +7,11 @@
      "logo.png",
 	 "favicon.ico",
      "bootstrap.min.css",
-     "bootstrap.bundle.min.js"	 
+     "bootstrap2.min.css",
+     "bootstrap.bundle.min.js",
+     "html2canvas.min.js"	 
   ],
   "formulario": "cadastro.html",
-  "dir": "."
+  "dir": "data"
 }
+

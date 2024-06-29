@@ -5,31 +5,84 @@
   <title>MacFix - Ordem de serviço</title>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="bootstrap.min.css" rel="stylesheet">
+  <link href="bootstrap2.min.css" rel="stylesheet">
   <script src="bootstrap.bundle.min.js"></script>
 </head>
 <body>
 
 <div class="container mt-3">
   <h2>MacFix - Ordem de serviço</h2>
-  <div id="principal">
+  <div id="principal" class="container">
   </div>
+  <div id="painel" class="container">
+    <div class="form-group row">  
+	  <div class="col-xs-2">
+        <button type="submit" class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
+        <button type="submit" class="btn btn-primary" onclick="f_html2canvas()">PNG</button>
+      </div>
+	  <div class="col-xs-2">
+        <input type="text" placeholder="Buscar Ordem de Serviço" onkeypress="busca(event,this)">
+      </div>
+	  <div class="col-xs-2">
+        <button type="submit" class="btn btn-primary" onclick="atualizar()">Atualizar</button>
+        <button type="submit" class="btn btn-primary" onclick="excluir()">Excluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <script src="html2canvas.min.js"></script>  
 </div>
 </body>
 </html>
 
 <script type="text/javascript">
 var html_cadastro=`
-    <div class="mb-3 mt-3">
-      <label for="text">Ordem de Serviço:</label>
-      <input type="text" class="form-control" id="os" placeholder="Ordem de Serviço" value="22">
-    </div>
-    <div class="mb-3">
-      <label for="pwd">Password:</label>
-      <input type="password" class="form-control" id="pwd" placeholder="Enter password">
-    </div>
-    <button type="submit" class="btn btn-primary" onclick="cadastrar()">Cadastrar</button>
+
+<div class="form-group row">
+	<div class="col-xs-2">
+		<label for="ex2">Ordem de Serviço:</label>
+		<input class="form-control" id="os" type="text" value="22">
+	</div>
+	<div class="col-xs-2">
+		<label for="ex3">MODELO/ANO:</label>
+		<input class="form-control" id="modelo_ano" type="text">
+	</div>
+	<div class="col-xs-2">
+		<label for="ex4">col-xs-4</label>
+		<input class="form-control" id="ex3" type="text">
+	</div>
+
+	  
+	<div class="col-xs-2">  
+		<label for="ex4">col-xs-4</label>
+		<select class="form-select form-select-lg mb-3" aria-label=".form-select-lg example">
+			<option selected>Open this select menu</option>
+			<option value="1">One</option>
+			<option value="2">Two</option>
+			<option value="3">Three</option>
+		</select>
+	</div>
+
+	<div class="col-xs-2">  	
+		<div class="form-check">
+		<input class="form-check-input" type="checkbox" value="" id="flexCheckDefault">
+		<label class="form-check-label" for="flexCheckDefault">
+		Default checkbox
+		</label>
+		</div>
+		<div class="form-check">
+		<input class="form-check-input" type="checkbox" value="" id="flexCheckChecked" checked>
+		<label class="form-check-label" for="flexCheckChecked">
+		Checked checkbox
+		</label>
+		</div>
+	</div>
+
+  
+</div>
+
 `;
+
 
 function gettoken(){
   var url_string = "http://www.example.com/t.html?a=1&b=3&c=m2-m3-m4-m5"; 
@@ -89,6 +142,31 @@ function cadastrar(){
   console.log(obj);
   ajax_post('cadastro', obj, null, null);
 }
+
+function f_html2canvas() {
+	var captureElement = document.getElementById('principal');
+	html2canvas(captureElement)
+        .then(canvas => {
+            canvas.style.display = 'none'
+            document.body.appendChild(canvas)
+            return canvas
+        })
+        .then(canvas => {
+            const image = canvas.toDataURL('image/png')
+            const a = document.createElement('a')
+            a.setAttribute('download', 'OrderDeServico01.png')
+            a.setAttribute('href', image)
+            a.click()
+            canvas.remove()
+        });
+}
+
+function busca(event,e){
+    if (event.which == 13 || event.keyCode == 13)
+       console.log(e.value);
+}
+  
+
 
 window.onload = function(){
   document.getElementById('principal').innerHTML=html_cadastro;
