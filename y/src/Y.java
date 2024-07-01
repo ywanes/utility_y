@@ -1387,7 +1387,7 @@ cat buffer.log
             sftp(args);
             return;
         }  
-		//REMOVED_GRAAL_END	
+        //REMOVED_GRAAL_END	
         if ( args[0].equals("serverRouter"))
         {
             serverRouter(args);
@@ -7477,6 +7477,7 @@ System.out.println("BB" + retorno);
 	//REMOVED_GRAAL_END
     
     private void serverRouter(String[] args) {
+        String ips_banidos=""; /////////////////////////
         String log=null;
         if ( ( args.length == 7 || args.length == 8 ) && args[args.length-2].equals("-log_ips") )
             log=args[args.length-1];
@@ -12077,10 +12078,19 @@ class Util{
         }        
         return ip_origem;
     }
+
+    public static boolean ip_banido(String ips_banidos, String ip_origem){
+        if (ips_banidos.length() > 0 && ("," + ips_banidos + ",").contains("," + ip_origem + ","))
+            return true;
+        return false;
+    }
     
     private static int identify_log=0; // 1 -> File, 2 -> POST    
     private static FileWriter cache_log=null;    
-    public static void log_serverRouter(String log, String ip_origem){
+    public static void log_serverRouter(String log, String ip_origem, boolean banido){
+        String tag_ip=" ip: ";
+        if ( banido )
+            tag_ip=" ip BANIDO: ";
         if ( identify_log == 0 ){
             if(log.toUpperCase().startsWith("HTTP"))
                 identify_log=2;
@@ -12097,7 +12107,7 @@ class Util{
         if ( identify_log == 1 ){
             try{
                 cache_log.write(date_(null));
-                cache_log.write(" ip: ");
+                cache_log.write(tag_ip);
                 cache_log.write(ip_origem);
                 cache_log.write("\n");
                 cache_log.flush();
@@ -12806,8 +12816,15 @@ class Ponte extends Util{
             try{
                 final Socket credencialSocket=ambiente.getCredencialSocket();
                 final String ip_origem = get_ip_origem_by_socket(credencialSocket);
+                String ips_banidos="";
+                boolean is_ip_banido = ip_banido(ips_banidos, ip_origem);
                 if ( log != null )
-                    log_serverRouter(log, ip_origem);
+                    log_serverRouter(log, ip_origem, is_ip_banido);
+                if ( is_ip_banido ){
+                    System.out.println("Conexao de origem BANIDO: " + ip_origem + ", data:" + (new Date()));
+                    continue;
+                }else
+                    System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
                 new Thread(){
                     public void run(){
                         ponte0(credencialSocket,host1,port1,ip_origem);
@@ -15320,13 +15337,14 @@ namespace LoopbackWithMic
 /* class HttpServer */             try {
 /* class HttpServer */                 socket = serverSocket.accept();
 /* class HttpServer */                 ip_origem = get_ip_origem_by_socket(socket);
+/* class HttpServer */                 boolean is_ip_banido = ip_banido(ips_banidos, ip_origem);
 /* class HttpServer */                 if ( log != null )
-/* class HttpServer */                     log_serverRouter(log, ip_origem);
-/* class HttpServer */                 System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
-/* class HttpServer */                 if (ips_banidos.length() > 0 && ("," + ips_banidos + ",").contains("," + ip_origem + ",")) {
-/* class HttpServer */                     System.out.println("Acesso recusado para o ip banido: " + ip_origem);
+/* class HttpServer */                     log_serverRouter(log, ip_origem, is_ip_banido);
+/* class HttpServer */                 if ( is_ip_banido ){
+/* class HttpServer */                     System.out.println("Conexao de origem BANIDO: " + ip_origem + ", data:" + (new Date()));
 /* class HttpServer */                     continue;
-/* class HttpServer */                 }
+/* class HttpServer */                 }else
+/* class HttpServer */                     System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
 /* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths, mode, host_display);
 /* class HttpServer */             } catch (Exception e) {
 /* class HttpServer */                 System.out.println("Erro ao executar servidor:" + e.toString());
