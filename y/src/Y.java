@@ -7477,25 +7477,20 @@ System.out.println("BB" + retorno);
 	//REMOVED_GRAAL_END
     
     private void serverRouter(String[] args) {
-        String ips_banidos=""; /////////////////////////
-        String log=null;
-        if ( ( args.length == 7 || args.length == 8 ) && args[args.length-2].equals("-log_ips") )
-            log=args[args.length-1];
-        if ( args.length == 5 || args.length == 7 ){
-            new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),"", log);
-            return;
+        Object [] objs = get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos(args);
+        if ( objs == null ){
+            comando_invalido(args);
+            System.exit(0);
         }
-        if ( (args.length == 6 || args.length == 8) && ( 
-                args[5].equals("show") 
-                || args[5].equals("showOnlySend") 
-                || args[5].equals("showOnlyReceive") 
-                || args[5].equals("showSimple") 
-        ) ){
-            new Ponte().serverRouter(args[1],Integer.parseInt(args[2]),args[3],Integer.parseInt(args[4]),args[5], log);
-            return;
-        }
-        comando_invalido(args);
-        System.exit(0);
+        String host0=(String)objs[0];
+        int port0=(Integer)objs[1];
+        String host1=(String)objs[2];
+        int port1=(Integer)objs[3];
+        String typeShow=(String)objs[4];
+        String log=(String)objs[5];
+        String ips_banidos=(String)objs[6];
+        
+        new Ponte().serverRouter(host0, port0, host1, port1, typeShow, log, ips_banidos);
     }
 
     ArrayList<String> xlsxToCSV_nomes=null;
@@ -7864,6 +7859,66 @@ System.out.println("BB" + retorno);
         }
     }
 
+    private Object [] get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos(String [] args){        
+        String host0=null;
+        int port0=-1;
+        String host1=null;
+        int port1=-1;
+        String typeShow=null;
+        String log=null;
+        String ipsBanidos=null;
+
+        args=sliceParm(1, args);
+        
+        while(true){
+            if ( args.length > 1 && log == null && args[0].equals("-log_ips") ){
+                log=args[1];
+                args=sliceParm(2, args);
+                continue;
+            }
+            if ( args.length > 0 && host0 == null ){
+                host0=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && port0 == -1 ){
+                port0=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && host1 == null ){
+                host1=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && port1 == -1 ){
+                port1=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && typeShow == null ){
+                typeShow=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && ipsBanidos == null && args[0].equals("-ips_banidos") ){
+                ipsBanidos=args[1];
+                args=sliceParm(2, args);
+                continue;
+            }
+            if ( port1 == -1 )
+                return null;
+            break;
+        }
+        if ( typeShow == null )
+            typeShow="";
+        if ( log == null )
+            log="";
+        if ( ipsBanidos == null )
+            ipsBanidos="";
+        return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos};
+    }        
+    
     private Object [] get_parms_curl_header_method_verbose_raw_host(String [] args){
         String header="";
         String method="GET";
@@ -12080,8 +12135,15 @@ class Util{
     }
 
     public static boolean ip_banido(String ips_banidos, String ip_origem){
-        if (ips_banidos.length() > 0 && ("," + ips_banidos + ",").contains("," + ip_origem + ","))
-            return true;
+        String [] banidos=ips_banidos.split(",");
+        for ( int i=0;i<banidos.length;i++){
+            if ( banidos[i].equals(ip_origem) )
+                return true;
+            if ( banidos[i].startsWith("::") && ip_origem.endsWith(banidos[i].substring(2)) )
+                return true;
+            if ( banidos[i].endsWith("::") && ip_origem.startsWith(banidos[i].substring(0,banidos[i].length()-2)) )
+                return true;
+        }
         return false;
     }
     
@@ -12796,7 +12858,7 @@ class Ponte extends Util{
     public static boolean displayVolta=false;
     public static boolean displaySimple=false;
 
-    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log){
+    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log, String ips_banidos){
         Ambiente ambiente=null;
         try{
             ambiente=new Ambiente(host0,port0);
@@ -12816,7 +12878,6 @@ class Ponte extends Util{
             try{
                 final Socket credencialSocket=ambiente.getCredencialSocket();
                 final String ip_origem = get_ip_origem_by_socket(credencialSocket);
-                String ips_banidos="";
                 boolean is_ip_banido = ip_banido(ips_banidos, ip_origem);
                 if ( log != null )
                     log_serverRouter(log, ip_origem, is_ip_banido);
@@ -12831,7 +12892,7 @@ class Ponte extends Util{
                     }
                 }.start();   
             }catch(Exception e){
-                System.out.println("FIM");
+                System.out.println("FIM "  + e.toString());
                 break;
             }
         }
