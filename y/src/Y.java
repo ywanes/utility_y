@@ -14535,6 +14535,45 @@ window.onload = function(){
             prefix="/id/"+path+"/";
         prefix=prefix.replace("/./", "/");
         File [] f=f_.listFiles();
+        // NaturalHumanOrder
+        Arrays.sort(f, new Comparator<File>() {
+            public int compare(File f1, File f2) {
+                return naturalOrder(f1.getName(), f2.getName(), 3);
+            }
+            private int naturalOrder(String s1, String s2, int n){
+                s1=mix_n(s1, n);
+                s2=mix_n(s2, n);
+                return s1.compareTo(s2);
+            }
+            private String mix_n(String s, int n) {
+                StringBuilder sb_tmp=new StringBuilder();
+                StringBuilder sb=new StringBuilder();
+                int pivo=0;
+                for ( int i=0; i<s.length(); i++ ){
+                    String t=s.substring(i, i+1);
+                    if ( t.charAt(0) >= 48 && t.charAt(0) <= 57 ){
+                        pivo++;
+                        sb_tmp.append(t);
+                    }else{
+                        if ( pivo > 0 ){
+                            while(pivo++ < n)
+                                sb_tmp.insert(0, "0");
+                            sb.append(sb_tmp);
+                            sb_tmp=new StringBuilder();
+                            pivo=0;
+                        }
+                        sb.append(t);
+                    }
+                }
+                if ( pivo > 0 ){
+                    while(pivo++ < n)
+                        sb_tmp.insert(0, "0");
+                    sb.append(sb_tmp);
+                    pivo=0;
+                }
+                return sb.toString();
+            }
+        });            
         for ( int i=0;i<f.length;i++ ){
             if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
                 continue;
