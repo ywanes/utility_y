@@ -1390,6 +1390,13 @@ cat buffer.log
         //REMOVED_GRAAL_END	
         if ( args[0].equals("serverRouter"))
         {
+            if ( args.length > 1 && args[1].contains(" ") ){
+                String [] args2=args[1].split(" ");
+                args=new String[args2.length+1];
+                args[0]="serverRouter";
+                for (int i=0;i<args2.length;i++)
+                    args[i+1]=args2[i];            
+            }
             serverRouter(args);
             return;            
         }
@@ -7490,6 +7497,7 @@ System.out.println("BB" + retorno);
         String log=(String)objs[5];
         String ips_banidos=(String)objs[6];
         
+        System.out.println("ips_banidos: " + ips_banidos);
         new Ponte().serverRouter(host0, port0, host1, port1, typeShow, log, ips_banidos);
     }
 
@@ -7876,6 +7884,11 @@ System.out.println("BB" + retorno);
                 args=sliceParm(2, args);
                 continue;
             }
+            if ( args.length > 1 && ipsBanidos == null && args[0].equals("-ips_banidos") ){
+                ipsBanidos=args[1];
+                args=sliceParm(2, args);
+                continue;
+            }
             if ( args.length > 0 && host0 == null ){
                 host0=args[0];
                 args=sliceParm(1, args);
@@ -7899,11 +7912,6 @@ System.out.println("BB" + retorno);
             if ( args.length > 0 && typeShow == null ){
                 typeShow=args[0];
                 args=sliceParm(1, args);
-                continue;
-            }
-            if ( args.length > 1 && ipsBanidos == null && args[0].equals("-ips_banidos") ){
-                ipsBanidos=args[1];
-                args=sliceParm(2, args);
                 continue;
             }
             if ( port1 == -1 )
