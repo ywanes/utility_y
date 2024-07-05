@@ -522,7 +522,10 @@ Exemplos...
     y date
     y date "+%Y%m%d_%H%M%S"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
-    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N"
+    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N"    
+    y date "+%s%N" from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%N_%z"
+    y date "+%s%N" from "20240625_102251_345_UTC" mask "+%Y%m%d_%H%M%S_%N_%z"
+    y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
 [y uptime]
     y uptime
     y uptime -ms

@@ -1650,11 +1650,19 @@ cat buffer.log
         }
         if ( args[0].equals("date")){
             if ( args.length == 1 ){
-                System.out.println(date_(null));
+                System.out.println(date_(null, null, null));
                 return;
             }
             if ( args.length == 2 ){
-                System.out.println(date_(args[1]));
+                System.out.println(date_(args[1], null, null));
+                return;
+            }
+            if ( args.length == 5 && args[1].equals("from") && args[3].equals("mask") ){
+                System.out.println(date_(null, args[2], args[4]));
+                return;
+            }
+            if ( args.length == 6 && args[2].equals("from") && args[4].equals("mask") ){
+                System.out.println(date_(args[1], args[3], args[5]));
                 return;
             }
         }
@@ -12056,79 +12064,84 @@ class Util{
         erroFatal(71);
         return null;
     }
-    
-    public static String date_(String parm_){
+
+    // %z no linux significa -0300, aqui esta sendo usado para empregar o zoneid America/Sao_Paulo    
+    // no java, print de zzzz com zondeId America/Sao_Paulo sai Fuso horário de Brasília
+    // lista de zoneid => java.time.ZoneId.getAvailableZoneIds()
+    public static String [] format_codes_date_in= new String []{"%z"  , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",  "%Z" };
+    public static String [] format_codes_date_out=new String []{"zzzz",  "dd", "MM", "yyyy", "HH", "mm", "ss", "SSS", "X"  };    
+    public static String format_america_sao_paulo_zoneid="America/Sao_Paulo";
+    public static String format_america_sao_paulo_zzzz=get_zzzz(format_america_sao_paulo_zoneid);
+    public static String date_(String format_out_, String date_from, String format_in_){ // y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
         StringBuilder sb=new StringBuilder();
-        String parm="+%d/%m/%Y %H:%M:%S";
-        if ( parm_ != null )
-            parm=parm_;
-        if(parm.startsWith("+"))
-            parm=parm.substring(1);
-        Date d = new Date();
+        String format_out="+%d/%m/%Y %H:%M:%S";
+        if ( format_out_ != null )
+            format_out=format_out_;
+        if(format_out.startsWith("+"))
+            format_out=format_out.substring(1);
+        Date d = date_from_mask(date_from, format_in_);
         String w="";
-        for(int i=0;i<parm.length();i++){
-            w+=parm.substring(i, i+1);
-            if(w.equals("%"))
+        for(int i=0;i<format_out.length();i++){
+            w+=format_out.substring(i, i+1);
+            if( w.equals("%") )
                 continue;
-            if(w.equals("%d")){
-                sb.append(new SimpleDateFormat("dd").format(d));
-                w="";
-                continue;
+            boolean achou=false;
+            for ( int j=0;j<format_codes_date_in.length;j++ ){
+                if ( format_codes_date_in[j].equals(w) ){
+                    achou=true;
+                    sb.append(new SimpleDateFormat(format_codes_date_out[j]).format(d));
+                    w="";
+                    break;
+                }
             }
-            if(w.equals("%m")){
-                sb.append(new SimpleDateFormat("MM").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%Y")){
-                sb.append(new SimpleDateFormat("yyyy").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%H")){
-                sb.append(new SimpleDateFormat("HH").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%M")){
-                sb.append(new SimpleDateFormat("mm").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%S")){
-                sb.append(new SimpleDateFormat("ss").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%N")){
-                sb.append(new SimpleDateFormat("SSS").format(d));
-                w="";
-                continue;
-            }
-            if(w.equals("%Z")){
-                sb.append(new SimpleDateFormat("X").format(d));
-                w="";
-                continue;
-            }
+            if ( achou )
+                continue;            
             if(w.equals("%s")){
                 sb.append(epoch(d));
                 w="";
                 continue;
             }
-            //System.out.print(w);
             sb.append(w);
             w="";
         }
-        return sb.toString();
+        return sb.toString().replace(format_america_sao_paulo_zzzz,format_america_sao_paulo_zoneid);
     }
-        
+      
+    public static String get_zzzz(String a){
+        SimpleDateFormat out = new SimpleDateFormat("zzzz");
+        out.setTimeZone(java.util.TimeZone.getTimeZone(a));
+        return out.format(new Date());
+    }
+    
+    public static Date date_from_mask(String date_, String format){ // y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+        if ( date_ == null || format == null )
+            return new Date();
+        if ( format.startsWith("\\+") )
+            erroFatal("mask invalida! " + format);        
+        format=format.substring(1);        
+        if ( format.equals("%s") || format.equals("%s%N") ){
+            Long tmp=Long.parseLong(date_);
+            if ( tmp < 1000000000000L )
+                tmp*=1000;
+            return new Date(tmp);
+        }
+        for ( int i=0;i<format_codes_date_in.length;i++ )
+            format=format.replace(format_codes_date_in[i], format_codes_date_out[i]);        
+        try{
+            return new SimpleDateFormat( format ).parse(date_.replace(format_america_sao_paulo_zoneid,format_america_sao_paulo_zzzz));
+        }catch(Exception e){
+            erroFatal("Erro format " + e.toString() + " date_:" + date_ + " format: " + format);
+        }
+        return null;
+    }
+    
     public static long epoch(Date d) {
         return Long.parseLong((epochmili(d)+"").substring(0,10));                
     }
     
     public static long epochmili(Date d){
         if ( d == null )
-            d = new Date();
+            d = new Date();        
         return d.toInstant().toEpochMilli();
     }
     
@@ -12176,7 +12189,7 @@ class Util{
         }
         if ( identify_log == 1 ){
             try{
-                cache_log.write(date_(null));
+                cache_log.write(date_(null, null, null));
                 cache_log.write(tag_ip);
                 cache_log.write(ip_origem);
                 cache_log.write("\n");
@@ -15864,6 +15877,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y echo]\n"
 /* class by manual */                + "  [y printf]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y lower]\n"
+/* class by manual */                + "  [y upper]\n"
 /* class by manual */                + "  [y xor]\n"
 /* class by manual */                + "  [y md5]\n"
 /* class by manual */                + "  [y sha1]\n"
@@ -16066,6 +16081,10 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y lower]\n"
+/* class by manual */                + "    y echo AA | y lower\n"
+/* class by manual */                + "[y upper]\n"
+/* class by manual */                + "    y echo aa | y upper\n"
 /* class by manual */                + "[y xor]\n"
 /* class by manual */                + "    y cat file | y xor 100\n"
 /* class by manual */                + "    y cat file | y xor 100\n"
@@ -16357,7 +16376,10 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y date\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\"\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\"    \n"
+/* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_America/Sao_Paulo\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
+/* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_UTC\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
+/* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_-03\" mask \"+%Y%m%d_%H%M%S_%N_%Z\"\n"
 /* class by manual */                + "[y uptime]\n"
 /* class by manual */                + "    y uptime\n"
 /* class by manual */                + "    y uptime -ms\n"
