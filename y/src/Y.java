@@ -1799,6 +1799,17 @@ cat buffer.log
                 return;
             }
         }
+        if ( args[0].equals("printScreen") ){
+            if ( args.length == 1 ){
+                printScreen(-1);
+                return;
+            }
+            if ( args.length > 1 ){
+                printScreen(Integer.parseInt(args[1]));
+                return;
+            }
+        }
+        
         if ( args[0].equals("paste") && args.length == 3 && new File(args[1]).exists() && new File(args[2]).exists() && new File(args[1]).isFile() && new File(args[2]).isFile() ){            
             paste(new File(args[1]), new File(args[2]));
             return;
@@ -1874,7 +1885,7 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("random") && args.length == 3 ){
-            random(Integer.parseInt(args[1]), Integer.parseInt(args[2]));
+            System.out.println(random(Integer.parseInt(args[1]), Integer.parseInt(args[2])));
             return;
         }
         if ( args[0].equals("update") || args[0].equals("u") ){
@@ -2820,7 +2831,7 @@ cat buffer.log
                     ip = ipv4_ipv6[0];
             }
             if ( pass == null ){
-                pass = random_int(0, 9999) + "";
+                pass = random(0, 9999) + "";
             }
         }
         if ( ip == null ){
@@ -7928,8 +7939,6 @@ System.out.println("BB" + retorno);
         }
         if ( typeShow == null )
             typeShow="";
-        if ( log == null )
-            log="";
         if ( ipsBanidos == null )
             ipsBanidos="";
         return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos};
@@ -10086,6 +10095,22 @@ while True:
         }.start();        
     }
         
+    public void printScreen(int a){
+        try{
+            if ( !new File("d:/").exists() )
+                erroFatal("drive d:/ nao encontrado!");                
+            if ( !new File("d:/ProgramFiles").exists() )
+                new File("d:/ProgramFiles").mkdir();
+            if ( !new File("d:/ProgramFiles/screens").exists() )
+                new File("d:/ProgramFiles/screens").mkdir();
+            String s="d:/ProgramFiles/screens/sc_"+date_("+%Y%m%d_%H%M%S_%N", null, null) + "_" + random(1000,9999)+".bmp";                    
+            javax.imageio.ImageIO.write(robotGetImgScreen(a), "bmp", new File(s));
+            System.out.println("printScreen: " + s);
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+    
     public void paste(File file1, File file2){
         try{
             readLine(file1);
@@ -10519,10 +10544,6 @@ while True:
             erro_amigavel_exception(e);
             System.exit(1);
         }
-    }
-    
-    private void random(int a, int b){    
-        System.out.println(random_int(a,b));
     }
     
     private void update(){        
@@ -11620,7 +11641,7 @@ class Util{
         return result;
     }
     
-    public static int random_int(int min, int max){
+    public static int random(int min, int max){
         return java.util.concurrent.ThreadLocalRandom.current().nextInt(min, max + 1);        
     }
     private static long print_cursor_timer_mili=-1;
@@ -12182,8 +12203,7 @@ class Util{
                 try{
                     cache_log=new FileWriter(log,true);
                 }catch(Exception e){
-                    System.out.println(e.toString());
-                    erroFatal(55);
+                    erroFatal("Error " + 55 + " " + e.toString() + " Path: " + log);
                 }
             }
         }
@@ -12212,7 +12232,10 @@ class Util{
         System.err.println(a);
         System.exit(1);
     }    
-    
+    public static void erroFatal(Exception e){
+        System.err.println(e.toString());
+        System.exit(1);
+    }
     
 	//REMOVED_GRAAL_START
     public void loadClassByBytes(java.util.HashMap classes, String principal, String [] args_){
