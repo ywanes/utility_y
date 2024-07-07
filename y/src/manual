@@ -96,6 +96,7 @@ usage:
   [y win]
   [y speed]
   [y lock]
+  [y printScreen]
   [y paste]
   [y mkv]
   [y insta]
@@ -597,6 +598,9 @@ Exemplos...
     y lock w
     obs: gera black screen
     obs2: y lock w -> white screen
+[y printScreen]
+    y printScreen
+    y printScreen 2
 [y paste]
     y paste file1 file2
 [y mkv]
