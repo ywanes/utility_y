@@ -830,7 +830,7 @@ cat buffer.log
             try{
                 Integer parm=100;
                 if ( args.length == 2 )
-                    Integer.parseInt(args[1]);
+                    parm=Integer.parseInt(args[1]);
                 xor(parm);
                 return;
             }catch(Exception e){}            
@@ -4935,8 +4935,12 @@ cat buffer.log
             byte[] buf = new byte[BUFFER_SIZE];
             int len=0;
             while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
-                for( int i=0;i<len;i++ )
-                    buf[i]^=parm;
+                for( int i=0;i<len;i++ ){
+                    int z=buf[i];
+                    if ( z < 0 )
+                        z+=256;
+                    buf[i]=(byte)(z^parm);
+                }
                 System.out.write(buf, 0, len);
             }
             System.out.flush();
