@@ -21,7 +21,7 @@
         <button type="submit" class="btn btn-primary" onclick="f_html2canvas()">PNG</button>
       </div>
 	  <div class="col-xs-2">
-        <input type="text" placeholder="Buscar Ordem de Serviço" onkeypress="busca(event,this)">
+        <input type="text" id="buscar" placeholder="Buscar Ordem de Serviço" onkeypress="buscar_press(event,this)">
       </div>
 	  <div class="col-xs-2">
         <button type="submit" class="btn btn-primary" onclick="atualizar()">Atualizar</button>
@@ -36,7 +36,7 @@
 </html>
 
 <script type="text/javascript">
-var html_cadastro=`
+var html_cadastrar=`
 
 <div class="form-group row">
 	<div class="col-xs-2">
@@ -97,10 +97,14 @@ function ajax_post(url, data, success, error) {
 	, true);
 	http.setRequestHeader('Content-type', 'application/json');
     http.onload = function() {
-      if( http.status == 200 )
-        alert('sucesso');
-      else{
-        console.log('Erro: ' + http.responseText );
+      if( http.status == 200 ){
+		try{
+          obj=JSON.parse(http.responseText);
+		  success(obj);
+		}catch(err){
+		  alert('Erro interno! - verifique a msg de erro no servidor!');
+		}        
+      }else{
 		try{
           obj=JSON.parse(http.responseText);
 		  alert('Erro - ' + obj['msg']);
@@ -137,10 +141,15 @@ function get_form_json(e){
 }
 
 function cadastrar(){
-  obj=get_form_json();
-  obj=JSON.stringify(obj);
-  console.log(obj);
-  ajax_post('cadastro', obj, null, null);
+  ajax_post('cadastrar', JSON.stringify( get_form_json() ), function(obj){alert(obj['msg']);}, null);
+}
+
+function atualizar(){
+  ajax_post('atualizar', JSON.stringify( get_form_json() ), function(obj){alert(obj['msg']);}, null);
+}
+
+function excluir(){
+  ajax_post('excluir', JSON.stringify( {"os": document.getElementById('buscar').value.trim()} ), function(obj){alert(obj['msg']);}, null);  
 }
 
 function f_html2canvas() {
@@ -161,15 +170,30 @@ function f_html2canvas() {
         });
 }
 
-function busca(event,e){
-    if (event.which == 13 || event.keyCode == 13)
-       console.log(e.value);
+function buscar_press(event,e){
+    if (event.which == 13 || event.keyCode == 13){	
+	   if ( e.value.trim() == '' ){
+	       alert('O campo Buscar está vazio!');
+           return;
+	   }
+       ajax_post('buscar', JSON.stringify( {"os": e.value.trim()} ), 
+	       function(obj){
+               if ( obj['msg'] == 'encontrou' )
+		           popula_tela(obj['data']);
+               else
+                   alert(obj['msg']);
+           }
+       , null);
+	}
 }
   
-
+function popula_tela(data){
+    console.log(data);
+	alert('pendente de implementação.. popular os campos');
+}
 
 window.onload = function(){
-  document.getElementById('principal').innerHTML=html_cadastro;
+  document.getElementById('principal').innerHTML=html_cadastrar;
 };
 
 </script>

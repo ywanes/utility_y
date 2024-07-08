@@ -102,7 +102,7 @@ var f_post = function(req,res){
 		write(res, 401, JSON.stringify({"msg": "token inválido"}), 'application/json');
 		return;			
 	}	
-    if ( req._parsedUrl.pathname == '/cadastro' ){		
+    if ( req._parsedUrl.pathname == '/cadastrar' ){		
 		data=req.body; // ja esta json
 		if ( data == null || data['1001']['id'] != 'os' || data['1001']['value'] == null || data['1001']['value'].trim() == '' ){
 			write(res, 401, JSON.stringify({"msg": "Ordem de serviço não preenchido!"}), 'application/json');
@@ -116,7 +116,63 @@ var f_post = function(req,res){
 			return;						
 		}
 		fs.writeFileSync(dir_os, JSON.stringify(data, null, "\t"), "UTF-8");
-	    write(res, 200, JSON.stringify({"msg": "ok"}), 'application/json');		
+	    write(res, 200, JSON.stringify({"msg": "cadastrado!"}), 'application/json');		
+		return;
+	}
+    if ( req._parsedUrl.pathname == '/buscar' ){		
+		data=req.body; // ja esta json
+		if ( data == null || data['os'] == null || data['os'].trim() == '' ){
+			write(res, 401, JSON.stringify({"msg": "Comando inválido, \"os\" não informada!"}), 'application/json');
+			return;						
+		}		
+		os=data['os'].trim().padStart(6, '0');
+		dir_os=resolve_dir_by_os(os);
+		if ( !fs.existsSync(dir_os) ){
+			write(res, 200, JSON.stringify({"msg": "Ordem de serviço " + os  + " não existe!"}), 'application/json');
+			return;						
+		}
+	    write(res, 200, JSON.stringify({"msg": "encontrou", "data": JSON.parse(fs.readFileSync(dir_os), 'utf8') }), 'application/json');		
+		return;
+	}
+    if ( req._parsedUrl.pathname == '/atualizar' ){		
+		data=req.body; // ja esta json
+		if ( data == null || data['1001']['id'] != 'os' || data['1001']['value'] == null || data['1001']['value'].trim() == '' ){
+			write(res, 401, JSON.stringify({"msg": "Ordem de serviço não preenchido!"}), 'application/json');
+			return;						
+		}		
+		data['1001']['value'] = data['1001']['value'].padStart(6, '0');
+		os=data['1001']['value'];
+		dir_os=resolve_dir_by_os(os);
+		if ( !fs.existsSync(dir_os) ){
+			write(res, 401, JSON.stringify({"msg": "Ordem de serviço " + os  + " não encontrada!"}), 'application/json');
+			return;						
+		}
+		fs.writeFileSync(dir_os, JSON.stringify(data, null, "\t"), "UTF-8");
+	    write(res, 200, JSON.stringify({"msg": "atualizado!"}), 'application/json');		
+		return;
+	}
+    if ( req._parsedUrl.pathname == '/excluir' ){		
+		data=req.body; // ja esta json
+		if ( data == null || data['os'] == null || data['os'].trim() == '' ){
+			write(res, 401, JSON.stringify({"msg": "Comando inválido, \"os\" não informada!"}), 'application/json');
+			return;						
+		}		
+		if ( data['os'].trim().split(' ').length != 2 || data['os'].trim().split(' ')[1] != 'excluir' ){
+			write(res, 401, JSON.stringify({"msg": "Por questão de segurança, preencha: \"" + data['os'].trim().split(' ')[0] + " excluir\" no campo buscar e click novamente em excluir"}), 'application/json');
+			return;						
+		}		
+		os=data['os'].trim().split(' ')[0].padStart(6, '0');
+		dir_os=resolve_dir_by_os(os);
+		if ( !fs.existsSync(dir_os) ){
+			write(res, 401, JSON.stringify({"msg": "Ordem de serviço " + os  + " não existe para excluir!"}), 'application/json');
+			return;						
+		}
+		!fs.rmSync(dir_os);
+		if ( fs.existsSync(dir_os) ){
+			write(res, 401, JSON.stringify({"msg": "Não foi possivel excluir a os:" + os + " !"}), 'application/json');
+			return;						
+		}
+	    write(res, 200, JSON.stringify({"msg": "os: " + os + " excluida com sucesso!"}), 'application/json');		
 		return;
 	}
 	write(res, 404, JSON.stringify({"msg": "pagina não encontrada!"}), 'application/json');
