@@ -14578,7 +14578,7 @@ window.onload = function(){
         // NaturalHumanOrder
         Arrays.sort(f, new Comparator<File>() {
             public int compare(File f1, File f2) {
-                return naturalOrder(f1.getName(), f2.getName(), 3);
+                return naturalOrder(f1.getName().toLowerCase(), f2.getName().toLowerCase(), 3);
             }
             private int naturalOrder(String s1, String s2, int n){
                 s1=mix_n(s1, n);
