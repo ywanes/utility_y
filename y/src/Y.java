@@ -1809,7 +1809,12 @@ cat buffer.log
                 return;
             }
         }
-        
+        if ( args[0].equals("dotaMutandoAll") ){
+            if ( args.length > 1 )
+                sleepSeconds(Integer.parseInt(args[1]));
+            dotaMutandoAll();
+            return;
+        }
         if ( args[0].equals("paste") && args.length == 3 && new File(args[1]).exists() && new File(args[2]).exists() && new File(args[1]).isFile() && new File(args[2]).isFile() ){            
             paste(new File(args[1]), new File(args[2]));
             return;
@@ -10115,6 +10120,244 @@ while True:
         }
     }
     
+    public void dotaMutandoAll(){
+        try{
+            System.out.println("dota mutando all...");
+            System.out.println("analisando se a tela esta com o dota aberto:");
+            if ( robotCheckRGB(239, 891, "49 54 56") )
+                System.out.println("Sim");
+            else
+                erroFatal("Não.. programa sendo finalizado!");
+
+            boolean painel_previsoes=robotCheckRGB(188, 768, "255 255 255"); // previsoes aberto
+            if ( painel_previsoes ){
+                robotMouseMove(188, 768); // fechar painel previsoes
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+                
+            robotMouseMove(998, 480); // meio da tela
+            sleepMillis(50);
+
+            robotMouseClickEsq();
+            sleepMillis(50);
+
+            System.out.println("analisando se o painel esta fechado:");
+            boolean painel_fechado=robotCheckRGB(175, 839, "64 69 73"); // painel fechado
+            if ( painel_fechado )
+                System.out.println("Ok, fechado");
+            else
+                erroFatal("Aberto.. programa sendo finalizado!");
+
+            System.out.println("abrindo painel...");
+            robotMouseMove(123, 27); // abrir painel
+            sleepMillis(50);
+            
+            painel_fechado=robotCheckRGB(175, 839, "64 69 73"); // painel fechado
+            if ( !painel_fechado )
+                System.out.println("painel aberto!");
+            else
+                erroFatal("não foi possivel abrir o painel.. programa sendo finalizado!");
+            
+            String rgb_="255 73 73";
+            int[] parms=new int[]{827, 121+(70*0), 1};            
+            boolean jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+            
+            parms=new int[]{827, 121+(70*1), 2};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+
+            parms=new int[]{827, 121+(70*2), 3};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+
+            parms=new int[]{827, 121+(70*3), 4};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+
+            parms=new int[]{827, 121+(70*4), 5};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+
+            parms=new int[]{827, 502+(70*0), 6};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+
+            parms=new int[]{827, 502+(70*1), 7};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+
+            parms=new int[]{827, 502+(70*2), 8};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+
+            parms=new int[]{827, 502+(70*3), 9};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+
+            parms=new int[]{827, 502+(70*4), 10};            
+            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+            System.out.println("analisando jogador " + parms[2]);
+            if ( jogador_mutado ){
+                System.out.println("jogador ja mutado!");
+            }else{
+                System.out.println("mutando...");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+            }
+            
+            boolean painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
+            System.out.println("analisando painel de ajuda");
+            if ( painel_ajuda_berto ){
+                System.out.println("abrindo painel de ajuda");
+                robotMouseMove(parms[0]+5, parms[1]);
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+                painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
+                if ( painel_ajuda_berto ){
+                    System.out.println("painel de ajuda aberto");
+                }else{
+                    erroFatal("Erro, falha ao abrir o painel de ajuda");
+                }
+                
+                parms=new int[]{1096, 434+(57*0)};
+                robotMouseMove(parms[0], parms[1]);
+                sleepMillis(50);
+                robotMouseClickEsq();
+                sleepMillis(50);
+
+                parms=new int[]{1096, 434+(57*1)};
+                robotMouseMove(parms[0], parms[1]);
+                sleepMillis(50);
+                robotMouseClickEsq();
+                sleepMillis(50);
+
+                parms=new int[]{1096, 434+(57*2)};
+                robotMouseMove(parms[0], parms[1]);
+                sleepMillis(50);
+                robotMouseClickEsq();
+                sleepMillis(50);
+
+                parms=new int[]{1096, 434+(57*3)};
+                robotMouseMove(parms[0], parms[1]);
+                sleepMillis(50);
+                robotMouseClickEsq();
+                sleepMillis(50);
+
+                robotMouseMove(998, 480); // meio da tela
+                sleepMillis(50);
+
+                robotMouseClickEsq();
+                sleepMillis(50);
+                System.out.println("fim");
+            }else{
+                erroFatal("Erro, painel de ajuda ja aberto");
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }
+        
+        
+    }
+    
     public void paste(File file1, File file2){
         try{
             readLine(file1);
@@ -12390,17 +12633,23 @@ class Util{
             System.exit(0);        
     }
                 
-    public Integer[] robotMouseGetXY() throws Exception{
+    public Integer[] robotMouseGetXYAndRGB() throws Exception{
         java.awt.PointerInfo p = java.awt.MouseInfo.getPointerInfo();        
         if ( p == null )
             System.exit(0);
-        java.awt.Point location=p.getLocation();
-        return new Integer[]{location.x, location.y};
+        java.awt.Point location=p.getLocation();  
+        Color c=robotGet().getPixelColor(location.x, location.y);
+        return new Integer[]{location.x, location.y, c.getRed(), c.getGreen(), c.getBlue(), c.getRGB()};
     }
 
     public void robotMouseShowXY() throws Exception{
-        Integer[] xy=robotMouseGetXY();
-        System.out.println("x: " + xy[0] + ", y: " + xy[1]);
+        Integer[] xyrgb=robotMouseGetXYAndRGB();
+        System.out.println("x: " + xyrgb[0] + ", y: " + xyrgb[1] + ", rgb: " + xyrgb[2] + " " + xyrgb[3] + " " + xyrgb[4] + " " + xyrgb[5]);
+    }
+    
+    public boolean robotCheckRGB(int x, int y, String rgb) throws Exception{
+        Color c=robotGet().getPixelColor(x, y);
+        return ( (c.getRed() + " " + c.getGreen() + " " + c.getBlue()).equals(rgb) || rgb.equals(c.getRGB()+"") );
     }
     
     public void robotMouseMove(int a, int b) throws Exception{
