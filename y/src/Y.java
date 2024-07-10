@@ -10354,8 +10354,6 @@ while True:
         }catch(Exception e){
             erroFatal(e);
         }
-        
-        
     }
     
     public void paste(File file1, File file2){
