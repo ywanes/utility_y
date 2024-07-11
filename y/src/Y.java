@@ -10152,6 +10152,16 @@ while True:
     
     public void dotaMutandoAll(){
         try{
+            robotMouseMove(188+1400, 768); // fechar painel previsoes
+            sleepMillis(50);
+
+            robotMouseClickEsq();
+            sleepMillis(50);
+
+                
+                
+                
+                
             System.out.println("dota mutando all...");
             System.out.println("analisando se a tela esta com o dota aberto:");
             if ( robotCheckRGB(239, 891, "49 54 56") )
@@ -10255,22 +10265,32 @@ while True:
                 if ( painel_ajuda_berto ){
                     System.out.println("painel de ajuda aberto");
                 }else{
-                    erroFatal("Erro, falha ao abrir o painel de ajuda");
+                    //erroFatal("Erro, falha ao abrir o painel de ajuda");
                 }
                 
                 
                 // jogador 6 -> y: 489
                 // jogador 1 -> y: 170
                 // jogador 10 -> y: 434
-                int ref_y=113+(57*n_eu_mesmo);
-                for ( int i=0;i<4;i++ ){
+                // jogador 9 -> y: 433
+                int ref_y=113;
+                int delta=n_eu_mesmo;
+                if ( n_eu_mesmo > 5 ){
+                    ref_y=432;
+                    delta-=5;
+                }
+                for ( int i=0;i<5;i++ ){
+                    if ( i+1 == delta )
+                        continue;
                     robotMouseMove(1096, ref_y+(57*i));
                     sleepMillis(50);
+                    //if ( 1 == 1 )
+                    //    System.exit(1);
                     robotMouseClickEsq();
                     sleepMillis(50);                    
                 }
 
-                robotMouseMove(998, 480); // meio da tela
+                robotMouseMove(998+400, 480); // meio da tela
                 sleepMillis(50);
 
                 robotMouseClickEsq();
