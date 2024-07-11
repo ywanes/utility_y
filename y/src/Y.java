@@ -10184,6 +10184,9 @@ while True:
             System.out.println("abrindo painel...");
             robotMouseMove(123, 27); // abrir painel
             sleepMillis(50);
+
+            robotMouseClickEsq();
+            sleepMillis(150);
             
             painel_fechado=robotCheckRGB(175, 839, "64 69 73"); // painel fechado
             if ( !painel_fechado )
@@ -10191,156 +10194,63 @@ while True:
             else
                 erroFatal("não foi possivel abrir o painel.. programa sendo finalizado!");
             
+            int n_eu_mesmo=1;
+            int[] parms=null;
             String rgb_="255 73 73";
-            int[] parms=new int[]{827, 121+(70*0), 1};            
-            boolean jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
+            for ( int i=0;i<5;i++ ){
+                parms=new int[]{827, 121+(70*i), i+1};        
+                if ( robotCheckRGB(parms[0], parms[1], "63 70 70") ){ // eu mesmo
+                    System.out.println("eu mesmo como jogador  " + i+1);
+                    n_eu_mesmo=i+1;
+                    continue;
+                }
+                boolean jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+                System.out.println("analisando jogador " + parms[2]);
+                if ( jogador_mutado ){
+                    System.out.println("jogador ja mutado!");                    
+                }else{
+                    System.out.println("mutando...");
+                    robotMouseMove(parms[0]+5, parms[1]);
+                    sleepMillis(50);
 
-                robotMouseClickEsq();
-                sleepMillis(50);
+                    robotMouseClickEsq();
+                    sleepMillis(50);
+                }
+            }
+
+            for ( int i=0;i<5;i++ ){
+                parms=new int[]{827, 502+(70*i), i+6};            
+                if ( robotCheckRGB(parms[0], parms[1], "63 70 70") ){ // eu mesmo
+                    System.out.println("eu mesmo como jogador  " + i+6);
+                    n_eu_mesmo=i+6;
+                    continue;
+                }
+                boolean jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
+                System.out.println("analisando jogador " + parms[2]);
+                if ( jogador_mutado ){
+                    System.out.println("jogador ja mutado!");
+                }else{
+                    System.out.println("mutando...");
+                    robotMouseMove(parms[0]+5, parms[1]);
+                    sleepMillis(50);
+
+                    robotMouseClickEsq();
+                    sleepMillis(50);
+                }
             }
             
-            parms=new int[]{827, 121+(70*1), 2};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
-
-            parms=new int[]{827, 121+(70*2), 3};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
-
-            parms=new int[]{827, 121+(70*3), 4};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
-
-            parms=new int[]{827, 121+(70*4), 5};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
-
-            parms=new int[]{827, 502+(70*0), 6};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
-
-            parms=new int[]{827, 502+(70*1), 7};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
-
-            parms=new int[]{827, 502+(70*2), 8};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
-
-            parms=new int[]{827, 502+(70*3), 9};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
-
-            parms=new int[]{827, 502+(70*4), 10};            
-            jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-            System.out.println("analisando jogador " + parms[2]);
-            if ( jogador_mutado ){
-                System.out.println("jogador ja mutado!");
-            }else{
-                System.out.println("mutando...");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-            }
+            robotMouseMove(998, 480); // meio da tela
+            sleepMillis(150);
             
             boolean painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
             System.out.println("analisando painel de ajuda");
-            if ( painel_ajuda_berto ){
+            if ( !painel_ajuda_berto ){
                 System.out.println("abrindo painel de ajuda");
-                robotMouseMove(parms[0]+5, parms[1]);
-                sleepMillis(50);
+                robotMouseMove(853, 834);
+                sleepMillis(150);
 
                 robotMouseClickEsq();
-                sleepMillis(50);
+                sleepMillis(150);
                 painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
                 if ( painel_ajuda_berto ){
                     System.out.println("painel de ajuda aberto");
@@ -10348,29 +10258,17 @@ while True:
                     erroFatal("Erro, falha ao abrir o painel de ajuda");
                 }
                 
-                parms=new int[]{1096, 434+(57*0)};
-                robotMouseMove(parms[0], parms[1]);
-                sleepMillis(50);
-                robotMouseClickEsq();
-                sleepMillis(50);
-
-                parms=new int[]{1096, 434+(57*1)};
-                robotMouseMove(parms[0], parms[1]);
-                sleepMillis(50);
-                robotMouseClickEsq();
-                sleepMillis(50);
-
-                parms=new int[]{1096, 434+(57*2)};
-                robotMouseMove(parms[0], parms[1]);
-                sleepMillis(50);
-                robotMouseClickEsq();
-                sleepMillis(50);
-
-                parms=new int[]{1096, 434+(57*3)};
-                robotMouseMove(parms[0], parms[1]);
-                sleepMillis(50);
-                robotMouseClickEsq();
-                sleepMillis(50);
+                
+                // jogador 6 -> y: 489
+                // jogador 1 -> y: 170
+                // jogador 10 -> y: 434
+                int ref_y=113+(57*n_eu_mesmo);
+                for ( int i=0;i<4;i++ ){
+                    robotMouseMove(1096, ref_y+(57*i));
+                    sleepMillis(50);
+                    robotMouseClickEsq();
+                    sleepMillis(50);                    
+                }
 
                 robotMouseMove(998, 480); // meio da tela
                 sleepMillis(50);
