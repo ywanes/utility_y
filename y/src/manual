@@ -234,8 +234,12 @@ Exemplos...
     y echo aa | y upper
 [y xor]
     y cat file | y xor 100
-    y cat file | y xor 100
-    obs: valor entre 0 e 255. Por padrao 100
+    y cat beltmatic_002.sav | y xor 104948 "7,215,169,11,62,56,139,40,128,196,29,36,86,12,244,116,175,83,57,142,3,255,249,75,208,143,44,62,165,92,216,64,24,1,125,20,82,107,43,11,123,121,31,99,250,252,15,214,90,234,96,112,163" > source.zip
+    obs: 104948 sendo o length do file beltmatic_002.sav
+    logica interna:
+    for (let i = 0; i < bytes.length; i++)
+      bytes[i] ^= key[(i + bytes.length) % 53];
+    obs2: valor entre 0 e 255. Por padrao 100
 [y md5]
     cat arquivo | y md5
 [y sha1]

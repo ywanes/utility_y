@@ -826,12 +826,16 @@ cat buffer.log
                 System.out.println(line.toUpperCase());
             return;
         }     
-        if ( args[0].equals("xor") && args.length <= 2 ){
+        if ( args[0].equals("xor") && args.length <= 3 ){
             try{
-                Integer parm=100;
-                if ( args.length == 2 )
-                    parm=Integer.parseInt(args[1]);
-                xor(parm);
+                if ( args.length <= 2 ){
+                    int a=100;
+                    if ( args.length == 2 )
+                        a=Integer.parseInt(args[1]);
+                    xor(a);                    
+                }else{
+                    xor_ofuscation(Integer.parseInt(args[1]), args[2]);
+                }
                 return;
             }catch(Exception e){}            
         }        
@@ -4948,6 +4952,32 @@ cat buffer.log
                 }
                 System.out.write(buf, 0, len);
             }
+            System.out.flush();
+            System.out.close();
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+        }
+    }
+    
+    public void xor_ofuscation(int a, String b){
+        try{
+            String [] tags=b.split(",");
+            int c=tags.length;
+            InputStream inputStream_pipe=System.in;
+            byte[] buf = new byte[BUFFER_SIZE];
+            int len=0;
+            int t=0;
+            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                for( int i=0;i<len;i++ ){
+                    int z=buf[i];
+                    if ( z < 0 )
+                        z+=256;
+                    buf[i]=(byte)( z^Integer.parseInt(tags[(i+a+t)%c]) );
+                }
+                System.out.write(buf, 0, len);
+                t+=len;
+            }
+            
             System.out.flush();
             System.out.close();
         }catch(Exception e){
@@ -16121,7 +16151,6 @@ namespace LoopbackWithMic
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -16244,7 +16273,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y take\n"
 /* class by manual */                + "    y take file1 pasta2\n"
 /* class by manual */                + "    Obs: envia o conteudo desta para para outro computador ou pasta\n"
-/* class by manual */                + "    Obs2: apos digitar y take, ele ira mostrar o comando que sera utilizado na outra ponta\n"
+/* class by manual */                + "    Obs2: apAs digitar y take, ele irA mostrar o comando que serA utilizado na outra ponta\n"
 /* class by manual */                + "[y banco fromCSV -outTable tabelaA selectInsert]\n"
 /* class by manual */                + "    cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert\n"
 /* class by manual */                + "[y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
@@ -16330,7 +16359,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
 /* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
-/* class by manual */                + "    obs: se add pasta e a descricao de pasta tem \"/\" ou \"\\\\\" entao o pacote tera o conteudo da pasta, caso contrario tera a pasta citada+conteudo.\n"
+/* class by manual */                + "    obs: se add pasta e a descricao de pasta tem \"/\" ou \"\\\\\" entAo o pacote terA o conteudo da pasta, caso contrArio terA a pasta citada+conteudo.\n"
 /* class by manual */                + "[y gzip]\n"
 /* class by manual */                + "    cat arquivo | y gzip > arquivo.gz\n"
 /* class by manual */                + "[y gunzip]\n"
@@ -16362,8 +16391,12 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y echo aa | y upper\n"
 /* class by manual */                + "[y xor]\n"
 /* class by manual */                + "    y cat file | y xor 100\n"
-/* class by manual */                + "    y cat file | y xor 100\n"
-/* class by manual */                + "    obs: valor entre 0 e 255. Por padrao 100\n"
+/* class by manual */                + "    y cat beltmatic_002.sav | y xor 104948 \"7,215,169,11,62,56,139,40,128,196,29,36,86,12,244,116,175,83,57,142,3,255,249,75,208,143,44,62,165,92,216,64,24,1,125,20,82,107,43,11,123,121,31,99,250,252,15,214,90,234,96,112,163\" > source.zip\n"
+/* class by manual */                + "    obs: 104948 sendo o length do file beltmatic_002.sav\n"
+/* class by manual */                + "    logica interna:\n"
+/* class by manual */                + "    for (let i = 0; i < bytes.length; i++)\n"
+/* class by manual */                + "      bytes[i] ^= key[(i + bytes.length) % 53];\n"
+/* class by manual */                + "    obs2: valor entre 0 e 255. Por padrao 100\n"
 /* class by manual */                + "[y md5]\n"
 /* class by manual */                + "    cat arquivo | y md5\n"
 /* class by manual */                + "[y sha1]\n"
@@ -16378,8 +16411,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA256 | y base64\n"
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA-256 | y base64\n"
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA | y base64\n"
-/* class by manual */                + "    obs: O comando \"y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA\" equivale a \"openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA\"\n"
-/* class by manual */                + "    obs2: O valor de salt(-S) devera conter 16 hexas maiusculos, ex: AAAAAAAAAAAAAAAA\n"
+/* class by manual */                + "    obs: O comando \"y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA\" equivale A \"openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA\"\n"
+/* class by manual */                + "    obs2: O valor de salt(-S) deverA contAr 16 hexas maiAsculos, ex: AAAAAAAAAAAAAAAA\n"
 /* class by manual */                + "    obs3: Se utilizar o salt na encriptacao, entao devera utilizar o mesmo salt na decriptacao\n"
 /* class by manual */                + "[y base64]\n"
 /* class by manual */                + "    cat arquivo | y base64\n"
@@ -16425,7 +16458,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    obs: -v => verbose\n"
-/* class by manual */                + "    obs2: --header e o mesmo que -H\n"
+/* class by manual */                + "    obs2: --header A o mesmo que -H\n"
 /* class by manual */                + "[ y curlJson]\n"
 /* class by manual */                + "    y curlJson \\\n"
 /* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
@@ -16436,7 +16469,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y [sed|tr]]\n"
 /* class by manual */                + "    cat arquivo | y sed A B\n"
 /* class by manual */                + "    cat arquivo | y sed A B E F\n"
-/* class by manual */                + "    obs: sed com dois parametros e performatico e aceita por exemplo \\n como quebra\n"
+/* class by manual */                + "    obs: sed com dois parametros A performatico e aceita por exemplo \\n como quebra\n"
 /* class by manual */                + "[y n]\n"
 /* class by manual */                + "    cat arquivo | y n\n"
 /* class by manual */                + "    obs: modifica arquivo \\r\\n para \\n(se ja tiver \\n nao tem problema)\n"
@@ -16473,7 +16506,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y touch fileA 60\n"
 /* class by manual */                + "    y touch fileA 20210128235959\n"
 /* class by manual */                + "    obs: 60(60 segundos a frente)\n"
-/* class by manual */                + "    obs2: -3600(3600 segundos atras)\n"
+/* class by manual */                + "    obs2: -3600(3600 segundos atrAs)\n"
 /* class by manual */                + "    obs3: 20210128235959(setando em 28/01/2021 23:59:59)\n"
 /* class by manual */                + "[y rm]\n"
 /* class by manual */                + "    y rm file1 file2\n"
@@ -16482,7 +16515,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y cp]\n"
 /* class by manual */                + "    y cp file1 file2\n"
 /* class by manual */                + "    y cp -R pasta1 pasta2\n"
-/* class by manual */                + "    obs: se a pasta2 nao existir entao e criado a copia com o nome pasta2, se existir e copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
+/* class by manual */                + "    obs: se a pasta2 nao existir entao A criado a cApia com o nome pasta2, se existir A copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
 /* class by manual */                + "[y mv]\n"
 /* class by manual */                + "    y mv file1 file2\n"
 /* class by manual */                + "    y mv pasta1 pasta2\n"
@@ -16525,7 +16558,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    cat arquivo | y awk -v start AAA end BBB    \n"
 /* class by manual */                + "    cat arquivo | y awk -v start AAA\n"
 /* class by manual */                + "    cat arquivo | y awk -v end BBB    \n"
-/* class by manual */                + "    obs: \"-v\" e a negativa\n"
+/* class by manual */                + "    obs: \"-v\" A a negativa\n"
 /* class by manual */                + "    obs2: start e end pode ocorrer varias vezes no texto\n"
 /* class by manual */                + "    obs3: -1 significa o ultimo\n"
 /* class by manual */                + "[y dev_null]\n"
@@ -16577,11 +16610,11 @@ namespace LoopbackWithMic
 /* class by manual */                + "        [ipA] conecta no router que conecta no [ipB]\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
-/* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
+/* class by manual */                + "    obs: o comando acima irA criar um httpServer temporario com parametros padroes\n"
 /* class by manual */                + "    y httpServer 127.0.0.1 8888 pagina_toke_zzz111 \"Lista de arquivos\" \"/dir\" \"\" \"\"\n"
 /* class by manual */                + "    y httpServer \"127.0.0.1 7070 tmp a . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt\"\n"
-/* class by manual */                + "    obs: O windows nao esta preparado para mais de 9 parametros\n"
-/* class by manual */                + "    obs2: _ sera substituido por \"\" internamente\n"
+/* class by manual */                + "    obs: O windows nAo esta preparado para mais de 9 parametros\n"
+/* class by manual */                + "    obs2: _ serA substituido por \"\" internamente\n"
 /* class by manual */                + "    parametros: host(pode ser \"\"), port, titulo_url, titulo, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
 /* class by manual */                + "[y playlist]\n"
 /* class by manual */                + "    y playlist\n"
@@ -16646,7 +16679,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y pss\n"
 /* class by manual */                + "[y pid]\n"
 /* class by manual */                + "    y pid 222\n"
-/* class by manual */                + "    Obs: onde 222 e o processId encontrado em y pss\n"
+/* class by manual */                + "    Obs: onde 222 A o processId encontrado em y pss\n"
 /* class by manual */                + "[y date]\n"
 /* class by manual */                + "    y date\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
@@ -16699,7 +16732,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    Obs: nao foi possivel implementar o mixer alto-falante, somente o mic\n"
 /* class by manual */                + "[y playWav]\n"
 /* class by manual */                + "    y playWav file.wav\n"
-/* class by manual */                + "    y cat file.wav | y playWav  # somente Wave dessa configuracao ate agora.\n"
+/* class by manual */                + "    y cat file.wav | y playWav  # somente Wave dessa configuraAAo atA agora.\n"
 /* class by manual */                + "[y playLine]\n"
 /* class by manual */                + "    y gravadorLine | y playLine\n"
 /* class by manual */                + "[y call]\n"
@@ -16715,7 +16748,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux\n"
 /* class by manual */                + "[y win]\n"
 /* class by manual */                + "    y win\n"
-/* class by manual */                + "    obs: mostra se o windows e office estao ativado\n"
+/* class by manual */                + "    obs: mostra se o windows e office estAo ativado\n"
 /* class by manual */                + "    obs2: outra forma de verificar pelo cmd -> slmgr -dli\n"
 /* class by manual */                + "[y speed]\n"
 /* class by manual */                + "    y speed\n"
@@ -16740,13 +16773,13 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y bmp]\n"
 /* class by manual */                + "    y cat img.bmp | y bmp\n"
 /* class by manual */                + "    y bmp -file a.bmp -len 64\n"
-/* class by manual */                + "    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparacao entre imagens\n"
+/* class by manual */                + "    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparaAAo entre imagens\n"
 /* class by manual */                + "    # primeira linha x, segunda y, demais r g b\n"
 /* class by manual */                + "[y decodeUrl]\n"
 /* class by manual */                + "    echo T%C3%B3quio | y decodeUrl\n"
 /* class by manual */                + "[y encodeUrl]\n"
-/* class by manual */                + "    echo Toquio | y encodeUrl\n"
-/* class by manual */                + "    obs: o espaco esta sendo representado como +, o que e uma traducao obsoleta.\n"
+/* class by manual */                + "    echo TAquio | y encodeUrl\n"
+/* class by manual */                + "    obs: o espaAo esta sendo representado como +, o que A uma traduAAo obsoleta.\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y random]\n"
@@ -16758,15 +16791,15 @@ namespace LoopbackWithMic
 /* class by manual */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
 /* class by manual */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
 /* class by manual */                + "\n"
-/* class by manual */                + "Observacoes:\n"
+/* class by manual */                + "ObservaAAes:\n"
 /* class by manual */                + "entrada de dados pode ser feito por |\n"
-/* class by manual */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmacao de fim de processamento de selectCSV\n"
+/* class by manual */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmaAAo de fim de processamento de selectCSV\n"
 /* class by manual */                + "export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV\n"
-/* class by manual */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravacao\n"
-/* class by manual */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravacao de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
+/* class by manual */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravaAAo\n"
+/* class by manual */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravaAAo de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"TZ\" deixando a data 10/10/2010T10:10:10Z\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"UTC\" deixando a data 10/10/2010 10:10:10 UTC\n"
-/* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data sera na data do natal ex 25/12/2010 10:10:15\n"
+/* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data serA na data do natal ex 25/12/2010 10:10:15\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"YYYY-MM-DD\" 2010-07-07 12:12:12\n"
 /* class by manual */                + "export COM_SEPARADOR_FINAL_CSV_Y=\"S\" ex: \"a\";\"a\"; o padrao seria \"a\";\"a\"\n"
 /* class by manual */                + "export SEM_HEADER_CSV_Y=\"S\"\n"
@@ -16839,8 +16872,6 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
 
 
 
