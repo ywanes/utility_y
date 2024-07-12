@@ -22,6 +22,7 @@ usage:
   [y tarlist]
   [y echo]
   [y printf]
+  [y sdiff]
   [y cat]
   [y lower]
   [y upper]
@@ -226,6 +227,8 @@ Exemplos...
     echo "a b c"
     obs: diferente do echo, o printf nao gera \n no final
     obs2: echo -n AA gera o mesmo efeito que, printf AA
+[y sdiff]
+    y sdiff file1.txt file2.txt
 [y cat]
     y cat arquivo
 [y lower]

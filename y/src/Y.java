@@ -140,8 +140,10 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeMap;
@@ -158,6 +160,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiPredicate;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.DataFormatException;
@@ -809,7 +813,11 @@ cat buffer.log
         if ( args[0].equals("print") ){
             System.err.println("O correto nao seria printf?");
             System.exit(1);
-        }              
+        }   
+        if ( args[0].equals("sdiff") && args.length == 3 ){
+            new Diff(args[1], args[2], System.out);
+            return;
+        }
         if ( args[0].equals("cat") ){
             cat(args);
             return;
@@ -12031,6 +12039,15 @@ class Util{
         scanner_pipe=null;
     }
     
+    public List<String> readAllLines(String caminho){
+        try{
+            return java.nio.file.Files.readAllLines(java.nio.file.Paths.get(caminho));
+        }catch(Exception e){
+            erroFatal(e);
+        }
+        return null;
+    }
+    
     public static java.util.Scanner scanner_pipeB=null;
     public void readLineB(String caminho) throws Exception{
         readLineB(new File(caminho));
@@ -16063,6 +16080,23 @@ namespace LoopbackWithMic
 /* class Tar  */ byte[] theader = new byte[TarConstants.HEADER_BLOCK]; int tr = 0;  while (tr < TarConstants.HEADER_BLOCK) { int res = read(theader, 0, TarConstants.HEADER_BLOCK - tr);  if (res < 0) { break; }  System.arraycopy(theader, 0, header, tr, res); tr += res; }  boolean eof = true; for (byte b : header) { if (b != 0) { eof = false; break; } }  if (!eof) { currentEntry = new TarEntry(header); }  return currentEntry; }  public long getCurrentOffset() { return bytesRead; }  protected void closeCurrentEntry() throws IOException { if (currentEntry != null) { if (currentEntry.getSize() > currentFileSize) { long bs = 0; while (bs < currentEntry.getSize() - currentFileSize) { long res = skip(currentEntry.getSize() - currentFileSize - bs);  if (res == 0 && currentEntry.getSize() - currentFileSize > 0) { throw new IOException("Possible tar file corruption"); }  bs += res; } }  currentEntry = null; currentFileSize = 0L; skipPad(); } }  protected void skipPad() throws IOException { if (bytesRead > 0) { int extra = (int) (bytesRead % TarConstants.DATA_BLOCK);  if (extra > 0) { long bs = 0; while (bs < TarConstants.DATA_BLOCK - extra) { long res = skip(TarConstants.DATA_BLOCK - extra - bs); bs += res; } } } }  @Override public long skip(long n) throws IOException { if (defaultSkip) { long bs = super.skip(n); bytesRead += bs;  return bs; }  if (n <= 0) { return 0; }  long left = n; byte[] sBuff = new byte[SKIP_BUFFER_SIZE];  while (left > 0) { int res = read(sBuff, 0, (int) (left < SKIP_BUFFER_SIZE ? left : SKIP_BUFFER_SIZE)); if (res < 0) { break; } left -= res; }  return n - left; }  public boolean isDefaultSkip() { return defaultSkip; }  public void setDefaultSkip(boolean defaultSkip) { this.defaultSkip = defaultSkip; } }
 
 
+/* class Diff  */ /* creditos - Copyright 2018 java-diff-utils. */
+/* class Diff  */ class Diff extends Util{ public Diff(String caminho_a, String caminho_b, OutputStream out){ try{ byte [] bytes_write60="                                                            ".getBytes(); byte [] barra_n="\n".getBytes(); byte [] code_equal="   ".getBytes(); byte [] code_dif=" | ".getBytes(); byte [] code_dir=" > ".getBytes(); byte [] code_esq=" < ".getBytes(); Diff_DiffRowGenerator generator = Diff_DiffRowGenerator.create().showInlineDiffs(true).inlineDiffByWord(true).oldTag(f -> "").newTag(f -> "").build(); List<Diff_DiffRow> rows = generator.generateDiffRows(readAllLines(caminho_a), readAllLines(caminho_b)); for (Diff_DiffRow row : rows) { String old_=row.getOldLine(); String new_=row.getNewLine(); int tag_=row.getTag(); if ( tag_ == Diff_DiffRow.TAG_EQUAL ){ write60(old_, out, bytes_write60); out.write(code_equal); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_INSERT_DIR ){ write60(old_, out, bytes_write60); out.write(code_dir); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_INSERT_ESQ ){ write60(old_, out, bytes_write60); out.write(code_esq); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_CHANGE ){ write60(old_, out, bytes_write60); out.write(code_dif); write60(new_, out, bytes_write60); out.write(barra_n); } } out.flush(); }catch(Exception e){ erroFatal(e); } } public void write60(String a, OutputStream out, byte [] bytes_write60) throws Exception{ int len=a.length(); if ( len == 60 ){ out.write(a.getBytes()); return; } if ( len > 60 ){ out.write(a.substring(0, 60).getBytes()); return; } out.write(a.getBytes()); out.write(bytes_write60, 0, 60-len); } } abstract class Diff_AbstractDelta<T> { private final Diff_Chunk<T> source; 
+/* class Diff  */ private final Diff_Chunk<T> target; private final int type; public Diff_AbstractDelta(int type, Diff_Chunk<T> source, Diff_Chunk<T> target) { Objects.requireNonNull(source); Objects.requireNonNull(target); Objects.requireNonNull(type); this.type = type; this.source = source; this.target = target; } public Diff_Chunk<T> getSource() { return source; } public Diff_Chunk<T> getTarget() { return target; } public int getType() { return type; } protected void verifyChunk(List<T> target) throws Exception { getSource().verify(target); } public abstract void applyTo(List<T> target) throws Exception; public abstract void restore(List<T> target); public int hashCode() { return Objects.hash(this.source, this.target, this.type); } public boolean equals(Object obj) { if (this == obj) { return true; } if (obj == null) { return false; } if (getClass() != obj.getClass()) { return false; } final Diff_AbstractDelta<?> other = (Diff_AbstractDelta<?>) obj; if (!Objects.equals(this.source, other.source)) { return false; } if (!Objects.equals(this.target, other.target)) { return false; } if (this.type != other.type) { return false; } return true; } } class Diff_Change { public final int deltaType; public final int startOriginal; public final int endOriginal; public final int startRevised; public final int endRevised; public Diff_Change(int deltaType, int startOriginal, int endOriginal, int startRevised, int endRevised) { this.deltaType = deltaType; this.startOriginal = startOriginal; this.endOriginal = endOriginal; this.startRevised = startRevised; this.endRevised = endRevised; } } class Diff_ChangeDelta<T> extends Diff_AbstractDelta<T> { public Diff_ChangeDelta(Diff_Chunk<T> source, Diff_Chunk<T> target) { super(Diff_DiffRow.TAG_CHANGE, source, target); Objects.requireNonNull(source, "source must not be null"); 
+/* class Diff  */ Objects.requireNonNull(target, "target must not be null"); } public void applyTo(List<T> target) throws Exception { verifyChunk(target); int position = getSource().getPosition(); int size = getSource().size(); for (int i = 0; i < size; i++) { target.remove(position); } int i = 0; for (T line : getTarget().getLines()) { target.add(position + i, line); i++; } } public void restore(List<T> target) { int position = getTarget().getPosition(); int size = getTarget().size(); for (int i = 0; i < size; i++) { target.remove(position); } int i = 0; for (T line : getSource().getLines()) { target.add(position + i, line); i++; } } public String toString() { return "[ChangeDelta, position: " + getSource().getPosition() + ", lines: " + getSource().getLines() + " to " + getTarget().getLines() + "]"; } } class Diff_Chunk<T> { private final int position; private List<T> lines; public Diff_Chunk(int position, List<T> lines) { this.position = position; this.lines = lines; } public Diff_Chunk(int position, T[] lines) { this.position = position; this.lines = Arrays.asList(lines); } public void verify(List<T> target) throws Exception { if (position > target.size() || last() > target.size()) { throw new Exception("Incorrect Chunk: the position of chunk > target size"); } for (int i = 0; i < size(); i++) { if (!target.get(position + i).equals(lines.get(i))) { throw new Exception( "Incorrect Chunk: the chunk content doesn't match the target"); } } } public int getPosition() { return position; } public void setLines(List<T> lines) { this.lines = lines; } public List<T> getLines() { return lines; } public int size() { return lines.size(); } public int last() { return getPosition() + size() - 1; } public int hashCode() { return Objects.hash(lines, position, size()); } 
+/* class Diff  */ public boolean equals(Object obj) { if (this == obj) { return true; } if (obj == null) { return false; } if (getClass() != obj.getClass()) { return false; } Diff_Chunk<T> other = (Diff_Chunk) obj; if (lines == null) { if (other.lines != null) { return false; } } else if (!lines.equals(other.lines)) { return false; } return position == other.position; } public String toString() { return "[position: " + position + ", size: " + size() + ", lines: " + lines + "]"; } } class Diff_DeleteDelta<T> extends Diff_AbstractDelta<T> { public Diff_DeleteDelta(Diff_Chunk<T> original, Diff_Chunk<T> revised) { super(Diff_DiffRow.TAG_DELETE, original, revised); } public void applyTo(List<T> target) throws Exception { verifyChunk(target); int position = getSource().getPosition(); int size = getSource().size(); for (int i = 0; i < size; i++) { target.remove(position); } } public void restore(List<T> target) { int position = this.getTarget().getPosition(); List<T> lines = this.getSource().getLines(); for (int i = 0; i < lines.size(); i++) { target.add(position + i, lines.get(i)); } } public String toString() { return "[DeleteDelta, position: " + getSource().getPosition() + ", lines: " + getSource().getLines() + "]"; } } class Diff_DiffRow implements Serializable { public static int tag = 0; public static final int TAG_EQUAL = 0; public static final int TAG_DELETE = 1; public static final int TAG_CHANGE = 2; public static final int TAG_INSERT = 3; public static final int TAG_INSERT_ESQ = 4; public static final int TAG_INSERT_DIR = 5; private final String oldLine; private final String newLine; public Diff_DiffRow(int tag, String oldLine, String newLine) { this.tag = tag; this.oldLine = oldLine; this.newLine = newLine; } public int getTag() { 
+/* class Diff  */ if ( oldLine.equals(newLine) ) return Diff_DiffRow.TAG_EQUAL; if ( newLine.equals("") ) return Diff_DiffRow.TAG_INSERT_ESQ; if ( oldLine.equals("") ) return Diff_DiffRow.TAG_INSERT_DIR; return Diff_DiffRow.TAG_CHANGE; } public void setTag(int tag) { this.tag = tag; } public String getOldLine() { return oldLine; } public String getNewLine() { return newLine; } public int hashCode() { return Objects.hash(newLine, oldLine, tag); } public boolean equals(Object obj) { if (this == obj) { return true; } if (obj == null) { return false; } if (getClass() != obj.getClass()) { return false; } Diff_DiffRow other = (Diff_DiffRow) obj; if (newLine == null) { if (other.newLine != null) { return false; } } else if (!newLine.equals(other.newLine)) { return false; } if (oldLine == null) { if (other.oldLine != null) { return false; } } else if (!oldLine.equals(other.oldLine)) { return false; } if (tag == -1) { if (other.tag != -1) { return false; } } else if (tag != other.tag) { return false; } return true; } public String toString() { return "[" + this.tag + "," + this.oldLine + "," + this.newLine + "]"; } } class Diff_DiffRowGenerator { public static final BiPredicate<String, String> DEFAULT_EQUALIZER = Object::equals; public static final BiPredicate<String, String> IGNORE_WHITESPACE_EQUALIZER = (original, revised) -> adjustWhitespace(original).equals(adjustWhitespace(revised)); public static final Function<String, List<String>> SPLITTER_BY_CHARACTER = line -> { List<String> list = new ArrayList<>(line.length()); for (Character character : line.toCharArray()) { list.add(character.toString()); } return list; }; public static final Pattern SPLIT_BY_WORD_PATTERN = Pattern.compile("\\s+|[,.\\[\\](){}/\\\\*+\\-#]"); 
+/* class Diff  */ public static final Function<String, List<String>> SPLITTER_BY_WORD = line -> splitStringPreserveDelimiter(line, SPLIT_BY_WORD_PATTERN); public static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+"); public static Diff_Builder create() { return new Diff_Builder(); } private static String adjustWhitespace(String raw) { return WHITESPACE_PATTERN.matcher(raw.trim()).replaceAll(" "); } protected final static List<String> splitStringPreserveDelimiter(String str, Pattern SPLIT_PATTERN) { List<String> list = new ArrayList<>(); if (str != null) { Matcher matcher = SPLIT_PATTERN.matcher(str); int pos = 0; while (matcher.find()) { if (pos < matcher.start()) { list.add(str.substring(pos, matcher.start())); } list.add(matcher.group()); pos = matcher.end(); } if (pos < str.length()) { list.add(str.substring(pos)); } } return list; } static void wrapInTag(List<String> sequence, int startPosition, int endPosition, Function<Boolean, String> tagGenerator) { int endPos = endPosition; while (endPos >= startPosition) { while (endPos > startPosition) { if (!"\n".equals(sequence.get(endPos - 1))) { break; } endPos--; } if (endPos == startPosition) { break; } sequence.add(endPos, tagGenerator.apply(false)); endPos--; while (endPos > startPosition) { if ("\n".equals(sequence.get(endPos - 1))) { break; } endPos--; } sequence.add(endPos, tagGenerator.apply(true)); endPos--; } } private final int columnWidth; private final BiPredicate<String, String> equalizer; private final boolean ignoreWhiteSpaces; private final Function<String, List<String>> inlineDiffSplitter; private final boolean mergeOriginalRevised; private final Function<Boolean, String> newTag; private final Function<Boolean, String> oldTag; 
+/* class Diff  */ private final boolean reportLinesUnchanged; private final boolean showInlineDiffs; private Diff_DiffRowGenerator(Diff_Builder builder) { showInlineDiffs = builder.showInlineDiffs; ignoreWhiteSpaces = builder.ignoreWhiteSpaces; oldTag = builder.oldTag; newTag = builder.newTag; columnWidth = builder.columnWidth; mergeOriginalRevised = builder.mergeOriginalRevised; inlineDiffSplitter = builder.inlineDiffSplitter; equalizer = ignoreWhiteSpaces ? IGNORE_WHITESPACE_EQUALIZER : DEFAULT_EQUALIZER; reportLinesUnchanged = builder.reportLinesUnchanged; Objects.requireNonNull(inlineDiffSplitter); } public List<Diff_DiffRow> generateDiffRows(List<String> original, List<String> revised) throws Exception { return generateDiffRows(original, Diff_Patch.generate(original, revised)); } public List<Diff_DiffRow> generateDiffRows(final List<String> original, Diff_Patch<String> patch) throws Exception { List<Diff_DiffRow> diffRows = new ArrayList<>(); int endPos = 0; final List<Diff_AbstractDelta<String>> deltaList = patch.getDeltas(); for (int i = 0; i < deltaList.size(); i++) { Diff_AbstractDelta<String> delta = deltaList.get(i); Diff_Chunk<String> orig = delta.getSource(); Diff_Chunk<String> rev = delta.getTarget(); for (String line : original.subList(endPos, orig.getPosition())) { diffRows.add(buildDiffRow(Diff_DiffRow.TAG_EQUAL, line, line)); } if (delta instanceof Diff_InsertDelta) { endPos = orig.last() + 1; for (String line : (List<String>) rev.getLines()) { diffRows.add(buildDiffRow(Diff_DiffRow.TAG_INSERT, "", line)); } continue; } if (delta instanceof Diff_DeleteDelta) { endPos = orig.last() + 1; for (String line : (List<String>) orig.getLines()) { diffRows.add(buildDiffRow(Diff_DiffRow.TAG_DELETE, line, "")); } continue; 
+/* class Diff  */ } if (showInlineDiffs) { diffRows.addAll(generateInlineDiffs(delta)); } else { for (int j = 0; j < Math.max(orig.size(), rev.size()); j++) { diffRows.add(buildDiffRow(Diff_DiffRow.TAG_CHANGE, orig.getLines().size() > j ? orig.getLines().get(j) : "", rev.getLines().size() > j ? rev.getLines().get(j) : "")); } } endPos = orig.last() + 1; } for (String line : original.subList(endPos, original.size())) { diffRows.add(buildDiffRow(Diff_DiffRow.TAG_EQUAL, line, line)); } return diffRows; } private Diff_DiffRow buildDiffRow(int type, String orgline, String newline) { if (reportLinesUnchanged) { return new Diff_DiffRow(type, orgline, newline); } else { String wrapOrg = preprocessLine(orgline); if (Diff_DiffRow.TAG_DELETE == type) { if (mergeOriginalRevised || showInlineDiffs) { wrapOrg = oldTag.apply(true) + wrapOrg + oldTag.apply(false); } } String wrapNew = preprocessLine(newline); if (Diff_DiffRow.TAG_INSERT == type) { if (mergeOriginalRevised) { wrapOrg = newTag.apply(true) + wrapNew + newTag.apply(false); } else if (showInlineDiffs) { wrapNew = newTag.apply(true) + wrapNew + newTag.apply(false); } } return new Diff_DiffRow(type, wrapOrg, wrapNew); } } private Diff_DiffRow buildDiffRowWithoutNormalizing(int type, String orgline, String newline) { return new Diff_DiffRow(type, Diff_StringUtils.wrapText(orgline, columnWidth), Diff_StringUtils.wrapText(newline, columnWidth)); } private List<Diff_DiffRow> generateInlineDiffs(Diff_AbstractDelta<String> delta) throws Exception { List<String> orig = Diff_StringUtils.normalize(delta.getSource().getLines()); List<String> rev = Diff_StringUtils.normalize(delta.getTarget().getLines()); List<String> origList; 
+/* class Diff  */ List<String> revList; String joinedOrig = String.join("\n", orig); String joinedRev = String.join("\n", rev); origList = inlineDiffSplitter.apply(joinedOrig); revList = inlineDiffSplitter.apply(joinedRev); List<Diff_AbstractDelta<String>> inlineDeltas = Diff_Patch.generate(origList, revList).getDeltas(); Collections.reverse(inlineDeltas); for (Diff_AbstractDelta<String> inlineDelta : inlineDeltas) { Diff_Chunk<String> inlineOrig = inlineDelta.getSource(); Diff_Chunk<String> inlineRev = inlineDelta.getTarget(); if (inlineDelta instanceof Diff_DeleteDelta) { wrapInTag(origList, inlineOrig.getPosition(), inlineOrig .getPosition() + inlineOrig.size(), oldTag); } else if (inlineDelta instanceof Diff_InsertDelta) { if (mergeOriginalRevised) { origList.addAll(inlineOrig.getPosition(), revList.subList(inlineRev.getPosition(), inlineRev.getPosition() + inlineRev.size())); wrapInTag(origList, inlineOrig.getPosition(), inlineOrig.getPosition() + inlineRev.size(), newTag); } else { wrapInTag(revList, inlineRev.getPosition(), inlineRev.getPosition() + inlineRev.size(), newTag); } } else if (inlineDelta instanceof Diff_ChangeDelta) { if (mergeOriginalRevised) { origList.addAll(inlineOrig.getPosition() + inlineOrig.size(), revList.subList(inlineRev.getPosition(), inlineRev.getPosition() + inlineRev.size())); wrapInTag(origList, inlineOrig.getPosition() + inlineOrig.size(), inlineOrig.getPosition() + inlineOrig.size() + inlineRev.size(), newTag); } else { wrapInTag(revList, inlineRev.getPosition(), inlineRev.getPosition() + inlineRev.size(), newTag); } wrapInTag(origList, inlineOrig.getPosition(), inlineOrig .getPosition() + inlineOrig.size(), oldTag); } } 
+/* class Diff  */ StringBuilder origResult = new StringBuilder(); StringBuilder revResult = new StringBuilder(); for (String character : origList) { origResult.append(character); } for (String character : revList) { revResult.append(character); } List<String> original = Arrays.asList(origResult.toString().split("\n")); List<String> revised = Arrays.asList(revResult.toString().split("\n")); List<Diff_DiffRow> diffRows = new ArrayList<>(); for (int j = 0; j < Math.max(original.size(), revised.size()); j++) { diffRows. add(buildDiffRowWithoutNormalizing(Diff_DiffRow.TAG_CHANGE, original.size() > j ? original.get(j) : "", revised.size() > j ? revised.get(j) : "")); } return diffRows; } private String preprocessLine(String line) { if (columnWidth == 0) { return Diff_StringUtils.normalize(line); } else { return Diff_StringUtils.wrapText(Diff_StringUtils.normalize(line), columnWidth); } } static class Diff_Builder { private boolean showInlineDiffs = false; private boolean ignoreWhiteSpaces = false; private Function<Boolean, String> oldTag = f -> f ? "<span class=\"editOldInline\">" : "</span>"; private Function<Boolean, String> newTag = f -> f ? "<span class=\"editNewInline\">" : "</span>"; private int columnWidth = 0; private boolean mergeOriginalRevised = false; private boolean reportLinesUnchanged = false; private Function<String, List<String>> inlineDiffSplitter = SPLITTER_BY_CHARACTER; private Diff_Builder() { } public Diff_Builder showInlineDiffs(boolean val) { showInlineDiffs = val; return this; } public Diff_Builder ignoreWhiteSpaces(boolean val) { ignoreWhiteSpaces = val; return this; } public Diff_Builder reportLinesUnchanged(final boolean val) { reportLinesUnchanged = val; return this; } public Diff_Builder oldTag(Function<Boolean, String> generator) { 
+/* class Diff  */ this.oldTag = generator; return this; } public Diff_Builder newTag(Function<Boolean, String> generator) { this.newTag = generator; return this; } public Diff_Builder columnWidth(int width) { if (width >= 0) { columnWidth = width; } return this; } public Diff_DiffRowGenerator build() { return new Diff_DiffRowGenerator(this); } public Diff_Builder mergeOriginalRevised(boolean mergeOriginalRevised) { this.mergeOriginalRevised = mergeOriginalRevised; return this; } public Diff_Builder inlineDiffByWord(boolean inlineDiffByWord) { inlineDiffSplitter = inlineDiffByWord ? SPLITTER_BY_WORD : SPLITTER_BY_CHARACTER; return this; } public Diff_Builder inlineDiffBySplitter(Function<String, List<String>> inlineDiffSplitter) { this.inlineDiffSplitter = inlineDiffSplitter; return this; } } } class Diff_StringUtils { public static String htmlEntites(String str) { return str.replace("<", "&lt;").replace(">", "&gt;"); } public static String normalize(String str) { return htmlEntites(str).replace("\t", "    "); } public static List<String> normalize(List<String> list) { return list.stream() .map(Diff_StringUtils::normalize) .collect(java.util.stream.Collectors.toList()); } public static List<String> wrapText(List<String> list, int columnWidth) { return list.stream() .map(line -> wrapText(line, columnWidth)) .collect(java.util.stream.Collectors.toList()); } public static String wrapText(String line, int columnWidth) { if (columnWidth < 0) { throw new IllegalArgumentException("columnWidth may not be less 0"); } if (columnWidth == 0) { return line; } int length = line.length(); int delimiter = "<br/>".length(); int widthIndex = columnWidth; StringBuilder b = new StringBuilder(line); for (int count = 0; length > widthIndex; count++) { 
+/* class Diff  */ b.insert(widthIndex + delimiter * count, "<br/>"); widthIndex += columnWidth; } return b.toString(); } private Diff_StringUtils() { } } class Diff_DiffUtils { private static List<String> compressLines(List<String> lines, String delimiter) { if (lines.isEmpty()) { return Collections.emptyList(); } return Collections.singletonList(lines.stream().collect(java.util.stream.Collectors.joining(delimiter))); } public static <T> List<T> patch(List<T> original, Diff_Patch<T> patch) throws Exception { return patch.applyTo(original); } public static <T> List<T> unpatch(List<T> revised, Diff_Patch<T> patch) { return patch.restore(revised); } private Diff_DiffUtils() { } } class Diff_InsertDelta<T> extends Diff_AbstractDelta<T> { public Diff_InsertDelta(Diff_Chunk<T> original, Diff_Chunk<T> revised) { super(Diff_DiffRow.TAG_INSERT, original, revised); } public void applyTo(List<T> target) throws Exception { verifyChunk(target); int position = this.getSource().getPosition(); List<T> lines = this.getTarget().getLines(); for (int i = 0; i < lines.size(); i++) { target.add(position + i, lines.get(i)); } } public void restore(List<T> target) { int position = getTarget().getPosition(); int size = getTarget().size(); for (int i = 0; i < size; i++) { target.remove(position); } } public String toString() { return "[InsertDelta, position: " + getSource().getPosition() + ", lines: " + getTarget().getLines() + "]"; } } class Diff_MyersDiff<T>{ private final BiPredicate<T, T> DEFAULT_EQUALIZER = Object::equals; private final BiPredicate<T, T> equalizer; public Diff_MyersDiff() { equalizer = DEFAULT_EQUALIZER; } public Diff_MyersDiff(final BiPredicate<T, T> equalizer) { Objects.requireNonNull(equalizer, "equalizer must not be null"); this.equalizer = equalizer; } 
+/* class Diff  */ public List<Diff_Change> computeDiff(final List<T> source, final List<T> target) throws Exception { Objects.requireNonNull(source, "source list must not be null"); Objects.requireNonNull(target, "target list must not be null"); Diff_PathNode path = buildPath(source, target); List<Diff_Change> result = buildRevision(path, source, target); return result; } private Diff_PathNode buildPath(final List<T> orig, final List<T> rev) throws Exception { Objects.requireNonNull(orig, "original sequence is null"); Objects.requireNonNull(rev, "revised sequence is null"); final int N = orig.size(); final int M = rev.size(); final int MAX = N + M + 1; final int size = 1 + 2 * MAX; final int middle = size / 2; final Diff_PathNode diagonal[] = new Diff_PathNode[size]; diagonal[middle + 1] = new Diff_PathNode(0, -1, true, true, null); for (int d = 0; d < MAX; d++) { for (int k = -d; k <= d; k += 2) { final int kmiddle = middle + k; final int kplus = kmiddle + 1; final int kminus = kmiddle - 1; Diff_PathNode prev; int i; if ((k == -d) || (k != d && diagonal[kminus].i < diagonal[kplus].i)) { i = diagonal[kplus].i; prev = diagonal[kplus]; } else { i = diagonal[kminus].i + 1; prev = diagonal[kminus]; } diagonal[kminus] = null; int j = i - k; Diff_PathNode node = new Diff_PathNode(i, j, false, false, prev); while (i < N && j < M && equalizer.test(orig.get(i), rev.get(j))) { i++; j++; } if (i != node.i) { node = new Diff_PathNode(i, j, true, false, node); } diagonal[kmiddle] = node; if (i >= N && j >= M) { return diagonal[kmiddle]; } } diagonal[middle + d - 1] = null; } throw new Exception("could not find a diff path"); } 
+/* class Diff  */ private List<Diff_Change> buildRevision(Diff_PathNode actualPath, List<T> orig, List<T> rev) { Objects.requireNonNull(actualPath, "path is null"); Objects.requireNonNull(orig, "original sequence is null"); Objects.requireNonNull(rev, "revised sequence is null"); Diff_PathNode path = actualPath; List<Diff_Change> changes = new ArrayList<>(); if (path.isSnake()) { path = path.prev; } while (path != null && path.prev != null && path.prev.j >= 0) { if (path.isSnake()) { throw new IllegalStateException("bad diffpath: found snake when looking for diff"); } int i = path.i; int j = path.j; path = path.prev; int ianchor = path.i; int janchor = path.j; if (ianchor == i && janchor != j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_INSERT, ianchor, i, janchor, j)); } else if (ianchor != i && janchor == j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_DELETE, ianchor, i, janchor, j)); } else { changes.add(new Diff_Change(Diff_DiffRow.TAG_CHANGE, ianchor, i, janchor, j)); } if (path.isSnake()) { path = path.prev; } } return changes; } } class Diff_PathNode { public final int i; public final int j; public final Diff_PathNode prev; public final boolean snake; public final boolean bootstrap; public Diff_PathNode(int i, int j, boolean snake, boolean bootstrap, Diff_PathNode prev) { this.i = i; this.j = j; this.bootstrap = bootstrap; if (snake) { this.prev = prev; } else { this.prev = prev == null ? null : prev.previousSnake(); } this.snake = snake; } public boolean isSnake() { return snake; } public boolean isBootstrap() { return bootstrap; } 
+/* class Diff  */ public final Diff_PathNode previousSnake() { if (isBootstrap()) { return null; } if (!isSnake() && prev != null) { return prev.previousSnake(); } return this; } public String toString() { StringBuilder buf = new StringBuilder("["); Diff_PathNode node = this; while (node != null) { buf.append("("); buf.append(Integer.toString(node.i)); buf.append(","); buf.append(Integer.toString(node.j)); buf.append(")"); node = node.prev; } buf.append("]"); return buf.toString(); } } class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public Diff_Patch() { this(10); } public Diff_Patch(int estimatedPatchSize) { deltas = new ArrayList<>(estimatedPatchSize); } public List<T> applyTo(List<T> target) throws Exception { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.applyTo(result); } return result; } public List<T> restore(List<T> target) { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.restore(result); } return result; } public void addDelta(Diff_AbstractDelta<T> delta) { deltas.add(delta); } public List<Diff_AbstractDelta<T>> getDeltas() { Collections.sort(deltas, java.util.Comparator.comparing(d -> d.getSource().getPosition())); return deltas; } public String toString() { return "Patch{" + "deltas=" + deltas + '}'; } public static <T> Diff_Patch<T> generate(List<T> original, List<T> revised) throws Exception { Diff_MyersDiff m=new Diff_MyersDiff<>(); List<Diff_Change> changes=m.computeDiff(original, revised); 
+/* class Diff  */ Diff_Patch<T> patch = new Diff_Patch<>(changes.size()); for (Diff_Change change : changes) { Diff_Chunk<T> orgChunk = new Diff_Chunk<>(change.startOriginal, new ArrayList<>(original.subList(change.startOriginal, change.endOriginal))); Diff_Chunk<T> revChunk = new Diff_Chunk<>(change.startRevised, new ArrayList<>(revised.subList(change.startRevised, change.endRevised))); switch (change.deltaType) { case Diff_DiffRow.TAG_DELETE: patch.addDelta(new Diff_DeleteDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_INSERT: patch.addDelta(new Diff_InsertDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_CHANGE: patch.addDelta(new Diff_ChangeDelta<>(orgChunk, revChunk)); break; } } return patch; } } 
 
 
 
@@ -16097,6 +16131,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y tarlist]\n"
 /* class by manual */                + "  [y echo]\n"
 /* class by manual */                + "  [y printf]\n"
+/* class by manual */                + "  [y sdiff]\n"
 /* class by manual */                + "  [y cat]\n"
 /* class by manual */                + "  [y lower]\n"
 /* class by manual */                + "  [y upper]\n"
@@ -16191,7 +16226,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y take\n"
 /* class by manual */                + "    y take file1 pasta2\n"
 /* class by manual */                + "    Obs: envia o conteudo desta para para outro computador ou pasta\n"
-/* class by manual */                + "    Obs2: apAs digitar y take, ele irA mostrar o comando que serA utilizado na outra ponta\n"
+/* class by manual */                + "    Obs2: apos digitar y take, ele ira mostrar o comando que sera utilizado na outra ponta\n"
 /* class by manual */                + "[y banco fromCSV -outTable tabelaA selectInsert]\n"
 /* class by manual */                + "    cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert\n"
 /* class by manual */                + "[y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
@@ -16277,7 +16312,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
 /* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
-/* class by manual */                + "    obs: se add pasta e a descricao de pasta tem \"/\" ou \"\\\\\" entAo o pacote terA o conteudo da pasta, caso contrArio terA a pasta citada+conteudo.\n"
+/* class by manual */                + "    obs: se add pasta e a descricao de pasta tem \"/\" ou \"\\\\\" entao o pacote tera o conteudo da pasta, caso contrario tera a pasta citada+conteudo.\n"
 /* class by manual */                + "[y gzip]\n"
 /* class by manual */                + "    cat arquivo | y gzip > arquivo.gz\n"
 /* class by manual */                + "[y gunzip]\n"
@@ -16301,6 +16336,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    echo \"a b c\"\n"
 /* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
 /* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
+/* class by manual */                + "[y sdiff]\n"
+/* class by manual */                + "    y sdiff file1.txt file2.txt\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
 /* class by manual */                + "[y lower]\n"
@@ -16329,8 +16366,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA256 | y base64\n"
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA-256 | y base64\n"
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA | y base64\n"
-/* class by manual */                + "    obs: O comando \"y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA\" equivale A \"openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA\"\n"
-/* class by manual */                + "    obs2: O valor de salt(-S) deverA contAr 16 hexas maiAsculos, ex: AAAAAAAAAAAAAAAA\n"
+/* class by manual */                + "    obs: O comando \"y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA\" equivale a \"openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA\"\n"
+/* class by manual */                + "    obs2: O valor de salt(-S) devera conter 16 hexas maiusculos, ex: AAAAAAAAAAAAAAAA\n"
 /* class by manual */                + "    obs3: Se utilizar o salt na encriptacao, entao devera utilizar o mesmo salt na decriptacao\n"
 /* class by manual */                + "[y base64]\n"
 /* class by manual */                + "    cat arquivo | y base64\n"
@@ -16376,7 +16413,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    obs: -v => verbose\n"
-/* class by manual */                + "    obs2: --header A o mesmo que -H\n"
+/* class by manual */                + "    obs2: --header e o mesmo que -H\n"
 /* class by manual */                + "[ y curlJson]\n"
 /* class by manual */                + "    y curlJson \\\n"
 /* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
@@ -16387,7 +16424,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y [sed|tr]]\n"
 /* class by manual */                + "    cat arquivo | y sed A B\n"
 /* class by manual */                + "    cat arquivo | y sed A B E F\n"
-/* class by manual */                + "    obs: sed com dois parametros A performatico e aceita por exemplo \\n como quebra\n"
+/* class by manual */                + "    obs: sed com dois parametros e performatico e aceita por exemplo \\n como quebra\n"
 /* class by manual */                + "[y n]\n"
 /* class by manual */                + "    cat arquivo | y n\n"
 /* class by manual */                + "    obs: modifica arquivo \\r\\n para \\n(se ja tiver \\n nao tem problema)\n"
@@ -16424,7 +16461,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y touch fileA 60\n"
 /* class by manual */                + "    y touch fileA 20210128235959\n"
 /* class by manual */                + "    obs: 60(60 segundos a frente)\n"
-/* class by manual */                + "    obs2: -3600(3600 segundos atrAs)\n"
+/* class by manual */                + "    obs2: -3600(3600 segundos atras)\n"
 /* class by manual */                + "    obs3: 20210128235959(setando em 28/01/2021 23:59:59)\n"
 /* class by manual */                + "[y rm]\n"
 /* class by manual */                + "    y rm file1 file2\n"
@@ -16433,7 +16470,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y cp]\n"
 /* class by manual */                + "    y cp file1 file2\n"
 /* class by manual */                + "    y cp -R pasta1 pasta2\n"
-/* class by manual */                + "    obs: se a pasta2 nao existir entao A criado a cApia com o nome pasta2, se existir A copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
+/* class by manual */                + "    obs: se a pasta2 nao existir entao e criado a copia com o nome pasta2, se existir e copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
 /* class by manual */                + "[y mv]\n"
 /* class by manual */                + "    y mv file1 file2\n"
 /* class by manual */                + "    y mv pasta1 pasta2\n"
@@ -16476,7 +16513,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    cat arquivo | y awk -v start AAA end BBB    \n"
 /* class by manual */                + "    cat arquivo | y awk -v start AAA\n"
 /* class by manual */                + "    cat arquivo | y awk -v end BBB    \n"
-/* class by manual */                + "    obs: \"-v\" A a negativa\n"
+/* class by manual */                + "    obs: \"-v\" e a negativa\n"
 /* class by manual */                + "    obs2: start e end pode ocorrer varias vezes no texto\n"
 /* class by manual */                + "    obs3: -1 significa o ultimo\n"
 /* class by manual */                + "[y dev_null]\n"
@@ -16528,11 +16565,11 @@ namespace LoopbackWithMic
 /* class by manual */                + "        [ipA] conecta no router que conecta no [ipB]\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
-/* class by manual */                + "    obs: o comando acima irA criar um httpServer temporario com parametros padroes\n"
+/* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
 /* class by manual */                + "    y httpServer 127.0.0.1 8888 pagina_toke_zzz111 \"Lista de arquivos\" \"/dir\" \"\" \"\"\n"
 /* class by manual */                + "    y httpServer \"127.0.0.1 7070 tmp a . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt\"\n"
-/* class by manual */                + "    obs: O windows nAo esta preparado para mais de 9 parametros\n"
-/* class by manual */                + "    obs2: _ serA substituido por \"\" internamente\n"
+/* class by manual */                + "    obs: O windows nao esta preparado para mais de 9 parametros\n"
+/* class by manual */                + "    obs2: _ sera substituido por \"\" internamente\n"
 /* class by manual */                + "    parametros: host(pode ser \"\"), port, titulo_url, titulo, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
 /* class by manual */                + "[y playlist]\n"
 /* class by manual */                + "    y playlist\n"
@@ -16597,7 +16634,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y pss\n"
 /* class by manual */                + "[y pid]\n"
 /* class by manual */                + "    y pid 222\n"
-/* class by manual */                + "    Obs: onde 222 A o processId encontrado em y pss\n"
+/* class by manual */                + "    Obs: onde 222 e o processId encontrado em y pss\n"
 /* class by manual */                + "[y date]\n"
 /* class by manual */                + "    y date\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
@@ -16650,7 +16687,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    Obs: nao foi possivel implementar o mixer alto-falante, somente o mic\n"
 /* class by manual */                + "[y playWav]\n"
 /* class by manual */                + "    y playWav file.wav\n"
-/* class by manual */                + "    y cat file.wav | y playWav  # somente Wave dessa configuraAAo atA agora.\n"
+/* class by manual */                + "    y cat file.wav | y playWav  # somente Wave dessa configuracao ate agora.\n"
 /* class by manual */                + "[y playLine]\n"
 /* class by manual */                + "    y gravadorLine | y playLine\n"
 /* class by manual */                + "[y call]\n"
@@ -16666,7 +16703,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux\n"
 /* class by manual */                + "[y win]\n"
 /* class by manual */                + "    y win\n"
-/* class by manual */                + "    obs: mostra se o windows e office estAo ativado\n"
+/* class by manual */                + "    obs: mostra se o windows e office estao ativado\n"
 /* class by manual */                + "    obs2: outra forma de verificar pelo cmd -> slmgr -dli\n"
 /* class by manual */                + "[y speed]\n"
 /* class by manual */                + "    y speed\n"
@@ -16691,13 +16728,13 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y bmp]\n"
 /* class by manual */                + "    y cat img.bmp | y bmp\n"
 /* class by manual */                + "    y bmp -file a.bmp -len 64\n"
-/* class by manual */                + "    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparaAAo entre imagens\n"
+/* class by manual */                + "    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparacao entre imagens\n"
 /* class by manual */                + "    # primeira linha x, segunda y, demais r g b\n"
 /* class by manual */                + "[y decodeUrl]\n"
 /* class by manual */                + "    echo T%C3%B3quio | y decodeUrl\n"
 /* class by manual */                + "[y encodeUrl]\n"
-/* class by manual */                + "    echo TAquio | y encodeUrl\n"
-/* class by manual */                + "    obs: o espaAo esta sendo representado como +, o que A uma traduAAo obsoleta.\n"
+/* class by manual */                + "    echo Toquio | y encodeUrl\n"
+/* class by manual */                + "    obs: o espaco esta sendo representado como +, o que e uma traducao obsoleta.\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y random]\n"
@@ -16709,15 +16746,15 @@ namespace LoopbackWithMic
 /* class by manual */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
 /* class by manual */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
 /* class by manual */                + "\n"
-/* class by manual */                + "ObservaAAes:\n"
+/* class by manual */                + "Observacoes:\n"
 /* class by manual */                + "entrada de dados pode ser feito por |\n"
-/* class by manual */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmaAAo de fim de processamento de selectCSV\n"
+/* class by manual */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmacao de fim de processamento de selectCSV\n"
 /* class by manual */                + "export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV\n"
-/* class by manual */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravaAAo\n"
-/* class by manual */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravaAAo de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
+/* class by manual */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravacao\n"
+/* class by manual */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravacao de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"TZ\" deixando a data 10/10/2010T10:10:10Z\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"UTC\" deixando a data 10/10/2010 10:10:10 UTC\n"
-/* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data serA na data do natal ex 25/12/2010 10:10:15\n"
+/* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data sera na data do natal ex 25/12/2010 10:10:15\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"YYYY-MM-DD\" 2010-07-07 12:12:12\n"
 /* class by manual */                + "export COM_SEPARADOR_FINAL_CSV_Y=\"S\" ex: \"a\";\"a\"; o padrao seria \"a\";\"a\"\n"
 /* class by manual */                + "export SEM_HEADER_CSV_Y=\"S\"\n"
