@@ -353,7 +353,9 @@ cat buffer.log
                 somente_mini("/y/manual")
             );
             return;
-        }        
+        }
+        if ( args.length > 0 && args[0].equals("var") )
+            args=get_var();
         //REMOVED_GRAAL_START
         if ( args[0].equals("daemon") || args[0].equals("d") ){
             daemon(args);
@@ -2821,6 +2823,28 @@ cat buffer.log
             if ( partes[i].equals(".") || partes[i].equals("..") )
                 return true;
         return false;
+    }
+    
+    private String [] get_var(){
+        String varLine=getEnv("var");
+        if ( varLine == null )
+            erroFatal("VarEnv var não encontrada!");
+        ArrayList<String> lista=new ArrayList<String>();
+        boolean started=false;
+        String s="";
+        for ( int i=0;i<varLine.length();i++ ){
+            if ( varLine.substring(i, i+1).equals("\"") ){
+                started=!started;
+                if ( !started ){
+                    lista.add(s);
+                    s="";                    
+                }
+                continue;
+            }            
+            if ( started )
+                s+=varLine.substring(i, i+1);
+        }
+        return lista.toArray(new String [lista.size()]);        
     }
     
     private boolean take(String [] args){
@@ -7553,8 +7577,8 @@ System.out.println("BB" + retorno);
             }
         }
     }
-	//REMOVED_GRAAL_END
     
+    //REMOVED_GRAAL_END    
     private void serverRouter(String[] args) {
         Object [] objs = get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos(args);
         if ( objs == null ){
@@ -12252,7 +12276,7 @@ class Util{
     }
     
     public static String [] listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
-            "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y"};  
+            "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y","var"};  
     private static String [] listEnv = null;
     public String[] initEnvByParm(String[] args) {
         ArrayList lista=new ArrayList<String>();
@@ -12301,7 +12325,7 @@ class Util{
         erroFatal(71);
         return null;
     }
-
+    
     // %z no linux significa -0300, aqui esta sendo usado para empregar o zoneid America/Sao_Paulo    
     // no java, print de zzzz com zondeId America/Sao_Paulo sai Fuso horário de Brasília
     // lista de zoneid => java.time.ZoneId.getAvailableZoneIds()
@@ -16109,6 +16133,8 @@ namespace LoopbackWithMic
 
 
 
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -16221,6 +16247,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y encodeUrl]\n"
 /* class by manual */                + "  [y test]\n"
 /* class by manual */                + "  [y random]\n"
+/* class by manual */                + "  [y var]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -16745,6 +16772,12 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y random]\n"
 /* class by manual */                + "    y random 1 2\n"
+/* class by manual */                + "[y var]\n"
+/* class by manual */                + "    y var\n"
+/* class by manual */                + "    Obs: execucao por parametro de variavel\n"
+/* class by manual */                + "    set var=\"cat\" \"a\" && y var\n"
+/* class by manual */                + "    export var='\"cat\" \"a\"' && y var\n"
+/* class by manual */                + "    export var='\"cat\" \"a\"' && y var -ignore FLAG_HERE\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
@@ -16833,6 +16866,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

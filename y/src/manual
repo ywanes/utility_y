@@ -106,6 +106,7 @@ usage:
   [y encodeUrl]
   [y test]
   [y random]
+  [y var]
   [y [update|u]]
   [y help]
 
@@ -630,6 +631,12 @@ Exemplos...
     y test
 [y random]
     y random 1 2
+[y var]
+    y var
+    Obs: execução por parametro de variavel
+    set var="cat" "a" && y var
+    export var='"cat" "a"' && y var
+    export var='"cat" "a"' && y var -ignore FLAG_HERE
 [y help]
     y help <command>
     y help router
