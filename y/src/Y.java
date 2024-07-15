@@ -815,6 +815,12 @@ cat buffer.log
             System.exit(1);
         }   
         if ( args[0].equals("sdiff") && args.length == 3 ){
+            File f=new File(args[1]);
+            if ( f == null || !f.exists() || !f.isFile() )
+                erroFatal("Arquivo " + args[1] + " não existe!");
+            f=new File(args[2]);
+            if ( f == null || !f.exists() || !f.isFile() )
+                erroFatal("Arquivo " + args[2] + " não existe!");
             new Diff(args[1], args[2], System.out);
             return;
         }
