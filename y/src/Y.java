@@ -7592,9 +7592,10 @@ System.out.println("BB" + retorno);
         String typeShow=(String)objs[4];
         String log=(String)objs[5];
         String ips_banidos=(String)objs[6];
+        ArrayList<String> decodes=(ArrayList<String>)objs[7];
         
         System.out.println("ips_banidos: " + ips_banidos);
-        new Ponte().serverRouter(host0, port0, host1, port1, typeShow, log, ips_banidos);
+        new Ponte().serverRouter(host0, port0, host1, port1, typeShow, log, ips_banidos, decodes);
     }
 
     ArrayList<String> xlsxToCSV_nomes=null;
@@ -7971,7 +7972,8 @@ System.out.println("BB" + retorno);
         String typeShow=null;
         String log=null;
         String ipsBanidos=null;
-
+        ArrayList<String> decodes = new ArrayList<String>();
+        
         args=sliceParm(1, args);
         
         while(true){
@@ -7985,6 +7987,11 @@ System.out.println("BB" + retorno);
                 args=sliceParm(2, args);
                 continue;
             }
+            if ( args.length > 2 && args[0].equals("-decodeSend") ){
+                decodes.add("decodeSend," + args[1] + "," + args[2]);
+                args=sliceParm(3, args);
+                continue;
+            }            
             if ( args.length > 0 && host0 == null ){
                 host0=args[0];
                 args=sliceParm(1, args);
@@ -8009,7 +8016,7 @@ System.out.println("BB" + retorno);
                 typeShow=args[0];
                 args=sliceParm(1, args);
                 continue;
-            }
+            }            
             if ( port1 == -1 )
                 return null;
             break;
@@ -8018,7 +8025,7 @@ System.out.println("BB" + retorno);
             typeShow="";
         if ( ipsBanidos == null )
             ipsBanidos="";
-        return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos};
+        return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos, decodes};
     }        
     
     private Object [] get_parms_curl_header_method_verbose_raw_host(String [] args){
@@ -13148,7 +13155,7 @@ class Ponte extends Util{
     public static boolean displayVolta=false;
     public static boolean displaySimple=false;
 
-    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log, String ips_banidos){
+    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log, String ips_banidos, ArrayList<String> decodes){
         Ambiente ambiente=null;
         try{
             ambiente=new Ambiente(host0,port0);
@@ -13178,7 +13185,7 @@ class Ponte extends Util{
                     System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
                 new Thread(){
                     public void run(){
-                        ponte0(credencialSocket,host1,port1,ip_origem);
+                        ponte0(credencialSocket,host1,port1,ip_origem,decodes);
                     }
                 }.start();   
             }catch(Exception e){
@@ -13188,13 +13195,13 @@ class Ponte extends Util{
         }
     }
 
-    private void ponte0(Socket credencialSocket, String host1, int port1, String ip_origem) {
+    private void ponte0(Socket credencialSocket, String host1, int port1, String ip_origem, ArrayList<String> decodes) {
         String id=padLeftZeros(new Random().nextInt(100000)+"",6);
         System.out.println("iniciando ponte id "+id+" - ip origem "+ip_origem);
         Origem origem=null;
         try{
-            Destino destino=new Destino(host1,port1);                    
-            origem=new Origem(credencialSocket,id);
+            Destino destino=new Destino(host1,port1,decodes);                    
+            origem=new Origem(credencialSocket,id,decodes);
             origem.referencia(destino);
             destino.referencia(origem);
             origem.start(); // destino é startado no meio do start da origem;
@@ -13209,10 +13216,40 @@ class Ponte extends Util{
         OutputStreamCustom os=null;
         Origem origem=null;
         String host1;
-        int port1;        
-        private Destino(String host1, int port1) {
+        int port1;    
+        byte[][] decodeSend_A=null;
+        byte[][] decodeSend_B=null;
+        private Destino(String host1, int port1, ArrayList<String> decodes) {
             this.host1=host1;
             this.port1=port1;
+            init_decodes(decodes);
+        }
+        private void init_decodes(ArrayList<String> decodes){
+            int count=0;
+            for ( int i=0;i<decodes.size();i++ ){
+                if ( decodes.get(i).split(",")[0].equals("decodeSend") )
+                    count++;
+            }               
+            if ( count > 0 ){
+                decodeSend_A=new byte[count][0];
+                decodeSend_B=new byte[count][0];
+                count=0;
+                for ( int i=0;i<decodes.size();i++ ){
+                    String [] partes=decodes.get(i).split(",");
+                    if ( partes[0].equals("decodeSend") ){
+                        String [] tmp=partes[1].split(" ");
+                        decodeSend_A[count]=new byte[tmp.length];
+                        for ( int j=0;j<tmp.length;j++ )
+                            decodeSend_A[count][j]=(byte)Integer.parseInt(tmp[j]);
+                        
+                        tmp=partes[2].split(" ");
+                        decodeSend_B[count]=new byte[tmp.length];
+                        for ( int j=0;j<tmp.length;j++ )
+                            decodeSend_B[count][j]=(byte)Integer.parseInt(tmp[j]);
+                        count++;
+                    }
+                }
+            }
         }
         private void referencia(Origem origem) {
             this.origem=origem;
@@ -13238,6 +13275,20 @@ class Ponte extends Util{
         }
 
         private void ida(byte[] buffer,int len, String ponteID) throws Exception {   // |   | ->|          
+            if ( decodeSend_A != null ){
+                for ( int i=0;i<decodeSend_A.length;i++ ){
+                    if ( decodeSend_A[i].length == len ){
+                        for( int j=0;j<len;j++ ){
+                            if ( decodeSend_A[i][j] != buffer[j] )
+                                break;
+                            if ( j == len-1 ){
+                                os.write(OutputStreamCustom.IDA,decodeSend_B[i],0,decodeSend_B[i].length,ponteID);
+                                return;                                
+                            }
+                        }
+                    }
+                }
+            }
             os.write(OutputStreamCustom.IDA,buffer,0,len,ponteID);
         }
     }
@@ -13248,10 +13299,12 @@ class Ponte extends Util{
         OutputStreamCustom os=null;
         Destino destino=null;
         int port0;
+        ArrayList<String> decodes=null;
         
-        private Origem(Socket credencialSocket,String ponteID) {            
+        private Origem(Socket credencialSocket,String ponteID, ArrayList<String> decodes) {            
             socket=credencialSocket;
             this.ponteID=ponteID;
+            this.decodes=decodes;
         }
         private void referencia(Destino destino) {
             this.destino=destino;
