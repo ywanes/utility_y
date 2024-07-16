@@ -13217,40 +13217,64 @@ class Ponte extends Util{
         Origem origem=null;
         String host1;
         int port1;    
-        byte[][] decodeSend_A=null;
-        byte[][] decodeSend_B=null;
+        byte[][] decode_A=null;
+        byte[][] decode_B=null;
+        byte[][] suprime=null;
+        String decode_tag="decodeSend";
+        String suprime_tag="suprimeSend";
         private Destino(String host1, int port1, ArrayList<String> decodes) {
             this.host1=host1;
             this.port1=port1;
             init_decodes(decodes);
+            init_suprimes(decodes);
         }
         private void init_decodes(ArrayList<String> decodes){
             int count=0;
             for ( int i=0;i<decodes.size();i++ ){
-                if ( decodes.get(i).split(",")[0].equals("decodeSend") )
+                if ( decodes.get(i).split(",")[0].equals(decode_tag) )
                     count++;
             }               
             if ( count > 0 ){
-                decodeSend_A=new byte[count][0];
-                decodeSend_B=new byte[count][0];
+                decode_A=new byte[count][0];
+                decode_B=new byte[count][0];
                 count=0;
                 for ( int i=0;i<decodes.size();i++ ){
                     String [] partes=decodes.get(i).split(",");
-                    if ( partes[0].equals("decodeSend") ){
+                    if ( partes[0].equals(decode_tag) ){
                         String [] tmp=partes[1].split(" ");
-                        decodeSend_A[count]=new byte[tmp.length];
+                        decode_A[count]=new byte[tmp.length];
                         for ( int j=0;j<tmp.length;j++ )
-                            decodeSend_A[count][j]=(byte)Integer.parseInt(tmp[j]);
+                            decode_A[count][j]=(byte)Integer.parseInt(tmp[j]);
                         
                         tmp=partes[2].split(" ");
-                        decodeSend_B[count]=new byte[tmp.length];
+                        decode_B[count]=new byte[tmp.length];
                         for ( int j=0;j<tmp.length;j++ )
-                            decodeSend_B[count][j]=(byte)Integer.parseInt(tmp[j]);
+                            decode_B[count][j]=(byte)Integer.parseInt(tmp[j]);
                         count++;
                     }
                 }
             }
         }
+        private void init_suprimes(ArrayList<String> decodes){
+            int count=0;
+            for ( int i=0;i<decodes.size();i++ ){
+                if ( decodes.get(i).split(",")[0].equals(suprime_tag) )
+                    count++;
+            }               
+            if ( count > 0 ){
+                suprime=new byte[count][0];
+                count=0;
+                for ( int i=0;i<decodes.size();i++ ){
+                    String [] partes=decodes.get(i).split(",");
+                    if ( partes[0].equals(suprime_tag) ){
+                        String [] tmp=partes[1].split(" ");
+                        suprime[count]=new byte[tmp.length];
+                        for ( int j=0;j<tmp.length;j++ )
+                            suprime[count][j]=(byte)Integer.parseInt(tmp[j]);
+                    }
+                }
+            }
+        }        
         private void referencia(Origem origem) {
             this.origem=origem;
         }
@@ -13275,16 +13299,28 @@ class Ponte extends Util{
         }
 
         private void ida(byte[] buffer,int len, String ponteID) throws Exception {   // |   | ->|          
-            if ( decodeSend_A != null ){
-                for ( int i=0;i<decodeSend_A.length;i++ ){
-                    if ( decodeSend_A[i].length == len ){
+            if ( decode_A != null ){
+                for ( int i=0;i<decode_A.length;i++ ){
+                    if ( decode_A[i].length == len ){
                         for( int j=0;j<len;j++ ){
-                            if ( decodeSend_A[i][j] != buffer[j] )
+                            if ( decode_A[i][j] != buffer[j] )
                                 break;
                             if ( j == len-1 ){
-                                os.write(OutputStreamCustom.IDA,decodeSend_B[i],0,decodeSend_B[i].length,ponteID);
+                                os.write(OutputStreamCustom.IDA,decode_B[i],0,decode_B[i].length,ponteID);
                                 return;                                
                             }
+                        }
+                    }
+                }
+            }
+            if ( suprime != null ){
+                for ( int i=0;i<suprime.length;i++ ){
+                    if ( suprime[i].length == len ){
+                        for( int j=0;j<len;j++ ){
+                            if ( suprime[i][j] != buffer[j] )
+                                break;
+                            if ( j == len-1 )                                
+                                return;                                
                         }
                     }
                 }
@@ -13299,13 +13335,65 @@ class Ponte extends Util{
         OutputStreamCustom os=null;
         Destino destino=null;
         int port0;
-        ArrayList<String> decodes=null;
+        byte[][] decode_A=null;
+        byte[][] decode_B=null;
+        byte[][] suprime=null;
+        String decode_tag="decodeReceive";
+        String suprime_tag="suprimeReceive";
         
         private Origem(Socket credencialSocket,String ponteID, ArrayList<String> decodes) {            
             socket=credencialSocket;
             this.ponteID=ponteID;
-            this.decodes=decodes;
+            init_decodes(decodes);
+            init_suprimes(decodes);
         }
+        private void init_decodes(ArrayList<String> decodes){
+            int count=0;
+            for ( int i=0;i<decodes.size();i++ ){
+                if ( decodes.get(i).split(",")[0].equals(decode_tag) )
+                    count++;
+            }               
+            if ( count > 0 ){
+                decode_A=new byte[count][0];
+                decode_B=new byte[count][0];
+                count=0;
+                for ( int i=0;i<decodes.size();i++ ){
+                    String [] partes=decodes.get(i).split(",");
+                    if ( partes[0].equals(decode_tag) ){
+                        String [] tmp=partes[1].split(" ");
+                        decode_A[count]=new byte[tmp.length];
+                        for ( int j=0;j<tmp.length;j++ )
+                            decode_A[count][j]=(byte)Integer.parseInt(tmp[j]);
+                        
+                        tmp=partes[2].split(" ");
+                        decode_B[count]=new byte[tmp.length];
+                        for ( int j=0;j<tmp.length;j++ )
+                            decode_B[count][j]=(byte)Integer.parseInt(tmp[j]);
+                        count++;
+                    }
+                }
+            }
+        }
+        private void init_suprimes(ArrayList<String> decodes){
+            int count=0;
+            for ( int i=0;i<decodes.size();i++ ){
+                if ( decodes.get(i).split(",")[0].equals(suprime_tag) )
+                    count++;
+            }               
+            if ( count > 0 ){
+                suprime=new byte[count][0];
+                count=0;
+                for ( int i=0;i<decodes.size();i++ ){
+                    String [] partes=decodes.get(i).split(",");
+                    if ( partes[0].equals(suprime_tag) ){
+                        String [] tmp=partes[1].split(" ");
+                        suprime[count]=new byte[tmp.length];
+                        for ( int j=0;j<tmp.length;j++ )
+                            suprime[count][j]=(byte)Integer.parseInt(tmp[j]);
+                    }
+                }
+            }
+        }            
         private void referencia(Destino destino) {
             this.destino=destino;
         }
@@ -13329,6 +13417,32 @@ class Ponte extends Util{
         }
 
         private void volta(int len,byte[] buffer) throws Exception { // |<- |   |
+            if ( decode_A != null ){
+                for ( int i=0;i<decode_A.length;i++ ){
+                    if ( decode_A[i].length == len ){
+                        for( int j=0;j<len;j++ ){
+                            if ( decode_A[i][j] != buffer[j] )
+                                break;
+                            if ( j == len-1 ){
+                                os.write(OutputStreamCustom.VOLTA,decode_B[i],0,decode_B[i].length,ponteID);
+                                return;                                
+                            }
+                        }
+                    }
+                }
+            }
+            if ( suprime != null ){
+                for ( int i=0;i<suprime.length;i++ ){
+                    if ( suprime[i].length == len ){
+                        for( int j=0;j<len;j++ ){
+                            if ( suprime[i][j] != buffer[j] )
+                                break;
+                            if ( j == len-1 )                                
+                                return;                                
+                        }
+                    }
+                }
+            }            
             os.write(OutputStreamCustom.VOLTA,buffer,0,len,ponteID);
         }
 
@@ -16649,6 +16763,10 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs:\n"
 /* class by manual */                + "        [ipA] -> Router -> [ipB]\n"
 /* class by manual */                + "        [ipA] conecta no router que conecta no [ipB]\n"
+/* class by manual */                + "   obs2, mais atributos opcionais:\n"
+/* class by manual */                + "        \"-decodeSend\" \"12 0 26 6 0 0 0 0 0 0 0 0 0\" \"15 0 3 12 119 119 32 103 105 118 101 32 116 97 105 108\"\n"
+/* class by manual */                + "        \"-decodeReceive\" \"3 0 0 0\" \"4 0 0 0\"\n"
+/* class by manual */                + "        \"-suprimeSend\" \"5 0 0 0\"\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
@@ -16919,6 +17037,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
