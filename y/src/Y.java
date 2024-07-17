@@ -12077,7 +12077,7 @@ class Util{
     }
     
     public List<String> readAllLines(String caminho){
-        try{
+        try{            
             return java.nio.file.Files.readAllLines(java.nio.file.Paths.get(caminho));
         }catch(Exception e){
             erroFatal(e);
