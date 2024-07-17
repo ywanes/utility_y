@@ -17,7 +17,7 @@ New-Item c:/programFiles -ItemType Directory -ea 0
 cd c:/programFiles
 
 # https://www.openlogic.com/openjdk-downloads
-Invoke-WebRequest -uri "https://builds.openlogic.com/downloadJDK/openlogic-openjdk/8u412-b08/openlogic-openjdk-8u412-b08-windows-x64.zip" -Method "GET"  -Outfile -Outfile java.zip
+Invoke-WebRequest -uri "https://builds.openlogic.com/downloadJDK/openlogic-openjdk/8u412-b08/openlogic-openjdk-8u412-b08-windows-x64.zip" -Method "GET"  -Outfile java.zip
 # teste.. Invoke-WebRequest -uri "https://arch.iit.edu/files/zip/22344/150-dpi.zip" -Method "GET"  -Outfile java.zip
 Expand-Archive -LiteralPath 'java.zip'
 [Environment]::SetEnvironmentVariable("JAVA_HOME", "c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64", "Machine")
