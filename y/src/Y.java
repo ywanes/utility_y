@@ -13277,8 +13277,14 @@ class Ponte extends Util{
                     String [] partes=decodes.get(i).split(",");
                     if ( partes[0].equals(suprime_tag) ){
                         String [] tmp=partes[1].split(" ");
-                        suprime[count]=new byte[tmp.length];
-                        for ( int j=0;j<tmp.length;j++ )
+                        int len=tmp.length;
+                        suprime_asterisco[count]=false;
+                        if ( tmp[len-1].equals("...") ){
+                            len--;
+                            decode_A_asterisco[count]=true;
+                        }
+                        suprime[count]=new byte[len];
+                        for ( int j=0;j<len;j++ )
                             suprime[count][j]=(byte)Integer.parseInt(tmp[j]);
                     }
                 }
@@ -13345,8 +13351,10 @@ class Ponte extends Util{
         Destino destino=null;
         int port0;
         byte[][] decode_A=null;
+        boolean[] decode_A_asterisco=null;
         byte[][] decode_B=null;
-        byte[][] suprime=null;
+        byte[][] suprime=null;        
+        boolean[] suprime_asterisco=null;
         String decode_tag="decodeReceive";
         String suprime_tag="suprimeReceive";
         
@@ -13364,14 +13372,21 @@ class Ponte extends Util{
             }               
             if ( count > 0 ){
                 decode_A=new byte[count][0];
+                decode_A_asterisco=new boolean[count];
                 decode_B=new byte[count][0];
                 count=0;
                 for ( int i=0;i<decodes.size();i++ ){
                     String [] partes=decodes.get(i).split(",");
                     if ( partes[0].equals(decode_tag) ){
                         String [] tmp=partes[1].split(" ");
-                        decode_A[count]=new byte[tmp.length];
-                        for ( int j=0;j<tmp.length;j++ )
+                        int len=tmp.length;
+                        decode_A_asterisco[count]=false;
+                        if ( tmp[len-1].equals("...") ){
+                            len--;
+                            decode_A_asterisco[count]=true;
+                        }
+                        decode_A[count]=new byte[len];                        
+                        for ( int j=0;j<len;j++ )
                             decode_A[count][j]=(byte)Integer.parseInt(tmp[j]);
                         
                         tmp=partes[2].split(" ");
@@ -13396,8 +13411,14 @@ class Ponte extends Util{
                     String [] partes=decodes.get(i).split(",");
                     if ( partes[0].equals(suprime_tag) ){
                         String [] tmp=partes[1].split(" ");
-                        suprime[count]=new byte[tmp.length];
-                        for ( int j=0;j<tmp.length;j++ )
+                        int len=tmp.length;
+                        suprime_asterisco[count]=false;
+                        if ( tmp[len-1].equals("...") ){
+                            len--;
+                            decode_A_asterisco[count]=true;
+                        }
+                        suprime[count]=new byte[len];
+                        for ( int j=0;j<len;j++ )
                             suprime[count][j]=(byte)Integer.parseInt(tmp[j]);
                     }
                 }
@@ -13428,7 +13449,7 @@ class Ponte extends Util{
         private void volta(int len,byte[] buffer) throws Exception { // |<- |   |
             if ( decode_A != null ){
                 for ( int i=0;i<decode_A.length;i++ ){
-                    if ( decode_A[i].length == len ){
+                    if ( decode_A[i].length == len || (decode_A[i].length <= len && decode_A_asterisco[i] ) ){
                         for( int j=0;j<len;j++ ){
                             if ( decode_A[i][j] != buffer[j] )
                                 break;
@@ -13442,7 +13463,7 @@ class Ponte extends Util{
             }
             if ( suprime != null ){
                 for ( int i=0;i<suprime.length;i++ ){
-                    if ( suprime[i].length == len ){
+                    if ( suprime[i].length == len || ( suprime[i].length <= len && suprime_asterisco[i] ) ){
                         for( int j=0;j<len;j++ ){
                             if ( suprime[i][j] != buffer[j] )
                                 break;
@@ -13451,7 +13472,7 @@ class Ponte extends Util{
                         }
                     }
                 }
-            }            
+            }        
             os.write(OutputStreamCustom.VOLTA,buffer,0,len,ponteID);
         }
 
