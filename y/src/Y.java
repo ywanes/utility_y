@@ -12257,12 +12257,12 @@ class Util{
         
     public String tryGetKernellInLinuxByOs(String s, String type){
         if ( ! type.equals("Linux") )
-            return s+" ..";
+            return s;
         if ( ! s.contains("Distributor ID:\tUbuntu") )
-            return s+" ...";
+            return s;
         String tmp=runtimeExec("uname -r", null, null);
         if ( tmp == null )
-            return s+" ....";
+            return s;
         return s+"Kernell:\t" + tmp;       
     }
     
