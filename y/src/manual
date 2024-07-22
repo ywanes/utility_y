@@ -114,6 +114,11 @@ Exemplos...
 
 [y daemon]
     y daemon
+    y daemon -server
+    y d r a
+    y d list
+    y d tail AA
+    y d restart AA
 [y take]
     y take
     y take file1 pasta2
