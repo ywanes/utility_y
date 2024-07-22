@@ -12246,6 +12246,7 @@ class Util{
                     return osGetTypeTrueCache;                     
                 }
                 s=tryGetKernellInLinuxByOs(s, types[i]);
+                s=tryGetFirewallInWindowsByOs(s, types[i]);
                 osGetTypeFalseCache=s;
                 return osGetTypeFalseCache;                     
             }
@@ -12266,6 +12267,28 @@ class Util{
         return s+"Kernell:\t" + tmp;       
     }
     
+    public String tryGetFirewallInWindowsByOs(String s, String type){
+        if ( ! type.equals("Windows") )
+            return s;
+        String tmp=runtimeExec("netsh advfirewall show allprofiles state", null, null);
+        if ( tmp == null )
+            return s;        
+        String [] partes=tmp.split("\n");
+        if ( partes.length < 13 )
+            return s;
+        if ( partes[2].length() < 2 || !partes[2].substring(0, 1).equals("-") )
+            return s;    
+        String p1=partes[7].substring(15).trim();
+        String p2=partes[7].substring(15).trim();
+        if ( !p1.equals("Desligado") && !p1.equals("Ligado") && !p1.equals("ON") && !p1.equals("OFF") )
+            return s+"Firewall:\t?";
+        if ( !p2.equals("Desligado") && !p2.equals("Ligado") && !p2.equals("ON") && !p2.equals("OFF") )
+            return s+"Firewall:\t?";
+        if ( p1.equals("Ligado") || p1.equals("ON") || p2.equals("Ligado") || p2.equals("ON") )
+            return s+"Firewall:\tOn";
+        return s.replace("\r\n\r\n", "\r\n")+"Firewall:\tOff";
+    }
+        
     public boolean isWindows(){
         return os(true).equals("Windows");
     }
