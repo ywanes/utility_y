@@ -464,6 +464,7 @@ Exemplos...
         "-decodeSend" "12 0 26 6 0 0 0 0 0 0 0 0 0" "15 0 3 12 119 119 32 103 105 118 101 32 116 97 105 108"
         "-decodeReceive" "3 0 0 0 ..." "4 0 0 0"
         "-suprimeSend" "5 0 0 0"
+        -ips_banidos 2804:14d:ac80:8889::
 [y httpServer]
     y httpServer
     obs: o comando acima irá criar um httpServer temporario com parametros padroes
@@ -602,7 +603,7 @@ Exemplos...
     y kill 3434
     y kill 3434 3435
     obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux
-    legenda Signal kill linux:
+    legenda Signal kill linux(os principais.. para mais, digite kill -l):
         SIGTERM      15       Term    Termination signal
         SIGINT        2       Term    Famous CONTROL+C interrupt from keyboard
         SIGHUP        1       Term    Disconnected terminal or parent died

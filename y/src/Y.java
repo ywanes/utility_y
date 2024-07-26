@@ -2829,11 +2829,13 @@ cat buffer.log
         String varLine=getEnv("var");
         if ( varLine == null )
             erroFatal("VarEnv var não encontrada!");
+        varLine=autoFormataAspas(varLine);
         ArrayList<String> lista=new ArrayList<String>();
         boolean started=false;
-        String s="";
+        String s="";        
         for ( int i=0;i<varLine.length();i++ ){
-            if ( varLine.substring(i, i+1).equals("\"") ){
+            if ( varLine.substring(i, i+1).equals("\"") 
+            ){
                 started=!started;
                 if ( !started ){
                     lista.add(s);
@@ -2846,6 +2848,55 @@ cat buffer.log
         }
         return lista.toArray(new String [lista.size()]);        
     }
+    
+    private String autoFormataAspas(String a){
+        String s="";
+        int stage=0; // 0 livre, 1 start_aspas, 2 start_char
+        int tag=0; // 0 aspas, 1 char, 2 space
+        for(int i=0;i<a.length();i++){
+            String t=a.substring(i, i+1);
+            // get tag
+            if (t.equals("\""))
+                tag=0;
+            else{
+                if (t.equals(" "))
+                    tag=2;
+                else
+                    tag=1;
+            }
+            // pre add
+            if (stage == 0 && tag == 1){
+                s+="\"";
+            }
+            if (stage == 2 && tag == 2){
+                s+="\"";
+            }
+            // add
+            s+=t;
+            // set stage 0
+            if(
+                (stage == 1 && tag == 0)
+                || (stage == 2 && tag == 2)
+            ){
+               stage=0;
+               continue;
+            }
+            // set stage 1
+            if((stage == 0 && tag == 0)){
+               stage=1;
+               continue;
+            }
+            // set stage 2
+            if((stage == 0 && tag == 1)){
+               stage=2;
+               continue;
+            }
+        }
+        if ( stage != 0 )
+            s+="\"";
+        return s;
+    }
+    
     
     private boolean take(String [] args){
         Object [] objs=get_parm_ip_port_server_send_pass_paths(args);
