@@ -9868,10 +9868,12 @@ while True:
                 return;
             }
             if ( parms_steps_type2.length > 0 ){                
+                if ( !new File("c:/windows/windows-kill.exe").exists() )
+                    erroFatal("Não foi possível encontrar a ferramenta c:/windows/windows-kill.exe - favor baixar em https://github.com/ElyDotDev/windows-kill/releases");
                 for ( int i=0;i<parms_steps_type2.length;i++ ){
                     String s=runtimeExec(null, new String[]{"windows-kill", "-2", parms_steps_type2[i]}, null);
                     if ( s == null )
-                        erroFatal(s);
+                        erroFatal(runtimeExecError);
                     s+="\n";
                     if ( out != null )
                         out.write(s.getBytes());            
