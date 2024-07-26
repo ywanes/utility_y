@@ -1798,7 +1798,22 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("kill") && args.length >= 2 ){
-            kill(args, System.out, 1);
+            String [] args2=new String[args.length];
+            System.arraycopy(args, 0, args2, 0, args.length);
+            args2=sliceParm(1, args2);
+            int i=0;
+            String type="-9";
+            while(true){
+                if ( i>= args2.length )
+                    break;
+                if ( args2[i].equals("-2") || args2[i].equals("-9") ){
+                    type=args2[i];
+                    args2=sliceParm(1, args2);
+                    continue;
+                }
+                i++;
+            }
+            kill(args2, System.out, type);
             return;
         }
         if ( args[0].equals("win") ){
@@ -1907,6 +1922,10 @@ cat buffer.log
         }
         if ( args[0].equals("test") ){
             test();
+            return;
+        }
+        if ( args[0].equals("controlc") ){
+            controlc();
             return;
         }
         if ( args[0].equals("random") && args.length == 3 ){
@@ -2396,7 +2415,7 @@ cat buffer.log
                                             if ( restart ){                                                
                                                 String pid=get_pid_by_text(" -ignore DAEMON" + nome + " ");
                                                 if ( pid != null )
-                                                    kill(new String[]{pid}, new ByteArrayOutputStream(), 0);                                                            
+                                                    kill(new String[]{pid});
                                             }                                            
                                             boolean jaEmUso=false;
                                             for ( int i=0;i<procs.size();i++ ){
@@ -2447,7 +2466,7 @@ cat buffer.log
                                                 result=nome + " nao esta em execucao";
                                             String pid=get_pid_by_text(" -ignore DAEMON" + nome + " ");
                                             if ( pid != null ){
-                                                kill(new String[]{pid}, new ByteArrayOutputStream(), 0);
+                                                kill(new String[]{pid});
                                                 result=nome + " stopado";
                                             }
                                             results+=result+"\n";
@@ -6838,12 +6857,30 @@ System.out.println("BB" + retorno);
     }
 
     public String[] sliceParm(int n, String[] args) {
+        if ( n == 0 )
+            erroFatal("erro interno sliceParm");
         String [] retorno=new String[args.length-n];
         for ( int i=n;i<args.length;i++ )
             retorno[i-n]=args[i];
         return retorno;
     }
 
+    public String[] addParm(String a, String[] args) {
+        return addParm(a, args.length, args);
+    }
+    
+    public String[] addParm(String a, int pos, String[] args){        
+        String [] retorno=new String[args.length+1];
+        retorno[pos]=a;
+        int delta=0;
+        for ( int i=0;i<args.length;i++ ){
+            if ( i == pos )
+                delta=1;
+            retorno[i+delta]=args[i];
+        }
+        return retorno;
+    }
+    
     public void createjobexecute(String conn) throws Exception {
         String line;
         String SQL="";
@@ -9791,48 +9828,60 @@ while True:
         }            
     }
     
-    public void kill(String [] parms_, OutputStream out, int index){
+    public void kill(String [] parms_){
+        kill(parms_, null, "-9");
+    }
+    
+    public void kill(String [] parms_, OutputStream out, String type){
         try{
-            int len_array=parms_.length;
-            int len_util=len_array-index;
-            String [] parms = null;
-            if (isWindows()){
-                int count = 2;
-                parms=new String[2+(len_util)*2];
-                parms[0] = "taskkill";
-                parms[1] = "/f";
-                for ( int i=index;i<len_array;i++ ){
-                    parms[count++]="/pid";
-                    parms[count++]=parms_[i];
+            String [] parms=new String[0];
+            String [] parms_steps_type2=new String[0];
+            if ( isLinux() ){
+                parms = addParm("kill", parms);
+                parms = addParm(type, parms);
+                for ( int i=0;i<parms_.length;i++ )
+                    parms = addParm(parms_[i], parms);
+            }
+            if ( isWindows() ){
+                if ( type.equals("-9") ){
+                    parms = addParm("taskkill", parms);
+                    parms = addParm("/f", parms);
+                    for ( int i=0;i<parms_.length;i++ ){
+                        parms = addParm("/pid", parms);
+                        parms = addParm(parms_[i], parms);
+                    }
+                }
+                if ( type.equals("-2") ){
+                    parms_steps_type2 = parms_;
                 }
             }
-            if (isLinux()){
-                int count = 2;
-                parms=new String[2+(len_util)];
-                parms[0] = "kill";
-                parms[1] = "-9";                
-                for ( int i=index;i<len_array;i++ )
-                    parms[count++]=parms_[i];
-            }
-            if ( parms == null ){
-                out.write("Comando nao implementado para esse sistema!".getBytes());
+            Charset.forName("UTF-8");
+            if ( parms.length == 0 && parms_steps_type2.length == 0 )                
+                erroFatal("erro interno - parametros invalidos.. ");
+            if ( parms.length > 0 ){
+                String s=runtimeExec(null, parms, null);
+                if ( s == null )
+                    s=runtimeExecError;
+                s+="\n";
+                if ( out != null )
+                    out.write(s.getBytes());  
                 return;
             }
-            Charset.forName("UTF-8");
-            Process proc = Runtime.getRuntime().exec(parms);
-            //java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-            byte[] b=new byte[1024];
-            int len=0;
-            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                out.write(b, 0, len);                    
+            if ( parms_steps_type2.length > 0 ){                
+                for ( int i=0;i<parms_steps_type2.length;i++ ){
+                    String s=runtimeExec(null, new String[]{"windows-kill", "-2", parms_steps_type2[i]}, null);
+                    if ( s == null )
+                        erroFatal(s);
+                    s+="\n";
+                    if ( out != null )
+                        out.write(s.getBytes());            
+                }
+                return;
             }
-            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                out.write(b, 0, len);
-            }               
-            out.write("\n".getBytes());
         }catch(Exception e){
             try{
-                out.write(e.toString().getBytes());            
+                if ( out != null )
+                    out.write(e.toString().getBytes());            
             }catch(Exception e2){
                 System.err.println("Erro desconhecido");
             }
@@ -10835,6 +10884,32 @@ while True:
         }
     }
     
+    private void controlc(){
+        try{
+            System.out.println("Control C iniciado...");
+            String [] controlC_parms = new String []{"\n", "0"};
+            // DisableControlC
+            new Util().loadDisableControlC(controlC_parms);
+            InputStream inputStream_pipe=System.in;      
+            byte [] buff = new byte[BUFFER_SIZE];
+            while(true){
+                if ( controlC_parms[1].equals("1") )
+                    break;
+                if ( inputStream_pipe.available() <= 0 )
+                    continue;
+                inputStream_pipe.read(buff,0,BUFFER_SIZE);
+            }   
+            System.out.println("3...");
+            sleepSeconds(1);
+            System.out.println("2...");
+            sleepSeconds(1);
+            System.out.println("1...");
+            sleepSeconds(1);
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+    
     private void update(){        
         try{
             boolean error=false;
@@ -11617,7 +11692,7 @@ class Util{
             if ( commands == null )
                 commands=line_commands.split(" ");
             runtimeExecError="";
-            Process proc = Runtime.getRuntime().exec(commands, null, file_path);
+            Process proc = Runtime.getRuntime().exec(commands, null, file_path);            
             byte[] b=new byte[1024];
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ByteArrayOutputStream baos_err = new ByteArrayOutputStream();
@@ -12629,16 +12704,6 @@ class Util{
     public void sleepMillis(long mili){
         try {Thread.sleep(mili);} catch (InterruptedException e) { }  
     }
-    
-    /*
-    public void arrayCopyBytes(byte [] a, byte [] b){        
-        for ( int i=0;i<a.length;i++ ){
-            if ( i >= b.length )
-                break;
-            b[i]=a[i];        
-        }
-    }
-    */
     
     java.awt.Robot robot_local=null;
     public java.awt.Robot robotGet() throws Exception{
@@ -16406,6 +16471,8 @@ namespace LoopbackWithMic
 
 
 
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -16517,6 +16584,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y decodeUrl]\n"
 /* class by manual */                + "  [y encodeUrl]\n"
 /* class by manual */                + "  [y test]\n"
+/* class by manual */                + "  [y controlc]\n"
 /* class by manual */                + "  [y random]\n"
 /* class by manual */                + "  [y var]\n"
 /* class by manual */                + "  [y [update|u]]\n"
@@ -16526,6 +16594,11 @@ namespace LoopbackWithMic
 /* class by manual */                + "\n"
 /* class by manual */                + "[y daemon]\n"
 /* class by manual */                + "    y daemon\n"
+/* class by manual */                + "    y daemon -server\n"
+/* class by manual */                + "    y d r a\n"
+/* class by manual */                + "    y d list\n"
+/* class by manual */                + "    y d tail AA\n"
+/* class by manual */                + "    y d restart AA\n"
 /* class by manual */                + "[y take]\n"
 /* class by manual */                + "    y take\n"
 /* class by manual */                + "    y take file1 pasta2\n"
@@ -16869,8 +16942,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "        [ipA] conecta no router que conecta no [ipB]\n"
 /* class by manual */                + "   obs2, mais atributos opcionais:\n"
 /* class by manual */                + "        \"-decodeSend\" \"12 0 26 6 0 0 0 0 0 0 0 0 0\" \"15 0 3 12 119 119 32 103 105 118 101 32 116 97 105 108\"\n"
-/* class by manual */                + "        \"-decodeReceive\" \"3 0 0 0\" \"4 0 0 0\"\n"
+/* class by manual */                + "        \"-decodeReceive\" \"3 0 0 0 ...\" \"4 0 0 0\"\n"
 /* class by manual */                + "        \"-suprimeSend\" \"5 0 0 0\"\n"
+/* class by manual */                + "        -ips_banidos 2804:14d:ac80:8889::\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
@@ -17008,7 +17082,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y kill]\n"
 /* class by manual */                + "    y kill 3434\n"
 /* class by manual */                + "    y kill 3434 3435\n"
-/* class by manual */                + "    obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux\n"
+/* class by manual */                + "    y kill -9 3434 3435\n"
+/* class by manual */                + "    y kill -2 3434 3435\n"
 /* class by manual */                + "[y win]\n"
 /* class by manual */                + "    y win\n"
 /* class by manual */                + "    obs: mostra se o windows e office estao ativado\n"
@@ -17045,6 +17120,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs: o espaco esta sendo representado como +, o que e uma traducao obsoleta.\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
+/* class by manual */                + "[y controlc]\n"
+/* class by manual */                + "    y controlc\n"
 /* class by manual */                + "[y random]\n"
 /* class by manual */                + "    y random 1 2\n"
 /* class by manual */                + "[y var]\n"
@@ -17141,6 +17218,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

@@ -105,6 +105,7 @@ usage:
   [y decodeUrl]
   [y encodeUrl]
   [y test]
+  [y controlc]
   [y random]
   [y var]
   [y [update|u]]
@@ -602,21 +603,8 @@ Exemplos...
 [y kill]
     y kill 3434
     y kill 3434 3435
-    obs: equivalente a taskkill /f /pid 3434 do windows e kill -9 3434 do linux
-    legenda Signal kill linux(os principais.. para mais, digite kill -l):
-        SIGTERM      15       Term    Termination signal
-        SIGINT        2       Term    Famous CONTROL+C interrupt from keyboard
-        SIGHUP        1       Term    Disconnected terminal or parent died
-        SIGPIPE      13       Term    Broken pipe
-        SIGALRM(*)   14       Term    Timer signal from alarm
-        SIGUSR2(*)   12       Term    User-defined signal 2
-        SIGUSR1(*)   10       Term    User-defined signal 1
-        SIGQUIT       3       Core    CONTRL+\ or quit from keyboard
-        SIGABRT       6       Core    Abort signal from abort(3)
-        SIGSEGV      11       Core    Invalid memory reference
-        SIGILL        4       Core    Illegal Instruction
-        SIGFPE        8       Core    Floating point exception
-        SIGKILL       9       Term    Kill signal
+    y kill -9 3434 3435
+    y kill -2 3434 3435
 [y win]
     y win
     obs: mostra se o windows e office estão ativado
@@ -653,6 +641,8 @@ Exemplos...
     obs: o espaço esta sendo representado como +, o que é uma tradução obsoleta.
 [y test]
     y test
+[y controlc]
+    y controlc
 [y random]
     y random 1 2
 [y var]
