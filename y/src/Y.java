@@ -15193,7 +15193,8 @@ window.onload = function(){
                 }
                 return sb.toString();
             }
-        });            
+        });    
+        String curl="";        
         for ( int i=0;i<f.length;i++ ){
             if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
                 continue;
@@ -15210,9 +15211,10 @@ window.onload = function(){
             if ( countSelect == 0 )
                 back="back.addEventListener('click', function(){ window.location.href='" + prefix + encodeUrl(f[i].getName()) + "'; });\n";
             elementos.add(f[i].getName());
-            if ( f[i].isFile() )
+            if ( f[i].isFile() ){
                 elementosIsFile.add("S");
-            else
+                curl += "curl \"" + (prefix + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
+            }else
                 elementosIsFile.add("N");
             tail_id=f[i].getName();
         };
@@ -15226,8 +15228,7 @@ window.onload = function(){
                 back="";
             }
         }else{
-            String trs="";
-            String curl="";
+            String trs="";            
             String h1="<br>";
             String txt_item="";
             String format_h1=path;
@@ -15246,10 +15247,9 @@ window.onload = function(){
                "</a>" +                     
                "<h1 style=\"color: white;\">&nbsp;" + format_h1 + "</h1>";
             for ( int i=0;i<elementos.size();i++ ){
-                if ( elementosIsFile.get(i).equals("S") ){
-                    curl += "curl \"" + (prefix + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
+                if ( elementosIsFile.get(i).equals("S") )                    
                     txt_item = elementos.get(i);
-                }else
+                else
                     txt_item = "<svg width=\"24px\" height=\"24px\" viewBox=\"0 0 100 100\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\"><path style=\"fill:#D9D58F;stroke:#222;stroke-width:2\" d=\"m 2,88 c 0,-1 0,-63 0,-63 0,0 -0.6,-5 4.4,-5 -1,0 5.6,0 5.6,0 l 0,-6 c 0,0 0,-3 3,-3 l 17,0 c 0,0 3,0 3,3 l 0,6 43,0 c 0,0 4,0 4,4 l 0,64 z\"></path><path style=\"fill:#E8DC88;stroke:#222;stroke-width:2;fill-opacity:0.7\" d=\"M 2,88 17,54 c 0,0 1,-5 9,-5 11,0 65,0 65,0 0,0 9,0 7,5 -2,5 -14,34 -14,34 z\"></path></svg><a> </a>" + elementos.get(i);
                 trs += "<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"window.location.href='" + prefix + encodeUrl(elementos.get(i)) + "'\">" + txt_item + "</td></tr>\n";
             }
@@ -15277,6 +15277,9 @@ window.onload = function(){
             id_display=id_display.split("\\.")[0];
         id=prefix.substring(lenPrefixTag-1)+id;
         return "<!-- creditos https://github.com/CodingGarden/css-challenges/blob/master/netflix-video-player/index.html -->\n" + 
+        "<!--\n" + 
+        curl +
+        "-->\n" + 
         "<html lang=\"pt-BR\">\n" +
         "<head>\n" +
         "  <meta charset=\"UTF-8\">\n" +
