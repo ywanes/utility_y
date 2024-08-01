@@ -842,6 +842,10 @@ cat buffer.log
                 System.out.println(line.toUpperCase());
             return;
         }     
+        if ( args[0].equals("removeAcentos") ){
+            base_removeAcentos();
+            return;
+        }     
         if ( args[0].equals("xor") && args.length <= 3 ){
             try{
                 if ( args.length <= 2 ){
@@ -5202,6 +5206,18 @@ cat buffer.log
             System.out.println(e.toString()+" - "+line_bkp);
         }
     }
+    
+    public void base_removeAcentos(){
+        String line=null;
+        while ( (line=readLine()) != null ){
+            System.out.println(removeAcentos(line));
+            System.out.flush();
+        }
+    }
+    
+    public String removeAcentos(String str) {
+        return java.text.Normalizer.normalize(str, java.text.Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
+    }    
     
     public void wc(String parm){
         if ( parm.equals("-l") ){
@@ -16478,6 +16494,7 @@ namespace LoopbackWithMic
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -16510,6 +16527,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y cat]\n"
 /* class by manual */                + "  [y lower]\n"
 /* class by manual */                + "  [y upper]\n"
+/* class by manual */                + "  [y removeAcentos]\n"
 /* class by manual */                + "  [y xor]\n"
 /* class by manual */                + "  [y md5]\n"
 /* class by manual */                + "  [y sha1]\n"
@@ -16726,6 +16744,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y echo AA | y lower\n"
 /* class by manual */                + "[y upper]\n"
 /* class by manual */                + "    y echo aa | y upper\n"
+/* class by manual */                + "[y removeAcentos]\n"
+/* class by manual */                + "    y cat file | y removeAcentos\n"
 /* class by manual */                + "[y xor]\n"
 /* class by manual */                + "    y cat file | y xor 100\n"
 /* class by manual */                + "    y cat beltmatic_002.sav | y xor 104948 \"7,215,169,11,62,56,139,40,128,196,29,36,86,12,244,116,175,83,57,142,3,255,249,75,208,143,44,62,165,92,216,64,24,1,125,20,82,107,43,11,123,121,31,99,250,252,15,214,90,234,96,112,163\" > source.zip\n"
@@ -16949,6 +16969,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "        \"-decodeSend\" \"12 0 26 6 0 0 0 0 0 0 0 0 0\" \"15 0 3 12 119 119 32 103 105 118 101 32 116 97 105 108\"\n"
 /* class by manual */                + "        \"-decodeReceive\" \"3 0 0 0 ...\" \"4 0 0 0\"\n"
 /* class by manual */                + "        \"-suprimeSend\" \"5 0 0 0\"\n"
+/* class by manual */                + "        \"-suprimeReceive\" \"5 0 0 0\"\n"
 /* class by manual */                + "        -ips_banidos 2804:14d:ac80:8889::\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
@@ -17223,6 +17244,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
