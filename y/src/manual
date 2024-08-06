@@ -84,6 +84,9 @@ usage:
   [y date]
   [y cronometro]
   [y [cls|clear|clean]]
+  [y ping]
+  [y pings]
+  [y pingMine]
   [y ips]
   [y mouse]  
   [y gravador]
@@ -574,6 +577,9 @@ Exemplos...
     y pings -t 15
     obs: lista os ips ja fazendo ping
     obs2: -t 15 => timeout 15 segundos
+[y pingMine]
+    y pingMine mc.gladmc.com
+    y pingMine mc.gladmc.com 25565
 [y ips]
     y ips
     y ips list

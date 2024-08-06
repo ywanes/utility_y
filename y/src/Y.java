@@ -649,7 +649,7 @@ cat buffer.log
                 boolean mostraEstruturaDebug=parm.equals("mostraEstruturaDebug");
                 String command=parm.contains("for elem in data")?parm:"";
                 if ( !command.equals("") || mostraTabela || mostraEstrutura || mostraEstruturaDebug ){
-                    new JSON().go(System.in, command, mostraTabela, mostraEstrutura, mostraEstruturaDebug,listOn, noHeader);
+                    new JSON(System.in, command, mostraTabela, mostraEstrutura, mostraEstruturaDebug,listOn, noHeader, System.out);
                     return;
                 }
             }
@@ -998,7 +998,7 @@ cat buffer.log
                                 });
                                 Thread pipeReader=new Thread(new Runnable() {
                                     public void run() {
-                                        new JSON().go(pipedInputStream, command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn,noHeader);
+                                        new JSON(pipedInputStream,command,mostraTabela,mostraEstrutura,mostraEstruturaDebug,listOn,noHeader,System.out);
                                     }
                                 });
                                 pipeWriter.start();
@@ -1726,6 +1726,23 @@ cat buffer.log
                 ping_list(timeout);
             else
                 System.out.println(ping(args[1], timeout));
+            return;
+        }
+        if ( args[0].equals("pingMine") && args.length > 1 ){
+            int default_port = 25565;
+            Object [] objs=get_parm_host_port_tray(args, default_port);
+            String host=(String)objs[0];
+            int port=(Integer)objs[1];
+            boolean tray=(Boolean)objs[2];
+            if ( tray )
+                pingMine_Tray(host, port);
+            else{
+                try{
+                    System.out.println(pingMine(host, port));
+                }catch(Exception e){
+                    erroFatal(e);
+                }                    
+            }
             return;
         }
         if ( args[0].equals("pings") && args.length > 0 ){
@@ -8348,6 +8365,32 @@ System.out.println("BB" + retorno);
         return new Object []{ip, port, server, send};
     }
         
+    private Object [] get_parm_host_port_tray(String [] args, int default_port){
+        String host=null;
+        int port=default_port;
+        Boolean tray=false;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length > 0){
+            if ( args.length > 0 && args[0].equals("-tray")){
+                args=sliceParm(1, args);
+                tray=true;
+                continue;
+            }
+            if ( args.length > 0 && host == null ){
+                host=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            port=Integer.parseInt(args[0]);
+            args=sliceParm(1, args);
+        }
+        if ( host == null )
+            return null;
+        return new Object []{host, port, tray};
+    }
+            
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
         String path=null;
         boolean acceptSymbolicLink=false;
@@ -9298,6 +9341,121 @@ System.out.println("BB" + retorno);
         }
     }
     
+    private String pingMine(String host, int port) throws Exception{
+        String retorno=null;
+        Socket socket=new Socket();
+        socket.connect(new InetSocketAddress(host, port), 1000);
+        InputStream is=socket.getInputStream();
+        OutputStream os=socket.getOutputStream();         
+        byte[] b=new byte[]{(byte)43,(byte)0,(byte)191,(byte)4,(byte)36,      
+            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
+            (byte)50,(byte)50,(byte)50,(byte)58,    
+            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
+            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
+            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
+            (byte)50,(byte)50,(byte)58,    
+            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
+            (byte)50,(byte)50,(byte)50,(byte)50,
+            (byte)99,(byte)222,(byte)1,(byte)1,(byte)0};
+        os.write(b);
+        byte [] buf=new byte[1024*10];
+        int len=is.read(buf);
+        String s=new String(buf,0,len,"UTF-8");
+        while(s.length()>0&&!s.substring(0,1).equals("{"))
+            s=s.substring(1);
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "", false, true, false, false, false, baos);
+        retorno=baos.toString();
+        return retorno;
+    }
+    
+    public void pingMine_Tray(String host, int port){
+        if ( !java.awt.SystemTray.isSupported() )
+            erroFatal("Tray não suportado nesse ambiente!");        
+        try{
+            java.awt.SystemTray tray = java.awt.SystemTray.getSystemTray();                
+            java.awt.PopupMenu popup = new java.awt.PopupMenu();
+            java.awt.MenuItem item=new java.awt.MenuItem("Exit");
+            item.addActionListener(
+                new java.awt.event.ActionListener() {
+                    public void actionPerformed(java.awt.event.ActionEvent e) {
+                        System.exit(0);
+                    }
+                }
+            );        
+            popup.add(item);
+            java.awt.TrayIcon trayIcon = new java.awt.TrayIcon( convertOnlyDigitNumberToImage(pingMine_getPlayersOnline(host, port)), "numero de onlines minecraft " + host, popup );
+            trayIcon.setImageAutoSize(true);
+            tray.add(trayIcon);
+            while(true){
+                sleepSeconds(10);
+                trayIcon.setImage( convertOnlyDigitNumberToImage(pingMine_getPlayersOnline(host, port)) );
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+    
+    public BufferedImage convertOnlyDigitNumberToImage(int n){
+        BufferedImage retorno=null;
+        try {  
+            String [][] digits=new String[][]{
+                { /* 0 */ "00000000000000","00011111111000","00011111111000","00011000011000","00011000011000","00011000011000","00011000011000","00011000011000","00011000011000","00011111111000","00011111111000","00000000000000"},
+                { /* 1 */ "00000000000000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000000000"},
+                { /* 2 */ "00000000000000","00011111111000","00011111111000","00000000011000","00000000011000","00011111111000","00011111111000","00011000000000","00011000000000","00011111111000","00011111111000","00000000000000"},
+                { /* 3 */ "00000000000000","00011111111000","00011111111000","00000000011000","00000000011000","00011111111000","00011111111000","00000000011000","00000000011000","00011111111000","00011111111000","00000000000000"},
+                { /* 4 */ "00000000000000","00011000011000","00011000011000","00011000011000","00011000011000","00011111111000","00011111111000","00000000011000","00000000011000","00000000011000","00000000011000","00000000000000"},
+                { /* 5 */ "00000000000000","00011111111000","00011111111000","00011000000000","00011000000000","00011111111000","00011111111000","00000000011000","00000000011000","00011111111000","00011111111000","00000000000000"},
+                { /* 6 */ "00000000000000","00011111111000","00011111111000","00011000000000","00011000000000","00011111111000","00011111111000","00011000011000","00011000011000","00011111111000","00011111111000","00000000000000"},
+                { /* 7 */ "00000000000000","00011111111000","00011111111000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000011000","00000000000000"},
+                { /* 8 */ "00000000000000","00011111111000","00011111111000","00011000011000","00011000011000","00011111111000","00011111111000","00011000011000","00011000011000","00011111111000","00011111111000","00000000000000"},
+                { /* 9 */ "00000000000000","00011111111000","00011111111000","00011000011000","00011000011000","00011111111000","00011111111000","00000000011000","00000000011000","00011111111000","00011111111000","00000000000000"},
+                { /* ? */ "00000000000000","00011111111000","00011100111000","00011000011000","00000000011000","00000000110000","00000001100000","00000011000000","00000000000000","00000011000000","00000011000000","00000000000000"}                
+            };	
+            String[] digit=digits[10];
+            if ( n > 9 )
+                digit=digits[9];
+            else{
+                if ( n >= 0 )
+                    digit=digits[n];
+            }
+            int w=digit[0].length();
+            int h=digit.length;
+            int [] rgbs=new int[w*h];
+            int nivel=0;
+            
+            nivel=150; int cinza = ((nivel & 0xFF) << 16) | ((nivel & 0xFF) << 8) | (nivel & 0xFF); // RGB
+            nivel=150; int vermelho = ((nivel & 0xFF) << 16) | ((0 & 0xFF) << 8) | (0 & 0xFF); // RGB            
+            nivel=150; int verde = ((0 & 0xFF) << 16) | ((nivel & 0xFF) << 8) | (0 & 0xFF); // RGB            
+            nivel=255; int branco = ((nivel & 0xFF) << 16) | ((nivel & 0xFF) << 8) | (nivel & 0xFF); // RGB            
+            nivel=0; int preto = ((nivel & 0xFF) << 16) | ((nivel & 0xFF) << 8) | (nivel & 0xFF); // RGB            
+            int c=0;
+            for ( int j=0;j<h;j++ ){
+                for ( int i=0;i<w;i++ ){
+                    if ( digit[j].substring(i,i+1).equals("1") )                        
+                        rgbs[c++]=cinza;
+                    else
+                        rgbs[c++]=preto;
+                }
+            }                          
+            retorno = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
+            retorno.setRGB(0, 0, w, h, rgbs, 0, w);            
+        } catch (Exception e) {            
+            erroFatal(e);
+        }        
+        return retorno;
+    }
+    
+    public int pingMine_getPlayersOnline(String host, int port){
+        try{
+            String [] partes=pingMine(host, port).replace(",", "").split("\n");
+            for ( int i=0;i<partes.length;i++ )
+                if ( partes[i].contains("online") )
+                    return Integer.parseInt(partes[i].trim().split(" ")[1]);
+        }catch(Exception e){}
+        return -1;
+    }
+        
     private String [] ips(boolean ping, int timeout, boolean list, boolean printOn){
         String ipv4=null;
         String ipv6=null;
@@ -12924,6 +13082,7 @@ class JSON extends Util{
     int count_camposCandidate=0;
     boolean finish_add_campos=false;
     boolean header_printed=false;
+    OutputStream os=null;
     /*
         controle de literal e guarda key pai(key de key/value da camada superiora)
         contra_barra_lvl controla os elementos "  \\ ou \" " no literal
@@ -12931,49 +13090,54 @@ class JSON extends Util{
         command => exemplo de parametro de comando: 
             "[elem['id'] for elem in data]"
     */
-    public void go(InputStream is, String command, boolean mostraTabela, 
-                boolean mostraEstrutura, boolean mostraEstruturaDebug, boolean list_on, boolean noHeader){ // "[elem['id'] for elem in data['items']]"        
-        readLine(is, null, "");
-        this.command=command;
-        this.mostraTabela=mostraTabela;
-        this.mostraEstrutura=mostraEstrutura;
-        this.mostraEstruturaDebug=mostraEstruturaDebug;  
-        this.list_on=list_on;
-        this.noHeader=noHeader;
-        if ( !command.equals("") && !setFilter() ){
-            System.out.println("Error, invalid filter!");
-            erroFatal(99);
+    JSON(InputStream is, String command, boolean mostraTabela, 
+                boolean mostraEstrutura, boolean mostraEstruturaDebug, boolean list_on, boolean noHeader, OutputStream _os){ // "[elem['id'] for elem in data['items']]"        
+        try{
+            if ( command == null )
+                command="";
+            readLine(is, null, "");
+            this.command=command;
+            this.mostraTabela=mostraTabela;
+            this.mostraEstrutura=mostraEstrutura;
+            this.mostraEstruturaDebug=mostraEstruturaDebug;  
+            this.list_on=list_on;
+            this.noHeader=noHeader;
+            this.os=_os;
+            if ( !command.equals("") && !setFilter() )
+                erroFatal("Error, invalid filter!");
+
+            String t=null;
+            int contra_barra_lvl=0;   
+            while( (t=read1String()) != null ){
+                if (literal && contra_barra_lvl > 1)
+                    contra_barra_lvl=0;
+                else
+                    if ((literal && t.equals("\\") && contra_barra_lvl == 0)
+                        || (literal && contra_barra_lvl == 1))
+                        contra_barra_lvl++;
+                if ( t.equals("\"") && contra_barra_lvl != 2 ){
+                    literal=!literal;
+                    if ( literal )
+                        key_pai="";
+                }
+                if ( !literal && t.equals(" ") ){
+                    continue;
+                }
+                if ( t.equals("\t") || t.equals("\r") || t.equals("\n") ){
+                    continue;
+                }
+                if ( literal && !t.equals("\"") && !t.equals(" ") ){
+                    key_pai+=t;
+                }
+                next(t);
+                if ( !literal && t.equals(":")){
+                    next(" ");            
+                }
+            }   
+            nextflush();
+        }catch(Exception e){
+            erroFatal(e);
         }
-        
-        String t=null;
-        int contra_barra_lvl=0;   
-        while( (t=read1String()) != null ){
-            if (literal && contra_barra_lvl > 1)
-                contra_barra_lvl=0;
-            else
-                if ((literal && t.equals("\\") && contra_barra_lvl == 0)
-                    || (literal && contra_barra_lvl == 1))
-                    contra_barra_lvl++;
-            if ( t.equals("\"") && contra_barra_lvl != 2 ){
-                literal=!literal;
-                if ( literal )
-                    key_pai="";
-            }
-            if ( !literal && t.equals(" ") ){
-                continue;
-            }
-            if ( t.equals("\t") || t.equals("\r") || t.equals("\n") ){
-                continue;
-            }
-            if ( literal && !t.equals("\"") && !t.equals(" ") ){
-                key_pai+=t;
-            }
-            next(t);
-            if ( !literal && t.equals(":")){
-                next(" ");            
-            }
-        }   
-        nextflush();
     }
     
     String [] pilha=new String [999];
@@ -12994,7 +13158,7 @@ class JSON extends Util{
         debug => trata mostraEstruturaDebug, codigo de elementos identados
         identacao => controle de identacao - para parametro mostraEstrutura
     */
-    private void next(String t) {
+    private void next(String t) throws Exception{
         if ( !literal ){
             if ( level_in.contains(t) ){
                 seq=0;
@@ -13096,13 +13260,15 @@ class JSON extends Util{
     /*
       finaliza ultimas pendencias apos ultimo next
     */   
-    private void nextflush(){
+    private void nextflush() throws Exception{
         outwrite();
         if ( !command.equals("") ){
             if ( !finish_add_campos  )
                 print_header();
-            if ( !detail.equals("") )
-                System.out.println(detail);
+            if ( !detail.equals("") ){
+                os.write(detail.getBytes());
+                os.write("\n".getBytes());
+            }
         }
     }
     
@@ -13111,7 +13277,7 @@ class JSON extends Util{
     /*
         mostra estrutura interna de identacao ex _.{.[
     */
-    private void debug(){
+    private void debug() throws Exception{
         String txtDebug="";
         String tabela="data";
         for ( int i=0;i<count_pilha;i++ ){
@@ -13122,14 +13288,17 @@ class JSON extends Util{
             if ( i > 0 && i < count_pilha-1)
                 tabela+="['"+p+"']";
         }
-        if ( mostraEstruturaDebug )
-            System.out.println(txtDebug);
+        if ( mostraEstruturaDebug ){
+            os.write(txtDebug.getBytes() );
+            os.write("\n".getBytes());
+        }
         if ( mostraTabela ){
             if ( txtDebug.endsWith("._")){// && !txtDebug.contains("._.") ){
                 tabela="[elem for elem in " + tabela + "]";
                 if ( !contemNaTabela(tabela) && count_tabelas < 50 ){
                     tabelas[count_tabelas++]=tabela;
-                    System.out.println("y json \""+tabela+"\"");
+                    os.write( ("y json \""+tabela+"\"").getBytes() );
+                    os.write("\n".getBytes());
                 }
             }           
         }
@@ -13147,13 +13316,13 @@ class JSON extends Util{
         return false;
     }                    
     
-    String out="";
+    String _out="";
     String out_mostra="";
     /*
         buffer de saida
     */
     private void out(String a){
-        out+=a;
+        _out+=a;
         out_mostra+=a;
     }
     
@@ -13164,12 +13333,14 @@ class JSON extends Util{
     /*
         imprime
     */
-    private void outwrite(){
-        if ( mostraEstrutura || mostraEstruturaDebug )
-            System.out.println(out_mostra);
+    private void outwrite() throws Exception{
+        if ( mostraEstrutura || mostraEstruturaDebug ){
+            os.write(out_mostra.getBytes());
+            os.write("\n".getBytes());
+        }
         if ( !unica_verificacao && !command.equals("") && filterMatchB ){
             unica_verificacao=true;
-            if ( !out.startsWith("{") && !out.startsWith("[") ){
+            if ( !_out.startsWith("{") && !_out.startsWith("[") ){
                 filterMatchA=filterMatchB;
                 filterA=filterB;
             }
@@ -13202,7 +13373,8 @@ class JSON extends Util{
                 if ( list_on ){
                     //pass
                 }else{
-                    System.out.println(detail);
+                    os.write(detail.getBytes());
+                    os.write("\n".getBytes());
                     detail="";                                        
                 }
             }
@@ -13216,18 +13388,19 @@ class JSON extends Util{
             }
         }
         
-        out="";
+        _out="";
         out_mostra="";
     }
 
-    private void print_header(){
+    private void print_header() throws Exception{
         if ( list_on == false && noHeader == false){
             for ( int i=0;i<count_campos;i++ ){
-                if ( i != 0 )
-                    System.out.print(getSeparadorCSV());
-                System.out.print("\""+campos[i]+"\"");
+                if ( i != 0 ){
+                    os.write(getSeparadorCSV().getBytes());
+                }
+                os.write( ("\""+campos[i]+"\"").getBytes() );
             }
-            System.out.println();        
+            os.write("\n".getBytes());
         }
     }
     
@@ -13257,7 +13430,7 @@ class JSON extends Util{
         get key value do objeto
     */
     private boolean get_KeyValue(){
-        String a=out;
+        String a=_out;
         key="?";
         value="?";
         if ( a.endsWith("{") || a.endsWith("[") || a.equals("}") || a.equals("]") || a.equals("},") || a.equals("],") ){
@@ -16494,7 +16667,6 @@ namespace LoopbackWithMic
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -16585,6 +16757,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y date]\n"
 /* class by manual */                + "  [y cronometro]\n"
 /* class by manual */                + "  [y [cls|clear|clean]]\n"
+/* class by manual */                + "  [y ping]\n"
+/* class by manual */                + "  [y pings]\n"
+/* class by manual */                + "  [y pingMine]\n"
 /* class by manual */                + "  [y ips]\n"
 /* class by manual */                + "  [y mouse]  \n"
 /* class by manual */                + "  [y gravador]\n"
@@ -17075,6 +17250,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y pings -t 15\n"
 /* class by manual */                + "    obs: lista os ips ja fazendo ping\n"
 /* class by manual */                + "    obs2: -t 15 => timeout 15 segundos\n"
+/* class by manual */                + "[y pingMine]\n"
+/* class by manual */                + "    y pingMine mc.gladmc.com\n"
+/* class by manual */                + "    y pingMine mc.gladmc.com 25565\n"
 /* class by manual */                + "[y ips]\n"
 /* class by manual */                + "    y ips\n"
 /* class by manual */                + "    y ips list\n"
@@ -17244,6 +17422,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
