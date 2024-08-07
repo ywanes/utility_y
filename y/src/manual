@@ -580,6 +580,11 @@ Exemplos...
 [y pingMine]
     y pingMine mc.gladmc.com
     y pingMine mc.gladmc.com 25565
+    y pingMine your_site -tray
+    obs: autostart tray:
+        criar atalho javaw em %appdata%\..\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+        e colocar no atalho -Dfile.encoding=UTF-8 -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\jsch-0.1.55.jar Y pingMine your_site -tray
+    obs2: o tray não mostra numeros acima de 9
 [y ips]
     y ips
     y ips list

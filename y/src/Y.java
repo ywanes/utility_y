@@ -1734,15 +1734,15 @@ cat buffer.log
             String host=(String)objs[0];
             int port=(Integer)objs[1];
             boolean tray=(Boolean)objs[2];
-            if ( tray )
+            if ( tray ){
                 pingMine_Tray(host, port);
-            else{
-                try{
-                    System.out.println(pingMine(host, port));
-                }catch(Exception e){
-                    erroFatal(e);
-                }                    
+                return;
             }
+            try{
+                System.out.println(pingMine(host, port));
+            }catch(Exception e){
+                erroFatal(e);
+            }                    
             return;
         }
         if ( args[0].equals("pings") && args.length > 0 ){
@@ -9384,7 +9384,7 @@ System.out.println("BB" + retorno);
                 }
             );        
             popup.add(item);
-            java.awt.TrayIcon trayIcon = new java.awt.TrayIcon( convertOnlyDigitNumberToImage(pingMine_getPlayersOnline(host, port)), "numero de onlines minecraft " + host, popup );
+            java.awt.TrayIcon trayIcon = new java.awt.TrayIcon( convertOnlyDigitNumberToImage(pingMine_getPlayersOnline(host, port)), "numero de onlines minecraft " + host, popup );            
             trayIcon.setImageAutoSize(true);
             tray.add(trayIcon);
             while(true){
@@ -17253,6 +17253,11 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y pingMine]\n"
 /* class by manual */                + "    y pingMine mc.gladmc.com\n"
 /* class by manual */                + "    y pingMine mc.gladmc.com 25565\n"
+/* class by manual */                + "    y pingMine your_site -tray\n"
+/* class by manual */                + "    obs: autostart tray:\n"
+/* class by manual */                + "        criar atalho javaw em %appdata%\\..\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\n"
+/* class by manual */                + "        e colocar no atalho -Dfile.encoding=UTF-8 -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\sqljdbc4-3.0.jar;c:\\\\y\\\\mysql-connector-java-8.0.26.jar;c:\\\\y\\\\jsch-0.1.55.jar Y pingMine your_site -tray\n"
+/* class by manual */                + "    obs2: o tray nao mostra numeros acima de 9\n"
 /* class by manual */                + "[y ips]\n"
 /* class by manual */                + "    y ips\n"
 /* class by manual */                + "    y ips list\n"
@@ -17422,6 +17427,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
