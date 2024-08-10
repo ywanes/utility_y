@@ -186,6 +186,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
 import javax.sound.sampled.AudioFileFormat;
+import javax.sound.sampled.AudioFormat;
 import javax.swing.JOptionPane;
 
 
@@ -9671,8 +9672,10 @@ System.out.println("BB" + retorno);
         return null;
     }
     
-    public javax.sound.sampled.SourceDataLine getLineWriter(boolean usingMixer){
+    public javax.sound.sampled.SourceDataLine getLineWriter(boolean usingMixer, AudioFormat format){
         try{
+            if ( format == null )
+                format = getAudioFormatBase();
             if ( usingMixer ){
                 javax.sound.sampled.Mixer.Info[] mixers = javax.sound.sampled.AudioSystem.getMixerInfo();
                 for (int i=0;i<mixers.length;i++){
@@ -9692,7 +9695,7 @@ System.out.println("BB" + retorno);
                 }
                 erroFatal("Nenhum mixer encontrado!");
             }else{
-                javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.SourceDataLine.class, getAudioFormatBase());
+                javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.SourceDataLine.class, format);
                 javax.sound.sampled.Line line_=javax.sound.sampled.AudioSystem.getLine(info);
                 javax.sound.sampled.SourceDataLine line=(javax.sound.sampled.SourceDataLine)line_;
                 line.open(line.getFormat());
@@ -9741,7 +9744,7 @@ System.out.println("BB" + retorno);
     */
     public void playLine(boolean usingMixer, InputStream in){
         try{
-            javax.sound.sampled.SourceDataLine line=getLineWriter(usingMixer);
+            javax.sound.sampled.SourceDataLine line=getLineWriter(usingMixer, null);
             int BUFFER_SIZE = 1024;
             byte[] buff = new byte[BUFFER_SIZE];
             int len = 0;    
@@ -9855,13 +9858,14 @@ while True:
     public void playWav(boolean usingMixer, String caminho){
         try{            
             javax.sound.sampled.AudioInputStream audioStream=null;
+            AudioFormat format=null;
             if ( caminho == null ){
                 audioStream = javax.sound.sampled.AudioSystem.getAudioInputStream(System.in);
             }else{
                 audioStream = javax.sound.sampled.AudioSystem.getAudioInputStream(new File(caminho));                
-                //System.out.println(audioStream.getFormat());
+                format=audioStream.getFormat();
             }
-            javax.sound.sampled.SourceDataLine line=getLineWriter(usingMixer);
+            javax.sound.sampled.SourceDataLine line=getLineWriter(usingMixer, format);
             int BUFFER_SIZE = 1024;
             byte[] buff = new byte[BUFFER_SIZE];
             int len = 0;            
