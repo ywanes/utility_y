@@ -5514,7 +5514,7 @@ cat buffer.log
                 javax.net.ssl.SSLSocketFactory sf = (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault();
                 socket = sf.createSocket(host, port);                
             }
-
+            
             byte[] buffer = new byte[2048];
             InputStream is=socket.getInputStream();
             OutputStream os=socket.getOutputStream(); 
