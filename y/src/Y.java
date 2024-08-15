@@ -1954,6 +1954,10 @@ cat buffer.log
             System.out.println(random(Integer.parseInt(args[1]), Integer.parseInt(args[2])));
             return;
         }
+        if ( args[0].equals("talk") ){
+            talk(args);
+            return;
+        }
         if ( args[0].equals("update") || args[0].equals("u") ){
             update();
             return;
@@ -5381,7 +5385,23 @@ cat buffer.log
             System.out.println(e.toString());
         }
     }
-           
+    
+    public void talk(String [] args){
+        if ( args.length == 2 && args[1].equals("list") ){                        
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("<option[\\s\\S]*?</option>").matcher(curl_string("https://ttsmp3.com/"));
+            String p1="";
+            String p2="";
+            while ( matcher.find() ){
+                String [] p=matcher.group().replaceAll("<", "|").replaceAll(">", "|").split("\\|");            
+                p1=p[2].split("/")[0].trim();
+                p2=p[1].split("'")[1];
+                System.out.println(p1.replaceAll(" ", "_") + "_" + p2);
+            }              
+            return;
+        }
+        erroFatal("Comando não reconhecido!");
+    }
+    
     public void cut(String [] args){
         String [] partes=args[1].substring(2).split(",");
         int [] elem=new int[partes.length*2];
@@ -5476,7 +5496,7 @@ cat buffer.log
         }
     }
 
-    public void curl_path(String url, String path) throws Exception{
+    public void curl_path(String url, String path) throws Exception{        
         curl(new FileOutputStream(path), "", "GET", false, false, url);
     }
     
@@ -12188,6 +12208,7 @@ class Util{
     public static int random(int min, int max){
         return java.util.concurrent.ThreadLocalRandom.current().nextInt(min, max + 1);        
     }
+        
     private static long print_cursor_timer_mili=-1;
     public static void print_cursor(String a, boolean on_timer){
         if ( on_timer ){
@@ -16630,7 +16651,7 @@ namespace LoopbackWithMic
 /* class Wget */ public static void fileDownload(String fAddress, String destinationDir,String proxy) {  int slashIndex =fAddress.lastIndexOf('/');  int periodIndex =fAddress.lastIndexOf('.');  String fileName=fAddress.substring(slashIndex + 1);  if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1) { if(fileName.contains("?")){  String tmp []=fileName.split("=");  fileName=tmp[0]; fileName=fileName.substring(0, fileName.length()-2);  } fileDownloadUrl(fAddress,fileName,destinationDir,proxy);  }else{  System.err.println("path or file name."); }  }} } 
 
 /* class Tar  */ // credits: https://github.com/kamranzafar/jtar/blob/master/src/test/java/org/kamranzafar/jtar/JTarTest.java 
-/* class Tar  */ // tar("in"); 
+/* class Tar  */ // tar("in");
 /* class Tar  */ // tar("test.tar", "in"); 
 /* class Tar  */ // untar("test.tar", null); 
 /* class Tar  */ // untar("test.tar", "in/in2/only"); 
@@ -16789,6 +16810,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y controlc]\n"
 /* class by manual */                + "  [y random]\n"
 /* class by manual */                + "  [y var]\n"
+/* class by manual */                + "  [y talk]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -17337,6 +17359,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y controlc\n"
 /* class by manual */                + "[y random]\n"
 /* class by manual */                + "    y random 1 2\n"
+/* class by manual */                + "[y talk]\n"
+/* class by manual */                + "    y talk list\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
 /* class by manual */                + "    Obs: execucao por parametro de variavel\n"
@@ -17431,6 +17455,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
