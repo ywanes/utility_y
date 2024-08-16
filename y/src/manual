@@ -400,6 +400,7 @@ Exemplos...
     cat arquivo | y uniq
 [y quebra]
     cat arquivo | y quebra
+    cat arquivo | y quebra -len 5
 [y seq]
     y seq 1 10 2
     y seq 5 7

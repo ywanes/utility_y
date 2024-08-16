@@ -1325,11 +1325,14 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("uniq") ){
-            uniq_quebra(false);
+            uniq_quebra(false, -1);
             return;
         }
         if ( args[0].equals("quebra") ){
-            uniq_quebra(true);
+            int len_quebra=-1;
+            if ( args.length == 3 && args[1].equals("-len") )
+                len_quebra=Integer.parseInt(args[2]);
+            uniq_quebra(true, len_quebra);
             return;
         }
         if ( args[0].equals("seq") ){
@@ -6647,7 +6650,7 @@ System.out.println("BB" + retorno);
         }
     }
     
-    public void uniq_quebra(boolean quebra){
+    public void uniq_quebra(boolean quebra, int len_quebra){
         String tail=null;
         String line=null;
         try {
@@ -6660,7 +6663,7 @@ System.out.println("BB" + retorno);
                 }
                 if ( !line.equals(tail) ){
                     if ( quebra ){
-                        System.out.print(count);
+                        System.out.print(lpad(count, len_quebra, "0"));
                         System.out.print(" ");
                     }
                     System.out.println(tail);
@@ -6671,7 +6674,7 @@ System.out.println("BB" + retorno);
             }
             if ( tail != null ){
                 if ( quebra ){
-                    System.out.print(count);
+                    System.out.print(lpad(count, len_quebra, "0"));
                     System.out.print(" ");
                 }
                 System.out.println(tail);
@@ -17098,6 +17101,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    cat arquivo | y uniq\n"
 /* class by manual */                + "[y quebra]\n"
 /* class by manual */                + "    cat arquivo | y quebra\n"
+/* class by manual */                + "    cat arquivo | y quebra -len 5\n"
 /* class by manual */                + "[y seq]\n"
 /* class by manual */                + "    y seq 1 10 2\n"
 /* class by manual */                + "    y seq 5 7\n"
@@ -17455,6 +17459,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
