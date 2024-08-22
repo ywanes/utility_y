@@ -5390,7 +5390,16 @@ cat buffer.log
     }
     
     public void talk(String [] args){
-        if ( args.length == 2 && args[1].equals("list") ){                        
+        Object [] objs = get_parms_msg_lang_list(args);
+        if ( objs == null ){
+            comando_invalido(args);
+            System.exit(0);
+        }
+        String msg=(String)objs[0];
+        String lang=(String)objs[1];
+        Boolean list=(Boolean)objs[2];
+        
+        if ( list ){                        
             java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("<option[\\s\\S]*?</option>").matcher(curl_string("https://ttsmp3.com/"));
             String p1="";
             String p2="";
@@ -5402,7 +5411,13 @@ cat buffer.log
             }              
             return;
         }
-        erroFatal("Comando não reconhecido!");
+        if ( lang == null )
+            lang="Brazilian_Portuguese_Ricardo";
+        if ( msg == null )
+            msg=String.join(" ", readAllLines(null));
+        msg=msg.trim();
+        if ( msg.equals("") )
+            erroFatal("Erro, Texto em branco!");
     }
     
     public void cut(String [] args){
@@ -8173,6 +8188,41 @@ System.out.println("BB" + retorno);
         return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos, decodes};
     }        
     
+    private Object [] get_parms_msg_lang_list(String [] args){        
+        String msg=null;
+        String lang=null;
+        Boolean list=false;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length > 0){
+            if ( args.length == 1 && args[0].equals("list") ){
+                args=sliceParm(1, args);
+                list=true;
+                continue;
+            }
+            if ( args.length > 1 && msg == null && args[0].equals("-msg") ){
+                args=sliceParm(1, args);
+                msg=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && lang == null && args[0].equals("-lang") ){
+                args=sliceParm(1, args);
+                lang=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length == 1 && msg == null ){
+                msg=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            return null;
+        }        
+        return new Object []{msg, lang, list};
+    }        
+        
     private Object [] get_parms_curl_header_method_verbose_raw_host(String [] args){
         String header="";
         String method="GET";
@@ -12407,7 +12457,14 @@ class Util{
     }
     
     public List<String> readAllLines(String caminho){
-        try{            
+        try{   
+            if ( caminho == null ){
+                List<String> lines=new ArrayList();
+                String line=null;
+                while( (line=readLine()) != null )
+                    lines.add(line);
+                return lines;
+            }
             return java.nio.file.Files.readAllLines(java.nio.file.Paths.get(caminho));
         }catch(Exception e){
             erroFatal(e);
@@ -16695,6 +16752,7 @@ namespace LoopbackWithMic
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -17365,6 +17423,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y random 1 2\n"
 /* class by manual */                + "[y talk]\n"
 /* class by manual */                + "    y talk list\n"
+/* class by manual */                + "    y talk oi\n"
+/* class by manual */                + "    y talk -lang Brazilian_Portuguese_Ricardo -msg oi\n"
+/* class by manual */                + "    y echo oi | y talk\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
 /* class by manual */                + "    Obs: execucao por parametro de variavel\n"
@@ -17459,6 +17520,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
