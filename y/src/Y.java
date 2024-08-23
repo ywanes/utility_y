@@ -5418,6 +5418,25 @@ cat buffer.log
         msg=msg.trim();
         if ( msg.equals("") )
             erroFatal("Erro, Texto em branco!");
+        String dir="/ProgramFiles";
+        if ( isWindows() ){
+            dir="d:/ProgramFiles";
+            if ( !new File(dir).exists() || !new File(dir).isDirectory() )
+                dir="c:/ProgramFiles";
+        }
+        if ( !new File(dir).exists() || !new File(dir).isDirectory() )
+            erroFatal("Não foi possivel encontrar a pasta " + dir);
+        if ( !new File(dir+"/talk").exists() )
+            new File(dir+"/talk").mkdir();
+        if ( !new File(dir+"/talk/"+lang).exists() )
+            new File(dir+"/talk/"+lang).mkdir();
+        String sha1=digest_text(msg, "SHA1");
+        String pre=sha1.substring(0,3);
+        if ( !new File(dir+"/talk/"+lang+"/"+pre).exists() )
+            new File(dir+"/talk/"+lang+"/"+pre).mkdir();
+        if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".txt").exists() )
+            salvando_file(msg, new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".txt"));
+        System.out.println(sha1);
     }
     
     public void cut(String [] args){
