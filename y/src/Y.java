@@ -10522,6 +10522,7 @@ while True:
     }
     
     Frame [] lock_frames=null;
+    Color [] lock_frames_color=null;
     boolean [] states_frames=null;
     private void lock(String w){
         GraphicsDevice[] gs=null;
@@ -10533,6 +10534,7 @@ while True:
         }
         int len=gs.length;
         lock_frames = new Frame[len];
+        lock_frames_color = new Color[len];
         states_frames = new boolean[len]; // false => 0 => tela visivel
         for ( int i=0;i<len;i++ ){
             if ( hasConfigurationDevice )
@@ -10540,9 +10542,11 @@ while True:
             else
                 lock_frames[i] = new Frame();
             if ( w == null )
-                lock_frames[i].setBackground(Color.black);
+                lock_frames_color[i]=Color.black;                
             else
-                lock_frames[i].setBackground(Color.white);
+                lock_frames_color[i]=Color.white;
+            lock_frames[i].setBackground(lock_frames_color[i]);
+            
             if ( !hasConfigurationDevice ){
                 lock_frames[i].setUndecorated(true); // tira borda do aplicativo
                 lock_frames[i].setExtendedState(lock_frames[i].MAXIMIZED_BOTH);        
@@ -10594,6 +10598,10 @@ while True:
                                 lock_frames[i].setExtendedState(1);  
                             else
                                 lock_frames[i].setExtendedState(0);  
+                            // BUG
+                            lock_frames[i].setBackground(lock_frames_color[i]);
+                            lock_frames[i].revalidate();
+                            lock_frames[i].repaint();
                         }                        
                     }
                 }catch(Exception e){}
