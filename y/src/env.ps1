@@ -32,7 +32,7 @@ Invoke-WebRequest -uri "https://builds.openlogic.com/downloadJDK/openlogic-openj
 Expand-Archive -LiteralPath 'java.zip'
 [Environment]::SetEnvironmentVariable("JAVA_HOME", "c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64", "Machine")
 
-$NewPATH = ("%JAVA_HOME%\bin;c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64\bin;" + [Environment]::GetEnvironmentVariable("PATH"))
+$NewPATH = ("%JAVA_HOME%\bin;c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64\bin;c:\programFiles;" + [Environment]::GetEnvironmentVariable("PATH"))
 [Environment]::SetEnvironmentVariable("PATH", $NewPath, [EnvironmentVariableTarget]::Machine)   
 
 
