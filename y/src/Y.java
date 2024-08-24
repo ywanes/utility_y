@@ -10599,9 +10599,9 @@ while True:
                             else
                                 lock_frames[i].setExtendedState(0);  
                             // BUG
-                            lock_frames[i].setBackground(lock_frames_color[i]);
-                            lock_frames[i].revalidate();
-                            lock_frames[i].repaint();
+                            //lock_frames[i].setBackground(lock_frames_color[i]);
+                            //lock_frames[i].revalidate();
+                            //lock_frames[i].repaint();
                         }                        
                     }
                 }catch(Exception e){}
