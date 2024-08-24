@@ -666,6 +666,7 @@ Exemplos...
     y talk list
     y talk oi
     y talk -lang Brazilian_Portuguese_Ricardo -msg oi
+    y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "d:/ProgramFiles/musicas_ia/talk.wav"
     y echo oi | y talk
 [y var]
     y var

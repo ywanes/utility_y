@@ -960,7 +960,7 @@ cat buffer.log
                 String host=(String)objs[4];
 
                 if ( host != null ){
-                    curl(System.out, header, method, verbose, raw, host);
+                    curl(System.out, header, method, verbose, raw, host, null);
                     return;
                 }
             }
@@ -994,7 +994,7 @@ cat buffer.log
                                 pipedInputStream.connect(pipedOutputStream);
                                 Thread pipeWriter=new Thread(new Runnable() {
                                     public void run() {
-                                        curl(pipedOutputStream, header, method, verbose, raw, host);
+                                        curl(pipedOutputStream, header, method, verbose, raw, host, null);
                                     }
                                 });
                                 Thread pipeReader=new Thread(new Runnable() {
@@ -5390,53 +5390,95 @@ cat buffer.log
     }
     
     public void talk(String [] args){
-        Object [] objs = get_parms_msg_lang_list(args);
-        if ( objs == null ){
-            comando_invalido(args);
-            System.exit(0);
-        }
-        String msg=(String)objs[0];
-        String lang=(String)objs[1];
-        Boolean list=(Boolean)objs[2];
-        
-        if ( list ){                        
-            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("<option[\\s\\S]*?</option>").matcher(curl_string("https://ttsmp3.com/"));
-            String p1="";
-            String p2="";
-            while ( matcher.find() ){
-                String [] p=matcher.group().replaceAll("<", "|").replaceAll(">", "|").split("\\|");            
-                p1=p[2].split("/")[0].trim();
-                p2=p[1].split("'")[1];
-                System.out.println(p1.replaceAll(" ", "_") + "_" + p2);
-            }              
-            return;
-        }
-        if ( lang == null )
-            lang="Brazilian_Portuguese_Ricardo";
-        if ( msg == null )
-            msg=String.join(" ", readAllLines(null));
-        msg=msg.trim();
-        if ( msg.equals("") )
-            erroFatal("Erro, Texto em branco!");
-        String dir="/ProgramFiles";
-        if ( isWindows() ){
-            dir="d:/ProgramFiles";
+        try{
+            Object [] objs = get_parms_msg_lang_list_copy(args);
+            if ( objs == null ){
+                comando_invalido(args);
+                System.exit(0);
+            }
+            String msg=(String)objs[0];
+            String lang=(String)objs[1];
+            Boolean list=(Boolean)objs[2];
+            String copy=(String)objs[3];
+
+            if ( list ){                        
+                java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("<option[\\s\\S]*?</option>").matcher(curl_string("https://ttsmp3.com/"));
+                String p1="";
+                String p2="";
+                while ( matcher.find() ){
+                    String [] p=matcher.group().replaceAll("<", "|").replaceAll(">", "|").split("\\|");            
+                    p1=p[2].split("/")[0].trim();
+                    p2=p[1].split("'")[1];
+                    System.out.println(p1.replaceAll(" ", "_") + "_" + p2);
+                }              
+                return;
+            }
+            if ( lang == null )
+                lang="Brazilian_Portuguese_Ricardo";
+            if ( msg == null )
+                msg=String.join(" ", readAllLines(null));
+            msg=msg.trim();
+            if ( msg.equals("") )
+                erroFatal("Erro, Texto em branco!");
+            String dir="/ProgramFiles";
+            if ( isWindows() ){
+                dir="d:/ProgramFiles";
+                if ( !new File(dir).exists() || !new File(dir).isDirectory() )
+                    dir="c:/ProgramFiles";
+                if ( !new File(dir).exists() || !new File(dir).isDirectory() )
+                    new File(dir).mkdir();
+            }
             if ( !new File(dir).exists() || !new File(dir).isDirectory() )
-                dir="c:/ProgramFiles";
+                erroFatal("Não foi possivel encontrar a pasta " + dir);
+            if ( !new File(dir+"/talk").exists() )
+                new File(dir+"/talk").mkdir();
+            if ( !new File(dir+"/talk/"+lang).exists() )
+                new File(dir+"/talk/"+lang).mkdir();
+            String sha1=digest_text(msg, "SHA1");
+            String pre=sha1.substring(0,3);
+            if ( !new File(dir+"/talk/"+lang+"/"+pre).exists() )
+                new File(dir+"/talk/"+lang+"/"+pre).mkdir();
+            if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".txt").exists() )
+                salvando_file(msg, new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".txt"));
+            if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3").exists() ){
+                String lang_="";
+                if ( lang.split("_").length == 2 )
+                    lang_=lang.split("_")[1];
+                if ( lang.split("_").length == 3 )
+                    lang_=lang.split("_")[2];
+                String msg_=encodeUrl(msg);
+                String url_="https://ttsmp3.com/makemp3_new.php";
+                String data_="msg="+msg_+"&lang="+lang_+"&source=ttsmp3";
+                ByteArrayOutputStream baos=new ByteArrayOutputStream();
+                curl(baos, "", "POST", false, false, url_, new ByteArrayInputStream(data_.getBytes()));
+                String s=baos.toString();
+                if ( !s.contains("\"Error\":") )
+                    erroFatal("Resposta inesperada do servidor: " + s);
+                if ( !s.contains("\"Error\":0") )
+                    erroFatal("Erro na resposta do servidor: " + s);
+                s=s.substring(s.length()-38, s.length()-38+32);
+                curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null);
+            }
+            if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav").exists() ){
+                runtimeExec(null, new String[]{"ffmpeg","-i",sha1+".mp3",sha1+".wav"}, new File(dir+"/talk/"+lang+"/"+pre)); 
+                if ( runtimeExecError != null && !runtimeExecError.contains("size=") )
+                    erroFatal(runtimeExecError);
+            }
+            playWav(false, dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav");
+            if ( copy != null )
+                java.nio.file.Files.copy(
+                        java.nio.file.Paths.get(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav"), 
+                        java.nio.file.Paths.get(copy), 
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                );
+                java.nio.file.Files.copy(
+                        java.nio.file.Paths.get(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".txt"), 
+                        java.nio.file.Paths.get(copy+".txt"), 
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING
+                );
+        }catch(Exception e){
+            erroFatal(e);
         }
-        if ( !new File(dir).exists() || !new File(dir).isDirectory() )
-            erroFatal("Não foi possivel encontrar a pasta " + dir);
-        if ( !new File(dir+"/talk").exists() )
-            new File(dir+"/talk").mkdir();
-        if ( !new File(dir+"/talk/"+lang).exists() )
-            new File(dir+"/talk/"+lang).mkdir();
-        String sha1=digest_text(msg, "SHA1");
-        String pre=sha1.substring(0,3);
-        if ( !new File(dir+"/talk/"+lang+"/"+pre).exists() )
-            new File(dir+"/talk/"+lang+"/"+pre).mkdir();
-        if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".txt").exists() )
-            salvando_file(msg, new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".txt"));
-        System.out.println(sha1);
     }
     
     public void cut(String [] args){
@@ -5534,16 +5576,16 @@ cat buffer.log
     }
 
     public void curl_path(String url, String path) throws Exception{        
-        curl(new FileOutputStream(path), "", "GET", false, false, url);
+        curl(new FileOutputStream(path), "", "GET", false, false, url, null);
     }
     
     public String curl_string(String url){
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
-        curl(baos, "", "GET", false, false, url);
+        curl(baos, "", "GET", false, false, url, null);
         return baos.toString();
     }
     
-    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host){
+    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_){
         try{                        
             String protocol="HTTP";
             int len=0;
@@ -5587,8 +5629,9 @@ cat buffer.log
             
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             if ( method.equals("POST") ){
-                InputStream inputStream_pipe=System.in;                
-                while( (len=inputStream_pipe.read(buffer,0,buffer.length)) > 0 )
+                if ( is_ == null )
+                    is_=System.in;
+                while( (len=is_.read(buffer,0,buffer.length)) > 0 )
                     baos.write(buffer, 0, len);
             }
             
@@ -8207,10 +8250,11 @@ System.out.println("BB" + retorno);
         return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos, decodes};
     }        
     
-    private Object [] get_parms_msg_lang_list(String [] args){        
+    private Object [] get_parms_msg_lang_list_copy(String [] args){        
         String msg=null;
         String lang=null;
         Boolean list=false;
+        String copy=null;
         
         args=sliceParm(1, args);
         
@@ -8232,6 +8276,12 @@ System.out.println("BB" + retorno);
                 args=sliceParm(1, args);
                 continue;
             }
+            if ( args.length > 1 && copy == null && args[0].equals("-o") ){
+                args=sliceParm(1, args);
+                copy=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
             if ( args.length == 1 && msg == null ){
                 msg=args[0];
                 args=sliceParm(1, args);
@@ -8239,7 +8289,7 @@ System.out.println("BB" + retorno);
             }
             return null;
         }        
-        return new Object []{msg, lang, list};
+        return new Object []{msg, lang, list, copy};
     }        
         
     private Object [] get_parms_curl_header_method_verbose_raw_host(String [] args){
@@ -17444,6 +17494,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y talk list\n"
 /* class by manual */                + "    y talk oi\n"
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Ricardo -msg oi\n"
+/* class by manual */                + "    y talk -lang Brazilian_Portuguese_Vitoria -msg \"desliga esse computador, agora!\" -o \"d:/ProgramFiles/musicas_ia/talk.wav\"\n"
 /* class by manual */                + "    y echo oi | y talk\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
