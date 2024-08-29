@@ -10228,8 +10228,7 @@ while True:
             else
                 new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
         }catch(Exception e){
-            System.out.println("Error..." + e.toString());
-            System.exit(1);
+            erroFatal("Error..." + e.toString());
         }            
     }
     
