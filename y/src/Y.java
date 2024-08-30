@@ -9376,6 +9376,7 @@ System.out.println("BB" + retorno);
                     if ( s2.split("\\.").length > 1 )
                         s2=s2.split("\\.")[0];
                     seconds=Long.parseLong(s1)-Long.parseLong(s2);                    
+                    seconds=Long.parseLong(s1); // remover s2 depois
                 }
                 if ( index_command[i].equals("aux_mac") ){
                     s = s.split("\r\n")[0];
