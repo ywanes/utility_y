@@ -14815,7 +14815,7 @@ class Texto_longo extends Util{
         "window.onload = function(){        \n" +
         "    var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';\n" +
         "    var finish_msg='<html><h1>Conexao encerrada!</h1></html>';\n" +
-        "    document.children[0].innerHTML='<html><body style=\"background-color: rgb(68, 87, 96);\"><img id=\"imgId\" style=\"height: 100%;\"></img></body></html>';\n" +
+        "    document.children[0].innerHTML='<html><body style=\"background-color: rgb(68, 87, 96);margin-left: 0px;margin-bottom: 0px;margin-right: 0px;margin-top: 0px;\"><img id=\"imgId\" style=\"height: 100%;\"></img></body></html>';\n" +
         "    var socket = null;\n" +
         "    var count_fps=0;\n" +
         "    try{\n" +
@@ -14884,7 +14884,7 @@ class Texto_longo extends Util{
         window.onload = function(){        
             var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';
             var finish_msg='<html><h1>Conexao encerrada!</h1></html>';
-            document.children[0].innerHTML='<html><body style="background-color: rgb(68, 87, 96);"><img id="imgId" style="height: 100%;"></img></body></html>';
+            document.children[0].innerHTML='<html><body style="background-color: rgb(68, 87, 96);margin-left: 0px;margin-bottom: 0px;margin-right: 0px;margin-top: 0px;"><img id="imgId" style="height: 100%;"></img></body></html>';
             var socket = null;
             var count_fps=0;
             try{
