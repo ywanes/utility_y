@@ -10124,8 +10124,9 @@ while True:
                 ip="["+ip+"]";
             System.out.println("http://"+ip+":"+port);
             String format_web="jpg";
+            String html=new Texto_longo().get_html_and_header_remote(format_web);
             robotGetImgScreenBytesParallels_start(format_web);
-            WebSocketServer wss=new WebSocketServer(new InetSocketAddress(ip, port), new Texto_longo().get_html_and_header_remote(format_web)){
+            WebSocketServer wss=new WebSocketServer(new InetSocketAddress(ip, port), html){
                 public void onOpen(WebSocket conn, ClientHandshake handshake) {}
                 public void onClose(WebSocket conn, int code, String reason, boolean remote) {}
                 public void onMessage(WebSocket conn, String message) {
@@ -10145,6 +10146,8 @@ while True:
             };
             wss.start();  
         }catch(Exception e){
+            if ( e.toString().contains("WebsocketNotConnectedException") )
+                return;
             System.err.println("Error " + e.toString());
         }            
     }
@@ -14803,111 +14806,125 @@ class XML extends Util{
 class Texto_longo extends Util{
     public String get_html_and_header_remote(String format_web){
         String result="HTTP/1.1 200 OK\n" +
-"Content-Type: text/html; charset=UTF-8\n" +
-"Access-Control-Allow-Origin: *\n" +
-"X-Frame-Options: SAMEORIGIN\n" +
-"Content-Length: ?\n" +
-"\n" +
-"<script type=\"text/javascript\">\n" +
-"window.onload = function(){        \n" +
-"    var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';\n" +
-"    var finish_msg='<html><h1>Conexao encerrada!</h1></html>';\n" +
-"    document.children[0].innerHTML='<html><body style=\"background-color: rgb(68, 87, 96);\"><img id=\"imgId\" style=\"height: 100%;\"></img></body></html>';\n" +
-"    var socket = null;\n" +
-"    var count_fps=0;\n" +
-"    try{\n" +
-"      socket = new WebSocket(\"ws://\"+window.location.href.split('://')[1].replace('/',''));\n" +
-"      socket.binaryType = \"blob\";\n" +
-"      socket.addEventListener(\"open\", (event) => {\n" +
-"        socket.send(\"1\");\n" +
-"      });\n" +
-"      socket.addEventListener(\"message\", (event) => {\n" +
-"        try{\n" +
-"          if ( event.data instanceof Blob ){\n" +
-"            var s = event.data;\n" +
-"            s = s.slice(0, s.size, \"image/[FORMATWEB]\");\n" +
-"            var link = window.URL.createObjectURL(s);\n" +
-"            document.getElementById(\"imgId\").src = link;    \n" +
-"            socket.send('3');\n" +
-"            count_fps++;\n" +
-"          }\n" +
-"          if ( event.data == '2' )\n" +
-"            socket.send('3');\n" +
-"        }catch(error){console.log('.');}\n" +
-"      });\n" +
-"      socket.addEventListener(\"error\", (event) => {\n" +
-"        document.children[0].innerHTML=error_msg;\n" +
-"      });\n" +
-"    }catch(error){\n" +
-"      document.children[0].innerHTML=error_msg;                          \n" +
-"    }\n" +
-"    setInterval(function(){\n" +
-"      if ( socket != null && socket.readyState == WebSocket.CLOSED )\n" +
-"        document.children[0].innerHTML=finish_msg;\n" +
-"      else{\n" +
-"        console.log('fps: '+count_fps);\n" +
-"        count_fps=0;\n" +
-"      }\n" +
-"        \n" +
-"    }, 1000);\n" +
-"};      \n" +
-"</script>";
+        "Content-Type: text/html; charset=UTF-8\n" +
+        "Access-Control-Allow-Origin: *\n" +
+        "X-Frame-Options: SAMEORIGIN\n" +
+        "Content-Length: ?\n" +
+        "\n" +
+        "<script type=\"text/javascript\">\n" +
+        "window.onload = function(){        \n" +
+        "    var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';\n" +
+        "    var finish_msg='<html><h1>Conexao encerrada!</h1></html>';\n" +
+        "    document.children[0].innerHTML='<html><body style=\"background-color: rgb(68, 87, 96);\"><img id=\"imgId\" style=\"height: 100%;\"></img></body></html>';\n" +
+        "    var socket = null;\n" +
+        "    var count_fps=0;\n" +
+        "    try{\n" +
+        "      socket = new WebSocket(\"ws://\"+window.location.href.split('://')[1].replace('/',''));\n" +
+        "      socket.binaryType = \"blob\";\n" +
+        "      socket.addEventListener(\"open\", (event) => {\n" +
+        "        socket.send(\"1\");\n" +
+        "      });\n" +
+        "      socket.addEventListener(\"message\", (event) => {\n" +
+        "        try{\n" +
+        "          if ( event.data instanceof Blob ){\n" +
+        "            var s = event.data;\n" +
+        "            s = s.slice(0, s.size, \"image/[FORMATWEB]\");\n" +
+        "            var link = window.URL.createObjectURL(s);\n" +
+        "            document.getElementById(\"imgId\").src = link;    \n" +
+        "            socket.send('3');\n" +
+        "            count_fps++;\n" +
+        "          }\n" +
+        "          if ( event.data == '2' )\n" +
+        "            socket.send('3');\n" +
+        "        }catch(error){console.log('.');}\n" +
+        "      });\n" +
+        "      socket.addEventListener(\"error\", (event) => {\n" +
+        "        document.children[0].innerHTML=error_msg;\n" +
+        "      });\n" +
+        "    }catch(error){\n" +
+        "      document.children[0].innerHTML=error_msg;                          \n" +
+        "    }\n" +
+        "    setInterval(function(){\n" +
+        "      if ( socket != null && socket.readyState == WebSocket.CLOSED )\n" +
+        "        document.children[0].innerHTML=finish_msg;\n" +
+        "      else{\n" +
+        "        console.log('fps: '+count_fps);\n" +
+        "        count_fps=0;\n" +
+        "      }\n" +
+        "        \n" +
+        "    }, 1000);\n" +
+        "    const toggleFullScreen = () => {\n" +
+        "      if (!document.fullscreenElement) {\n" +
+        "        element=document.children[0];\n" +
+        "        if(element.requestFullscreen) element.requestFullscreen();\n" +
+        "        else if(element.mozRequestFullScreen) element.mozRequestFullScreen();\n" +
+        "        else if(element.webkitRequestFullscreen) element.webkitRequestFullscreen();\n" +
+        "        else if(element.msRequestFullscreen) element.msRequestFullscreen();\n" +
+        "      } else {\n" +
+        "        document.exitFullscreen();\n" +
+        "      }\n" +
+        "    };\n" +
+        "    document.addEventListener('dblclick', () => {\n" +
+        "      toggleFullScreen();\n" +
+        "    });\n" +
+        "};\n" + 
+        "</script>";
         result=result.replace("[FORMATWEB]", format_web);
         int len=result.split("Content-Length: \\?\n\n")[1].length();
         return result.replace("Content-Length: ?","Content-Length: "+len)+"// 123";
-        
-/*
-HTTP/1.1 200 OK
-Content-Type: text/html; charset=UTF-8
-Access-Control-Allow-Origin: *
-X-Frame-Options: SAMEORIGIN
-Content-Length: ?
 
-<script type="text/javascript">
-window.onload = function(){        
-    var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';
-    var finish_msg='<html><h1>Conexao encerrada!</h1></html>';
-    document.children[0].innerHTML='<html><body style="background-color: rgb(68, 87, 96);"><img id="imgId" style="height: 100%;"></img></body></html>';
-    var socket = null;
-    var count_fps=0;
-    try{
-      socket = new WebSocket("ws://"+window.location.href.split('://')[1].replace('/',''));
-      socket.binaryType = "blob";
-      socket.addEventListener("open", (event) => {
-        socket.send("1");
-      });
-      socket.addEventListener("message", (event) => {
-        try{
-          if ( event.data instanceof Blob ){
-            var s = event.data;
-            s = s.slice(0, s.size, "image/[FORMATWEB]");
-            var link = window.URL.createObjectURL(s);
-            document.getElementById("imgId").src = link;    
-            socket.send('3');
-            count_fps++;
-          }
-          if ( event.data == '2' )
-            socket.send('3');
-        }catch(error){console.log('.');}
-      });
-      socket.addEventListener("error", (event) => {
-        document.children[0].innerHTML=error_msg;
-      });
-    }catch(error){
-      document.children[0].innerHTML=error_msg;                          
-    }
-    setInterval(function(){
-      if ( socket != null && socket.readyState == WebSocket.CLOSED )
-        document.children[0].innerHTML=finish_msg;
-      else{
-        console.log('fps: '+count_fps);
-        count_fps=0;
-      }
-        
-    }, 1000);
-};      
-</script>
-*/        
+        /*
+        HTTP/1.1 200 OK
+        Content-Type: text/html; charset=UTF-8
+        Access-Control-Allow-Origin: *
+        X-Frame-Options: SAMEORIGIN
+        Content-Length: ?
+
+        <script type="text/javascript">
+        window.onload = function(){        
+            var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';
+            var finish_msg='<html><h1>Conexao encerrada!</h1></html>';
+            document.children[0].innerHTML='<html><body style="background-color: rgb(68, 87, 96);"><img id="imgId" style="height: 100%;"></img></body></html>';
+            var socket = null;
+            var count_fps=0;
+            try{
+              socket = new WebSocket("ws://"+window.location.href.split('://')[1].replace('/',''));
+              socket.binaryType = "blob";
+              socket.addEventListener("open", (event) => {
+                socket.send("1");
+              });
+              socket.addEventListener("message", (event) => {
+                try{
+                  if ( event.data instanceof Blob ){
+                    var s = event.data;
+                    s = s.slice(0, s.size, "image/[FORMATWEB]");
+                    var link = window.URL.createObjectURL(s);
+                    document.getElementById("imgId").src = link;    
+                    socket.send('3');
+                    count_fps++;
+                  }
+                  if ( event.data == '2' )
+                    socket.send('3');
+                }catch(error){console.log('.');}
+              });
+              socket.addEventListener("error", (event) => {
+                document.children[0].innerHTML=error_msg;
+              });
+            }catch(error){
+              document.children[0].innerHTML=error_msg;                          
+            }
+            setInterval(function(){
+              if ( socket != null && socket.readyState == WebSocket.CLOSED )
+                document.children[0].innerHTML=finish_msg;
+              else{
+                console.log('fps: '+count_fps);
+                count_fps=0;
+              }
+
+            }, 1000);
+        };      
+        </script>
+        */        
     }
     public String get_html_virtual_playlist(String host_display){
         String faixas="";
