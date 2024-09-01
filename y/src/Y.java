@@ -15829,14 +15829,21 @@ class Texto_longo extends Util{
         "    250);\n" +
         "  }else\n" +
         "    mili_dclick=Date.now();\n" +
-        "}" +                
+        "}\n" +                
         "document.addEventListener('click', function(e) {  \n" +
         "   console.log('tagName clicked: ' + e.target.tagName);\n" +
         "   if ( e.target.tagName == 'VIDEO' ){\n" +
         "     clickingVideo(e.detail); // 1 - click, 2 - doubleclick\n" +
         "   }\n" +
         "},false);  \n" +
-        "  \n" +
+        "\n" +
+        "document.addEventListener('dragend', function(e) {  \n" +
+        "   console.log('tagName dragend: ' + e.target.tagName);\n" +
+        "   if ( e.target.tagName == 'VIDEO' ){\n" +
+        "     clickingVideo(1); // 1 - click, 2 - doubleclick\n" +
+        "   }\n" +
+        "},false);  \n" +
+        "\n" +
         "document.addEventListener('fullscreenchange', () => {\n" +
         "  if (!document.fullscreenElement) {\n" +
         "    maximizeButton.style.display = '';\n" +
