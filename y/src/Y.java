@@ -9869,6 +9869,13 @@ System.out.println("BB" + retorno);
                         p+=2;
                         continue;
                     }
+                    if ( p < args.length && ( args[p].equals("key") || args[p].equals("k") ) && p+2 <= args.length ){
+                        System.out.println(args[p] + " " + args[p+1]);
+                        //robotMouseSleep(Float.parseFloat(args[p+1]));
+                        robotKey(args[p+1].toCharArray()[0]);
+                        p+=2;
+                        continue;
+                    }
                     if ( p < args.length && ( args[p].equals("click") || args[p].equals("c") ) ){
                         System.out.println(args[p]);
                         robotMouseClickEsq();
@@ -13375,7 +13382,83 @@ class Util{
     
     public void robotMouseReleaseDir() throws Exception{
         robotGet().mouseRelease(java.awt.event.InputEvent.BUTTON3_DOWN_MASK);
-    }        
+    }   
+    
+    public void robotKey(char a) throws Exception{
+        robotGet().keyPress(robotKeyByChar(a));
+        robotGet().keyRelease(robotKeyByChar(a));
+    }
+    
+    public int robotKeyByChar(char character){        
+        switch (character) {
+        case 'a': return java.awt.event.KeyEvent.VK_A;
+        case 'b': return java.awt.event.KeyEvent.VK_B;
+        case 'c': return java.awt.event.KeyEvent.VK_C;
+        case 'd': return java.awt.event.KeyEvent.VK_D;
+        case 'e': return java.awt.event.KeyEvent.VK_E;
+        case 'f': return java.awt.event.KeyEvent.VK_F;
+        case 'g': return java.awt.event.KeyEvent.VK_G;
+        case 'h': return java.awt.event.KeyEvent.VK_H;
+        case 'i': return java.awt.event.KeyEvent.VK_I;
+        case 'j': return java.awt.event.KeyEvent.VK_J;
+        case 'k': return java.awt.event.KeyEvent.VK_K;
+        case 'l': return java.awt.event.KeyEvent.VK_L;
+        case 'm': return java.awt.event.KeyEvent.VK_M;
+        case 'n': return java.awt.event.KeyEvent.VK_N;
+        case 'o': return java.awt.event.KeyEvent.VK_O;
+        case 'p': return java.awt.event.KeyEvent.VK_P;
+        case 'q': return java.awt.event.KeyEvent.VK_Q;
+        case 'r': return java.awt.event.KeyEvent.VK_R;
+        case 's': return java.awt.event.KeyEvent.VK_S;
+        case 't': return java.awt.event.KeyEvent.VK_T;
+        case 'u': return java.awt.event.KeyEvent.VK_U;
+        case 'v': return java.awt.event.KeyEvent.VK_V;
+        case 'w': return java.awt.event.KeyEvent.VK_W;
+        case 'x': return java.awt.event.KeyEvent.VK_X;
+        case 'y': return java.awt.event.KeyEvent.VK_Y;
+        case 'z': return java.awt.event.KeyEvent.VK_Z;
+        case '`': return java.awt.event.KeyEvent.VK_BACK_QUOTE;
+        case '0': return java.awt.event.KeyEvent.VK_0;
+        case '1': return java.awt.event.KeyEvent.VK_1;
+        case '2': return java.awt.event.KeyEvent.VK_2;
+        case '3': return java.awt.event.KeyEvent.VK_3;
+        case '4': return java.awt.event.KeyEvent.VK_4;
+        case '5': return java.awt.event.KeyEvent.VK_5;
+        case '6': return java.awt.event.KeyEvent.VK_6;
+        case '7': return java.awt.event.KeyEvent.VK_7;
+        case '8': return java.awt.event.KeyEvent.VK_8;
+        case '9': return java.awt.event.KeyEvent.VK_9;
+        case '-': return java.awt.event.KeyEvent.VK_MINUS;
+        case '=': return java.awt.event.KeyEvent.VK_EQUALS;
+        case '!': return java.awt.event.KeyEvent.VK_EXCLAMATION_MARK;
+        case '@': return java.awt.event.KeyEvent.VK_AT;
+        case '#': return java.awt.event.KeyEvent.VK_NUMBER_SIGN;
+        case '$': return java.awt.event.KeyEvent.VK_DOLLAR;
+        case '^': return java.awt.event.KeyEvent.VK_CIRCUMFLEX;
+        case '&': return java.awt.event.KeyEvent.VK_AMPERSAND;
+        case '*': return java.awt.event.KeyEvent.VK_ASTERISK;
+        case '(': return java.awt.event.KeyEvent.VK_LEFT_PARENTHESIS;
+        case ')': return java.awt.event.KeyEvent.VK_RIGHT_PARENTHESIS;
+        case '_': return java.awt.event.KeyEvent.VK_UNDERSCORE;
+        case '+': return java.awt.event.KeyEvent.VK_PLUS;
+        case '\t':return java.awt.event.KeyEvent.VK_TAB;
+        case '\n':return java.awt.event.KeyEvent.VK_ENTER;
+        case '[': return java.awt.event.KeyEvent.VK_OPEN_BRACKET;
+        case ']': return java.awt.event.KeyEvent.VK_CLOSE_BRACKET;
+        case '\\':return java.awt.event.KeyEvent.VK_BACK_SLASH;
+        case ';': return java.awt.event.KeyEvent.VK_SEMICOLON;
+        case ':': return java.awt.event.KeyEvent.VK_COLON;
+        case '\'':return java.awt.event.KeyEvent.VK_QUOTE;
+        case '"': return java.awt.event.KeyEvent.VK_QUOTEDBL;
+        case ',': return java.awt.event.KeyEvent.VK_COMMA;
+        case '.': return java.awt.event.KeyEvent.VK_PERIOD;
+        case '/': return java.awt.event.KeyEvent.VK_SLASH;
+        case ' ': return java.awt.event.KeyEvent.VK_SPACE;
+        default:
+            throw new IllegalArgumentException("Cannot type character " + character);
+        }        
+    }
+    
     int rGISBP_p = 0;
     int rGISBP_len = 6; // melhor configuração
     /*
