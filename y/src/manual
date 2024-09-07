@@ -113,6 +113,7 @@ usage:
   [y random]
   [y var]
   [y talk]
+  [y overflix]
   [y [update|u]]
   [y help]
 
@@ -668,6 +669,11 @@ Exemplos...
     y talk -lang Brazilian_Portuguese_Ricardo -msg oi
     y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "d:/ProgramFiles/musicas_ia/talk.wav"
     y echo oi | y talk
+[y overflix]
+    y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
+    y overflix -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
+    y overflix -v -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
+onlyLink
 [y var]
     y var
     Obs: execução por parametro de variavel

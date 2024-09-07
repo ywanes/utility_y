@@ -831,6 +831,12 @@ cat buffer.log
             cat(args);
             return;
         }     
+        if ( args[0].equals("overflix") ){
+            if ( ! isWindows() )
+                erroFatal("overflix implementado somente para o windows");            
+            overflix(args);
+            return;
+        }             
         if ( args[0].equals("lower") ){
             String line=null;
             while ( (line=readLine()) != null )
@@ -5071,6 +5077,123 @@ cat buffer.log
         }
     }
     
+    public void overflix(String [] args){                
+        Object [] objs = get_parms_url_verbose_onlyLink(args);
+        String url=(String)objs[0];
+        Boolean verbose=(Boolean)objs[1];
+        Boolean onlyLink=(Boolean)objs[2];
+        overflix_busca(url, verbose, onlyLink);
+    }
+    
+    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink){
+        ////////////////////
+        // teste
+        // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
+        // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
+        // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
+        
+        String html=curl_string(url);
+        if ( curl_status == 301 ){
+            url=curl_location;
+            html=curl_string(url);
+        }
+        if ( curl_status != 200 )
+            erroFatal("Erro:\nURL: " + url+"\nStatus: "+ curl_status+"\nText:\n" + html);
+        
+        if ( verbose )
+            System.out.println(url);
+        String [] partes=null;
+
+        // nivel 1 filme
+        partes=regex_matcher("<div class=\"assistir\"><a href=\"", "\"><i", html, true);
+        if ( partes.length > 0 ){
+            for ( int i=0;i<partes.length;i++ )
+                overflix_busca(partes[i], verbose, onlyLink);
+            return;
+        }
+        
+        // https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=11
+        // nivel 1 serie        
+        partes=regex_matcher("</i><a href=\"", "\">", html, true);
+        if ( partes.length > 0 ){
+            for ( int i=0;i<partes.length;i++ )
+                overflix_busca(partes[i], verbose, onlyLink);            
+            if ( !url.contains("?temporada=") ){
+                // chama todas as temporadas
+                url+="?temporada=1";
+                int next_temporada=Integer.parseInt(url.split("=")[1])+1;
+                while ( html.contains("load("+next_temporada+")") ){
+                    url=url.split("=")[0]+"="+next_temporada;
+                    overflix_busca(url, verbose, onlyLink);                    
+                    next_temporada=Integer.parseInt(url.split("=")[1])+1;
+                }
+            }
+            return;
+        }
+        
+        // nivel 2 filme e serie
+        partes=regex_matcher("<a href=\"", "\"", html, true); 
+        if ( partes.length > 0 && !url.contains("/f/") ){
+            String prefix=url.substring(0, url.indexOf("/", 9));
+            for ( int i=0;i<partes.length;i++ ){
+                if ( ! partes[i].startsWith("/emb") )
+                    continue;
+                overflix_busca(prefix+partes[i], verbose, onlyLink);
+                return;
+            }
+            erroFatal("Não foi possível resolver a url: " + url);
+        }
+        
+        // nivel 3 filme e serie
+        partes=regex_matcher("window.location.href=\"", "\"", html, true); 
+        if ( partes.length > 0 ){
+            String suffix="?download";
+            for ( int i=0;i<partes.length;i++ ){                
+                overflix_busca(partes[i]+suffix, verbose, onlyLink);
+                return;
+            }
+            erroFatal("Não foi possível resolver a url:: " + url);
+        }
+        
+        // nivel 4 filme e serie
+        if ( url.contains("/f/") && url.endsWith("?download") && html.contains("<b title=\"") ){            
+            // pegando titulo
+            String titulo="?";
+            partes=regex_matcher("<b title=\"", "\"", html, true); 
+            if ( partes.length > 0 )
+                titulo=partes[0].trim();
+            String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
+                "$ie.Visible=$false\n" +
+                "$ie.ParsedHtml\n" +
+                "$ie.Navigate(\"" + url + "\");\n" +
+                "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
+                "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
+                "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
+                "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
+                "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
+                "$ie.Parent.Quit();\n"; 
+            //taskkill /im iexplore.exe /f
+            String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+            if ( s != null )
+                s=s.trim();
+            else
+                erroFatal("Error script: " + runtimeExecError);
+            if ( verbose ){
+                System.out.println("curl \"" + s + "\" > \"" + titulo + "\"");
+            }
+            if ( onlyLink ){
+                System.out.println("curl \"" + s + "\" > \"" + titulo + "\"");
+            }else{
+                if ( !new File(titulo).exists() ){
+                    System.out.println("curl \"" + s + "\" > \"" + titulo + "\"");
+                }else{
+                    System.out.println(titulo+" já baixado!");
+                }
+            }            
+            return;
+        }
+    }
+    
     public void xor(int parm){
         while(parm < 0)
             parm+=256;
@@ -5460,7 +5583,7 @@ cat buffer.log
                 curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null);
             }
             if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav").exists() ){
-                runtimeExec(null, new String[]{"ffmpeg","-i",sha1+".mp3",sha1+".wav"}, new File(dir+"/talk/"+lang+"/"+pre)); 
+                runtimeExec(null, new String[]{"ffmpeg","-i",sha1+".mp3",sha1+".wav"}, new File(dir+"/talk/"+lang+"/"+pre), null); 
                 if ( runtimeExecError != null && !runtimeExecError.contains("size=") )
                     erroFatal(runtimeExecError);
             }
@@ -5585,6 +5708,9 @@ cat buffer.log
         return baos.toString();
     }
     
+    String curl_header_response="";
+    String curl_location="";
+    int curl_status=0;
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_){
         try{                        
             String protocol="HTTP";
@@ -5671,7 +5797,9 @@ cat buffer.log
             
             try{
                 boolean heading=true;
-                String header_response="";
+                curl_header_response="";
+                curl_location="";
+                curl_status=0;
                 byte[] ending_head = new byte[4]; // \r\n\r\n 13 10 13 10
                 while( is.available() >= 0 && (len=is.read(buffer)) > -1 ){
                     if ( heading ){
@@ -5680,16 +5808,23 @@ cat buffer.log
                                 os_print.write(buffer, i, 1);                        
                                 os_print.flush();
                             }
-                            header_response+=(char)buffer[i];
-
+                            curl_header_response+=(char)buffer[i];
                             ending_head[0] = ending_head[1];
                             ending_head[1] = ending_head[2];
                             ending_head[2] = ending_head[3];
                             ending_head[3] = buffer[i];
                             if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){                                
-                                heading=false;
+                                heading=false;  
+                                String [] partes_ = curl_header_response.split("\r\n");
+                                curl_status=Integer.parseInt(partes_[0].split(" ")[1]);
+                                for ( int j=0; j<partes_.length;j++ ){
+                                    if ( partes_[j].startsWith("location: ") ){
+                                        curl_location=partes_[j].split(" ")[1];
+                                        break;
+                                    }                                    
+                                }
                                 i++;
-                                if ( !raw && header_response.contains("\r\nTransfer-Encoding: chunked")){
+                                if ( !raw && curl_header_response.contains("\r\nTransfer-Encoding: chunked")){
                                     chunked=true;
                                 }
                                 if ( i < len ){
@@ -8292,6 +8427,36 @@ System.out.println("BB" + retorno);
         return new Object []{msg, lang, list, copy};
     }        
         
+    private Object [] get_parms_url_verbose_onlyLink(String [] args){
+        String url=null;
+        Boolean verbose=false;
+        Boolean onlyLink=false;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length > 0){
+            if ( args.length > 0 && args[0].equals("-onlyLink") ){
+                args=sliceParm(1, args);
+                onlyLink=true;
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-v") ){
+                args=sliceParm(1, args);
+                verbose=true;
+                continue;
+            }
+            if ( args.length > 0 && url == null ){
+                url=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }            
+            return null;
+        }      
+        if ( url == null )
+            return null;
+        return new Object []{url, verbose, onlyLink};
+    }        
+           
     private Object [] get_parms_curl_header_method_verbose_raw_host(String [] args){
         String header="";
         String method="GET";
@@ -9134,7 +9299,7 @@ System.out.println("BB" + retorno);
 
     private String getLocalDateTime_windows(){
         try{
-            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null, null);
+            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null, null, null);
             String [] lines=s.split("\n");
             return lines[1].trim();
         }catch(Exception e){
@@ -9183,7 +9348,7 @@ System.out.println("BB" + retorno);
     private void load_pss_windows() {        
         try{
             load_pss_init();
-            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null, null);
+            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null, null, null);
             String [] lines=s_.split("\n");
             ArrayList<Integer> list_p = new ArrayList<>();
             boolean isWord=false;
@@ -9346,7 +9511,7 @@ System.out.println("BB" + retorno);
         String s1_aux="";  
         for ( int i=0;i<command.length;i++ ){
             try {          
-                String s = runtimeExec(command[i], null, null).trim();
+                String s = runtimeExec(command[i], null, null, null).trim();
                 if ( s == null ){
                     if ( runtimeExecError.contains("Permission denied") ){                        
                         System.err.println("Permission denied!");
@@ -10183,7 +10348,7 @@ while True:
             if ( parms.length == 0 && parms_steps_type2.length == 0 )                
                 erroFatal("erro interno - parametros invalidos.. ");
             if ( parms.length > 0 ){
-                String s=runtimeExec(null, parms, null);
+                String s=runtimeExec(null, parms, null, null);
                 if ( s == null )
                     s=runtimeExecError;
                 s+="\n";
@@ -10195,7 +10360,7 @@ while True:
                 if ( !new File("c:/windows/windows-kill.exe").exists() )
                     erroFatal("Não foi possível encontrar a ferramenta c:/windows/windows-kill.exe - favor baixar em https://github.com/ElyDotDev/windows-kill/releases");
                 for ( int i=0;i<parms_steps_type2.length;i++ ){
-                    String s=runtimeExec(null, new String[]{"windows-kill", "-2", parms_steps_type2[i]}, null);
+                    String s=runtimeExec(null, new String[]{"windows-kill", "-2", parms_steps_type2[i]}, null, null);
                     if ( s == null )
                         erroFatal(runtimeExecError);
                     s+="\n";
@@ -10386,7 +10551,7 @@ while True:
     
     private void win(){
         try{
-            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus", null, null);
+            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus", null, null, null);
             if ( s == null )
                 erroFatal(4311);
             String [] lines=s.split("\n");
@@ -10833,7 +10998,7 @@ while True:
                 bat_mkv(display_mkv);
                 System.exit(0);
             }            
-            runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""}, null);
+            runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""}, null, null);
             String msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
@@ -10961,8 +11126,8 @@ while True:
                 erroFatal("Ocorreu um erro ao tentar gravar o arquivo " + dir+"/"+id+"/"+id+".mp4");
         }
         if ( !new File(dir+"/"+id+"/out-0001.bmp").exists() ){
-            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -r 1 -i " + id + ".mp4 -r 1 out-%04d.bmp"}, new File(dir+"/"+id));
-            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -i " + id + ".mp4 -qscale:v 2 out-%04d.jpg"}, new File(dir+"/"+id));
+            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -r 1 -i " + id + ".mp4 -r 1 out-%04d.bmp"}, new File(dir+"/"+id), null);
+            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -i " + id + ".mp4 -qscale:v 2 out-%04d.jpg"}, new File(dir+"/"+id), null);
             if ( !new File(dir+"/"+id+"/out-0001.bmp").exists() )
                 erroFatal("Nao foi possivel encontrar o utilitario ffmpef");
         }
@@ -10972,7 +11137,7 @@ while True:
                 continue;
             if ( new File(dir+"/"+id+"/"+files[i].getName()+".assinatura.txt").exists() )
                 continue;
-            String txt = runtimeExec(null, new String[]{"cmd", "/c", "y bmp -file " + files[i].getName() + " -len 64"}, new File(dir+"/"+id));
+            String txt = runtimeExec(null, new String[]{"cmd", "/c", "y bmp -file " + files[i].getName() + " -len 64"}, new File(dir+"/"+id), null);
             if ( ! salvando_file(txt, new File(dir+"/"+id+"/"+files[i].getName()+".assinatura.txt")) )
                 erroFatal("Nao foi possivel gravar o arquivo " + dir+"/"+id+"/"+files[i].getName()+".assinatura.txt");
             if ( ! salvando_file("", new File(dir+"/"+id+"/"+files[i].getName()) ) )
@@ -11015,7 +11180,7 @@ while True:
             if ( ! salvando_file(pre_saida + saida + pos_saida, new File(dir+"/"+id+".html")) )
                 erroFatal("Ocorreu um erro na gravacao do arquivo " + dir+"/"+id+".html");
         }
-        runtimeExec(null, new String[]{"cmd", "/c", dir+"/"+id+".html"}, null);
+        runtimeExec(null, new String[]{"cmd", "/c", dir+"/"+id+".html"}, null, null);
     }
     
     public int insta_diff(String [] partes1, String [] partes2, int corte){
@@ -12020,21 +12185,39 @@ class Util{
     }
     
     public String runtimeExecError = "";
-    public String runtimeExec(String line_commands, String [] commands,File file_path){
+    public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in){
         try{
             if ( commands == null )
                 commands=line_commands.split(" ");
             runtimeExecError="";
             Process proc = Runtime.getRuntime().exec(commands, null, file_path);            
-            byte[] b=new byte[1024];
+            
+            Thread ok0=new Thread(){
+                public void run(){
+                    try{
+                        if ( std_in != null ){    
+                            OutputStream os=proc.getOutputStream();
+                            os.write(std_in);
+                            os.flush();
+                            os.close();
+                        }
+                    }catch(Exception e1){
+                        runtimeExecError="Erro interno 210";
+                    }
+                }
+            };
+            ok0.start();
+            byte[] b1=new byte[1024];
+            byte[] b2=new byte[1024];
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ByteArrayOutputStream baos_err = new ByteArrayOutputStream();
             Thread ok=new Thread(){
                 public void run(){
                     try{
                         int len=0;
-                        while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                            baos.write(b, 0, len);
+                        while ( (len=proc.getInputStream().read(b1, 0, b1.length)) != -1 ){
+                            baos.write(b1, 0, len);
+                            baos.flush();
                         }                    
                     }catch(Exception e1){
                         runtimeExecError="Erro interno 211";
@@ -12046,8 +12229,9 @@ class Util{
                 public void run(){
                     try{
                         int len=0;
-                        while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                            baos_err.write(b, 0, len);
+                        while ( (len=proc.getErrorStream().read(b2, 0, b2.length)) != -1 ){
+                            baos_err.write(b2, 0, len);
+                            baos_err.flush();
                             runtimeExecError=baos_err.toString("UTF-8");                
                         }  
                     }catch(Exception e2){
@@ -12056,6 +12240,7 @@ class Util{
                 }
             };
             nok.start();
+            ok0.join();
             ok.join();
             nok.join();
             if ( !runtimeExecError.equals("") )
@@ -12072,6 +12257,20 @@ class Util{
             runtimeExecError=e.toString();            
         }
         return null;
+    }
+    
+    public String [] regex_matcher(String start, String end, String text, Boolean trunc_lens){
+        ArrayList<String> lista=new ArrayList<String>();
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(start+"[\\s\\S]*?"+end).matcher(text);        
+        while ( matcher.find() )
+            lista.add(matcher.group());
+        if ( trunc_lens ){
+            String [] lista2=new String[lista.size()];
+            for ( int i=0;i<lista.size();i++ )
+                lista2[i]=lista.get(i).substring(start.length(),lista.get(i).length()-end.length());
+            return lista2;
+        }
+        return arrayList_to_array(lista);
     }
     
     public String[] arrayList_to_array(ArrayList a){
@@ -12705,7 +12904,7 @@ class Util{
                 "Linux",
             };
             for ( int i=0;i<commands.length;i++ ){
-                String s=runtimeExec(commands[i], null, null);
+                String s=runtimeExec(commands[i], null, null, null);
                 if ( s == null )
                     continue;
                 if ( getType ){
@@ -12728,7 +12927,7 @@ class Util{
             return s;
         if ( ! s.contains("Distributor ID:\tUbuntu") )
             return s;
-        String tmp=runtimeExec("uname -r", null, null);
+        String tmp=runtimeExec("uname -r", null, null, null);
         if ( tmp == null )
             return s;
         return s+"Kernell:\t" + tmp;       
@@ -12737,7 +12936,7 @@ class Util{
     public String tryGetFirewallInWindowsByOs(String s, String type){
         if ( ! type.equals("Windows") )
             return s;
-        String tmp=runtimeExec("netsh advfirewall show allprofiles state", null, null);
+        String tmp=runtimeExec("netsh advfirewall show allprofiles state", null, null, null);
         if ( tmp == null )
             return s;        
         String [] partes=tmp.split("\n");
@@ -12761,7 +12960,7 @@ class Util{
     }
 
     public boolean isWindowsAdm(){
-        return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null) != null;
+        return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null, null) != null;
     }
     
     public boolean isLinux(){
@@ -16853,7 +17052,6 @@ namespace LoopbackWithMic
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -16973,6 +17171,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y random]\n"
 /* class by manual */                + "  [y var]\n"
 /* class by manual */                + "  [y talk]\n"
+/* class by manual */                + "  [y overflix]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -17528,6 +17727,11 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Ricardo -msg oi\n"
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Vitoria -msg \"desliga esse computador, agora!\" -o \"d:/ProgramFiles/musicas_ia/talk.wav\"\n"
 /* class by manual */                + "    y echo oi | y talk\n"
+/* class by manual */                + "[y overflix]\n"
+/* class by manual */                + "    y overflix \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
+/* class by manual */                + "    y overflix -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
+/* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
+/* class by manual */                + "onlyLink\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
 /* class by manual */                + "    Obs: execucao por parametro de variavel\n"
@@ -17622,6 +17826,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
