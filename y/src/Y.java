@@ -831,7 +831,7 @@ cat buffer.log
             cat(args);
             return;
         }     
-        if ( args[0].equals("overflix") ){
+        if ( args[0].equals("overflix") && args.length > 1 ){
             if ( ! isWindows() )
                 erroFatal("overflix implementado somente para o windows");            
             overflix(args);
@@ -5082,10 +5082,10 @@ cat buffer.log
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
-        overflix_busca(url, verbose, onlyLink);
+        overflix_busca(url, verbose, onlyLink, null);
     }
     
-    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink){
+    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, String titulo_serie){
         ////////////////////
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
@@ -5108,7 +5108,7 @@ cat buffer.log
         partes=regex_matcher("<div class=\"assistir\"><a href=\"", "\"><i", html, true);
         if ( partes.length > 0 ){
             for ( int i=0;i<partes.length;i++ )
-                overflix_busca(partes[i], verbose, onlyLink);
+                overflix_busca(partes[i], verbose, onlyLink, titulo_serie);
             return;
         }
         
@@ -5116,15 +5116,22 @@ cat buffer.log
         // nivel 1 serie        
         partes=regex_matcher("</i><a href=\"", "\">", html, true);
         if ( partes.length > 0 ){
+            // pegando titulo serie
+            if ( titulo_serie == null ){
+                String [] tmp=regex_matcher("<small>", "</small>", html, true);
+                if ( tmp.length > 0 )
+                    titulo_serie=tmp[0].replaceAll("'", "");
+            }
+            // <small>Rick and Morty</small>
             for ( int i=0;i<partes.length;i++ )
-                overflix_busca(partes[i], verbose, onlyLink);            
+                overflix_busca(partes[i], verbose, onlyLink, titulo_serie);            
             if ( !url.contains("?temporada=") ){
                 // chama todas as temporadas
                 url+="?temporada=1";
                 int next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 while ( html.contains("load("+next_temporada+")") ){
                     url=url.split("=")[0]+"="+next_temporada;
-                    overflix_busca(url, verbose, onlyLink);                    
+                    overflix_busca(url, verbose, onlyLink, titulo_serie);                    
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 }
             }
@@ -5138,7 +5145,7 @@ cat buffer.log
             for ( int i=0;i<partes.length;i++ ){
                 if ( ! partes[i].startsWith("/emb") )
                     continue;
-                overflix_busca(prefix+partes[i], verbose, onlyLink);
+                overflix_busca(prefix+partes[i], verbose, onlyLink, titulo_serie);
                 return;
             }
             erroFatal("Não foi possível resolver a url: " + url);
@@ -5149,7 +5156,7 @@ cat buffer.log
         if ( partes.length > 0 ){
             String suffix="?download";
             for ( int i=0;i<partes.length;i++ ){                
-                overflix_busca(partes[i]+suffix, verbose, onlyLink);
+                overflix_busca(partes[i]+suffix, verbose, onlyLink, titulo_serie);
                 return;
             }
             erroFatal("Não foi possível resolver a url:: " + url);
@@ -5186,6 +5193,9 @@ cat buffer.log
             }else{
                 if ( !new File(titulo).exists() ){
                     System.out.println("curl \"" + s + "\" > \"" + titulo + "\"");
+                    // titulo_serie
+                    // D:\ProgramFiles\filmes
+                    // D:\ProgramFiles\filmes\Novos
                 }else{
                     System.out.println(titulo+" já baixado!");
                 }
