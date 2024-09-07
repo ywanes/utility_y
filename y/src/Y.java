@@ -5085,8 +5085,7 @@ cat buffer.log
         overflix_busca(url, verbose, onlyLink, null);
     }
     
-    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, String titulo_serie){
-        ////////////////////
+    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, String titulo_serie){        
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
@@ -5193,9 +5192,12 @@ cat buffer.log
             }else{
                 if ( !new File(titulo).exists() ){
                     System.out.println("curl \"" + s + "\" > \"" + titulo + "\"");
+                    ////////////////////
                     // titulo_serie
                     // D:\ProgramFiles\filmes
                     // D:\ProgramFiles\filmes\Novos
+                    // verify thread joined -> .isAlive()
+                    // display \r5 downloading...
                 }else{
                     System.out.println(titulo+" já baixado!");
                 }
