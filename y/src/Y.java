@@ -5162,12 +5162,16 @@ cat buffer.log
         }
         
         // nivel 4 filme e serie
-        if ( url.contains("/f/") && url.endsWith("?download") && html.contains("<b title=\"") ){            
+        if ( url.contains("/f/") && url.endsWith("?download") ){
             // pegando titulo
             String titulo="?";
             partes=regex_matcher("<b title=\"", "\"", html, true); 
+            if ( html.contains("<h2>WE ARE SORRY</h2>") )
+                erroFatal("Arquivo não mais disponível no mixdrop, url: " + url);
             if ( partes.length > 0 )
                 titulo=partes[0].trim();
+            else
+                erroFatal("Erro, titulo não encontrado na url: " + url);
             String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
                 "$ie.Visible=$false\n" +
                 "$ie.ParsedHtml\n" +
@@ -5204,6 +5208,7 @@ cat buffer.log
             }            
             return;
         }
+        erroFatal("Não foi possível resolver a url "+url);
     }
     
     public void xor(int parm){
