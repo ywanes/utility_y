@@ -5092,12 +5092,12 @@ cat buffer.log
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
         
         String html=curl_string(url);
-        if ( curl_status == 301 ){
-            url=curl_location;
+        if ( curl_response_status == 301 ){
+            url=curl_response_location;
             html=curl_string(url);
         }
-        if ( curl_status != 200 )
-            erroFatal("Erro:\nURL: " + url+"\nStatus: "+ curl_status+"\nText:\n" + html);
+        if ( curl_response_status != 200 )
+            erroFatal("Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html);
         
         if ( verbose )
             System.out.println(url);
@@ -5725,9 +5725,10 @@ cat buffer.log
         return baos.toString();
     }
     
-    String curl_header_response="";
-    String curl_location="";
-    int curl_status=0;
+    String curl_response_header="";
+    String curl_response_location="";
+    int curl_response_status=0;
+    long curl_response_len=0;
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_){
         try{                        
             String protocol="HTTP";
@@ -5814,9 +5815,10 @@ cat buffer.log
             
             try{
                 boolean heading=true;
-                curl_header_response="";
-                curl_location="";
-                curl_status=0;
+                curl_response_header="";
+                curl_response_location="";
+                curl_response_status=0;
+                curl_response_len=0;
                 byte[] ending_head = new byte[4]; // \r\n\r\n 13 10 13 10
                 while( is.available() >= 0 && (len=is.read(buffer)) > -1 ){
                     if ( heading ){
@@ -5825,23 +5827,26 @@ cat buffer.log
                                 os_print.write(buffer, i, 1);                        
                                 os_print.flush();
                             }
-                            curl_header_response+=(char)buffer[i];
+                            curl_response_header+=(char)buffer[i];
                             ending_head[0] = ending_head[1];
                             ending_head[1] = ending_head[2];
                             ending_head[2] = ending_head[3];
                             ending_head[3] = buffer[i];
                             if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){                                
                                 heading=false;  
-                                String [] partes_ = curl_header_response.split("\r\n");
-                                curl_status=Integer.parseInt(partes_[0].split(" ")[1]);
+                                String [] partes_ = curl_response_header.split("\r\n");
+                                curl_response_status=Integer.parseInt(partes_[0].split(" ")[1]);
                                 for ( int j=0; j<partes_.length;j++ ){
                                     if ( partes_[j].startsWith("location: ") ){
-                                        curl_location=partes_[j].split(" ")[1];
-                                        break;
-                                    }                                    
+                                        curl_response_location=partes_[j].split(" ")[1];                                        
+                                    }      
+                                    if ( partes_[j].startsWith("Content-Length: ") ){
+                                        curl_response_len=Long.parseLong(partes_[j].split(" ")[1]);
+                                    }      
+                                    //Content-Length: 5892368384                                    
                                 }
                                 i++;
-                                if ( !raw && curl_header_response.contains("\r\nTransfer-Encoding: chunked")){
+                                if ( !raw && curl_response_header.contains("\r\nTransfer-Encoding: chunked")){
                                     chunked=true;
                                 }
                                 if ( i < len ){
