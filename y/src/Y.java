@@ -16945,12 +16945,9 @@ namespace LoopbackWithMic
 /* class HttpServer */         if ( ! uri.equals("/favicon.ico"))
 /* class HttpServer */             System.out.println("nav: " + nav + ";uri: " + uri);
 /* class HttpServer */         if (new File(nav).exists() && new File(nav).isFile() && endsWith_OK(nav, endsWiths)) {
-/* class HttpServer */             long lenFile = -1;
-/* class HttpServer */             if ( range > -1 ){
-/* class HttpServer */                 lenFile = new File(nav).length();
-/* class HttpServer */                 if ( range >= lenFile)
-/* class HttpServer */                     range = -1;
-/* class HttpServer */             }
+/* class HttpServer */             long lenFile = new File(nav).length();
+/* class HttpServer */             if ( range > -1 && range >= lenFile)
+/* class HttpServer */                 range = -1;
 /* class HttpServer */             if ( range > -1){
 /* class HttpServer */                 if ( userAgent.contains(" TV ") )
 /* class HttpServer */                     lenTarget=lenFile-range;
@@ -16975,6 +16972,7 @@ namespace LoopbackWithMic
 /* class HttpServer */                 for (String line: new String[] {
 /* class HttpServer */                         "HTTP/1.1 200 OK\r\n",
 /* class HttpServer */                         "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
+/* class HttpServer */                         "Content-Length: " + lenFile + "\r\n",
 /* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
 /* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
 /* class HttpServer */                         "\r\n"
