@@ -5156,10 +5156,10 @@ cat buffer.log
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
-        overflix_busca(url, verbose, onlyLink, null);
+        overflix_busca(url, verbose, onlyLink, null, null);
     }
     
-    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, String titulo_serie){        
+    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, String titulo_serie, Boolean cam){        
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
@@ -5180,8 +5180,10 @@ cat buffer.log
         // nivel 1 filme
         partes=regex_matcher("<div class=\"assistir\"><a href=\"", "\"><i", html, true);
         if ( partes.length > 0 ){
+            if ( html.contains("\">CAM</span>") )
+                cam=true;
             for ( int i=0;i<partes.length;i++ )
-                overflix_busca(partes[i], verbose, onlyLink, titulo_serie);
+                overflix_busca(partes[i], verbose, onlyLink, titulo_serie, cam);
             return;
         }
         
@@ -5197,14 +5199,14 @@ cat buffer.log
             }
             // <small>Rick and Morty</small>
             for ( int i=0;i<partes.length;i++ )
-                overflix_busca(partes[i], verbose, onlyLink, titulo_serie);            
+                overflix_busca(partes[i], verbose, onlyLink, titulo_serie, cam);
             if ( !url.contains("?temporada=") ){
                 // chama todas as temporadas
                 url+="?temporada=1";
                 int next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 while ( html.contains("load("+next_temporada+")") ){
                     url=url.split("=")[0]+"="+next_temporada;
-                    overflix_busca(url, verbose, onlyLink, titulo_serie);                    
+                    overflix_busca(url, verbose, onlyLink, titulo_serie, cam);
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 }
             }
@@ -5216,9 +5218,9 @@ cat buffer.log
         if ( partes.length > 0 && !url.contains("/f/") ){
             String prefix=url.substring(0, url.indexOf("/", 9));
             for ( int i=0;i<partes.length;i++ ){
-                if ( ! partes[i].startsWith("/emb") )
+                if ( ! partes[i].startsWith("/em") )
                     continue;
-                overflix_busca(prefix+partes[i], verbose, onlyLink, titulo_serie);
+                overflix_busca(prefix+partes[i], verbose, onlyLink, titulo_serie, cam);
                 return;
             }
             erroFatal("Não foi possível resolver a url: " + url);
@@ -5229,7 +5231,7 @@ cat buffer.log
         if ( partes.length > 0 ){
             String suffix="?download";
             for ( int i=0;i<partes.length;i++ ){                
-                overflix_busca(partes[i]+suffix, verbose, onlyLink, titulo_serie);
+                overflix_busca(partes[i]+suffix, verbose, onlyLink, titulo_serie, cam);
                 return;
             }
             erroFatal("Não foi possível resolver a url:: " + url);
@@ -5243,7 +5245,7 @@ cat buffer.log
             if ( html.contains("<h2>WE ARE SORRY</h2>") )
                 erroFatal("Arquivo não mais disponível no mixdrop, url: " + url);
             if ( partes.length > 0 )
-                titulo=partes[0].trim();
+                titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "");
             else
                 erroFatal("Erro, titulo não encontrado na url: " + url);
             String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
@@ -5274,6 +5276,7 @@ cat buffer.log
                     // titulo_serie
                     // D:\ProgramFiles\filmes
                     // D:\ProgramFiles\filmes\Novos
+                    // D:\ProgramFiles\filmes\Novos-CAM
                     // verify thread joined -> .isAlive()
                     // display \r5 downloading...
                     // model display layout: https://global.discourse-cdn.com/docker/optimized/3X/c/7/c7ab1eb57d3c4eb31bf6093e507ab9e1ba319599_2_1024x576.jpeg
