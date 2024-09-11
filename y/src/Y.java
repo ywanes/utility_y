@@ -827,6 +827,13 @@ cat buffer.log
             new Diff(args[1], args[2], System.out);
             return;
         }
+        if ( args[0].equals("progressBar") ){
+            Boolean uniqLine=false;
+            if ( args.length > 1 && args[1].equals("-uniqLine") )
+                uniqLine=true;
+            progressBar(System.in, uniqLine);
+            return;
+        }     
         if ( args[0].equals("cat") ){
             cat(args);
             return;
@@ -2771,7 +2778,7 @@ cat buffer.log
         }
         return result;
     }
-    
+
     class ProcDaemon{
         public String nome=null;
         public String [] command=null;
@@ -5041,7 +5048,74 @@ cat buffer.log
             result+=" "+args[i];        
         return result;
     }
+    private void cursorUp(int n){
+        try{
+            System.out.write(new byte[]{(byte)27});
+        }catch(Exception e){
+            erroFatal(e);
+        }
+        System.out.print("[");
+        System.out.print(n);
+        System.out.print("F");
+    }
     
+    private void progressBar(InputStream is, Boolean uniqLine) {
+        readLine(is,"UTF-8",null);
+        String line="";
+        ArrayList lista=new ArrayList<String>();
+        int carro=0;
+        while( (line=readLine()) != null ){
+            if ( line.equals("done") ){
+                System.out.println("");
+                System.out.flush();
+                return;
+            }
+            if(uniqLine){
+                System.out.print(progressBarFormat80(line, false));
+                System.out.flush();
+            }else{
+                line=progressBarFormat80(line, true);
+                carro=progressBarFormat80_numeroCarro;
+                while(carro+1 > lista.size()){
+                    System.out.println("");
+                    lista.add("");
+                }
+                lista.set(carro, line);                
+                cursorUp(lista.size());
+                for(int i=0;i<lista.size();i++)
+                    System.out.println(lista.get(i));
+                System.out.flush();
+            }
+        }
+        System.out.println("");
+        System.out.flush();
+    }
+    
+    private int progressBarFormat80_numeroCarro=0;
+    private String progressBarFormat80_spaces="                                                                                ";    
+    private String progressBarFormat80(String a, Boolean hasCarro){
+        a=a.trim();
+        if ( hasCarro ){
+            int p=a.indexOf(" ");
+            try{
+                progressBarFormat80_numeroCarro=Integer.parseInt(a.split(" ")[0])-1;
+            }catch(Exception e){
+                erroFatal("\n\nprogressBar Error!\nComando inválido: " + a);
+            }
+            if ( p > -1 )
+                a=a.substring(p+1);
+            else
+                return "\r"+progressBarFormat80_spaces;
+        }
+        if ( a.length() > 80 )
+            a=a.substring(0, 77) + "...";
+        else{
+            if ( a.length() < 80 )
+                a=a+progressBarFormat80_spaces.substring(0, 80-a.length());
+        }
+        return "\r"+a;
+    }
+            
     public void cat(String [] caminhos)
     {
         try{
@@ -5202,6 +5276,8 @@ cat buffer.log
                     // D:\ProgramFiles\filmes\Novos
                     // verify thread joined -> .isAlive()
                     // display \r5 downloading...
+                    // model display layout: https://global.discourse-cdn.com/docker/optimized/3X/c/7/c7ab1eb57d3c4eb31bf6093e507ab9e1ba319599_2_1024x576.jpeg
+                    // using y progressBar
                 }else{
                     System.out.println(titulo+" já baixado!");
                 }
@@ -17184,6 +17260,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y echo]\n"
 /* class by manual */                + "  [y printf]\n"
 /* class by manual */                + "  [y sdiff]\n"
+/* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y cat]\n"
 /* class by manual */                + "  [y lower]\n"
 /* class by manual */                + "  [y upper]\n"
@@ -17403,6 +17480,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
 /* class by manual */                + "[y sdiff]\n"
 /* class by manual */                + "    y sdiff file1.txt file2.txt\n"
+/* class by manual */                + "[y progressBar]\n"
+/* class by manual */                + "    ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar\n"
+/* class by manual */                + "    ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar -uniqLine\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
 /* class by manual */                + "[y lower]\n"
@@ -17929,6 +18009,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
