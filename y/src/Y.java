@@ -964,16 +964,17 @@ cat buffer.log
             String [] args2 = new String[args.length];            
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
-            Object [] objs = get_parms_curl_header_method_verbose_raw_host(args2);
+            Object [] objs = get_parms_curl_header_method_verbose_raw_host_limitRate(args2);
             if ( objs != null ){
                 String header=(String)objs[0];
                 String method=(String)objs[1];
                 boolean verbose=(Boolean)objs[2];
                 boolean raw=(Boolean)objs[3];
                 String host=(String)objs[4];
+                Long limitRate=(Long)objs[5];
 
                 if ( host != null ){
-                    curl(System.out, header, method, verbose, raw, host, null);
+                    curl(System.out, header, method, verbose, raw, host, null, limitRate);
                     return;
                 }
             }
@@ -982,13 +983,14 @@ cat buffer.log
             String [] args2 = new String[args.length];            
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
-            Object [] objsCurl = get_parms_curl_header_method_verbose_raw_host(args2);
+            Object [] objsCurl = get_parms_curl_header_method_verbose_raw_host_limitRate(args2);
             if ( objsCurl != null ){
                 String header=(String)objsCurl[0];
                 String method=(String)objsCurl[1];
                 boolean verbose=(Boolean)objsCurl[2];
                 boolean raw=(Boolean)objsCurl[3];
-                String host=(String)objsCurl[4];            
+                String host=(String)objsCurl[4];  
+                Long limitRate=(Long)objsCurl[5];
 
                 Object [] objs = get_parms_json_listOn_noHeader_parm(args2);
                 if ( objs != null ){
@@ -1007,7 +1009,7 @@ cat buffer.log
                                 pipedInputStream.connect(pipedOutputStream);
                                 Thread pipeWriter=new Thread(new Runnable() {
                                     public void run() {
-                                        curl(pipedOutputStream, header, method, verbose, raw, host, null);
+                                        curl(pipedOutputStream, header, method, verbose, raw, host, null, limitRate);
                                     }
                                 });
                                 Thread pipeReader=new Thread(new Runnable() {
@@ -5669,14 +5671,14 @@ cat buffer.log
                 String url_="https://ttsmp3.com/makemp3_new.php";
                 String data_="msg="+msg_+"&lang="+lang_+"&source=ttsmp3";
                 ByteArrayOutputStream baos=new ByteArrayOutputStream();
-                curl(baos, "", "POST", false, false, url_, new ByteArrayInputStream(data_.getBytes()));
+                curl(baos, "", "POST", false, false, url_, new ByteArrayInputStream(data_.getBytes()), null);
                 String s=baos.toString();
                 if ( !s.contains("\"Error\":") )
                     erroFatal("Resposta inesperada do servidor: " + s);
                 if ( !s.contains("\"Error\":0") )
                     erroFatal("Erro na resposta do servidor: " + s);
                 s=s.substring(s.length()-38, s.length()-38+32);
-                curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null);
+                curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null, null);
             }
             if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav").exists() ){
                 runtimeExec(null, new String[]{"ffmpeg","-i",sha1+".mp3",sha1+".wav"}, new File(dir+"/talk/"+lang+"/"+pre), null); 
@@ -5795,12 +5797,12 @@ cat buffer.log
     }
 
     public void curl_path(String url, String path) throws Exception{        
-        curl(new FileOutputStream(path), "", "GET", false, false, url, null);
+        curl(new FileOutputStream(path), "", "GET", false, false, url, null, null);
     }
     
     public String curl_string(String url){
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
-        curl(baos, "", "GET", false, false, url, null);
+        curl(baos, "", "GET", false, false, url, null, null);
         return baos.toString();
     }
     
@@ -5808,7 +5810,7 @@ cat buffer.log
     String curl_response_location="";
     int curl_response_status=0;
     long curl_response_len=0;
-    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_){
+    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate){
         try{                        
             String protocol="HTTP";
             int len=0;
@@ -5855,7 +5857,7 @@ cat buffer.log
                 if ( is_ == null )
                     is_=System.in;
                 while( (len=is_.read(buffer,0,buffer.length)) > 0 )
-                    baos.write(buffer, 0, len);
+                    baos.write(buffer, 0, len);                
             }
             
             String init_msg=method + " " + path + " " + http_version + "\r\n";
@@ -5945,8 +5947,11 @@ cat buffer.log
                             if ( curl_chunk_write(buffer, 0, len) ){
                                 System.exit(0);
                             }
-                        }else
+                        }else{
+                            if ( limitRate != null )
+                                sleepLimitRate(len, limitRate);
                             os_print.write(buffer, 0, len);
+                        }
                     }
                 }
                 os_print.flush();
@@ -5958,6 +5963,19 @@ cat buffer.log
         }catch(Exception e){
             System.err.println("Error: " + e.toString());
         }
+    }
+    
+    public Long sleepLimitRate_start=null;
+    public Long sleepLimitRate_sumLen=0L;
+    public void sleepLimitRate(int len, Long limitRate){
+        Long now=epochmili(null);
+        if ( sleepLimitRate_start == null )
+            sleepLimitRate_start=now;
+        sleepLimitRate_sumLen+=len;
+        Long delta=now-sleepLimitRate_start;
+        Long miliPrevisto=(sleepLimitRate_sumLen/limitRate)*1000;
+        if ( delta < miliPrevisto )
+            sleepMillis(miliPrevisto-delta);
     }
     
     boolean flip=true; // true => head chunked | false => data chunked
@@ -8558,15 +8576,22 @@ System.out.println("BB" + retorno);
         return new Object []{url, verbose, onlyLink};
     }        
            
-    private Object [] get_parms_curl_header_method_verbose_raw_host(String [] args){
+    private Object [] get_parms_curl_header_method_verbose_raw_host_limitRate(String [] args){
         String header="";
         String method="GET";
         boolean verbose=false;
         boolean raw=false;
         String host = "";
+        Long limitRate=null;
 
         while(true){
             if ( args.length > 1 && (args[0].equals("-H") || args[0].equals("--header")) ){
+                header+=args[1]+"\r\n";
+                args=sliceParm(2, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("--limit-rate") ){
+                limitRate=getLimitRateByText(args[1]);
                 header+=args[1]+"\r\n";
                 args=sliceParm(2, args);
                 continue;
@@ -8596,7 +8621,25 @@ System.out.println("BB" + retorno);
             break;
         }
         header+="\r\n";
-        return new Object []{header, method, verbose, raw, host};
+        return new Object []{header, method, verbose, raw, host, limitRate};
+    }
+    
+    private Long getLimitRateByText(String a){
+        try{
+            while( a.endsWith("k") || a.endsWith("K") || a.endsWith("m") || a.endsWith("M") || a.endsWith("g") || a.endsWith("G") ){            
+                String next="";
+                if ( a.endsWith("k") || a.endsWith("K") )
+                    next="";
+                if ( a.endsWith("m") || a.endsWith("M") )
+                    next="k";
+                if ( a.endsWith("g") || a.endsWith("G") )
+                    next="m";
+                a=Long.parseLong(a.substring(0, a.length()-1))*1012+next;
+            }
+        }catch(Exception e){
+            erroFatal("Parametro invalido de --limit-rate");
+        }
+        return Long.parseLong(a);
     }
     
     private Object [] get_parms_json_listOn_noHeader_parm(String [] args){
@@ -17234,6 +17277,8 @@ namespace LoopbackWithMic
 
 
 
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -17562,6 +17607,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
 /* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
+/* class by manual */                + "    curl http://localhost:8080/v1/movies --limit-rate 20M\n"
 /* class by manual */                + "    obs: -v => verbose\n"
 /* class by manual */                + "    obs2: --header e o mesmo que -H\n"
 /* class by manual */                + "[ y curlJson]\n"
@@ -18012,6 +18058,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

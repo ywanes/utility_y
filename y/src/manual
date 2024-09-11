@@ -322,6 +322,7 @@ Exemplos...
         -H "Content-Type: application/json" \
         -X POST http://localhost:8080/v1/movies
     curl http://localhost:8080/v1/movies
+    curl http://localhost:8080/v1/movies --limit-rate 20M
     obs: -v => verbose
     obs2: --header é o mesmo que -H
 [ y curlJson]
