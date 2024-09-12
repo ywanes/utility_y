@@ -7218,7 +7218,7 @@ System.out.println("BB" + retorno);
         }
     }
     
-    private static String bytesToHex(byte[] a){
+    private String bytesToHex(byte[] a){
         StringBuilder sb = new StringBuilder();
         for (byte b : a) {
             sb.append(String.format("%02X", b));
@@ -7226,7 +7226,7 @@ System.out.println("BB" + retorno);
         return sb.toString();
     }
     
-    private static byte[] hexTobytes(String s) {
+    private byte[] hexTobytes(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];
         for (int i = 0; i < len; i += 2) {
@@ -7539,7 +7539,7 @@ System.out.println("BB" + retorno);
         }
     }
     
-    public static String formatacaoInsertClobComAspetas(String _text)
+    public String formatacaoInsertClobComAspetas(String _text)
     {
         String retorno = "";
         int len = 0;
@@ -12217,7 +12217,7 @@ class grammarsWhere extends Util{
 }
 
 class Util{
-    public static String erroSequenciaIlegal="Erro, sequencia ilegal!";
+    public String erroSequenciaIlegal="Erro, sequencia ilegal!";
     
     int V_0b00000011=3; // 0b00000011 (3)
     int V_0b0000000011=3; // 0b0000000011 (3)
@@ -12449,7 +12449,7 @@ class Util{
         return e.toString();        
     }
     
-    public static ByteArrayOutputStream delete_baos(ByteArrayOutputStream baos_, int start, int end){
+    public ByteArrayOutputStream delete_baos(ByteArrayOutputStream baos_, int start, int end){
         byte [] bytes_baos_=baos_.toByteArray();
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
         if ( start != 0 || start >= end || end > bytes_baos_.length )
