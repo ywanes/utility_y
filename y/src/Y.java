@@ -8536,7 +8536,7 @@ System.out.println("BB" + retorno);
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length == 1 && msg == null ){
+            if ( msg == null ){
                 msg=args[0];
                 args=sliceParm(1, args);
                 continue;
