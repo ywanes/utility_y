@@ -5196,13 +5196,20 @@ cat buffer.log
         if ( partes.length > 0 ){
             // pegando titulo serie
             if ( titulo_serie == null ){
-                String [] tmp=regex_matcher("<small>", "</small>", html, true);
+                String [] tmp=null;
+                tmp=regex_matcher("<span class=\"titulo\">", "<small>", html, true);
                 if ( tmp.length > 0 )
-                    titulo_serie=tmp[0].replaceAll("'", "");
+                    titulo_serie=tmp[0].replaceAll("'", "").trim();
+                if ( titulo_serie == null ){
+                    tmp=regex_matcher("<small>", "</small>", html, true);
+                    if ( tmp.length > 0 )
+                        titulo_serie=tmp[0].replaceAll("'", "").trim();
+                }
             }
-            // <small>Rick and Morty</small>
+            // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ )
                 overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, titulo_serie, cam);
+            // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
                 // chama todas as temporadas
                 url+="?temporada=1";
