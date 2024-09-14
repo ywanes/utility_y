@@ -16108,7 +16108,7 @@ class Texto_longo extends Util{
         "  <title>" + id_display + "</title>\n" +
         "  <link href=\"https://fonts.googleapis.com/css?family=Rubik&display=swap\" rel=\"stylesheet\">\n" +
         "</head>\n" +
-        "<body onload=\"playPause()\">\n" +
+        "<body onload=\"f_onload()\">\n" +
         "  <div class=\"video-container\">\n" +
         "    <video src=\"" + id + "\" id=\"video\"></video>\n" +
         "    <div class=\"controls-container\">\n" +
@@ -16144,17 +16144,7 @@ class Texto_longo extends Util{
         "              d=\"M10,12V22H8V14H6V12H10M18,14V20C18,21.11 17.11,22 16,22H14A2,2 0 0,1 12,20V14A2,2 0 0,1 14,12H16C17.11,12 18,12.9 18,14M14,14V20H16V14H14M11.5,3C14.15,3 16.55,4 18.4,5.6L21,3V10H14L16.62,7.38C15.23,6.22 13.46,5.5 11.5,5.5C7.96,5.5 4.95,7.81 3.9,11L1.53,10.22C2.92,6.03 6.85,3 11.5,3Z\" />\n" +
         "          </svg>\n" +
         "        </button>\n" +
-        "        <button class=\"volume\">\n" +
-        "          <svg class=\"full-volume\" viewBox=\"0 0 24 24\">\n" +
-        "            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\n" +
-        "            <path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\"></path>\n" +
-        "          </svg>\n" +
-        "          <svg class=\"muted\" viewBox=\"0 0 24 24\">\n" +
-        "            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\n" +
-        "            <line x1=\"23\" y1=\"9\" x2=\"17\" y2=\"15\"></line>\n" +
-        "            <line x1=\"17\" y1=\"9\" x2=\"23\" y2=\"15\"></line>\n" +
-        "          </svg>\n" +
-        "        </button>\n" +
+        "        <button id=\"volume\"></button>\n" +
         "        <p class=\"title\">\n" +
         "          <span class=\"series\"></span><span class=\"episode\">" + id_display + "</span>\n" +
         "        </p>\n" +
@@ -16198,12 +16188,9 @@ class Texto_longo extends Util{
         "const playPauseButton = document.querySelector('.video-container .controls button.play-pause');\n" +
         "const rewindButton = document.querySelector('.video-container .controls button.rewind');\n" +
         "const fastForwardButton = document.querySelector('.video-container .controls button.fast-forward');\n" +
-        "const volumeButton = document.querySelector('.video-container .controls button.volume');\n" +
         "const fullScreenButton = document.querySelector('.video-container .controls button.full-screen');\n" +
         "const playButton = playPauseButton.querySelector('.playing');\n" +
         "const pauseButton = playPauseButton.querySelector('.paused');\n" +
-        "const fullVolumeButton = volumeButton.querySelector('.full-volume');\n" +
-        "const mutedButton = volumeButton.querySelector('.muted');\n" +
         "const maximizeButton = fullScreenButton.querySelector('.maximize');\n" +
         "const minimizeButton = fullScreenButton.querySelector('.minimize');\n" +
         "\n" +
@@ -16245,17 +16232,6 @@ class Texto_longo extends Util{
         "      pauseButton.style.display = 'none';\n" +
         "    }\n" +
         "  }catch(e){}\n" +
-        "};\n" +
-        "\n" +
-        "const toggleMute = () => {\n" +
-        "  video.muted = !video.muted;\n" +
-        "  if (video.muted) {\n" +
-        "    fullVolumeButton.style.display = 'none';\n" +
-        "    mutedButton.style.display = '';\n" +
-        "  } else {\n" +
-        "    fullVolumeButton.style.display = '';\n" +
-        "    mutedButton.style.display = 'none';\n" +
-        "  }\n" +
         "};\n" +
         "\n" +
         "const toggleFullScreen = () => {\n" +
@@ -16311,7 +16287,7 @@ class Texto_longo extends Util{
         "    playPause(); \n" +
         "  }\n" +
         "  if (event.code === 'KeyM') {\n" +
-        "    toggleMute();\n" +
+        "    volumeclick();\n" +
         "  }\n" +
         "  if (event.code === 'KeyF') {\n" +
         "    toggleFullScreen();\n" +
@@ -16357,6 +16333,27 @@ class Texto_longo extends Util{
         "  else\n" +
         "    second=''+second;\n" +
         "  return hour+':'+minute+':'+second;\n" +
+        "}\n" + 
+        "function volumeclick(){\n" +
+        "  let e=document.getElementById('volume');\n" +
+        "  let state1='\\n          <svg viewBox=\"0 0 24 24\">\\n            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\\n            <path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\"></path>\\n          </svg>';\n" +
+        "  let state2='\\n          <svg viewBox=\"0 0 24 24\">\\n            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\\n            </svg>';\n" +
+        "  let state3='\\n          <svg viewBox=\"0 0 24 24\">\\n            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\\n            <line x1=\"23\" y1=\"9\" x2=\"17\" y2=\"15\"></line>\\n            <line x1=\"17\" y1=\"9\" x2=\"23\" y2=\"15\"></line>\\n          </svg>\\n        ';\n" +
+        "  let volume1=1;\n" +
+        "  let volume2=0.5;\n" +
+        "  let volume3=0;  \n" +
+        "  if ( e.innerHTML == state1 ){\n" +
+        "    e.innerHTML=state2;\n" +
+        "	video.volume=volume2;\n" +
+        "	return;\n" +
+        "  }\n" +
+        "  if ( e.innerHTML == state2 ){\n" +
+        "    e.innerHTML=state3;\n" +
+        "	video.volume=volume3;\n" +
+        "	return;\n" +
+        "  }\n" +
+        "  e.innerHTML=state1;\n" +
+        "  video.volume=volume1;\n" +
         "}\n" +
         "video.addEventListener('timeupdate', () => {\n" +
         "  watchedBar.style.width = ((video.currentTime / video.duration) * 100) + '%';\n" +
@@ -16379,9 +16376,12 @@ class Texto_longo extends Util{
         "  video.currentTime += 10;\n" +
         "});\n" +
         "\n" +
-        "volumeButton.addEventListener('click', toggleMute);\n" +
-        "\n" +
-        "fullScreenButton.addEventListener('click', toggleFullScreen);\n" +
+        "fullScreenButton.addEventListener('click', toggleFullScreen);\n" + 
+        "document.getElementById('volume').addEventListener('click', volumeclick);\n" + 
+        "function f_onload(){\n" + 
+        "  volumeclick();\n" +
+        "  playPause();\n" +
+        "}\n" +                
         "</script>\n" +
         "\n" +
         "<style>\n" +
