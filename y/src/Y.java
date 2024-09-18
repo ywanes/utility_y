@@ -837,11 +837,15 @@ cat buffer.log
         if ( args[0].equals("cat") ){
             cat(args);
             return;
-        }     
+        }
         if ( args[0].equals("overflix") && args.length > 1 ){
             if ( ! isWindows() )
                 erroFatal("overflix implementado somente para o windows");            
-            overflix(args);
+            try{
+                overflix(args);
+            }catch(Exception e){
+                erroFatal(e);
+            }
             return;
         }             
         if ( args[0].equals("lower") ){
@@ -974,7 +978,7 @@ cat buffer.log
                 Long limitRate=(Long)objs[5];
 
                 if ( host != null ){
-                    curl(System.out, header, method, verbose, raw, host, null, limitRate);
+                    curl(System.out, header, method, verbose, raw, host, null, limitRate, null, null, null);
                     return;
                 }
             }
@@ -1009,7 +1013,7 @@ cat buffer.log
                                 pipedInputStream.connect(pipedOutputStream);
                                 Thread pipeWriter=new Thread(new Runnable() {
                                     public void run() {
-                                        curl(pipedOutputStream, header, method, verbose, raw, host, null, limitRate);
+                                        curl(pipedOutputStream, header, method, verbose, raw, host, null, limitRate, null, null, null);
                                     }
                                 });
                                 Thread pipeReader=new Thread(new Runnable() {
@@ -5061,7 +5065,7 @@ cat buffer.log
         System.out.print("F");
     }
     
-    private void progressBar(InputStream is, Boolean uniqLine) {
+    public void progressBar(InputStream is, Boolean uniqLine) {
         readLine(is,"UTF-8",null);
         String line="";
         ArrayList lista=new ArrayList<String>();
@@ -5094,8 +5098,9 @@ cat buffer.log
     }
     
     private int progressBarFormat80_numeroCarro=0;
-    private String progressBarFormat80_spaces="                                                                                ";    
+    private String progressBarFormat80_spaces="                                                                                                                                                                ";    
     private String progressBarFormat80(String a, Boolean hasCarro){
+        int _80=150;
         a=a.trim();
         if ( hasCarro ){
             int p=a.indexOf(" ");
@@ -5109,11 +5114,11 @@ cat buffer.log
             else
                 return "\r"+progressBarFormat80_spaces;
         }
-        if ( a.length() > 80 )
-            a=a.substring(0, 77) + "...";
+        if ( a.length() > _80 )
+            a=a.substring(0, _80-3) + "...";
         else{
-            if ( a.length() < 80 )
-                a=a+progressBarFormat80_spaces.substring(0, 80-a.length());
+            if ( a.length() < _80 )
+                a=a+progressBarFormat80_spaces.substring(0, _80-a.length());
         }
         return "\r"+a;
     }
@@ -5153,16 +5158,19 @@ cat buffer.log
         }
     }
     
-    public void overflix(String [] args){                
+    multiCurl overflix_multi=null;
+    public void overflix(String [] args) throws Exception{             
         Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink(args);
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
         Boolean onlyPreLink=(Boolean)objs[3];
         overflix_busca(url, verbose, onlyLink, onlyPreLink, null, null);
+        if ( overflix_multi != null )
+            overflix_multi.waitFinish();
     }
     
-    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, String titulo_serie, Boolean cam){        
+    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, String titulo_serie, Boolean cam) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
@@ -5199,11 +5207,11 @@ cat buffer.log
                 String [] tmp=null;
                 tmp=regex_matcher("<span class=\"titulo\">", "<small>", html, true);
                 if ( tmp.length > 0 )
-                    titulo_serie=tmp[0].replaceAll("'", "").trim();
+                    titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").trim();
                 if ( titulo_serie == null ){
                     tmp=regex_matcher("<small>", "</small>", html, true);
                     if ( tmp.length > 0 )
-                        titulo_serie=tmp[0].replaceAll("'", "").trim();
+                        titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").trim();
                 }
             }
             // chamando itens da temporada
@@ -5287,20 +5295,13 @@ cat buffer.log
             if ( verbose ){
                 System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
             }
-            if ( onlyLink ){
+            if ( onlyLink || onlyPreLink ){
                 System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
             }else{
                 if ( !new File(titulo).exists() ){
-                    System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
-                    ////////////////////
-                    // titulo_serie
-                    // D:\ProgramFiles\filmes
-                    // D:\ProgramFiles\filmes\Novos
-                    // D:\ProgramFiles\filmes\Novos-CAM
-                    // verify thread joined -> .isAlive()
-                    // display \r5 downloading...
-                    // model display layout: https://global.discourse-cdn.com/docker/optimized/3X/c/7/c7ab1eb57d3c4eb31bf6093e507ab9e1ba319599_2_1024x576.jpeg
-                    // using y progressBar
+                    if ( overflix_multi == null )
+                        overflix_multi=new multiCurl();                    
+                    overflix_multi.addCurl(s,dir+titulo);
                 }else{
                     System.out.println(titulo+" já baixado!");
                 }
@@ -5689,14 +5690,14 @@ cat buffer.log
                 String url_="https://ttsmp3.com/makemp3_new.php";
                 String data_="msg="+msg_+"&lang="+lang_+"&source=ttsmp3";
                 ByteArrayOutputStream baos=new ByteArrayOutputStream();
-                curl(baos, "", "POST", false, false, url_, new ByteArrayInputStream(data_.getBytes()), null);
+                curl(baos, "", "POST", false, false, url_, new ByteArrayInputStream(data_.getBytes()), null, null, null, null);
                 String s=baos.toString();
                 if ( !s.contains("\"Error\":") )
                     erroFatal("Resposta inesperada do servidor: " + s);
                 if ( !s.contains("\"Error\":0") )
                     erroFatal("Erro na resposta do servidor: " + s);
                 s=s.substring(s.length()-38, s.length()-38+32);
-                curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null, null);
+                curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null, null, null, null, null);
             }
             if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav").exists() ){
                 runtimeExec(null, new String[]{"ffmpeg","-i",sha1+".mp3",sha1+".wav"}, new File(dir+"/talk/"+lang+"/"+pre), null); 
@@ -5814,13 +5815,13 @@ cat buffer.log
         }
     }
 
-    public void curl_path(String url, String path) throws Exception{        
-        curl(new FileOutputStream(path), "", "GET", false, false, url, null, null);
+    public void curl_path(String url, String path) throws Exception{
+        curl(new FileOutputStream(path), "", "GET", false, false, url, null, null, null, null, null);
     }
     
     public String curl_string(String url){
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
-        curl(baos, "", "GET", false, false, url, null, null);
+        curl(baos, "", "GET", false, false, url, null, null, null, null, null);
         return baos.toString();
     }
     
@@ -5828,7 +5829,8 @@ cat buffer.log
     String curl_response_location="";
     int curl_response_status=0;
     long curl_response_len=0;
-    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate){
+    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
+                Long [] progress_finished_len, Long [] progress_len, Integer progress_number){
         try{                        
             String protocol="HTTP";
             int len=0;
@@ -5941,6 +5943,8 @@ cat buffer.log
                                     }      
                                     if ( partes_[j].startsWith("Content-Length: ") ){
                                         curl_response_len=Long.parseLong(partes_[j].split(" ")[1]);
+                                        if ( progress_len != null )
+                                            progress_len[progress_number]=curl_response_len;
                                     }      
                                     //Content-Length: 5892368384                                    
                                 }
@@ -5969,6 +5973,13 @@ cat buffer.log
                             if ( limitRate != null )
                                 sleepLimitRate(len, limitRate);
                             os_print.write(buffer, 0, len);
+//System.out.println(1);                            
+//System.out.println("len " + len);
+                            if ( progress_len != null ){
+//System.out.println(2);                                
+                                progress_finished_len[progress_number]+=len;
+//System.out.println(3+" " + progress_number+" " + progress_finished_len[progress_number]);                                
+                            }
                         }
                     }
                 }
@@ -6058,7 +6069,6 @@ cat buffer.log
     }
     
     public int hex_string_to_int(String a){
-System.out.println("AA" + a);
         int retorno=0;
         int lvl=1;
         while(a.length()>0){
@@ -6070,7 +6080,6 @@ System.out.println("AA" + a);
             a=a.substring(0, len-1);
             lvl*=16;
         }        
-System.out.println("BB" + retorno);        
         return retorno+2;
     }
     
@@ -11488,13 +11497,26 @@ while True:
             System.out.println(encodeUrl(line));
     }
     
+        
+    private void test(){   
+        try{
+            multiCurl multi=new multiCurl();
+            multi.addCurl("http://203.cloudns.cl:8895/A%20Boa%20Vizinhança/a-boa-vizinhanca-1x1-dublado-www.encontrei.tv.mp4","C:\\tmp\\tmp\\tmp\\tmp\\tmp\\a1");
+            multi.addCurl("http://203.cloudns.cl:8895/A%20Boa%20VizinhançaZ/a-boa-vizinhanca-1x1-dublado-www.encontrei.tv.mp4","C:\\tmp\\tmp\\tmp\\tmp\\tmp\\a2");
+            multi.addCurl("http://203.cloudns.cl:8895/A%20Boa%20Vizinhança/a-boa-vizinhanca-1x1-dublado-www.encontrei.tv.mp4","C:\\tmp\\tmp\\tmp\\tmp\\tmp\\a3");
+            multi.waitFinish();
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+    
     private String [] tests_name=null;
     private String [] tests_commands=null;
     private String [] tests_hash_out=null;
     private String [] tests_hash_err=null;
     private String dir_tests="/tmp/tests_y";
     private String file_command_test=null;
-    private void test(){    
+    private void testOld(){    
         try{
             //init
             if ( isWindows() ){
@@ -11640,6 +11662,109 @@ while True:
             System.exit(1);
         }        
     }
+}
+
+class multiCurl extends Util{
+    int slots=500;
+    Long [] progress_finished_len=new Long[slots];
+    Long [] progress_finished_len_memory=new Long[slots];
+    Long [] progress_len=new Long[slots];
+    ArrayList<Thread> threads=new ArrayList<Thread>();
+    ArrayList<String> caminhos=new ArrayList<String>();
+    public void addCurl(String url, String caminho) throws Exception{        
+        if ( threads.size() == 0 ){
+            init_progress();
+            start_monitor();
+        }
+        int progress_number=threads.size();
+        Thread t=new Thread(){
+            public void run(){
+                try{
+                    sleepMillis(random(1, 2000));    
+                    Y y=new Y();
+                    y.preparatePath(caminho, true, 0);
+                    y.curl(new FileOutputStream(caminho), "", "GET", false, false, url, null, 200000000L, progress_finished_len, progress_len, progress_number);
+                    if ( y.curl_response_status != 200 && progress_finished_len[progress_number].equals(0L) )
+                        progress_finished_len[progress_number]=-1L;
+                }catch(Exception e1){
+                    erroFatal(e1);
+                }
+            }
+        };
+        t.start();     
+        caminhos.add(caminho);
+        threads.add(t);
+    }
+
+    public void init_progress(){
+        for ( int i=0;i<slots;i++ ){
+            progress_finished_len[i]=0L;
+            progress_finished_len_memory[i]=0L;
+            progress_len[i]=0L;
+        }
+    }
+    
+    public void start_monitor() throws Exception{
+        final PipedInputStream pipedInputStream=new PipedInputStream();
+        final PipedOutputStream pipedOutputStream=new PipedOutputStream();
+        
+        pipedInputStream.connect(pipedOutputStream);
+
+        Thread pipeWriter=new Thread(new Runnable() {
+            public void run() {                
+                try{
+                    while(true){
+                        for ( int i=0;i<threads.size();i++ ){
+                            if ( progress_finished_len[i] != progress_finished_len_memory[i] ){
+                                progress_finished_len_memory[i]=progress_finished_len[i];
+                                if ( progress_finished_len_memory[i].equals(-1L) ){
+                                    pipedOutputStream.write(
+                                        (
+                                            (i+1)+" [[[ERROR_download]]] "+ caminhos.get(i)+"\n"
+                                        ).getBytes()
+                                    );                                    
+                                }else{
+                                    if ( progress_finished_len_memory[i].equals(progress_len[i]) ){                                    
+                                        pipedOutputStream.write(
+                                            (
+                                                (i+1)+" downloaded! "+bytes_to_text(progress_len[i]).replace(" ","")+" "+ caminhos.get(i)+"\n"
+                                            ).getBytes()
+                                        );
+                                    }else{
+                                        pipedOutputStream.write(
+                                            (
+                                                (i+1)+" downloading... "+bytes_to_text(progress_finished_len_memory[i]).replace(" ","")+"/"+bytes_to_text(progress_len[i]).replace(" ","")+" "+ caminhos.get(i)+"\n"
+                                            ).getBytes()
+                                        );
+                                    }
+                                }
+                                pipedOutputStream.flush();
+                            }
+                        }
+                        sleepMillis(500);
+                    }
+                }catch(Exception e1){
+                    new Y().erro_amigavel_exception(e1);
+                }                
+            }
+        });
+
+        Thread pipeReader=new Thread(new Runnable() {
+            public void run() {
+                new Y().progressBar(pipedInputStream, false);
+            }
+        });
+
+        pipeWriter.start();
+        pipeReader.start();
+    }
+    
+    public void waitFinish() throws Exception{
+        for ( int i=0;i<threads.size();i++ )
+            threads.get(i).join();
+        sleepSeconds(2);
+        System.exit(0);
+    }    
 }
 
 class grammarsWhere extends Util{
@@ -13677,6 +13802,27 @@ class Util{
         return result;
     }        
     
+    public void preparatePath(String caminho, boolean contemFile, int nivel){
+        // examples
+        // contemFile true  => d:\\aa\\b.mp3
+        // contemFile false => d:\\aa
+        String caminho_up=null;
+        String sep="\\";
+        if ( caminho.contains("/") )
+            sep="/";
+        int p=caminho.lastIndexOf(sep);
+        if ( p > 0 )
+            caminho_up=caminho.substring(0, caminho.lastIndexOf(sep));
+        if ( nivel == 0 && contemFile ){
+            if ( caminho_up != null )
+                preparatePath(caminho_up, contemFile, nivel+1);
+            return;
+        }
+        if ( !new File(caminho).exists() ){
+            preparatePath(caminho_up, contemFile, nivel+1);
+            new File(caminho).mkdir();
+        }        
+    }
 }
 
 
@@ -15385,7 +15531,7 @@ class Texto_longo extends Util{
         for ( int i=0;i<f.length;i++ ){
             if ( f[i].isFile() && ! f[i].getName().endsWith(".bat") && ! f[i].getName().endsWith(".cfg") ){                
                 String name_file = f[i].getName();
-                curl += "curl \"" + host_display.replace("//renato:", "//203.cloudns.cl:") + "/" + encodeUrl(name_file) + "\" > \"" + name_file + "\"\n";
+                curl += "curl \"" + host_display.replace("//renato:", "//203.cloudns.cl:").replace(" ", "%20") + "/" + encodeUrl(name_file) + "\" > \"" + name_file + "\"\n";
                 int len_partes = name_file.split("\\.").length;
                 int len_extension = name_file.split("\\.")[len_partes-1].length()+1;
                 int len_tag = 12;
@@ -16033,7 +16179,7 @@ class Texto_longo extends Util{
             elementos.add(f[i].getName());
             if ( f[i].isFile() ){
                 elementosIsFile.add("S");
-                curl += "curl \"" + (prefix + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
+                curl += "curl \"" + (prefix.replace(" ", "%20") + encodeUrl(elementos.get(i))).replace("/id/", "http://203.cloudns.cl:8895/") + "\" > \"" + elementos.get(i) + "\"\n";
             }else
                 elementosIsFile.add("N");
             tail_id=f[i].getName();
