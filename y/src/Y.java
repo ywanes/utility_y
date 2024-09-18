@@ -5298,12 +5298,10 @@ cat buffer.log
             if ( onlyLink || onlyPreLink ){
                 System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
             }else{
-                if ( !new File(titulo).exists() ){
+                if ( !new File(dir+titulo).exists() ){
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
                     overflix_multi.addCurl(s,dir+titulo);
-                }else{
-                    System.out.println(titulo+" já baixado!");
                 }
             }            
             return;
@@ -11674,6 +11672,9 @@ class multiCurl extends Util{
                     y.curl(new FileOutputStream(caminho), "", "GET", false, false, url, null, 200000000L, progress_finished_len, progress_len, progress_number);
                     if ( y.curl_response_status != 200 && progress_finished_len[progress_number].equals(0L) )
                         progress_finished_len[progress_number]=-1L;
+                    // arredondando para finish
+                    if ( y.curl_response_status == 200 && progress_finished_len[progress_number] > 10000000 && progress_len[progress_number] > 0 && !progress_finished_len[progress_number].equals(progress_len[progress_number]) && (progress_finished_len[progress_number]+1000000) > progress_len[progress_number] )
+                        progress_finished_len[progress_number]=progress_len[progress_number];
                 }catch(Exception e1){
                     erroFatal(e1);
                 }
