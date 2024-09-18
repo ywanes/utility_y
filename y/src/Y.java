@@ -11497,18 +11497,6 @@ while True:
             System.out.println(encodeUrl(line));
     }
     
-        
-    private void test(){   
-        try{
-            multiCurl multi=new multiCurl();
-            multi.addCurl("http://203.cloudns.cl:8895/A%20Boa%20Vizinhança/a-boa-vizinhanca-1x1-dublado-www.encontrei.tv.mp4","C:\\tmp\\tmp\\tmp\\tmp\\tmp\\a1");
-            multi.addCurl("http://203.cloudns.cl:8895/A%20Boa%20VizinhançaZ/a-boa-vizinhanca-1x1-dublado-www.encontrei.tv.mp4","C:\\tmp\\tmp\\tmp\\tmp\\tmp\\a2");
-            multi.addCurl("http://203.cloudns.cl:8895/A%20Boa%20Vizinhança/a-boa-vizinhanca-1x1-dublado-www.encontrei.tv.mp4","C:\\tmp\\tmp\\tmp\\tmp\\tmp\\a3");
-            multi.waitFinish();
-        }catch(Exception e){
-            erroFatal(e);
-        }
-    }
     
     private String [] tests_name=null;
     private String [] tests_commands=null;
@@ -11516,7 +11504,7 @@ while True:
     private String [] tests_hash_err=null;
     private String dir_tests="/tmp/tests_y";
     private String file_command_test=null;
-    private void testOld(){    
+    private void test(){    
         try{
             //init
             if ( isWindows() ){
