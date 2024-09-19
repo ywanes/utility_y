@@ -5219,7 +5219,7 @@ cat buffer.log
             // pegando titulo serie
             if ( titulo_serie == null ){
                 String [] tmp=null;
-                tmp=regex_matcher("<span class=\"titulo\">", "<small>", html, true);
+                tmp=regex_matcher("<span class=\"titulo\">", "<", html, true);
                 if ( tmp.length > 0 )
                     titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").trim();
                 if ( titulo_serie == null ){
@@ -5227,6 +5227,8 @@ cat buffer.log
                     if ( tmp.length > 0 )
                         titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").trim();
                 }
+                if ( titulo_serie.contains("\n") )
+                    erroFatal("nao foi possivel pegar o titulo serie de " + url + ":\n" + html);
             }
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ )
