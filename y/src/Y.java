@@ -5070,28 +5070,34 @@ cat buffer.log
         String line="";
         ArrayList lista=new ArrayList<String>();
         int carro=0;
+        boolean fullDisplay=false;
         while( (line=readLine()) != null ){
             if ( line.equals("done") ){
                 System.out.println("");
                 System.out.flush();
                 return;
             }
-            if(uniqLine){
+            if(uniqLine)
                 System.out.print(progressBarFormat80(line, false));
-                System.out.flush();
-            }else{
+            else{
                 line=progressBarFormat80(line, true);
                 carro=progressBarFormat80_numeroCarro;
                 while(carro+1 > lista.size()){
                     System.out.println("");
                     lista.add("");
                 }
-                lista.set(carro, line);                
-                cursorUp(lista.size());
-                for(int i=0;i<lista.size();i++)
-                    System.out.println(lista.get(i));
-                System.out.flush();
+                lista.set(carro, line);   
+                if ( fullDisplay ){
+                    cursorUp(lista.size());
+                    for(int i=0;i<lista.size();i++)
+                        System.out.println(lista.get(i));                 
+                }else{
+                    cursorUp(lista.size()-carro);
+                    for(int i=carro;i<lista.size();i++)
+                        System.out.println(lista.get(i));                 
+                }
             }
+            System.out.flush();
         }
         System.out.println("");
         System.out.flush();
@@ -5167,7 +5173,7 @@ cat buffer.log
         Boolean onlyPreLink=(Boolean)objs[3];
         overflix_busca(url, verbose, onlyLink, onlyPreLink, null, null);
         if ( overflix_multi != null )
-            overflix_multi.waitFinish();
+            overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);
     }
     
     public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, String titulo_serie, Boolean cam) throws Exception{
@@ -5302,6 +5308,7 @@ cat buffer.log
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
                     overflix_multi.addCurl(s,dir+titulo);
+                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(5);
                 }
             }            
             return;
@@ -5971,12 +5978,8 @@ cat buffer.log
                             if ( limitRate != null )
                                 sleepLimitRate(len, limitRate);
                             os_print.write(buffer, 0, len);
-//System.out.println(1);                            
-//System.out.println("len " + len);
                             if ( progress_len != null ){
-//System.out.println(2);                                
                                 progress_finished_len[progress_number]+=len;
-//System.out.println(3+" " + progress_number+" " + progress_finished_len[progress_number]);                                
                             }
                         }
                     }
@@ -11748,11 +11751,27 @@ class multiCurl extends Util{
         pipeReader.start();
     }
     
-    public void waitFinish() throws Exception{
-        for ( int i=0;i<threads.size();i++ )
-            threads.get(i).join();
-        sleepSeconds(2);
-        System.exit(0);
+    public void wait_numeroDeTrabalhoIgualOuMenor(int n) throws Exception{
+        if ( n < 0 )
+            erroFatal("internal error wait_numeroDeTrabalhoIgualOuMenor");
+        if ( n == 0 ){
+            for ( int i=0;i<threads.size();i++ )
+                threads.get(i).join();
+            sleepSeconds(2);
+            System.exit(0);
+        }else{
+            int count=0;
+            while(true){                
+                count=0;
+                for ( int i=0;i<threads.size();i++ )
+                    if ( threads.get(i).isAlive() )
+                        count++;
+                if ( count <= n )
+                    break;
+                sleepMillis(100);
+            }
+            
+        }
     }    
 }
 
