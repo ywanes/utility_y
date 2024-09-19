@@ -5106,7 +5106,7 @@ cat buffer.log
     private int progressBarFormat80_numeroCarro=0;
     private String progressBarFormat80_spaces="                                                                                                                                                                ";    
     private String progressBarFormat80(String a, Boolean hasCarro){
-        int _80=150;
+        int _80=130;
         a=a.trim();
         if ( hasCarro ){
             int p=a.indexOf(" ");
