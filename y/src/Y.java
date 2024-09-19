@@ -5275,7 +5275,7 @@ cat buffer.log
             String s="PreLink";
             if ( !onlyPreLink ){
                 String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
-                    "$ie.Visible=$false\n" +
+                    "$ie.Visible=$false\n" +                    
                     "$ie.ParsedHtml\n" +
                     "$ie.Navigate(\"" + url + "\");\n" +
                     "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
@@ -5283,7 +5283,8 @@ cat buffer.log
                     "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
                     "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
                     "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
-                    "$ie.Parent.Quit();\n"; 
+                    "$ie.Parent.Quit();\n" + 
+                    ""; 
                 //taskkill /im iexplore.exe /f
                 s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
             }
@@ -5294,10 +5295,10 @@ cat buffer.log
                 if ( titulo_serie != null )
                     dir="D:\\ProgramFiles\\filmes\\"+titulo_serie+"\\";
             }
-            if ( s != null )
+            if ( s != null && s.trim().length() > 0 )
                 s=s.trim();
             else
-                erroFatal("Error script: " + runtimeExecError);
+                erroFatal("Error script token: " + runtimeExecError);
             if ( verbose ){
                 System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
             }
