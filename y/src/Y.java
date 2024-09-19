@@ -5175,7 +5175,7 @@ cat buffer.log
         if ( overflix_multi != null ){
             overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
             if ( overflix_busca_skip )
-                System.out.println("token indisponivel no momento, volte daqui 30 minutos.");
+                System.out.println("\n\n\ntoken indisponivel no momento, volte daqui 30 minutos.\n\n\n");
             sleepSeconds(2);
             System.exit(0);
         }
