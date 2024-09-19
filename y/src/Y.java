@@ -5172,16 +5172,24 @@ cat buffer.log
         Boolean onlyLink=(Boolean)objs[2];
         Boolean onlyPreLink=(Boolean)objs[3];
         overflix_busca(url, verbose, onlyLink, onlyPreLink, null, null);
-        if ( overflix_multi != null )
-            overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);
+        if ( overflix_multi != null ){
+            overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
+            if ( overflix_busca_skip )
+                System.out.println("token com problema, volte daqui 30 minutos.");
+            sleepSeconds(2);
+            System.exit(0);
+        }
     }
     
+    public boolean overflix_busca_skip=false;
     public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, String titulo_serie, Boolean cam) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
         
+        if ( overflix_busca_skip )
+            return;
         String html=curl_string(url);
         if ( curl_response_status == 301 ){
             url=curl_response_location;
@@ -5297,8 +5305,14 @@ cat buffer.log
             }
             if ( s != null && s.trim().length() > 0 )
                 s=s.trim();
-            else
-                erroFatal("Error script token: " + runtimeExecError);
+            else{
+                if ( runtimeExecError.trim().equals("") ){
+                    overflix_busca_skip=true;
+                    return;
+                }else{
+                    erroFatal("Error script token: " + runtimeExecError);
+                }
+            }
             if ( verbose ){
                 System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
             }
@@ -11759,8 +11773,6 @@ class multiCurl extends Util{
         if ( n == 0 ){
             for ( int i=0;i<threads.size();i++ )
                 threads.get(i).join();
-            sleepSeconds(2);
-            System.exit(0);
         }else{
             int count=0;
             while(true){                
