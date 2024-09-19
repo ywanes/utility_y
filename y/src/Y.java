@@ -5172,17 +5172,17 @@ cat buffer.log
         Boolean onlyLink=(Boolean)objs[2];
         Boolean onlyPreLink=(Boolean)objs[3];
         overflix_busca(url, verbose, onlyLink, onlyPreLink, null, null);
-        if ( overflix_multi != null || overflix_busca_skip ){
+        if ( overflix_multi != null || overflix_error != null ){
             if ( overflix_multi != null )
                 overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
             sleepSeconds(2);
-            if ( overflix_busca_skip )
-                System.out.println("\ntoken indisponivel no momento, volte daqui 30 minutos.");
+            if ( overflix_error != null  )
+                System.out.println(overflix_error);
             System.exit(0);
         }
     }
     
-    public boolean overflix_busca_skip=false;
+    public String overflix_error=null;
     public boolean skiping_show=true;
     public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, String titulo_serie, Boolean cam) throws Exception{
         // teste
@@ -5190,15 +5190,17 @@ cat buffer.log
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
         
-        if ( overflix_busca_skip )
+        if ( overflix_error != null )
             return;
         String html=curl_string(url);
         if ( curl_response_status == 301 ){
             url=curl_response_location;
             html=curl_string(url);
         }
-        if ( curl_response_status != 200 )
-            erroFatal("Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html);
+        if ( curl_response_status != 200 ){
+            overflix_error="Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html;
+            return;            
+        }
         
         if ( verbose )
             System.out.println(url);
@@ -5229,8 +5231,10 @@ cat buffer.log
                     if ( tmp.length > 0 )
                         titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").trim();
                 }
-                if ( titulo_serie.contains("\n") )
-                    erroFatal("nao foi possivel pegar o titulo serie de " + url + ":\n" + html);
+                if ( titulo_serie.contains("\n") ){
+                    overflix_error="nao foi possivel pegar o titulo serie de " + url + ":\n" + html;
+                    return;
+                }
             }
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ )
@@ -5259,7 +5263,8 @@ cat buffer.log
                 overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, titulo_serie, cam);
                 return;
             }
-            erroFatal("Não foi possível resolver a url: " + url);
+            overflix_error="Não foi possível resolver a url:: " + url;
+            return;
         }
         
         // nivel 3 filme e serie
@@ -5270,7 +5275,8 @@ cat buffer.log
                 overflix_busca(partes[i]+suffix, verbose, onlyLink, onlyPreLink, titulo_serie, cam);
                 return;
             }
-            erroFatal("Não foi possível resolver a url:: " + url);
+            overflix_error="Não foi possível resolver a url:: " + url;
+            return;
         }
         
         // nivel 4 filme e serie
@@ -5278,12 +5284,16 @@ cat buffer.log
             // pegando titulo
             String titulo="?";
             partes=regex_matcher("<b title=\"", "\"", html, true); 
-            if ( html.contains("<h2>WE ARE SORRY</h2>") )
-                erroFatal("Arquivo não mais disponível no mixdrop, url: " + url);
+            if ( html.contains("<h2>WE ARE SORRY</h2>") ){
+                overflix_error="Arquivo não mais disponível no mixdrop, url: " + url;
+                return;
+            }
             if ( partes.length > 0 )
                 titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "");
-            else
-                erroFatal("Erro, titulo não encontrado na url: " + url);
+            else{
+                overflix_error="Erro, titulo não encontrado na url: " + url;
+                return;
+            }
             
             String dir="D:\\ProgramFiles\\filmes\\Novos\\";
             if ( cam != null && cam )
@@ -5319,11 +5329,12 @@ cat buffer.log
                 s=s.trim();
             else{
                 if ( runtimeExecError.trim().equals("") ){
-                    overflix_busca_skip=true;
+                    overflix_error="token indisponivel no momento, volte daqui 30 minutos.";
                     return;
                 }else{
-                    erroFatal("Error script token: " + runtimeExecError);
-                }
+                    overflix_error="Error script token: " + runtimeExecError;
+                    return;
+               }
             }
             if ( verbose ){
                 System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
@@ -5344,7 +5355,8 @@ cat buffer.log
             }            
             return;
         }
-        erroFatal("Não foi possível resolver a url "+url);
+        overflix_error="Não foi possível resolver a url "+ url;
+        return;
     }
     
     public void xor(int parm){
