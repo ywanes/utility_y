@@ -5304,7 +5304,8 @@ cat buffer.log
             if ( onlyLink || onlyPreLink ){
                 System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
             }else{
-                if ( !new File(dir+titulo).exists() ){
+                File f=new File(dir+titulo);
+                if ( !f.exists() || f.length() < 1024*1024 ){
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
                     overflix_multi.addCurl(s,dir+titulo);
