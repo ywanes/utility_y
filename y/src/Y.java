@@ -5172,16 +5172,18 @@ cat buffer.log
         Boolean onlyLink=(Boolean)objs[2];
         Boolean onlyPreLink=(Boolean)objs[3];
         overflix_busca(url, verbose, onlyLink, onlyPreLink, null, null);
-        if ( overflix_multi != null ){
-            overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
-            if ( overflix_busca_skip )
-                System.out.println("\n\n\ntoken indisponivel no momento, volte daqui 30 minutos.\n\n\n");
+        if ( overflix_multi != null || overflix_busca_skip ){
+            if ( overflix_multi != null )
+                overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
             sleepSeconds(2);
+            if ( overflix_busca_skip )
+                System.out.println("\ntoken indisponivel no momento, volte daqui 30 minutos.");
             System.exit(0);
         }
     }
     
     public boolean overflix_busca_skip=false;
+    public boolean skiping_show=true;
     public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, String titulo_serie, Boolean cam) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
@@ -5282,8 +5284,23 @@ cat buffer.log
                 titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "");
             else
                 erroFatal("Erro, titulo não encontrado na url: " + url);
-            String s="PreLink";
-            if ( !onlyPreLink ){
+            
+            String dir="D:\\ProgramFiles\\filmes\\Novos\\";
+            if ( cam != null && cam )
+                dir="D:\\ProgramFiles\\filmes\\Novos-CAM\\";
+            else{
+                if ( titulo_serie != null )
+                    dir="D:\\ProgramFiles\\filmes\\"+titulo_serie+"\\";
+            }
+            
+            File f=new File(dir+titulo);
+            boolean needDownload = !f.exists() || f.length() < 1024*1024;
+            String s="Token";
+            if ( onlyPreLink 
+                 || ( !onlyPreLink && !onlyLink && !needDownload )
+            ){ 
+                // skip token
+            }else{
                 String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
                     "$ie.Visible=$false\n" +                    
                     "$ie.ParsedHtml\n" +
@@ -5297,13 +5314,6 @@ cat buffer.log
                     ""; 
                 //taskkill /im iexplore.exe /f
                 s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-            }
-            String dir="D:\\ProgramFiles\\filmes\\Novos\\";
-            if ( cam != null && cam )
-                dir="D:\\ProgramFiles\\filmes\\Novos-CAM\\";
-            else{
-                if ( titulo_serie != null )
-                    dir="D:\\ProgramFiles\\filmes\\"+titulo_serie+"\\";
             }
             if ( s != null && s.trim().length() > 0 )
                 s=s.trim();
@@ -5320,13 +5330,16 @@ cat buffer.log
             }
             if ( onlyLink || onlyPreLink ){
                 System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
-            }else{
-                File f=new File(dir+titulo);
-                if ( !f.exists() || f.length() < 1024*1024 ){
+            }else{                
+                if ( needDownload ){
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
                     overflix_multi.addCurl(s,dir+titulo);
                     overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(5);
+                    skiping_show=false;
+                }else{
+                    if ( skiping_show )
+                        System.out.println("skip " + dir+titulo);
                 }
             }            
             return;
@@ -6010,6 +6023,11 @@ cat buffer.log
             System.err.println("Error UnknownHost: " + host + " " + e.toString());
         }catch(Exception e){
             System.err.println("Error: " + e.toString());
+        }        
+        if ( os_print != null ){
+            try{
+                os_print.close();
+            }catch(Exception e){}
         }
     }
     
