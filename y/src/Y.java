@@ -5311,6 +5311,10 @@ cat buffer.log
             ){ 
                 // skip token
             }else{
+                if ( url.equals("") ){
+                    overflix_error="url vazia!";
+                    return;
+                }
                 String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
                     "$ie.Visible=$false\n" +                    
                     "$ie.ParsedHtml\n" +
