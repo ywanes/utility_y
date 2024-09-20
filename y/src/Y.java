@@ -5333,7 +5333,7 @@ cat buffer.log
                 s=s.trim();
             else{
                 if ( runtimeExecError.trim().equals("") ){
-                    overflix_error="token indisponivel no momento, volte daqui 30 minutos.";
+                    overflix_error="token indisponivel no momento, volte daqui 30 minutos. " + dir+titulo;
                     return;
                 }else{
                     overflix_error="Error script token: " + runtimeExecError;
