@@ -5225,11 +5225,11 @@ cat buffer.log
                 String [] tmp=null;
                 tmp=regex_matcher("<span class=\"titulo\">", "<", html, true);
                 if ( tmp.length > 0 )
-                    titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").trim();
+                    titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").trim();
                 if ( titulo_serie == null ){
                     tmp=regex_matcher("<small>", "</small>", html, true);
                     if ( tmp.length > 0 )
-                        titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").trim();
+                        titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").trim();
                 }
                 if ( titulo_serie.contains("\n") ){
                     overflix_error="nao foi possivel pegar o titulo serie de " + url + ":\n" + html;
@@ -5346,7 +5346,7 @@ cat buffer.log
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
                     overflix_multi.addCurl(s,dir+titulo);
-                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(5);
+                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(2);
                     skiping_show=false;
                 }else{
                     if ( skiping_show )
@@ -9897,6 +9897,8 @@ cat buffer.log
         os.write(b);
         byte [] buf=new byte[1024*10];
         int len=is.read(buf);
+        if ( len == -1 )
+            erroFatal("host nao responde: " + host+" " + port);
         String s=new String(buf,0,len,"UTF-8");
         while(s.length()>0&&!s.substring(0,1).equals("{"))
             s=s.substring(1);
@@ -9984,12 +9986,17 @@ cat buffer.log
     }
     
     public int pingMine_getPlayersOnline(String host, int port){
-        try{
-            String [] partes=pingMine(host, port).replace(",", "").split("\n");
+        String s="";
+        try{        
+            s=pingMine(host, port);
+            //System.out.println(s);
+            String [] partes=s.replace(",", "").split("\n");
             for ( int i=0;i<partes.length;i++ )
                 if ( partes[i].contains("online") )
                     return Integer.parseInt(partes[i].trim().split(" ")[1]);
-        }catch(Exception e){}
+        }catch(Exception e){
+            //System.out.println(e.toString() + " " + s);
+        }
         return -1;
     }
         
