@@ -5166,12 +5166,13 @@ cat buffer.log
     
     multiCurl overflix_multi=null;
     public void overflix(String [] args) throws Exception{             
-        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink(args);
+        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken(args);
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
         Boolean onlyPreLink=(Boolean)objs[3];
-        overflix_busca(url, verbose, onlyLink, onlyPreLink, null, null);
+        Boolean vToken=(Boolean)objs[4];
+        overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, null, null);
         if ( overflix_multi != null || overflix_error != null ){
             if ( overflix_multi != null )
                 overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
@@ -5184,7 +5185,7 @@ cat buffer.log
     
     public String overflix_error=null;
     public boolean skiping_show=true;
-    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, String titulo_serie, Boolean cam) throws Exception{
+    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, String titulo_serie, Boolean cam) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
@@ -5212,7 +5213,7 @@ cat buffer.log
             if ( html.contains("\">CAM</span>") )
                 cam=true;
             for ( int i=0;i<partes.length;i++ )
-                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, titulo_serie, cam);
+                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
             return;
         }
         
@@ -5238,7 +5239,7 @@ cat buffer.log
             }
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ )
-                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, titulo_serie, cam);
+                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
             // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
                 // chama todas as temporadas
@@ -5246,7 +5247,7 @@ cat buffer.log
                 int next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 while ( html.contains("load("+next_temporada+")") ){
                     url=url.split("=")[0]+"="+next_temporada;
-                    overflix_busca(url, verbose, onlyLink, onlyPreLink, titulo_serie, cam);
+                    overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 }
             }
@@ -5260,7 +5261,7 @@ cat buffer.log
             for ( int i=0;i<partes.length;i++ ){
                 if ( ! partes[i].startsWith("/em") )
                     continue;
-                overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, titulo_serie, cam);
+                overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
                 return;
             }
             overflix_error="Não foi possível resolver a url:: " + url;
@@ -5272,7 +5273,7 @@ cat buffer.log
         if ( partes.length > 0 ){
             String suffix="?download";
             for ( int i=0;i<partes.length;i++ ){                
-                overflix_busca(partes[i]+suffix, verbose, onlyLink, onlyPreLink, titulo_serie, cam);
+                overflix_busca(partes[i]+suffix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
                 return;
             }
             overflix_error="Não foi possível resolver a url:: " + url;
@@ -5315,8 +5316,14 @@ cat buffer.log
                     overflix_error="url vazia!";
                     return;
                 }
+                String _visible="$false";
+                String _quit="$ie.Parent.Quit();";
+                if ( vToken ){
+                    _visible="$true";
+                    _quit="";
+                }
                 String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
-                    "$ie.Visible=$false\n" +                    
+                    "$ie.Visible=" + _visible + "\n" +                    
                     "$ie.ParsedHtml\n" +
                     "$ie.Navigate(\"" + url + "\");\n" +
                     "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
@@ -5324,7 +5331,7 @@ cat buffer.log
                     "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
                     "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
                     "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
-                    "$ie.Parent.Quit();\n" + 
+                    _quit + "\n" + 
                     ""; 
                 //taskkill /im iexplore.exe /f
                 s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
@@ -5333,7 +5340,7 @@ cat buffer.log
                 s=s.trim();
             else{
                 if ( runtimeExecError.trim().equals("") ){
-                    overflix_error="token indisponivel no momento, volte daqui 30 minutos. " + dir+titulo;
+                    overflix_error="token indisponivel no momento, volte daqui 30 minutos. url:" + url + " file: " + dir+titulo;
                     return;
                 }else{
                     overflix_error="Error script token: " + runtimeExecError;
@@ -8626,11 +8633,12 @@ cat buffer.log
         return new Object []{msg, lang, list, copy};
     }        
         
-    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink(String [] args){
+    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken(String [] args){
         String url=null;
         Boolean verbose=false;
         Boolean onlyLink=false;
         Boolean onlyPreLink=false;
+        Boolean vToken=false;
         
         args=sliceParm(1, args);
         
@@ -8640,9 +8648,14 @@ cat buffer.log
                 onlyLink=true;
                 continue;
             }
-            if ( args.length > 0 && args[0].equals("-onlyPreLink") ){
+            if ( args.length > 0 && args[0].equals("-onlyLink") ){
                 args=sliceParm(1, args);
-                onlyPreLink=true;
+                onlyLink=true;
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-vToken") ){
+                args=sliceParm(1, args);
+                vToken=true;
                 continue;
             }
             if ( args.length > 0 && args[0].equals("-v") ){
@@ -8661,7 +8674,7 @@ cat buffer.log
             return null;
         if ( onlyLink && onlyPreLink )
             return null;
-        return new Object []{url, verbose, onlyLink, onlyPreLink};
+        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken};
     }        
            
     private Object [] get_parms_curl_header_method_verbose_raw_host_limitRate(String [] args){
