@@ -677,9 +677,9 @@ Exemplos...
 [y overflix]
     y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
     y overflix -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
-    y overflix -onlyPreLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
+    y overflix -onlyPreLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"    
     y overflix -v -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
-onlyLink
+    obs: -vToken => mostra iexplorer.exe e não fecha.
 [y var]
     y var
     Obs: execução por parametro de variavel

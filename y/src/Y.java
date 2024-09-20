@@ -5335,12 +5335,28 @@ cat buffer.log
                     ""; 
                 //taskkill /im iexplore.exe /f
                 s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                if ( s.trim().length() == 0 ){
+                    text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
+                    "$ie.Visible=" + _visible + "\n" +                    
+                    "$ie.ParsedHtml\n" +
+                    "$ie.Navigate(\"" + url + "\");\n" +
+                    "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
+                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                    "sleep -Milliseconds 3000;\n" +
+                    "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
+                    "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
+                    "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
+                    "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
+                    _quit + "\n" + 
+                    "";                     
+                    s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                }
             }
             if ( s != null && s.trim().length() > 0 )
                 s=s.trim();
             else{
                 if ( runtimeExecError.trim().equals("") ){
-                    overflix_error="token indisponivel no momento, volte daqui 30 minutos. url:" + url + " file: " + dir+titulo;
+                    overflix_error="token indisponivel no momento, volte daqui 30 minutos. url: " + url + " file: " + dir+titulo;
                     return;
                 }else{
                     overflix_error="Error script token: " + runtimeExecError;
@@ -5357,7 +5373,7 @@ cat buffer.log
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
                     overflix_multi.addCurl(s,dir+titulo);
-                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(2);
+                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(5);
                     skiping_show=false;
                 }else{
                     if ( skiping_show )
@@ -18212,9 +18228,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y overflix]\n"
 /* class by manual */                + "    y overflix \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
 /* class by manual */                + "    y overflix -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
-/* class by manual */                + "    y overflix -onlyPreLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
+/* class by manual */                + "    y overflix -onlyPreLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"    \n"
 /* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
-/* class by manual */                + "onlyLink\n"
+/* class by manual */                + "    obs: -vToken => mostra iexplorer.exe e nao fecha.\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
 /* class by manual */                + "    Obs: execucao por parametro de variavel\n"
@@ -18309,6 +18325,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
