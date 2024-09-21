@@ -5174,17 +5174,17 @@ cat buffer.log
         Boolean vToken=(Boolean)objs[4];
         String o_force_out=(String)objs[5];
         overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out);
-        if ( overflix_multi != null || overflix_error != null ){
-            if ( overflix_multi != null )
-                overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
+        
+        if ( overflix_multi != null ){
+            overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
             sleepSeconds(2);
-            if ( overflix_error != null  )
-                System.out.println(overflix_error);
-            System.exit(0);
         }
+        if ( !overflix_error.equals("")  )
+            System.out.println(overflix_error);
+        System.exit(0);
     }
     
-    public String overflix_error=null;
+    public String overflix_error="";
     public boolean skiping_show=true;
     public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, String titulo_serie, Boolean cam, String o_force_out) throws Exception{
         // teste
@@ -5192,8 +5192,6 @@ cat buffer.log
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
         
-        if ( overflix_error != null )
-            return;
         String html=curl_string(url);
         if ( curl_response_status == 301 ){
             url=curl_response_location;
@@ -5339,7 +5337,7 @@ cat buffer.log
                     ""; 
                 //taskkill /im iexplore.exe /f
                 s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                int limitLoop=3;
+                int limitLoop=1;
                 while ( s.trim().length() == 0 && limitLoop-->0 ){
                     text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
                     "$ie.Visible=" + _visible + "\n" +                    
@@ -5366,10 +5364,10 @@ cat buffer.log
                 s=s.trim();
             else{
                 if ( runtimeExecError.trim().equals("") ){
-                    overflix_error="token indisponivel no momento, volte daqui 30 minutos. url: " + url + " file: " + out;
+                    overflix_error+="token indisponivel no momento, volte daqui 30 minutos. url: " + url + " file: " + out+"\n";
                     return;
                 }else{
-                    overflix_error="Error script token: " + runtimeExecError;
+                    overflix_error+="Error script token: " + runtimeExecError+"\n";
                     return;
                }
             }
@@ -5383,7 +5381,7 @@ cat buffer.log
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
                     overflix_multi.addCurl(s,out);
-                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(5);
+                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(2);
                     skiping_show=false;
                 }else{
                     if ( skiping_show )
