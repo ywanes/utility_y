@@ -5304,8 +5304,11 @@ cat buffer.log
                 if ( titulo_serie != null )
                     dir="D:\\ProgramFiles\\filmes\\"+titulo_serie+"\\";
             }
+            String out=dir+titulo;
+            if ( o_force_out != null )
+                out=o_force_out;
             
-            File f=new File(dir+titulo);
+            File f=new File(out);
             boolean needDownload = !f.exists() || f.length() < 1024*1024;
             String s="Token";
             if ( onlyPreLink 
@@ -5336,7 +5339,7 @@ cat buffer.log
                     ""; 
                 //taskkill /im iexplore.exe /f
                 s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                int limitLoop=6;
+                int limitLoop=3;
                 while ( s.trim().length() == 0 && limitLoop-->0 ){
                     text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
                     "$ie.Visible=" + _visible + "\n" +                    
@@ -5344,11 +5347,11 @@ cat buffer.log
                     "$ie.Navigate(\"" + url + "\");\n" +
                     "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
                     "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 3000;\n" +
+                    "sleep -Milliseconds 1000;\n" +
                     "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 3000;\n" +
+                    "sleep -Milliseconds 1000;\n" +
                     "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 3000;\n" +
+                    "sleep -Milliseconds 1000;\n" +
                     "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
                     "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
                     "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
@@ -5356,14 +5359,14 @@ cat buffer.log
                     _quit + "\n" + 
                     "";                     
                     s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                    sleepSeconds(2);
+                    sleepSeconds(1);
                 }
             }
             if ( s != null && s.trim().length() > 0 )
                 s=s.trim();
             else{
                 if ( runtimeExecError.trim().equals("") ){
-                    overflix_error="token indisponivel no momento, volte daqui 30 minutos. url: " + url + " file: " + dir+titulo;
+                    overflix_error="token indisponivel no momento, volte daqui 30 minutos. url: " + url + " file: " + out;
                     return;
                 }else{
                     overflix_error="Error script token: " + runtimeExecError;
@@ -5371,20 +5374,20 @@ cat buffer.log
                }
             }
             if ( verbose ){
-                System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
+                System.out.println("curl \"" + s + "\" > \"" + out + "\"");
             }
             if ( onlyLink || onlyPreLink ){
-                System.out.println("curl \"" + s + "\" > \"" + dir+titulo + "\"");
+                System.out.println("curl \"" + s + "\" > \"" + out + "\"");
             }else{                
                 if ( needDownload ){
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
-                    overflix_multi.addCurl(s,dir+titulo);
+                    overflix_multi.addCurl(s,out);
                     overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(5);
                     skiping_show=false;
                 }else{
                     if ( skiping_show )
-                        System.out.println("skip " + dir+titulo);
+                        System.out.println("skip " + out);
                 }
             }            
             return;
