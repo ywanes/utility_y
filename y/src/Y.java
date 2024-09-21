@@ -5166,13 +5166,14 @@ cat buffer.log
     
     multiCurl overflix_multi=null;
     public void overflix(String [] args) throws Exception{             
-        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken(args);
+        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o(args);
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
         Boolean onlyPreLink=(Boolean)objs[3];
         Boolean vToken=(Boolean)objs[4];
-        overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, null, null);
+        String o_force_out=(String)objs[5];
+        overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out);
         if ( overflix_multi != null || overflix_error != null ){
             if ( overflix_multi != null )
                 overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
@@ -5185,7 +5186,7 @@ cat buffer.log
     
     public String overflix_error=null;
     public boolean skiping_show=true;
-    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, String titulo_serie, Boolean cam) throws Exception{
+    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, String titulo_serie, Boolean cam, String o_force_out) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
@@ -5213,7 +5214,7 @@ cat buffer.log
             if ( html.contains("\">CAM</span>") )
                 cam=true;
             for ( int i=0;i<partes.length;i++ )
-                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
+                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
             return;
         }
         
@@ -5239,7 +5240,7 @@ cat buffer.log
             }
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ )
-                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
+                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
             // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
                 // chama todas as temporadas
@@ -5247,7 +5248,7 @@ cat buffer.log
                 int next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 while ( html.contains("load("+next_temporada+")") ){
                     url=url.split("=")[0]+"="+next_temporada;
-                    overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
+                    overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 }
             }
@@ -5261,7 +5262,7 @@ cat buffer.log
             for ( int i=0;i<partes.length;i++ ){
                 if ( ! partes[i].startsWith("/em") )
                     continue;
-                overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
+                overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                 return;
             }
             overflix_error="Não foi possível resolver a url:: " + url;
@@ -5273,7 +5274,7 @@ cat buffer.log
         if ( partes.length > 0 ){
             String suffix="?download";
             for ( int i=0;i<partes.length;i++ ){                
-                overflix_busca(partes[i]+suffix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam);
+                overflix_busca(partes[i]+suffix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                 return;
             }
             overflix_error="Não foi possível resolver a url:: " + url;
@@ -5335,7 +5336,8 @@ cat buffer.log
                     ""; 
                 //taskkill /im iexplore.exe /f
                 s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                if ( s.trim().length() == 0 ){
+                int limitLoop=6;
+                while ( s.trim().length() == 0 && limitLoop-->0 ){
                     text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
                     "$ie.Visible=" + _visible + "\n" +                    
                     "$ie.ParsedHtml\n" +
@@ -5354,6 +5356,7 @@ cat buffer.log
                     _quit + "\n" + 
                     "";                     
                     s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                    sleepSeconds(2);
                 }
             }
             if ( s != null && s.trim().length() > 0 )
@@ -8653,12 +8656,13 @@ cat buffer.log
         return new Object []{msg, lang, list, copy};
     }        
         
-    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken(String [] args){
+    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o(String [] args){
         String url=null;
         Boolean verbose=false;
         Boolean onlyLink=false;
         Boolean onlyPreLink=false;
         Boolean vToken=false;
+        String o=null;
         
         args=sliceParm(1, args);
         
@@ -8678,6 +8682,12 @@ cat buffer.log
                 vToken=true;
                 continue;
             }
+            if ( args.length > 1 && args[0].equals("-o") ){
+                args=sliceParm(1, args);
+                o=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
             if ( args.length > 0 && args[0].equals("-v") ){
                 args=sliceParm(1, args);
                 verbose=true;
@@ -8694,7 +8704,7 @@ cat buffer.log
             return null;
         if ( onlyLink && onlyPreLink )
             return null;
-        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken};
+        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o};
     }        
            
     private Object [] get_parms_curl_header_method_verbose_raw_host_limitRate(String [] args){
@@ -18235,6 +18245,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y overflix -onlyPreLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"    \n"
 /* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
 /* class by manual */                + "    obs: -vToken => mostra iexplorer.exe e nao fecha.\n"
+/* class by manual */                + "         -o => force out path\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
 /* class by manual */                + "    Obs: execucao por parametro de variavel\n"
@@ -18329,6 +18340,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
