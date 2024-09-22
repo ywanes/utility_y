@@ -5355,66 +5355,75 @@ cat buffer.log
     }
     
     public String getTokenIE(Boolean vToken, String url){
-        String [] result=new String[]{""};
-        Thread t=new Thread(new Runnable() {
-            public void run() {
-                String s="Token";
-                String _visible="$false";
-                String _quit="$ie.Parent.Quit();";
-                if ( vToken ){
-                    _visible="$true";
-                    _quit="";
+        try{
+            String [] result=new String[]{""};
+            Thread t=new Thread(new Runnable() {
+                public void run() {
+                    try{
+                        String s="Token";
+                        String _visible="$false";
+                        String _quit="$ie.Parent.Quit();";
+                        if ( vToken ){
+                            _visible="$true";
+                            _quit="";
+                        }
+                        String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
+                            "$ie.Visible=" + _visible + "\n" +                    
+                            "$ie.ParsedHtml\n" +
+                            "$ie.Navigate(\"" + url + "\");\n" +
+                            "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
+                            "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
+                            "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
+                            "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
+                            "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
+                            _quit + "\n" + 
+                            ""; 
+                        //taskkill /im iexplore.exe /f
+                        s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                        if ( s == null )
+                            s="";
+                        int limitLoop=1;                
+                        while ( s.trim().length() == 0 && limitLoop-->0 ){
+                            text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
+                            "$ie.Visible=" + _visible + "\n" +                    
+                            "$ie.ParsedHtml\n" +
+                            "$ie.Navigate(\"" + url + "\");\n" +
+                            "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
+                            "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                            "sleep -Milliseconds 1000;\n" +
+                            "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                            "sleep -Milliseconds 1000;\n" +
+                            "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                            "sleep -Milliseconds 1000;\n" +
+                            "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
+                            "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
+                            "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
+                            "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
+                            _quit + "\n" + 
+                            "";                     
+                            s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                            sleepSeconds(1);
+                        }    
+                        if ( s == null )
+                            s="";
+                        result[0]=s;
+                    }catch(Exception e){
+                        result[0]="";
+                    }                    
                 }
-                String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
-                    "$ie.Visible=" + _visible + "\n" +                    
-                    "$ie.ParsedHtml\n" +
-                    "$ie.Navigate(\"" + url + "\");\n" +
-                    "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
-                    "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
-                    "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
-                    "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
-                    "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
-                    _quit + "\n" + 
-                    ""; 
-                //taskkill /im iexplore.exe /f
-                s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                if ( s == null )
-                    s="";
-                int limitLoop=1;                
-                while ( s.trim().length() == 0 && limitLoop-->0 ){
-                    text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
-                    "$ie.Visible=" + _visible + "\n" +                    
-                    "$ie.ParsedHtml\n" +
-                    "$ie.Navigate(\"" + url + "\");\n" +
-                    "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
-                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 1000;\n" +
-                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 1000;\n" +
-                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 1000;\n" +
-                    "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
-                    "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
-                    "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
-                    "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
-                    _quit + "\n" + 
-                    "";                     
-                    s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                    sleepSeconds(1);
-                }    
-                if ( s == null )
-                    s="";
-                result[0]=s;
+            });
+            t.start();
+            for ( int i=0;i<15;i++ ){
+                if ( !t.isAlive() ){
+                    try{
+                        return result[0];
+                    }catch(Exception e){}
+                }
+                sleepSeconds(1);
             }
-        });
-        t.start();
-        for ( int i=0;i<15;i++ ){
-            if ( !t.isAlive() )
-                return result[0];
-            sleepSeconds(1);
-        }
-        try{    
-            t.interrupt();
+            try{    
+                t.interrupt();
+            }catch(Exception e){}
         }catch(Exception e){}
         return "";
     }
@@ -13544,7 +13553,7 @@ class Util{
         return d.toInstant().toEpochMilli();
     }
     
-    public static String get_ip_origem_by_socket(Socket credencialSocket){
+    public static String get_ip_origem_by_socket(Socket credencialSocket){        
         String ip_origem=credencialSocket.getRemoteSocketAddress().toString().substring(1);
         if ( ip_origem.contains(":") ){
             int p=ip_origem.length()-1;
