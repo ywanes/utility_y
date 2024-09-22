@@ -5378,8 +5378,9 @@ cat buffer.log
                     ""; 
                 //taskkill /im iexplore.exe /f
                 s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                int limitLoop=1;
-                // enrroscando infinitamente?
+                if ( s == null )
+                    s="";
+                int limitLoop=1;                
                 while ( s.trim().length() == 0 && limitLoop-->0 ){
                     text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
                     "$ie.Visible=" + _visible + "\n" +                    
@@ -5400,7 +5401,9 @@ cat buffer.log
                     "";                     
                     s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
                     sleepSeconds(1);
-                }     
+                }    
+                if ( s == null )
+                    s="";
                 result[0]=s;
             }
         });
