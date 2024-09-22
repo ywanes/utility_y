@@ -5198,7 +5198,7 @@ cat buffer.log
             html=curl_string(url);
         }
         if ( curl_response_status != 200 ){
-            overflix_error="Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html;
+            overflix_error+="Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html+"\n";
             return;            
         }
         
@@ -5232,7 +5232,7 @@ cat buffer.log
                         titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").trim();
                 }
                 if ( titulo_serie.contains("\n") ){
-                    overflix_error="nao foi possivel pegar o titulo serie de " + url + ":\n" + html;
+                    overflix_error+="nao foi possivel pegar o titulo serie de " + url + ":\n" + html+"\n";
                     return;
                 }
             }
@@ -5263,7 +5263,7 @@ cat buffer.log
                 overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                 return;
             }
-            overflix_error="Não foi possível resolver a url:: " + url;
+            overflix_error+="Não foi possível resolver a url:: " + url+"\n";
             return;
         }
         
@@ -5275,7 +5275,7 @@ cat buffer.log
                 overflix_busca(partes[i]+suffix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                 return;
             }
-            overflix_error="Não foi possível resolver a url:: " + url;
+            overflix_error+="Não foi possível resolver a url:: " + url+"\n";
             return;
         }
         
@@ -5285,13 +5285,13 @@ cat buffer.log
             String titulo="?";
             partes=regex_matcher("<b title=\"", "\"", html, true); 
             if ( html.contains("<h2>WE ARE SORRY</h2>") ){
-                overflix_error="Arquivo não mais disponível no mixdrop, url: " + url;
+                overflix_error+="Arquivo não mais disponível no mixdrop, url: " + url+"\n";
                 return;
             }
             if ( partes.length > 0 )
                 titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "");
             else{
-                overflix_error="Erro, titulo não encontrado na url: " + url;
+                overflix_error+="Erro, titulo não encontrado na url: " + url+"\n";
                 return;
             }
             
@@ -5315,50 +5315,10 @@ cat buffer.log
                 // skip token
             }else{
                 if ( url.equals("") ){
-                    overflix_error="url vazia!";
+                    overflix_error+="url vazia!\n";
                     return;
                 }
-                String _visible="$false";
-                String _quit="$ie.Parent.Quit();";
-                if ( vToken ){
-                    _visible="$true";
-                    _quit="";
-                }
-                String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
-                    "$ie.Visible=" + _visible + "\n" +                    
-                    "$ie.ParsedHtml\n" +
-                    "$ie.Navigate(\"" + url + "\");\n" +
-                    "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
-                    "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
-                    "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
-                    "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
-                    "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
-                    _quit + "\n" + 
-                    ""; 
-                //taskkill /im iexplore.exe /f
-                s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                int limitLoop=1;
-                while ( s.trim().length() == 0 && limitLoop-->0 ){
-                    text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
-                    "$ie.Visible=" + _visible + "\n" +                    
-                    "$ie.ParsedHtml\n" +
-                    "$ie.Navigate(\"" + url + "\");\n" +
-                    "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
-                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 1000;\n" +
-                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 1000;\n" +
-                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
-                    "sleep -Milliseconds 1000;\n" +
-                    "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
-                    "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
-                    "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
-                    "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
-                    _quit + "\n" + 
-                    "";                     
-                    s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
-                    sleepSeconds(1);
-                }
+                s=getTokenIE(vToken, url);
             }
             if ( s != null && s.trim().length() > 0 )
                 s=s.trim();
@@ -5390,9 +5350,72 @@ cat buffer.log
             }            
             return;
         }
-        overflix_error="Não foi possível resolver a url "+ url;
+        overflix_error+="Não foi possível resolver a url "+ url;
         return;
     }
+    
+    public String getTokenIE(Boolean vToken, String url){
+        String [] result=new String[]{""};
+        Thread t=new Thread(new Runnable() {
+            public void run() {
+                String s="Token";
+                String _visible="$false";
+                String _quit="$ie.Parent.Quit();";
+                if ( vToken ){
+                    _visible="$true";
+                    _quit="";
+                }
+                String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
+                    "$ie.Visible=" + _visible + "\n" +                    
+                    "$ie.ParsedHtml\n" +
+                    "$ie.Navigate(\"" + url + "\");\n" +
+                    "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
+                    "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
+                    "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
+                    "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
+                    "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
+                    _quit + "\n" + 
+                    ""; 
+                //taskkill /im iexplore.exe /f
+                s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                int limitLoop=1;
+                // enrroscando infinitamente?
+                while ( s.trim().length() == 0 && limitLoop-->0 ){
+                    text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
+                    "$ie.Visible=" + _visible + "\n" +                    
+                    "$ie.ParsedHtml\n" +
+                    "$ie.Navigate(\"" + url + "\");\n" +
+                    "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
+                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                    "sleep -Milliseconds 1000;\n" +
+                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                    "sleep -Milliseconds 1000;\n" +
+                    "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                    "sleep -Milliseconds 1000;\n" +
+                    "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +           
+                    "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
+                    "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
+                    "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
+                    _quit + "\n" + 
+                    "";                     
+                    s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                    sleepSeconds(1);
+                }     
+                result[0]=s;
+            }
+        });
+        t.start();
+        for ( int i=0;i<15;i++ ){
+            if ( !t.isAlive() )
+                return result[0];
+            sleepSeconds(1);
+        }
+        try{    
+            t.interrupt();
+        }catch(Exception e){}
+        return "";
+    }
+    
     
     public void xor(int parm){
         while(parm < 0)
@@ -10682,10 +10705,14 @@ while True:
     
     private void clear_cls(){
         try{
-            if ( System.getProperty("user.dir").contains("/") )
-                new ProcessBuilder("clear").inheritIO().start().waitFor();
-            else
-                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            System.out.write(new byte[]{(byte)27,(byte)91,(byte)72,(byte)27,(byte)91,(byte)50,(byte)74,(byte)27,(byte)91,(byte)51,(byte)74});
+            System.out.flush();
+            /*
+                if ( System.getProperty("user.dir").contains("/") )
+                    new ProcessBuilder("clear").inheritIO().start().waitFor();
+                else
+                    new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();            
+            */
         }catch(Exception e){
             erroFatal("Error..." + e.toString());
         }            
@@ -11828,6 +11855,7 @@ class multiCurl extends Util{
                                     }else{
                                         pipedOutputStream.write(
                                             (
+                                                // [=>        ] ?
                                                 (i+1)+" downloading... "+bytes_to_text(progress_finished_len_memory[i]).replace(" ","")+"/"+bytes_to_text(progress_len[i]).replace(" ","")+" "+ caminhos.get(i)+"\n"
                                             ).getBytes()
                                         );
