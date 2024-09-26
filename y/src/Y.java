@@ -964,6 +964,11 @@ cat buffer.log
             cut(args);
             return;
         }
+        if ( args[0].equals("cors") ){
+            //Object [] obj = get_parms_curl_header_method_verbose_raw_host_limitRate(args2);
+            ////////////////
+            return;
+        }        
         if ( args[0].equals("curl") ){
             String [] args2 = new String[args.length];            
             System.arraycopy(args, 0, args2, 0, args.length);
@@ -5998,16 +6003,16 @@ cat buffer.log
                     baos.write(buffer, 0, len);                
             }
             
-            String init_msg=method + " " + path + " " + http_version + "\r\n";
+            String init_msg=method + " " + path + " " + http_version + "\r\n";            
             String pre_header="";
             if ( header.equals("") )
                 header = "\r\n";
             if ( !(init_msg+pre_header+header).contains("\r\nHost: ") )
                 pre_header+="Host: " + host + "\r\n";
-            if ( !(init_msg+pre_header+header).contains("\r\nuser-agent: ") )
-                pre_header+="user-agent: curl/7.87.0\r\n";
-            if ( !(init_msg+pre_header+header).contains("\r\naccept: ") )
-                pre_header+="accept: */*\r\n";
+            if ( !(init_msg+pre_header+header).contains("\r\nUser-Agent: ") )
+                pre_header+="User-Agent: curl/8.0.1\r\n";
+            if ( !(init_msg+pre_header+header).contains("\r\nAccept: ") )
+                pre_header+="Accept: */*\r\n";
             if ( method.equals("POST") && !(init_msg+pre_header+header).contains("\r\nContent-Type: ") )
                 pre_header+="Content-Type: application/x-www-form-urlencoded\r\n";
             if ( method.equals("POST") && !(init_msg+pre_header+header).contains("\r\nContent-Length: ") )
@@ -9981,7 +9986,7 @@ cat buffer.log
         byte [] buf=new byte[1024*10];
         int len=is.read(buf);
         if ( len == -1 )
-            erroFatal("host nao responde: " + host+" " + port);
+            throw new Exception("host nao responde: " + host+" " + port);
         String s=new String(buf,0,len,"UTF-8");
         while(s.length()>0&&!s.substring(0,1).equals("{"))
             s=s.substring(1);
@@ -17647,6 +17652,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y tail]\n"
 /* class by manual */                + "  [y cut]\n"
 /* class by manual */                + "  [y curl]\n"
+/* class by manual */                + "  [y cors]\n"
 /* class by manual */                + "  [y [sed|tr]]\n"
 /* class by manual */                + "  [y n]\n"
 /* class by manual */                + "  [y rn]\n"
@@ -17931,7 +17937,26 @@ namespace LoopbackWithMic
 /* class by manual */                + "    curl http://localhost:8080/v1/movies --limit-rate 20M\n"
 /* class by manual */                + "    obs: -v => verbose\n"
 /* class by manual */                + "    obs2: --header e o mesmo que -H\n"
-/* class by manual */                + "[ y curlJson]\n"
+/* class by manual */                + "[y cors]\n"
+/* class by manual */                + "    y cors\n"
+/* class by manual */                + "    y cors -ip localhost -port 500\n"
+/* class by manual */                + "    y cors -sw https://super -sw https://teste\n"
+/* class by manual */                + "    obs: -sw significa startWith\n"
+/* class by manual */                + "    obs2: cors serve como bypass de \"blocked by CORS policy\"\n"
+/* class by manual */                + "    obs3: -sw e opcional, mas uma vez utilizado, so permitira os valores informados pelos -sw\n"
+/* class by manual */                + "    obs4: o cors nao usa stream, ou seja, captura 100% da resposta para depois transmitir.\n"
+/* class by manual */                + "    exemplo de requisicao js:\n"
+/* class by manual */                + "    function b(url){\n"
+/* class by manual */                + "      var xhr = new XMLHttpRequest();\n"
+/* class by manual */                + "      xhr.withCredentials = false;\n"
+/* class by manual */                + "      xhr.open(\"GET\", url, false);\n"
+/* class by manual */                + "      xhr.overrideMimeType(\"text/plain; charset=x-user-defined\");\n"
+/* class by manual */                + "      xhr.send(null);\n"
+/* class by manual */                + "      return xhr.responseText;\n"
+/* class by manual */                + "    }\n"
+/* class by manual */                + "    b('http://localhost:500?https://site.com');\n"
+/* class by manual */                + "     \n"
+/* class by manual */                + "[y curlJson]\n"
 /* class by manual */                + "    y curlJson \\\n"
 /* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
 /* class by manual */                + "        -H \"other: other\" \\\n"
@@ -18381,6 +18406,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

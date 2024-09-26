@@ -41,6 +41,7 @@ usage:
   [y tail]
   [y cut]
   [y curl]
+  [y cors]
   [y [sed|tr]]
   [y n]
   [y rn]
@@ -325,7 +326,26 @@ Exemplos...
     curl http://localhost:8080/v1/movies --limit-rate 20M
     obs: -v => verbose
     obs2: --header é o mesmo que -H
-[ y curlJson]
+[y cors]
+    y cors
+    y cors -ip localhost -port 500
+    y cors -sw https://super -sw https://teste
+    obs: -sw significa startWith
+    obs2: cors serve como bypass de "blocked by CORS policy"
+    obs3: -sw é opcional, mas uma vez utilizado, só permitirá os valores informados pelos -sw
+    obs4: o cors não usa stream, ou seja, captura 100% da resposta para depois transmitir.
+    exemplo de requisição js:
+    function b(url){
+      var xhr = new XMLHttpRequest();
+      xhr.withCredentials = false;
+      xhr.open("GET", url, false);
+      xhr.overrideMimeType("text/plain; charset=x-user-defined");
+      xhr.send(null);
+      return xhr.responseText;
+    }
+    b('http://localhost:500?https://site.com');
+     
+[y curlJson]
     y curlJson \
         -H "Content-Type: application/json" \
         -H "other: other" \
