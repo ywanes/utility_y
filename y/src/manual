@@ -328,12 +328,14 @@ Exemplos...
     obs2: --header é o mesmo que -H
 [y cors]
     y cors
-    y cors -ip localhost -port 500
-    y cors -sw https://super -sw https://teste
+    y cors -port 4000
+    y cors -ip 200.200.200.200 -port 4000
+    y cors -sw "https://super" -sw "https://teste"
     obs: -sw significa startWith
     obs2: cors serve como bypass de "blocked by CORS policy"
     obs3: -sw é opcional, mas uma vez utilizado, só permitirá os valores informados pelos -sw
     obs4: o cors não usa stream, ou seja, captura 100% da resposta para depois transmitir.
+    obs5: local host de ip classe C não funciona no browser
     exemplo de requisição js:
     function b(url){
       var xhr = new XMLHttpRequest();
@@ -343,7 +345,7 @@ Exemplos...
       xhr.send(null);
       return xhr.responseText;
     }
-    b('http://localhost:500?https://site.com');
+    b('http://200.200.200.200:4000?https://site.com');
      
 [y curlJson]
     y curlJson \

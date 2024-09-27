@@ -964,9 +964,8 @@ cat buffer.log
             cut(args);
             return;
         }
-        if ( args[0].equals("cors") ){
-            //Object [] obj = get_parms_curl_header_method_verbose_raw_host_limitRate(args2);
-            ////////////////
+        if ( args[0].equals("cors") ){            
+            cors(args);
             return;
         }        
         if ( args[0].equals("curl") ){
@@ -5844,6 +5843,160 @@ cat buffer.log
         }
     }
     
+    public void cors(String [] args){
+        Object [] obj = get_parms_cors_ip_port_sw(args);
+        if ( obj == null )
+            erroFatal("Parametros invalidos");
+        String ip=(String)obj[0];
+        Integer port=(Integer)obj[1];        
+        final String [] sw=(obj[2]==null)?(new String[]{}):(((String)obj[2]).split("\\|"));
+        System.out.println(
+                "Server cors ligado!\n"
+                + "exemplo de chamada:\n"
+                + "y curl \"http://"+ip+":"+port+"?http://site.com\"\n"
+                + "exemplo js:\n"
+                + "    function b(url){\n"
+                + "      var xhr = new XMLHttpRequest();\n"
+                + "      xhr.withCredentials = false;\n"
+                + "      xhr.open(\"GET\", url, false);\n"
+                + "      xhr.overrideMimeType(\"text/plain; charset=x-user-defined\");\n"
+                + "      xhr.send(null);\n"
+                + "      return xhr.responseText;\n"
+                + "    }\n"
+                + "    b('http://" + ip + ":" + port + "?https://site.com');\n"
+        );
+        try{            
+            ServerSocket serverSocket = new ServerSocket(port, 1, InetAddress.getByName(ip));
+            while (true) {
+                try {
+                    final Socket socket = serverSocket.accept();
+                    new Thread() {
+                        public void run() {
+                            try {  
+                                InputStream input = socket.getInputStream();
+                                OutputStream output = socket.getOutputStream();
+                                byte [] cors_invalido=(
+                                                "HTTP/1.1 404 OK\r\n"
+                                                + "Content-Type: text/html; charset=UTF-8\r\n"
+                                                + "Access-Control-Allow-Origin: *\r\n"
+                                                + "X-Frame-Options: SAMEORIGIN\r\n"
+                                                + "\r\n"
+                                                + "chamada invalida para cors.. vc deve utilizar \"?\" na url e nao pode ser no final"
+                                            ).getBytes();
+                                if (input != null) {
+                                    byte [] buf=new byte[1024*10];
+                                    int len=input.read(buf);
+                                    if ( len <= 0 ){
+                                        System.err.println("Erro fatal, header invalido!");
+                                        System.exit(1);
+                                    }
+                                    String texto=new String(buf);
+                                    texto=texto.split("\r\n")[0];
+                                    texto=texto.split(" ")[1];
+                                    int p=texto.indexOf("?");
+                                    if ( p <= 0 ){
+                                        output.write(cors_invalido);
+                                        output.flush();
+                                        socket.close();
+                                        return;
+                                    }
+                                    texto=texto.substring(p+1);
+                                    if ( texto.length() == 0 ){
+                                        output.write(cors_invalido);
+                                        output.flush();
+                                        socket.close();
+                                        return;
+                                    }
+                                    String url=texto;
+                                    boolean achou=(sw.length==0);
+                                    for ( int i=0;i<sw.length;i++ ){
+                                        if ( url.startsWith(sw[i]) ){
+                                            achou=true;
+                                            break;
+                                        }
+                                    }
+                                    if ( !achou ){
+                                        output.write(
+                                            (    
+                                                "HTTP/1.1 400 OK\r\n"
+                                                + "Content-Type: text/html; charset=UTF-8\r\n"
+                                                + "Access-Control-Allow-Origin: *\r\n"
+                                                + "X-Frame-Options: SAMEORIGIN\r\n"
+                                                + "\r\n"
+                                                + "solicitacao nao permitida de acordo com os parametros -sw"
+                                            ).getBytes()                                        
+                                        );
+                                        output.flush();
+                                        socket.close();
+                                        return;                                        
+                                    }
+                                    curl_string(url);
+                                    byte [] s=curl_bytes(url);
+                                    if ( curl_error == null ){
+                                        String [] headers=curl_response_header.split("\r\n");
+                                        int count_cors=0;
+                                        String status_301=null;
+                                        for ( int i=0;i<headers.length;i++ ){
+                                            if ( headers[i].toLowerCase().startsWith("access-control-allow-origin: ") ){
+                                                headers[i]="Access-Control-Allow-Origin: *";
+                                                count_cors++;
+                                            }
+                                            if ( headers[i].toUpperCase().startsWith("HTTP/1.1 301 ") )
+                                                status_301=headers[i];
+                                        }
+                                        if ( status_301 != null ){
+                                            output.write(
+                                                (    
+                                                    "HTTP/1.1 400 OK\r\n"
+                                                    + "Content-Type: text/html; charset=UTF-8\r\n"
+                                                    + "Access-Control-Allow-Origin: *\r\n"
+                                                    + "X-Frame-Options: SAMEORIGIN\r\n"
+                                                    + "\r\n"
+                                                    + "redirect nao permitido para cors:\n"
+                                                    + status_301
+                                                ).getBytes()                                        
+                                            );
+                                            output.flush();
+                                            socket.close();
+                                            return;                                                                                        
+                                        }
+                                        if ( count_cors == 0 )
+                                            headers=addParm("Access-Control-Allow-Origin: *", headers);
+                                            
+                                        curl_response_header = String.join("\r\n",headers)+"\r\n\r\n";
+                                        output.write(curl_response_header.getBytes());
+                                        output.write(s);
+                                        output.flush();
+                                        socket.close();
+                                        return;
+                                    }
+                                    output.write(
+                                        (    
+                                            "HTTP/1.1 400 OK\r\n"
+                                            + "Content-Type: text/html; charset=UTF-8\r\n"
+                                            + "Access-Control-Allow-Origin: *\r\n"
+                                            + "X-Frame-Options: SAMEORIGIN\r\n"
+                                            + "\r\n"
+                                            + curl_error
+                                        ).getBytes()                                        
+                                    );
+                                    output.flush();
+                                    socket.close();
+                                }
+                            } catch (Exception e) {
+                                System.out.println("----------> Erro ao executar servidor:" + e.toString());
+                            }
+                        }
+                    }.start();
+                } catch (Exception e) {
+                    System.out.println("Erro ao executar servidor:" + e.toString());
+                }
+            }                  
+        }catch(Exception e){
+            System.out.println(e.toString());
+        }  
+    }
+    
     public void cut(String [] args){
         String [] partes=args[1].substring(2).split(",");
         int [] elem=new int[partes.length*2];
@@ -5943,15 +6096,24 @@ cat buffer.log
     }
     
     public String curl_string(String url){
+        return curl_baos(url).toString();
+    }
+    
+    public byte [] curl_bytes(String url){
+        return curl_baos(url).toByteArray();
+    }
+    
+    public ByteArrayOutputStream curl_baos(String url){
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
-        curl(baos, "", "GET", false, false, url, null, null, null, null, null);
-        return baos.toString();
+        curl(baos, "", "GET", false, false, url, null, null, null, null, null);        
+        return baos;
     }
     
     String curl_response_header="";
     String curl_response_location="";
     int curl_response_status=0;
     long curl_response_len=0;
+    String curl_error=null;
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
                 Long [] progress_finished_len, Long [] progress_len, Integer progress_number){
         try{                        
@@ -6103,13 +6265,17 @@ cat buffer.log
                     }
                 }
                 os_print.flush();
+                curl_error=null;
             }catch(Exception e){
-                os_print.write(("\nError "+e.toString()).getBytes());
-            }
+                curl_error="\nError "+e.toString();
+                os_print.write((curl_error).getBytes());                
+            }            
         }catch(UnknownHostException e){
-            System.err.println("Error UnknownHost: " + host + " " + e.toString());
+            curl_error="Error UnknownHost: " + host + " " + e.toString();
+            System.err.println(curl_error);
         }catch(Exception e){
-            System.err.println("Error: " + e.toString());
+            curl_error="Error: " + e.toString();
+            System.err.println(curl_error);
         }        
         if ( os_print != null ){
             try{
@@ -7401,6 +7567,18 @@ cat buffer.log
         String [] retorno=new String[args.length-n];
         for ( int i=n;i<args.length;i++ )
             retorno[i-n]=args[i];
+        return retorno;
+    }
+    public String[] sliceParm1N(int n, String[] args) {
+        if ( n == 0 )
+            erroFatal("erro interno sliceParm");
+        String [] retorno=new String[args.length-1];
+        for ( int i=0;i<args.length-1;i++ ){
+            if ( i >= n )
+                retorno[i]=args[i-1];
+            else
+                retorno[i]=args[i];
+        }
         return retorno;
     }
 
@@ -8748,6 +8926,47 @@ cat buffer.log
         return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o};
     }        
            
+    private Object [] get_parms_cors_ip_port_sw(String [] args){
+        String ip=null;        
+        Integer port=4000;
+        String sw=null;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length > 0){
+            if ( args.length > 1 && args[0].equals("-ip") ){
+                args=sliceParm(1, args);
+                ip=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-port") ){
+                args=sliceParm(1, args);
+                port=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-sw") ){
+                args=sliceParm(1, args);
+                if ( sw == null )
+                    sw=args[0];
+                else
+                    sw+="|"+args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            erroFatal("Erro de parametros");
+        }
+        if ( ip == null ){
+            String [] ipv4_ipv6=ips(true, 15, false, false); // "10.0.2.15";
+            if ( ip == null )
+                ip = "["+ipv4_ipv6[1]+"]";
+            if ( ip == null )
+                ip = ipv4_ipv6[0];
+        }        
+        return new Object []{ip, port, sw};
+    }
+            
     private Object [] get_parms_curl_header_method_verbose_raw_host_limitRate(String [] args){
         String header="";
         String method="GET";
@@ -17252,7 +17471,7 @@ namespace LoopbackWithMic
 /* class HttpServer */             }
 /* class HttpServer */         }.start();
 /* class HttpServer */     }
-/* class HttpServer */     private void lendo() throws Exception {
+/* class HttpServer */     private void lendo() throws Exception { // refatorar depois, isso aqui ta muito ruim!!
 /* class HttpServer */         try {
 /* class HttpServer */             int i = reader.read(buffer);
 /* class HttpServer */             if (i == -1) return;
@@ -17939,12 +18158,14 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs2: --header e o mesmo que -H\n"
 /* class by manual */                + "[y cors]\n"
 /* class by manual */                + "    y cors\n"
-/* class by manual */                + "    y cors -ip localhost -port 500\n"
-/* class by manual */                + "    y cors -sw https://super -sw https://teste\n"
+/* class by manual */                + "    y cors -port 4000\n"
+/* class by manual */                + "    y cors -ip 200.200.200.200 -port 4000\n"
+/* class by manual */                + "    y cors -sw \"https://super\" -sw \"https://teste\"\n"
 /* class by manual */                + "    obs: -sw significa startWith\n"
 /* class by manual */                + "    obs2: cors serve como bypass de \"blocked by CORS policy\"\n"
 /* class by manual */                + "    obs3: -sw e opcional, mas uma vez utilizado, so permitira os valores informados pelos -sw\n"
 /* class by manual */                + "    obs4: o cors nao usa stream, ou seja, captura 100% da resposta para depois transmitir.\n"
+/* class by manual */                + "    obs5: local host de ip classe C nao funciona no browser\n"
 /* class by manual */                + "    exemplo de requisicao js:\n"
 /* class by manual */                + "    function b(url){\n"
 /* class by manual */                + "      var xhr = new XMLHttpRequest();\n"
@@ -17954,7 +18175,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "      xhr.send(null);\n"
 /* class by manual */                + "      return xhr.responseText;\n"
 /* class by manual */                + "    }\n"
-/* class by manual */                + "    b('http://localhost:500?https://site.com');\n"
+/* class by manual */                + "    b('http://200.200.200.200:4000?https://site.com');\n"
 /* class by manual */                + "     \n"
 /* class by manual */                + "[y curlJson]\n"
 /* class by manual */                + "    y curlJson \\\n"
@@ -18406,23 +18627,6 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
