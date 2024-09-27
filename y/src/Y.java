@@ -5855,12 +5855,16 @@ cat buffer.log
                 + "exemplo de chamada:\n"
                 + "y curl \"http://"+ip+":"+port+"?http://site.com\"\n"
                 + "exemplo js:\n"
-                + "    function b(url){\n"
+                + "    var b_status=0;\n"                        
+                + "    function b(url){"
+                + "      if(location.href.indexOf('http://')!= 0){alert('cors nao pode ser executado nessa aba! somente em http://');return;}\n"
+                + "      if(url.indexOf('?')>-1) url=url.split('?')[0]+'?base64?'+btoa(url);\n"
                 + "      var xhr = new XMLHttpRequest();\n"
                 + "      xhr.withCredentials = false;\n"
                 + "      xhr.open(\"GET\", url, false);\n"
                 + "      xhr.overrideMimeType(\"text/plain; charset=x-user-defined\");\n"
                 + "      xhr.send(null);\n"
+                + "      b_status=xhr.status;\n"
                 + "      return xhr.responseText;\n"
                 + "    }\n"
                 + "    b('http://" + ip + ":" + port + "?https://site.com');\n"
@@ -5907,6 +5911,27 @@ cat buffer.log
                                         socket.close();
                                         return;
                                     }
+                                    if ( texto.startsWith("base64?" ) ){
+                                        texto=texto.substring(7);
+                                        try{
+                                            texto=base64_S_S(texto, false);
+                                            texto=texto.substring(texto.indexOf("?")+1);
+                                        }catch(Exception e ){
+                                            output.write(
+                                                (    
+                                                    "HTTP/1.1 400 OK\r\n"
+                                                    + "Content-Type: text/html; charset=UTF-8\r\n"
+                                                    + "Access-Control-Allow-Origin: *\r\n"
+                                                    + "X-Frame-Options: SAMEORIGIN\r\n"
+                                                    + "\r\n"
+                                                    + "base64 invalida: " + texto
+                                                ).getBytes()                                        
+                                            );
+                                            output.flush();
+                                            socket.close();
+                                            return;                                                                                    
+                                        }
+                                    }
                                     String url=texto;
                                     boolean achou=(sw.length==0);
                                     for ( int i=0;i<sw.length;i++ ){
@@ -5936,12 +5961,15 @@ cat buffer.log
                                         String [] headers=curl_response_header.split("\r\n");
                                         int count_cors=0;
                                         String status_301=null;
+                                        String location="";
                                         for ( int i=0;i<headers.length;i++ ){
                                             if ( headers[i].toLowerCase().startsWith("access-control-allow-origin: ") ){
                                                 headers[i]="Access-Control-Allow-Origin: *";
                                                 count_cors++;
                                             }
-                                            if ( headers[i].toUpperCase().startsWith("HTTP/1.1 301 ") )
+                                            if ( headers[i].toLowerCase().startsWith("location: ") )
+                                                location=headers[i];
+                                            if ( headers[i].toUpperCase().startsWith("HTTP/1.1 301 ") || headers[i].toUpperCase().startsWith("HTTP/1.0 301 ") )
                                                 status_301=headers[i];
                                         }
                                         if ( status_301 != null ){
@@ -5952,8 +5980,7 @@ cat buffer.log
                                                     + "Access-Control-Allow-Origin: *\r\n"
                                                     + "X-Frame-Options: SAMEORIGIN\r\n"
                                                     + "\r\n"
-                                                    + "redirect nao permitido para cors:\n"
-                                                    + status_301
+                                                    + "redirect nao permitido para cors:\n" + status_301 + "\n" + location
                                                 ).getBytes()                                        
                                             );
                                             output.flush();
@@ -17824,6 +17851,7 @@ namespace LoopbackWithMic
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -18167,12 +18195,16 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs4: o cors nao usa stream, ou seja, captura 100% da resposta para depois transmitir.\n"
 /* class by manual */                + "    obs5: local host de ip classe C nao funciona no browser\n"
 /* class by manual */                + "    exemplo de requisicao js:\n"
+/* class by manual */                + "    var b_status=0;\n"
 /* class by manual */                + "    function b(url){\n"
+/* class by manual */                + "      if(location.href.indexOf('http://')!= 0){alert('cors nao pode ser executado nessa aba! somente em http://');return;}\n"
+/* class by manual */                + "      if(url.indexOf('?')>-1) url=url.split('?')[0]+'?base64?'+btoa(url);\n"
 /* class by manual */                + "      var xhr = new XMLHttpRequest();\n"
 /* class by manual */                + "      xhr.withCredentials = false;\n"
 /* class by manual */                + "      xhr.open(\"GET\", url, false);\n"
 /* class by manual */                + "      xhr.overrideMimeType(\"text/plain; charset=x-user-defined\");\n"
 /* class by manual */                + "      xhr.send(null);\n"
+/* class by manual */                + "      b_status=xhr.status;\n"
 /* class by manual */                + "      return xhr.responseText;\n"
 /* class by manual */                + "    }\n"
 /* class by manual */                + "    b('http://200.200.200.200:4000?https://site.com');\n"
@@ -18627,6 +18659,9 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
 
 
 

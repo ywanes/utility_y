@@ -337,12 +337,16 @@ Exemplos...
     obs4: o cors não usa stream, ou seja, captura 100% da resposta para depois transmitir.
     obs5: local host de ip classe C não funciona no browser
     exemplo de requisição js:
+    var b_status=0;
     function b(url){
+      if(location.href.indexOf('http://')!= 0){alert('cors nao pode ser executado nessa aba! somente em http://');return;}
+      if(url.indexOf('?')>-1) url=url.split('?')[0]+'?base64?'+btoa(url);
       var xhr = new XMLHttpRequest();
       xhr.withCredentials = false;
       xhr.open("GET", url, false);
       xhr.overrideMimeType("text/plain; charset=x-user-defined");
       xhr.send(null);
+      b_status=xhr.status;
       return xhr.responseText;
     }
     b('http://200.200.200.200:4000?https://site.com');
