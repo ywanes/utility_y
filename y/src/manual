@@ -24,6 +24,7 @@ usage:
   [y printf]
   [y sdiff]
   [y progressBar]
+  [y xargs]
   [y cat]
   [y lower]
   [y upper]
@@ -247,6 +248,9 @@ Exemplos...
 [y progressBar]
     ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar
     ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar -uniqLine
+[y xargs]
+    y echo a | y xargs echo
+    y echo a | y xargs echo "{}" "{}"
 [y cat]
     y cat arquivo
 [y lower]

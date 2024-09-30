@@ -834,6 +834,10 @@ cat buffer.log
             progressBar(System.in, uniqLine);
             return;
         }     
+        if ( args[0].equals("xargs") ){
+            xargs(args);
+            return;
+        }
         if ( args[0].equals("cat") ){
             cat(args);
             return;
@@ -5133,6 +5137,21 @@ cat buffer.log
         return "\r"+a;
     }
             
+    public void xargs(String [] args){
+        args = sliceParm(1, args);
+        if ( args.length == 0 )
+            erroFatal("Erro de parametro!");
+        ArrayList<String> lista_in=readAllLines();
+        if ( args.length == 1 && !args[0].contains("{}") )
+            args = addParm("{}", args);
+        for ( int i=0;i<lista_in.size();i++ ){
+            String [] command=new String[args.length];
+            for ( int j=0;j<args.length;j++ )
+                command[j]=args[j].replace("{}", lista_in.get(i));
+            new Y().go(command);
+        }
+    }    
+    
     public void cat(String [] caminhos)
     {
         try{
@@ -5778,7 +5797,7 @@ cat buffer.log
             if ( lang == null )
                 lang="Brazilian_Portuguese_Ricardo";
             if ( msg == null )
-                msg=String.join(" ", readAllLines(null));
+                msg=String.join(" ", readAllLines());
             msg=msg.trim();
             if ( msg.equals("") )
                 erroFatal("Erro, Texto em branco!");
@@ -13439,18 +13458,19 @@ class Util{
     
     public List<String> readAllLines(String caminho){
         try{   
-            if ( caminho == null ){
-                List<String> lines=new ArrayList();
-                String line=null;
-                while( (line=readLine()) != null )
-                    lines.add(line);
-                return lines;
-            }
             return java.nio.file.Files.readAllLines(java.nio.file.Paths.get(caminho));
         }catch(Exception e){
             erroFatal(e);
         }
         return null;
+    }
+    
+    public ArrayList<String> readAllLines(){
+        ArrayList<String> lines=new ArrayList();
+        String line=null;
+        while( (line=readLine()) != null )
+            lines.add(line);
+        return lines;
     }
     
     public static java.util.Scanner scanner_pipeB=null;
@@ -17882,6 +17902,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y printf]\n"
 /* class by manual */                + "  [y sdiff]\n"
 /* class by manual */                + "  [y progressBar]\n"
+/* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
 /* class by manual */                + "  [y lower]\n"
 /* class by manual */                + "  [y upper]\n"
@@ -18105,6 +18126,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y progressBar]\n"
 /* class by manual */                + "    ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar\n"
 /* class by manual */                + "    ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar -uniqLine\n"
+/* class by manual */                + "[y xargs]\n"
+/* class by manual */                + "    y echo a | y xargs echo\n"
+/* class by manual */                + "    y echo a | y xargs echo \"{}\" \"{}\"\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
 /* class by manual */                + "[y lower]\n"
@@ -18659,6 +18683,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
