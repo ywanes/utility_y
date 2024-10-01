@@ -1797,44 +1797,32 @@ cat buffer.log
             mouse(args);
             return;
         }
+        if ( args[0].equals("mixer") ){
+            mixer();
+            return;
+        }
         if ( args[0].equals("gravador") ){
-            if ( args.length > 1 )
-                gravador(false, false, args[1], null);                
-            else
-                gravador(false, false, null, System.out);
-            return;
-        }
-        if ( args[0].equals("gravadorMixer") ){
-            if ( args.length > 1 )
-                gravador(false, true, args[1], null);
-            else
-                gravador(false, true, null, System.out);
-            return;
-        }
-        if ( args[0].equals("playWav") ){
-            if ( args.length > 1 )
-                playWav(false, args[1]);
-            else
-                playWav(false, null);
-            return;
-        }
-        if ( args[0].equals("playLine") ){
             try{
-                if ( args.length == 2 )
-                    playLine(false, new FileInputStream(args[1]));
-                else
-                    playLine(false, System.in);
+                gravador(args);
             }catch(Exception e){
                 erro_amigavel_exception(e);
             }
             return;
         }
-        if ( args[0].equals("gravadorLine") ){
-            gravador(true, false, null, System.out);
+        if ( args[0].equals("play") ){
+            try{
+                play(args);
+            }catch(Exception e){
+                erro_amigavel_exception(e);
+            }
             return;
         }
-        if ( args[0].equals("gravadorMixerLine") ){
-            gravador(true, true, null, System.out);
+        if ( args[0].equals("gravador") ){
+            try{
+                gravador(args);
+            }catch(Exception e){
+                erro_amigavel_exception(e);
+            }
             return;
         }
         if ( args[0].equals("call") ){
@@ -5845,7 +5833,7 @@ cat buffer.log
                 if ( runtimeExecError != null && !runtimeExecError.contains("size=") )
                     erroFatal(runtimeExecError);
             }
-            playWav(false, dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav");
+            play(null, dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav", null, false, true, false, null);
             if ( copy != null )
                 java.nio.file.Files.copy(
                         java.nio.file.Paths.get(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav"), 
@@ -8978,6 +8966,75 @@ cat buffer.log
         return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o};
     }        
            
+    private Object [] get_parms_f_mixer_line_wav_mp3_volume(String [] args){
+        String f=null;        
+        String mixer=null;
+        Boolean line=false;
+        Boolean wav=false;
+        Boolean mp3=false;
+        Float volume=null;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length > 0){
+            if ( args.length > 1 && args[0].equals("-f") ){
+                args=sliceParm(1, args);
+                f=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-mixer") ){
+                args=sliceParm(1, args);
+                mixer=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-volume") ){
+                args=sliceParm(1, args);
+                try{
+                    volume=Float.parseFloat(args[0]);
+                    if ( volume < 0f || volume > 1f )
+                        return null;
+                }catch(Exception e){
+                    return null;
+                }
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-line") ){
+                args=sliceParm(1, args);
+                line=true;
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-wav") ){
+                args=sliceParm(1, args);
+                wav=true;
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("-mp3") ){
+                args=sliceParm(1, args);
+                mp3=true;
+                continue;
+            }
+            if ( args.length > 0 && f == null ){
+                f=args[0];
+                args=sliceParm(1, args);                
+                continue;
+            }
+            erroFatal("Erro de parametros");
+        }
+        int count=0;
+        if ( line ) count++;
+        if ( wav ) count++;
+        if ( mp3 ) count++;
+        
+        if ( count == 0 )
+            wav=true;
+        if ( count > 1 )
+            erroFatal("Erro, multiplos formatos solicitados!");        
+        return new Object []{f, mixer, line, wav, mp3, volume};
+    }
+                
     private Object [] get_parms_cors_ip_port_sw(String [] args){
         String ip=null;        
         Integer port=4000;
@@ -10545,72 +10602,103 @@ cat buffer.log
         return false;
     }
     
-    public javax.sound.sampled.TargetDataLine getLineReader(boolean usingMixer){
-        try{
-            boolean mic=true;
-            if ( usingMixer ){
-                javax.sound.sampled.Mixer.Info[] mixers = javax.sound.sampled.AudioSystem.getMixerInfo();
-                for (int i=0;i<mixers.length;i++){
-                    javax.sound.sampled.Mixer mix = javax.sound.sampled.AudioSystem.getMixer(mixers[i]);                
-                    if ( mix.getTargetLineInfo().length == 0 ) 
-                        continue;
-                    if ( evitarDeviceAudio(mixers[i].getName()) )
-                        continue;
-                    System.err.println("LineReaderDevice -> " + mixers[i].getName());
+    public javax.sound.sampled.Mixer [] getMixers(String filter1Mixer, String notLike, boolean printAllMixer, boolean printFirstOk, Boolean getSource, Boolean getTarget){
+        if ( filter1Mixer != null && filter1Mixer.equals("-") ) // "-" -> pegando mixer padrao
+            filter1Mixer=null;
+        javax.sound.sampled.Mixer.Info[] infos = javax.sound.sampled.AudioSystem.getMixerInfo();
+        javax.sound.sampled.Mixer [] mixers=new javax.sound.sampled.Mixer[infos.length];
+        boolean [] oks=new boolean[infos.length];        
+        int countOks=0;
+        for ( int i=0;i<infos.length;i++ ){
+            mixers[i]=javax.sound.sampled.AudioSystem.getMixer(infos[i]);
+            int countSource=mixers[i].getSourceLineInfo().length;
+            int countTarget=mixers[i].getTargetLineInfo().length;
+            boolean skip=false;
+            String name=infos[i].getName();
+            if ( printAllMixer )
+                System.out.println(name + " - " + countSource + " Sources - " + countTarget + " Targets");
+            if ( filter1Mixer != null && !filter1Mixer.equals(name) )
+                continue;
+            if ( filter1Mixer== null && notLike != null && name.contains(notLike) )
+                continue;            
+            if ( (getSource && countSource > 0 )
+                || (getTarget && countTarget > 0 )
+            ){
+                oks[i]=true;
+                countOks++;
+                if ( countOks == 1 && printFirstOk ){
+                    System.err.println("Device -> " + name);
                     System.err.flush();
-                    javax.sound.sampled.Line.Info [] infos = mix.getTargetLineInfo();
-                    javax.sound.sampled.Line line_ = mix.getLine(infos[0]);                       
-                    javax.sound.sampled.TargetDataLine line = (javax.sound.sampled.TargetDataLine)line_;                               
-                    line.open(line.getFormat());
-                    line.start();
-                    return line;
                 }
-                erroFatal("Nenhum mixer encontrado!");
+            }
+        }
+        javax.sound.sampled.Mixer [] retorno=new javax.sound.sampled.Mixer[countOks];
+        int count=0;
+        for ( int i=0;i<mixers.length;i++ )
+            if ( oks[i] )
+                retorno[count++]=mixers[i];
+        return retorno;
+    }
+    
+    public javax.sound.sampled.TargetDataLine getLineReader(String mixer, Float volume){
+        try{            
+            javax.sound.sampled.Line line_=null;            
+            if ( mixer != null ){
+                javax.sound.sampled.Mixer [] mixers=getMixers(mixer, "som primário", false, true, false, true);                
+                if ( mixers.length == 0 )
+                    erroFatal("Nenhum mixer encontrado!");
+                line_ = mixers[0].getLine(mixers[0].getTargetLineInfo()[0]);
             }else{                            
                 javax.sound.sampled.AudioFormat format=getAudioFormatBase();
                 javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.TargetDataLine.class, format);
-                javax.sound.sampled.Line line_=javax.sound.sampled.AudioSystem.getLine(info);
-                javax.sound.sampled.TargetDataLine line=(javax.sound.sampled.TargetDataLine)line_;
-                line.open(line.getFormat());
-                line.start();
-                return line;
+                line_=javax.sound.sampled.AudioSystem.getLine(info);
             }
+            javax.sound.sampled.TargetDataLine line = (javax.sound.sampled.TargetDataLine)line_;                               
+            line.open(line.getFormat());
+            line.start();
+            if ( volume != null ){
+                // trava de segurança
+                if ( volume < 0f || volume > 1f )
+                    erroFatal("volume inválido!");
+                javax.sound.sampled.FloatControl gainControl = (javax.sound.sampled.FloatControl)line.getControl(javax.sound.sampled.FloatControl.Type.MASTER_GAIN);
+                float range = gainControl.getMaximum() - gainControl.getMinimum();
+                float gain = (range * volume) + gainControl.getMinimum();
+                gainControl.setValue(gain);
+            }            
+            return line;
         }catch(Exception e){
             erro_amigavel_exception(e);
         }
         return null;
     }
     
-    public javax.sound.sampled.SourceDataLine getLineWriter(boolean usingMixer, AudioFormat format){
+    public javax.sound.sampled.SourceDataLine getLineWriter(String mixer, AudioFormat format, Float volume){        
         try{
-            if ( format == null )
-                format = getAudioFormatBase();
-            if ( usingMixer ){
-                javax.sound.sampled.Mixer.Info[] mixers = javax.sound.sampled.AudioSystem.getMixerInfo();
-                for (int i=0;i<mixers.length;i++){
-                    javax.sound.sampled.Mixer mix = javax.sound.sampled.AudioSystem.getMixer(mixers[i]);                
-                    if ( mix.getSourceLineInfo().length == 0 ) 
-                        continue;
-                    if ( evitarDeviceAudio(mixers[i].getName()) )
-                        continue;
-                    System.err.println("LineWriterDevice -> " + mixers[i].getName());
-                    System.err.flush();
-                    javax.sound.sampled.Line.Info [] infos = mix.getSourceLineInfo();
-                    javax.sound.sampled.Line line_ = mix.getLine(infos[0]);                       
-                    javax.sound.sampled.SourceDataLine line = (javax.sound.sampled.SourceDataLine)line_;           
-                    line.open(line.getFormat());
-                    line.start();
-                    return line;
-                }
-                erroFatal("Nenhum mixer encontrado!");
+            javax.sound.sampled.Line line_=null;
+            if ( mixer != null ){
+                javax.sound.sampled.Mixer [] mixers=getMixers(mixer, "som primário", false, true, true, false);
+                if ( mixers.length == 0 )
+                    erroFatal("Nenhum mixer encontrado!");
+                line_ = mixers[0].getLine(mixers[0].getSourceLineInfo()[0]);
             }else{
+                if ( format == null )
+                    format = getAudioFormatBase();
                 javax.sound.sampled.DataLine.Info info=new javax.sound.sampled.DataLine.Info(javax.sound.sampled.SourceDataLine.class, format);
-                javax.sound.sampled.Line line_=javax.sound.sampled.AudioSystem.getLine(info);
-                javax.sound.sampled.SourceDataLine line=(javax.sound.sampled.SourceDataLine)line_;
-                line.open(line.getFormat());
-                line.start();
-                return line;
+                line_=javax.sound.sampled.AudioSystem.getLine(info);
             }
+            javax.sound.sampled.SourceDataLine line=(javax.sound.sampled.SourceDataLine)line_;
+            line.open(line.getFormat());
+            line.start();
+            if ( volume != null ){
+                // trava de segurança
+                if ( volume < 0f || volume > 1f )
+                    erroFatal("volume inválido!");
+                javax.sound.sampled.FloatControl gainControl = (javax.sound.sampled.FloatControl)line.getControl(javax.sound.sampled.FloatControl.Type.MASTER_GAIN);
+                float range = gainControl.getMaximum() - gainControl.getMinimum();
+                float gain = (range * volume) + gainControl.getMinimum();
+                gainControl.setValue(gain);
+            }
+            return line;
         }catch(Exception e){
             erro_amigavel_exception(e);
         }
@@ -10625,6 +10713,8 @@ cat buffer.log
     }
 
     /*
+    // estudo captura de audio do sistema!
+    
     // wasapi   -> Stream #0:0: Audio: pcm_f32le ([3][0][0][0] / 0x0003), 48000 Hz, mono, flt, 1536 kb/s
     // no windows mostra -> Canal 1, 16 bit(s), 48000 Hz (Qualidade de DVD)
     0x0003 ->  WaveFormatEncoding.IeeeFloat
@@ -10650,22 +10740,8 @@ cat buffer.log
     AudioFloatConverter
     AudioFloatConversion16S
     https://github.com/jaudiolibs/audioservers/blob/master/audioservers-javasound/src/main/java/org/jaudiolibs/audioservers/javasound/AudioFloatConverter.java
-    */
-    public void playLine(boolean usingMixer, InputStream in){
-        try{
-            javax.sound.sampled.SourceDataLine line=getLineWriter(usingMixer, null);
-            int BUFFER_SIZE = 1024;
-            byte[] buff = new byte[BUFFER_SIZE];
-            int len = 0;    
-            while ( (len=in.read(buff, 0, BUFFER_SIZE)) != -1 ){
-                line.write(buff, 0, len);
-            }
-        }catch(Exception e){
-            erroFatal(e.toString());
-        }        
-    }
-        
-    /*
+    
+    
 # gravador onlyLine python mic
 import pyaudio
 import wave
@@ -10739,24 +10815,113 @@ while True:
     pass
 
 # gravador onlyLine python linux(pendente)
-# PyAudioWPatch only works on Windows
+# PyAudioWPatch only works on Windows    
     */
-
-    public void gravador(boolean onlyLine, boolean usingMixer, String caminho, OutputStream out){ // erro em stdout -> y gravador > a.wav
-        try {
-            javax.sound.sampled.TargetDataLine line=getLineReader(usingMixer);
-            if ( onlyLine ){
-                if ( out == null )
-                    out=new FileOutputStream(new File(caminho));
-                filterLine(line, out);
-            }else{
-                javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                    
-                if ( caminho == null ){ // java.io.IOException: stream length not specified ---> o problema esta no ais!!
-                    javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, out);                            
+    
+    public void play(String [] parms) throws Exception{        
+        Object [] objs=get_parms_f_mixer_line_wav_mp3_volume(parms);
+        if ( objs == null )
+            erroFatal("Parametros invalidos");
+        String f=(String)objs[0];
+        String mixer=(String)objs[1];
+        Boolean line=(Boolean)objs[2];
+        Boolean wav=(Boolean)objs[3];
+        Boolean mp3=(Boolean)objs[4];
+        Float volume=(Float)objs[5];
+        play(mixer, f, null, line, wav, mp3, volume);
+    }
+    
+    public void play(String mixer, String caminho, InputStream is_force, boolean isLine, boolean isWav, boolean isMp3, Float volume){
+        // realmente é preciso ter essa redundancia -> String caminho, InputStream is_force
+        // porque na comunicação usa-se inputstream... e no wav file local só funciona File.
+        // ou seja, existe 3 cenarios.. System.in, InputStream e File
+        // ao tentar usar InputStream no arquivo wav local ele dá esse erro aqui:
+        // java.io.IOException: mark/reset not supported
+        try{
+            AudioFormat format=null;            
+            InputStream is=null;
+            javax.sound.sampled.SourceDataLine line=null;
+            if ( isLine ){
+                if ( is_force != null ){
+                    is=is_force;
                 }else{
+                    if ( caminho == null )
+                        is=System.in;
+                    else
+                        is=new FileInputStream(caminho);
+                }
+                line=getLineWriter(mixer, format, volume);                
+            }else{
+                if ( isWav ){
+                    if ( caminho == null ){
+                        javax.sound.sampled.AudioInputStream audioStream=javax.sound.sampled.AudioSystem.getAudioInputStream(System.in);
+                        format=audioStream.getFormat();
+                        is=(InputStream)audioStream;                                
+                        line=getLineWriter(mixer, format, volume);                    
+                    }else{                        
+                        javax.sound.sampled.AudioInputStream audioStream=javax.sound.sampled.AudioSystem.getAudioInputStream(new File(caminho));                    
+                        format=audioStream.getFormat();
+                        is=(InputStream)audioStream;                                
+                        line=getLineWriter(mixer, format, volume);                    
+                    }
+                }else{
+                    if ( isMp3 ){
+                        erroFatal("mp3 nao implementado!");
+                    }else{
+                        erroFatal("Erro interno, formato invalido!");
+                    }
+                }
+            }
+
+            int BUFFER_SIZE = 1024;
+            byte[] buff = new byte[BUFFER_SIZE];
+            int len = 0;            
+            while ( (len=is.read(buff, 0, BUFFER_SIZE)) != -1 )
+                line.write(buff, 0, len);
+            line.drain();
+            line.close();
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+        }        
+    }    
+
+    public void gravador(String [] parms) throws Exception{        
+        Object [] objs=get_parms_f_mixer_line_wav_mp3_volume(parms);
+        if ( objs == null )
+            erroFatal("Parametros invalidos");
+        String f=(String)objs[0];
+        String mixer=(String)objs[1];
+        Boolean line=(Boolean)objs[2];
+        Boolean wav=(Boolean)objs[3];
+        Boolean mp3=(Boolean)objs[4];
+        Float volume=(Float)objs[5];
+        OutputStream os=null;
+        if ( f == null )
+            os=System.out;
+        else
+            os=(OutputStream)(new FileOutputStream(f));
+        gravador(mixer, os, line, wav, mp3, volume);
+    }
+    
+    public void gravador(String mixer, OutputStream os, boolean isLine, boolean isWav, boolean isMp3, Float volume){
+        try {
+            javax.sound.sampled.TargetDataLine line=getLineReader(mixer, volume);
+            if ( isLine ){
+                filterLine(line, os);
+            }else{
+                if ( isWav ){
+                    // stdin error:
+                    // java.io.IOException: stream length not specified ---> o problema esta no ais!!
+                    javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                    
                     System.err.println("gravando...");            
                     System.err.flush();
-                    javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));            
+                    javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, os);            
+                }else{
+                    if ( isMp3 ){
+                        erroFatal("mp3 nao implementado!");
+                    }else{
+                        erroFatal("Erro interno, formato invalido!");
+                    }
                 }
             }
         } catch (Exception e) {
@@ -10764,30 +10929,9 @@ while True:
         }        
     }
     
-    public void playWav(boolean usingMixer, String caminho){
-        try{            
-            javax.sound.sampled.AudioInputStream audioStream=null;
-            AudioFormat format=null;
-            if ( caminho == null ){
-                audioStream = javax.sound.sampled.AudioSystem.getAudioInputStream(System.in);
-            }else{
-                audioStream = javax.sound.sampled.AudioSystem.getAudioInputStream(new File(caminho));                
-                format=audioStream.getFormat();
-            }
-            javax.sound.sampled.SourceDataLine line=getLineWriter(usingMixer, format);
-            int BUFFER_SIZE = 1024;
-            byte[] buff = new byte[BUFFER_SIZE];
-            int len = 0;            
-            while ( (len=audioStream.read(buff, 0, BUFFER_SIZE)) != -1 ){
-                line.write(buff, 0, len);
-            }
-            line.drain();
-            line.close();
-        }catch(Exception e){
-            erro_amigavel_exception(e);
-        }        
+    public void mixer(){
+        getMixers(null, null, true, false, false, false);        
     }
-    
     
     public void call(String [] args){
         try{        
@@ -10821,9 +10965,9 @@ while True:
                 int len_buffer=BUFFER_SIZE*1024;
                 byte [] buffer=new byte[len_buffer];
                 int len=0;
+                Socket s = null;
+                ServerSocket ss=null;
                 if ( server ){
-                    Socket s = null;
-                    ServerSocket ss=null;
                     try{
                         ss=new ServerSocket(port, 1,InetAddress.getByName(ip));
                     }catch(Exception ee){
@@ -10841,32 +10985,22 @@ while True:
                     }
                     System.out.println(print_after);
                     s = ss.accept();
-                    OutputStream os = s.getOutputStream();
-                    InputStream is = s.getInputStream();
-                    new Thread(){
-                        public void run(){
-                            try{
-                                gravador(true, false, null, os);
-                            }catch(Exception e1){}
-                        }
-                    }.start();                    
-                    playLine(false, is);
-                    s.close();
-                    ss.close();
                 }else{
-                    Socket s = new Socket(InetAddress.getByName(ip), port);                        
-                    OutputStream os = s.getOutputStream();
-                    InputStream is = s.getInputStream();
-                    new Thread(){
-                        public void run(){
-                            try{
-                                gravador(true, false, null, os);
-                            }catch(Exception e1){}
-                        }
-                    }.start();                    
-                    playLine(false, is);
-                    s.close();
+                    s = new Socket(InetAddress.getByName(ip), port);                        
                 }
+                OutputStream os = s.getOutputStream();
+                InputStream is = s.getInputStream();
+                new Thread(){
+                    public void run(){
+                        try{                                
+                            gravador(null, os, true, false, false, null);
+                        }catch(Exception e1){}
+                    }
+                }.start();                    
+                play(null, null, is, true, false, false, null);
+                s.close();
+                if ( ss != null )
+                    ss.close();
             }catch(Exception e){
                 erro_amigavel_exception(e);
             }   
@@ -17975,11 +18109,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y pingMine]\n"
 /* class by manual */                + "  [y ips]\n"
 /* class by manual */                + "  [y mouse]  \n"
+/* class by manual */                + "  [y mixer]\n"
 /* class by manual */                + "  [y gravador]\n"
-/* class by manual */                + "  [y gravadorLine]\n"
-/* class by manual */                + "  [y gravadorMixerLine]\n"
-/* class by manual */                + "  [y playWav]\n"
-/* class by manual */                + "  [y playLine]\n"
+/* class by manual */                + "  [y play]\n"
 /* class by manual */                + "  [y call]\n"
 /* class by manual */                + "  [y remote]\n"
 /* class by manual */                + "  [y injectMicLine]\n"
@@ -18517,21 +18649,24 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y mouse \"m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base baixa - Os Iluminados\n"
 /* class by manual */                + "    y mouse \"m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base alta - Os Temidos\n"
 /* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
+/* class by manual */                + "[y mixer]\n"
+/* class by manual */                + "    y mixer\n"
+/* class by manual */                + "    obs: lista os mixers\n"
 /* class by manual */                + "[y gravador]\n"
 /* class by manual */                + "    y gravador file.wav\n"
+/* class by manual */                + "    y gravador -mixer \"-\" -f file.wav\n"
+/* class by manual */                + "    y gravador -mixer \"-\" -line > fileLine\n"
+/* class by manual */                + "    y gravador -mixer \"-\" -line | y play -line\n"
 /* class by manual */                + "    y gravador > file.wav # com problema\n"
-/* class by manual */                + "[y gravadorLine]\n"
-/* class by manual */                + "    y gravadorLine | y playLine\n"
-/* class by manual */                + "[y gravadorMixerLine]\n"
-/* class by manual */                + "    y gravadorMixerLine | y playLine\n"
-/* class by manual */                + "    Obs: nao foi possivel implementar o mixer alto-falante, somente o mic\n"
-/* class by manual */                + "[y playWav]\n"
-/* class by manual */                + "    y playWav file.wav\n"
-/* class by manual */                + "    y cat file.wav | y playWav  # somente Wave dessa configuracao ate agora.\n"
-/* class by manual */                + "[y playLine]\n"
-/* class by manual */                + "    y gravadorLine | y playLine\n"
-/* class by manual */                + "    y gravadorMixerLine | y playLine\n"
-/* class by manual */                + "    obs: gravadorMixerLine contem mais ruido de fundo.\n"
+/* class by manual */                + "    obs: formatos: -line, -wave e -mp3\n"
+/* class by manual */                + "    obs2: -mp3 ainda nao implementado\n"
+/* class by manual */                + "[y play]\n"
+/* class by manual */                + "    y play file.wav\n"
+/* class by manual */                + "    y play -f file.wav\n"
+/* class by manual */                + "    y cat file.wav | y play\n"
+/* class by manual */                + "    y cat fileLine | y play -mixer \"-\" -line\n"
+/* class by manual */                + "    obs: formatos: -line, -wave e -mp3\n"
+/* class by manual */                + "    obs2: -mp3 ainda nao implementado\n"
 /* class by manual */                + "[y call]\n"
 /* class by manual */                + "    y call\n"
 /* class by manual */                + "[y remote]\n"
@@ -18691,6 +18826,9 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
 
 
 
