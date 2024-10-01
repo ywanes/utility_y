@@ -251,6 +251,8 @@ Exemplos...
 [y xargs]
     y echo a | y xargs echo
     y echo a | y xargs echo "{}" "{}"
+    y cls && y find | y grep "." | y tr """" "" | y xargs echo "y printf \"\" | ffmpeg -i \"{}\"  -max_muxing_queue_size 1024 \"{}.mp4\" && y rm \"{}\"" | y tr "rmvb.mp4" "mp4" | y tr "mpg.mp4" "mp4"
+    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
 [y lower]

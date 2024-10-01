@@ -17870,6 +17870,7 @@ namespace LoopbackWithMic
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -18127,6 +18128,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y xargs]\n"
 /* class by manual */                + "    y echo a | y xargs echo\n"
 /* class by manual */                + "    y echo a | y xargs echo \"{}\" \"{}\"\n"
+/* class by manual */                + "    y cls && y find | y grep \".\" | y tr \"\"\"\" \"\" | y xargs echo \"y printf \\\"\\\" | ffmpeg -i \\\"{}\\\"  -max_muxing_queue_size 1024 \\\"{}.mp4\\\" && y rm \\\"{}\\\"\" | y tr \"rmvb.mp4\" \"mp4\" | y tr \"mpg.mp4\" \"mp4\"\n"
+/* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
 /* class by manual */                + "[y lower]\n"
@@ -18681,6 +18684,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
