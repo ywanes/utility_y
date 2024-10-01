@@ -8081,14 +8081,20 @@ cat buffer.log
         String [] linhas=lendo_arquivo_pacote("/y/manual").split("\n");
         String result="";
         int count=0;
+        boolean passou_help=false;
         for ( int i=0;i<linhas.length;i++ ){
-            if ( count == 2 )
+            if ( count == 2 ){
                 result+=linhas[i]+"\n";
+                if ( linhas[i].trim().equals("[y help]") )
+                    passou_help=true;
+            }
             if ( linhas[i].trim().equals("") )
                 count++;
             if ( count == 3 )
                 break;
         }
+        if ( !passou_help )
+            erroFatal("Erro interno, painel help com problema!"); // nao pode haver linha em branco no painel!!!!
         return result;
     }
     
@@ -18233,7 +18239,6 @@ namespace LoopbackWithMic
 /* class by manual */                + "      return xhr.responseText;\n"
 /* class by manual */                + "    }\n"
 /* class by manual */                + "    b('http://200.200.200.200:4000?https://site.com');\n"
-/* class by manual */                + "     \n"
 /* class by manual */                + "[y curlJson]\n"
 /* class by manual */                + "    y curlJson \\\n"
 /* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
@@ -18525,6 +18530,8 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y cat file.wav | y playWav  # somente Wave dessa configuracao ate agora.\n"
 /* class by manual */                + "[y playLine]\n"
 /* class by manual */                + "    y gravadorLine | y playLine\n"
+/* class by manual */                + "    y gravadorMixerLine | y playLine\n"
+/* class by manual */                + "    obs: gravadorMixerLine contem mais ruido de fundo.\n"
 /* class by manual */                + "[y call]\n"
 /* class by manual */                + "    y call\n"
 /* class by manual */                + "[y remote]\n"
@@ -18684,6 +18691,9 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
 
 
 

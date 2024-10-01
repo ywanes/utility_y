@@ -356,7 +356,6 @@ Exemplos...
       return xhr.responseText;
     }
     b('http://200.200.200.200:4000?https://site.com');
-     
 [y curlJson]
     y curlJson \
         -H "Content-Type: application/json" \
@@ -648,6 +647,8 @@ Exemplos...
     y cat file.wav | y playWav  # somente Wave dessa configuração até agora.
 [y playLine]
     y gravadorLine | y playLine
+    y gravadorMixerLine | y playLine
+    obs: gravadorMixerLine contém mais ruido de fundo.
 [y call]
     y call
 [y remote]
