@@ -10900,14 +10900,14 @@ while True:
             os=System.out;
         else
             os=(OutputStream)(new FileOutputStream(f));
-        gravador(mixer, os, line, wav, mp3, volume);
+        gravador(mixer, f, os, line, wav, mp3, volume);
     }
     
-    public void gravador(String mixer, OutputStream os, boolean isLine, boolean isWav, boolean isMp3, Float volume){
+    public void gravador(String mixer, String caminho, OutputStream os_force, boolean isLine, boolean isWav, boolean isMp3, Float volume){
         try {
             javax.sound.sampled.TargetDataLine line=getLineReader(mixer, volume);
             if ( isLine ){
-                filterLine(line, os);
+                filterLine(line, os_force);
             }else{
                 if ( isWav ){
                     // stdin error:
@@ -10915,7 +10915,10 @@ while True:
                     javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                    
                     System.err.println("gravando...");            
                     System.err.flush();
-                    javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, os);            
+                    if ( caminho != null )
+                        javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));
+                    else
+                        javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, os_force); // not work
                 }else{
                     if ( isMp3 ){
                         erroFatal("mp3 nao implementado!");
@@ -10993,7 +10996,7 @@ while True:
                 new Thread(){
                     public void run(){
                         try{                                
-                            gravador(null, os, true, false, false, null);
+                            gravador(null, null, os, true, false, false, null);
                         }catch(Exception e1){}
                     }
                 }.start();                    
