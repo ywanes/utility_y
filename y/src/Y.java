@@ -13779,6 +13779,7 @@ class Util{
                 }
                 s=tryGetKernellInLinuxByOs(s, types[i]);
                 s=tryGetFirewallInWindowsByOs(s, types[i]);
+                s=tryGetDefaultAudioInWindowsByOs(s, types[i]);
                 osGetTypeFalseCache=s;
                 return osGetTypeFalseCache;                     
             }
@@ -13798,7 +13799,7 @@ class Util{
             return s;
         return s+"Kernell:\t" + tmp;       
     }
-    
+            
     public String tryGetFirewallInWindowsByOs(String s, String type){
         if ( ! type.equals("Windows") )
             return s;
@@ -13820,11 +13821,57 @@ class Util{
             return s+"Firewall:\tOn";
         return s.replace("\r\n\r\n", "\r\n")+"Firewall:\tOff";
     }
-        
+
+    public String tryGetDefaultAudioInWindowsByOs(String s, String type){
+        if ( ! type.equals("Windows") )
+            return s;
+        return s+"\n"+getDefaultAudioWindows();
+    }
+    
     public boolean isWindows(){
         return os(true).equals("Windows");
     }
 
+    public String getDefaultAudioWindows(){
+        String text="Add-Type @'\n" +
+            "[Guid(\"D666063F-1587-4E43-81F1-B948E807363F\"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]\n" +
+            "interface IMMDevice {\n" +
+            "    int a(); int o();\n" +
+            "    int GetId([MarshalAs(UnmanagedType.LPWStr)] out string id);\n" +
+            "}\n" +
+            "[Guid(\"A95664D2-9614-4F35-A746-DE8DB63617E6\"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]\n" +
+            "interface IMMDeviceEnumerator {\n" +
+            "    int f();\n" +
+            "    int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);\n" +
+            "}\n" +
+            "[ComImport, Guid(\"BCDE0395-E52F-467C-8E3D-C4579291692E\")] class MMDeviceEnumeratorComObject { }\n" +
+            "\n" +
+            "public static string GetDefault (int direction) {\n" +
+            "    var enumerator = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;\n" +
+            "    IMMDevice dev = null;\n" +
+            "    Marshal.ThrowExceptionForHR(enumerator.GetDefaultAudioEndpoint(direction, 1, out dev));\n" +
+            "    string id = null;\n" +
+            "    Marshal.ThrowExceptionForHR(dev.GetId(out id));\n" +
+            "    return id;\n" +
+            "}\n" +
+            "'@ -name audio -Namespace system\n" +
+            "\n" +
+            "function getFriendlyName($id) {\n" +
+            "    $reg = \"HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\SWD\\MMDEVAPI\\$id\"\n" +
+            "    return (get-ItemProperty $reg).FriendlyName\n" +
+            "}\n" +
+            "\n" +
+            "$id0 = [audio]::GetDefault(0)\n" +
+            "$id1 = [audio]::GetDefault(1)\n" +
+            "write-host \"Default Speaker: $(getFriendlyName $id0)\" \n" +
+            "write-host \"Default Micro  : $(getFriendlyName $id1)\""; 
+        //taskkill /im iexplore.exe /f
+        String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+        if ( s == null || s.equals("") )
+            erroFatal(runtimeExecError);
+        return s;
+    }
+    
     public boolean isWindowsAdm(){
         return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null, null) != null;
     }
