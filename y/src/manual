@@ -637,11 +637,10 @@ Exemplos...
     obs: lista os mixers
 [y gravador]
     y gravador file.wav
-    y gravador file.wav
+    y gravador > file.wav
     y gravador -mixer "-" -f file.wav
     y gravador -mixer "-" -line > fileLine
-    y gravador -mixer "-" -line | y play -line
-    y gravador > file.wav # com problema
+    y gravador -mixer "-" -line | y play -line    
     obs: formatos: -line, -wave e -mp3
     obs2: -mp3 ainda não implementado
 [y play]

@@ -10902,27 +10902,24 @@ while True:
         try {
             javax.sound.sampled.TargetDataLine line=getLineReader(mixer, volume);
             OutputStream os=null;
+            if ( os_force != null ){
+                os=os_force;
+            }else{
+                if ( caminho == null )
+                    os=System.out;
+                else
+                    os=new FileOutputStream(caminho);
+            }
+            
             if ( isLine ){
-                if ( os_force != null ){
-                    os=os_force;
-                }else{
-                    if ( caminho == null )
-                        os=System.out;
-                    else
-                        os=new FileOutputStream(caminho);
-                }
                 filterLine(line, os);
             }else{
                 if ( isWav ){
-                    // stdin error:
-                    // java.io.IOException: stream length not specified ---> o problema esta no ais!!
                     javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                    
                     System.err.println("gravando...");            
                     System.err.flush();
-                    if ( caminho != null )
-                        javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));
-                    else
-                        javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, os_force); // y gravador # not work
+                    //javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.AU, os); // utilizando AU porinquanto
+                    javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.AU, os); // utilizando AU porinquanto
                 }else{
                     if ( isMp3 ){
                         erroFatal("mp3 nao implementado!");
@@ -18018,6 +18015,7 @@ namespace LoopbackWithMic
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -18661,19 +18659,20 @@ namespace LoopbackWithMic
 /* class by manual */                + "    obs: lista os mixers\n"
 /* class by manual */                + "[y gravador]\n"
 /* class by manual */                + "    y gravador file.wav\n"
+/* class by manual */                + "    y gravador > file.wav\n"
 /* class by manual */                + "    y gravador -mixer \"-\" -f file.wav\n"
 /* class by manual */                + "    y gravador -mixer \"-\" -line > fileLine\n"
-/* class by manual */                + "    y gravador -mixer \"-\" -line | y play -line\n"
-/* class by manual */                + "    y gravador > file.wav # com problema\n"
+/* class by manual */                + "    y gravador -mixer \"-\" -line | y play -line    \n"
 /* class by manual */                + "    obs: formatos: -line, -wave e -mp3\n"
 /* class by manual */                + "    obs2: -mp3 ainda nao implementado\n"
 /* class by manual */                + "[y play]\n"
-/* class by manual */                + "    y play file.wav\n"
+/* class by manual */                + "    y play file.wav -volume 0.5\n"
 /* class by manual */                + "    y play -f file.wav\n"
 /* class by manual */                + "    y cat file.wav | y play\n"
 /* class by manual */                + "    y cat fileLine | y play -mixer \"-\" -line\n"
 /* class by manual */                + "    obs: formatos: -line, -wave e -mp3\n"
 /* class by manual */                + "    obs2: -mp3 ainda nao implementado\n"
+/* class by manual */                + "    obs3: -volume varia entra 0 e 1 mas de acordo com o volume ja setado, ou seja, se ja tiver em 10% e o comando colocar 0.5 entao seria equivalente a 5%\n"
 /* class by manual */                + "[y call]\n"
 /* class by manual */                + "    y call\n"
 /* class by manual */                + "[y remote]\n"
@@ -18833,6 +18832,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
