@@ -10835,7 +10835,7 @@ while True:
         // realmente é preciso ter essa redundancia -> String caminho, InputStream is_force
         // porque na comunicação usa-se inputstream... e no wav file local só funciona File.
         // ou seja, existe 3 cenarios.. System.in, InputStream e File
-        // ao tentar usar InputStream no arquivo wav local ele dá esse erro aqui:
+        // ao tentar usar InputStream "no arquivo wav local" ele dá esse erro aqui:
         // java.io.IOException: mark/reset not supported
         try{
             AudioFormat format=null;            
@@ -10895,19 +10895,23 @@ while True:
         Boolean wav=(Boolean)objs[3];
         Boolean mp3=(Boolean)objs[4];
         Float volume=(Float)objs[5];
-        OutputStream os=null;
-        if ( f == null )
-            os=System.out;
-        else
-            os=(OutputStream)(new FileOutputStream(f));
-        gravador(mixer, f, os, line, wav, mp3, volume);
+        gravador(mixer, f, null, line, wav, mp3, volume);
     }
     
     public void gravador(String mixer, String caminho, OutputStream os_force, boolean isLine, boolean isWav, boolean isMp3, Float volume){
         try {
             javax.sound.sampled.TargetDataLine line=getLineReader(mixer, volume);
+            OutputStream os=null;
             if ( isLine ){
-                filterLine(line, os_force);
+                if ( os_force != null ){
+                    os=os_force;
+                }else{
+                    if ( caminho == null )
+                        os=System.out;
+                    else
+                        os=new FileOutputStream(caminho);
+                }
+                filterLine(line, os);
             }else{
                 if ( isWav ){
                     // stdin error:
@@ -10918,7 +10922,7 @@ while True:
                     if ( caminho != null )
                         javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, new File(caminho));
                     else
-                        javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, os_force); // not work
+                        javax.sound.sampled.AudioSystem.write(ais, javax.sound.sampled.AudioFileFormat.Type.WAVE, os_force); // y gravador # not work
                 }else{
                     if ( isMp3 ){
                         erroFatal("mp3 nao implementado!");
