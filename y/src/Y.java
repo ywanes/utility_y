@@ -10556,7 +10556,7 @@ cat buffer.log
         } 
     }
     
-    public void filterLine(javax.sound.sampled.TargetDataLine line, OutputStream out) throws Exception{
+    public void filterLine(javax.sound.sampled.TargetDataLine line, OutputStream out, boolean filter) throws Exception{
         int BUFFER_SIZE = 1024;            
         byte[] buff = new byte[BUFFER_SIZE];            
         byte[] buff2 = new byte[BUFFER_SIZE];            
@@ -10566,7 +10566,6 @@ cat buffer.log
         int countB=0;
         long now = epochmili(null);
         long tmp_now=0;
-        boolean filter=true;
         while( (len=line.read(buff, 0, BUFFER_SIZE)) > 0 ){
             if ( filter ){
                 lenMix=0;
@@ -10615,8 +10614,20 @@ cat buffer.log
             int countTarget=mixers[i].getTargetLineInfo().length;
             boolean skip=false;
             String name=infos[i].getName();
-            if ( printAllMixer )
-                System.out.println(name + " - " + countSource + " Sources - " + countTarget + " Targets");
+            if ( printAllMixer && !name.startsWith("Port ") ){
+                if ( countTarget > 0 && countSource > 0 )
+                    System.out.println(name + " - ENTRADA/SAIDA");
+                else{
+                    if ( countTarget > 0 ){
+                        System.out.println(name + " - ENTRADA");
+                    }else{
+                        if ( countSource > 0 )
+                            System.out.println(name + " - SAIDA");
+                        else
+                            System.out.println(name + " - " + countTarget + " ENTRADAS - " + countSource + " SAIDAS");
+                    }
+                }
+            }
             if ( filter1Mixer != null && !filter1Mixer.equals(name) )
                 continue;
             if ( filter1Mixer== null && notLike != null && name.contains(notLike) )
@@ -10912,7 +10923,8 @@ while True:
             }
             
             if ( isLine ){
-                filterLine(line, os);
+                // só faz sentido ligar o filtro para: y gravador -line -mixer "Driver de captura de som primário"
+                filterLine(line, os, false);
             }else{
                 if ( isWav ){
                     javax.sound.sampled.AudioInputStream ais = new javax.sound.sampled.AudioInputStream(line);                    
