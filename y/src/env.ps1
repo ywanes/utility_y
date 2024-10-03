@@ -20,6 +20,9 @@ cd c:/programFiles
 # ffmpeg.exe
 Invoke-WebRequest -uri "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffmpeg.exe" -Method "GET"  -Outfile ffmpeg.exe
 
+# ffplay.exe
+Invoke-WebRequest -uri "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay.exe" -Method "GET"  -Outfile ffplay.exe
+
 
 # nssm.exe
 # http://nssm.cc/download

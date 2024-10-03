@@ -5130,7 +5130,14 @@ cat buffer.log
         if ( args.length == 0 )
             erroFatal("Erro de parametro!");
         ArrayList<String> lista_in=readAllLines();
-        if ( args.length == 1 && !args[0].contains("{}") )
+        boolean achou=false;
+        for ( int i=0;i<args.length;i++ ){
+            if ( args[i].contains("{}") ){
+                achou=true;
+                break;
+            }                
+        }
+        if ( !achou )
             args = addParm("{}", args);
         for ( int i=0;i<lista_in.size();i++ ){
             String [] command=new String[args.length];
