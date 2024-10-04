@@ -10608,6 +10608,48 @@ cat buffer.log
         return false;
     }
     
+    private String [] tryGetGuidWindows_cacheName=null;
+    private String [] tryGetGuidWindows_cacheGuid=null;
+    private String tryGetGuidWindows(String name){
+        if ( !isWindows() )
+            return name;
+        if ( tryGetGuidWindows_cacheName == null ){
+            String [] partes=getMixerGuidWindows().split("\n");
+            tryGetGuidWindows_cacheName=new String[partes.length];
+            tryGetGuidWindows_cacheGuid=new String[partes.length];
+            for ( int i=0;i<partes.length;i++ ){
+                tryGetGuidWindows_cacheName[i]=partes[i].split("#")[0];
+                tryGetGuidWindows_cacheGuid[i]=partes[i].split("#")[1];
+            }
+        }
+        for ( int i=0;i<tryGetGuidWindows_cacheName.length;i++ ){
+            if ( tryGetGuidWindows_cacheName[i].equals(name) ){
+                name+=" - " + tryGetGuidWindows_cacheGuid[i];
+                break;
+            }
+        }
+        return name;
+    }
+    
+    public void printAllMixer(String name, int countTarget, int countSource){
+        if ( !name.startsWith("Port ") ){
+            name=tryGetGuidWindows(name);
+            if ( countTarget > 0 && countSource > 0 )
+                System.out.println("ENTRADA/SAIDA - " + name);
+            else{
+                if ( countTarget > 0 ){
+                    System.out.println("ENTRADA - " + name);
+                }else{
+                    if ( countSource > 0 )
+                        System.out.println("SAIDA - " + name);
+                    else
+                        System.out.println(countTarget + " ENTRADAS - " + countSource + " SAIDAS - " + name);
+                }
+            }
+        }
+    }
+    
+    
     public javax.sound.sampled.Mixer [] getMixers(String filter1Mixer, String notLike, boolean printAllMixer, boolean printFirstOk, Boolean getSource, Boolean getTarget){
         if ( filter1Mixer != null && filter1Mixer.equals("-") ) // "-" -> pegando mixer padrao
             filter1Mixer=null;
@@ -10621,20 +10663,8 @@ cat buffer.log
             int countTarget=mixers[i].getTargetLineInfo().length;
             boolean skip=false;
             String name=infos[i].getName();
-            if ( printAllMixer && !name.startsWith("Port ") ){
-                if ( countTarget > 0 && countSource > 0 )
-                    System.out.println(name + " - ENTRADA/SAIDA");
-                else{
-                    if ( countTarget > 0 ){
-                        System.out.println(name + " - ENTRADA");
-                    }else{
-                        if ( countSource > 0 )
-                            System.out.println(name + " - SAIDA");
-                        else
-                            System.out.println(name + " - " + countTarget + " ENTRADAS - " + countSource + " SAIDAS");
-                    }
-                }
-            }
+            if ( printAllMixer )
+                printAllMixer(name, countTarget, countSource);
             if ( filter1Mixer != null && !filter1Mixer.equals(name) )
                 continue;
             if ( filter1Mixer== null && notLike != null && name.contains(notLike) )
@@ -13851,6 +13881,61 @@ class Util{
         return os(true).equals("Windows");
     }
 
+    public String getMixerGuidWindows(){
+        String retorno="";
+        String [] commands=new String[]{"Get-ChildItem -Path \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Render\" -recurse", 
+                                        "Get-ChildItem -Path \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Capture\" -recurse"};
+        for ( int j=0;j<commands.length;j++ ){                                
+            String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, commands[j].getBytes());
+            if ( s == null || s.equals("") )
+                erroFatal(runtimeExecError);
+            String [] partes=s.split("\n");
+            String p1=null;
+            String p2=null;
+            String p3=null;
+            for ( int i=0;i<partes.length;i++ ){
+                if ( partes[i].contains("Render\\") || partes[i].contains("Capture\\") ){
+                    p1=null;
+                    p2=null;
+                    p3="topo0";
+                    continue;
+                }
+                if ( partes[i].contains("{a45c254e-df1c-4efd-8020-67d146a850e0},2 ") ){
+                    p1=partes[i].split(":")[1].trim();
+                    continue;
+                }
+                if ( partes[i].contains("{b3f8fa53-0004-438e-9003-51a46e139bfc},6 ") ){
+                    p2=partes[i].split(":")[1].trim();
+                    continue;
+                }
+                if ( partes[i].contains("{6994ad04-93ef-11d0-a3cc-00a0c9223196}") && partes[i].contains("topo") ){
+                    p3=partes[i].split("\\\\")[1].trim();
+                    continue;
+                }
+                if ( partes[i].contains("MMDEVAPI#{0.0.0.00000000}") ){
+                    if ( p1 == null || p2 == null ){
+                        p1=null;
+                        p2=null;
+                        p3="topo0";
+                        continue;
+                    }
+                    retorno+=p1 + " (" + p2 + ")#" + p3 + "#" + partes[i].split("#")[2]+"\n";
+                }
+            }
+        }
+        // get first topo
+        String [] retornos=retorno.split("\n");
+        retorno="";
+        Arrays.sort(retornos); 
+        String tail="?";
+        for ( int i=0;i<retornos.length;i++ ){            
+            if ( !retornos[i].split("#")[0].equals(tail) )
+                retorno+=retornos[i].split("#")[0]+"#"+retornos[i].split("#")[2]+"\n";
+            tail=retornos[i].split("#")[0];                
+        }        
+        return retorno;
+    }
+    
     public String getDefaultAudioWindows(){
         String text="Add-Type @'\n" +
             "[Guid(\"D666063F-1587-4E43-81F1-B948E807363F\"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]\n" +
@@ -13890,6 +13975,7 @@ class Util{
             erroFatal(runtimeExecError);
         return s;
     }
+    
     
     public boolean isWindowsAdm(){
         return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null, null) != null;
