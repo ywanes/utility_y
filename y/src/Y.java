@@ -13912,7 +13912,7 @@ class Util{
                     p3=partes[i].split("\\\\")[1].trim();
                     continue;
                 }
-                if ( partes[i].contains("MMDEVAPI#{0.0.0.00000000}") ){
+                if ( partes[i].contains("MMDEVAPI#{0.0.0.00000000}") || partes[i].contains("MMDEVAPI#{0.0.1.00000000}") ){
                     if ( p1 == null || p2 == null ){
                         p1=null;
                         p2=null;
