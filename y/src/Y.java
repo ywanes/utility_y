@@ -11830,7 +11830,6 @@ while True:
                         }
                     }
                     removes+=" -map -0:a:" + p1 + " ";
-                    //System.out.println(p1 + " " + p2 + " " + p3);
                 }
             }
             if ( !video ){
@@ -11843,7 +11842,7 @@ while True:
             }
             if ( removes.equals("") )
                 continue;  
-            String display_mkv="ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
+            String display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
             System.exit(0);
