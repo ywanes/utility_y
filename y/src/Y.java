@@ -1457,116 +1457,23 @@ cat buffer.log
         }
         if ( args[0].equals("httpServer"))
         {
-            if ( args.length == 2 && args[1].split(" ").length > 2 )
-                args = (args[0] + " " + args[1]).split(" ");
-            for ( int i=0;i<args.length;i++ )
-                if ( args[i].equals("_") )
-                    args[i]=null;
-            String host="127.0.0.1";
-            if ( args.length > 1 && args[1] != null )
-                host=args[1];
-            else
-                System.out.println("host preenchido automaticamente => " + host);
-            String port="8888";
-            if ( args.length > 2 && args[2] != null )
-                port=args[2];
-            else
-                System.out.println("porta preenchido automaticamente => " + port);     
-            String titulo_url="tmp";
-            if ( args.length > 3 && args[3] != null )
-                titulo_url=args[3];
-            else
-                System.out.println("titulo url preenchido automaticamente => " + titulo_url);     
-            String titulo="tmp";
-            if ( args.length > 4 && args[4] != null )
-                titulo=args[4];
-            else
-                System.out.println("titulo preenchido automaticamente => " + titulo);        
-            String dir=".";
-            if ( args.length > 5 && args[5] != null )
-                dir=args[5];
-            else
-                System.out.println("diretorio preenchido automaticamente => " + dir);     
-            String endsWiths="";
-            if ( args.length > 6 && args[6] != null )
-                endsWiths=args[6];
-            else
-                System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);     
-            String ips_banidos="";
-            if ( args.length > 7 && args[7] != null )
-                ips_banidos=args[7];
-            else
-                System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
-            String log=null;
-            if ( args.length > 9 && args[8].equals("-log_ips") ){
-                log=args[9];
-            }else{
-            }
-            new HttpServer(new String[]{host, port, titulo_url, titulo, dir, endsWiths, ips_banidos}, null, log);
+            Object [] parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg=get_parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg(args);
+            if ( parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg == null )
+                erroFatal("Erro de parametros!");
+            String mode=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[0];
+            String host=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[1];
+            Integer port=(Integer)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[2];
+            String titulo_url=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[3];
+            String titulo=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[4];
+            String dir=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[5];
+            String endsWiths=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[6];
+            String ips_banidos=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[7];
+            String log_ips=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[8];
+            String cfg=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[9];
+            new HttpServer(mode, host, port, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, cfg);
             return;
-        }  
-        if ( args[0].equals("playlist")){
-            for ( int i=0;i<args.length;i++ )
-                if ( args[i].equals("_") )
-                    args[i]=null;
-            String host="127.0.0.1";
-            if ( args.length > 1 )
-                host=args[1];
-            else
-                System.out.println("host preenchido automaticamente => " + host);
-            String port="8888";
-            if ( args.length > 2 && args[2] != null )
-                port=args[2];
-            else
-                System.out.println("porta preenchido automaticamente => " + port);     
-            String titulo_url="tmp";
-            System.out.println("titulo url preenchido automaticamente => " + titulo_url);     
-            String titulo="tmp";
-            System.out.println("titulo preenchido automaticamente => " + titulo);        
-            String dir=".";
-            System.out.println("diretorio preenchido automaticamente => " + dir);     
-            String endsWiths="";
-            System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);     
-            String ips_banidos="";
-            System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
-            String log=null;
-            if ( args.length > 4 && args[3].equals("-log_ips") )
-                log=args[4];
-            new HttpServer(new String[]{host, port, titulo_url, titulo, dir, endsWiths, ips_banidos}, "playlist", log);
-            return;            
         }
-            
-        if ( args[0].equals("playlistmovie")){
-            for ( int i=0;i<args.length;i++ )
-                if ( args[i].equals("_") )
-                    args[i]=null;
-            String host="127.0.0.1";
-            if ( args.length > 1 && args[1] != null )
-                host=args[1];
-            else
-                System.out.println("host preenchido automaticamente => " + host);
-            String port="8888";
-            if ( args.length > 2 && args[2] != null )
-                port=args[2];
-            else
-                System.out.println("porta preenchido automaticamente => " + port);     
-            String titulo_url="tmp";
-            System.out.println("titulo url preenchido automaticamente => " + titulo_url);     
-            String titulo="tmp";
-            System.out.println("titulo preenchido automaticamente => " + titulo);        
-            String dir=".";
-            System.out.println("diretorio preenchido automaticamente => " + dir);     
-            String endsWiths="";
-            System.out.println("extensoes validas preenchido automaticamente => " + endsWiths);     
-            String ips_banidos="";
-            System.out.println("ips banidos preenchido automaticamente => " + ips_banidos);     
-            String log=null;
-            if ( args.length > 4 && args[3].equals("-log_ips") )
-                log=args[4];
-            new HttpServer(new String[]{host, port, titulo_url, titulo, dir, endsWiths, ips_banidos}, "playlistmovie", log);
-            return;            
-        }
-                    
+        
         if ( args[0].equals("wget")){
             wget(args);
             return;            
@@ -9349,7 +9256,91 @@ cat buffer.log
             return null;
         return new Object []{host, port, tray};
     }
-            
+           
+    private Object [] get_parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg(String [] args){
+        String mode=null;
+        String host="127.0.0.1";
+        Integer port=8888;
+        String tituloUrl="";
+        String titulo="titulo";
+        String dir=".";
+        String endsWiths="";
+        String ipsBanidos="";
+        String log_ips=null;
+        String cfg=null;
+                
+        args=sliceParm(1,args);
+        while(args.length > 0){
+            if ( args[0].equals("-mode") ){
+                args=sliceParm(1,args);
+                mode=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-host") ){
+                args=sliceParm(1,args);
+                host=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-port") ){
+                args=sliceParm(1,args);
+                port=Integer.parseInt(args[0]);
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-titulo_url_token") ){
+                args=sliceParm(1,args);
+                tituloUrl=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-titulo") ){
+                args=sliceParm(1,args);
+                titulo=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-dir") ){
+                args=sliceParm(1,args);
+                dir=args[0].trim();
+                if (!dir.endsWith("/")) 
+                    dir += "/";                
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-endsWiths") ){
+                args=sliceParm(1,args);
+                endsWiths=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-ips_banidos") ){
+                args=sliceParm(1,args);
+                ipsBanidos=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-log_ips") ){
+                args=sliceParm(1,args);
+                log_ips=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-cfg") ){
+                args=sliceParm(1,args);
+                cfg=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            return null;
+        }
+        if ( mode != null && mode.equals("playlistserver") && cfg == null )
+            erroFatal("Erro de parametros, mode playlistserver exige valor de cfg");
+        return new Object[]{mode, host, port, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, cfg};
+    }    
+
+
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
         String path=null;
         boolean acceptSymbolicLink=false;
@@ -12978,7 +12969,7 @@ class grammarsWhere extends Util{
     }
 }
 
-class Util{
+class Util{    
     public String erroSequenciaIlegal="Erro, sequencia ilegal!";
     
     int V_0b00000011=3; // 0b00000011 (3)
@@ -13096,6 +13087,8 @@ class Util{
         }
         return a;
     }
+    
+    public static PlaylistServer playlistserver=null;
     
     public String runtimeExecError = "";
     public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in){
@@ -16116,6 +16109,22 @@ class XML extends Util{
     }      
 }
 
+class PlaylistServer extends Util{
+    public PlaylistServer(String cfg){
+        
+    }
+    public String perguntando(String a){
+        /*
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open('GET', '/yradio', false);
+            xmlHttp.setRequestHeader('acao', 'oi');
+            xmlHttp.send(null);
+            console.log(xmlHttp.responseText);
+        */        
+        return "..";
+    }
+}
+
 class Texto_longo extends Util{
     public String get_html_and_header_remote(String format_web){
         String result="HTTP/1.1 200 OK\n" +
@@ -16780,7 +16789,7 @@ class Texto_longo extends Util{
         "</script>\n" +
         "</div>\n" +
         "</body></head></html>\n";
-    }
+    }    
     public String get_html_virtual_playlistmovie(String id){
         String js_compartilhado="" +
         "<script>\n" +
@@ -17407,8 +17416,11 @@ class Texto_longo extends Util{
         "</style>\n" + 
         js_compartilhado;
     }
+    public String get_html_virtual_playlistserver(){
+        String retorno="...";
+        return retorno;
+    }
 }
-
 
 /* 
 //WASAPI C#
@@ -17711,21 +17723,20 @@ namespace LoopbackWithMic
 /* class HttpServer */ // new HttpServer(...)
 /* class HttpServer */ // host(pode ser ""), port, titulo_url, titulo, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 /* class HttpServer */ class HttpServer extends Util{
-/* class HttpServer */     String host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log;
-/* class HttpServer */     String mode=null;
+/* class HttpServer */     String mode, host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log_ips, cfg;
 /* class HttpServer */     int port;
 /* class HttpServer */     Socket socket = null;
-/* class HttpServer */     public HttpServer(String[] args, String mode, String log) {
-/* class HttpServer */         host = args[0];
-/* class HttpServer */         port = Integer.parseInt(args[1]);
-/* class HttpServer */         titulo_url = args[2];
-/* class HttpServer */         titulo = args[3];
-/* class HttpServer */         dir = args[4].trim();
-/* class HttpServer */         if (!dir.endsWith("/")) dir += "/";
-/* class HttpServer */         endsWiths = args[5];
-/* class HttpServer */         ips_banidos = args[6];
+/* class HttpServer */     public HttpServer(String mode, String host, Integer port, String titulo_url, String titulo, String dir, String endsWiths, String ips_banidos, String log_ips, String cfg){
 /* class HttpServer */         this.mode = mode;
-/* class HttpServer */         this.log = log;
+/* class HttpServer */         this.host = host;
+/* class HttpServer */         this.port = port;
+/* class HttpServer */         this.titulo_url = titulo_url;
+/* class HttpServer */         this.titulo = titulo;
+/* class HttpServer */         this.dir = dir;
+/* class HttpServer */         this.endsWiths = endsWiths;
+/* class HttpServer */         this.ips_banidos = ips_banidos;
+/* class HttpServer */         this.log_ips = log_ips;
+/* class HttpServer */         this.cfg = cfg;
 /* class HttpServer */         try {
 /* class HttpServer */             serve();
 /* class HttpServer */         } catch (Exception e) {
@@ -17747,7 +17758,9 @@ namespace LoopbackWithMic
 /* class HttpServer */             else
 /* class HttpServer */                 System.out.println("Service opened: \n" + host_display + "\nFiles:\n" + host_display + "/" + titulo_url);
 /* class HttpServer */             System.out.println("Path work: " + dir + "\n");
-/* class HttpServer */         } catch (Exception e) {
+/* class HttpServer */             if ( mode != null && mode.equals("playlistserver") )
+/* class HttpServer */                 playlistserver=new PlaylistServer(cfg);
+/* class HttpServer */         }catch(Exception e){
 /* class HttpServer */             throw new Exception("erro na inicialização: " + e.toString());
 /* class HttpServer */         }
 /* class HttpServer */         while (true) {
@@ -17755,14 +17768,14 @@ namespace LoopbackWithMic
 /* class HttpServer */                 socket = serverSocket.accept();
 /* class HttpServer */                 ip_origem = get_ip_origem_by_socket(socket);
 /* class HttpServer */                 boolean is_ip_banido = ip_banido(ips_banidos, ip_origem);
-/* class HttpServer */                 if ( log != null )
-/* class HttpServer */                     log_serverRouter(log, ip_origem, is_ip_banido);
+/* class HttpServer */                 if ( log_ips != null )
+/* class HttpServer */                     log_serverRouter(log_ips, ip_origem, is_ip_banido);
 /* class HttpServer */                 if ( is_ip_banido ){
 /* class HttpServer */                     System.out.println("Conexao de origem BANIDO: " + ip_origem + ", data:" + (new Date()));
 /* class HttpServer */                     continue;
 /* class HttpServer */                 }else
 /* class HttpServer */                     System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
-/* class HttpServer */                 new ClientThread(socket, titulo_url, titulo, dir, endsWiths, mode, host_display);
+/* class HttpServer */                 new ClientThread(mode, socket, titulo_url, titulo, dir, endsWiths, host_display, cfg);
 /* class HttpServer */             } catch (Exception e) {
 /* class HttpServer */                 System.out.println("Erro ao executar servidor:" + e.toString());
 /* class HttpServer */             }
@@ -17770,7 +17783,7 @@ namespace LoopbackWithMic
 /* class HttpServer */     }
 /* class HttpServer */ }
 /* class HttpServer */ class ClientThread extends Util{
-/* class HttpServer */     String method, uri, protocol, titulo_url, titulo, dir, endsWiths, userAgent;
+/* class HttpServer */     String mode, method, uri, protocol, titulo_url, titulo, dir, endsWiths, userAgent, acao, cfg;
 /* class HttpServer */     long range=-1;
 /* class HttpServer */     long lenTarget=-1;
 /* class HttpServer */     String nav;
@@ -17780,15 +17793,15 @@ namespace LoopbackWithMic
 /* class HttpServer */     Writer writer;
 /* class HttpServer */     InputStreamReader isr = null;
 /* class HttpServer */     Reader reader;
-/* class HttpServer */     String mode=null;
 /* class HttpServer */     String host_display=null;
-/* class HttpServer */     public ClientThread(final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String mode, String host_display) {
+/* class HttpServer */     public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg) {
 /* class HttpServer */         this.titulo_url = titulo_url;
 /* class HttpServer */         this.titulo = titulo;
 /* class HttpServer */         this.dir = dir;
 /* class HttpServer */         this.endsWiths = endsWiths;
 /* class HttpServer */         this.mode = mode;
 /* class HttpServer */         this.host_display = host_display;
+/* class HttpServer */         this.cfg = cfg;
 /* class HttpServer */         new Thread() {
 /* class HttpServer */             public void run() {
 /* class HttpServer */                 try {
@@ -17820,6 +17833,8 @@ namespace LoopbackWithMic
 /* class HttpServer */             String line = null;
 /* class HttpServer */             int lineNumber = 0;
 /* class HttpServer */             this.range = -1;
+/* class HttpServer */             this.userAgent = null;
+/* class HttpServer */             this.acao = null;
 /* class HttpServer */             while ((line = br.readLine()) != null) {
 /* class HttpServer */                 System.out.println("<---|    " + line.replace("\n","\n          "));
 /* class HttpServer */                 if (lineNumber == 0 && line.split(" ").length == 3) {
@@ -17833,6 +17848,8 @@ namespace LoopbackWithMic
 /* class HttpServer */                   this.range = Long.parseLong(line.split("=")[1].replace("-", ""));
 /* class HttpServer */                 if (line.startsWith("User-Agent: ") )
 /* class HttpServer */                   this.userAgent = line.substring(12);
+/* class HttpServer */                 if (line.startsWith("acao: ") )
+/* class HttpServer */                   this.acao = line.substring(6);
 /* class HttpServer */                 lineNumber++;
 /* class HttpServer */             }
 /* class HttpServer */             System.out.println("    |");
@@ -17842,6 +17859,7 @@ namespace LoopbackWithMic
 /* class HttpServer */     }
 /* class HttpServer */     private void gravando() throws Exception {
 /* class HttpServer */         StringBuilder sb = new StringBuilder();
+/* class HttpServer */         // OPTIONS
 /* class HttpServer */         if (method.equals("OPTIONS")) {
 /* class HttpServer */             for (String line: new String[] {
 /* class HttpServer */                     "HTTP/1.1 501 Not Implemented\r\n", 
@@ -17856,7 +17874,12 @@ namespace LoopbackWithMic
 /* class HttpServer */             output.write(sb.toString().getBytes());
 /* class HttpServer */             return;
 /* class HttpServer */         }
-/* class HttpServer */         if ( nav == null && mode != null && ( uri.equals("/") || uri.equals("/id") || uri.equals("/id/") || uri.startsWith("/id/") ) ){
+/* class HttpServer */         // nav playlist ou playlistmovie
+/* class HttpServer */         if ( nav == null 
+/* class HttpServer */             && mode != null 
+/* class HttpServer */             && ( mode.equals("playlist") || mode.equals("playlistmovie") ) 
+/* class HttpServer */             && ( uri.equals("/") || uri.equals("/id") || uri.equals("/id/") || uri.startsWith("/id/") ) 
+/* class HttpServer */         ){
 /* class HttpServer */             if ( uri.length() > 1 && uri.endsWith("/") ){
 /* class HttpServer */                 redirect(output, uri.substring(0, uri.length()-1));
 /* class HttpServer */                 return;
@@ -17889,10 +17912,33 @@ namespace LoopbackWithMic
 /* class HttpServer */             output.write(sb.toString().getBytes());
 /* class HttpServer */             return;
 /* class HttpServer */         }
+/* class HttpServer */         // nav playlistserver
+/* class HttpServer */         if ( nav == null 
+/* class HttpServer */             && mode != null 
+/* class HttpServer */             && mode.equals("playlistserver")
+/* class HttpServer */             && uri.equals("/"+titulo_url)
+/* class HttpServer */         ){
+/* class HttpServer */             String txt="HTTP/1.1 200 OK\r\n";
+/* class HttpServer */             txt+="Content-Type: text/html; charset=UTF-8\r\n";
+/* class HttpServer */             txt+="Access-Control-Allow-Origin: *\r\n";
+/* class HttpServer */             txt+="X-Frame-Options: SAMEORIGIN\r\n";
+/* class HttpServer */             txt+="\r\n";
+/* class HttpServer */             if ( acao == null )
+/* class HttpServer */                 txt+=new Texto_longo().get_html_virtual_playlistserver();
+/* class HttpServer */             else{
+/* class HttpServer */                 if ( playlistserver == null )
+/* class HttpServer */                     txt+="erro interno 435353";
+/* class HttpServer */                 else
+/* class HttpServer */                     txt+=playlistserver.perguntando(acao);
+/* class HttpServer */             }
+/* class HttpServer */             output.write(txt.getBytes());
+/* class HttpServer */             return;
+/* class HttpServer */         }
 /* class HttpServer */         sb = new StringBuilder();
 /* class HttpServer */         nav = dir + uri.replace("//", "/").trim();
 /* class HttpServer */         nav = nav.replace("//", "/");
 /* class HttpServer */         nav = decodeUrl(nav);
+/* class HttpServer */         // nav detect index
 /* class HttpServer */         if (!new File(nav).isFile()) {
 /* class HttpServer */             nav += "/";
 /* class HttpServer */             int c = 9;
@@ -17908,6 +17954,7 @@ namespace LoopbackWithMic
 /* class HttpServer */                 }
 /* class HttpServer */             }
 /* class HttpServer */         }
+/* class HttpServer */         // list files
 /* class HttpServer */         if (uri.equals("/" + titulo_url)) {
 /* class HttpServer */             sb = new StringBuilder();
 /* class HttpServer */             for (String line: new String[] {
@@ -17949,8 +17996,10 @@ namespace LoopbackWithMic
 /* class HttpServer */             output.write(sb.toString().getBytes());
 /* class HttpServer */             return;
 /* class HttpServer */         }
+/* class HttpServer */         // favicon
 /* class HttpServer */         if ( ! uri.equals("/favicon.ico"))
 /* class HttpServer */             System.out.println("nav: " + nav + ";uri: " + uri);
+/* class HttpServer */         // nav file
 /* class HttpServer */         if (new File(nav).exists() && new File(nav).isFile() && endsWith_OK(nav, endsWiths)) {
 /* class HttpServer */             long lenFile = new File(nav).length();
 /* class HttpServer */             if ( range > -1 && range >= lenFile)
@@ -18007,7 +18056,8 @@ namespace LoopbackWithMic
 /* class HttpServer */             }else{
 /* class HttpServer */                 System.out.println("nao encontrou o arquivo: " + nav);
 /* class HttpServer */             }
-/* class HttpServer */         } /* ERROR 404 */
+/* class HttpServer */         }
+/* class HttpServer */         // 404
 /* class HttpServer */         sb = new StringBuilder();
 /* class HttpServer */         for (String line: new String[] {
 /* class HttpServer */                 "HTTP/1.1 404 OK\r\n",
@@ -18134,9 +18184,6 @@ namespace LoopbackWithMic
 /* class Tar  */ if (stillPadding) continue;  if (header[i] == (byte) ' ') break; }  stillPadding = false;  result = ( result << 3 ) + ( header[i] - '0' ); }  return result; }  public static int getOctalBytes(long value, byte[] buf, int offset, int length) { int idx = length - 1;  buf[offset + idx] = 0; --idx; buf[offset + idx] = (byte) ' '; --idx;  if (value == 0) { buf[offset + idx] = (byte) '0'; --idx; } else { for (long val = value; idx >= 0 && val > 0; --idx) { buf[offset + idx] = (byte) ( (byte) '0' + (byte) ( val & 7 ) ); val = val >> 3; } }  for (; idx >= 0; --idx) { buf[offset + idx] = (byte) '0'; }  return offset + length; } public static int getCheckSumOctalBytes(long value, byte[] buf, int offset, int length) { getOctalBytes( value, buf, offset, length ); buf[offset + length - 1] = (byte) ' '; buf[offset + length - 2] = 0; return offset + length; }  public static int getLongOctalBytes(long value, byte[] buf, int offset, int length) { byte[] temp = new byte[length + 1]; getOctalBytes( value, temp, 0, length + 1 ); System.arraycopy( temp, 0, buf, offset, length ); return offset + length; }  }  class TarUtils { public static long calculateTarSize(File path) { return tarSize(path) + TarConstants.EOF_BLOCK; }  private static long tarSize(File dir) { long size = 0;  if (dir.isFile()) { return entrySize(dir.length()); } else { File[] subFiles = dir.listFiles();  if (subFiles != null && subFiles.length > 0) { for (File file : subFiles) { if (file.isFile()) { size += entrySize(file.length()); } else { size += tarSize(file); } } } else { return TarConstants.HEADER_BLOCK; } }  return size; }  private static long entrySize(long fileSize) { long size = 0; size += TarConstants.HEADER_BLOCK; size += fileSize;  long extra = size % TarConstants.DATA_BLOCK;  if (extra > 0) { size += (TarConstants.DATA_BLOCK - extra); }  return size; }  public static String trim(String s, char c) { StringBuffer tmp = new StringBuffer(s); for (int i = 0; i < tmp.length(); i++) { if (tmp.charAt(i) != c) { break; } else { tmp.deleteCharAt(i); } }  for (int i = tmp.length() - 1; i >= 0; i--) { if (tmp.charAt(i) != c) { break; } else { tmp.deleteCharAt(i); } }  return tmp.toString(); } }  class TarInputStream extends FilterInputStream {  private static final int SKIP_BUFFER_SIZE = 2048; private TarEntry currentEntry; private long currentFileSize; private long bytesRead; private boolean defaultSkip = false;  public TarInputStream(InputStream in) { super(in); currentFileSize = 0; bytesRead = 0; }  @Override public boolean markSupported() { return false; }  @Override public synchronized void mark(int readlimit) { }  @Override public synchronized void reset() throws IOException { throw new IOException("mark/reset not supported"); }  @Override public int read() throws IOException { byte[] buf = new byte[1];  int res = this.read(buf, 0, 1);  if (res != -1) { return 0xFF & buf[0]; }  return res; }  @Override public int read(byte[] b, int off, int len) throws IOException { if (currentEntry != null) { if (currentFileSize == currentEntry.getSize()) { return -1; } else if ((currentEntry.getSize() - currentFileSize) < len) { len = (int) (currentEntry.getSize() - currentFileSize); } }  int br = super.read(b, off, len);  if (br != -1) { if (currentEntry != null) { currentFileSize += br; }  bytesRead += br; }  return br; }  public TarEntry getNextEntry() throws IOException { closeCurrentEntry();  byte[] header = new byte[TarConstants.HEADER_BLOCK]; 
 /* class Tar  */ byte[] theader = new byte[TarConstants.HEADER_BLOCK]; int tr = 0;  while (tr < TarConstants.HEADER_BLOCK) { int res = read(theader, 0, TarConstants.HEADER_BLOCK - tr);  if (res < 0) { break; }  System.arraycopy(theader, 0, header, tr, res); tr += res; }  boolean eof = true; for (byte b : header) { if (b != 0) { eof = false; break; } }  if (!eof) { currentEntry = new TarEntry(header); }  return currentEntry; }  public long getCurrentOffset() { return bytesRead; }  protected void closeCurrentEntry() throws IOException { if (currentEntry != null) { if (currentEntry.getSize() > currentFileSize) { long bs = 0; while (bs < currentEntry.getSize() - currentFileSize) { long res = skip(currentEntry.getSize() - currentFileSize - bs);  if (res == 0 && currentEntry.getSize() - currentFileSize > 0) { throw new IOException("Possible tar file corruption"); }  bs += res; } }  currentEntry = null; currentFileSize = 0L; skipPad(); } }  protected void skipPad() throws IOException { if (bytesRead > 0) { int extra = (int) (bytesRead % TarConstants.DATA_BLOCK);  if (extra > 0) { long bs = 0; while (bs < TarConstants.DATA_BLOCK - extra) { long res = skip(TarConstants.DATA_BLOCK - extra - bs); bs += res; } } } }  @Override public long skip(long n) throws IOException { if (defaultSkip) { long bs = super.skip(n); bytesRead += bs;  return bs; }  if (n <= 0) { return 0; }  long left = n; byte[] sBuff = new byte[SKIP_BUFFER_SIZE];  while (left > 0) { int res = read(sBuff, 0, (int) (left < SKIP_BUFFER_SIZE ? left : SKIP_BUFFER_SIZE)); if (res < 0) { break; } left -= res; }  return n - left; }  public boolean isDefaultSkip() { return defaultSkip; }  public void setDefaultSkip(boolean defaultSkip) { this.defaultSkip = defaultSkip; } }
 
-
-
-
 /* class Diff  */ /* creditos - https://github.com/java-diff-utils/java-diff-utils */
 /* class Diff  */ class Diff extends Util{ public Diff(String caminho_a, String caminho_b, OutputStream out){ try{ byte [] bytes_write60="                                                            ".getBytes(); byte [] barra_n="\n".getBytes(); byte [] code_equal="   ".getBytes(); byte [] code_dif=" | ".getBytes(); byte [] code_dir=" > ".getBytes(); byte [] code_esq=" < ".getBytes(); Diff_DiffRowGenerator generator = Diff_DiffRowGenerator.create().showInlineDiffs(true).inlineDiffByWord(true).oldTag(f -> "").newTag(f -> "").build(); List<Diff_DiffRow> rows = generator.generateDiffRows(readAllLines(caminho_a), readAllLines(caminho_b)); for (Diff_DiffRow row : rows) { String old_=row.getOldLine(); String new_=row.getNewLine(); int tag_=row.getTag(); if ( tag_ == Diff_DiffRow.TAG_EQUAL ){ write60(old_, out, bytes_write60); out.write(code_equal); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_INSERT ){ write60(old_, out, bytes_write60); out.write(code_dir); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_DELETE ){ write60(old_, out, bytes_write60); out.write(code_esq); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_CHANGE ){ write60(old_, out, bytes_write60); out.write(code_dif); write60(new_, out, bytes_write60); out.write(barra_n); } }out.flush(); }catch(Exception e){ erroFatal(e); } }     public void write60(String a, OutputStream out, byte [] bytes_write60) throws Exception{ int len=a.length(); if ( len == 60 ){ out.write(a.getBytes()); return; } if ( len > 60 ){ out.write(a.substring(0, 60).getBytes()); return; } out.write(a.getBytes()); out.write(bytes_write60, 0, 60-len); } } abstract class Diff_AbstractDelta<T> { private final Diff_Chunk<T> source; 
 /* class Diff  */ private final Diff_Chunk<T> target; private final int type; public Diff_AbstractDelta(int type, Diff_Chunk<T> source, Diff_Chunk<T> target) { Objects.requireNonNull(source); Objects.requireNonNull(target); Objects.requireNonNull(type); this.type = type; this.source = source; this.target = target; } public Diff_Chunk<T> getSource() { return source; } public Diff_Chunk<T> getTarget() { return target; } public int getType() { return type; } protected void verifyChunk(List<T> target) throws Exception { getSource().verify(target); } public abstract void applyTo(List<T> target) throws Exception; public abstract void restore(List<T> target); public int hashCode() { return Objects.hash(this.source, this.target, this.type); } public boolean equals(Object obj) { if (this == obj) { return true; } if (obj == null) { return false; } if (getClass() != obj.getClass()) { return false; } final Diff_AbstractDelta<?> other = (Diff_AbstractDelta<?>) obj; if (!Objects.equals(this.source, other.source)) { return false; } if (!Objects.equals(this.target, other.target)) { return false; } if (this.type != other.type) { return false; } return true; } } class Diff_Change { public final int deltaType; public final int startOriginal; public final int endOriginal; public final int startRevised; public final int endRevised; public Diff_Change(int deltaType, int startOriginal, int endOriginal, int startRevised, int endRevised) { this.deltaType = deltaType; this.startOriginal = startOriginal; this.endOriginal = endOriginal; this.startRevised = startRevised; this.endRevised = endRevised; } } class Diff_ChangeDelta<T> extends Diff_AbstractDelta<T> { public Diff_ChangeDelta(Diff_Chunk<T> source, Diff_Chunk<T> target) { super(Diff_DiffRow.TAG_CHANGE, source, target); Objects.requireNonNull(source, "source must not be null"); 
@@ -18154,6 +18201,7 @@ namespace LoopbackWithMic
 /* class Diff  */ private List<Diff_Change> buildRevision(Diff_PathNode actualPath, List<T> orig, List<T> rev) { Objects.requireNonNull(actualPath, "path is null"); Objects.requireNonNull(orig, "original sequence is null"); Objects.requireNonNull(rev, "revised sequence is null"); Diff_PathNode path = actualPath; List<Diff_Change> changes = new ArrayList<>(); if (path.isSnake()) { path = path.prev; } while (path != null && path.prev != null && path.prev.j >= 0) { if (path.isSnake()) { throw new IllegalStateException("bad diffpath: found snake when looking for diff"); } int i = path.i; int j = path.j; path = path.prev; int ianchor = path.i; int janchor = path.j; if (ianchor == i && janchor != j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_INSERT, ianchor, i, janchor, j)); } else if (ianchor != i && janchor == j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_DELETE, ianchor, i, janchor, j)); } else { changes.add(new Diff_Change(Diff_DiffRow.TAG_CHANGE, ianchor, i, janchor, j)); } if (path.isSnake()) { path = path.prev; } } return changes; } } class Diff_PathNode { public final int i; public final int j; public final Diff_PathNode prev; public final boolean snake; public final boolean bootstrap; public Diff_PathNode(int i, int j, boolean snake, boolean bootstrap, Diff_PathNode prev) { this.i = i; this.j = j; this.bootstrap = bootstrap; if (snake) { this.prev = prev; } else { this.prev = prev == null ? null : prev.previousSnake(); } this.snake = snake; } public boolean isSnake() { return snake; } public boolean isBootstrap() { return bootstrap; } 
 /* class Diff  */ public final Diff_PathNode previousSnake() { if (isBootstrap()) { return null; } if (!isSnake() && prev != null) { return prev.previousSnake(); } return this; } public String toString() { StringBuilder buf = new StringBuilder("["); Diff_PathNode node = this; while (node != null) { buf.append("("); buf.append(Integer.toString(node.i)); buf.append(","); buf.append(Integer.toString(node.j)); buf.append(")"); node = node.prev; } buf.append("]"); return buf.toString(); } } class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public Diff_Patch() { this(10); } public Diff_Patch(int estimatedPatchSize) { deltas = new ArrayList<>(estimatedPatchSize); } public List<T> applyTo(List<T> target) throws Exception { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.applyTo(result); } return result; } public List<T> restore(List<T> target) { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.restore(result); } return result; } public void addDelta(Diff_AbstractDelta<T> delta) { deltas.add(delta); } public List<Diff_AbstractDelta<T>> getDeltas() { Collections.sort(deltas, java.util.Comparator.comparing(d -> d.getSource().getPosition())); return deltas; } public String toString() { return "Patch{" + "deltas=" + deltas + '}'; } public static <T> Diff_Patch<T> generate(List<T> original, List<T> revised) throws Exception { Diff_MyersDiff m=new Diff_MyersDiff<>(); List<Diff_Change> changes=m.computeDiff(original, revised); 
 /* class Diff  */ Diff_Patch<T> patch = new Diff_Patch<>(changes.size()); for (Diff_Change change : changes) { Diff_Chunk<T> orgChunk = new Diff_Chunk<>(change.startOriginal, new ArrayList<>(original.subList(change.startOriginal, change.endOriginal))); Diff_Chunk<T> revChunk = new Diff_Chunk<>(change.startRevised, new ArrayList<>(revised.subList(change.startRevised, change.endRevised))); switch (change.deltaType) { case Diff_DiffRow.TAG_DELETE: patch.addDelta(new Diff_DeleteDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_INSERT: patch.addDelta(new Diff_InsertDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_CHANGE: patch.addDelta(new Diff_ChangeDelta<>(orgChunk, revChunk)); break; } } return patch; } } 
+
 
 
 
@@ -18244,8 +18292,6 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y serverRouter]\n"
 /* class by manual */                + "  [y httpServer]\n"
 /* class by manual */                + "  [y wget]\n"
-/* class by manual */                + "  [y playlist]\n"
-/* class by manual */                + "  [y playlistmovie]\n"
 /* class by manual */                + "  [y pwd]\n"
 /* class by manual */                + "  [y find]\n"
 /* class by manual */                + "  [y ls]\n"
@@ -18685,23 +18731,21 @@ namespace LoopbackWithMic
 /* class by manual */                + "        -ips_banidos 2804:14d:ac80:8889::\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
-/* class by manual */                + "    obs: o comando acima ira criar um httpServer temporario com parametros padroes\n"
-/* class by manual */                + "    y httpServer 127.0.0.1 8888 pagina_toke_zzz111 \"Lista de arquivos\" \"/dir\" \"\" \"\"\n"
-/* class by manual */                + "    y httpServer \"127.0.0.1 7070 tmp a . _ _ -log_ips d:/ProgramFiles/log_ips/log_7070.txt\"\n"
-/* class by manual */                + "    obs: O windows nao esta preparado para mais de 9 parametros\n"
-/* class by manual */                + "    obs2: _ sera substituido por \"\" internamente\n"
-/* class by manual */                + "    parametros: host(pode ser \"\"), port, titulo_url, titulo, dir, endsWiths(ex: \"\",\"jar,zip\"), ips_banidos(ex: \"\",\"8.8.8.8,4.4.4.4\")\n"
-/* class by manual */                + "[y playlist]\n"
-/* class by manual */                + "    y playlist\n"
-/* class by manual */                + "    y playlist 192.168.0.100\n"
-/* class by manual */                + "    y playlist 192.168.0.100 8888\n"
-/* class by manual */                + "    y playlist 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
-/* class by manual */                + "    obs: na pasta de musicas, criar o arquivo start_.bat contendo y playlist 192.168.0.100, no browser abrir http://192.168.0.100:8888/\n"
-/* class by manual */                + "[y playlistmovie]\n"
-/* class by manual */                + "    y playlistmovie\n"
-/* class by manual */                + "    y playlistmovie 192.168.0.100\n"
-/* class by manual */                + "    y playlistmovie 192.168.0.100 8888\n"
-/* class by manual */                + "    y playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
+/* class by manual */                + "    y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
+/* class by manual */                + "    y -mode playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
+/* class by manual */                + "    y -mode playlistserver 192.168.0.100 8888\n"
+/* class by manual */                + "    windows:\n"
+/* class by manual */                + "    set var=\"httpServer\" \"-host\" \"127.0.0.1\" \"-port\" \"8888\" \"-titulo_url_token\" \"\" \"-titulo\" \"titulo\" \"-dir\" \".\" \"-endsWith\" \"\" \"-ips_banidos\" \"\" \"-log_ips\" \"\" && y var\n"
+/* class by manual */                + "    linux:\n"
+/* class by manual */                + "    export var='\"httpServer\" \"-host\" \"127.0.0.1\" \"-port\" \"8888\" \"-titulo_url_token\" \"\" \"-titulo\" \"titulo\" \"-dir\" \".\" \"-endsWith\" \"\" \"-ips_banidos\" \"\" \"-log_ips\" \"\"' && y var\n"
+/* class by manual */                + "    Obs, valores padroes:\n"
+/* class by manual */                + "    host: 127.0.0.1\n"
+/* class by manual */                + "    port: 8888\n"
+/* class by manual */                + "    titulo_url_token: \"\"\n"
+/* class by manual */                + "    titulo: titulo\n"
+/* class by manual */                + "    Exemplo de endsWith: \"jar,zip\"\n"
+/* class by manual */                + "    Exemplo de ips_banidos: \"8.8.8.8,4.4.4.4\"\n"
+/* class by manual */                + "    Exemplo de log_ips: \"c:\\tmp\\ips.log\"\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "[y pwd]\n"
@@ -18892,7 +18936,9 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
 /* class by manual */                + "    Obs: execucao por parametro de variavel\n"
+/* class by manual */                + "    windows:\n"
 /* class by manual */                + "    set var=\"cat\" \"a\" && y var\n"
+/* class by manual */                + "    linux:\n"
 /* class by manual */                + "    export var='\"cat\" \"a\"' && y var\n"
 /* class by manual */                + "    export var='\"cat\" \"a\"' && y var -ignore FLAG_HERE\n"
 /* class by manual */                + "[y help]\n"
@@ -18983,9 +19029,6 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
 
 
 
