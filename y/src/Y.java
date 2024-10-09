@@ -17936,6 +17936,12 @@ namespace LoopbackWithMic
 /* class HttpServer */         }
 /* class HttpServer */         sb = new StringBuilder();
 /* class HttpServer */         nav = dir + uri.replace("//", "/").trim();
+/* class HttpServer */         if ( titulo_url.length() > 0 ){
+/* class HttpServer */             if ( uri.startsWith("/"+titulo_url) )
+/* class HttpServer */                 nav = dir + uri.substring(titulo_url.length()+1).replace("//", "/").trim(); 
+/* class HttpServer */             else
+/* class HttpServer */                 nav = "[invalido]";
+/* class HttpServer */         }
 /* class HttpServer */         nav = nav.replace("//", "/");
 /* class HttpServer */         nav = decodeUrl(nav);
 /* class HttpServer */         // nav detect index
@@ -17953,48 +17959,6 @@ namespace LoopbackWithMic
 /* class HttpServer */                     break;
 /* class HttpServer */                 }
 /* class HttpServer */             }
-/* class HttpServer */         }
-/* class HttpServer */         // list files
-/* class HttpServer */         if (uri.equals("/" + titulo_url)) {
-/* class HttpServer */             sb = new StringBuilder();
-/* class HttpServer */             for (String line: new String[] {
-/* class HttpServer */                     "HTTP/1.1 200 OK\r\n",
-/* class HttpServer */                     "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                     "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                     "\r\n",
-/* class HttpServer */                     "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
-/* class HttpServer */                     "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
-/* class HttpServer */                     "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n",
-/* class HttpServer */                     "<br>\n",
-/* class HttpServer */                     "&nbsp;" + titulo + "<br>\n"
-/* class HttpServer */                 }) {
-/* class HttpServer */                 sb.append(line);
-/* class HttpServer */                 System.out.print("    |---> " + line);
-/* class HttpServer */             }
-/* class HttpServer */             File[] files = new File(dir).listFiles();
-/* class HttpServer */             Arrays.sort(files, new Comparator < File > () {
-/* class HttpServer */                 public int compare(File f1, File f2) {
-/* class HttpServer */                     if (f1.lastModified() < f2.lastModified()) return 1;
-/* class HttpServer */                     if (f1.lastModified() > f2.lastModified()) return -1;
-/* class HttpServer */                     return 0;
-/* class HttpServer */                 }
-/* class HttpServer */             });
-/* class HttpServer */             sb.append("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
-/* class HttpServer */             System.out.println("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
-/* class HttpServer */             sb.append("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
-/* class HttpServer */             System.out.println("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
-/* class HttpServer */             for (File p: files) {
-/* class HttpServer */                 if (!p.isFile()) continue;
-/* class HttpServer */                 if (!endsWith_OK(p.getName(), endsWiths)) continue;
-/* class HttpServer */                 sb.append("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
-/* class HttpServer */                 System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
-/* class HttpServer */             }
-/* class HttpServer */             sb.append("</table></html>");
-/* class HttpServer */             System.out.println("</table></html>");
-/* class HttpServer */             System.out.println("    |");
-/* class HttpServer */             output.write(sb.toString().getBytes());
-/* class HttpServer */             return;
 /* class HttpServer */         }
 /* class HttpServer */         // favicon
 /* class HttpServer */         if ( ! uri.equals("/favicon.ico"))
@@ -18056,6 +18020,58 @@ namespace LoopbackWithMic
 /* class HttpServer */             }else{
 /* class HttpServer */                 System.out.println("nao encontrou o arquivo: " + nav);
 /* class HttpServer */             }
+/* class HttpServer */         }
+/* class HttpServer */         // list files
+/* class HttpServer */         if (  
+/* class HttpServer */                 !uri.contains("..")
+/* class HttpServer */                 && uri.startsWith("/" + titulo_url)
+/* class HttpServer */                 && new File(dir+uri.substring(titulo_url.length()>0?(titulo_url.length()+1):0)).isDirectory() 
+/* class HttpServer */         ){
+/* class HttpServer */             sb = new StringBuilder();
+/* class HttpServer */             for (String line: new String[] {
+/* class HttpServer */                     "HTTP/1.1 200 OK\r\n",
+/* class HttpServer */                     "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                     "X-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                     "\r\n",
+/* class HttpServer */                     "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
+/* class HttpServer */                     "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
+/* class HttpServer */                     "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n",
+/* class HttpServer */                     "<br>\n",
+/* class HttpServer */                     "&nbsp;" + titulo + "<br>\n"
+/* class HttpServer */                 }) {
+/* class HttpServer */                 sb.append(line);
+/* class HttpServer */                 System.out.print("    |---> " + line);
+/* class HttpServer */             }
+/* class HttpServer */             String token="/"+titulo_url;
+/* class HttpServer */             if ( titulo_url.equals("") )
+/* class HttpServer */                 token="";
+/* class HttpServer */             String pre=uri.substring(token.length());
+/* class HttpServer */             if ( !pre.endsWith("/") )
+/* class HttpServer */                 pre+="/";
+/* class HttpServer */             File[] files = new File(dir+pre).listFiles();
+/* class HttpServer */             Arrays.sort(files, new Comparator < File > () {
+/* class HttpServer */                 public int compare(File f1, File f2) {
+/* class HttpServer */                     if (f1.lastModified() < f2.lastModified()) return 1;
+/* class HttpServer */                     if (f1.lastModified() > f2.lastModified()) return -1;
+/* class HttpServer */                     return 0;
+/* class HttpServer */                 }
+/* class HttpServer */             });
+/* class HttpServer */             sb.append("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
+/* class HttpServer */             System.out.println("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
+/* class HttpServer */             sb.append("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
+/* class HttpServer */             System.out.println("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
+/* class HttpServer */             for (File p: files) {
+/* class HttpServer */                 //if (!p.isFile()) continue;
+/* class HttpServer */                 if (!endsWith_OK(p.getName(), endsWiths)) continue;
+/* class HttpServer */                 sb.append("<tr><td dd='"+uri.substring(1) + "/"+"'>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + token + pre + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
+/* class HttpServer */                 System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + token + pre + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
+/* class HttpServer */             }
+/* class HttpServer */             sb.append("</table></html>");
+/* class HttpServer */             System.out.println("</table></html>");
+/* class HttpServer */             System.out.println("    |");
+/* class HttpServer */             output.write(sb.toString().getBytes());
+/* class HttpServer */             return;
 /* class HttpServer */         }
 /* class HttpServer */         // 404
 /* class HttpServer */         sb = new StringBuilder();
