@@ -16197,6 +16197,11 @@ class Texto_longo extends Util{
         "      if ( socket != null && socket.readyState == WebSocket.CLOSED )\n" +
         "        document.children[0].innerHTML=finish_msg;\n" +
         "      else{\n" +
+        "        if ( fps_tail == null )\n" +
+        "          fps_tail=60;\n" +
+        "        if ( fps_tail == 0 && count_fps == 0 )\n" +
+        "          location.reload();\n" +
+        "        fps_tail=count_fps;\n" +
         "        console.log('fps: '+count_fps);\n" +
         "        count_fps=0;\n" +
         "      }\n" +
