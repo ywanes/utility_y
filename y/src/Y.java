@@ -8339,7 +8339,7 @@ cat buffer.log
     
     //REMOVED_GRAAL_END    
     private void serverRouter(String[] args) {
-        Object [] objs = get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos(args);
+        Object [] objs = get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor(args);
         if ( objs == null ){
             comando_invalido(args);
             System.exit(0);
@@ -8352,9 +8352,10 @@ cat buffer.log
         String log=(String)objs[5];
         String ips_banidos=(String)objs[6];
         ArrayList<String> decodes=(ArrayList<String>)objs[7];
+        Integer xor=(Integer)objs[8];
         
         System.out.println("ips_banidos: " + ips_banidos);
-        new Ponte().serverRouter(host0, port0, host1, port1, typeShow, log, ips_banidos, decodes);
+        new Ponte().serverRouter(host0, port0, host1, port1, typeShow, log, ips_banidos, decodes, xor);
     }
 
     ArrayList<String> xlsxToCSV_nomes=null;
@@ -8723,7 +8724,7 @@ cat buffer.log
         }
     }
 
-    private Object [] get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos(String [] args){        
+    private Object [] get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor(String [] args){        
         String host0=null;
         int port0=-1;
         String host1=null;
@@ -8732,6 +8733,7 @@ cat buffer.log
         String log=null;
         String ipsBanidos=null;
         ArrayList<String> decodes = new ArrayList<String>();
+        Integer xor=null;
         
         args=sliceParm(1, args);
         
@@ -8750,7 +8752,13 @@ cat buffer.log
                 decodes.add("decodeSend," + args[1] + "," + args[2]);
                 args=sliceParm(3, args);
                 continue;
-            }            
+            }     
+            if ( args.length > 1 && args[0].equals("-xor") ){
+                args=sliceParm(1, args);
+                xor=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }     
             if ( args.length > 0 && host0 == null ){
                 host0=args[0];
                 args=sliceParm(1, args);
@@ -8784,7 +8792,7 @@ cat buffer.log
             typeShow="";
         if ( ipsBanidos == null )
             ipsBanidos="";
-        return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos, decodes};
+        return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos, decodes, xor};
     }        
     
     private Object [] get_parms_msg_lang_list_copy(String [] args){        
@@ -14956,7 +14964,7 @@ class Ponte extends Util{
     public static boolean displayVolta=false;
     public static boolean displaySimple=false;
 
-    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log, String ips_banidos, ArrayList<String> decodes){
+    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log, String ips_banidos, ArrayList<String> decodes, Integer xor){
         Ambiente ambiente=null;
         try{
             ambiente=new Ambiente(host0,port0);
@@ -14986,7 +14994,7 @@ class Ponte extends Util{
                     System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
                 new Thread(){
                     public void run(){
-                        ponte0(credencialSocket,host1,port1,ip_origem,decodes);
+                        ponte0(credencialSocket,host1,port1,ip_origem,decodes,xor);
                     }
                 }.start();   
             }catch(Exception e){
@@ -14996,13 +15004,13 @@ class Ponte extends Util{
         }
     }
 
-    private void ponte0(Socket credencialSocket, String host1, int port1, String ip_origem, ArrayList<String> decodes) {
+    private void ponte0(Socket credencialSocket, String host1, int port1, String ip_origem, ArrayList<String> decodes, Integer xor) {
         String id=padLeftZeros(new Random().nextInt(100000)+"",6);
         System.out.println("iniciando ponte id "+id+" - ip origem "+ip_origem);
         Origem origem=null;
         try{
-            Destino destino=new Destino(host1,port1,decodes);                    
-            origem=new Origem(credencialSocket,id,decodes);
+            Destino destino=new Destino(host1,port1,decodes,xor);                    
+            origem=new Origem(credencialSocket,id,decodes,xor);
             origem.referencia(destino);
             destino.referencia(origem);
             origem.start(); // destino é startado no meio do start da origem;
@@ -15025,9 +15033,11 @@ class Ponte extends Util{
         boolean[] suprime_asterisco=null;
         String decode_tag="decodeSend";
         String suprime_tag="suprimeSend";
-        private Destino(String host1, int port1, ArrayList<String> decodes) {
+        Integer xor=null;
+        private Destino(String host1, int port1, ArrayList<String> decodes, Integer xor) {
             this.host1=host1;
             this.port1=port1;
+            this.xor=xor;
             init_decodes(decodes);
             init_suprimes(decodes);
         }
@@ -15115,6 +15125,14 @@ class Ponte extends Util{
         }
 
         private void ida(byte[] buffer,int len, String ponteID) throws Exception {   // |   | ->|          
+            if ( xor != null ){
+                for ( int i=0;i<len;i++ ){
+                    int z=buffer[i];
+                    if ( z < 0 )
+                        z+=256;
+                    buffer[i]=(byte)(z^xor);
+                }
+            }            
             if ( decode_A != null ){
                 for ( int i=0;i<decode_A.length;i++ ){
                     if ( decode_A[i].length == len || (decode_A[i].length <= len && decode_A_asterisco[i] ) ){
@@ -15158,10 +15176,11 @@ class Ponte extends Util{
         boolean[] suprime_asterisco=null;
         String decode_tag="decodeReceive";
         String suprime_tag="suprimeReceive";
-        
-        private Origem(Socket credencialSocket,String ponteID, ArrayList<String> decodes) {            
+        Integer xor=null;
+        private Origem(Socket credencialSocket,String ponteID, ArrayList<String> decodes, Integer xor) {            
             socket=credencialSocket;
             this.ponteID=ponteID;
+            this.xor=xor;
             init_decodes(decodes);
             init_suprimes(decodes);
         }
@@ -15248,6 +15267,14 @@ class Ponte extends Util{
         }
 
         private void volta(int len,byte[] buffer) throws Exception { // |<- |   |
+            if ( xor != null ){
+                for ( int i=0;i<len;i++ ){
+                    int z=buffer[i];
+                    if ( z < 0 )
+                        z+=256;
+                    buffer[i]=(byte)(z^xor);
+                }
+            }
             if ( decode_A != null ){
                 for ( int i=0;i<decode_A.length;i++ ){
                     if ( decode_A[i].length == len || (decode_A[i].length <= len && decode_A_asterisco[i] ) ){
@@ -18230,7 +18257,6 @@ namespace LoopbackWithMic
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -18745,11 +18771,12 @@ namespace LoopbackWithMic
 /* class by manual */                + "        \"-suprimeSend\" \"5 0 0 0\"\n"
 /* class by manual */                + "        \"-suprimeReceive\" \"5 0 0 0\"\n"
 /* class by manual */                + "        -ips_banidos 2804:14d:ac80:8889::\n"
+/* class by manual */                + "        -xor 100\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
 /* class by manual */                + "    y -mode playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
-/* class by manual */                + "    y -mode playlistserver 192.168.0.100 8888\n"
+/* class by manual */                + "    y -mode playlistserver 192.168.0.100 8888 -cfg d:/ProgramFiles/playlistserver.cfg\n"
 /* class by manual */                + "    windows:\n"
 /* class by manual */                + "    set var=\"httpServer\" \"-host\" \"127.0.0.1\" \"-port\" \"8888\" \"-titulo_url_token\" \"\" \"-titulo\" \"titulo\" \"-dir\" \".\" \"-endsWith\" \"\" \"-ips_banidos\" \"\" \"-log_ips\" \"\" && y var\n"
 /* class by manual */                + "    linux:\n"

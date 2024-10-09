@@ -508,6 +508,7 @@ Exemplos...
         "-suprimeSend" "5 0 0 0"
         "-suprimeReceive" "5 0 0 0"
         -ips_banidos 2804:14d:ac80:8889::
+        -xor 100
 [y httpServer]
     y httpServer
     y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt
