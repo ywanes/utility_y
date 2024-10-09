@@ -18025,7 +18025,7 @@ namespace LoopbackWithMic
 /* class HttpServer */         if (  
 /* class HttpServer */                 !uri.contains("..")
 /* class HttpServer */                 && uri.startsWith("/" + titulo_url)
-/* class HttpServer */                 && new File(dir+uri.substring(titulo_url.length()>0?(titulo_url.length()+1):0)).isDirectory() 
+/* class HttpServer */                 && new File(dir+ decodeUrl(uri.substring(titulo_url.length()>0?(titulo_url.length()+1):0)) ).isDirectory() 
 /* class HttpServer */         ){
 /* class HttpServer */             sb = new StringBuilder();
 /* class HttpServer */             for (String line: new String[] {
@@ -18049,7 +18049,7 @@ namespace LoopbackWithMic
 /* class HttpServer */             String pre=uri.substring(token.length());
 /* class HttpServer */             if ( !pre.endsWith("/") )
 /* class HttpServer */                 pre+="/";
-/* class HttpServer */             File[] files = new File(dir+pre).listFiles();
+/* class HttpServer */             File[] files = new File(dir+decodeUrl(pre)).listFiles();
 /* class HttpServer */             Arrays.sort(files, new Comparator < File > () {
 /* class HttpServer */                 public int compare(File f1, File f2) {
 /* class HttpServer */                     if (f1.lastModified() < f2.lastModified()) return 1;
