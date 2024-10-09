@@ -85,7 +85,7 @@ pushd %*
 Set-Content config_y.reg 'Windows Registry Editor Version 5.00
 
 [HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Command Processor]
-"Autorun"="doskey cd=cd0 $* && chcp 65001 1>$null && doskey cat=y cat $* && doskey printf=y printf $* && doskey sed=y sed $* && doskey ls=y ls $* && doskey lss=y lss $* && doskey pss=y pss $* && doskey du=y du $*"
+"Autorun"="doskey cd=cd0 $* && chcp 65001 1>NUL && doskey cat=y cat $* && doskey printf=y printf $* && doskey sed=y sed $* && doskey ls=y ls $* && doskey lss=y lss $* && doskey pss=y pss $* && doskey du=y du $*"
 '
 
 
