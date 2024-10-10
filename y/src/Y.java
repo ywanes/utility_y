@@ -9429,8 +9429,6 @@ cat buffer.log
             }
             return null;
         }
-        if ( type != null && type.equals("l") && path.equals(".") ) // fixbug
-            path=null;        
         return new Object[]{path,acceptSymbolicLink,mtime,type,pre,pos};
     }    
 
@@ -13929,26 +13927,41 @@ class Util{
     }
     
     public boolean isSymbolicLink(File f){
-        String r=f.getPath().toString();
+        java.nio.file.Path ab_path=f.toPath().toAbsolutePath();
+        java.nio.file.Path parent_path=ab_path.getParent();
+        java.nio.file.Path real_path=null;
+        int n=0;
         try{
-            if ( f.getPath().toString().startsWith(".") ){
-                return false;
-            }
+            n=1;
             if ( Files.isSymbolicLink(f.toPath()) ){
+                n=2;
                 return true;
             }
-            if ( !isWindows() ){
+            n=3;
+            try{
+                real_path=ab_path.toRealPath();
+            }catch(Exception e){
                 return false;
             }
-            if ( !f.toPath().toAbsolutePath().toString().toUpperCase().equals(f.toPath().toAbsolutePath().getParent().toString().toUpperCase()) ){
-                if ( f.toPath().toAbsolutePath().toRealPath().toString().toUpperCase().equals( (f.toPath().toAbsolutePath().getParent().toRealPath().toString()+"\\"+f.getName()).toUpperCase() )){
+            if ( !isWindows() ){
+                n=4;
+                return false;
+            }
+            n=5;
+            if ( !ab_path.toString().toUpperCase().equals(parent_path.toString().toUpperCase()) ){
+                n=6;
+                if ( real_path.toString().toUpperCase().equals( (parent_path.toRealPath().toString()+"\\"+f.getName()).toUpperCase() )){
+                    n=7;
                     return false;
                 }
             }
-            if ( !f.toPath().toAbsolutePath().toString().toUpperCase().equals(f.toPath().toRealPath().toString().toUpperCase()) ){
+            n=8;
+            if ( !ab_path.toString().toUpperCase().equals(real_path.toString().toUpperCase()) ){
+                n=9;
                 return true;
             }
         }catch(Exception e){
+            erroFatal("Error isSymbolicLink " + ab_path + " - internal_step: " + n);
         }
         return false;
     }
