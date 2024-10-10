@@ -9429,7 +9429,7 @@ cat buffer.log
             }
             return null;
         }
-        if ( type.equals("l") && path.equals(".") ) // fixbug
+        if ( type != null && type.equals("l") && path.equals(".") ) // fixbug
             path=null;        
         return new Object[]{path,acceptSymbolicLink,mtime,type,pre,pos};
     }    
