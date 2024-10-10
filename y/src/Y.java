@@ -5159,7 +5159,7 @@ cat buffer.log
         // nivel 1 filme
         partes=regex_matcher("<div class=\"assistir\"><a href=\"", "\"><i", html, true);
         if ( partes.length > 0 ){
-            if ( html.split("article class=")[0].contains("\">CAM</span>") )
+            if ( html.split("cWidgetContainer")[0].contains("\">CAM</span>") )
                 cam=true;
             //if ( html.contains("\">CAM</span>") )
             //    cam=true;
