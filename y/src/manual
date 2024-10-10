@@ -538,7 +538,7 @@ Exemplos...
     y find . -mtime 0.5 # arquivos recentes a mais de 12 horas
     y find . -type f # somente Files    
     y find -type f -pre "y cat" -pos "| y grep 'PESQUISA AQUI'" 
-    obs: -L para considerar SymbolicLink, ex: y find / -L
+    obs: -L para navegar dentro do SymbolicLink, ex: y find / -L
     obs2: -type contem as opcoes f e d
 [y ls]
     y ls

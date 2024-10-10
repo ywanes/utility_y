@@ -1491,7 +1491,7 @@ cat buffer.log
                 String type=(String)parm_path_symbol_mtime_type_pre_pos[3];
                 String pre=(String)parm_path_symbol_mtime_type_pre_pos[4];
                 String pos=(String)parm_path_symbol_mtime_type_pre_pos[5];
-                find(path, false, mtime, acceptSymbolicLink, type, pre, pos, false, null);
+                find(path, false, mtime, acceptSymbolicLink, type, pre, pos, false, null, System.out);
                 return;                
             }
         }
@@ -1499,23 +1499,48 @@ cat buffer.log
             int len_antes=args.length;
             args = bind_asterisk(args);
             if ( args.length == 1 ){
-                find(null, true, 0, true, null, null, null, false, null);
+                find(null, true, 0, true, null, null, null, false, null, System.out);
                 return;
             }
             if ( args.length == 2 ){
-                find(args[1], true, 0, true, null, null, null, false, null);
+                find(args[1], true, 0, true, null, null, null, false, null, System.out);
                 return;
             }
             for( int i=1;i<args.length;i++ ){
                 if ( len_antes > 2 )
                     System.out.println("\n"+args[i]+":");
-                find(args[i], true, 0, true, null, null, null, false, null);                
+                find(args[i], true, 0, true, null, null, null, false, null, System.out);
             }
             return;
         }
         if ( args[0].equals("lss") ){            
-            if ( isWindows() )
-                find(args.length>1?args[1]:null, true, 0, true, null, null, null, true, null);
+            if ( isWindows() ){
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                find(args.length>1?args[1]:null, true, 0, true, null, null, null, true, null, baos);
+                String [] partes=baos.toString().split("\n");
+                Arrays.sort(partes, new Comparator<String>() {
+                    public int compare(String a, String b){
+                        if ( b.length() == 0 )
+                            return 1;
+                        if ( a.length() == 0 )
+                            return -1;
+                        int p1=a.charAt(0);
+                        int p2=b.charAt(0);
+                        if ( p1 != 100 )
+                            p1=2;
+                        else
+                            p1=1;
+                        if ( p2 != 100 )
+                            p2=2;
+                        else
+                            p2=1;
+                        if ( p1 != p2 )
+                            return p1 - p2;
+                        return a.substring(17).compareTo(b.substring(17));
+                    }
+                }); 
+                System.out.println(String.join("\n", partes));
+            }
             else
                 if ( ! lss_linux(args.length>1?args[1]:null) )
                     lss_mac(args.length>1?args[1]:null);
@@ -1531,7 +1556,7 @@ cat buffer.log
                     path=".";
                 if ( bkmg == null )
                     bkmg="k";
-                find(path, false, 0, acceptSymbolicLink, null, null, null, false, bkmg);
+                find(path, false, 0, acceptSymbolicLink, null, null, null, false, bkmg, System.out);
                 return;                
             }
         }
@@ -5134,8 +5159,10 @@ cat buffer.log
         // nivel 1 filme
         partes=regex_matcher("<div class=\"assistir\"><a href=\"", "\"><i", html, true);
         if ( partes.length > 0 ){
-            if ( html.contains("\">CAM</span>") )
+            if ( html.split("article class=")[0].contains("\">CAM</span>") )
                 cam=true;
+            //if ( html.contains("\">CAM</span>") )
+            //    cam=true;
             for ( int i=0;i<partes.length;i++ )
                 overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
             return;
@@ -5249,7 +5276,7 @@ cat buffer.log
                 s=s.trim();
             else{
                 if ( runtimeExecError.trim().equals("") ){
-                    overflix_error+="token indisponivel no momento, volte daqui 30 minutos. url: " + url + " file: " + out+"\n";
+                    overflix_error+="não foi possível solucionar pelo token.. pegue o arquivo pela url: " + url + " file: " + out+"\n";
                     return;
                 }else{
                     overflix_error+="Error script token: " + runtimeExecError+"\n";
@@ -6740,7 +6767,7 @@ cat buffer.log
     boolean errorRRmPrinted = false;
     public void rm(File f, boolean recursiveMode){
         try{
-            if( f.isDirectory() ){
+            if( f.isDirectory() && !isSymbolicLink(f) ){
                 if ( recursiveMode ){
                     File [] files=f.listFiles();
                     for( int i=0;i<files.length;i++ ){
@@ -9375,9 +9402,11 @@ cat buffer.log
                 args=sliceParm(1,args);
                 continue;
             }
-            if ( args.length > 1 && args[0].equals("-type") && (args[1].equals("d") || args[1].equals("f") ) ){
+            if ( args.length > 1 && args[0].equals("-type") && (args[1].equals("d") || args[1].equals("f") || args[1].equals("-") || args[1].equals("l") ) ){
                 args=sliceParm(1,args);
                 type=args[0];
+                if ( type.equals("-") )
+                    type="f";
                 args=sliceParm(1,args);
                 continue;
             }
@@ -9400,6 +9429,8 @@ cat buffer.log
             }
             return null;
         }
+        if ( type.equals("l") && path.equals(".") ) // fixbug
+            path=null;        
         return new Object[]{path,acceptSymbolicLink,mtime,type,pre,pos};
     }    
 
@@ -9498,7 +9529,7 @@ cat buffer.log
             
             
     private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, 
-            String pos, boolean format_lss, String format_du){
+            String pos, boolean format_lss, String format_du, OutputStream out){
         String sep=System.getProperty("user.dir").contains("/")?"/":"\\";
         File f=null;
         long len_du=0;
@@ -9520,15 +9551,15 @@ cat buffer.log
         if ( !f.isDirectory() ){
             if ( format_du != null )
                 len_du = f.length();
-            showfind(f, path, mtime, type, pre, pos, format_lss, format_du, len_du);
+            showfind(f, path, mtime, type, pre, pos, format_lss, format_du, len_du, out);
         }else{
             if ( f.isDirectory())
-                find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du);
+                find_nav(f, sep, path, superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du, out);
         }
     }
     
     private long find_nav(File f, String sep, String hist, Boolean superficial, float mtime, 
-        boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss, String format_du){
+                boolean acceptSymbolicLink, String type, String pre, String pos, boolean format_lss, String format_du, OutputStream out){
         long len_du=0;
         long len_du_aux=0;
         String hist_bkp=hist;
@@ -9536,116 +9567,136 @@ cat buffer.log
             // faz nada
         }else{
             if ( format_du == null )
-                showfind(f, hist, mtime, type, pre, pos, format_lss, format_du, 0);
+                showfind(f, hist, mtime, type, pre, pos, format_lss, format_du, 0, out);
             hist+=sep;
         }
         try{
             File [] files = f.listFiles();
-            for ( int i=0;i<files.length;i++ )
+            for ( int i=0;i<files.length;i++ ){
                 if ( !files[i].isDirectory() ){
                     len_du_aux = 0;
                     if ( superficial ){
                         if ( format_du != null )
                             len_du_aux=files[i].length();
                         else
-                            showfind(files[i], files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                            showfind(files[i], files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux, out);
                     }else{
                         if ( format_du != null )
                             len_du_aux=new File(hist+files[i].getName()).length();
                         else
-                            showfind(files[i], hist+files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                            showfind(files[i], hist+files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux, out);
                     }
                     len_du+=len_du_aux;
                 }
-            for ( int i=0;i<files.length;i++ )
+            }
+            boolean force_superficial=false;
+            for ( int i=0;i<files.length;i++ ){                
+                force_superficial=false;
                 if ( files[i].isDirectory() ){
-                    if ( !acceptSymbolicLink && f.getPath().contains("\\") && !(f.getAbsolutePath()+"\\"+files[i].getName()).replace(":\\\\",":\\").toUpperCase().equals(files[i].toPath().toRealPath().toString().toUpperCase()) )
-                        continue;
-                    if (!acceptSymbolicLink && Files.isSymbolicLink(files[i].toPath()))
-                        continue;
-                    if ( superficial ){
+                    // skip anti loop
+                    //if ( !acceptSymbolicLink && f.getPath().contains("\\") && !(f.getAbsolutePath()+"\\"+files[i].getName()).replace(":\\\\",":\\").toUpperCase().equals(files[i].toPath().toRealPath().toString().toUpperCase()) )
+                    //    continue;                    
+                    if (!acceptSymbolicLink && isSymbolicLink(files[i]) )
+                        force_superficial=true;
+                    if ( superficial || force_superficial){
                         len_du_aux = 0;
                         if ( format_du != null )
                             len_du_aux=files[i].length();
                         else
-                            showfind(files[i], files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux);
+                            showfind(files[i], files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux, out);
                     }else{
-                        len_du += find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du);
+                        
+                        len_du += find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du, out);
                     }
                 }
+            }
             len_du += f.length();
             if ( format_du != null )
-                showfind(f, hist_bkp, mtime, type, pre, pos, format_lss, format_du, len_du);            
+                showfind(f, hist_bkp, mtime, type, pre, pos, format_lss, format_du, len_du, out);
         }catch(Exception e){}        
         return len_du;
     }
     
     long findnow = 0;
-    private void showfind(File f, String name, float mtime, String type, String pre, String pos, boolean format_lss, String format_du, long len_du){
-        name=name.replace("\\","/");
-        boolean print=false;
-        String type_a = null;
-        String type_lss = null;
-        String format_lss_="";
-        //File file_=null;
-        
-        if ( mtime == 0 ){
-            print = true;
-        }else{
-            if ( findnow == 0 ){
-                findnow = java.util.Calendar.getInstance().getTime().getTime();
-            }
-            long b = new java.util.Date(f.lastModified()).getTime();
-            long diffMili = Math.abs(findnow - b);
-            if (
-                (mtime > 0 && diffMili >= mtime)
-                || (mtime < 0 && mtime*-1 >= diffMili)
-            ){
+    private void showfind(File f, String name, float mtime, String type, String pre, String pos, boolean format_lss, String format_du, long len_du, OutputStream out){
+        try{
+            name=name.replace("\\","/");
+            boolean print=false;
+            String type_a = null;
+            String type_lss = null;
+            String format_lss_="";
+            String format_lss_B="";
+
+            if ( mtime == 0 ){
                 print = true;
-            }
-        }         
-        if ( print && (type != null || format_lss) ){
-            type_a="f";
-            type_lss="-";
-            if ( f.isDirectory() ){
-                type_a = "d";
-                type_lss="d";
-            }        
-        }
-        if ( print && type != null && !type.equals(type_a) )
-            print = false;
-        if ( print ){
-            if ( format_lss ){
-                Date d = new Date(f.lastModified());    
-                format_lss_ = f.length() + " " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(d) + " ";                
-                String space_="                                                       ";
-                int len_=35;//55
-                format_lss_ = type_lss + space_.substring(0, len_-format_lss_.length()) + format_lss_;
-            }           
-            if ( pre != null || pos != null )
-                name="\""+name+"\"";
-            if ( pre != null )
-                name=pre+" "+name;
-            if ( pos != null )
-                name=name+" "+pos;
-            if ( format_du != null ){
-                if ( format_du.equals("b") )
-                    System.out.println(len_du + "\t" + name);
-                if ( format_du.equals("k") )
-                    System.out.println((int)(len_du/1024) + "\t" + name);
-                if ( format_du.equals("m") )
-                    System.out.println((int)(len_du/(1024*1024)) + "\t" + name);
-                if ( format_du.equals("g") )
-                    System.out.println((int)(len_du/(1024*1024*1024)) + "\t" + name);
-                
             }else{
-                if ( name.contains(" ") ) 
-                    if ( isWindows() )
-                        name="\"" + name + "\"";
-                    else
-                        name="'" + name + "'";
-                System.out.println(format_lss_ + name);
+                if ( findnow == 0 ){
+                    findnow = java.util.Calendar.getInstance().getTime().getTime();
+                }
+                long b = new java.util.Date(f.lastModified()).getTime();
+                long diffMili = Math.abs(findnow - b);
+                if (
+                    (mtime > 0 && diffMili >= mtime)
+                    || (mtime < 0 && mtime*-1 >= diffMili)
+                ){
+                    print = true;
+                }
+            }         
+            if ( print && (type != null || format_lss) ){
+                type_a="f";
+                type_lss="-";
+                if ( f.isDirectory() ){
+                    if(isSymbolicLink(f)){
+                        type_a = "l";
+                        type_lss="l";
+                    }else{
+                        type_a = "d";
+                        type_lss="d";
+                    }
+                }        
             }
+            if ( print && type != null && !type.equals(type_a) )
+                print = false;
+            if ( print ){
+                if ( format_lss ){
+                    Date d = new Date(f.lastModified());    
+                    format_lss_ = f.length() + " " + new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(d) + " ";                
+                    String space_="                                                       ";
+                    int len_=35;//55
+                    format_lss_ = type_lss + space_.substring(0, len_-format_lss_.length()) + format_lss_;                    
+                    if ( type_lss.equals("l") ){
+                        format_lss_B= f.toPath().toRealPath().toString();
+                        if ( format_lss_B.contains(" ") )
+                            format_lss_B="\""+format_lss_B+"\"";
+                        format_lss_B=" --> " + format_lss_B;
+                    }
+                }           
+                if ( pre != null || pos != null )
+                    name="\""+name+"\"";
+                if ( pre != null )
+                    name=pre+" "+name;
+                if ( pos != null )
+                    name=name+" "+pos;
+                if ( format_du != null ){                
+                    if ( format_du.equals("b") )
+                        out.write((len_du + "\t" + name + "\n").getBytes());
+                    if ( format_du.equals("k") )
+                        out.write(((int)(len_du/1024) + "\t" + name + "\n").getBytes());
+                    if ( format_du.equals("m") )
+                        out.write(((int)(len_du/(1024*1024)) + "\t" + name + "\n").getBytes());
+                    if ( format_du.equals("g") )
+                        out.write(((int)(len_du/(1024*1024*1024)) + "\t" + name + "\n").getBytes());
+                }else{
+                    if ( name.contains(" ") ) 
+                        if ( isWindows() )
+                            name="\"" + name + "\"";
+                        else
+                            name="'" + name + "'";
+                    out.write((format_lss_ + name + format_lss_B + "\n").getBytes());
+                }
+            }
+        }catch(Exception e){
+            erroFatal(e);
         }
     }
     
@@ -13875,6 +13926,31 @@ class Util{
         if ( ! type.equals("Windows") )
             return s;
         return s+"\n"+getDefaultAudioWindows();
+    }
+    
+    public boolean isSymbolicLink(File f){
+        String r=f.getPath().toString();
+        try{
+            if ( f.getPath().toString().startsWith(".") ){
+                return false;
+            }
+            if ( Files.isSymbolicLink(f.toPath()) ){
+                return true;
+            }
+            if ( !isWindows() ){
+                return false;
+            }
+            if ( !f.toPath().toAbsolutePath().toString().toUpperCase().equals(f.toPath().toAbsolutePath().getParent().toString().toUpperCase()) ){
+                if ( f.toPath().toAbsolutePath().toRealPath().toString().toUpperCase().equals( (f.toPath().toAbsolutePath().getParent().toRealPath().toString()+"\\"+f.getName()).toUpperCase() )){
+                    return false;
+                }
+            }
+            if ( !f.toPath().toAbsolutePath().toString().toUpperCase().equals(f.toPath().toRealPath().toString().toUpperCase()) ){
+                return true;
+            }
+        }catch(Exception e){
+        }
+        return false;
     }
     
     public boolean isWindows(){
