@@ -846,6 +846,7 @@ cat buffer.log
             if ( ! isWindows() )
                 erroFatal("overflix implementado somente para o windows");            
             try{
+                global_header="cookie: ips4_device_key=66ef5686d84b5bced223d789462e4ded; ips4_member_id=82450; ips4_login_key=addd863af56dcdeb48ef159ceda239ba;\r\n";
                 overflix(args);
             }catch(Exception e){
                 erroFatal(e);
@@ -5141,7 +5142,10 @@ cat buffer.log
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
+        // y overflix "https://encontre.tv/assistir-prometheus-dublado-online-1012/"
         
+        overflix_verbose(verbose, url);
+            
         String html=curl_string(url);
         if ( curl_response_status == 301 ){
             url=curl_response_location;
@@ -5152,8 +5156,6 @@ cat buffer.log
             return;            
         }
         
-        if ( verbose )
-            System.out.println(url);
         String [] partes=null;
 
         // nivel 1 filme
@@ -5163,8 +5165,10 @@ cat buffer.log
                 cam=true;
             //if ( html.contains("\">CAM</span>") )
             //    cam=true;
-            for ( int i=0;i<partes.length;i++ )
+            for ( int i=0;i<partes.length;i++ ){
+                overflix_verbose(verbose, "TAG:1");
                 overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+            }
             return;
         }
         
@@ -5173,6 +5177,7 @@ cat buffer.log
         partes=regex_matcher("</i><a href=\"", "\">", html, true);
         if ( partes.length > 0 ){
             // pegando titulo serie
+            overflix_verbose(verbose, "TAG:2");
             if ( titulo_serie == null ){
                 String [] tmp=null;
                 tmp=regex_matcher("<span class=\"titulo\">", "<", html, true);
@@ -5189,14 +5194,17 @@ cat buffer.log
                 }
             }
             // chamando itens da temporada
-            for ( int i=0;i<partes.length;i++ )
+            for ( int i=0;i<partes.length;i++ ){
+                overflix_verbose(verbose, "TAG:3");
                 overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+            }
             // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
                 // chama todas as temporadas
                 url+="?temporada=1";
                 int next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 while ( html.contains("load("+next_temporada+")") ){
+                    overflix_verbose(verbose, "TAG:4");
                     url=url.split("=")[0]+"="+next_temporada;
                     overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
@@ -5208,11 +5216,16 @@ cat buffer.log
         // nivel 2 filme e serie
         partes=regex_matcher("<a href=\"", "\"", html, true); 
         if ( partes.length > 0 && !url.contains("/f/") ){
+            overflix_verbose(verbose, "TAG:5");
             String prefix=url.substring(0, url.indexOf("/", 9));
             for ( int i=0;i<partes.length;i++ ){
-                if ( ! partes[i].startsWith("/em") )
-                    continue;
-                overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+                if ( ! partes[i].startsWith("/em") && !partes[i].startsWith("https://mixdrop.ps") )
+                    continue;                
+                overflix_verbose(verbose, "TAG:6");
+                if ( partes[i].startsWith("https://mixdrop.ps") )
+                    overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+                else
+                    overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                 return;
             }
             overflix_error+="Não foi possível resolver a url:: " + url+"\n";
@@ -5220,20 +5233,36 @@ cat buffer.log
         }
         
         // nivel 3 filme e serie
-        partes=regex_matcher("window.location.href=\"", "\"", html, true); 
-        if ( partes.length > 0 ){
-            String suffix="?download";
-            for ( int i=0;i<partes.length;i++ ){                
-                overflix_busca(partes[i]+suffix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
-                return;
+        String mix=null;
+        String suffix="?download";
+        if ( url.startsWith("https://mixdrop.ps") && !url.endsWith("?download") ){
+            mix=url+suffix;
+        }else{
+            partes=regex_matcher("window.location.href=\"", "\"", html, true); 
+            if ( partes.length > 0 ){
+                overflix_verbose(verbose, "TAG:7");                
+                for ( int i=0;i<partes.length;i++ ){                
+                    mix=partes[i]+suffix;                
+                    break;
+                }
+                if ( mix == null ){
+                    overflix_error+="Não foi possível resolver a url:: " + url+"\n";            
+                    return;
+                }
             }
-            overflix_error+="Não foi possível resolver a url:: " + url+"\n";
+        }
+        
+        // use mix
+        if ( mix != null ){
+            overflix_verbose(verbose, "TAG:8");
+            overflix_busca(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
             return;
         }
         
         // nivel 4 filme e serie
         if ( url.contains("/f/") && url.endsWith("?download") ){
             // pegando titulo
+            overflix_verbose(verbose, "TAG:9");
             String titulo="?";
             partes=regex_matcher("<b title=\"", "\"", html, true); 
             if ( html.contains("<h2>WE ARE SORRY</h2>") ){
@@ -5283,9 +5312,7 @@ cat buffer.log
                     return;
                }
             }
-            if ( verbose ){
-                System.out.println("curl \"" + s + "\" > \"" + out + "\"");
-            }
+            overflix_verbose(verbose, "curl \"" + s + "\" > \"" + out + "\"");
             if ( onlyLink || onlyPreLink ){
                 System.out.println("curl \"" + s + "\" > \"" + out + "\"");
             }else{                
@@ -5304,6 +5331,11 @@ cat buffer.log
         }
         overflix_error+="Não foi possível resolver a url "+ url;
         return;
+    }
+    
+    public void overflix_verbose(boolean verbose, String a){
+        if ( verbose )
+            System.out.println(a);
     }
     
     public String getTokenIE(Boolean vToken, String url){
@@ -6089,6 +6121,7 @@ cat buffer.log
     int curl_response_status=0;
     long curl_response_len=0;
     String curl_error=null;
+    static String global_header="";
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
                 Long [] progress_finished_len, Long [] progress_len, Integer progress_number){
         try{                        
@@ -6142,8 +6175,8 @@ cat buffer.log
             
             String init_msg=method + " " + path + " " + http_version + "\r\n";            
             String pre_header="";
-            if ( header.equals("") )
-                header = "\r\n";
+            header+=global_header;
+            header+="\r\n";
             if ( !(init_msg+pre_header+header).contains("\r\nHost: ") )
                 pre_header+="Host: " + host + "\r\n";
             if ( !(init_msg+pre_header+header).contains("\r\nUser-Agent: ") )
@@ -6157,20 +6190,13 @@ cat buffer.log
             
             sb.append(init_msg);
             sb.append(pre_header);
-            sb.append(header);            
+            sb.append(header);  
+            byte [] bytes_sb=sb.toString().getBytes();
             if ( verbose ){
-                os_print.write( ("* Connected " + socket.getInetAddress().toString().replace("/", " - ") + " port " + port).getBytes());
-                os_print.write("\n".getBytes());
-                os_print.write(init_msg.getBytes());
-                os_print.write("\n".getBytes());
-                os_print.write(pre_header.getBytes());
-                os_print.write("\n".getBytes());
-                os_print.write(header.getBytes());
-                os_print.write("\n".getBytes());
-                os_print.write(baos.toByteArray());
-                os_print.write("\n".getBytes());
+                os_print.write( ("* Connected " + socket.getInetAddress().toString().replace("/", " - ") + " port " + port + "\n").getBytes());
+                os_print.write(bytes_sb);
             }
-            os.write(sb.toString().getBytes());                        
+            os.write(bytes_sb);                        
             os.write(baos.toByteArray());            
             os.flush();
             
