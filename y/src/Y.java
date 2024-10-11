@@ -10684,9 +10684,11 @@ cat buffer.log
     
     private String [] tryGetGuidWindows_cacheName=null;
     private String [] tryGetGuidWindows_cacheGuid=null;
-    private String tryGetGuidWindows(String name){
-        if ( !isWindows() )
-            return name;
+    private void tryGetGuidWindows(String prefix, String name){
+        if ( !isWindows() ){
+            System.out.println(prefix+name);
+            return;
+        }
         if ( tryGetGuidWindows_cacheName == null ){
             String [] partes=getMixerGuidWindows().split("\n");
             tryGetGuidWindows_cacheName=new String[partes.length];
@@ -10696,30 +10698,33 @@ cat buffer.log
                 tryGetGuidWindows_cacheGuid[i]=partes[i].split("#")[1];
             }
         }
+        int count=0;
         for ( int i=0;i<tryGetGuidWindows_cacheName.length;i++ ){
             if ( tryGetGuidWindows_cacheName[i].equals(name) ){
-                name+=" - " + tryGetGuidWindows_cacheGuid[i];
-                break;
+                count++;
+                System.out.println(prefix+name+" - "+tryGetGuidWindows_cacheGuid[i]);
             }
         }
-        return name;
+        if ( count == 0 )
+            System.out.println(prefix+name);
     }
     
     public void printAllMixer(String name, int countTarget, int countSource){
+        String prefix="";
         if ( !name.startsWith("Port ") ){
-            name=tryGetGuidWindows(name);
             if ( countTarget > 0 && countSource > 0 )
-                System.out.println("ENTRADA/SAIDA - " + name);
+                prefix="ENTRADA/SAIDA - ";
             else{
                 if ( countTarget > 0 ){
-                    System.out.println("ENTRADA - " + name);
+                    prefix="ENTRADA - ";
                 }else{
                     if ( countSource > 0 )
-                        System.out.println("SAIDA - " + name);
+                        prefix="SAIDA - ";
                     else
-                        System.out.println(countTarget + " ENTRADAS - " + countSource + " SAIDAS - " + name);
+                        prefix=countTarget + " ENTRADAS - " + countSource + " SAIDAS - ";
                 }
             }
+            tryGetGuidWindows(prefix, name);
         }
     }
     
@@ -14007,12 +14012,10 @@ class Util{
             String [] partes=s.split("\n");
             String p1=null;
             String p2=null;
-            String p3=null;
             for ( int i=0;i<partes.length;i++ ){
                 if ( partes[i].contains("Render\\") || partes[i].contains("Capture\\") ){
                     p1=null;
                     p2=null;
-                    p3="topo0";
                     continue;
                 }
                 if ( partes[i].contains("{a45c254e-df1c-4efd-8020-67d146a850e0},2 ") ){
@@ -14023,31 +14026,16 @@ class Util{
                     p2=partes[i].split(":")[1].trim();
                     continue;
                 }
-                if ( partes[i].contains("{6994ad04-93ef-11d0-a3cc-00a0c9223196}") && partes[i].contains("topo") ){
-                    p3=partes[i].split("\\\\")[1].trim();
-                    continue;
-                }
                 if ( partes[i].contains("MMDEVAPI#{0.0.0.00000000}") || partes[i].contains("MMDEVAPI#{0.0.1.00000000}") ){
                     if ( p1 == null || p2 == null ){
                         p1=null;
                         p2=null;
-                        p3="topo0";
                         continue;
                     }
-                    retorno+=p1 + " (" + p2 + ")#" + p3 + "#" + partes[i].split("#")[2]+"\n";
+                    retorno+=p1 + " (" + p2 + ")#" + partes[i].split("#")[2]+"\n";
                 }
             }
         }
-        // get first topo
-        String [] retornos=retorno.split("\n");
-        retorno="";
-        Arrays.sort(retornos); 
-        String tail="?";
-        for ( int i=0;i<retornos.length;i++ ){            
-            if ( !retornos[i].split("#")[0].equals(tail) )
-                retorno+=retornos[i].split("#")[0]+"#"+retornos[i].split("#")[2]+"\n";
-            tail=retornos[i].split("#")[0];                
-        }        
         return retorno;
     }
     
