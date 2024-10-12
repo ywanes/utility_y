@@ -6597,14 +6597,29 @@ cat buffer.log
         int valor=0;        
         if ( args.length == 1 ){ // stdin
             while ( (line=readLine()) != null ) {
-                try{
-                    valor=Integer.parseInt(line);
-                }catch(Exception ex){
-                    System.out.println("\nErro, valor invalido: "+line);
-                    System.exit(1);
+                String [] partes=line.split(" ");
+                if ( partes.length > 1 ){
+                    for ( int i=0;i<partes.length;i++ ){
+                        if ( partes[i].length() == 0)
+                            continue;
+                        try{
+                            valor=Integer.parseInt(partes[i]);
+                            write1Byte(valor);            
+                        }catch(Exception ex){
+                            System.out.println("\nErro, valor invalido: "+line + ".>>" + partes[i] + "<<");
+                            System.exit(1);
+                        }
+                    }
+                }else{
+                    try{
+                        valor=Integer.parseInt(line);
+                        write1Byte(valor);            
+                    }catch(Exception ex){
+                        System.out.println("\nErro, valor invalido: "+line);
+                        System.exit(1);
+                    }
                 }
-                write1Byte(valor);            
-                write1ByteFlush();//0 cache
+                write1ByteFlush();
             } 
             closeLine();
         }else{ // parametros
