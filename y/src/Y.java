@@ -17438,6 +17438,8 @@ class Texto_longo extends Util{
         "      let b = JSON.parse(a);\n" +
         "      let currentTime = b['currentTime'];\n" +
         "      document.getElementById('video').currentTime = currentTime;      \n" +
+        "      if ( document.getElementById('video').currentTime > (document.getElementById('video').duration-10) )\n" +
+        "        document.getElementById('video').currentTime = 0;      \n" +
         "    }\n" +
         "    a = localStorage.getItem('playlistmovie-v-20241014test-global');\n" +
         "    if ( a != null ){\n" +
