@@ -16943,6 +16943,7 @@ class Texto_longo extends Util{
     public String get_html_virtual_playlistmovie(String id){
         String js_compartilhado="" +
         "<script>\n" +
+        /*
         "function user_click(p){\n" + 
         "  //aa();\n" + 
         "}\n" +
@@ -16956,6 +16957,7 @@ class Texto_longo extends Util{
         "  console.log('user ' + user);\n" + 
         "  data=b['data'];\n" + 
         "}\n" +
+        */
         "</script>\n";
         
         String tail_id="";
@@ -17396,10 +17398,83 @@ class Texto_longo extends Util{
         "\n" +
         "fullScreenButton.addEventListener('click', toggleFullScreen);\n" + 
         "document.getElementById('volume').addEventListener('click', volumeclick);\n" + 
-        "function f_onload(){\n" + 
+        "var cache_digest=null;\n" +
+        "function getDigest(){\n" +
+        "  if ( cache_digest != null )\n" +
+        "    return cache_digest;\n" +
+        "  let digest = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];\n" +
+        "  let p_digest = 0;\n" +
+        "  function updateDigest(a){\n" +
+        "    for ( var i=0;i<a.length;i++ ){\n" +
+        "      digest[p_digest]=(digest[p_digest]+a.charCodeAt(i))%52;\n" +
+        "      p_digest++;\n" +
+        "      if ( p_digest >= digest.length )\n" +
+        "        p_digest=0;\n" +
+        "    }\n" +
+        "  }\n" +
+        "  var a = video.src;\n" +
+        "  for ( var i=0;i<digest.length;i++ ){\n" +
+        "    if ( digest[i] >= 26 )\n" +
+        "      a+=String.fromCharCode(digest[i]-26+97);\n" +
+        "    else\n" +
+        "      a+=String.fromCharCode(digest[i]+65);\n" +
+        "  }\n" +
+        "  cache_digest = a;\n" +
+        "  return cache_digest;\n" +
+        "}\n" +
+        "function save_station(){\n" +
+        "  if ( getDigest() != null ){\n" +
+        "    let digest = getDigest();\n" +
+        "    let currentTime=document.getElementById('video').currentTime;\n" +
+        "    let volume=document.getElementById('video').volume;\n" +
+        "    localStorage.setItem('playlistmovie-v-20241014test-'+digest,JSON.stringify({'currentTime': currentTime}));\n" +
+        "    localStorage.setItem('playlistmovie-v-20241014test-global',JSON.stringify({'volume': volume}));\n" +
+        "  }\n" +
+        "}\n" +
+        "function load_station(){\n" +
+        "  if ( getDigest() != null ){\n" +
+        "    let a = localStorage.getItem('playlistmovie-v-20241014test-'+getDigest());\n" +
+        "    if ( a != null ){\n" +
+        "      let b = JSON.parse(a);\n" +
+        "      let currentTime = b['currentTime'];\n" +
+        "      document.getElementById('video').currentTime = currentTime;      \n" +
+        "    }\n" +
+        "    a = localStorage.getItem('playlistmovie-v-20241014test-global');\n" +
+        "    if ( a != null ){\n" +
+        "      let b = JSON.parse(a);\n" +
+        "      let volume = b['volume'];\n" +
+        "      setvolume(volume);\n" +
+        "    }\n" +
+        "  }\n" +
+        "}\n" +
+        "function interval_1000(){\n" +
+        "  save_station();\n" +
+        "}\n" +
+        "function setvolume(volume){\n" +
+        "  let e=document.getElementById('volume');\n" +
+        "  let state1='\\n          <svg data-s=\"1\" viewBox=\"0 0 24 24\">\\n            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\\n            <path d=\"M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07\"></path>\\n          </svg>';\n" +
+        "  let state2='\\n          <svg data-s=\"2\" viewBox=\"0 0 24 24\">\\n            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\\n            </svg>';\n" +
+        "  let state3='\\n          <svg data-s=\"3\" viewBox=\"0 0 24 24\">\\n            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\\n            </svg>';\n" +
+        "  let state4='\\n          <svg data-s=\"4\" viewBox=\"0 0 24 24\">\\n            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\\n            </svg>';\n" +
+        "  let state5='\\n          <svg data-s=\"5\" viewBox=\"0 0 24 24\">\\n            <polygon points=\"11 5 6 9 2 9 2 15 6 15 11 19 11 5\"></polygon>\\n            <line x1=\"23\" y1=\"9\" x2=\"17\" y2=\"15\"></line>\\n            <line x1=\"17\" y1=\"9\" x2=\"23\" y2=\"15\"></line>\\n          </svg>\\n        ';\n" +
+        "  let volume1=1;\n" +
+        "  let volume2=0.6;\n" +
+        "  let volume3=0.4;\n" +
+        "  let volume4=0.2;\n" +
+        "  let volume5=0;  \n" +
+        "  if ( volume == volume2 ){ e.innerHTML=state2;video.volume=volume2;return; }\n" +
+        "  if ( volume == volume3 ){ e.innerHTML=state3;video.volume=volume3;return; }\n" +
+        "  if ( volume == volume4 ){ e.innerHTML=state4;video.volume=volume4;return; }\n" +
+        "  if ( volume == volume5 ){ e.innerHTML=state5;video.volume=volume5;return; }\n" +
+        "  e.innerHTML=state1;\n" +
+        "  video.volume=volume1;\n" +
+        "}\n" +
+        "function f_onload(){\n" +
         "  volumeclick();\n" +
+        "  load_station();\n" +
         "  playPause();\n" +
-        "}\n" +                
+        "}\n" +
+        "setInterval(interval_1000, 1000);\n" +                
         "</script>\n" +
         "\n" +
         "<style>\n" +
