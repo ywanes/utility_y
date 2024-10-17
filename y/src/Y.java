@@ -5124,19 +5124,35 @@ cat buffer.log
             erroFatal("Erro de parametro!");
         String url="https://encontre.tv/pesquisar/?p=" + String.join(" ", args);
         String html=curl_string(url);        
-        String [] partes=regex_matcher("<a href=\"", ">", html, true); 
+        String [] partes=regex_matcher("<div class=\"videoboxGridview\">", "</main>", html, true); 
+        if ( partes.length != 1 )
+            erroFatal("Erro interno!");
+        partes[0]=partes[0].replace("\n","");
+        partes=partes[0].split("<div id=\"collview\">");
         for ( int i=0;i<partes.length;i++ ){
-            if ( !partes[i].contains("title=\"") )
+            if ( !partes[i].contains("<a href=") )
                 continue;
-            if ( partes[i].contains("title=\"Go to your profile\"") || partes[i].contains("title=\"Edit account settings\"") )
-                continue;            
-            String [] subpartes=partes[i].split("\"");
-            if ( subpartes.length != 3 )
-                continue;            
-            if ( subpartes[2].startsWith("Assistir ") )
-                subpartes[2]=subpartes[2].substring("Assistir ".length());
-            System.out.println("y overflix " + subpartes[0] + " - " + subpartes[2]);
-        }        
+            String [] a=regex_matcher("<a href=\"", "</a>", partes[i], true); 
+            String [] b=regex_matcher("<span class=\"capa-info capa-audio\">", "</span>", partes[i], true); 
+            String [] c=regex_matcher("<span class=\"capa-info capa-quali\">", "</span>", partes[i], true); 
+            String [] d=regex_matcher("<span class=\"y\">", "</span>", partes[i], true); 
+            String [] e=regex_matcher("<span class=\"t\">", "</span>", partes[i], true); 
+            if ( a.length >= 2 && b.length >= 1 && c.length >= 1 && d.length >= 1 && e.length >= 1 ){
+                String [] f=a[1].split(("\"") );
+                if ( f.length == 4){
+                    System.out.println("y overflix " + 
+                            f[0] + " - " +
+                            f[3].substring(1) + " - " +
+                            b[0] + " - " +
+                            c[0] + " - " +
+                            d[0] + " - " +
+                            e[0]
+                    );
+                }else
+                    erroFatal("Não foi possivel decodigicar:\n" + partes[i]);
+            }else
+                erroFatal("Não foi possivel decodigicar:\n" + partes[i]);
+        }
     }
     
     multiCurl overflix_multi=null;
