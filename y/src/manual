@@ -565,12 +565,12 @@ Exemplos...
     y regua
     y regua 90
 [y link]
-    y link /opt/original original_linked
-    y link c:\\tmp\\original original_linked
-    y link a b
+    y link "/opt/original" "original_linked"
+    y link "c:\\tmp\\original" "original_linked"
+    y link "" "b"
     obs: original_linked sendo o link criado que aponta para /opt/original
-    internal command windows: mklink /j original_linked c:\\tmp\\original
-    internal command nao windows: ln -s /opt/original original_linked
+    internal command windows: mklink /j "original_linked" "c:\\tmp\\original"
+    internal command nao windows: ln -s "/opt/original" "original_linked"
 [y os]
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]

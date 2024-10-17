@@ -847,7 +847,10 @@ cat buffer.log
                 erroFatal("overflix implementado somente para o windows");            
             try{
                 global_header="cookie: ips4_device_key=66ef5686d84b5bced223d789462e4ded; ips4_member_id=82450; ips4_login_key=addd863af56dcdeb48ef159ceda239ba;\r\n";
-                overflix(args);
+                if ( args[1].equals("p") )
+                    overflix_busca(args);
+                else
+                    overflix(args);
             }catch(Exception e){
                 erroFatal(e);
             }
@@ -5115,6 +5118,27 @@ cat buffer.log
         }
     }
     
+    public void overflix_busca(String [] args){
+        args=sliceParm(2, args);
+        if ( args.length == 0 )
+            erroFatal("Erro de parametro!");
+        String url="https://encontre.tv/pesquisar/?p=" + String.join(" ", args);
+        String html=curl_string(url);        
+        String [] partes=regex_matcher("<a href=\"", ">", html, true); 
+        for ( int i=0;i<partes.length;i++ ){
+            if ( !partes[i].contains("title=\"") )
+                continue;
+            if ( partes[i].contains("title=\"Go to your profile\"") || partes[i].contains("title=\"Edit account settings\"") )
+                continue;            
+            String [] subpartes=partes[i].split("\"");
+            if ( subpartes.length != 3 )
+                continue;            
+            if ( subpartes[2].startsWith("Assistir ") )
+                subpartes[2]=subpartes[2].substring("Assistir ".length());
+            System.out.println("y overflix " + subpartes[0] + " - " + subpartes[2]);
+        }        
+    }
+    
     multiCurl overflix_multi=null;
     public void overflix(String [] args) throws Exception{             
         Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o(args);
@@ -5124,7 +5148,7 @@ cat buffer.log
         Boolean onlyPreLink=(Boolean)objs[3];
         Boolean vToken=(Boolean)objs[4];
         String o_force_out=(String)objs[5];
-        overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out);
+        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out);
         
         if ( overflix_multi != null ){
             overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
@@ -5137,7 +5161,7 @@ cat buffer.log
     
     public String overflix_error="";
     public boolean skiping_show=true;
-    public void overflix_busca(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, String titulo_serie, Boolean cam, String o_force_out) throws Exception{
+    public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, String titulo_serie, Boolean cam, String o_force_out) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
@@ -5167,7 +5191,7 @@ cat buffer.log
             //    cam=true;
             for ( int i=0;i<partes.length;i++ ){
                 overflix_verbose(verbose, "TAG:1");
-                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
             }
             return;
         }
@@ -5196,7 +5220,7 @@ cat buffer.log
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ ){
                 overflix_verbose(verbose, "TAG:3");
-                overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
             }
             // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
@@ -5206,7 +5230,7 @@ cat buffer.log
                 while ( html.contains("load("+next_temporada+")") ){
                     overflix_verbose(verbose, "TAG:4");
                     url=url.split("=")[0]+"="+next_temporada;
-                    overflix_busca(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+                    overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 }
             }
@@ -5223,9 +5247,9 @@ cat buffer.log
                     continue;                
                 overflix_verbose(verbose, "TAG:6");
                 if ( partes[i].startsWith("https://mixdrop.ps") )
-                    overflix_busca(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                 else
-                    overflix_busca(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+                    overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
                 return;
             }
             overflix_error+="Não foi possível resolver a url:: " + url+"\n";
@@ -5255,7 +5279,7 @@ cat buffer.log
         // use mix
         if ( mix != null ){
             overflix_verbose(verbose, "TAG:8");
-            overflix_busca(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
+            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out);
             return;
         }
         
@@ -5334,6 +5358,8 @@ cat buffer.log
     }
     
     public void overflix_verbose(boolean verbose, String a){
+        if ( a.startsWith("TAG") )
+            return;
         if ( verbose )
             System.out.println(a);
     }
@@ -10022,9 +10048,9 @@ cat buffer.log
             
         String command="";
         if ( System.getProperty("user.dir").contains("/") )
-            command = "ln -s " + fonte + " " + new_;
+            command = "ln -s \"" + fonte + "\" \"" + new_ + "\"";
         else
-            command = "cmd /c mklink /j " + new_ + " " + fonte;
+            command = "cmd /c mklink /j \"" + new_ + "\" \"" + fonte + "\"";
         
         try{
             System.out.println("running command " + command);
@@ -19001,7 +19027,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y find . -mtime 0.5 # arquivos recentes a mais de 12 horas\n"
 /* class by manual */                + "    y find . -type f # somente Files    \n"
 /* class by manual */                + "    y find -type f -pre \"y cat\" -pos \"| y grep 'PESQUISA AQUI'\" \n"
-/* class by manual */                + "    obs: -L para considerar SymbolicLink, ex: y find / -L\n"
+/* class by manual */                + "    obs: -L para navegar dentro do SymbolicLink, ex: y find / -L\n"
 /* class by manual */                + "    obs2: -type contem as opcoes f e d\n"
 /* class by manual */                + "[y ls]\n"
 /* class by manual */                + "    y ls\n"
@@ -19028,12 +19054,12 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y regua\n"
 /* class by manual */                + "    y regua 90\n"
 /* class by manual */                + "[y link]\n"
-/* class by manual */                + "    y link /opt/original original_linked\n"
-/* class by manual */                + "    y link c:\\\\tmp\\\\original original_linked\n"
+/* class by manual */                + "    y link \"/opt/original\" \"original_linked\"\n"
+/* class by manual */                + "    y link \"c:\\\\tmp\\\\original\" \"original_linked\"\n"
 /* class by manual */                + "    y link a b\n"
 /* class by manual */                + "    obs: original_linked sendo o link criado que aponta para /opt/original\n"
-/* class by manual */                + "    internal command windows: mklink /j original_linked c:\\\\tmp\\\\original\n"
-/* class by manual */                + "    internal command nao windows: ln -s /opt/original original_linked\n"
+/* class by manual */                + "    internal command windows: mklink /j \"original_linked\" \"c:\\\\tmp\\\\original\"\n"
+/* class by manual */                + "    internal command nao windows: ln -s \"/opt/original\" \"original_linked\"\n"
 /* class by manual */                + "[y os]\n"
 /* class by manual */                + "    y os\n"
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
