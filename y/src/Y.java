@@ -10469,6 +10469,9 @@ cat buffer.log
     }
     
     private String pingMine(String host, int port) throws Exception{
+        // refresh dns jvm
+        // networkaddress.cache.ttl=5
+        // in %JAVA_HOME%/jre/lib/security/java.security
         String retorno=null;
         Socket socket=new Socket();
         socket.connect(new InetSocketAddress(host, port), 1000);
