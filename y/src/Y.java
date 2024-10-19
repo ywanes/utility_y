@@ -847,9 +847,10 @@ cat buffer.log
                 erroFatal("overflix implementado somente para o windows");            
             try{
                 global_header="cookie: ips4_device_key=66ef5686d84b5bced223d789462e4ded; ips4_member_id=82450; ips4_login_key=addd863af56dcdeb48ef159ceda239ba;\r\n";
-                if ( args[1].equals("p") )
+                if ( args[1].equals("p") ){
                     overflix_busca(args);
-                else
+                    superflix_busca(args);
+                }else
                     overflix(args);
             }catch(Exception e){
                 erroFatal(e);
@@ -5118,7 +5119,9 @@ cat buffer.log
         }
     }
     
-    public void overflix_busca(String [] args){
+    public void overflix_busca(String [] args_){
+        String [] args=new String[args_.length];
+        System.arraycopy(args_, 0, args, 0, args_.length);
         args=sliceParm(2, args);
         if ( args.length == 0 )
             erroFatal("Erro de parametro!");
@@ -5153,6 +5156,39 @@ cat buffer.log
             }else
                 erroFatal("Não foi possivel decodigicar:\n" + partes[i]);
         }
+    }
+    
+    public void superflix_busca(String [] args_){
+        String [] args=new String[args_.length];
+        System.arraycopy(args_, 0, args, 0, args_.length);
+        args=sliceParm(2, args);
+        if ( args.length == 0 )
+            erroFatal("Erro de parametro!");
+        String search=String.join(" ", args);
+        String separator="<div class=\"item fbox fbox_space_between fbox_align_center\">";
+        String nenhum="Nenhum filme foi encontrado";
+        String s="";
+        for ( int i=1;i<20;i++ ){
+            String html=curl_string("https://superflixapi.dev/filmes/?search="+search+"&sort=&paged="+i);
+            if ( html.contains(nenhum) || !html.contains(separator) )
+                break;
+            String [] partes=html.split(separator);
+            partes=sliceParm(1, partes);
+            for ( int j=0;j<partes.length;j++ ){
+                String [] partes_=regex_matcher("<a href=\"", "</a>", partes[j], true); 
+                if ( partes_.length == 0 )
+                    erroFatal("Erro interno!");
+                String [] partes_B=partes_[0].split("\""); 
+                if ( partes_B.length == 0 )
+                    erroFatal("Erro interno!");
+                String [] partes_C=partes_[0].split("</span>"); 
+                if ( partes_B.length < 2 )
+                    erroFatal("Erro interno!");                
+                s+="y overflix "+partes_B[0]+" - "+partes_C[1]+"\n";
+            }
+        }
+        if ( !s.equals("") )
+            System.out.print(s);
     }
     
     multiCurl overflix_multi=null;
