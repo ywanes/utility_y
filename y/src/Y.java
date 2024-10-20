@@ -5196,6 +5196,7 @@ cat buffer.log
         String videoid="";
         String h="";
         String disk="";
+        String audio="";
         String _32A="";
         String _32B="";
         String html="";
@@ -5206,6 +5207,9 @@ cat buffer.log
         String tryresolucao="";
         String dir="D:\\ProgramFiles\\filmes\\Novos\\";
         String filme="";
+        // check ffmpeg
+        if ( !isFfmpeg() )
+            erroFatal("Não foi possível encontrar o componente ffempeg.exe");
         
         // get config
         html=curl_string(url);        
@@ -5230,6 +5234,8 @@ cat buffer.log
                         partes=regex_matcher("\"video_url\":\"", "\"", html, true);
                         if ( partes.length > 0 ){
                             h=partes[0].replace("\\/", "/");
+                            if ( !h.startsWith("https://brbeast.com/video/") )
+                                erroFatal("host não implementado ou quebrado: "+h);
                             if ( h.startsWith("https://brbeast.com/video/") ){
                                 html=curl_string(h);        
                                 if ( curl_response_status == 200 ){
@@ -5252,53 +5258,60 @@ cat buffer.log
                                                     continue;
                                                 }
                                             }
-                                            //tryA
-                                            if ( !disk.equals("") && !_32A.equals("") ){                                            
-                                                curl_string("https://gambino10.com/cdn/down/"+disk+"/"+_32A+"/Audio/audio_por_0.html");        
+                                            String [] _32_versions=new String[]{_32A, _32B};
+                                            String [] audios=new String[]{"por", "und", "eng"};
+                                            for ( int i=0;i<_32_versions.length;i++ ){
+                                                for ( int j=0;j<audios.length;j++ ){
+                                                    if ( !id.equals("") )
+                                                        continue;
+                                                    curl_string("https://gambino10.com/cdn/down/"+disk+"/"+_32_versions[i]+"/Audio/audio_" + audios[j] + "_0.html");        
+                                                    if ( curl_response_status == 200 ){
+                                                        id=disk+"/"+_32_versions[i];
+                                                        audio=audios[j];
+                                                    }
+                                                }
+                                            }
+                                            if ( audio.equals("eng") )
+                                                erroFatal("Abortado. Filme somente em inglês.");
+                                            if ( audio.equals("") )
+                                                erroFatal("Erro, audio diferente do implementado... será necessário investigar.");
+                                            String [] videos=new String[]{"720p", "480p", "1080p"};
+                                            for ( int i=0;i<videos.length;i++ ){
+                                                if ( !resolucao.equals("") )
+                                                    continue;
+                                                curl_string("https://gambino10.com/cdn/down/"+id+"/Video/"+videos[i]+"/"+videos[i]+"_000.html");        
                                                 if ( curl_response_status == 200 )
-                                                    id=disk+"/"+_32A;
+                                                    resolucao=videos[i];
+
                                             }
-                                            //tryB
-                                            if ( id.equals("") && !disk.equals("") && !_32B.equals("") ){                                            
-                                                curl_string("https://gambino10.com/cdn/down/"+disk+"/"+_32B+"/Audio/audio_por_0.html");        
-                                                if ( curl_response_status == 200 )
-                                                    id=disk+"/"+_32B;
-                                            }
-                                            if ( !id.equals("") ){
-                                                if ( resolucao.equals("") ){
-                                                    tryresolucao="720p";
-                                                    curl_string("https://gambino10.com/cdn/down/"+id+"/Video/"+tryresolucao+"/"+tryresolucao+"_000.html");        
-                                                    if ( curl_response_status == 200 )
-                                                        resolucao=tryresolucao;
-                                                }
-                                                if ( resolucao.equals("") ){
-                                                    tryresolucao="480p";
-                                                    curl_string("https://gambino10.com/cdn/down/"+id+"/Video/"+tryresolucao+"/"+tryresolucao+"_000.html");        
-                                                    if ( curl_response_status == 200 )
-                                                        resolucao=tryresolucao;
-                                                }
-                                                if ( resolucao.equals("") ){
-                                                    tryresolucao="1080p";
-                                                    curl_string("https://gambino10.com/cdn/down/"+id+"/Video/"+tryresolucao+"/"+tryresolucao+"_000.html");        
-                                                    if ( curl_response_status == 200 )
-                                                        resolucao=tryresolucao;
-                                                }
-                                            }
+                                            superflixapi_not_if(9, resolucao);
                                         }
+                                        superflixapi_not_if(8, resolucao);
                                     }
+                                    superflixapi_not_if(7, resolucao);
                                 }
+                                superflixapi_not_if(6, resolucao);
                             }
+                            superflixapi_not_if(5, resolucao);
                         }                        
+                        superflixapi_not_if(4, resolucao);
                     }
+                    superflixapi_not_if(3, resolucao);
                 }
+                superflixapi_not_if(2, resolucao);
             }
+            superflixapi_not_if(1, resolucao);
         }
         
         if ( !resolucao.equals("") ){
             preparatePath(filme, true, 0);
             System.out.println(id + " - " + resolucao + " - " + titulo);
-        }
-        
+        }        
+    }
+    
+    public void superflixapi_not_if(int n, String resolucao){
+        if (resolucao.equals(""))
+            System.out.println("unknow "+n);
     }
     
     multiCurl overflix_multi=null;
@@ -14213,6 +14226,12 @@ class Util{
         return os(true).equals("Windows");
     }
 
+    public boolean isFfmpeg(){
+        runtimeExec("ffmpeg.exe", null, null, null);
+        return runtimeExecError.startsWith("ffmpeg version");
+    }
+    
+    
     public String getMixerGuidWindows(){
         String retorno="";
         String [] commands=new String[]{"Get-ChildItem -Path \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Render\" -recurse", 
