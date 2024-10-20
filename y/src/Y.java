@@ -5204,6 +5204,8 @@ cat buffer.log
         String titulo="";
         String resolucao="";
         String tryresolucao="";
+        String dir="D:\\ProgramFiles\\filmes\\Novos\\";
+        String filme="";
         
         // get config
         html=curl_string(url);        
@@ -5213,6 +5215,13 @@ cat buffer.log
                 titulo=partes[0];
                 if ( titulo.startsWith("SuperFlix API - ") )
                     titulo=titulo.substring("SuperFlix API - ".length());
+                if ( titulo.lastIndexOf("(") > 0 )
+                    titulo=titulo.substring(0, titulo.lastIndexOf("(")).trim();
+                filme=dir+titulo+".mp4";
+                if ( new File(filme).exists() ){
+                    System.out.println("skip "+filme);
+                    return;
+                }
                 partes=regex_matcher("data-id=", ">", html, true);
                 if ( partes.length > 0 ){
                     videoid=partes[0].substring(1, partes[0].length()-1);
@@ -5286,6 +5295,7 @@ cat buffer.log
         }
         
         if ( !resolucao.equals("") ){
+            preparatePath(filme, true, 0);
             System.out.println(id + " - " + resolucao + " - " + titulo);
         }
         
@@ -18643,7 +18653,6 @@ namespace LoopbackWithMic
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -18709,6 +18718,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "  [y uniq]\n"
 /* class by manual */                + "  [y quebra]\n"
 /* class by manual */                + "  [y seq]\n"
+/* class by manual */                + "  [y tr]\n"
 /* class by manual */                + "  [y add]\n"
 /* class by manual */                + "  [y awk print]\n"
 /* class by manual */                + "  [y dev_null]\n"
@@ -19090,11 +19100,14 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y seq 9 -10\n"
 /* class by manual */                + "    y seq 2022-09-19 2022-11-19\n"
 /* class by manual */                + "    y seq 19/11/2022 19/09/2022\n"
+/* class by manual */                + "[y tr]\n"
+/* class by manual */                + "    echo a a | y tr \"a\" \"bb\"\n"
+/* class by manual */                + "    Obs: no windows, usar \"\"\"\" ao inves de \"\\\"\"\n"
 /* class by manual */                + "[y add]\n"
 /* class by manual */                + "    y add 2022-09-19\n"
 /* class by manual */                + "    y add 19/09/2022\n"
 /* class by manual */                + "[y awk]\n"
-/* class by manual */                + "    cat arquivo | y awk print 1 3 5,6\n"
+/* class by manual */                + "    cat arquivo | y awk print 1 3 \"5,6\"\n"
 /* class by manual */                + "    cat arquivo | y awk print -1\n"
 /* class by manual */                + "    cat arquivo | y awk start AAA end BBB    \n"
 /* class by manual */                + "    cat arquivo | y awk start AAA\n"
@@ -19217,7 +19230,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y link]\n"
 /* class by manual */                + "    y link \"/opt/original\" \"original_linked\"\n"
 /* class by manual */                + "    y link \"c:\\\\tmp\\\\original\" \"original_linked\"\n"
-/* class by manual */                + "    y link a b\n"
+/* class by manual */                + "    y link \"\" \"b\"\n"
 /* class by manual */                + "    obs: original_linked sendo o link criado que aponta para /opt/original\n"
 /* class by manual */                + "    internal command windows: mklink /j \"original_linked\" \"c:\\\\tmp\\\\original\"\n"
 /* class by manual */                + "    internal command nao windows: ln -s \"/opt/original\" \"original_linked\"\n"
