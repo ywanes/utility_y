@@ -850,8 +850,8 @@ cat buffer.log
                 if ( args[1].equals("p") ){
                     overflix_busca(args);
                     superflix_busca(args);
-                }else
-                    overflix(args);
+                }else                    
+                    overflix(args);                
             }catch(Exception e){
                 erroFatal(e);
             }
@@ -5191,6 +5191,106 @@ cat buffer.log
             System.out.print(s);
     }
     
+    public void superflixapi(String url){        
+        // get video id
+        String videoid="";
+        String h="";
+        String disk="";
+        String _32A="";
+        String _32B="";
+        String html="";
+        String [] partes=null;
+        String id="";
+        String titulo="";
+        String resolucao="";
+        String tryresolucao="";
+        
+        // get config
+        html=curl_string(url);        
+        if ( curl_response_status == 200 ){
+            partes=regex_matcher("<title>", "</title>", html, true);
+            if ( partes.length > 0 ){
+                titulo=partes[0];
+                if ( titulo.startsWith("SuperFlix API - ") )
+                    titulo=titulo.substring("SuperFlix API - ".length());
+                partes=regex_matcher("data-id=", ">", html, true);
+                if ( partes.length > 0 ){
+                    videoid=partes[0].substring(1, partes[0].length()-1);
+                    html=curl_string("https://superflixapi.dev/api?action=getPlayer&video_id="+videoid);            
+                    if ( curl_response_status == 200 ){
+                        partes=regex_matcher("\"video_url\":\"", "\"", html, true);
+                        if ( partes.length > 0 ){
+                            h=partes[0].replace("\\/", "/");
+                            if ( h.startsWith("https://brbeast.com/video/") ){
+                                html=curl_string(h);        
+                                if ( curl_response_status == 200 ){
+                                    int p1=html.indexOf("|||");
+                                    if ( p1 > 0 ){
+                                        int p2=html.indexOf("'", p1);
+                                        if ( p2 > 0 ){
+                                            partes=html.substring(p1, p2).split("\\|");
+                                            for ( int i=0;i<partes.length;i++ ){
+                                                if ( disk.equals("") && partes[i].startsWith("disk") ){
+                                                    disk=partes[i];
+                                                    continue;
+                                                }
+                                                if ( _32A.equals("") && partes[i].length() == 32 ){
+                                                    _32A=partes[i];
+                                                    continue;
+                                                }
+                                                if ( _32B.equals("") && partes[i].length() == 32 ){
+                                                    _32B=partes[i];
+                                                    continue;
+                                                }
+                                            }
+                                            //tryA
+                                            if ( !disk.equals("") && !_32A.equals("") ){                                            
+                                                curl_string("https://gambino10.com/cdn/down/"+disk+"/"+_32A+"/Audio/audio_por_0.html");        
+                                                if ( curl_response_status == 200 )
+                                                    id=disk+"/"+_32A;
+                                            }
+                                            //tryB
+                                            if ( id.equals("") && !disk.equals("") && !_32B.equals("") ){                                            
+                                                curl_string("https://gambino10.com/cdn/down/"+disk+"/"+_32B+"/Audio/audio_por_0.html");        
+                                                if ( curl_response_status == 200 )
+                                                    id=disk+"/"+_32B;
+                                            }
+                                            if ( !id.equals("") ){
+                                                if ( resolucao.equals("") ){
+                                                    tryresolucao="720p";
+                                                    curl_string("https://gambino10.com/cdn/down/"+id+"/Video/"+tryresolucao+"/"+tryresolucao+"_000.html");        
+                                                    if ( curl_response_status == 200 )
+                                                        resolucao=tryresolucao;
+                                                }
+                                                if ( resolucao.equals("") ){
+                                                    tryresolucao="480p";
+                                                    curl_string("https://gambino10.com/cdn/down/"+id+"/Video/"+tryresolucao+"/"+tryresolucao+"_000.html");        
+                                                    if ( curl_response_status == 200 )
+                                                        resolucao=tryresolucao;
+                                                }
+                                                if ( resolucao.equals("") ){
+                                                    tryresolucao="1080p";
+                                                    curl_string("https://gambino10.com/cdn/down/"+id+"/Video/"+tryresolucao+"/"+tryresolucao+"_000.html");        
+                                                    if ( curl_response_status == 200 )
+                                                        resolucao=tryresolucao;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }                        
+                    }
+                }
+            }
+        }
+        
+        if ( !resolucao.equals("") ){
+            System.out.println(id + " - " + resolucao + " - " + titulo);
+        }
+        
+    }
+    
     multiCurl overflix_multi=null;
     public void overflix(String [] args) throws Exception{             
         Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o(args);
@@ -5200,6 +5300,12 @@ cat buffer.log
         Boolean onlyPreLink=(Boolean)objs[3];
         Boolean vToken=(Boolean)objs[4];
         String o_force_out=(String)objs[5];
+        
+        if ( url.startsWith("https://superflixapi.dev/filme/") ){
+            superflixapi(url);
+            return;
+        }
+        
         overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out);
         
         if ( overflix_multi != null ){
