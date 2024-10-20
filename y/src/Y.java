@@ -5125,11 +5125,11 @@ cat buffer.log
         args=sliceParm(2, args);
         if ( args.length == 0 )
             erroFatal("Erro de parametro!");
-        String url="https://encontre.tv/pesquisar/?p=" + String.join(" ", args);
+        String url="https://encontre.tv/pesquisar/?p=" + String.join("+", args);
         String html=curl_string(url);        
         String [] partes=regex_matcher("<div class=\"videoboxGridview\">", "</main>", html, true); 
         if ( partes.length != 1 )
-            erroFatal("Erro interno!");
+            return;
         partes[0]=partes[0].replace("\n","");
         partes=partes[0].split("<div id=\"collview\">");
         for ( int i=0;i<partes.length;i++ ){
@@ -5164,7 +5164,7 @@ cat buffer.log
         args=sliceParm(2, args);
         if ( args.length == 0 )
             erroFatal("Erro de parametro!");
-        String search=String.join(" ", args);
+        String search=String.join("+", args);
         String separator="<div class=\"item fbox fbox_space_between fbox_align_center\">";
         String nenhum="Nenhum filme foi encontrado";
         String s="";
@@ -5177,13 +5177,13 @@ cat buffer.log
             for ( int j=0;j<partes.length;j++ ){
                 String [] partes_=regex_matcher("<a href=\"", "</a>", partes[j], true); 
                 if ( partes_.length == 0 )
-                    erroFatal("Erro interno!");
+                    erroFatal("Erro interno 1!" + partes[j]);
                 String [] partes_B=partes_[0].split("\""); 
                 if ( partes_B.length == 0 )
-                    erroFatal("Erro interno!");
+                    erroFatal("Erro interno 2!"+partes[j]);
                 String [] partes_C=partes_[0].split("</span>"); 
                 if ( partes_B.length < 2 )
-                    erroFatal("Erro interno!");                
+                    erroFatal("Erro interno 3!"+partes[j]);                
                 s+="y overflix "+partes_B[0]+" - "+partes_C[1]+"\n";
             }
         }
