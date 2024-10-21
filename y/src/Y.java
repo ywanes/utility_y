@@ -1462,20 +1462,21 @@ cat buffer.log
         }
         if ( args[0].equals("httpServer"))
         {
-            Object [] parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg=get_parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg(args);
-            if ( parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg == null )
+            Object [] parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg=get_parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg(args);
+            if ( parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg == null )
                 erroFatal("Erro de parametros!");
-            String mode=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[0];
-            String host=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[1];
-            Integer port=(Integer)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[2];
-            String titulo_url=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[3];
-            String titulo=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[4];
-            String dir=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[5];
-            String endsWiths=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[6];
-            String ips_banidos=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[7];
-            String log_ips=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[8];
-            String cfg=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg[9];
-            new HttpServer(mode, host, port, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, cfg);
+            String mode=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[0];
+            String host=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[1];
+            Integer port=(Integer)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[2];
+            String titulo_url=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[3];
+            String titulo=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[4];
+            String dir=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[5];
+            String endsWiths=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[6];
+            String ips_banidos=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[7];
+            String log_ips=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[8];
+            Boolean noLogLocal=(Boolean)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[9];
+            String cfg=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[10];
+            new HttpServer(mode, host, port, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg);
             return;
         }
         
@@ -8614,7 +8615,7 @@ cat buffer.log
     
     //REMOVED_GRAAL_END    
     private void serverRouter(String[] args) {
-        Object [] objs = get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor(args);
+        Object [] objs = get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor_noLogLocal(args);
         if ( objs == null ){
             comando_invalido(args);
             System.exit(0);
@@ -8628,9 +8629,10 @@ cat buffer.log
         String ips_banidos=(String)objs[6];
         ArrayList<String> decodes=(ArrayList<String>)objs[7];
         Integer xor=(Integer)objs[8];
+        Boolean noLogLocal=(Boolean)objs[9];
         
         System.out.println("ips_banidos: " + ips_banidos);
-        new Ponte().serverRouter(host0, port0, host1, port1, typeShow, log, ips_banidos, decodes, xor);
+        new Ponte().serverRouter(host0, port0, host1, port1, typeShow, log, noLogLocal, ips_banidos, decodes, xor);
     }
 
     ArrayList<String> xlsxToCSV_nomes=null;
@@ -8999,7 +9001,7 @@ cat buffer.log
         }
     }
 
-    private Object [] get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor(String [] args){        
+    private Object [] get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor_noLogLocal(String [] args){        
         String host0=null;
         int port0=-1;
         String host1=null;
@@ -9009,10 +9011,16 @@ cat buffer.log
         String ipsBanidos=null;
         ArrayList<String> decodes = new ArrayList<String>();
         Integer xor=null;
+        Boolean noLogLocal=false;
         
         args=sliceParm(1, args);
         
         while(true){
+            if ( args.length > 0 && !noLogLocal && args[0].equals("-noLogLocal") ){
+                args=sliceParm(1, args);
+                noLogLocal=true;
+                continue;
+            }
             if ( args.length > 1 && log == null && args[0].equals("-log_ips") ){
                 log=args[1];
                 args=sliceParm(2, args);
@@ -9067,7 +9075,7 @@ cat buffer.log
             typeShow="";
         if ( ipsBanidos == null )
             ipsBanidos="";
-        return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos, decodes, xor};
+        return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos, decodes, xor, noLogLocal};
     }        
     
     private Object [] get_parms_msg_lang_list_copy(String [] args){        
@@ -9540,7 +9548,7 @@ cat buffer.log
         return new Object []{host, port, tray};
     }
            
-    private Object [] get_parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_cfg(String [] args){
+    private Object [] get_parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg(String [] args){
         String mode=null;
         String host="127.0.0.1";
         Integer port=8888;
@@ -9550,10 +9558,16 @@ cat buffer.log
         String endsWiths="";
         String ipsBanidos="";
         String log_ips=null;
+        Boolean noLogLocal=false;
         String cfg=null;
                 
         args=sliceParm(1,args);
         while(args.length > 0){
+            if ( args[0].equals("-noLogLocal") ){
+                args=sliceParm(1,args);
+                noLogLocal=true;
+                continue;
+            }
             if ( args[0].equals("-mode") ){
                 args=sliceParm(1,args);
                 mode=args[0];
@@ -9620,7 +9634,7 @@ cat buffer.log
         }
         if ( mode != null && mode.equals("playlistserver") && cfg == null )
             erroFatal("Erro de parametros, mode playlistserver exige valor de cfg");
-        return new Object[]{mode, host, port, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, cfg};
+        return new Object[]{mode, host, port, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg};
     }    
 
 
@@ -14479,7 +14493,7 @@ class Util{
     
     private static int identify_log=0; // 1 -> File, 2 -> POST    
     private static FileWriter cache_log=null;    
-    public static void log_serverRouter(String log, String ip_origem, boolean banido){
+    public static void log_serverRouter(String log, Boolean noLogLocal, String ip_origem, boolean banido){
         String tag_ip=" ip: ";
         if ( banido )
             tag_ip=" ip BANIDO: ";
@@ -14497,11 +14511,13 @@ class Util{
         }
         if ( identify_log == 1 ){
             try{
-                cache_log.write(date_(null, null, null));
-                cache_log.write(tag_ip);
-                cache_log.write(ip_origem);
-                cache_log.write("\n");
-                cache_log.flush();
+                if ( !noLogLocal || !ip_origem.contains(":0:0:0:") ){
+                    cache_log.write(date_(null, null, null));
+                    cache_log.write(tag_ip);
+                    cache_log.write(ip_origem);
+                    cache_log.write("\n");
+                    cache_log.flush();
+                }
             }catch(Exception e){
                 System.out.println(e.toString());
                 erroFatal(56);
@@ -15298,7 +15314,7 @@ class Ponte extends Util{
     public static boolean displayVolta=false;
     public static boolean displaySimple=false;
 
-    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log, String ips_banidos, ArrayList<String> decodes, Integer xor){
+    public void serverRouter(final String host0,final int port0,final String host1,final  int port1,final String typeShow, String log, Boolean noLogLocal, String ips_banidos, ArrayList<String> decodes, Integer xor){
         Ambiente ambiente=null;
         try{
             ambiente=new Ambiente(host0,port0);
@@ -15320,7 +15336,7 @@ class Ponte extends Util{
                 final String ip_origem = get_ip_origem_by_socket(credencialSocket);
                 boolean is_ip_banido = ip_banido(ips_banidos, ip_origem);
                 if ( log != null )
-                    log_serverRouter(log, ip_origem, is_ip_banido);
+                    log_serverRouter(log, noLogLocal, ip_origem, is_ip_banido);
                 if ( is_ip_banido ){
                     System.out.println("Conexao de origem BANIDO: " + ip_origem + ", data:" + (new Date()));
                     continue;
@@ -18168,8 +18184,9 @@ namespace LoopbackWithMic
 /* class HttpServer */ class HttpServer extends Util{
 /* class HttpServer */     String mode, host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log_ips, cfg;
 /* class HttpServer */     int port;
+/* class HttpServer */     Boolean noLogLocal=false;
 /* class HttpServer */     Socket socket = null;
-/* class HttpServer */     public HttpServer(String mode, String host, Integer port, String titulo_url, String titulo, String dir, String endsWiths, String ips_banidos, String log_ips, String cfg){
+/* class HttpServer */     public HttpServer(String mode, String host, Integer port, String titulo_url, String titulo, String dir, String endsWiths, String ips_banidos, String log_ips, Boolean noLogLocal, String cfg){
 /* class HttpServer */         this.mode = mode;
 /* class HttpServer */         this.host = host;
 /* class HttpServer */         this.port = port;
@@ -18179,6 +18196,7 @@ namespace LoopbackWithMic
 /* class HttpServer */         this.endsWiths = endsWiths;
 /* class HttpServer */         this.ips_banidos = ips_banidos;
 /* class HttpServer */         this.log_ips = log_ips;
+/* class HttpServer */         this.noLogLocal = noLogLocal;
 /* class HttpServer */         this.cfg = cfg;
 /* class HttpServer */         try {
 /* class HttpServer */             serve();
@@ -18212,7 +18230,7 @@ namespace LoopbackWithMic
 /* class HttpServer */                 ip_origem = get_ip_origem_by_socket(socket);
 /* class HttpServer */                 boolean is_ip_banido = ip_banido(ips_banidos, ip_origem);
 /* class HttpServer */                 if ( log_ips != null )
-/* class HttpServer */                     log_serverRouter(log_ips, ip_origem, is_ip_banido);
+/* class HttpServer */                     log_serverRouter(log_ips, noLogLocal, ip_origem, is_ip_banido);
 /* class HttpServer */                 if ( is_ip_banido ){
 /* class HttpServer */                     System.out.println("Conexao de origem BANIDO: " + ip_origem + ", data:" + (new Date()));
 /* class HttpServer */                     continue;
@@ -18660,6 +18678,8 @@ namespace LoopbackWithMic
 /* class Diff  */ private List<Diff_Change> buildRevision(Diff_PathNode actualPath, List<T> orig, List<T> rev) { Objects.requireNonNull(actualPath, "path is null"); Objects.requireNonNull(orig, "original sequence is null"); Objects.requireNonNull(rev, "revised sequence is null"); Diff_PathNode path = actualPath; List<Diff_Change> changes = new ArrayList<>(); if (path.isSnake()) { path = path.prev; } while (path != null && path.prev != null && path.prev.j >= 0) { if (path.isSnake()) { throw new IllegalStateException("bad diffpath: found snake when looking for diff"); } int i = path.i; int j = path.j; path = path.prev; int ianchor = path.i; int janchor = path.j; if (ianchor == i && janchor != j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_INSERT, ianchor, i, janchor, j)); } else if (ianchor != i && janchor == j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_DELETE, ianchor, i, janchor, j)); } else { changes.add(new Diff_Change(Diff_DiffRow.TAG_CHANGE, ianchor, i, janchor, j)); } if (path.isSnake()) { path = path.prev; } } return changes; } } class Diff_PathNode { public final int i; public final int j; public final Diff_PathNode prev; public final boolean snake; public final boolean bootstrap; public Diff_PathNode(int i, int j, boolean snake, boolean bootstrap, Diff_PathNode prev) { this.i = i; this.j = j; this.bootstrap = bootstrap; if (snake) { this.prev = prev; } else { this.prev = prev == null ? null : prev.previousSnake(); } this.snake = snake; } public boolean isSnake() { return snake; } public boolean isBootstrap() { return bootstrap; } 
 /* class Diff  */ public final Diff_PathNode previousSnake() { if (isBootstrap()) { return null; } if (!isSnake() && prev != null) { return prev.previousSnake(); } return this; } public String toString() { StringBuilder buf = new StringBuilder("["); Diff_PathNode node = this; while (node != null) { buf.append("("); buf.append(Integer.toString(node.i)); buf.append(","); buf.append(Integer.toString(node.j)); buf.append(")"); node = node.prev; } buf.append("]"); return buf.toString(); } } class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public Diff_Patch() { this(10); } public Diff_Patch(int estimatedPatchSize) { deltas = new ArrayList<>(estimatedPatchSize); } public List<T> applyTo(List<T> target) throws Exception { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.applyTo(result); } return result; } public List<T> restore(List<T> target) { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.restore(result); } return result; } public void addDelta(Diff_AbstractDelta<T> delta) { deltas.add(delta); } public List<Diff_AbstractDelta<T>> getDeltas() { Collections.sort(deltas, java.util.Comparator.comparing(d -> d.getSource().getPosition())); return deltas; } public String toString() { return "Patch{" + "deltas=" + deltas + '}'; } public static <T> Diff_Patch<T> generate(List<T> original, List<T> revised) throws Exception { Diff_MyersDiff m=new Diff_MyersDiff<>(); List<Diff_Change> changes=m.computeDiff(original, revised); 
 /* class Diff  */ Diff_Patch<T> patch = new Diff_Patch<>(changes.size()); for (Diff_Change change : changes) { Diff_Chunk<T> orgChunk = new Diff_Chunk<>(change.startOriginal, new ArrayList<>(original.subList(change.startOriginal, change.endOriginal))); Diff_Chunk<T> revChunk = new Diff_Chunk<>(change.startRevised, new ArrayList<>(revised.subList(change.startRevised, change.endRevised))); switch (change.deltaType) { case Diff_DiffRow.TAG_DELETE: patch.addDelta(new Diff_DeleteDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_INSERT: patch.addDelta(new Diff_InsertDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_CHANGE: patch.addDelta(new Diff_ChangeDelta<>(orgChunk, revChunk)); break; } } return patch; } } 
+
+
 
 
 
@@ -19176,6 +19196,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlyReceive\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showSimple\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt\n"
+/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt -noLogLocal\n"
 /* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090\n"
 /* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 show\n"
 /* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlySend\n"
@@ -19194,6 +19215,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
 /* class by manual */                + "    y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
+/* class by manual */                + "    y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt -noLogLocal\n"
 /* class by manual */                + "    y -mode playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
 /* class by manual */                + "    y -mode playlistserver 192.168.0.100 8888 -cfg d:/ProgramFiles/playlistserver.cfg\n"
 /* class by manual */                + "    windows:\n"
@@ -19491,6 +19513,8 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

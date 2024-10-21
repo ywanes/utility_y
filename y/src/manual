@@ -498,6 +498,7 @@ Exemplos...
     y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlyReceive
     y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showSimple
     y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt -noLogLocal
     y serverRouter 127.0.0.1 8080 127.0.0.1 9090
     y serverRouter 127.0.0.1 8080 127.0.0.1 9090 show
     y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlySend
@@ -516,6 +517,7 @@ Exemplos...
 [y httpServer]
     y httpServer
     y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt
+    y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt -noLogLocal
     y -mode playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt
     y -mode playlistserver 192.168.0.100 8888 -cfg d:/ProgramFiles/playlistserver.cfg
     windows:
