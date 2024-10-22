@@ -849,7 +849,7 @@ cat buffer.log
                 global_header="cookie: ips4_device_key=66ef5686d84b5bced223d789462e4ded; ips4_member_id=82450; ips4_login_key=addd863af56dcdeb48ef159ceda239ba;\r\n";
                 if ( args[1].equals("p") ){
                     overflix_busca(args);
-                    superflix_busca(args);
+                    superflixapi_busca(args);
                 }else                    
                     overflix(args);                
             }catch(Exception e){
@@ -5159,7 +5159,7 @@ cat buffer.log
         }
     }
     
-    public void superflix_busca(String [] args_){
+    public void superflixapi_busca(String [] args_){
         String [] args=new String[args_.length];
         System.arraycopy(args_, 0, args, 0, args_.length);
         args=sliceParm(2, args);
@@ -5303,11 +5303,86 @@ cat buffer.log
             }
             superflixapi_not_if(1, resolucao);
         }
+        if ( !resolucao.equals("") )
+            superflixapi(id, resolucao, audio, titulo, filme);
+    }
+    
+    public void superflixapi(String id, String resolucao, String audio, String titulo, String filme){        
+        if ( 1 == 1 )
+            erroFatal("em desenvolvimento!");
         
-        if ( !resolucao.equals("") ){
-            preparatePath(filme, true, 0);
-            System.out.println(id + " - " + resolucao + " - " + titulo);
-        }        
+        try{
+            String wav_name=System.getenv("tmp")+"\\"+titulo+".wav";
+            String mp4_name=System.getenv("tmp")+"\\"+titulo+".mp3";
+            
+            FileOutputStream fos_audio=new FileOutputStream(wav_name);
+            FileOutputStream fos_video=new FileOutputStream(mp4_name);
+            String url="";
+            byte [] tmp=null;
+
+            int limit=10000;
+            int count_audio=0;
+            int count_video=0;
+            
+            while(limit-->0){
+                url="https://gambino" + get_gambino_audio_n() + ".com/cdn/down/" + id + "/Audio/audio_" + audio + "_" + count_audio++ + ".html";
+                tmp=curl_bytes(url);
+                if ( curl_response_status == 200 ){
+                    fos_audio.write(tmp);
+                    continue;
+                }
+                if ( curl_response_status == 404 ){
+                    break;
+                }
+                erroFatal("Ocorreu um erro na leitura da url: " + url + " - status:"+curl_response_status);        
+            }
+            fos_audio.flush();
+            fos_audio.close();
+                   
+            limit=10000;
+            while(limit-->0){
+                url="https://gambino" + get_gambino_video_n() + ".com/cdn/down/" + id + "/Video/" + resolucao + "/" + resolucao + "_" + lpad(count_video++ + "", 3, "0") + ".html";
+                tmp=curl_bytes(url);
+                if ( curl_response_status == 200 ){
+                    fos_video.write(tmp);
+                    continue;
+                }
+                if ( curl_response_status == 404 ){
+                    break;
+                }
+                erroFatal("Ocorreu um erro na leitura da url: " + url + " - status:"+curl_response_status);        
+            }
+            fos_video.flush();
+            fos_video.close();
+            
+            runtimeExec("ffmpeg -i \""+mp4_name+"\" -i \""+wav_name+"\" -c:v copy -c:a aac \"" + filme + "\"", null, null, null);
+            new File(mp4_name).delete();
+            new File(wav_name).delete();
+            if ( runtimeExecError.contains("\n[aac ") ){
+                //ok
+            }else{
+                System.out.println("Erro: "+ runtimeExecError);
+            }
+                
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+    
+    public static int gambino_audio_n=13;
+    public int get_gambino_audio_n(){
+        gambino_audio_n++;
+        if ( gambino_audio_n > 13 )
+            gambino_audio_n=1;
+        return gambino_audio_n;
+    }
+    
+    public static int gambino_video_n=13;
+    public int get_gambino_video_n(){
+        gambino_video_n++;
+        if ( gambino_video_n > 13 )
+            gambino_video_n=1;
+        return gambino_video_n;
     }
     
     public void superflixapi_not_if(int n, String resolucao){
