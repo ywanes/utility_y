@@ -5338,11 +5338,14 @@ cat buffer.log
         }
         if ( !overflix_error.equals("")  )
             System.out.println(overflix_error);
+        if ( skiping_hide_count > 0  )
+            System.out.println("skips ocultados:"+skiping_hide_count);
         System.exit(0);
     }
     
     public String overflix_error="";
     public boolean skiping_show=true;
+    public int skiping_hide_count=0;
     public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, String titulo_serie, Boolean cam, String o_force_out) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
@@ -5531,6 +5534,8 @@ cat buffer.log
                 }else{
                     if ( skiping_show )
                         System.out.println("skip " + out);
+                    else
+                        skiping_hide_count++;
                 }
             }            
             return;
