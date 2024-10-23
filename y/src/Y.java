@@ -5308,53 +5308,141 @@ cat buffer.log
     }
     
     public void superflixapi(String id, String resolucao, String audio, String titulo, String filme){        
-        if ( 1 == 1 )
-            erroFatal("em desenvolvimento!");
-        
         try{
             String wav_name=System.getenv("tmp")+"\\"+titulo+".wav";
             String mp4_name=System.getenv("tmp")+"\\"+titulo+".mp3";
             
             FileOutputStream fos_audio=new FileOutputStream(wav_name);
             FileOutputStream fos_video=new FileOutputStream(mp4_name);
-            String url="";
-            byte [] tmp=null;
 
-            int limit=10000;
+            int slots=12;
             int count_audio=0;
+            int count_audio_request=0;
             int count_video=0;
+            int count_video_request=0;
+            Boolean [] running=new Boolean[]{true};
+            Boolean [] finish_audio=new Boolean[]{false};
+            Boolean [] finish_video=new Boolean[]{false};
+            Boolean [] types_audio=new Boolean[slots];
+            byte [][] matrix=new byte[slots][1024*1024*10];
+            Integer [] lens=new Integer[slots];
+            Integer [] seqs=new Integer[slots];
+            String [] commands=new String[slots];
+            Integer [] steps=new Integer[slots]; // 0-nada 1-prontoParaTrabalhar 2-pacotePronto
+            Thread [] workers=new Thread[slots];
             
-            while(limit-->0){
-                url="https://gambino" + get_gambino_audio_n() + ".com/cdn/down/" + id + "/Audio/audio_" + audio + "_" + count_audio++ + ".html";
-                tmp=curl_bytes(url);
-                if ( curl_response_status == 200 ){
-                    fos_audio.write(tmp);
-                    continue;
-                }
-                if ( curl_response_status == 404 ){
-                    break;
-                }
-                erroFatal("Ocorreu um erro na leitura da url: " + url + " - status:"+curl_response_status);        
+            //init
+            for ( int i=0;i<slots;i++ ){
+                lens[i]=0;
+                commands[i]="";
+                steps[i]=0;
+                types_audio[i]=false;
+                seqs[i]=0;
             }
+            
+            //worker
+            for ( int i=0;i<slots;i++ ){
+                final int i_=i;
+                workers[i]=new Thread(){
+                    final int n=i_;                    
+                    final Y y_=new Y();
+                    public void run() {
+                        while(running[0]){
+                            if ( steps[n] == 1 ){
+                                byte [] tmp=y_.curl_bytes(commands[n]);
+                                if ( y_.curl_response_status == 200 ){
+                                    lens[n]=tmp.length;
+                                    System.arraycopy(tmp, 0, matrix[n], 0, tmp.length);
+                                    if ( lens[n] == 0 ){
+                                        System.err.println("warning.. len 0");        
+                                        continue;
+                                    }
+                                    steps[n]=2;
+                                    continue;
+                                }
+                                if ( y_.curl_response_status == 404 ){
+                                    if ( types_audio[n] )
+                                        finish_audio[0]=true;
+                                    else
+                                        finish_video[0]=true;
+                                    lens[n]=0;
+                                    steps[n]=0;
+                                    continue;
+                                }
+                                erroFatal("Ocorreu um erro na leitura da url: " + commands[n] + " - status:"+y_.curl_response_status);        
+                            }
+                            sleepMillis(100);
+                        }
+                    }
+                };
+                workers[i].start();
+            }
+            
+            // manager
+            while(true){
+                // coletando ordens
+                for ( int i=0;i<slots;i++ ){
+                    if ( steps[i] == 2 ){
+                        if ( types_audio[i] && seqs[i] == count_audio_request ){
+                            fos_audio.write(matrix[i], 0, lens[i]);
+                            steps[i]=0;
+                            count_audio_request++;
+                            continue;
+                        }
+                        if ( !types_audio[i] && seqs[i] == count_video_request ){
+                            fos_video.write(matrix[i], 0, lens[i]);
+                            steps[i]=0;
+                            count_video_request++;
+                            continue;
+                        }
+                    }
+                }                
+                // inserindo ordens
+                for ( int i=0;i<slots;i++ ){
+                    // inserindo audio
+                    if ( steps[i] == 0 && !finish_audio[0] ){
+                        commands[i]="https://gambino" + get_gambino_audio_n() + ".com/cdn/down/" + id + "/Audio/audio_" + audio + "_" + count_audio + ".html";
+                        seqs[i]=count_audio;
+                        count_audio++;
+                        types_audio[i]=true;
+                        steps[i]=1;
+                        continue;
+                    }
+                    // inserindo video                    
+                    if ( steps[i] == 0 && !finish_video[0] ){
+                        commands[i]="https://gambino" + get_gambino_video_n() + ".com/cdn/down/" + id + "/Video/" + resolucao + "/" + resolucao + "_" + lpad(count_video + "", 3, "0") + ".html";
+                        seqs[i]=count_video;
+                        count_video++;
+                        types_audio[i]=false;
+                        steps[i]=1;
+                        continue;
+                    }
+                }
+                // check saida
+                if ( finish_audio[0] && finish_video[0] ){
+                    boolean finish_all=true;                    
+                    for ( int i=0;i<slots;i++ ){
+                        if ( steps[i] != 0 ){
+                            finish_all=false;
+                            break;
+                        }
+                    }
+                    if ( finish_all )
+                        break;
+                }
+                // sleep
+                sleepMillis(100);
+            }
+            
+            running[0]=false;
+            for ( int i=0;i<slots;i++ )
+                workers[i].join();
+
             fos_audio.flush();
-            fos_audio.close();
-                   
-            limit=10000;
-            while(limit-->0){
-                url="https://gambino" + get_gambino_video_n() + ".com/cdn/down/" + id + "/Video/" + resolucao + "/" + resolucao + "_" + lpad(count_video++ + "", 3, "0") + ".html";
-                tmp=curl_bytes(url);
-                if ( curl_response_status == 200 ){
-                    fos_video.write(tmp);
-                    continue;
-                }
-                if ( curl_response_status == 404 ){
-                    break;
-                }
-                erroFatal("Ocorreu um erro na leitura da url: " + url + " - status:"+curl_response_status);        
-            }
             fos_video.flush();
+            fos_audio.close();
             fos_video.close();
-            
+
             runtimeExec("ffmpeg -i \""+mp4_name+"\" -i \""+wav_name+"\" -c:v copy -c:a aac \"" + filme + "\"", null, null, null);
             new File(mp4_name).delete();
             new File(wav_name).delete();
@@ -5363,7 +5451,6 @@ cat buffer.log
             }else{
                 System.out.println("Erro: "+ runtimeExecError);
             }
-                
         }catch(Exception e){
             erroFatal(e);
         }
