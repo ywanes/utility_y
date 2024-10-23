@@ -5303,8 +5303,10 @@ cat buffer.log
             }
             superflixapi_not_if(1, resolucao);
         }
-        if ( !resolucao.equals("") )
+        if ( !resolucao.equals("") ){
+            preparatePath(filme, true, 0);
             superflixapi(id, resolucao, audio, titulo, filme);
+        }
     }
     
     public void superflixapi(String id, String resolucao, String audio, String titulo, String filme){        
