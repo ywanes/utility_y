@@ -719,6 +719,7 @@ Exemplos...
     y overflix -v -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
     obs: -vToken => mostra iexplorer.exe e não fecha.
          -o => force out path
+         -tags => verbose profundo
 [y var]
     y var
     Obs: execução por parametro de variavel
