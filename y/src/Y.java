@@ -5592,7 +5592,7 @@ cat buffer.log
         // nivel 2 filme e serie
         partes=regex_matcher("<a href=\"", "\"", html.replace("'","\""), true); 
         if ( partes.length > 0 && !url.contains("/f/") ){            
-            overflix_verbose(verbose, "TAG:5->"+String.join(",", partes));
+            overflix_verbose(verbose, tags, "TAG:5->"+String.join(",", partes));
             String prefix=url.substring(0, url.indexOf("/", 9));
             for ( int i=0;i<partes.length;i++ ){
                 if ( !partes[i].startsWith("/em") && !partes[i].startsWith("https://mixdrop.ps") )
