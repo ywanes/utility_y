@@ -846,7 +846,9 @@ cat buffer.log
             if ( ! isWindows() )
                 erroFatal("overflix implementado somente para o windows");            
             try{
-                global_header="cookie: ips4_device_key=66ef5686d84b5bced223d789462e4ded; ips4_member_id=82450; ips4_login_key=addd863af56dcdeb48ef159ceda239ba;\r\n";
+                global_header="cookie: ips4_device_key=66ef5686d84b5bced223d789462e4ded; ips4_member_id=82450; ips4_login_key=addd863af56dcdeb48ef159ceda239ba;\r\n";                
+                if ( !args[1].toLowerCase().startsWith("http://") &&  !args[1].toLowerCase().startsWith("https://") && !args[1].equals("p") )
+                    args=addParm("p", 1, args);
                 if ( args[1].equals("p") ){
                     overflix_busca(args);
                     superflixapi_busca(args);
