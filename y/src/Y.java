@@ -13479,6 +13479,45 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+    public ArrayList<String> getPivot(String a, String quebralinha){
+        ArrayList<String> retorno=new ArrayList<String>();
+        String [] partes=a.split(quebralinha);
+        String linha_key=partes[0];
+        String linha_value=partes[1];
+        int p_key=0;
+        int p_value=0;
+        String key="";
+        String value="";
+        boolean wording=false;
+        String t=null;
+        while(p_key<linha_key.length() && p_value<linha_value.length()){
+            if ( p_key<linha_key.length() ){
+                t=linha_key.substring(p_key, p_key+1);
+                if ( !t.equals(" ") ){
+                    if ( !wording ){
+                        if ( !value.equals("") )
+                            retorno.add(key.trim()+": "+value.trim());
+                        key="";
+                        value="";
+                    }
+                    wording=true;
+                }else{
+                    wording=false;
+                }
+                key+=t;
+                p_key++;
+            }
+            if ( p_value<linha_value.length() ){
+                t=linha_value.substring(p_value, p_value+1);
+                value+=t;
+                p_value++;
+            }
+        }
+        if ( !value.equals("") )
+            retorno.add(key.trim()+": "+value.trim());
+        return retorno;
+    }
+    
     public String decodeUrl(String a){
         try{    
             return java.net.URLDecoder.decode( a, "UTF-8");
@@ -14291,7 +14330,8 @@ class Util{
                 return osGetTypeFalseCache;        
             boolean show=false;
             String [] commands = new String[]{
-                "cmd /c wmic os get BootDevice,BuildNumber,Caption,OSArchitecture,RegisteredUser,Version",
+                // BootDevice,RegisteredUser, removido!
+                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize",
                 "system_profiler SPSoftwareDataType",
                 "oslevel",
                 "lsb_release -a",
@@ -14314,6 +14354,7 @@ class Util{
                     osGetTypeTrueCache=types[i];
                     return osGetTypeTrueCache;                     
                 }
+                s=tryPivotWindowsAndAjustsValues(s, types[i]);
                 s=tryGetKernellInLinuxByOs(s, types[i]);
                 s=tryGetFirewallInWindowsByOs(s, types[i]);
                 s=tryGetDefaultAudioInWindowsByOs(s, types[i]);
@@ -14325,7 +14366,30 @@ class Util{
         }
         return null;
     }
-        
+
+    public String tryPivotWindowsAndAjustsValues(String s, String type){
+        String retorno="";
+        if ( ! type.equals("Windows") )
+            return s;
+        String [] partes=s.split("\r\n\r\n");
+        ArrayList<String> elementos=new ArrayList<String>();
+        for ( int i=0;i<partes.length;i++ )
+            elementos.addAll(getPivot(partes[i], "\r\n"));
+        for ( int i=0;i<elementos.size();i++ ){
+            String tmp=elementos.get(i);            
+            if ( tmp.startsWith("L3CacheSize: ") ){
+                String value=tmp.substring("L3CacheSize: ".length());
+                tmp="L3CacheSize: "+bytes_to_text(Long.parseLong(value)*1024);
+            }
+            if ( tmp.startsWith("TotalPhysicalMemory: ") ){
+                String value=tmp.substring("TotalPhysicalMemory: ".length());
+                tmp="TotalPhysicalMemory: "+bytes_to_text(Long.parseLong(value));
+            }
+            retorno+=tmp+"\r\n";
+        }
+        return retorno;
+    }
+    
     public String tryGetKernellInLinuxByOs(String s, String type){
         if ( ! type.equals("Linux") )
             return s;
@@ -14351,12 +14415,12 @@ class Util{
         String p1=partes[7].substring(15).trim();
         String p2=partes[7].substring(15).trim();
         if ( !p1.equals("Desligado") && !p1.equals("Ligado") && !p1.equals("ON") && !p1.equals("OFF") )
-            return s+"Firewall:\t?";
+            return s+"Firewall: ?";
         if ( !p2.equals("Desligado") && !p2.equals("Ligado") && !p2.equals("ON") && !p2.equals("OFF") )
-            return s+"Firewall:\t?";
+            return s+"Firewall: ?";
         if ( p1.equals("Ligado") || p1.equals("ON") || p2.equals("Ligado") || p2.equals("ON") )
-            return s+"Firewall:\tOn";
-        return s.replace("\r\n\r\n", "\r\n")+"Firewall:\tOff";
+            return s+"Firewall: On";
+        return s.replace("\r\n\r\n", "\r\n")+"Firewall: Off";
     }
 
     public String tryGetDefaultAudioInWindowsByOs(String s, String type){
@@ -14485,7 +14549,7 @@ class Util{
             "$id0 = [audio]::GetDefault(0)\n" +
             "$id1 = [audio]::GetDefault(1)\n" +
             "write-host \"Default Speaker: $(getFriendlyName $id0)\" \n" +
-            "write-host \"Default Micro  : $(getFriendlyName $id1)\""; 
+            "write-host \"Default Micro: $(getFriendlyName $id1)\""; 
         //taskkill /im iexplore.exe /f
         String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
         if ( s == null || s.equals("") )
