@@ -5221,9 +5221,10 @@ cat buffer.log
             if ( partes.length > 0 ){
                 titulo=partes[0];
                 if ( titulo.startsWith("SuperFlix API - ") )
-                    titulo=titulo.substring("SuperFlix API - ".length());
+                    titulo=titulo.substring("SuperFlix API - ".length()).trim();
                 if ( titulo.lastIndexOf("(") > 0 )
                     titulo=titulo.substring(0, titulo.lastIndexOf("(")).trim();
+                titulo=fixNameFile(titulo.trim());
                 filme=dir+titulo+".mp4";
                 if ( new File(filme).exists() ){
                     System.out.println("skip "+filme);
@@ -5278,7 +5279,7 @@ cat buffer.log
                                                 erroFatal("Abortado. Filme somente em inglês.");
                                             if ( audio.equals("") )
                                                 erroFatal("Erro, audio diferente do implementado... será necessário investigar.");
-                                            String [] videos=new String[]{"720p", "480p", "1080p"};
+                                            String [] videos=new String[]{"720p", "480p", "360p", "1080p"};
                                             for ( int i=0;i<videos.length;i++ ){
                                                 if ( !resolucao.equals("") )
                                                     continue;
@@ -5314,7 +5315,7 @@ cat buffer.log
     public void superflixapi(String id, String resolucao, String audio, String titulo, String filme){        
         try{
             String wav_name=System.getenv("tmp")+"\\"+titulo+".wav";
-            String mp4_name=System.getenv("tmp")+"\\"+titulo+".mp3";
+            String mp4_name=System.getenv("tmp")+"\\"+titulo+".mp3";            
             
             FileOutputStream fos_audio=new FileOutputStream(wav_name);
             FileOutputStream fos_video=new FileOutputStream(mp4_name);
@@ -5558,7 +5559,7 @@ cat buffer.log
                 String [] tmp=null;
                 tmp=regex_matcher("<span class=\"titulo\">", "<", html, true);
                 if ( tmp.length > 0 )
-                    titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").trim();
+                    titulo_serie=fixNameFile(tmp[0].trim());
                 if ( titulo_serie == null ){
                     tmp=regex_matcher("<small>", "</small>", html, true);
                     if ( tmp.length > 0 )
@@ -13494,6 +13495,10 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public String fixNameFile(String a){
+        return a.replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-");
+    }
     
     public ArrayList<String> getPivot(String a, String quebralinha){
         ArrayList<String> retorno=new ArrayList<String>();
