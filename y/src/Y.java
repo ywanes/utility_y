@@ -18965,8 +18965,6 @@ namespace LoopbackWithMic
 
 
 
-
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -19608,6 +19606,13 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y mouse \"m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base baixa - Os Iluminados\n"
 /* class by manual */                + "    y mouse \"m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base alta - Os Temidos\n"
 /* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
+/* class by manual */                + "    mais opcoes:\n"
+/* class by manual */                + "    key w\n"
+/* class by manual */                + "    k w\n"
+/* class by manual */                + "    keypress w\n"
+/* class by manual */                + "    kp w\n"
+/* class by manual */                + "    keyrelease w\n"
+/* class by manual */                + "    kr w\n"
 /* class by manual */                + "[y mixer]\n"
 /* class by manual */                + "    y mixer\n"
 /* class by manual */                + "    obs: lista os mixers\n"
@@ -19692,6 +19697,7 @@ namespace LoopbackWithMic
 /* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
 /* class by manual */                + "    obs: -vToken => mostra iexplorer.exe e nao fecha.\n"
 /* class by manual */                + "         -o => force out path\n"
+/* class by manual */                + "         -tags => verbose profundo\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
 /* class by manual */                + "    Obs: execucao por parametro de variavel\n"
@@ -19788,8 +19794,6 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
 
 
 
