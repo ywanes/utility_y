@@ -635,6 +635,13 @@ Exemplos...
     y mouse "m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base baixa - Os Iluminados
     y mouse "m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base alta - Os Temidos
     obs: bloquear a tela faz o programa sair imediatamente
+    mais opcoes:
+    key w
+    k w
+    keypress w
+    kp w
+    keyrelease w
+    kr w
 [y mixer]
     y mixer
     obs: lista os mixers

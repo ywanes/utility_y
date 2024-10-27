@@ -10800,6 +10800,7 @@ cat buffer.log
     private String pingMine(String host, int port) throws Exception{
         // refresh dns jvm
         // networkaddress.cache.ttl=5
+        // networkaddress.cache.ttl=-1
         // in %JAVA_HOME%/jre/lib/security/java.security
         String retorno=null;
         Socket socket=new Socket();
@@ -11016,8 +11017,19 @@ cat buffer.log
                     }
                     if ( p < args.length && ( args[p].equals("key") || args[p].equals("k") ) && p+2 <= args.length ){
                         System.out.println(args[p] + " " + args[p+1]);
-                        //robotMouseSleep(Float.parseFloat(args[p+1]));
                         robotKey(args[p+1].toCharArray()[0]);
+                        p+=2;
+                        continue;
+                    }
+                    if ( p < args.length && ( args[p].equals("keypress") || args[p].equals("kp") ) && p+2 <= args.length ){
+                        System.out.println(args[p] + " " + args[p+1]);
+                        robotKeyPress(args[p+1].toCharArray()[0]);
+                        p+=2;
+                        continue;
+                    }
+                    if ( p < args.length && ( args[p].equals("keyrelease") || args[p].equals("kr") ) && p+2 <= args.length ){
+                        System.out.println(args[p] + " " + args[p+1]);
+                        robotKeyRelease(args[p+1].toCharArray()[0]);
                         p+=2;
                         continue;
                     }
@@ -14988,9 +15000,18 @@ class Util{
     }   
     
     public void robotKey(char a) throws Exception{
+        robotKeyPress(a);
+        robotKeyRelease(a);
+    }
+    
+    public void robotKeyPress(char a) throws Exception{
         robotGet().keyPress(robotKeyByChar(a));
+    }
+    
+    public void robotKeyRelease(char a) throws Exception{
         robotGet().keyRelease(robotKeyByChar(a));
     }
+    
     
     public int robotKeyByChar(char character){        
         switch (character) {
