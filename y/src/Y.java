@@ -15998,7 +15998,7 @@ class Ponte extends Util{
         ServerSocket serverSocket=null;
         private Ambiente(String host0,int port0) throws Exception {
             // exemplo host0 -> "192.168.0.100"
-            if ( host0 == null || host0.equals("localhost") ){
+            if ( host0 == null ){
                 try{
                     host0=InetAddress.getLocalHost().getHostName();
                 }catch(Exception e){
