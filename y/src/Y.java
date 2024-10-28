@@ -851,7 +851,7 @@ cat buffer.log
                     args=addParm("p", 1, args);
                 if ( args[1].equals("p") ){
                     overflix_busca(args);
-                    superflixapi_busca(args);
+                    //superflixapi_busca(args);
                 }else                    
                     overflix(args);                
             }catch(Exception e){
@@ -5130,7 +5130,7 @@ cat buffer.log
             erroFatal("Erro de parametro!");
         String url="https://encontre.tv/pesquisar/?p=" + String.join("+", args);
         String html=curl_string(url);        
-        String [] partes=regex_matcher("<div class=\"videoboxGridview\">", "</main>", html, true); 
+        String [] partes=regex_matcher("<div class=\'videoboxGridview\'>", "</main>", html, true); 
         if ( partes.length != 1 )
             return;
         partes[0]=partes[0].replace("\n","");
@@ -5138,13 +5138,13 @@ cat buffer.log
         for ( int i=0;i<partes.length;i++ ){
             if ( !partes[i].contains("<a href=") )
                 continue;
-            String [] a=regex_matcher("<a href=\"", "</a>", partes[i], true); 
+            String [] a=regex_matcher("<a href='", "</a>", partes[i], true); 
             String [] b=regex_matcher("<span class=\"capa-info capa-audio\">", "</span>", partes[i], true); 
             String [] c=regex_matcher("<span class=\"capa-info capa-quali\">", "</span>", partes[i], true); 
             String [] d=regex_matcher("<span class=\"y\">", "</span>", partes[i], true); 
             String [] e=regex_matcher("<span class=\"t\">", "</span>", partes[i], true); 
             if ( a.length >= 2 && b.length >= 1 && c.length >= 1 && d.length >= 1 && e.length >= 1 ){
-                String [] f=a[1].split(("\"") );
+                String [] f=a[1].split(("'") );
                 if ( f.length == 4){
                     System.out.println("y overflix " + 
                             f[0] + " - " +
@@ -5155,7 +5155,7 @@ cat buffer.log
                             e[0]
                     );
                 }else
-                    erroFatal("Não foi possivel decodigicar:\n" + partes[i]);
+                    erroFatal("Não foi possivel decodigicar::\n" + partes[i]);
             }else
                 erroFatal("Não foi possivel decodigicar:\n" + partes[i]);
         }
@@ -5359,7 +5359,7 @@ cat buffer.log
                                     lens[n]=tmp.length;
                                     System.arraycopy(tmp, 0, matrix[n], 0, tmp.length);
                                     if ( lens[n] == 0 ){
-                                        System.err.println("warning.. len 0");        
+                                        //System.err.println("warning.. len 0");        
                                         continue;
                                     }
                                     steps[n]=2;
@@ -5383,6 +5383,8 @@ cat buffer.log
                 workers[i].start();
             }
             
+            long count_bytes_audio=0;
+            long count_bytes_video=0;
             // manager
             while(true){
                 // coletando ordens
@@ -5390,12 +5392,16 @@ cat buffer.log
                     if ( steps[i] == 2 ){
                         if ( types_audio[i] && seqs[i] == count_audio_request ){
                             fos_audio.write(matrix[i], 0, lens[i]);
+                            count_bytes_audio+=lens[i];
+                            System.out.print("\rdownloading.. audio.. "+bytes_to_text(count_bytes_audio)+"                ");
                             steps[i]=0;
                             count_audio_request++;
                             continue;
                         }
                         if ( !types_audio[i] && seqs[i] == count_video_request ){
                             fos_video.write(matrix[i], 0, lens[i]);
+                            count_bytes_video+=lens[i];
+                            System.out.print("\rdownloading.. video.. "+bytes_to_text(count_bytes_video)+"                ");
                             steps[i]=0;
                             count_video_request++;
                             continue;
@@ -5451,8 +5457,9 @@ cat buffer.log
             runtimeExec("ffmpeg -i \""+mp4_name+"\" -i \""+wav_name+"\" -c:v copy -c:a aac \"" + filme + "\"", null, null, null);
             new File(mp4_name).delete();
             new File(wav_name).delete();
+            System.out.print("\r                                                                              ");
             if ( runtimeExecError.contains("\n[aac ") ){
-                //ok
+                System.out.println("\nFim");
             }else{
                 System.out.println("Erro: "+ runtimeExecError);
             }
