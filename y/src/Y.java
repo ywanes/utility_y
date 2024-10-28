@@ -850,8 +850,10 @@ cat buffer.log
                 if ( !args[args.length-1].toLowerCase().startsWith("http://") &&  !args[args.length-1].toLowerCase().startsWith("https://") && !args[1].equals("p") )
                     args=addParm("p", 1, args);
                 if ( args[1].equals("p") ){
-                    overflix_busca(args);
-                    //superflixapi_busca(args);
+                    System.out.print(
+                        overflix_busca(args)+
+                        superflixapi_busca(args)
+                    );
                 }else                    
                     overflix(args);                
             }catch(Exception e){
@@ -5122,7 +5124,8 @@ cat buffer.log
         }
     }
     
-    public void overflix_busca(String [] args_){
+    public String overflix_busca(String [] args_){
+        String s="";
         String [] args=new String[args_.length];
         System.arraycopy(args_, 0, args, 0, args_.length);
         args=sliceParm(2, args);
@@ -5132,7 +5135,7 @@ cat buffer.log
         String html=curl_string(url);        
         String [] partes=regex_matcher("<div class=\'videoboxGridview\'>", "</main>", html, true); 
         if ( partes.length != 1 )
-            return;
+            return "";
         partes[0]=partes[0].replace("\n","");
         partes=partes[0].split("<div id=\"collview\">");
         for ( int i=0;i<partes.length;i++ ){
@@ -5146,22 +5149,57 @@ cat buffer.log
             if ( a.length >= 2 && b.length >= 1 && c.length >= 1 && d.length >= 1 && e.length >= 1 ){
                 String [] f=a[1].split(("'") );
                 if ( f.length == 4){
-                    System.out.println("y overflix " + 
-                            f[0] + " - " +
-                            f[3].substring(1) + " - " +
+                    s+="y overflix " + 
+                            lpad(f[0], 92, " ") + " - " +
+                            f[3].substring(1).trim() + " - " +
                             b[0] + " - " +
                             c[0] + " - " +
                             d[0] + " - " +
-                            e[0]
-                    );
+                            e[0] +
+                            "\n";
                 }else
                     erroFatal("Não foi possivel decodigicar::\n" + partes[i]);
             }else
                 erroFatal("Não foi possivel decodigicar:\n" + partes[i]);
         }
+        return s;
     }
     
-    public void superflixapi_busca(String [] args_){
+    public String superflixapi_busca(String [] args_){
+        String s="";
+        String [] args=new String[args_.length];
+        System.arraycopy(args_, 0, args, 0, args_.length);
+        args=sliceParm(2, args);
+        if ( args.length == 0 )
+            erroFatal("Erro de parametro!");
+        String search=String.join("%20", args);
+        String separator="<div class=\"item fbox fbox_space_between fbox_align_center\">";
+        String nenhum="Nenhum filme encontrado";
+        for ( int i=1;i<20;i++ ){
+            String html=curl_string("https://superflixapi.dev/filmes/?search="+search+"&sort=&paged="+i);
+            //System.out.println("i: " + i);
+            if ( html.contains(nenhum) ){
+                break;
+            }
+            String [] partes=regex_matcher("<div id=\"contentList\">", "<div class=\"clearfix\"></div>", html, true); 
+            if ( partes.length < 1 )
+                break;
+            partes=partes[0].split("<div class=\"poster\">");                        
+            for ( int j=0;j<partes.length;j++ ){
+                String [] partes_A=regex_matcher("<span class=\"title\">", "</span>", partes[j], true); 
+                String [] partes_B=regex_matcher("<span class=\"year\">", "</span>", partes[j], true); 
+                String [] partes_C=regex_matcher("href=\"", "\"", partes[j], true); 
+                if ( partes_A.length > 0 && partes_B.length > 0 && partes_C.length > 0 ){
+                    if ( partes_C[0].endsWith("/filme/") )
+                        continue;
+                    s+="y overflix " + lpad(partes_C[0],92," ") + " - " + partes_A[0] + " - " + partes_B[0]+"\n";
+                }
+            }
+        }
+        return s;
+    }
+        
+    public void superflixapi_buscaOld(String [] args_){
         String [] args=new String[args_.length];
         System.arraycopy(args_, 0, args, 0, args_.length);
         args=sliceParm(2, args);
