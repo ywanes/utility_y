@@ -14628,10 +14628,9 @@ class Util{
             "$id1 = [audio]::GetDefault(1)\n" +
             "write-host \"Default Speaker: $(getFriendlyName $id0)\" \n" +
             "write-host \"Default Micro: $(getFriendlyName $id1)\""; 
-        //taskkill /im iexplore.exe /f
         String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
         if ( s == null || s.equals("") )
-            erroFatal(runtimeExecError);
+            return "";//erroFatal(runtimeExecError);
         return s;
     }
     
