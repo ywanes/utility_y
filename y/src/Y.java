@@ -13553,6 +13553,33 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+    public static String getListaCompleta_cache=null;
+    public static long getListaCompleta_last=0;
+    public String getListaCompleta(File a, long nivel){
+        StringBuilder sb=new StringBuilder();
+        long now=epoch(null);
+        if ( nivel == 0 && getListaCompleta_cache != null && getListaCompleta_last > now-3600*24 )
+            return getListaCompleta_cache;
+        if ( a.isFile() ){
+            sb.append(a.getAbsolutePath());
+            sb.append("\n");
+        }else{
+            if ( a.isDirectory() ){
+                sb.append(a.getAbsolutePath());
+                sb.append("\n");
+                File [] f_=a.listFiles();
+                for ( int i=0;i<f_.length;i++ )
+                    sb.append(getListaCompleta(f_[i], nivel+1));
+            }
+        }
+        String retorno=sb.toString();
+        if ( nivel == 0 ){            
+            getListaCompleta_cache=retorno;
+            getListaCompleta_last=now;
+        }
+        return retorno;
+    }
+    
     public String fixNameFile(String a){
         return a.replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-");
     }
@@ -17591,7 +17618,7 @@ class Texto_longo extends Util{
         for ( int i=0;i<f.length;i++ ){
             if ( f[i].getName().endsWith(".bat") || f[i].getName().endsWith(".cfg") )
                 continue;
-            if ( f[i].isFile() )
+            if ( f[i].isFile() && !f[i].getName().startsWith(".") && !f[i].getName().equals("index.html") )
                 countFile++;
             if ( f[i].isDirectory())
                 countDirectory++;
@@ -18736,6 +18763,26 @@ namespace LoopbackWithMic
 /* class HttpServer */                 }) {
 /* class HttpServer */                 if (new File(nav + index).exists()) {
 /* class HttpServer */                     nav += index;
+/* class HttpServer */                     String tmp=lendo_arquivo(nav);
+/* class HttpServer */                     // if [GLOBAL]
+/* class HttpServer */                     if ( tmp.contains("[GLOBAL]") ){
+/* class HttpServer */                         tmp=tmp.replace("[GLOBAL]",getListaCompleta(new File(dir), 0));
+/* class HttpServer */                         sb = new StringBuilder();
+/* class HttpServer */                         for (String line: new String[] {
+/* class HttpServer */                                 "HTTP/1.1 200 OK\r\n",
+/* class HttpServer */                                 "Content-Type: text/html; charset=UTF-8\r\n",
+/* class HttpServer */                                 "Access-Control-Allow-Origin: *\r\n",
+/* class HttpServer */                                 "X-Frame-Options: SAMEORIGIN\r\n",
+/* class HttpServer */                                 "\r\n"
+/* class HttpServer */                             }) {
+/* class HttpServer */                             sb.append(line);
+/* class HttpServer */                             System.out.print("    |---> " + line);
+/* class HttpServer */                         }
+/* class HttpServer */                         System.out.println("    |---> index text global suprimido.");
+/* class HttpServer */                         sb.append(tmp);
+/* class HttpServer */                         output.write(sb.toString().getBytes());
+/* class HttpServer */                         return;
+/* class HttpServer */                     }
 /* class HttpServer */                     break;
 /* class HttpServer */                 }
 /* class HttpServer */             }
@@ -19838,20 +19885,3 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
