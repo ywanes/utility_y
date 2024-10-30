@@ -14436,7 +14436,7 @@ class Util{
             boolean show=false;
             String [] commands = new String[]{
                 // BootDevice,RegisteredUser, removido!
-                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize",
+                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize && wmic path Win32_VideoController get Caption",
                 "system_profiler SPSoftwareDataType",
                 "oslevel",
                 "lsb_release -a",
@@ -14489,6 +14489,18 @@ class Util{
             if ( tmp.startsWith("TotalPhysicalMemory: ") ){
                 String value=tmp.substring("TotalPhysicalMemory: ".length());
                 tmp="TotalPhysicalMemory: "+bytes_to_text(Long.parseLong(value));
+            }
+            if ( tmp.startsWith("AdapterRAM: ") ){ // bugado só mostra até 4giga
+                String value=tmp.substring("AdapterRAM: ".length());
+                tmp="TotalPhysicalMemoryGPU: "+bytes_to_text(Long.parseLong(value));
+            }
+            if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionOS: ")){
+                String value=tmp.substring("Caption: ".length());
+                tmp="CaptionOS: " +value;
+            }
+            if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionGPU: ")){
+                String value=tmp.substring("Caption: ".length());
+                tmp="CaptionGPU: " +value;
             }
             retorno+=tmp+"\r\n";
         }
