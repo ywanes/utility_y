@@ -13572,7 +13572,7 @@ class Util{
                     sb.append(getListaCompleta(f_[i], nivel+1));
             }
         }
-        String retorno=sb.toString();
+        String retorno=sb.toString().replace("\\","/");
         if ( nivel == 0 ){            
             getListaCompleta_cache=retorno;
             getListaCompleta_last=now;
