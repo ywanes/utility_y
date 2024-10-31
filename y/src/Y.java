@@ -5246,7 +5246,7 @@ cat buffer.log
         String titulo="";
         String resolucao="";
         String tryresolucao="";
-        String dir="D:\\ProgramFiles\\filmes\\Novos\\";
+        String dir="D:\\ProgramFiles\\site\\filmes\\";
         String filme="";
         // check ffmpeg
         if ( !isFfmpeg() )
@@ -5704,12 +5704,12 @@ cat buffer.log
                 return;
             }
             
-            String dir="D:\\ProgramFiles\\filmes\\Novos\\";
+            String dir="D:\\ProgramFiles\\site\\filmes\\";
             if ( cam != null && cam )
-                dir="D:\\ProgramFiles\\filmes\\Novos-CAM\\";
+                dir="D:\\ProgramFiles\\site\\filmes-cam\\";
             else{
                 if ( titulo_serie != null )
-                    dir="D:\\ProgramFiles\\filmes\\"+titulo_serie+"\\";
+                    dir="D:\\ProgramFiles\\site\\filmes\\"+titulo_serie+"\\";
             }
             String out=dir+titulo;
             if ( o_force_out != null )
