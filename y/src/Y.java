@@ -5709,7 +5709,7 @@ cat buffer.log
                 dir="D:\\ProgramFiles\\site\\filmes-cam\\";
             else{
                 if ( titulo_serie != null )
-                    dir="D:\\ProgramFiles\\site\\filmes\\"+titulo_serie+"\\";
+                    dir="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
             }
             String out=dir+titulo;
             if ( o_force_out != null )
