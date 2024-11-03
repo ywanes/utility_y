@@ -725,8 +725,16 @@ function load_music(parm, elements){
 				}
 				function create_playlist(){
 				  tmp='';
+				  // wi e si new display
+				  tmp_wi='1400'; 
+				  tmp_si='28';
+				  if ( window.innerHeight/window.innerWidth > 1.5 ){ // celular
+					  tmp_wi='800';
+					  tmp_si='40';				  
+				  }
+				  //window.innerHeight/window.innerWidth > 1.5
 				  for ( let i=0;i<elements.length;i++ )
-				    tmp+="<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: 800px; font-size: 40px;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + src+elements[i] + "\" >" + elements[i] + "</td></tr>\n";
+				    tmp+="<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: " + tmp_wi + "px; font-size: " + tmp_si + "px;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + src+elements[i] + "\" >" + elements[i] + "</td></tr>\n";
 					
 				  document.getElementById('principal').innerHTML=`
 						<style>canvas {position: relative;top: 0%;left: 50%;margin-left: -50vmin;width: 100vmin;height: 100vmin;}</style>
