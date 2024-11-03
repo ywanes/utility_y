@@ -13558,7 +13558,7 @@ class Util{
     public String getListaCompleta(File a, long nivel){
         StringBuilder sb=new StringBuilder();
         long now=epoch(null);
-        if ( nivel == 0 && getListaCompleta_cache != null && getListaCompleta_last > now-3600 )
+        if ( nivel == 0 && getListaCompleta_cache != null && getListaCompleta_last > now-60 )
             return getListaCompleta_cache;
         if ( a.isFile() ){
             sb.append(a.getAbsolutePath());
