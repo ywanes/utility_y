@@ -1466,21 +1466,23 @@ cat buffer.log
         }
         if ( args[0].equals("httpServer"))
         {
-            Object [] parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg=get_parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg(args);
-            if ( parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg == null )
+            Object [] parm_=get_parm_httpserver(args);
+            if ( parm_ == null )
                 erroFatal("Erro de parametros!");
-            String mode=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[0];
-            String host=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[1];
-            Integer port=(Integer)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[2];
-            String titulo_url=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[3];
-            String titulo=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[4];
-            String dir=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[5];
-            String endsWiths=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[6];
-            String ips_banidos=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[7];
-            String log_ips=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[8];
-            Boolean noLogLocal=(Boolean)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[9];
-            String cfg=(String)parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg[10];
-            new HttpServer(mode, host, port, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg);
+            String mode=(String)parm_[0];
+            String host=(String)parm_[1];
+            Integer port=(Integer)parm_[2];
+            String titulo_url=(String)parm_[3];
+            String titulo=(String)parm_[4];
+            String dir=(String)parm_[5];
+            String endsWiths=(String)parm_[6];
+            String ips_banidos=(String)parm_[7];
+            String log_ips=(String)parm_[8];
+            Boolean noLogLocal=(Boolean)parm_[9];
+            String cfg=(String)parm_[10];
+            String redisDir=(String)parm_[11];
+            Long redisSeconds=(Long)parm_[12];
+            new HttpServer(mode, host, port, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds);
             return;
         }
         
@@ -5608,7 +5610,7 @@ cat buffer.log
                 if ( titulo_serie == null ){
                     tmp=regex_matcher("<small>", "</small>", html, true);
                     if ( tmp.length > 0 )
-                        titulo_serie=tmp[0].replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").trim();
+                        titulo_serie=fixNameFile(tmp[0]);
                 }
                 if ( titulo_serie.contains("\n") ){
                     overflix_error+="nao foi possivel pegar o titulo serie de " + url + ":\n" + html+"\n";
@@ -9779,7 +9781,7 @@ cat buffer.log
         return new Object []{host, port, tray};
     }
            
-    private Object [] get_parm_mode_host_port_tituloUrl_titulo_dir_endsWiths_ipsBanidos_logIps_noLogLocal_cfg(String [] args){
+    private Object [] get_parm_httpserver(String [] args){
         String mode=null;
         String host="127.0.0.1";
         Integer port=8888;
@@ -9791,6 +9793,8 @@ cat buffer.log
         String log_ips=null;
         Boolean noLogLocal=false;
         String cfg=null;
+        String redisDir=null;
+        Long redisSeconds=null;
                 
         args=sliceParm(1,args);
         while(args.length > 0){
@@ -9837,6 +9841,18 @@ cat buffer.log
                 args=sliceParm(1,args);
                 continue;
             }
+            if ( args[0].equals("-redisDir") ){
+                args=sliceParm(1,args);
+                redisDir=args[0].trim();
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-redisSeconds") ){
+                args=sliceParm(1,args);
+                redisSeconds=Long.parseLong(args[0]);
+                args=sliceParm(1,args);
+                continue;
+            }
             if ( args[0].equals("-endsWiths") ){
                 args=sliceParm(1,args);
                 endsWiths=args[0];
@@ -9865,9 +9881,10 @@ cat buffer.log
         }
         if ( mode != null && mode.equals("playlistserver") && cfg == null )
             erroFatal("Erro de parametros, mode playlistserver exige valor de cfg");
-        return new Object[]{mode, host, port, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg};
-    }    
-
+        if ( redisDir == null && redisSeconds != null )
+            erroFatal("Erro de parametros, não é possível usar o parametro redisSeconds sem usar o redisDir");
+        return new Object[]{mode, host, port, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds};
+    }
 
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
         String path=null;
@@ -13539,9 +13556,134 @@ class grammarsWhere extends Util{
     }
 }
 
+class Redis extends Util{
+    File f_redis=null;
+    String [] path=null;
+    String sep="\\";
+    Long redisSeconds=60L;
+    Thread t=null;
+    ArrayList<String> del_list=new ArrayList<String>();
+    public Redis(String redisDir, Long redisSeconds){        
+        if ( redisDir != null && !redisDir.equals("") ){
+            // sync in file Redis
+            this.redisSeconds=redisSeconds;
+            f_redis=new File(redisDir);
+            if ( !f_redis.exists() || !f_redis.isDirectory() )
+                erroFatal("Esse caminho não existe ou não é um diretório: " + redisDir);
+            File [] files=f_redis.listFiles();
+            for(int i=0;i<files.length;i++){
+                if ( !files[i].isFile() )
+                    erroFatal("Esse, esse objeto não é um arquivo: " + redisDir);                        
+                String key=files[i].getName();
+                String value=lendo_arquivo(files[i].getAbsolutePath());
+                redis_map[0].put(key, value);
+                redis_file[0].put(key, value);
+            }
+            if ( f_redis.getAbsolutePath().contains("/") )
+                sep="/";
+            path=new String[]{f_redis.getAbsolutePath()+sep};
+            t=new Thread(){
+                public void run(){
+                    final long _redisSeconds=redisSeconds;
+                    try{
+                        while(true){
+                            while(del_list.size()>0){
+                                if ( new File(path[0]+del_list.get(0)).exists() )
+                                    new File(path[0]+del_list.get(0)).delete();
+                                del_list.remove(0);
+                            }
+                            try{Thread.sleep(_redisSeconds);}catch(Exception e){} 
+                            Object [] objs=redis_map[0].keySet().toArray();
+                            for(int i=0;i<objs.length;i++){
+                                String key=(String)objs[i];
+                                String value=null;
+                                if ( !redis_file[0].containsKey(key) ){
+                                    value=(String)redis_map[0].get(key);
+                                }else{
+                                    value=(String)redis_map[0].get(key);
+                                    if ( !value.equals( (String)redis_file[0].get(key) ) )
+                                        redis_file[0].put(key, value);
+                                    else
+                                        value=null;
+                                }
+                                if ( value != null ){
+                                    redis_file[0].put(key, value);
+                                    BufferedWriter out = new BufferedWriter(new FileWriter(new File(path[0]+key), false));
+                                    out.write(value);
+                                    out.flush();
+                                    out.close();                                
+                                }
+                            }
+                        }
+                    }catch(Exception e){
+                        System.err.println("Erro thread: " + e.toString());
+                        System.exit(1);
+                    }
+                }
+            };
+            t.start();
+        }
+    }
+    public void add(String key, String value){ // ADD
+        redis_map[0].put(key, value);
+    }
+    public String get(String key){ // GET
+        if( redis_map[0].containsKey(key) )
+            return (String)redis_map[0].get(key);
+        return "null";
+    }
+    public int addConcorrenteSign(String id, Boolean sign, String key, String value){ // ADDCS
+        if ( sign || !redis_sign.containsKey(key) ){
+            redis_sign.put(key, id);                        
+        }else{
+            if( !((String)redis_sign.get(key)).equals(id) )
+                return 1;            
+        }
+        redis_map[0].put(key, value);
+        return 0;
+    }
+    public void del(String [] keys){
+        for ( int i=0;i<keys.length;i++ ){
+            if( redis_map[0].containsKey(keys[i]) )
+                redis_map[0].remove(keys[i]);
+            if( redis_file[0].containsKey(keys[i]) )
+                redis_file[0].remove(keys[i]);
+            del_list.add(keys[i]);
+        }
+    }
+    public String getAll(){
+        StringBuilder sb=new StringBuilder();
+        Object [] objs=redis_map[0].keySet().toArray();
+        if ( objs.length > 0 )
+            sb.append("keys:\n");
+        for(int i=0;i<objs.length;i++){
+            String key=(String)objs[i];
+            sb.append(key);
+            sb.append(" ");
+            sb.append(redis_map[0].get(key));
+            sb.append("\n");
+        }
+        objs=redis_sign.keySet().toArray();
+        if ( objs.length > 0 )
+            sb.append("signs:\n");
+        for(int i=0;i<objs.length;i++){
+            String key=(String)objs[i];
+            sb.append(key);
+            sb.append(" ");
+            sb.append(redis_sign.get(key));
+            sb.append("\n");
+        }        
+        String retorno=sb.toString();
+        if ( retorno.equals("") )
+            return "null\n";
+        return retorno;
+    }
+}
+
 class Util{    
     public String erroSequenciaIlegal="Erro, sequencia ilegal!";
     
+    // aux base64
     int V_0b00000011=3; // 0b00000011 (3)
     int V_0b0000000011=3; // 0b0000000011 (3)
     int V_0b0000001111=15; // 0b0000001111 (15)
@@ -13553,6 +13695,10 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+    public static Redis redis=null;
+    public static HashMap redis_sign=new HashMap();
+    public final static HashMap [] redis_map=new HashMap[]{new HashMap()};
+    public final static HashMap [] redis_file=new HashMap[]{new HashMap()};
     public static String getListaCompleta_cache=null;
     public static long getListaCompleta_last=0;
     public String getListaCompleta(File a, long nivel){
@@ -13581,7 +13727,7 @@ class Util{
     }
     
     public String fixNameFile(String a){
-        return a.replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-");
+        return a.replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").trim();
     }
     
     public ArrayList<String> getPivot(String a, String quebralinha){
@@ -18536,467 +18682,534 @@ namespace LoopbackWithMic
 /* class WebSocket */ void writeMore() throws IOException; boolean isNeedRead(); int readMore(ByteBuffer dst) throws IOException; boolean isBlocking(); } class WrappedIOException extends Exception { private final transient WebSocket connection; private final IOException ioException; public WrappedIOException(WebSocket connection, IOException ioException) { this.connection = connection; this.ioException = ioException; } public WebSocket getConnection() { return connection; } public IOException getIOException() { return ioException; } } 
 
 
-/* class HttpServer */ // parametros
-/* class HttpServer */ // new HttpServer(...)
-/* class HttpServer */ // host(pode ser ""), port, titulo_url, titulo, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
-/* class HttpServer */ class HttpServer extends Util{
-/* class HttpServer */     String mode, host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log_ips, cfg;
-/* class HttpServer */     int port;
-/* class HttpServer */     Boolean noLogLocal=false;
-/* class HttpServer */     Socket socket = null;
-/* class HttpServer */     public HttpServer(String mode, String host, Integer port, String titulo_url, String titulo, String dir, String endsWiths, String ips_banidos, String log_ips, Boolean noLogLocal, String cfg){
-/* class HttpServer */         this.mode = mode;
-/* class HttpServer */         this.host = host;
-/* class HttpServer */         this.port = port;
-/* class HttpServer */         this.titulo_url = titulo_url;
-/* class HttpServer */         this.titulo = titulo;
-/* class HttpServer */         this.dir = dir;
-/* class HttpServer */         this.endsWiths = endsWiths;
-/* class HttpServer */         this.ips_banidos = ips_banidos;
-/* class HttpServer */         this.log_ips = log_ips;
-/* class HttpServer */         this.noLogLocal = noLogLocal;
-/* class HttpServer */         this.cfg = cfg;
-/* class HttpServer */         try {
-/* class HttpServer */             serve();
-/* class HttpServer */         } catch (Exception e) {
-/* class HttpServer */             System.err.println(e.toString());
-/* class HttpServer */             System.exit(1);
-/* class HttpServer */         }
-/* class HttpServer */     }
-/* class HttpServer */     public void serve() throws Exception {
-/* class HttpServer */         ServerSocket serverSocket = null;
-/* class HttpServer */         String ip_origem = "";
-/* class HttpServer */         String host_display = "";
-/* class HttpServer */         try {
-/* class HttpServer */             serverSocket = new ServerSocket(port, 1, InetAddress.getByName(host));
-/* class HttpServer */             host_display="http://" + host + ":" + port;
-/* class HttpServer */             if (host.contains(":"))
-/* class HttpServer */                 host_display="http://[" + host + "]:" + port;
-/* class HttpServer */             if (mode == null)
-/* class HttpServer */                 System.out.println("Service opened: " + host_display + "/" + titulo_url);
-/* class HttpServer */             else
-/* class HttpServer */                 System.out.println("Service opened: \n" + host_display + "\nFiles:\n" + host_display + "/" + titulo_url);
-/* class HttpServer */             System.out.println("Path work: " + dir + "\n");
-/* class HttpServer */             if ( mode != null && mode.equals("playlistserver") )
-/* class HttpServer */                 playlistserver=new PlaylistServer(cfg);
-/* class HttpServer */         }catch(Exception e){
-/* class HttpServer */             throw new Exception("erro na inicialização: " + e.toString());
-/* class HttpServer */         }
-/* class HttpServer */         while (true) {
-/* class HttpServer */             try {
-/* class HttpServer */                 socket = serverSocket.accept();
-/* class HttpServer */                 ip_origem = get_ip_origem_by_socket(socket);
-/* class HttpServer */                 boolean is_ip_banido = ip_banido(ips_banidos, ip_origem);
-/* class HttpServer */                 if ( log_ips != null )
-/* class HttpServer */                     log_serverRouter(log_ips, noLogLocal, ip_origem, is_ip_banido);
-/* class HttpServer */                 if ( is_ip_banido ){
-/* class HttpServer */                     System.out.println("Conexao de origem BANIDO: " + ip_origem + ", data:" + (new Date()));
-/* class HttpServer */                     continue;
-/* class HttpServer */                 }else
-/* class HttpServer */                     System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
-/* class HttpServer */                 new ClientThread(mode, socket, titulo_url, titulo, dir, endsWiths, host_display, cfg);
-/* class HttpServer */             } catch (Exception e) {
-/* class HttpServer */                 System.out.println("Erro ao executar servidor:" + e.toString());
-/* class HttpServer */             }
-/* class HttpServer */         }
-/* class HttpServer */     }
-/* class HttpServer */ }
-/* class HttpServer */ class ClientThread extends Util{
-/* class HttpServer */     String mode, method, uri, protocol, titulo_url, titulo, dir, endsWiths, userAgent, acao, cfg;
-/* class HttpServer */     long range=-1;
-/* class HttpServer */     long lenTarget=-1;
-/* class HttpServer */     String nav;
-/* class HttpServer */     InputStream input = null;
-/* class HttpServer */     OutputStream output = null;
-/* class HttpServer */     char[] buffer = new char[2048];
-/* class HttpServer */     Writer writer;
-/* class HttpServer */     InputStreamReader isr = null;
-/* class HttpServer */     Reader reader;
-/* class HttpServer */     String host_display=null;
-/* class HttpServer */     public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg) {
-/* class HttpServer */         this.titulo_url = titulo_url;
-/* class HttpServer */         this.titulo = titulo;
-/* class HttpServer */         this.dir = dir;
-/* class HttpServer */         this.endsWiths = endsWiths;
-/* class HttpServer */         this.mode = mode;
-/* class HttpServer */         this.host_display = host_display;
-/* class HttpServer */         this.cfg = cfg;
-/* class HttpServer */         new Thread() {
-/* class HttpServer */             public void run() {
-/* class HttpServer */                 try {
-/* class HttpServer */                     input = socket.getInputStream();
-/* class HttpServer */                     output = socket.getOutputStream();
-/* class HttpServer */                     if (input != null) {
-/* class HttpServer */                         isr = new InputStreamReader(input);
-/* class HttpServer */                         reader = new BufferedReader(isr);
-/* class HttpServer */                         writer = new StringWriter();
-/* class HttpServer */                         lendo();
-/* class HttpServer */                         gravando();
-/* class HttpServer */                         socket.close();
-/* class HttpServer */                         writer.close();
-/* class HttpServer */                         reader.close();
-/* class HttpServer */                         isr.close();
-/* class HttpServer */                     }
-/* class HttpServer */                 } catch (Exception e) {
-/* class HttpServer */                     System.out.println("----------> Erro ao executar servidor:" + e.toString());
-/* class HttpServer */                 }
-/* class HttpServer */             }
-/* class HttpServer */         }.start();
-/* class HttpServer */     }
-/* class HttpServer */     private void lendo() throws Exception { // refatorar depois, isso aqui ta muito ruim!!
-/* class HttpServer */         try {
-/* class HttpServer */             int i = reader.read(buffer);
-/* class HttpServer */             if (i == -1) return;
-/* class HttpServer */             writer.write(buffer, 0, i);
-/* class HttpServer */             BufferedReader br = new BufferedReader(new StringReader(writer.toString()));
-/* class HttpServer */             String line = null;
-/* class HttpServer */             int lineNumber = 0;
-/* class HttpServer */             this.range = -1;
-/* class HttpServer */             this.userAgent = null;
-/* class HttpServer */             this.acao = null;
-/* class HttpServer */             while ((line = br.readLine()) != null) {
-/* class HttpServer */                 System.out.println("<---|    " + line.replace("\n","\n          "));
-/* class HttpServer */                 if (lineNumber == 0 && line.split(" ").length == 3) {
-/* class HttpServer */                     this.method = line.split(" ")[0];
-/* class HttpServer */                     this.uri = line.split(" ")[1];
-/* class HttpServer */                     if ( this.uri.indexOf("?") > -1 )
-/* class HttpServer */                         this.uri = this.uri.split("\\?")[0];
-/* class HttpServer */                     this.protocol = line.split(" ")[2];
-/* class HttpServer */                 }
-/* class HttpServer */                 if (line.startsWith("Range: bytes=") && line.endsWith("-") )
-/* class HttpServer */                   this.range = Long.parseLong(line.split("=")[1].replace("-", ""));
-/* class HttpServer */                 if (line.startsWith("User-Agent: ") )
-/* class HttpServer */                   this.userAgent = line.substring(12);
-/* class HttpServer */                 if (line.startsWith("acao: ") )
-/* class HttpServer */                   this.acao = line.substring(6);
-/* class HttpServer */                 lineNumber++;
-/* class HttpServer */             }
-/* class HttpServer */             System.out.println("    |");
-/* class HttpServer */         } catch (IOException e) {
-/* class HttpServer */             throw new Exception("Erro ao converter stream para string:" + e.toString());
-/* class HttpServer */         }
-/* class HttpServer */     }
-/* class HttpServer */     private void gravando() throws Exception {
-/* class HttpServer */         StringBuilder sb = new StringBuilder();
-/* class HttpServer */         // OPTIONS
-/* class HttpServer */         if (method.equals("OPTIONS")) {
-/* class HttpServer */             for (String line: new String[] {
-/* class HttpServer */                     "HTTP/1.1 501 Not Implemented\r\n", 
-/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                     "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                     "\r\n",
-/* class HttpServer */                 }) {
-/* class HttpServer */                 sb.append(line);
-/* class HttpServer */                 System.out.print("    |---> " + line);
-/* class HttpServer */             }
-/* class HttpServer */             System.out.println("    |");
-/* class HttpServer */             output.write(sb.toString().getBytes());
-/* class HttpServer */             return;
-/* class HttpServer */         }
-/* class HttpServer */         // nav playlist ou playlistmovie
-/* class HttpServer */         if ( nav == null 
-/* class HttpServer */             && mode != null 
-/* class HttpServer */             && ( mode.equals("playlist") || mode.equals("playlistmovie") ) 
-/* class HttpServer */             && ( uri.equals("/") || uri.equals("/id") || uri.equals("/id/") || uri.startsWith("/id/") ) 
-/* class HttpServer */         ){
-/* class HttpServer */             if ( uri.length() > 1 && uri.endsWith("/") ){
-/* class HttpServer */                 redirect(output, uri.substring(0, uri.length()-1));
-/* class HttpServer */                 return;
-/* class HttpServer */             }
-/* class HttpServer */             if ( uri.equals("/id") ){
-/* class HttpServer */                 redirect(output, "/");
-/* class HttpServer */                 return;
-/* class HttpServer */             }
-/* class HttpServer */             String txt="Erro interno 37676.";
-/* class HttpServer */             String id="";
-/* class HttpServer */             if ( uri.startsWith("/id/") )
-/* class HttpServer */                id=uri.substring(4);
-/* class HttpServer */             if ( mode.equals("playlist") )
-/* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlist(host_display);
-/* class HttpServer */             if ( mode.equals("playlistmovie") )
-/* class HttpServer */                txt=new Texto_longo().get_html_virtual_playlistmovie(id);
-/* class HttpServer */             sb = new StringBuilder();
-/* class HttpServer */             for (String line: new String[] {
-/* class HttpServer */                     "HTTP/1.1 200 OK\r\n",
-/* class HttpServer */                     "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                     "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                     "\r\n",
-/* class HttpServer */                     txt
-/* class HttpServer */                 }) {
-/* class HttpServer */                 sb.append(line);
-/* class HttpServer */                 System.out.print("    |---> " + line);
-/* class HttpServer */             }
-/* class HttpServer */             System.out.println("    |");
-/* class HttpServer */             output.write(sb.toString().getBytes());
-/* class HttpServer */             return;
-/* class HttpServer */         }
-/* class HttpServer */         // nav playlistserver
-/* class HttpServer */         if ( nav == null 
-/* class HttpServer */             && mode != null 
-/* class HttpServer */             && mode.equals("playlistserver")
-/* class HttpServer */             && uri.equals("/"+titulo_url)
-/* class HttpServer */         ){
-/* class HttpServer */             String txt="HTTP/1.1 200 OK\r\n";
-/* class HttpServer */             txt+="Content-Type: text/html; charset=UTF-8\r\n";
-/* class HttpServer */             txt+="Access-Control-Allow-Origin: *\r\n";
-/* class HttpServer */             txt+="X-Frame-Options: SAMEORIGIN\r\n";
-/* class HttpServer */             txt+="\r\n";
-/* class HttpServer */             if ( acao == null )
-/* class HttpServer */                 txt+=new Texto_longo().get_html_virtual_playlistserver();
-/* class HttpServer */             else{
-/* class HttpServer */                 if ( playlistserver == null )
-/* class HttpServer */                     txt+="erro interno 435353";
-/* class HttpServer */                 else
-/* class HttpServer */                     txt+=playlistserver.perguntando(acao);
-/* class HttpServer */             }
-/* class HttpServer */             output.write(txt.getBytes());
-/* class HttpServer */             return;
-/* class HttpServer */         }
-/* class HttpServer */         sb = new StringBuilder();
-/* class HttpServer */         nav = dir + uri.replace("//", "/").trim();
-/* class HttpServer */         if ( titulo_url.length() > 0 ){
-/* class HttpServer */             if ( uri.startsWith("/"+titulo_url) )
-/* class HttpServer */                 nav = dir + uri.substring(titulo_url.length()+1).replace("//", "/").trim(); 
-/* class HttpServer */             else
-/* class HttpServer */                 nav = "[invalido]";
-/* class HttpServer */         }
-/* class HttpServer */         nav = nav.replace("//", "/");
-/* class HttpServer */         nav = decodeUrl(nav);
-/* class HttpServer */         // nav detect index
-/* class HttpServer */         if (!new File(nav).isFile()) {
-/* class HttpServer */             nav += "/";
-/* class HttpServer */             int c = 9;
-/* class HttpServer */             while (nav.contains("//") && c-- > 0) nav = nav.replace("//", "/");
-/* class HttpServer */             for (
-/* class HttpServer */                 String index: new String[] {
-/* class HttpServer */                     "index.html",
-/* class HttpServer */                     "index.htm"
-/* class HttpServer */                 }) {
-/* class HttpServer */                 if (new File(nav + index).exists()) {
-/* class HttpServer */                     nav += index;
-/* class HttpServer */                     String tmp=lendo_arquivo(nav);
-/* class HttpServer */                     // if [GLOBAL]
-/* class HttpServer */                     if ( tmp.contains("[GLOBAL]") ){
-/* class HttpServer */                         tmp=tmp.replace("[GLOBAL]",getListaCompleta(new File(dir), 0));
-/* class HttpServer */                         sb = new StringBuilder();
-/* class HttpServer */                         for (String line: new String[] {
-/* class HttpServer */                                 "HTTP/1.1 200 OK\r\n",
-/* class HttpServer */                                 "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                                 "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                                 "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                                 "\r\n"
-/* class HttpServer */                             }) {
-/* class HttpServer */                             sb.append(line);
-/* class HttpServer */                             System.out.print("    |---> " + line);
-/* class HttpServer */                         }
-/* class HttpServer */                         System.out.println("    |---> index text global suprimido.");
-/* class HttpServer */                         sb.append(tmp);
-/* class HttpServer */                         output.write(sb.toString().getBytes());
-/* class HttpServer */                         return;
-/* class HttpServer */                     }
-/* class HttpServer */                     break;
-/* class HttpServer */                 }
-/* class HttpServer */             }
-/* class HttpServer */         }
-/* class HttpServer */         // favicon
-/* class HttpServer */         if ( ! uri.equals("/favicon.ico"))
-/* class HttpServer */             System.out.println("nav: " + nav + ";uri: " + uri);
-/* class HttpServer */         // nav file
-/* class HttpServer */         if (new File(nav).exists() && new File(nav).isFile() && endsWith_OK(nav, endsWiths)) {
-/* class HttpServer */             long lenFile = new File(nav).length();
-/* class HttpServer */             if ( range > -1 && range >= lenFile)
-/* class HttpServer */                 range = -1;
-/* class HttpServer */             if ( range > -1){
-/* class HttpServer */                 if ( userAgent.contains(" TV ") )
-/* class HttpServer */                     lenTarget=lenFile-range;
-/* class HttpServer */                 else
-/* class HttpServer */                     lenTarget=25000000; // 25MB
-/* class HttpServer */                 if ( (range + lenTarget) > lenFile )
-/* class HttpServer */                     lenTarget=lenFile-range;
-/* class HttpServer */                 for (String line: new String[] {
-/* class HttpServer */                         "HTTP/1.1 206 OK\r\n",
-/* class HttpServer */                         "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
-/* class HttpServer */                         "accept-ranges: bytes\r\n",
-/* class HttpServer */                         "Content-Length: " + lenTarget + "\r\n",
-/* class HttpServer */                         "Content-Range: bytes " + range + "-" + (range+lenTarget-1) + "/" + lenFile + "\r\n",
-/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                         "\r\n"
-/* class HttpServer */                     }) {
-/* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     System.out.print("    |---> " + line);
-/* class HttpServer */                 }
-/* class HttpServer */             }else{  
-/* class HttpServer */                 for (String line: new String[] {
-/* class HttpServer */                         "HTTP/1.1 200 OK\r\n",
-/* class HttpServer */                         "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
-/* class HttpServer */                         "Content-Length: " + lenFile + "\r\n",
-/* class HttpServer */                         "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                         "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                         "\r\n"
-/* class HttpServer */                     }) {
-/* class HttpServer */                     sb.append(line);
-/* class HttpServer */                     System.out.print("    |---> " + line);
-/* class HttpServer */                 }
-/* class HttpServer */             }    
-/* class HttpServer */             System.out.println("    |");
-/* class HttpServer */             output.write(sb.toString().getBytes());
-/* class HttpServer */             try {
-/* class HttpServer */                 System.out.println("iniciando leitura do arquivo: " + nav);
-/* class HttpServer */                 transf_bytes(output, nav, range, lenTarget);
-/* class HttpServer */                 System.out.println("finalizando leitura do arquivo: " + nav);
-/* class HttpServer */                 return;
-/* class HttpServer */             } catch (Exception e) {
-/* class HttpServer */                 if ( e.toString().contains("Software caused connection abort: socket write error") ){}else{
-/* class HttpServer */                     System.out.println("erro 404, não foi possivel ler o arquivo: " + nav);
-/* class HttpServer */                 }
-/* class HttpServer */                 return;
-/* class HttpServer */             }
-/* class HttpServer */         } else {
-/* class HttpServer */             if (uri.equals("/favicon.ico")) {
-/* class HttpServer */                 return;
-/* class HttpServer */             }else{
-/* class HttpServer */                 System.out.println("nao encontrou o arquivo: " + nav);
-/* class HttpServer */             }
-/* class HttpServer */         }
-/* class HttpServer */         // list files
-/* class HttpServer */         if (  
-/* class HttpServer */                 !uri.contains("..")
-/* class HttpServer */                 && uri.startsWith("/" + titulo_url)
-/* class HttpServer */                 && new File(dir+ decodeUrl(uri.substring(titulo_url.length()>0?(titulo_url.length()+1):0)) ).isDirectory() 
-/* class HttpServer */         ){
-/* class HttpServer */             sb = new StringBuilder();
-/* class HttpServer */             for (String line: new String[] {
-/* class HttpServer */                     "HTTP/1.1 200 OK\r\n",
-/* class HttpServer */                     "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                     "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                     "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                     "\r\n",
-/* class HttpServer */                     "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
-/* class HttpServer */                     "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
-/* class HttpServer */                     "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n",
-/* class HttpServer */                     "<br>\n",
-/* class HttpServer */                     "&nbsp;" + titulo + "<br>\n"
-/* class HttpServer */                 }) {
-/* class HttpServer */                 sb.append(line);
-/* class HttpServer */                 System.out.print("    |---> " + line);
-/* class HttpServer */             }
-/* class HttpServer */             String token="/"+titulo_url;
-/* class HttpServer */             if ( titulo_url.equals("") )
-/* class HttpServer */                 token="";
-/* class HttpServer */             String pre=uri.substring(token.length());
-/* class HttpServer */             if ( !pre.endsWith("/") )
-/* class HttpServer */                 pre+="/";
-/* class HttpServer */             File[] files = new File(dir+decodeUrl(pre)).listFiles();
-/* class HttpServer */             Arrays.sort(files, new Comparator < File > () {
-/* class HttpServer */                 public int compare(File f1, File f2) {
-/* class HttpServer */                     if (f1.lastModified() < f2.lastModified()) return 1;
-/* class HttpServer */                     if (f1.lastModified() > f2.lastModified()) return -1;
-/* class HttpServer */                     return 0;
-/* class HttpServer */                 }
-/* class HttpServer */             });
-/* class HttpServer */             sb.append("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
-/* class HttpServer */             System.out.println("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
-/* class HttpServer */             sb.append("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
-/* class HttpServer */             System.out.println("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
-/* class HttpServer */             for (File p: files) {
-/* class HttpServer */                 //if (!p.isFile()) continue;
-/* class HttpServer */                 if (!endsWith_OK(p.getName(), endsWiths)) continue;
-/* class HttpServer */                 sb.append("<tr><td dd='"+uri.substring(1) + "/"+"'>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + token + pre + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
-/* class HttpServer */                 System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + token + pre + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
-/* class HttpServer */             }
-/* class HttpServer */             sb.append("</table></html>");
-/* class HttpServer */             System.out.println("</table></html>");
-/* class HttpServer */             System.out.println("    |");
-/* class HttpServer */             output.write(sb.toString().getBytes());
-/* class HttpServer */             return;
-/* class HttpServer */         }
-/* class HttpServer */         // 404
-/* class HttpServer */         sb = new StringBuilder();
-/* class HttpServer */         for (String line: new String[] {
-/* class HttpServer */                 "HTTP/1.1 404 OK\r\n",
-/* class HttpServer */                 "Content-Type: text/html; charset=UTF-8\r\n",
-/* class HttpServer */                 "Access-Control-Allow-Origin: *\r\n",
-/* class HttpServer */                 "X-Frame-Options: SAMEORIGIN\r\n",
-/* class HttpServer */                 "\r\n",
-/* class HttpServer */                 "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" + "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" + "<title>404 - File or directory not found.</title>\n" + "<style type=\"text/css\">\n" + "<!--\n" + "body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" + "fieldset{padding:0 15px 10px 15px;} \n" +
-/* class HttpServer */                 "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
-/* class HttpServer */             }) {
-/* class HttpServer */             sb.append(line);
-/* class HttpServer */             System.out.print("    |---> " + line);
-/* class HttpServer */         }
-/* class HttpServer */         System.out.println("    |");
-/* class HttpServer */         output.write(sb.toString().getBytes());
-/* class HttpServer */     }
-/* class HttpServer */     private String getContentType(String caminho) {
-/* class HttpServer */         // https://mimetype.io/all-types
-/* class HttpServer */         if (caminho.endsWith(".html") || caminho.endsWith(".htm")) return "text/html";
-/* class HttpServer */         if (caminho.endsWith(".css")) return "text/css";
-/* class HttpServer */         if (caminho.endsWith(".js")) return "text/javascript";
-/* class HttpServer */         if (caminho.endsWith(".txt")) return "text/plain";
-/* class HttpServer */         if (caminho.endsWith(".png")) return "image/png";
-/* class HttpServer */         if (caminho.endsWith(".ico")) return "image/x-icon";
-/* class HttpServer */         if (caminho.endsWith(".jpg")) return "image/jpeg";
-/* class HttpServer */         if (caminho.endsWith(".jpeg")) return "image/jpeg";
-/* class HttpServer */         if (caminho.endsWith(".webp")) return "image/webp";
-/* class HttpServer */         if (caminho.endsWith(".gif")) return "image/gif";
-/* class HttpServer */         if (caminho.endsWith(".mkv")) return "video/x-matroska";
-/* class HttpServer */         if (caminho.endsWith(".avi")) return "video/x-msvideo";
-/* class HttpServer */         if (caminho.endsWith(".movie")) return "video/x-sgi-movie";
-/* class HttpServer */         if (caminho.endsWith(".webm")) return "video/webm";
-/* class HttpServer */         if (caminho.endsWith(".mp4")) return "audio/aac";
-/* class HttpServer */         if (caminho.endsWith(".mp3")) return "audio/mpeg";
-/* class HttpServer */         if (caminho.endsWith(".ogg")) return "audio/ogg";
-/* class HttpServer */         if (caminho.endsWith(".wma")) return "audio/x-ms-wma";
-/* class HttpServer */         if (caminho.endsWith(".pdf")) return "application/pdf";
-/* class HttpServer */         return "application/octet-stream";
-/* class HttpServer */     }
-/* class HttpServer */     public ArrayList < String > lendo_arquivo_display(String caminho) throws Exception {
-/* class HttpServer */         ArrayList < String > result = new ArrayList < String > ();
-/* class HttpServer */         String strLine;
-/* class HttpServer */         try {
-/* class HttpServer */             FileReader rf = new FileReader(caminho);
-/* class HttpServer */             BufferedReader in = new BufferedReader(rf);
-/* class HttpServer */             while ((strLine = in .readLine()) != null) result.add(strLine); in .close();
-/* class HttpServer */             rf.close();
-/* class HttpServer */         } catch (Exception e) {
-/* class HttpServer */             throw new Exception("nao foi possivel encontrar o arquivo " + caminho);
-/* class HttpServer */         }
-/* class HttpServer */         return result;
-/* class HttpServer */     }
-/* class HttpServer */     private void transf_bytes(OutputStream output, String nav, long resume, long lenTarget) throws Exception {
-/* class HttpServer */         int count;
-/* class HttpServer */         DataInputStream dis = new DataInputStream(new FileInputStream(nav));
-/* class HttpServer */         byte[] buffer = new byte[8192];
-/* class HttpServer */         if ( resume > 0 ) 
-/* class HttpServer */             dis.skip(resume);
-/* class HttpServer */         if ( resume > 0 && lenTarget < buffer.length )
-/* class HttpServer */             buffer = new byte[(int)lenTarget];
-/* class HttpServer */         while ((count = dis.read(buffer)) > 0){
-/* class HttpServer */             output.write(buffer, 0, count);
-/* class HttpServer */             if ( resume > 0 ){
-/* class HttpServer */                 lenTarget-=count;
-/* class HttpServer */                 if ( lenTarget <= 0 )
-/* class HttpServer */                     break;    
-/* class HttpServer */                 if ( lenTarget < buffer.length )
-/* class HttpServer */                     buffer = new byte[(int)lenTarget];
-/* class HttpServer */             }
-/* class HttpServer */         }
-/* class HttpServer */         dis.close();
-/* class HttpServer */     }
-/* class HttpServer */     private boolean endsWith_OK(String url, String ends) {
-/* class HttpServer */         if (ends.equals("")) return true;
-/* class HttpServer */         String[] partes = ends.split(",");
-/* class HttpServer */         for (int i = 0; i < partes.length; i++)
-/* class HttpServer */             if (url.endsWith("." + partes[i])) return true;
-/* class HttpServer */         return false;
-/* class HttpServer */     }
-/* class HttpServer */     private void redirect(OutputStream output, String uri) throws Exception{
-/* class HttpServer */         // clean cache redirect -> fonte: https://superuser.com/questions/304589/how-can-i-make-chrome-stop-caching-redirects
-/* class HttpServer */         output.write(("HTTP/1.1 301 Moved Permanently\nLocation: " + uri + "\n\n").getBytes());
-/* class HttpServer */     }
-/* class HttpServer */ }
+// parametros
+// new HttpServer(...)
+// host(pode ser ""), port, titulo_url, titulo, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
+class HttpServer extends Util{
+    String mode, host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log_ips, cfg;
+    int port;
+    Boolean noLogLocal=false;
+    Socket socket = null;    
+    public HttpServer(String mode, String host, Integer port, String titulo_url, String titulo, String dir, String endsWiths, String ips_banidos, String log_ips, Boolean noLogLocal, String cfg, String redisDir, Long redisSeconds){
+        this.mode = mode;
+        this.host = host;
+        this.port = port;
+        this.titulo_url = titulo_url;
+        this.titulo = titulo;
+        this.dir = dir;
+        this.endsWiths = endsWiths;
+        this.ips_banidos = ips_banidos;
+        this.log_ips = log_ips;
+        this.noLogLocal = noLogLocal;
+        this.cfg = cfg;
+        try{
+            if ( redisDir != null )
+                redis=new Redis(redisDir, redisSeconds);
+            serve();
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }
+    }
+    public void serve() throws Exception {
+        ServerSocket serverSocket = null;
+        String ip_origem = "";
+        String host_display = "";
+        try {
+            serverSocket = new ServerSocket(port, 1, InetAddress.getByName(host));
+            host_display="http://" + host + ":" + port;
+            if (host.contains(":"))
+                host_display="http://[" + host + "]:" + port;
+            if (mode == null)
+                System.out.println("Service opened: " + host_display + "/" + titulo_url);
+            else
+                System.out.println("Service opened: \n" + host_display + "\nFiles:\n" + host_display + "/" + titulo_url);
+            System.out.println("Path work: " + dir + "\n");
+            if ( mode != null && mode.equals("playlistserver") )
+                playlistserver=new PlaylistServer(cfg);
+        }catch(Exception e){
+            throw new Exception("erro na inicialização: " + e.toString());
+        }
+        while (true) {
+            try {
+                socket = serverSocket.accept();
+                ip_origem = get_ip_origem_by_socket(socket);
+                boolean is_ip_banido = ip_banido(ips_banidos, ip_origem);
+                if ( log_ips != null )
+                    log_serverRouter(log_ips, noLogLocal, ip_origem, is_ip_banido);
+                if ( is_ip_banido ){
+                    System.out.println("Conexao de origem BANIDO: " + ip_origem + ", data:" + (new Date()));
+                    continue;
+                }else
+                    System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
+                new ClientThread(mode, socket, titulo_url, titulo, dir, endsWiths, host_display, cfg);
+            } catch (Exception e) {
+                System.out.println("Erro ao executar servidor:" + e.toString());
+            }
+        }
+    }
+}
+class ClientThread extends Util{
+    String header_redis_id, header_redis_sign, header_redis_key, header_redis_value, header_redis_del, header_userAgent, header_acao, mode, method, uri, protocol, titulo_url, titulo, dir, endsWiths, cfg;
+    long header_range=-1;
+    long lenTarget=-1;
+    String nav;
+    InputStream input = null;
+    OutputStream output = null;
+    char[] buffer = new char[2048];
+    Writer writer;
+    InputStreamReader isr = null;
+    Reader reader;
+    String host_display=null;
+    public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg) {
+        this.titulo_url = titulo_url;
+        this.titulo = titulo;
+        this.dir = dir;
+        this.endsWiths = endsWiths;
+        this.mode = mode;
+        this.host_display = host_display;
+        this.cfg = cfg;
+        new Thread() {
+            public void run() {
+                try {
+                    input = socket.getInputStream();
+                    output = socket.getOutputStream();
+                    if (input != null) {
+                        isr = new InputStreamReader(input);
+                        reader = new BufferedReader(isr);
+                        writer = new StringWriter();
+                        lendo();
+                        gravando();
+                        socket.close();
+                        writer.close();
+                        reader.close();
+                        isr.close();
+                    }
+                } catch (Exception e) {
+                    System.out.println("----------> Erro ao executar servidor:" + e.toString());
+                }
+            }
+        }.start();
+    }
+    private void lendo() throws Exception { // refatorar depois, isso aqui ta muito ruim!!
+        try {
+            int i = reader.read(buffer);
+            if (i == -1) return;
+            writer.write(buffer, 0, i);
+            BufferedReader br = new BufferedReader(new StringReader(writer.toString()));
+            String line = null;
+            int lineNumber = 0;
+            this.header_range = -1;
+            this.header_userAgent = null;
+            this.header_acao = null;
+            this.header_redis_id=null;
+            this.header_redis_sign=null;
+            this.header_redis_key=null;
+            this.header_redis_value=null;            
+            this.header_redis_del=null;
+            while ((line = br.readLine()) != null) {
+                System.out.println("<---|    " + line.replace("\n","\n          "));
+                if (lineNumber == 0 && line.split(" ").length == 3) {
+                    this.method = line.split(" ")[0];
+                    this.uri = line.split(" ")[1];
+                    if ( this.uri.indexOf("?") > -1 )
+                        this.uri = this.uri.split("\\?")[0];
+                    this.protocol = line.split(" ")[2];
+                }
+                if (line.startsWith("Range: bytes=") && line.endsWith("-") )
+                  this.header_range = Long.parseLong(line.split("=")[1].replace("-", ""));
+                if (line.startsWith("User-Agent: ") )
+                  this.header_userAgent = line.substring(12);
+                if (line.startsWith("acao: ") )
+                  this.header_acao = line.substring(6);
+                if (line.startsWith("Redis-ID: ") )
+                  this.header_redis_id = line.substring(10);
+                if (line.startsWith("Redis-SIGN: ") )
+                  this.header_redis_sign = line.substring(12);
+                if (line.startsWith("Redis-KEY: ") )
+                  this.header_redis_key = line.substring(11);
+                if (line.startsWith("Redis-VALUE: ") )
+                  this.header_redis_value = line.substring(13);
+                if (line.startsWith("Redis-DEL: ") )
+                  this.header_redis_del = line.substring(11);
+                lineNumber++;
+            }
+            System.out.println("    |");
+        } catch (IOException e) {
+            throw new Exception("Erro ao converter stream para string:" + e.toString());
+        }
+    }
+    private void gravando() throws Exception {
+        StringBuilder sb = new StringBuilder();
+        // redis
+        if ( redis != null ){
+            if ( header_redis_del != null ){
+                redis.del(header_redis_del.split(" "));
+                output.write(  ("HTTP/1.1 200 OK\r\n\r\n+OK").getBytes() );
+                return;                    
+            }
+            if ( header_redis_key != null && !header_redis_key.contains(" ") && header_redis_key.equals(fixNameFile(header_redis_key)) ){
+                if ( header_redis_key.equals("*") ){
+                    output.write(  ("HTTP/1.1 200 OK\r\n\r\n"+redis.getAll()).getBytes() );
+                    return;                    
+                }
+                if ( header_redis_value == null ){
+                    output.write(  ("HTTP/1.1 200 OK\r\n\r\n"+redis.get(header_redis_key)).getBytes() );
+                    return;                    
+                }
+                if ( header_redis_id == null ){
+                    redis.add(header_redis_key, header_redis_value);
+                    output.write(  ("HTTP/1.1 200 OK\r\n\r\n+OK").getBytes() );
+                    return;                    
+                }
+                if ( header_redis_sign == null ){
+                    if ( redis.addConcorrenteSign(header_redis_id, false, header_redis_key, header_redis_value) == 0 )
+                        output.write(  ("HTTP/1.1 200 OK\r\n\r\n+OK").getBytes() );
+                    else
+                        output.write(  ("HTTP/1.1 203 Non-Authoritative Information\r\n\r\n+NOK").getBytes() );
+                    return;
+                }
+                redis.addConcorrenteSign(header_redis_id, true, header_redis_key, header_redis_value);
+                output.write(  ("HTTP/1.1 200 OK\r\n\r\n+OK").getBytes() );
+                return;
+            }
+            
+            
+            // 404
+            sb = new StringBuilder();
+            for (String line: new String[] {
+                    "HTTP/1.1 404 OK\r\n",
+                    "Content-Type: text/html; charset=UTF-8\r\n",
+                    "Access-Control-Allow-Origin: *\r\n",
+                    "X-Frame-Options: SAMEORIGIN\r\n",
+                    "\r\n",
+                    "A<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" + "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" + "<title>404 - File or directory not found.</title>\n" + "<style type=\"text/css\">\n" + "<!--\n" + "body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" + "fieldset{padding:0 15px 10px 15px;} \n" +
+                    "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
+                }) {
+                sb.append(line);
+            }
+            output.write(sb.toString().getBytes());
+            return;
+        }
+        // OPTIONS
+        if (method.equals("OPTIONS")) {
+            for (String line: new String[] {
+                    "HTTP/1.1 501 Not Implemented\r\n", 
+                    "Access-Control-Allow-Origin: *\r\n",
+                    "X-Frame-Options: SAMEORIGIN\r\n",
+                    "\r\n",
+                }) {
+                sb.append(line);
+                System.out.print("    |---> " + line);
+            }
+            System.out.println("    |");
+            output.write(sb.toString().getBytes());
+            return;
+        }
+        // nav playlist ou playlistmovie
+        if ( nav == null 
+            && mode != null 
+            && ( mode.equals("playlist") || mode.equals("playlistmovie") ) 
+            && ( uri.equals("/") || uri.equals("/id") || uri.equals("/id/") || uri.startsWith("/id/") ) 
+        ){
+            if ( uri.length() > 1 && uri.endsWith("/") ){
+                redirect(output, uri.substring(0, uri.length()-1));
+                return;
+            }
+            if ( uri.equals("/id") ){
+                redirect(output, "/");
+                return;
+            }
+            String txt="Erro interno 37676.";
+            String id="";
+            if ( uri.startsWith("/id/") )
+               id=uri.substring(4);
+            if ( mode.equals("playlist") )
+               txt=new Texto_longo().get_html_virtual_playlist(host_display);
+            if ( mode.equals("playlistmovie") )
+               txt=new Texto_longo().get_html_virtual_playlistmovie(id);
+            sb = new StringBuilder();
+            for (String line: new String[] {
+                    "HTTP/1.1 200 OK\r\n",
+                    "Content-Type: text/html; charset=UTF-8\r\n",
+                    "Access-Control-Allow-Origin: *\r\n",
+                    "X-Frame-Options: SAMEORIGIN\r\n",
+                    "\r\n",
+                    txt
+                }) {
+                sb.append(line);
+                System.out.print("    |---> " + line);
+            }
+            System.out.println("    |");
+            output.write(sb.toString().getBytes());
+            return;
+        }
+        // nav playlistserver
+        if ( nav == null 
+            && mode != null 
+            && mode.equals("playlistserver")
+            && uri.equals("/"+titulo_url)
+        ){
+            String txt="HTTP/1.1 200 OK\r\n";
+            txt+="Content-Type: text/html; charset=UTF-8\r\n";
+            txt+="Access-Control-Allow-Origin: *\r\n";
+            txt+="X-Frame-Options: SAMEORIGIN\r\n";
+            txt+="\r\n";
+            if ( header_acao == null )
+                txt+=new Texto_longo().get_html_virtual_playlistserver();
+            else{
+                if ( playlistserver == null )
+                    txt+="erro interno 435353";
+                else
+                    txt+=playlistserver.perguntando(header_acao);
+            }
+            output.write(txt.getBytes());
+            return;
+        }
+        sb = new StringBuilder();
+        nav = dir + uri.replace("//", "/").trim();
+        if ( titulo_url.length() > 0 ){
+            if ( uri.startsWith("/"+titulo_url) )
+                nav = dir + uri.substring(titulo_url.length()+1).replace("//", "/").trim(); 
+            else
+                nav = "[invalido]";
+        }
+        nav = nav.replace("//", "/");
+        nav = decodeUrl(nav);
+        // nav detect index
+        if (!new File(nav).isFile()) {
+            nav += "/";
+            int c = 9;
+            while (nav.contains("//") && c-- > 0) nav = nav.replace("//", "/");
+            for (
+                String index: new String[] {
+                    "index.html",
+                    "index.htm"
+                }) {
+                if (new File(nav + index).exists()) {
+                    nav += index;
+                    String tmp=lendo_arquivo(nav);
+                    // if [GLOBAL]
+                    if ( tmp.contains("[GLOBAL]") ){
+                        tmp=tmp.replace("[GLOBAL]",getListaCompleta(new File(dir), 0));
+                        sb = new StringBuilder();
+                        for (String line: new String[] {
+                                "HTTP/1.1 200 OK\r\n",
+                                "Content-Type: text/html; charset=UTF-8\r\n",
+                                "Access-Control-Allow-Origin: *\r\n",
+                                "X-Frame-Options: SAMEORIGIN\r\n",
+                                "\r\n"
+                            }) {
+                            sb.append(line);
+                            System.out.print("    |---> " + line);
+                        }
+                        System.out.println("    |---> index text global suprimido.");
+                        sb.append(tmp);
+                        output.write(sb.toString().getBytes());
+                        return;
+                    }
+                    break;
+                }
+            }
+        }
+        // favicon
+        if ( ! uri.equals("/favicon.ico"))
+            System.out.println("nav: " + nav + ";uri: " + uri);
+        // nav file
+        if (new File(nav).exists() && new File(nav).isFile() && endsWith_OK(nav, endsWiths)) {
+            long lenFile = new File(nav).length();
+            if ( header_range > -1 && header_range >= lenFile)
+                header_range = -1;
+            if ( header_range > -1){
+                if ( header_userAgent.contains(" TV ") )
+                    lenTarget=lenFile-header_range;
+                else
+                    lenTarget=25000000; // 25MB
+                if ( (header_range + lenTarget) > lenFile )
+                    lenTarget=lenFile-header_range;
+                for (String line: new String[] {
+                        "HTTP/1.1 206 OK\r\n",
+                        "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
+                        "accept-ranges: bytes\r\n",
+                        "Content-Length: " + lenTarget + "\r\n",
+                        "Content-Range: bytes " + header_range + "-" + (header_range+lenTarget-1) + "/" + lenFile + "\r\n",
+                        "Access-Control-Allow-Origin: *\r\n",
+                        "X-Frame-Options: SAMEORIGIN\r\n",
+                        "\r\n"
+                    }) {
+                    sb.append(line);
+                    System.out.print("    |---> " + line);
+                }
+            }else{  
+                for (String line: new String[] {
+                        "HTTP/1.1 200 OK\r\n",
+                        "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
+                        "Content-Length: " + lenFile + "\r\n",
+                        "Access-Control-Allow-Origin: *\r\n",
+                        "X-Frame-Options: SAMEORIGIN\r\n",
+                        "\r\n"
+                    }) {
+                    sb.append(line);
+                    System.out.print("    |---> " + line);
+                }
+            }    
+            System.out.println("    |");
+            output.write(sb.toString().getBytes());
+            try {
+                System.out.println("iniciando leitura do arquivo: " + nav);
+                transf_bytes(output, nav, header_range, lenTarget);
+                System.out.println("finalizando leitura do arquivo: " + nav);
+                return;
+            } catch (Exception e) {
+                if ( e.toString().contains("Software caused connection abort: socket write error") ){}else{
+                    System.out.println("erro 404, não foi possivel ler o arquivo: " + nav);
+                }
+                return;
+            }
+        } else {
+            if (uri.equals("/favicon.ico")) {
+                return;
+            }else{
+                System.out.println("nao encontrou o arquivo: " + nav);
+            }
+        }
+        // list files
+        if (  
+                !uri.contains("..")
+                && uri.startsWith("/" + titulo_url)
+                && new File(dir+ decodeUrl(uri.substring(titulo_url.length()>0?(titulo_url.length()+1):0)) ).isDirectory() 
+        ){
+            sb = new StringBuilder();
+            for (String line: new String[] {
+                    "HTTP/1.1 200 OK\r\n",
+                    "Content-Type: text/html; charset=UTF-8\r\n",
+                    "Access-Control-Allow-Origin: *\r\n",
+                    "X-Frame-Options: SAMEORIGIN\r\n",
+                    "\r\n",
+                    "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
+                    "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
+                    "<meta charset='UTF-8' http-equiv='X-UA-Compatible' content='IE=9'>\n",
+                    "<br>\n",
+                    "&nbsp;" + titulo + "<br>\n"
+                }) {
+                sb.append(line);
+                System.out.print("    |---> " + line);
+            }
+            String token="/"+titulo_url;
+            if ( titulo_url.equals("") )
+                token="";
+            String pre=uri.substring(token.length());
+            if ( !pre.endsWith("/") )
+                pre+="/";
+            File[] files = new File(dir+decodeUrl(pre)).listFiles();
+            Arrays.sort(files, new Comparator < File > () {
+                public int compare(File f1, File f2) {
+                    if (f1.lastModified() < f2.lastModified()) return 1;
+                    if (f1.lastModified() > f2.lastModified()) return -1;
+                    return 0;
+                }
+            });
+            sb.append("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
+            System.out.println("<style>.bordered {border: solid #ccc 3px;border-radius: 6px;}.bordered tr:hover {background: #fbf8e9;}.bordered td, .bordered th {border-left: 2px solid #ccc;border-top: 2px solid #ccc;padding: 10px;}</style>");
+            sb.append("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
+            System.out.println("<table id='tablebase' class='bordered' style='font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;'>");
+            for (File p: files) {
+                //if (!p.isFile()) continue;
+                if (!endsWith_OK(p.getName(), endsWiths)) continue;
+                sb.append("<tr><td dd='"+uri.substring(1) + "/"+"'>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + token + pre + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
+                System.out.println("<tr><td>" + new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(new Date(p.lastModified())).toString() + "</td><td>" + "<a href=\"" + token + pre + p.getName() + "\">" + p.getName() + "</a></td></tr>\n");
+            }
+            sb.append("</table></html>");
+            System.out.println("</table></html>");
+            System.out.println("    |");
+            output.write(sb.toString().getBytes());
+            return;
+        }
+        // 404
+        sb = new StringBuilder();
+        for (String line: new String[] {
+                "HTTP/1.1 404 OK\r\n",
+                "Content-Type: text/html; charset=UTF-8\r\n",
+                "Access-Control-Allow-Origin: *\r\n",
+                "X-Frame-Options: SAMEORIGIN\r\n",
+                "\r\n",
+                "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" + "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" + "<title>404 - File or directory not found.</title>\n" + "<style type=\"text/css\">\n" + "<!--\n" + "body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" + "fieldset{padding:0 15px 10px 15px;} \n" +
+                "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
+            }) {
+            sb.append(line);
+            System.out.print("    |---> " + line);
+        }
+        System.out.println("    |");
+        output.write(sb.toString().getBytes());
+    }
+    private String getContentType(String caminho) {
+        // https://mimetype.io/all-types
+        if (caminho.endsWith(".html") || caminho.endsWith(".htm")) return "text/html";
+        if (caminho.endsWith(".css")) return "text/css";
+        if (caminho.endsWith(".js")) return "text/javascript";
+        if (caminho.endsWith(".txt")) return "text/plain";
+        if (caminho.endsWith(".png")) return "image/png";
+        if (caminho.endsWith(".ico")) return "image/x-icon";
+        if (caminho.endsWith(".jpg")) return "image/jpeg";
+        if (caminho.endsWith(".jpeg")) return "image/jpeg";
+        if (caminho.endsWith(".webp")) return "image/webp";
+        if (caminho.endsWith(".gif")) return "image/gif";
+        if (caminho.endsWith(".mkv")) return "video/x-matroska";
+        if (caminho.endsWith(".avi")) return "video/x-msvideo";
+        if (caminho.endsWith(".movie")) return "video/x-sgi-movie";
+        if (caminho.endsWith(".webm")) return "video/webm";
+        if (caminho.endsWith(".mp4")) return "audio/aac";
+        if (caminho.endsWith(".mp3")) return "audio/mpeg";
+        if (caminho.endsWith(".ogg")) return "audio/ogg";
+        if (caminho.endsWith(".wma")) return "audio/x-ms-wma";
+        if (caminho.endsWith(".pdf")) return "application/pdf";
+        return "application/octet-stream";
+    }
+    public ArrayList < String > lendo_arquivo_display(String caminho) throws Exception {
+        ArrayList < String > result = new ArrayList < String > ();
+        String strLine;
+        try {
+            FileReader rf = new FileReader(caminho);
+            BufferedReader in = new BufferedReader(rf);
+            while ((strLine = in .readLine()) != null) result.add(strLine); in .close();
+            rf.close();
+        } catch (Exception e) {
+            throw new Exception("nao foi possivel encontrar o arquivo " + caminho);
+        }
+        return result;
+    }
+    private void transf_bytes(OutputStream output, String nav, long resume, long lenTarget) throws Exception {
+        int count;
+        DataInputStream dis = new DataInputStream(new FileInputStream(nav));
+        byte[] buffer = new byte[8192];
+        if ( resume > 0 ) 
+            dis.skip(resume);
+        if ( resume > 0 && lenTarget < buffer.length )
+            buffer = new byte[(int)lenTarget];
+        while ((count = dis.read(buffer)) > 0){
+            output.write(buffer, 0, count);
+            if ( resume > 0 ){
+                lenTarget-=count;
+                if ( lenTarget <= 0 )
+                    break;    
+                if ( lenTarget < buffer.length )
+                    buffer = new byte[(int)lenTarget];
+            }
+        }
+        dis.close();
+    }
+    private boolean endsWith_OK(String url, String ends) {
+        if (ends.equals("")) return true;
+        String[] partes = ends.split(",");
+        for (int i = 0; i < partes.length; i++)
+            if (url.endsWith("." + partes[i])) return true;
+        return false;
+    }
+    private void redirect(OutputStream output, String uri) throws Exception{
+        // clean cache redirect -> fonte: https://superuser.com/questions/304589/how-can-i-make-chrome-stop-caching-redirects
+        output.write(("HTTP/1.1 301 Moved Permanently\nLocation: " + uri + "\n\n").getBytes());
+    }
+}
 
 /* class Wget */ // download do Wget muito instavel, melhor refatorar para curl
 /* class Wget */ //String [] args2 = {"-h"};               
@@ -19056,7 +19269,6 @@ namespace LoopbackWithMic
 /* class Diff  */ private List<Diff_Change> buildRevision(Diff_PathNode actualPath, List<T> orig, List<T> rev) { Objects.requireNonNull(actualPath, "path is null"); Objects.requireNonNull(orig, "original sequence is null"); Objects.requireNonNull(rev, "revised sequence is null"); Diff_PathNode path = actualPath; List<Diff_Change> changes = new ArrayList<>(); if (path.isSnake()) { path = path.prev; } while (path != null && path.prev != null && path.prev.j >= 0) { if (path.isSnake()) { throw new IllegalStateException("bad diffpath: found snake when looking for diff"); } int i = path.i; int j = path.j; path = path.prev; int ianchor = path.i; int janchor = path.j; if (ianchor == i && janchor != j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_INSERT, ianchor, i, janchor, j)); } else if (ianchor != i && janchor == j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_DELETE, ianchor, i, janchor, j)); } else { changes.add(new Diff_Change(Diff_DiffRow.TAG_CHANGE, ianchor, i, janchor, j)); } if (path.isSnake()) { path = path.prev; } } return changes; } } class Diff_PathNode { public final int i; public final int j; public final Diff_PathNode prev; public final boolean snake; public final boolean bootstrap; public Diff_PathNode(int i, int j, boolean snake, boolean bootstrap, Diff_PathNode prev) { this.i = i; this.j = j; this.bootstrap = bootstrap; if (snake) { this.prev = prev; } else { this.prev = prev == null ? null : prev.previousSnake(); } this.snake = snake; } public boolean isSnake() { return snake; } public boolean isBootstrap() { return bootstrap; } 
 /* class Diff  */ public final Diff_PathNode previousSnake() { if (isBootstrap()) { return null; } if (!isSnake() && prev != null) { return prev.previousSnake(); } return this; } public String toString() { StringBuilder buf = new StringBuilder("["); Diff_PathNode node = this; while (node != null) { buf.append("("); buf.append(Integer.toString(node.i)); buf.append(","); buf.append(Integer.toString(node.j)); buf.append(")"); node = node.prev; } buf.append("]"); return buf.toString(); } } class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public Diff_Patch() { this(10); } public Diff_Patch(int estimatedPatchSize) { deltas = new ArrayList<>(estimatedPatchSize); } public List<T> applyTo(List<T> target) throws Exception { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.applyTo(result); } return result; } public List<T> restore(List<T> target) { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.restore(result); } return result; } public void addDelta(Diff_AbstractDelta<T> delta) { deltas.add(delta); } public List<Diff_AbstractDelta<T>> getDeltas() { Collections.sort(deltas, java.util.Comparator.comparing(d -> d.getSource().getPosition())); return deltas; } public String toString() { return "Patch{" + "deltas=" + deltas + '}'; } public static <T> Diff_Patch<T> generate(List<T> original, List<T> revised) throws Exception { Diff_MyersDiff m=new Diff_MyersDiff<>(); List<Diff_Change> changes=m.computeDiff(original, revised); 
 /* class Diff  */ Diff_Patch<T> patch = new Diff_Patch<>(changes.size()); for (Diff_Change change : changes) { Diff_Chunk<T> orgChunk = new Diff_Chunk<>(change.startOriginal, new ArrayList<>(original.subList(change.startOriginal, change.endOriginal))); Diff_Chunk<T> revChunk = new Diff_Chunk<>(change.startRevised, new ArrayList<>(revised.subList(change.startRevised, change.endRevised))); switch (change.deltaType) { case Diff_DiffRow.TAG_DELETE: patch.addDelta(new Diff_DeleteDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_INSERT: patch.addDelta(new Diff_InsertDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_CHANGE: patch.addDelta(new Diff_ChangeDelta<>(orgChunk, revChunk)); break; } } return patch; } } 
-
 
 
 
@@ -19606,6 +19818,16 @@ namespace LoopbackWithMic
 /* class by manual */                + "    Exemplo de endsWith: \"jar,zip\"\n"
 /* class by manual */                + "    Exemplo de ips_banidos: \"8.8.8.8,4.4.4.4\"\n"
 /* class by manual */                + "    Exemplo de log_ips: \"c:\\tmp\\ips.log\"\n"
+/* class by manual */                + "    -redisDir \"\"\n"
+/* class by manual */                + "    -redisDir \"c:\\tmp\\tmp\" -redisSeconds \"600\"\n"
+/* class by manual */                + "    curl redis:\n"
+/* class by manual */                + "    y curl \"203.cloudns.cl:8100/\" -H \"Redis-KEY: *\"\n"
+/* class by manual */                + "    y curl \"203.cloudns.cl:8100/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\"\n"
+/* class by manual */                + "    y curl \"203.cloudns.cl:8100/\" -H \"Redis-DEL: A\"\n"
+/* class by manual */                + "    y curl \"203.cloudns.cl:8100/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # retorna 200 ou 203\n"
+/* class by manual */                + "    obs, como funciona o SIGN(add key value concorrente):\n"
+/* class by manual */                + "      Em caso de =>                   -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # ele retorna 200. \"Redis-SIGN: Y\" forca o valor \"C\" para SIGN\n"
+/* class by manual */                + "      Em caso de um sign diferente => -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C2\"                   # ele retorna 203 negando a gravacao, pois KEY A esta com SIGN C e nao C2.\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "[y pwd]\n"
@@ -19897,3 +20119,7 @@ namespace LoopbackWithMic
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+

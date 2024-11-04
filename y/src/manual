@@ -532,6 +532,16 @@ Exemplos...
     Exemplo de endsWith: "jar,zip"
     Exemplo de ips_banidos: "8.8.8.8,4.4.4.4"
     Exemplo de log_ips: "c:\tmp\ips.log"
+    -redisDir ""
+    -redisDir "c:\tmp\tmp" -redisSeconds "600"
+    curl redis:
+    y curl "203.cloudns.cl:8100/" -H "Redis-KEY: *"
+    y curl "203.cloudns.cl:8100/" -H "Redis-KEY: A" -H "Redis-VALUE: B"
+    y curl "203.cloudns.cl:8100/" -H "Redis-DEL: A"
+    y curl "203.cloudns.cl:8100/" -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C" -H "Redis-SIGN: Y" # retorna 200 ou 203
+    obs, como funciona o SIGN(add key value concorrente):
+      Em caso de =>                   -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C" -H "Redis-SIGN: Y" # ele retorna 200. "Redis-SIGN: Y" força o valor "C" para SIGN
+      Em caso de um sign diferente => -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C2"                   # ele retorna 203 negando a gravação, pois KEY A está com SIGN C e não C2.
 [y wget]
     y wget -h
 [y pwd]
