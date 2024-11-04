@@ -12527,6 +12527,8 @@ while True:
             }
             if ( removes.equals("") )
                 continue;  
+            // conversao direta
+            // ffmpeg -i "A.mkv" -qscale 0 "A.mp4"
             String display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
