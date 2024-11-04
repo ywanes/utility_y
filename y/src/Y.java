@@ -19279,7 +19279,6 @@ class ClientThread extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -19821,10 +19820,10 @@ class ClientThread extends Util{
 /* class by manual */                + "    -redisDir \"\"\n"
 /* class by manual */                + "    -redisDir \"c:\\tmp\\tmp\" -redisSeconds \"600\"\n"
 /* class by manual */                + "    curl redis:\n"
-/* class by manual */                + "    y curl \"203.cloudns.cl:8100/\" -H \"Redis-KEY: *\"\n"
-/* class by manual */                + "    y curl \"203.cloudns.cl:8100/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\"\n"
-/* class by manual */                + "    y curl \"203.cloudns.cl:8100/\" -H \"Redis-DEL: A\"\n"
-/* class by manual */                + "    y curl \"203.cloudns.cl:8100/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # retorna 200 ou 203\n"
+/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: *\"\n"
+/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\"\n"
+/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-DEL: A\"\n"
+/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # retorna 200 ou 203\n"
 /* class by manual */                + "    obs, como funciona o SIGN(add key value concorrente):\n"
 /* class by manual */                + "      Em caso de =>                   -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # ele retorna 200. \"Redis-SIGN: Y\" forca o valor \"C\" para SIGN\n"
 /* class by manual */                + "      Em caso de um sign diferente => -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C2\"                   # ele retorna 203 negando a gravacao, pois KEY A esta com SIGN C e nao C2.\n"
@@ -20119,7 +20118,5 @@ class ClientThread extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
 
 
