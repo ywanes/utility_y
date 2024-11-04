@@ -18948,61 +18948,13 @@ class ClientThread extends Util{
     }
     private void gravando() throws Exception {
         StringBuilder sb = new StringBuilder();
-        // redis
-        if ( redis != null ){
-            if ( header_redis_del != null ){
-                redis.del(header_redis_del.split(" "));
-                output.write(  ("HTTP/1.1 200 OK\r\n\r\n+OK").getBytes() );
-                return;                    
-            }
-            if ( header_redis_key != null && !header_redis_key.contains(" ") && header_redis_key.equals(fixNameFile(header_redis_key)) ){
-                if ( header_redis_key.equals("*") ){
-                    output.write(  ("HTTP/1.1 200 OK\r\n\r\n"+redis.getAll()).getBytes() );
-                    return;                    
-                }
-                if ( header_redis_value == null ){
-                    output.write(  ("HTTP/1.1 200 OK\r\n\r\n"+redis.get(header_redis_key)).getBytes() );
-                    return;                    
-                }
-                if ( header_redis_id == null ){
-                    redis.add(header_redis_key, header_redis_value);
-                    output.write(  ("HTTP/1.1 200 OK\r\n\r\n+OK").getBytes() );
-                    return;                    
-                }
-                if ( header_redis_sign == null ){
-                    if ( redis.addConcorrenteSign(header_redis_id, false, header_redis_key, header_redis_value) == 0 )
-                        output.write(  ("HTTP/1.1 200 OK\r\n\r\n+OK").getBytes() );
-                    else
-                        output.write(  ("HTTP/1.1 203 Non-Authoritative Information\r\n\r\n+NOK").getBytes() );
-                    return;
-                }
-                redis.addConcorrenteSign(header_redis_id, true, header_redis_key, header_redis_value);
-                output.write(  ("HTTP/1.1 200 OK\r\n\r\n+OK").getBytes() );
-                return;
-            }
-            
-            
-            // 404
-            sb = new StringBuilder();
-            for (String line: new String[] {
-                    "HTTP/1.1 404 OK\r\n",
-                    "Content-Type: text/html; charset=UTF-8\r\n",
-                    "Access-Control-Allow-Origin: *\r\n",
-                    "X-Frame-Options: SAMEORIGIN\r\n",
-                    "\r\n",
-                    "A<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" + "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" + "<title>404 - File or directory not found.</title>\n" + "<style type=\"text/css\">\n" + "<!--\n" + "body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" + "fieldset{padding:0 15px 10px 15px;} \n" +
-                    "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
-                }) {
-                sb.append(line);
-            }
-            output.write(sb.toString().getBytes());
-            return;
-        }
-        // OPTIONS
+        
+        // OPTIONS - options precisa retornar 200 para não dar o erro "blocked by CORS policy: Response to preflight" em caso de XMLHttpRequest com setRequestHeader
         if (method.equals("OPTIONS")) {
             for (String line: new String[] {
-                    "HTTP/1.1 501 Not Implemented\r\n", 
+                    "HTTP/1.1 200\r\n", 
                     "Access-Control-Allow-Origin: *\r\n",
+                    "Access-Control-Allow-Headers: *\r\n",
                     "X-Frame-Options: SAMEORIGIN\r\n",
                     "\r\n",
                 }) {
@@ -19013,6 +18965,45 @@ class ClientThread extends Util{
             output.write(sb.toString().getBytes());
             return;
         }
+                
+        // redis
+        if ( redis != null && !method.equals("OPTIONS") ){
+            if ( header_redis_del != null ){
+                redis.del(header_redis_del.split(" "));
+                output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
+                return;                    
+            }
+            if ( header_redis_key != null && !header_redis_key.contains(" ") && header_redis_key.equals(fixNameFile(header_redis_key)) ){
+                if ( header_redis_key.equals("*") ){                    
+                    output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n"+redis.getAll()).getBytes() );
+                    return;                    
+                }
+                if ( header_redis_value == null ){
+                    output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n"+redis.get(header_redis_key)).getBytes() );
+                    return;                    
+                }
+                if ( header_redis_id == null ){
+                    redis.add(header_redis_key, header_redis_value);
+                    output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
+                    return;                    
+                }
+                if ( header_redis_sign == null ){
+                    if ( redis.addConcorrenteSign(header_redis_id, false, header_redis_key, header_redis_value) == 0 )
+                        output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
+                    else
+                        output.write(  ("HTTP/1.1 203 Non-Authoritative Information\r\nAccess-Control-Allow-Origin: *\r\n\r\n+NOK").getBytes() );
+                    return;
+                }
+                redis.addConcorrenteSign(header_redis_id, true, header_redis_key, header_redis_value);
+                output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
+                return;
+            }
+            
+            // 404
+            output.write(  ("HTTP/1.1 404 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n<title>404 - File or directory not found.</title>\n<style type=\"text/css\">\n\nbody{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\nfieldset{padding:0 15px 10px 15px;} \nh1{font-size:2.4em;margin:0;color:#FFF;}\nh2{font-size:1.7em;margin:0;color:#CC0000;} \nh3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\nbackground-color:#555555;}\n#content{margin:0 0 0 2%;position:relative;}\n.content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n\n</style>\n</head>\n<body>\n<div id=\"header\"><h1>Server Error</h1></div>\n<div id=\"content\">\n<div class=\"content-container\"><fieldset>\n<h2>404 - File or directory not found.</h2>\n<h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n</fieldset></div>\n</div>\n</body>\n</html>").getBytes() );
+            return;
+        }
+
         // nav playlist ou playlistmovie
         if ( nav == null 
             && mode != null 
@@ -19234,15 +19225,14 @@ class ClientThread extends Util{
         }
         // 404
         sb = new StringBuilder();
-        for (String line: new String[] {
+        for(String line: new String[]{
                 "HTTP/1.1 404 OK\r\n",
                 "Content-Type: text/html; charset=UTF-8\r\n",
                 "Access-Control-Allow-Origin: *\r\n",
                 "X-Frame-Options: SAMEORIGIN\r\n",
                 "\r\n",
-                "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n" + "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n" + "<title>404 - File or directory not found.</title>\n" + "<style type=\"text/css\">\n" + "<!--\n" + "body{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\n" + "fieldset{padding:0 15px 10px 15px;} \n" +
-                "h1{font-size:2.4em;margin:0;color:#FFF;}\n" + "h2{font-size:1.7em;margin:0;color:#CC0000;} \n" + "h3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n" + "#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\n" + "background-color:#555555;}\n" + "#content{margin:0 0 0 2%;position:relative;}\n" + ".content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n" + "-->\n" + "</style>\n" + "</head>\n" + "<body>\n" + "<div id=\"header\"><h1>Server Error</h1></div>\n" + "<div id=\"content\">\n" + " <div class=\"content-container\"><fieldset>\n" + "  <h2>404 - File or directory not found.</h2>\n" + "  <h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n" + " </fieldset></div>\n" + "</div>\n" + "</body>\n" + "</html>"
-            }) {
+                "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n<title>404 - File or directory not found.</title>\n<style type=\"text/css\">\n\nbody{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\nfieldset{padding:0 15px 10px 15px;} \nh1{font-size:2.4em;margin:0;color:#FFF;}\nh2{font-size:1.7em;margin:0;color:#CC0000;} \nh3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\nbackground-color:#555555;}\n#content{margin:0 0 0 2%;position:relative;}\n.content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n\n</style>\n</head>\n<body>\n<div id=\"header\"><h1>Server Error</h1></div>\n<div id=\"content\">\n<div class=\"content-container\"><fieldset>\n<h2>404 - File or directory not found.</h2>\n<h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n</fieldset></div>\n</div>\n</body>\n</html>"
+            }){
             sb.append(line);
             System.out.print("    |---> " + line);
         }
