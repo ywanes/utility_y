@@ -113,6 +113,7 @@ usage:
   [y random]
   [y var]
   [y talk]
+  [y sign]
   [y overflix]
   [y [update|u]]
   [y help]
@@ -729,6 +730,12 @@ Exemplos...
     y talk -lang Brazilian_Portuguese_Ricardo -msg oi
     y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "d:/ProgramFiles/musicas_ia/talk.wav"
     y echo oi | y talk
+[y sign]
+    y sign -msg "Hello" -pass "My passphrase"
+    y sign -verify -msg "Hello" -publicKey "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==" -signature "MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA=="
+    obs: retornando true, significa assinatura ok
+    obs2: Informações técnicas => SPEC "secp256r1" ALGO = "SHA256withECDSA"
+    obs3: Não confundir com secp256k1 do bitcoin
 [y overflix]
     y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
     y overflix -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"

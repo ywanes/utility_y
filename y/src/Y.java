@@ -1920,6 +1920,10 @@ cat buffer.log
             talk(args);
             return;
         }
+        if ( args[0].equals("sign") ){
+            sign(args);
+            return;
+        }
         if ( args[0].equals("update") || args[0].equals("u") ){
             update();
             return;
@@ -6257,6 +6261,60 @@ cat buffer.log
         }
     }
     
+    public void sign(String [] args){
+        String spec="secp256r1";
+        String algo="SHA256withECDSA";
+        Object [] obj = get_parms_sign(args);
+        if ( obj == null )
+            erroFatal("Parametros invalidos");
+        String msg=(String)obj[0];
+        String pass=(String)obj[1];
+        Boolean verify=(Boolean)obj[2];
+        String publicKey=(String)obj[3];
+        String signature=(String)obj[4];
+
+        if ( verify )
+            verify_sign(msg, publicKey, signature, algo);
+        else{
+            signing(msg, pass, spec, algo);
+        }      
+    }
+    
+    public void verify_sign(String msg, String _publicKey, String signature, String algo){
+        try{
+            java.security.Signature ecdsaVerify = java.security.Signature.getInstance(algo);
+            java.security.spec.EncodedKeySpec publicKeySpec = new java.security.spec.X509EncodedKeySpec(java.util.Base64.getDecoder().decode(_publicKey));
+            java.security.KeyFactory keyFactory = java.security.KeyFactory.getInstance("EC");
+            java.security.PublicKey publicKey = keyFactory.generatePublic(publicKeySpec);
+            ecdsaVerify.initVerify(publicKey);
+            ecdsaVerify.update(msg.getBytes("UTF-8"));
+            boolean result = ecdsaVerify.verify(java.util.Base64.getDecoder().decode(signature));
+            System.out.println(result);
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+    
+    public void signing(String msg, String pass, String spec, String algo){
+        try{
+            java.security.spec.ECGenParameterSpec ecSpec = new java.security.spec.ECGenParameterSpec(spec);
+            java.security.KeyPairGenerator g = java.security.KeyPairGenerator.getInstance("EC");
+            g.initialize(ecSpec, new java.security.SecureRandom(pass.getBytes()));
+            java.security.KeyPair keypair = g.generateKeyPair();
+            java.security.PublicKey _publicKey = keypair.getPublic();
+            java.security.PrivateKey privateKey = keypair.getPrivate();        
+            java.security.Signature ecdsaSign = java.security.Signature.getInstance(algo);
+            ecdsaSign.initSign(privateKey);
+            ecdsaSign.update(msg.getBytes("UTF-8"));
+            byte[] _signature = ecdsaSign.sign();        
+            String publicKey = java.util.Base64.getEncoder().encodeToString(_publicKey.getEncoded());
+            String signature = java.util.Base64.getEncoder().encodeToString(_signature);        
+            System.out.println("y sign -verify -msg \""+msg+"\" -publicKey \""+publicKey+"\" -signature \""+signature+"\"");
+        }catch(Exception e){
+            erroFatal(e);
+        }  
+    }
+    
     public void cors(String [] args){
         Object [] obj = get_parms_cors_ip_port_sw(args);
         if ( obj == null )
@@ -9472,7 +9530,56 @@ cat buffer.log
             erroFatal("Erro, multiplos formatos solicitados!");        
         return new Object []{f, mixer, line, wav, mp3, volume};
     }
-                
+               
+    private Object [] get_parms_sign(String [] args){
+        String msg=null;
+        String pass=null;
+        Boolean verify=false;
+        String publicKey=null;
+        String signature=null;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length > 0){
+            if ( args.length > 1 && msg == null && args[0].equals("-msg") ){
+                args=sliceParm(1, args);
+                msg=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && pass == null && args[0].equals("-pass") ){
+                args=sliceParm(1, args);
+                pass=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && !verify && args[0].equals("-verify") ){
+                args=sliceParm(1, args);
+                verify=true;
+                continue;
+            }
+            if ( args.length > 1 && publicKey == null && args[0].equals("-publicKey") ){
+                args=sliceParm(1, args);
+                publicKey=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && signature == null && args[0].equals("-signature") ){
+                args=sliceParm(1, args);
+                signature=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            erroFatal("Erro de parametros");
+        }        
+        if ( 
+            ( msg != null && pass != null && !verify && publicKey == null && signature == null )
+            || ( msg != null && pass == null && verify && publicKey != null && signature != null )
+        )
+            return new Object[]{msg, pass, verify, publicKey, signature};
+        return null;
+    }
+    
     private Object [] get_parms_cors_ip_port_sw(String [] args){
         String ip=null;        
         Integer port=4000;
@@ -19278,7 +19385,6 @@ class ClientThread extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -19398,6 +19504,7 @@ class ClientThread extends Util{
 /* class by manual */                + "  [y random]\n"
 /* class by manual */                + "  [y var]\n"
 /* class by manual */                + "  [y talk]\n"
+/* class by manual */                + "  [y sign]\n"
 /* class by manual */                + "  [y overflix]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
@@ -20014,6 +20121,12 @@ class ClientThread extends Util{
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Ricardo -msg oi\n"
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Vitoria -msg \"desliga esse computador, agora!\" -o \"d:/ProgramFiles/musicas_ia/talk.wav\"\n"
 /* class by manual */                + "    y echo oi | y talk\n"
+/* class by manual */                + "[y sign]\n"
+/* class by manual */                + "    y sign -msg \"Hello\" -pass \"My passphrase\"\n"
+/* class by manual */                + "    y sign -verify -msg \"Hello\" -publicKey \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==\" -signature \"MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA==\"\n"
+/* class by manual */                + "    obs: retornando true, significa assinatura ok\n"
+/* class by manual */                + "    obs2: Informacoes tecnicas => SPEC \"secp256r1\" ALGO = \"SHA256withECDSA\"\n"
+/* class by manual */                + "    obs3: Nao confundir com secp256k1 do bitcoin\n"
 /* class by manual */                + "[y overflix]\n"
 /* class by manual */                + "    y overflix \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
 /* class by manual */                + "    y overflix -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
