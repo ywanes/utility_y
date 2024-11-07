@@ -1,4 +1,28 @@
 <style>
+.btn_resume{
+     background: -webkit-linear-gradient(bottom, #E0E0E0, #F9F9F9 70%);
+     background: -moz-linear-gradient(bottom, #E0E0E0, #F9F9F9 70%);
+     background: -o-linear-gradient(bottom, #E0E0E0, #F9F9F9 70%);
+     background: -ms-linear-gradient(bottom, #E0E0E0, #F9F9F9 70%);
+     background: linear-gradient(bottom, #E0E0E0, #F9F9F9 70%);
+     border: 1px solid #CCCCCE;
+     border-radius: 3px;
+     box-shadow: 0 3px 0 rgba(0, 0, 0, .3),
+                   0 2px 7px rgba(0, 0, 0, 0.2);
+     color: #616165;
+     display: block;
+     font-family: "Trebuchet MS";
+     font-size: 14px;
+     font-weight: bold;
+     line-height: 25px;
+     text-align: center;
+     text-decoration: none;
+     text-transform: uppercase;
+     text-shadow:1px 1px 0 #FFF;
+     padding: 5px 15px;
+     position: relative;
+}
+ 
 .bordered {
   border: solid #ccc 3px;
   border-radius: 6px;
@@ -181,7 +205,7 @@
 			<tr style="padding: 0; height: 1%;">
 				<td style="padding: 0;">
 					<!-- login -->
-					<div id="login">
+					<div id="login" style="display: none">
 					<table border="0" align="left" style="width: 1%; padding: 0;">
 						<tr style="padding: 0;">
 							<td style="padding: 0;">
@@ -190,7 +214,7 @@
 								</a>
 							</td>
 							<td style="padding: 0;">
-								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;" onclick="user_click()">
+								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;" onclick="profile_click()">
 									<div id="profile">
 										<svg width="44" height="44" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0 -1028.4)"><path d="m8.4062 1041.1c-2.8856 1.3-4.9781 4-5.3437 7.3 0 1.1 0.8329 2 1.9375 2h14c1.105 0 1.938-0.9 1.938-2-0.366-3.3-2.459-6-5.344-7.3-0.649 1.3-2.011 2.3-3.594 2.3s-2.9453-1-3.5938-2.3z" fill="#2c3e50"/><path d="m17 4a5 5 0 1 1 -10 0 5 5 0 1 1 10 0z" fill="#34495e" transform="translate(0 1031.4)"/><path d="m12 11c-1.277 0-2.4943 0.269-3.5938 0.75-2.8856 1.262-4.9781 3.997-5.3437 7.25 0 1.105 0.8329 2 1.9375 2h14c1.105 0 1.938-0.895 1.938-2-0.366-3.253-2.459-5.988-5.344-7.25-1.1-0.481-2.317-0.75-3.594-0.75z" fill="#34495e" transform="translate(0 1028.4)"/></g></svg>
 									</div>
@@ -203,7 +227,7 @@
 							</td>
 							<td style="padding: 0;">
 								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;">
-									<input id="nick_name" style="display: none;" type="text" placeholder="nick_name" onkeypress="keypress_nick_name(event)"></input>
+									<input id="nick_name" style="display: none;" type="text" placeholder="nick_name" onkeypress="keypress_nick_name(event)" autocomplete="off"></input>
 								</a>
 							</td>
 							<td style="padding: 0;">
@@ -211,7 +235,7 @@
 									<button id="btn_aplicar_nick" style="display: none;" type="submit" onclick="aplicar_nick()">aplicar</button>
 								</a>
 							</td>
-						</tr>	
+						</tr>
 						<tr style="padding: 0;">
 							<td style="padding: 0;">
 								&nbsp;
@@ -221,6 +245,13 @@
 					</div>
 				</td>
 			</tr>
+			<tr style="padding: 0; height: 1%;">
+				<td style="padding: 0;">
+					<!-- resume -->
+					<div id="resume" style="display: none">
+					</div>
+				</td>
+			</tr>			
 			<tr style="padding: 0; height: 1%;">
 				<td style="padding: 0;">
 					<!-- nav -->
@@ -238,7 +269,7 @@
 			<tr style="padding: 0; ">
 				<td style="padding: 0;">
 					<!-- home -->
-					<div id="div_index">
+					<div id="div_index" style="display: ;position: relative; top: -34px;">
 					<table border="0" align="center" style="width: 100%; padding: 0;">
 						<tr>
 							<td >
@@ -321,9 +352,13 @@ function go_home(){
 	update_url('/');
 	document.getElementById('login').style="";
 	document.getElementById('nav').style="display: none;";
-	document.getElementById('div_index').style="";
+	document.getElementById('resume').style="display: none;";	
+	document.getElementById('div_index').style="display: ; position: relative; top: -34px;";
 	document.getElementById('principal').style="display: none;";
-	document.getElementById('principal').innerHTML='';
+	document.getElementById('principal').innerHTML='';		
+	document.getElementById('nick_name').style='display: none';
+	document.getElementById('btn_aplicar_nick').style='display: none';
+	document.getElementById('nick').style='';
 }
 
 function human_sort(a){
@@ -358,11 +393,11 @@ function load_nav(parm, table_click, type){
 inicializado=false;
 inicializado2=false;
 first_click_f11=true;
-function load_movie(parm, table_click){	
+function load_movie(parm, table_click){	    
 	var src='/'+parm.join('/');
 	document.getElementById('login').style="display: none;";
 	document.getElementById('nav').style="display: none;";
-	document.getElementById('div_index').style="display: none;";
+	document.getElementById('div_index').style="display: none; position: relative; top: -34px;";
 	document.getElementById('principal').style="";
 	document.getElementById('principal').innerHTML=`
 		  <div class="video-container">
@@ -673,48 +708,50 @@ function load_movie(parm, table_click){
 	fullScreenButton.addEventListener('click', toggleFullScreen);
 	document.getElementById('volume').addEventListener('click', volumeclick);
 	function getDigest(){
-	  let digest = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-	  let p_digest = 0;
-	  function updateDigest(a){
-		for ( var i=0;i<a.length;i++ ){
-		  digest[p_digest]=(digest[p_digest]+a.charCodeAt(i))%52;
-		  p_digest++;
-		  if ( p_digest >= digest.length )
-			p_digest=0;
-		}
-	  }
-	  var a = getVideo().src;
-	  for ( var i=0;i<digest.length;i++ ){
-		if ( digest[i] >= 26 )
-		  a+=String.fromCharCode(digest[i]-26+97);
-		else
-		  a+=String.fromCharCode(digest[i]+65);
-	  }
-	  cache_digest = a;
-	  return cache_digest;
+	  return getVideo().src;
 	}
-	function save_station(){
-	  if ( document.getElementById('video') != null && getDigest() != null ){
+	function save_station1(){
+	  let nick_name=get_nick_name();
+	  if ( document.getElementById('video') != null && getDigest() != null && nick_name != null ){
+		contador_save_station1+=1;
+		if ( contador_save_station1 < 5 && !sign_first ){
+		  return;
+		}
+		contador_save_station1=0;
 		let digest = getDigest();
 		let currentTime=document.getElementById('video').currentTime;
 		let duration=document.getElementById('video').duration;
 		let volume=document.getElementById('video').volume;
-		localStorage.setItem('playlistmovie-v-20241101-'+digest,JSON.stringify({'currentTime': currentTime, 'duration': duration}));
+		//localStorage.setItem('playlistmovie-v-20241101-'+digest,JSON.stringify({'currentTime': currentTime, 'duration': duration}));
+		if ( sign_first ){
+		  redis_sign(get_nick_session(), 'Y', get_nick_name()+'-playlistmovie-v-20241101-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration}));
+		  sign_first=false;
+		}else{
+		  r=redis_sign(get_nick_session(), 'N', get_nick_name()+'-playlistmovie-v-20241101-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration}));
+		  if ( r == '+NOK' ){
+		    document.getElementById('principal').innerHTML='';
+		    document.getElementById('resume').innerHTML='<a style="color: white; font-size: 25px; font-family: Franklin Gothic Medium;"><br><br>&nbsp;&nbsp;&nbsp;ESSE TITULO JA ESTA SENDO VISUALIZADO EM OUTRO TERMINAL!!!</a>';
+			document.getElementById('resume').style='';
+		  }		  		  
+		}
 		localStorage.setItem('playlistmovie-v-20241101-global',JSON.stringify({'volume': volume}));
 	  }
 	}
-	function load_station(){
+	function load_station1(){
 	  if ( document.getElementById('video') != null && getDigest() != null ){
 	    let digest=getDigest();
-		let a = localStorage.getItem('playlistmovie-v-20241101-'+digest);
+		//let a = localStorage.getItem('playlistmovie-v-20241101-'+digest);		
+		let a=redis_get(get_nick_name()+'-playlistmovie-v-20241101-'+digest);
 		if ( a != null ){
-		  let b = JSON.parse(a);
-		  let currentTime = b['currentTime'];
-		  let duration = b['duration'];
-		  if ( currentTime > (duration-10) )
-			document.getElementById('video').currentTime = 0;      
-		  else
-		    document.getElementById('video').currentTime = currentTime;      
+		  try{
+		    let b = JSON.parse(a);
+		    let currentTime = b['currentTime'];
+		    let duration = b['duration'];
+		    if ( currentTime > (duration-10) )
+  			  document.getElementById('video').currentTime = 0;      
+		    else
+  		      document.getElementById('video').currentTime = currentTime;      
+		  }catch(err){}
 		}
 		a = localStorage.getItem('playlistmovie-v-20241101-global');
 		if ( a != null ){
@@ -746,7 +783,8 @@ function load_movie(parm, table_click){
 	
 	function f_onload(){
 	  volumeclick();
-	  load_station();
+	  sign_first=true;
+	  load_station1();
 	  playPause();	  
 	}	
 	
@@ -763,46 +801,23 @@ function load_movie(parm, table_click){
 		  if ( getVideo() == null ){
 		    interval_ok=false;			
 		  }else{
-            save_station();
+            save_station1();
           }
 		}
 	  }, 1000);
 	}
 }
 
+var contador_save_station1=0;
+var sign_first=true;
+
 function load_music(parm, elements){	
-	var src='/'+parm.join('/')+'/';
-	update_url( '/#'+parm.join('/') );
-	document.getElementById('login').style="display: none;";
-	document.getElementById('nav').style="display: none;";
-	document.getElementById('div_index').style="display: none;";
-	document.getElementById('principal').style="";
-	//document.getElementById('principal').innerHTML=elements;
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-					
-					
-					
-					
+				var src='/'+parm.join('/')+'/';
+				update_url( '/#'+parm.join('/') );
+				document.getElementById('login').style="display: none;";
+				document.getElementById('nav').style="display: none;";
+				document.getElementById('div_index').style="display: none; position: relative; top: -34px;";
+				document.getElementById('principal').style="";
 				function remove_playlist(){
 				  document.getElementById('master').innerHTML='';
 				}
@@ -1353,20 +1368,6 @@ function load_music(parm, elements){
 				
 				preparacao();
 				inicializado2=true;
-					
-					
-					
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
-	
 }
 
 function get_back_next(_parm){
@@ -1405,7 +1406,8 @@ function load_playlist(parm, table_click, type){
 	document.getElementById('body').style='margin-top: 0px;margin-right: 0px;margin-bottom: 0px;margin-left: 0px; background-color: black';
 	document.getElementById('login').style="";
 	document.getElementById('nav').style="";
-	document.getElementById('div_index').style="display: none;";
+	document.getElementById('resume').style="display: none";	
+	document.getElementById('div_index').style="display: none; position: relative; top: -34px;";
 	document.getElementById('principal').style="";
 	let s='<table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;">\n';
 	let elements=get_elementos_filtrados(parm);
@@ -1433,24 +1435,47 @@ function load_playlist(parm, table_click, type){
 	load_nav(parm, table_click, type);	
 }
 
+function save_station_nick1(){
+  let nick_name=get_nick_name();
+  if ( nick_name != null ){
+    localStorage.setItem('playlistmovie-v-20241101-nick_name',JSON.stringify({'nick_name': nick_name}));
+  }
+}
+
+function load_station_nick1(){
+  if ( document.getElementById('nick_name') != null ){ // verificacao de segurança
+	a = localStorage.getItem('playlistmovie-v-20241101-nick_name');
+	if ( a != null ){
+	  let b = JSON.parse(a);
+	  let nick_name = b['nick_name'];
+	  document.getElementById('nick_name').value = nick_name;
+	  aplicar_nick(true);
+	}
+  }
+}
+
+
 function f_load(){  
+  document.getElementById('resume').style="display: none";
   document.getElementById('body_copy').setAttribute('style_copy', document.getElementById('body').getAttribute('style'));
   let uri=decodeURI(window.location.href);
   if ( uri.indexOf('#') > 0 ){
-    document.getElementById('principal').style="";
 	detect=uri.split('#')[1].split('/')[0];
 	type='?';
 	if ( detect == 'series' || detect == 'filmes' )
 		type='movie';
 	if ( detect == 'musicas' )
 		type='music';
-	let s="<br><br><br><a style=\"background-color: #9d9d9d66;cursor: pointer;color: blue;font-size: 24px;\" onclick=\"load_playlist(" + "['" + uri.split('#')[1].split('/').join("','") + "']" + ", true, '" + type + "')\">" + uri.split('#')[1] + "</a>";
-    document.getElementById('principal').innerHTML="<table border=\"0\" align=\"center\"><tr><td>"+s+"</td></tr></table>";
-  }  
+	let s="<a style=\"display: inline-block; cursor: pointer;\" class=\"btn_resume\" onclick=\"load_playlist(" + "['" + uri.split('#')[1].split('/').join("','") + "']" + ", true, '" + type + "')\">" + uri.split('#')[1] + "</a>";
+	document.getElementById('resume').style='';
+    document.getElementById('resume').innerHTML="<table border=\"0\" align=\"center\"><tr><td>"+s+"</td></tr></table>";
+  }
+  load_station_nick1();
+  document.getElementById('login').style='';
 }
 
 
-function user_click(){
+function profile_click(){
 
 }
 
@@ -1462,11 +1487,27 @@ function nick_click(){
 		document.getElementById('nick_name').type='text';
 	document.getElementById('nick_name').style='';
 	document.getElementById('btn_aplicar_nick').style='';
+	document.getElementById('nick_name').focus();
 }
 
-function aplicar_nick(){	
-	if ( document.getElementById('nick_name').value.trim() != '' && document.getElementById('nick_name').value.trim() == document.getElementById('nick_name').value ){
-		let nick=document.getElementById('nick_name').value;
+function get_nick_name(){
+	let nick_name=document.getElementById('nick_name');
+	if ( nick_name != null && nick_name.value.trim().length > 0 && nick_name.value.trim() == nick_name.value || nick_name.value != 'offline' )
+		return nick_name.value;
+	return null;
+}
+
+function get_nick_session(){
+    return document.getElementById('nick_name').getAttribute('Redis-ID');
+}
+
+
+function aplicar_nick(sistemico){	
+	if ( typeof sistemico == 'undefined' )
+		sistemico=false;
+	let nick_name=get_nick_name();
+	if ( nick_name != null ){
+		let nick=nick_name;
 		if ( nick.indexOf('#') > -1 ){
 			if ( nick.split('#').length != 2 || nick.split('#')[0].length == 0 || nick.split('#')[1].length == 0 )
 				return;
@@ -1475,33 +1516,65 @@ function aplicar_nick(){
 		document.getElementById('nick').innerHTML=nick;
 		document.getElementById('nick_name').style='display: none';
 		document.getElementById('btn_aplicar_nick').style='display: none';
-		document.getElementById('nick').style='';
+		if ( !sistemico ){
+			save_station_nick1();
+		}
+		if ( document.getElementById('nick_name').getAttribute('Redis-ID') == null )
+			document.getElementById('nick_name').setAttribute('Redis-ID', Math.random() * 1);
 	}
+	document.getElementById('nick').style='';
+}
+
+function saneamentoValue(a){
+  return a.replaceAll(':', '_').replaceAll('/', '_').replaceAll('+', '_');
+}
+
+function redis(a){
+  try{
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open('GET', 'http://203.cloudns.cl:8100', false);
+	for ( let i=0;i<a.length;i++ ){
+      let key=a[i][0];
+      let value=a[i][1];
+	  if ( key == 'Redis-KEY' ){
+	    value=saneamentoValue(value);
+	  }
+      xmlHttp.setRequestHeader(key, value);
+	}
+    xmlHttp.send();
+    return xmlHttp.responseText;
+  }catch(err){
+    console.log('xmlHttp erro: '+err);
+  }
+  return null;
+}
+
+function redis_get(a){
+  return redis([
+    ['Redis-KEY', a]
+  ]);
+}
+
+function redis_set(a, b){
+  return redis([
+    ['Redis-KEY', a],
+    ['Redis-VALUE', b]
+  ]);
+}
+
+function redis_sign(a, b, c, d){
+  return redis([
+    ['Redis-ID', a],
+    ['Redis-SIGN', b],
+    ['Redis-KEY', c],
+    ['Redis-VALUE', d]
+  ]);
 }
 
 function keypress_nick_name(e) {    
     if (e.which == 13 || e.keyCode == 13)
        aplicar_nick();
 };
-
-/*
-								<td>
-									<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;">
-										<div id="nick" onclick="nick_click()">offline</div>
-									</a>
-								</td>
-								<td>
-									<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;">
-										<input id="nick_name" style="display: none;" type="text" placeholder="nick_name" onkeypress="keypress_nick_name(event)"></input>
-									</a>
-								</td>
-								<td>
-									<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;">
-										<button id="btn_aplicar_nick" style="display: none;" type="submit" onclick="aplicar_nick()">aplicar</button>
-									</a>
-								</td>
-								
-*/
 
 								
 </script>

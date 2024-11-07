@@ -18989,11 +18989,11 @@ class ClientThread extends Util{
                     output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
                     return;                    
                 }
-                if ( header_redis_sign == null ){
+                if ( header_redis_sign == null || !header_redis_sign.equals("Y") ){
                     if ( redis.addConcorrenteSign(header_redis_id, false, header_redis_key, header_redis_value) == 0 )
                         output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
                     else
-                        output.write(  ("HTTP/1.1 203 Non-Authoritative Information\r\nAccess-Control-Allow-Origin: *\r\n\r\n+NOK").getBytes() );
+                        output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+NOK").getBytes() );
                     return;
                 }
                 redis.addConcorrenteSign(header_redis_id, true, header_redis_key, header_redis_value);
