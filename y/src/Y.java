@@ -19900,10 +19900,10 @@ class ClientThread extends Util{
 /* class by manual */                + "        -xor 100\n"
 /* class by manual */                + "[y httpServer]\n"
 /* class by manual */                + "    y httpServer\n"
-/* class by manual */                + "    y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
-/* class by manual */                + "    y -mode playlist -ip 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt -noLogLocal\n"
-/* class by manual */                + "    y -mode playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\n"
-/* class by manual */                + "    y -mode playlistserver 192.168.0.100 8888 -cfg d:/ProgramFiles/playlistserver.cfg\n"
+/* class by manual */                + "    set var=\"httpServer -mode playlist -host 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer -mode playlist -host 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt -noLogLocal\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer -mode playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer -mode playlistserver 192.168.0.100 8888 -cfg d:/ProgramFiles/playlistserver.cfg\" && y var\n"
 /* class by manual */                + "    windows:\n"
 /* class by manual */                + "    set var=\"httpServer\" \"-host\" \"127.0.0.1\" \"-port\" \"8888\" \"-titulo_url_token\" \"\" \"-titulo\" \"titulo\" \"-dir\" \".\" \"-endsWith\" \"\" \"-ips_banidos\" \"\" \"-log_ips\" \"\" && y var\n"
 /* class by manual */                + "    linux:\n"
@@ -20223,5 +20223,6 @@ class ClientThread extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 

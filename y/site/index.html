@@ -11,7 +11,7 @@
                    0 2px 7px rgba(0, 0, 0, 0.2);
      color: #616165;
      display: block;
-     font-family: "Trebuchet MS";
+     font-family: "Franklin Gothic Medium";
      font-size: 14px;
      font-weight: bold;
      line-height: 25px;
@@ -189,12 +189,14 @@
   color: #FEFEFE;
   font-weight: bold;
   font-size: 1em;
+  font-family: "Franklin Gothic Medium";
 }
 
 .video-container .controls .title .episode {
   color: #A1A1A1;
   font-size: 0.75em;
   padding-left: 1vw;
+  font-family: "Franklin Gothic Medium";
 }
 </style>
 
@@ -214,24 +216,24 @@
 								</a>
 							</td>
 							<td style="padding: 0;">
-								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;" onclick="profile_click()">
+								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="profile_click()">
 									<div id="profile">
 										<svg width="44" height="44" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><g transform="translate(0 -1028.4)"><path d="m8.4062 1041.1c-2.8856 1.3-4.9781 4-5.3437 7.3 0 1.1 0.8329 2 1.9375 2h14c1.105 0 1.938-0.9 1.938-2-0.366-3.3-2.459-6-5.344-7.3-0.649 1.3-2.011 2.3-3.594 2.3s-2.9453-1-3.5938-2.3z" fill="#2c3e50"/><path d="m17 4a5 5 0 1 1 -10 0 5 5 0 1 1 10 0z" fill="#34495e" transform="translate(0 1031.4)"/><path d="m12 11c-1.277 0-2.4943 0.269-3.5938 0.75-2.8856 1.262-4.9781 3.997-5.3437 7.25 0 1.105 0.8329 2 1.9375 2h14c1.105 0 1.938-0.895 1.938-2-0.366-3.253-2.459-5.988-5.344-7.25-1.1-0.481-2.317-0.75-3.594-0.75z" fill="#34495e" transform="translate(0 1028.4)"/></g></svg>
 									</div>
 								</a>
 							</td>
 							<td style="padding: 0;">
-								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;">
+								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;">
 									<div id="nick" onclick="nick_click()">offline</div>
 								</a>
 							</td>
 							<td style="padding: 0;">
-								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;">
+								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;">
 									<input id="nick_name" style="display: none;" type="text" placeholder="nick_name" onkeypress="keypress_nick_name(event)" autocomplete="off"></input>
 								</a>
 							</td>
 							<td style="padding: 0;">
-								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;">
+								<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;">
 									<button id="btn_aplicar_nick" style="display: none;" type="submit" onclick="aplicar_nick()">aplicar</button>
 								</a>
 							</td>
@@ -256,6 +258,7 @@
 				<td style="padding: 0;">
 					<!-- nav -->
 					<div id="nav" style="display: none">
+					&nbsp;&nbsp;&nbsp;
 					<table border="0" align="left" style="width: 100%; padding: 0;">
 						<tr style="padding: 0;">
 							<td style="width: 100%; padding: 0;">								
@@ -377,17 +380,17 @@ function get_elementos(){
 }
 
 function load_nav(parm, table_click, type){
-	let barra_branca='<a style="color: white;">/</a>';
+	let barra_branca='<a style="color: white; font-family: Franklin Gothic Medium;">/</a>';
 	let space='&nbsp;';
 	let s='';
 	if ( parm.length > 0 )
-		s=barra_branca+space+'<a style="color: white;">'+parm[parm.length-1]+'</a>'+space+s;		
+		s=barra_branca+space+'<a style="color: white; font-family: Franklin Gothic Medium;">'+parm[parm.length-1]+'</a>'+space+s;		
 	while(parm.length > 1){
 		parm.pop(0);
-		s=barra_branca+space+"<a onclick=\"load_playlist(" + "['" + parm.join("','") + "']" + "," + table_click + " ,'" + type + "')\" style=\"display: inline-block; cursor: pointer;\">" + parm[parm.length-1] + "</a>" + space+s;		
+		s=barra_branca+space+"<a onclick=\"load_playlist(" + "['" + parm.join("','") + "']" + "," + table_click + " ,'" + type + "')\" style=\"display: inline-block; cursor: pointer; font-family: Franklin Gothic Medium;\">" + parm[parm.length-1] + "</a>" + space+s;		
 	}	
-	s=barra_branca+space+'<a onclick="go_home()" style="display: inline-block; cursor: pointer;">Home</a>'+space+s;		
-	document.getElementById('nav').innerHTML='<h1 style="color: rgb(51,102,204);">'+s+'</h1>';
+	s=barra_branca+space+'<a onclick="go_home()" style="display: inline-block; cursor: pointer; font-family: Franklin Gothic Medium;">Home</a>'+space+s;		
+	document.getElementById('nav').innerHTML='<h1 style="color: rgb(51,102,204);">&nbsp;'+s+'</h1>';
 }
 
 inicializado=false;
@@ -409,7 +412,7 @@ function load_movie(parm, table_click){
 							<a onclick="go_home()" style="display: inline-block; cursor: pointer;">            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <g clip-path="url(#clip0)"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z" fill="#293644"></path> </g> <defs> <clipPath id="clip0"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </svg>        </a>        
 						</td>
 						<td>
-							<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px;">
+							<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;">
 								<div id="nick2" onclick="go_home()">
 								` + document.getElementById('nick').innerHTML + 
 								`
@@ -708,7 +711,7 @@ function load_movie(parm, table_click){
 	fullScreenButton.addEventListener('click', toggleFullScreen);
 	document.getElementById('volume').addEventListener('click', volumeclick);
 	function getDigest(){
-	  return getVideo().src;
+	  return getVideo().src.replace(ref_, '');	  
 	}
 	function save_station1(){
 	  let nick_name=get_nick_name();
@@ -832,7 +835,7 @@ function load_music(parm, elements){
 				  }
 				  //window.innerHeight/window.innerWidth > 1.5
 				  for ( let i=0;i<elements.length;i++ )
-				    tmp+="<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: " + tmp_wi + "px; font-size: " + tmp_si + "px;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + src+elements[i] + "\" >" + elements[i] + "</td></tr>\n";
+				    tmp+="<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: " + tmp_wi + "px; font-size: " + tmp_si + "px; font-family: Franklin Gothic Medium;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + src+elements[i] + "\" >" + elements[i] + "</td></tr>\n";
 					
 				  document.getElementById('principal').innerHTML=`
 						<style>canvas {position: relative;top: 0%;left: 50%;margin-left: -50vmin;width: 100vmin;height: 100vmin;}</style>
@@ -853,21 +856,21 @@ function load_music(parm, elements){
 						<svg width="44" height="44" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0)"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z" fill="#293644"></path> </g> <defs> <clipPath id="clip0"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </svg>
 					</a>
 					<br/>
-					&nbsp;&nbsp;&nbsp;<a style="display: inline-block; cursor: pointer; font-size: 40px;" onclick="troca_de_faixa_anterior()">&#9194;</a>
-					<a style="display: inline-block; cursor: pointer; font-size: 40px;" onclick="troca_de_faixa()">&#9193;</a>
-					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" value="FULL_SCREEN" onclick="Fullscreen(false);" style="color: #333; font-size: 18px; background-color: rgb(0, 0, 0);">
-					<input type="button" value="VIDEO" onclick="Fullscreen(true);" style="color: #333; font-size: 18px; background-color: rgb(0, 0, 0);">
-					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px;" onclick="A_mais()">A+</a>
-					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px;" onclick="A_menos()">A-</a>
-					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px;" onclick="W_mais()">W+</a>
-					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px;" onclick="W_menos()">W-</a>
-					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px;" onclick="D()">D</a>					
+					&nbsp;&nbsp;&nbsp;<a style="display: inline-block; cursor: pointer; font-size: 40px; font-family: Franklin Gothic Medium;" onclick="troca_de_faixa_anterior()">&#9194;</a>
+					<a style="display: inline-block; cursor: pointer; font-size: 40px; font-family: Franklin Gothic Medium;" onclick="troca_de_faixa()">&#9193;</a>
+					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" value="FULL_SCREEN" onclick="Fullscreen(false);" style="color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
+					<input type="button" value="VIDEO" onclick="Fullscreen(true);" style="color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
+					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="A_mais()">A+</a>
+					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="A_menos()">A-</a>
+					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="W_mais()">W+</a>
+					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="W_menos()">W-</a>
+					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="D()">D</a>					
 					<br/>
-					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="tocando" style="display: inline-block; color: white; font-size: 32px;"></a>
+					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<a id="tocando" style="display: inline-block; color: white; font-size: 32px; font-family: Franklin Gothic Medium;"></a>
 					<br/>
 					<br/>
 					<br/>
-					&nbsp;&nbsp;&nbsp;&nbsp;<a style="color: #777; font-size: 8px;">&nbsp;&nbsp;click no corpo da pagina para pausar/despausar</a>
+					&nbsp;&nbsp;&nbsp;&nbsp;<a style="color: #777; font-size: 8px; font-family: Franklin Gothic Medium;">&nbsp;&nbsp;click no corpo da pagina para pausar/despausar</a>
 					<br/>
 					&nbsp;&nbsp;&nbsp;&nbsp;<audio id="p" controls="controls" preload="metadata">
 					  <source src="" type="audio/mp3">
@@ -1429,7 +1432,7 @@ function load_playlist(parm, table_click, type){
 		}
 	}
 	for ( let i=0;i<elements.length;i++ )
-		s+="<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px;\" onclick=\"load_playlist(" + "['" + parm.concat(elements[i]).join("','") + "']" + ", true, '" + type + "')\">" + elements[i] + "</td></tr>\n";
+		s+="<tr><td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + parm.concat(elements[i]).join("','") + "']" + ", true, '" + type + "')\">" + elements[i] + "</td></tr>\n";
 	s+='</table>\n';
 	document.getElementById('principal').innerHTML=s;
 	load_nav(parm, table_click, type);	
@@ -1529,10 +1532,13 @@ function saneamentoValue(a){
   return a.replaceAll(':', '_').replaceAll('/', '_').replaceAll('+', '_');
 }
 
+var ref_=window.location.origin;
+var ref_8100=ref_.substr(0,ref_.lastIndexOf(':'))+':8100';
+
 function redis(a){
   try{
     var xmlHttp = new XMLHttpRequest();
-    xmlHttp.open('GET', 'http://203.cloudns.cl:8100', false);
+    xmlHttp.open('GET', ref_8100, false);
 	for ( let i=0;i<a.length;i++ ){
       let key=a[i][0];
       let value=a[i][1];
