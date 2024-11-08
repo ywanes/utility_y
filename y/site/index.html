@@ -710,18 +710,18 @@ function load_movie(parm, table_click){
 
 	fullScreenButton.addEventListener('click', toggleFullScreen);
 	document.getElementById('volume').addEventListener('click', volumeclick);
-	function getDigest(){
+	function getDigest1(){
 	  return getVideo().src.replace(ref_, '');	  
 	}
 	function save_station1(){
 	  let nick_name=get_nick_name();
-	  if ( document.getElementById('video') != null && getDigest() != null && nick_name != null ){
+	  if ( document.getElementById('video') != null && getDigest1() != null && nick_name != null ){
 		contador_save_station1+=1;
 		if ( contador_save_station1 < 5 && !sign_first ){
 		  return;
 		}
 		contador_save_station1=0;
-		let digest = getDigest();
+		let digest = getDigest1();
 		let currentTime=document.getElementById('video').currentTime;
 		let duration=document.getElementById('video').duration;
 		let volume=document.getElementById('video').volume;
@@ -741,8 +741,8 @@ function load_movie(parm, table_click){
 	  }
 	}
 	function load_station1(){
-	  if ( document.getElementById('video') != null && getDigest() != null ){
-	    let digest=getDigest();
+	  if ( document.getElementById('video') != null && getDigest1() != null ){
+	    let digest=getDigest1();
 		let a=redis_get(get_nick_name()+'-playlistmovie-v-20241108-'+digest);
 		if ( a != null ){
 		  try{
@@ -834,9 +834,9 @@ function load_music(parm, elements){
 					  tmp_si='40';				  
 				  }
 				  //window.innerHeight/window.innerWidth > 1.5
-				  for ( let i=0;i<elements.length;i++ )
-				    tmp+="<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: " + tmp_wi + "px; font-size: " + tmp_si + "px; font-family: Franklin Gothic Medium;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + src+elements[i] + "\" >" + elements[i] + "</td></tr>\n";
-					
+				  for ( let i=0;i<elements.length;i++ ){
+				    tmp+="<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: " + tmp_wi + "px; font-size: " + tmp_si + "px; font-family: Franklin Gothic Medium;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + src+elements[i] + "\" >" + remove_extensao(elements[i]) + "</td></tr>\n";
+                  }
 				  document.getElementById('principal').innerHTML=`
 						<style>canvas {position: relative;top: 0%;left: 50%;margin-left: -50vmin;width: 100vmin;height: 100vmin;}</style>
 						<div id="f11bg" style="display: none" >
@@ -930,7 +930,7 @@ function load_music(parm, elements){
 				  }
 				  click_faixa(e);
 				}
-				getDigest2=function(){
+				getDigest2_OLD=function(){
 				  let digest = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
 				  let p_digest = 0;
 				  function updateDigest(a){
@@ -941,10 +941,10 @@ function load_music(parm, elements){
 						p_digest=0;
 					}
 				  }
-				  var a = document.getElementById('tablebase').children[0];
+				  let a = document.getElementById('tablebase').children[0];
 				  for ( var i=0;i<a.children.length;i++ )
 					updateDigest(a.children[i].children[0].innerText);
-				  var a='';
+				  a='';
 				  for ( var i=0;i<digest.length;i++ ){
 					if ( digest[i] >= 26 )
 					  a+=String.fromCharCode(digest[i]-26+97);
@@ -953,6 +953,9 @@ function load_music(parm, elements){
 				  }
 				  cache_digest = a;
 				  return cache_digest;
+				}
+				getDigest2=function(){				  
+				  return parm.join('/');
 				}
 				A_update=function(sz){
 				  let a = document.getElementById('tablebase').children[0];
@@ -1447,7 +1450,7 @@ function save_station_nick1(){
 
 function load_station_nick1(){
   if ( document.getElementById('nick_name') != null ){ // verificacao de segurança
-	a = localStorage.getItem('playlistmovie-v-20241101-nick_name');
+	let a = localStorage.getItem('playlistmovie-v-20241101-nick_name');
 	if ( a != null ){
 	  let b = JSON.parse(a);
 	  let nick_name = b['nick_name'];
@@ -1530,6 +1533,13 @@ function aplicar_nick(sistemico){
 
 function saneamentoValue(a){
   return a.replaceAll(':', '_').replaceAll('/', '_').replaceAll('+', '_');
+}
+
+function remove_extensao(a){
+  let pos=a.lastIndexOf('.');
+  if ( pos > 0 && pos < a.length-1 )
+    return a.substring(0,pos);
+  return a;
 }
 
 var ref_=window.location.origin;
