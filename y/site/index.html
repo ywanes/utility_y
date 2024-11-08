@@ -732,9 +732,10 @@ function load_movie(parm, table_click){
 		  r=redis_sign(get_nick_session(), 'N', get_nick_name()+'-playlistmovie-v-20241108-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest}));
 		  if ( r == '+NOK' ){
 		    document.getElementById('principal').innerHTML='';
-		    document.getElementById('resume').innerHTML='<a style="color: white; font-size: 25px; font-family: Franklin Gothic Medium;"><br><br>&nbsp;&nbsp;&nbsp;ESSE TITULO JA ESTA SENDO VISUALIZADO EM OUTRO TERMINAL!!!</a>';
+		    document.getElementById('resume').innerHTML='<a style="color: white; font-size: 25px; font-family: Franklin Gothic Medium;"><br><br>&nbsp;&nbsp;&nbsp;ESSE TITULO JA ESTA SENDO VISUALIZADO EM OUTRO TERMINAL!<br><br>&nbsp;&nbsp;&nbsp;' + digest + '</a>';
 			document.getElementById('resume').style='';
-		  }		  		  
+			document.getElementById('body').style='margin: 0px; background-color: black; cursor: ;';
+		  }
 		}
 		localStorage.setItem('playlistmovie-v-20241101-global',JSON.stringify({'volume': volume}));
 	  }
