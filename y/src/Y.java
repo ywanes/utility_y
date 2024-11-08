@@ -1818,6 +1818,17 @@ cat buffer.log
                 return;
             }
         }
+        if ( args[0].equals("monitor") ){
+            if ( !isWindows() )
+                erroFatal("implementado somente para windows!");
+            if ( args.length >= 2 && args[1].equals("cpu") ){
+                boolean oneLine=false;
+                if ( args.length >= 3 && args[2].equals("oneLine") )
+                    oneLine=true;
+                monitor(oneLine);
+                return;
+            }
+        }
         if ( args[0].equals("printScreen") ){
             if ( args.length == 1 ){
                 printScreen(-1);
@@ -12253,7 +12264,21 @@ while True:
             }
         }.start();        
     }
-        
+       
+    public void monitor(boolean oneLine){
+        while(true){
+            String s=runtimeExec("wmic cpu get loadpercentage", null, null, null);
+            if ( s == null )
+                break;
+            String [] partes=s.split("\r\n");
+            if ( oneLine ){
+                System.out.print("CPU: " + partes[partes.length-1].trim() + "%  \r");
+            }else
+                System.out.println("CPU: " + partes[partes.length-1].trim() + "%");
+            sleepSeconds(1);
+        }
+    }
+    
     public void printScreen(int a){
         try{
             if ( !new File("d:/").exists() )
@@ -14756,6 +14781,14 @@ class Util{
             if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionGPU: ")){
                 String value=tmp.substring("Caption: ".length());
                 tmp="CaptionGPU: " +value;
+            }
+            if ( tmp.startsWith("LoadPercentage: ") && !retorno.contains("CPU: ")){
+                String value=tmp.substring("LoadPercentage: ".length());
+                tmp="CPU: " +value;
+            }
+            if ( tmp.startsWith("ThreadCount: ") && !retorno.contains("CPUThreads: ")){
+                String value=tmp.substring("ThreadCount: ".length());
+                tmp="CPUThreads: " +value;
             }
             retorno+=tmp+"\r\n";
         }
@@ -19376,7 +19409,6 @@ class ClientThread extends Util{
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -19484,6 +19516,7 @@ class ClientThread extends Util{
 /* class by manual */                + "  [y win]\n"
 /* class by manual */                + "  [y speed]\n"
 /* class by manual */                + "  [y lock]\n"
+/* class by manual */                + "  [y monitor]\n"
 /* class by manual */                + "  [y printScreen]\n"
 /* class by manual */                + "  [y paste]\n"
 /* class by manual */                + "  [y mkv]\n"
@@ -20080,6 +20113,9 @@ class ClientThread extends Util{
 /* class by manual */                + "    y lock w\n"
 /* class by manual */                + "    obs: gera black screen\n"
 /* class by manual */                + "    obs2: y lock w -> white screen\n"
+/* class by manual */                + "[y monitor]\n"
+/* class by manual */                + "    y monitor cpu\n"
+/* class by manual */                + "    y monitor cpu oneLine\n"
 /* class by manual */                + "[y printScreen]\n"
 /* class by manual */                + "    y printScreen\n"
 /* class by manual */                + "    y printScreen 2\n"
@@ -20224,6 +20260,10 @@ class ClientThread extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
 
 
 

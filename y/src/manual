@@ -101,6 +101,7 @@ usage:
   [y win]
   [y speed]
   [y lock]
+  [y monitor]
   [y printScreen]
   [y paste]
   [y mkv]
@@ -697,6 +698,9 @@ Exemplos...
     y lock w
     obs: gera black screen
     obs2: y lock w -> white screen
+[y monitor]
+    y monitor cpu
+    y monitor cpu oneLine
 [y printScreen]
     y printScreen
     y printScreen 2
