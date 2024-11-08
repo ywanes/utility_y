@@ -725,12 +725,11 @@ function load_movie(parm, table_click){
 		let currentTime=document.getElementById('video').currentTime;
 		let duration=document.getElementById('video').duration;
 		let volume=document.getElementById('video').volume;
-		//localStorage.setItem('playlistmovie-v-20241101-'+digest,JSON.stringify({'currentTime': currentTime, 'duration': duration}));
 		if ( sign_first ){
-		  redis_sign(get_nick_session(), 'Y', get_nick_name()+'-playlistmovie-v-20241101-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration}));
+		  redis_sign(get_nick_session(), 'Y', get_nick_name()+'-playlistmovie-v-20241108-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest}));
 		  sign_first=false;
 		}else{
-		  r=redis_sign(get_nick_session(), 'N', get_nick_name()+'-playlistmovie-v-20241101-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration}));
+		  r=redis_sign(get_nick_session(), 'N', get_nick_name()+'-playlistmovie-v-20241108-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest}));
 		  if ( r == '+NOK' ){
 		    document.getElementById('principal').innerHTML='';
 		    document.getElementById('resume').innerHTML='<a style="color: white; font-size: 25px; font-family: Franklin Gothic Medium;"><br><br>&nbsp;&nbsp;&nbsp;ESSE TITULO JA ESTA SENDO VISUALIZADO EM OUTRO TERMINAL!!!</a>';
@@ -743,13 +742,13 @@ function load_movie(parm, table_click){
 	function load_station1(){
 	  if ( document.getElementById('video') != null && getDigest() != null ){
 	    let digest=getDigest();
-		//let a = localStorage.getItem('playlistmovie-v-20241101-'+digest);		
-		let a=redis_get(get_nick_name()+'-playlistmovie-v-20241101-'+digest);
+		let a=redis_get(get_nick_name()+'-playlistmovie-v-20241108-'+digest);
 		if ( a != null ){
 		  try{
 		    let b = JSON.parse(a);
 		    let currentTime = b['currentTime'];
 		    let duration = b['duration'];
+			let _digest = b['digest']; // aux
 		    if ( currentTime > (duration-10) )
   			  document.getElementById('video').currentTime = 0;      
 		    else
