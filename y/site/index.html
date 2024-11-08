@@ -858,8 +858,9 @@ function load_music(parm, elements){
 					<br/>
 					&nbsp;&nbsp;&nbsp;<a style="display: inline-block; cursor: pointer; font-size: 40px; font-family: Franklin Gothic Medium;" onclick="troca_de_faixa_anterior()">&#9194;</a>
 					<a style="display: inline-block; cursor: pointer; font-size: 40px; font-family: Franklin Gothic Medium;" onclick="troca_de_faixa()">&#9193;</a>
-					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<input type="button" value="FULL_SCREEN" onclick="Fullscreen(false);" style="color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
-					<input type="button" value="VIDEO" onclick="Fullscreen(true);" style="color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
+					&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+					<input type="button" value="FULL_SCREEN" onclick="Fullscreen(true);" style="color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
+					<input type="button" value="VIDEO_BG" onclick="Fullscreen(true);" style="display: none; color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
 					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="A_mais()">A+</a>
 					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="A_menos()">A-</a>
 					<a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="W_mais()">W+</a>
@@ -1111,9 +1112,9 @@ function load_music(parm, elements){
 						"mouseover",function(e){
 						  if ( document.getElementById('p') == null )
 							return;
-						  if ( e.target.getAttribute("value") && ( e.target.getAttribute("value") == "FULL_SCREEN" || e.target.getAttribute("value") == "VIDEO" ) ){
+						  if ( e.target.getAttribute("value") && ( e.target.getAttribute("value") == "FULL_SCREEN" || e.target.getAttribute("value") == "VIDEO_BG" ) ){
 							document.getElementById("f11").setAttribute("tailmousef11","s");
-							if( e.target.getAttribute("value") == "VIDEO" )
+							if( e.target.getAttribute("value") == "VIDEO_BG" || e.target.getAttribute("value") == "FULL_SCREEN" )
 							  document.getElementById("f11").setAttribute("tailvideo","s");
 							else
 							  document.getElementById("f11").setAttribute("tailvideo","n");
@@ -1293,7 +1294,7 @@ function load_music(parm, elements){
 					  return t.children[i].children[0];
 				  return null;
 				}
-				function Fullscreen(videoOn) { // ocorre um erro se for invocado sem interação de tela(bloqueio nativo do browser)
+				Fullscreen=function(videoOn) { // ocorre um erro se for invocado sem interação de tela(bloqueio nativo do browser)
 				  element=document.children[0];
 				  if(element.requestFullscreen) element.requestFullscreen();
 				  else if(element.mozRequestFullScreen) element.mozRequestFullScreen();
