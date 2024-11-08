@@ -706,6 +706,7 @@ Exemplos...
     y mkv
     y mkv -v
     y mkv -force
+    obs: ffmpeg -i "A.mkv" -qscale 0 "A.mp4"
 [y insta]
     y insta [url]
 [y bmp]

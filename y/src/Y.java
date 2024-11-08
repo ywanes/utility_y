@@ -20089,6 +20089,7 @@ class ClientThread extends Util{
 /* class by manual */                + "    y mkv\n"
 /* class by manual */                + "    y mkv -v\n"
 /* class by manual */                + "    y mkv -force\n"
+/* class by manual */                + "    obs: ffmpeg -i \"A.mkv\" -qscale 0 \"A.mp4\"\n"
 /* class by manual */                + "[y insta]\n"
 /* class by manual */                + "    y insta [url]\n"
 /* class by manual */                + "[y bmp]\n"
