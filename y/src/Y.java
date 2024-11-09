@@ -13786,30 +13786,37 @@ class Redis extends Util{
         }
     }
     public String getAll(){
+        return getLike(null);
+    }
+    public String getLike(String like){
         StringBuilder sb=new StringBuilder();
         Object [] objs=redis_map[0].keySet().toArray();
-        if ( objs.length > 0 )
+        if ( objs.length > 0 && like == null )
             sb.append("keys:\n");
         for(int i=0;i<objs.length;i++){
             String key=(String)objs[i];
-            sb.append(key);
-            sb.append(" ");
-            sb.append(redis_map[0].get(key));
-            sb.append("\n");
+            if ( like == null || key.startsWith(like) ){
+                sb.append(key);
+                sb.append(" ");
+                sb.append(redis_map[0].get(key));
+                sb.append("\n");
+            }
         }
-        objs=redis_sign.keySet().toArray();
-        if ( objs.length > 0 )
-            sb.append("signs:\n");
-        for(int i=0;i<objs.length;i++){
-            String key=(String)objs[i];
-            sb.append(key);
-            sb.append(" ");
-            sb.append(redis_sign.get(key));
-            sb.append("\n");
-        }        
+        if ( like == null ){
+            objs=redis_sign.keySet().toArray();
+            if ( objs.length > 0 )
+                sb.append("signs:\n");
+            for(int i=0;i<objs.length;i++){
+                String key=(String)objs[i];
+                sb.append(key);
+                sb.append(" ");
+                sb.append(redis_sign.get(key));
+                sb.append("\n");
+            }        
+        }
         String retorno=sb.toString();
         if ( retorno.equals("") )
-            return "null\n";
+            return "null";
         return retorno;
     }
 }
@@ -19008,20 +19015,30 @@ class ClientThread extends Util{
                 output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
                 return;                    
             }
-            if ( header_redis_key != null && !header_redis_key.contains(" ") && header_redis_key.equals(fixNameFile(header_redis_key)) ){
+            if ( header_redis_key != null && !header_redis_key.equals("") && !header_redis_key.contains(" ") && header_redis_key.equals(fixNameFile(header_redis_key)) ){
+                // getAll
                 if ( header_redis_key.equals("*") ){                    
                     output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n"+redis.getAll()).getBytes() );
                     return;                    
                 }
-                if ( header_redis_value == null ){
+                // getLike e get 
+                if ( header_redis_value == null ){                    
+                    if ( header_redis_key.endsWith("*") ){
+                        // getLike
+                        output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n"+redis.getLike(header_redis_key.substring(0, header_redis_key.length()-1))).getBytes() );
+                        return;
+                    }
+                    // get
                     output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n"+redis.get(header_redis_key)).getBytes() );
                     return;                    
                 }
+                // add
                 if ( header_redis_id == null ){
                     redis.add(header_redis_key, header_redis_value);
                     output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
                     return;                    
                 }
+                // addConcorrenteSign false
                 if ( header_redis_sign == null || !header_redis_sign.equals("Y") ){
                     if ( redis.addConcorrenteSign(header_redis_id, false, header_redis_key, header_redis_value) == 0 )
                         output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
@@ -19029,6 +19046,7 @@ class ClientThread extends Util{
                         output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+NOK").getBytes() );
                     return;
                 }
+                // addConcorrenteSign true
                 redis.addConcorrenteSign(header_redis_id, true, header_redis_key, header_redis_value);
                 output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
                 return;
