@@ -1436,8 +1436,14 @@ function load_playlist(parm, table_click, type){
 			return;
 		}
 	}
-	for ( let i=0;i<elements.length;i++ )	
+	// Playing
+	// <tr><td colspan="3"><a style="color: white; font-size: 34px; font-family: Franklin Gothic Medium;">Playing</a></td></tr>
+	// Filmes
+	// <tr><td colspan="3"><a style="color: white; font-size: 34px; font-family: Franklin Gothic Medium;">Filmes</a></td></tr>
 	
+	// test
+	s+="<tr><td colspan=\"3\"><a style=\"color: white; font-size: 34px; font-family: Franklin Gothic Medium;\">filmes</a></td></tr>"
+	for ( let i=0;i<elements.length;i++ )		
 		s+="<tr>"+
 			"<td style=\"padding: 0; cursor: pointer;\" onclick=\"remove_playing(this)\" ><svg width=\"40px\" height=\"40px\" viewBox=\"0 0 1024 1024\" class=\"icon\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#008000\" d=\"M745.344 361.344a32 32 0 0145.312 45.312l-288 288a32 32 0 01-45.312 0l-160-160a32 32 0 1145.312-45.312L480 626.752l265.344-265.408z\"></path></svg></td>"+
 			"<td style=\"padding: 12; \"><progress style=\"accent-color: red; height: 6px;\" value=\"75\" max=\"100\">75%</progress></td>"+
