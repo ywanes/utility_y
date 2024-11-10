@@ -1554,7 +1554,10 @@ function saneamentoValue(a){
 function remove_extensao(a){
   let pos=a.lastIndexOf('.');
   if ( pos > 0 && pos < a.length-1 )
-    return a.substring(0,pos);
+    a=a.substring(0,pos);
+  a=a.replaceAll(' - ', '|').replaceAll('-', ' ').replaceAll('|', ' - ');
+  a=a.replaceAll(' dublado www.encontrei.tv','');
+  a=a.replaceAll('.',' ');
   return a;
 }
 
