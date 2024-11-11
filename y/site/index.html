@@ -8,6 +8,10 @@ this.inicializado=false;// nao colocar var
 this.inicializado2=false;// nao colocar var
 let contador_save_station1=0;
 let sign_first=true;
+this.playlistmovie_v='-playlistmovie-v-20241110-';
+this.playlistmovie_v_global='playlistmovie-v-20241101-global';
+this.playlistmovie_v_nick_name='playlistmovie-v-20241101-nick_name';
+this.playlist_v='playlist-v-20231018-';
 
 
 function toggleFullScreen(event, op){	
@@ -40,9 +44,14 @@ function update_url(a){
 
 function load_history_nick(){
 	let nick_name=get_nick_name();
-	if ( nick_name != null )
-		redis_get(nick_name+'-playlistmovie-v-20241110-*');
-	console.log(history);
+	if ( nick_name != null ){
+		let a=redis_get(nick_name + this.playlistmovie_v + '*');
+		if ( a == 'null' )
+			history_nick=null;
+		else
+			history_nick=a.trim().split('\n');
+	}
+	console.log(history_nick);
 }
 
 function go_home(){
@@ -427,10 +436,10 @@ function load_movie(parm, table_click){
 		let volume=document.getElementById('video').volume;
 		let epochMili=getEpochMili();
 		if ( sign_first ){
-		  redis_sign(get_nick_session(), 'Y', get_nick_name()+'-playlistmovie-v-20241110-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest, 'epochMili': epochMili}));
+		  redis_sign(get_nick_session(), 'Y', get_nick_name() + this.playlistmovie_v + digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest, 'epochMili': epochMili}));
 		  sign_first=false;
 		}else{
-		  r=redis_sign(get_nick_session(), 'N', get_nick_name()+'-playlistmovie-v-20241110-'+digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest, 'epochMili': epochMili}));
+		  r=redis_sign(get_nick_session(), 'N', get_nick_name() + this.playlistmovie_v + digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest, 'epochMili': epochMili}));
 		  if ( r == '+NOK' ){
 		    document.getElementById('principal').innerHTML='';
 		    document.getElementById('resume').innerHTML='<a style="color: white; font-size: 25px; font-family: Franklin Gothic Medium;"><br><br>&nbsp;&nbsp;&nbsp;ESSE TITULO JA ESTA SENDO VISUALIZADO EM OUTRO TERMINAL!<br><br>&nbsp;&nbsp;&nbsp;' + digest + '</a>';
@@ -438,13 +447,13 @@ function load_movie(parm, table_click){
 			document.getElementById('body').style='margin: 0px; background-color: black; cursor: ;';
 		  }
 		}
-		localStorage.setItem('playlistmovie-v-20241101-global',JSON.stringify({'volume': volume}));
+		localStorage.setItem(this.playlistmovie_v_global, JSON.stringify({'volume': volume}));
 	  }
 	}
 	function load_station1(){
 	  if ( document.getElementById('video') != null && getDigest1() != null ){
 	    let digest=getDigest1();
-		let a=redis_get(get_nick_name()+'-playlistmovie-v-20241110-'+digest);
+		let a=redis_get(get_nick_name() + this.playlistmovie_v + digest);
 		if ( a != null ){
 		  try{
 		    let b = JSON.parse(a);
@@ -458,7 +467,7 @@ function load_movie(parm, table_click){
   		      document.getElementById('video').currentTime = currentTime;      
 		  }catch(err){}
 		}
-		a = localStorage.getItem('playlistmovie-v-20241101-global');
+		a = localStorage.getItem(this.playlistmovie_v_global);
 		if ( a != null ){
 		  let b = JSON.parse(a);
 		  let volume = b['volume'];
@@ -709,12 +718,12 @@ function load_music(parm, elements){
 					}
 					let sz = document.getElementById("f11").getAttribute("sz");
 					let wi = document.getElementById("f11").getAttribute("wi");
-					localStorage.setItem('playlist-v-20231018-'+digest,JSON.stringify({'playing': playing, 'currentTime': currentTime, 'volume': volume, 'flags': flags, 'sz': sz, 'wi': wi}));
+					localStorage.setItem(this.playlist_v + digest,JSON.stringify({'playing': playing, 'currentTime': currentTime, 'volume': volume, 'flags': flags, 'sz': sz, 'wi': wi}));
 				  }
 				}
 				load_station2=function(){
 				  if ( getDigest2() != null ){
-					let a = localStorage.getItem('playlist-v-20231018-'+getDigest2());
+					let a = localStorage.getItem(this.playlist_v + getDigest2());
 					if ( a != null ){
 					  let b = JSON.parse(a);
 					  let playing = b['playing'];
@@ -1154,13 +1163,13 @@ function load_playlist(parm, table_click, type){
 function save_station_nick1(){
   let nick_name=get_nick_name();
   if ( nick_name != null ){
-    localStorage.setItem('playlistmovie-v-20241101-nick_name',JSON.stringify({'nick_name': nick_name}));
+    localStorage.setItem(this.playlistmovie_v_nick_name, JSON.stringify({'nick_name': nick_name}));
   }
 }
 
 function load_station_nick1(){
   if ( document.getElementById('nick_name') != null ){ // verificacao de segurança
-	let a = localStorage.getItem('playlistmovie-v-20241101-nick_name');
+	let a = localStorage.getItem(this.playlistmovie_v_nick_name);
 	if ( a != null ){
 	  let b = JSON.parse(a);
 	  let nick_name = b['nick_name'];
