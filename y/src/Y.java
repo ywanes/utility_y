@@ -6494,7 +6494,7 @@ cat buffer.log
                                     socket.close();
                                 }
                             } catch (Exception e) {
-                                System.out.println("----------> Erro ao executar servidor:" + e.toString());
+                                System.out.println("----------> Erro ao executar servidor::" + e.toString());
                             }
                         }
                     }.start();
@@ -18946,15 +18946,21 @@ class ClientThread extends Util{
     }
     private void lendo() throws Exception { // refatorar depois, isso aqui ta muito ruim!!
         try {  
+            
             int i = 0;            
-            CharArrayWriter caw=new CharArrayWriter();
-            while(reader.ready()){                
+            CharArrayWriter caw=new CharArrayWriter();            
+            while(true){
                 i = reader.read(buffer);
-                if (i == -1) 
+                if (i < 0 ) 
                     break;
-                caw.write(buffer, 0, i);
+                else
+                    caw.write(buffer, 0, i);
+                if ( reader.ready() )
+                    continue;
+                break;
             }
             BufferedReader br = new BufferedReader(new StringReader(caw.toString()));
+            
             String line = null;
             int lineNumber = 0;
             this.header_range = -1;
@@ -19104,6 +19110,7 @@ class ClientThread extends Util{
             output.write(sb.toString().getBytes());
             return;
         }
+        
         // nav playlistserver
         if ( nav == null 
             && mode != null 
