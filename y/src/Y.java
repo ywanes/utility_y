@@ -13796,6 +13796,8 @@ class Redis extends Util{
         for(int i=0;i<objs.length;i++){
             String key=(String)objs[i];
             if ( like == null || key.startsWith(like) ){
+                if ( key.startsWith("secret-") )
+                    continue;
                 sb.append(key);
                 sb.append(" ");
                 sb.append(redis_map[0].get(key));
@@ -13808,6 +13810,8 @@ class Redis extends Util{
                 sb.append("signs:\n");
             for(int i=0;i<objs.length;i++){
                 String key=(String)objs[i];
+                if ( key.startsWith("secret-") )
+                    continue;
                 sb.append(key);
                 sb.append(" ");
                 sb.append(redis_sign.get(key));
