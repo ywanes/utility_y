@@ -18945,11 +18945,16 @@ class ClientThread extends Util{
         }.start();
     }
     private void lendo() throws Exception { // refatorar depois, isso aqui ta muito ruim!!
-        try {
-            int i = reader.read(buffer);
-            if (i == -1) return;
-            writer.write(buffer, 0, i);
-            BufferedReader br = new BufferedReader(new StringReader(writer.toString()));
+        try {  
+            int i = 0;            
+            CharArrayWriter caw=new CharArrayWriter();
+            while(reader.ready()){                
+                i = reader.read(buffer);
+                if (i == -1) 
+                    break;
+                caw.write(buffer, 0, i);
+            }
+            BufferedReader br = new BufferedReader(new StringReader(caw.toString()));
             String line = null;
             int lineNumber = 0;
             this.header_range = -1;
