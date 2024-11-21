@@ -48,7 +48,6 @@ function get_pai_digest(a){
 	return tmp.join('/');	
 }
 
-
 function load_history_nick(){
 	let nick_name=get_nick_name();
 	if ( nick_name != null ){
@@ -84,6 +83,9 @@ function load_history_nick(){
 							max_epoch=history_nick[keys[j]]['epochMili'];
 					}
 					if ( history_nick[keys[i]]['epochMili'] < max_epoch )
+						history_nick[keys[i]]['tail']=false;
+				}else{
+					if ( (history_nick[keys[i]]['currentTime'] + 59) >= history_nick[keys[i]]['duration'] )
 						history_nick[keys[i]]['tail']=false;
 				}
 			}
