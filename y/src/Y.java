@@ -4527,7 +4527,7 @@ cat buffer.log
             return null;
         return lendo_arquivo(dir_token+md5);
     }
-    public boolean salvando_file(String texto, File arquivo) {
+    public boolean salvando_file(String texto, File arquivo){
         return salvando_file(texto, arquivo, false);
     }
     public boolean salvando_file(String texto, File arquivo, boolean append) {
@@ -17144,10 +17144,52 @@ class XML extends Util{
 }
 
 class PlaylistServer extends Util{
+    File _cfg=null;
     public PlaylistServer(String cfg){
-        
+        if ( cfg != null ){
+            _cfg=new File(cfg);
+            if ( _cfg.exists() ){
+                String pergunta=lendo_arquivo(cfg);
+                String resposta=perguntando(pergunta, true);
+            }
+        }
     }
-    public String perguntando(String a){
+    public String perguntando(String a, Boolean starting_server){
+        if ( a.equals("ping") )
+            return "pong";
+        /*
+        Na acao status, retornar a lista completa de instruções e o play deve informar o time:
+            play faixa 2 time 20 seg            
+            ou
+            stopped
+            ou Error abced(em caso da faixa não existir o arquivo ou algum outro tipo de erro)
+
+        Na acao next, deve ir para a proxima faixa baseado na qual esta tocando
+        
+        Na acao stop, deve para tudo.
+        
+        Na acao back, deve ir para musica anterior
+        
+        Na instrucao play deve haver várias linhas sendo a final play ...:
+            name_worker abc
+            worker_loop yes
+            device {0.0.0.00000000}.{8eee1bfc-5bb7-47ce-ab43-2fb54956292e}
+            n_faixas 3
+            faixa 0 aaa
+            faixa 1 bbb
+            faixa 3 ccc
+            vol worker abc 0.44
+            vol faixa 1 0.33
+            exemplos de play:
+                play faixa 2 time 20 seg
+                play faixa 4
+                play faixa random
+            obs: play precisa ser a ultima linha necessariamente, senão o comando deve retornar erro
+            obs2: se o worker_loop for no, então ao final da playlist, o sistema deverá ficar em stopped
+            obs3: uma vez executada esse comando de play com sucesso e nao for starting_server e _cfg não for null, então: deverá armazenar a pergunta aqui recebida. salvando_file(String texto, File _cfg)
+            obs4: formato do texto da pergunta: aa bb cc\ndd ee ff. Se for armazenar, guardar no mesmo formato!
+        */
+        
         /*
             var xmlHttp = new XMLHttpRequest();
             xmlHttp.open('GET', '/yradio', false);
@@ -17156,6 +17198,15 @@ class PlaylistServer extends Util{
             console.log(xmlHttp.responseText);
         */        
         return "..";
+    }
+    public String get_html_sem_acao(){
+        if ( _cfg == null )
+            return "nao existe html configurado!!";
+        String _f=_cfg.getAbsolutePath()+".html";
+        File f=new File(_f);
+        if ( !f.exists() )
+            return "O arquivo " + f.getAbsolutePath() + " ainda não foi criado!";
+        return lendo_arquivo(_f);
     }
 }
 
@@ -18532,10 +18583,6 @@ class Texto_longo extends Util{
         "</style>\n" + 
         js_compartilhado;
     }
-    public String get_html_virtual_playlistserver(){
-        String retorno="...";
-        return retorno;
-    }
 }
 
 /* 
@@ -19122,13 +19169,13 @@ class ClientThread extends Util{
             txt+="Access-Control-Allow-Origin: *\r\n";
             txt+="X-Frame-Options: SAMEORIGIN\r\n";
             txt+="\r\n";
-            if ( header_acao == null )
-                txt+=new Texto_longo().get_html_virtual_playlistserver();
+            if ( playlistserver == null )
+                txt+="erro interno 435353";
             else{
-                if ( playlistserver == null )
-                    txt+="erro interno 435353";
+                if ( header_acao == null )
+                    txt+=playlistserver.get_html_sem_acao();
                 else
-                    txt+=playlistserver.perguntando(header_acao);
+                    txt+=playlistserver.perguntando(header_acao, false);
             }
             output.write(txt.getBytes());
             return;
