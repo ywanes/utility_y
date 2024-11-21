@@ -17192,7 +17192,7 @@ class PlaylistServer extends Util{
         
         /*
             var xmlHttp = new XMLHttpRequest();
-            xmlHttp.open('GET', '/yradio', false);
+            xmlHttp.open('GET', '/token', false);
             xmlHttp.setRequestHeader('acao', 'oi');
             xmlHttp.send(null);
             console.log(xmlHttp.responseText);
