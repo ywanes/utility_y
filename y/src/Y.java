@@ -2415,10 +2415,8 @@ cat buffer.log
                                                 results+=nome + " - nome invalido para uma proc windows\n";
                                                 continue;
                                             }                                                                                        
-                                            if ( restart ){                                                
-                                                String pid=get_pid_by_text(" -ignore DAEMON" + nome + " ");
-                                                if ( pid != null )
-                                                    kill(new String[]{pid});
+                                            if ( restart ){                   
+                                                kill_by_text(" -ignore DAEMON" + nome + " ");
                                             }                                            
                                             boolean jaEmUso=false;
                                             for ( int i=0;i<procs.size();i++ ){
@@ -2467,11 +2465,8 @@ cat buffer.log
                                                 }
                                             if ( !jaEmUso )
                                                 result=nome + " nao esta em execucao";
-                                            String pid=get_pid_by_text(" -ignore DAEMON" + nome + " ");
-                                            if ( pid != null ){
-                                                kill(new String[]{pid});
+                                            if ( kill_by_text(" -ignore DAEMON" + nome + " ") )
                                                 result=nome + " stopado";
-                                            }
                                             results+=result+"\n";
                                         }
                                         result=results.trim();
@@ -4526,21 +4521,6 @@ cat buffer.log
         if ( ! new File(dir_token+md5).exists() )
             return null;
         return lendo_arquivo(dir_token+md5);
-    }
-    public boolean salvando_file(String texto, File arquivo){
-        return salvando_file(texto, arquivo, false);
-    }
-    public boolean salvando_file(String texto, File arquivo, boolean append) {
-        try{
-            BufferedWriter out = new BufferedWriter(new FileWriter(arquivo, append));
-            out.write(texto);
-            out.flush();
-            out.close();
-            return true;
-        }catch(Exception e){
-            System.err.println(e.toString());
-        }        
-        return false; 
     }
 
 	//REMOVED_GRAAL_START
@@ -8080,43 +8060,6 @@ cat buffer.log
         System.err.println("]");
     }
 
-    public String[] sliceParm(int n, String[] args) {
-        if ( n == 0 )
-            erroFatal("erro interno sliceParm");
-        String [] retorno=new String[args.length-n];
-        for ( int i=n;i<args.length;i++ )
-            retorno[i-n]=args[i];
-        return retorno;
-    }
-    public String[] sliceParm1N(int n, String[] args) {
-        if ( n == 0 )
-            erroFatal("erro interno sliceParm");
-        String [] retorno=new String[args.length-1];
-        for ( int i=0;i<args.length-1;i++ ){
-            if ( i >= n )
-                retorno[i]=args[i-1];
-            else
-                retorno[i]=args[i];
-        }
-        return retorno;
-    }
-
-    public String[] addParm(String a, String[] args) {
-        return addParm(a, args.length, args);
-    }
-    
-    public String[] addParm(String a, int pos, String[] args){        
-        String [] retorno=new String[args.length+1];
-        retorno[pos]=a;
-        int delta=0;
-        for ( int i=0;i<args.length;i++ ){
-            if ( i == pos )
-                delta=1;
-            retorno[i+delta]=args[i];
-        }
-        return retorno;
-    }
-    
     public void createjobexecute(String conn) throws Exception {
         String line;
         String SQL="";
@@ -10624,202 +10567,6 @@ cat buffer.log
         }            
     }
 
-    private String getLocalDateTime_windows(){
-        try{
-            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null, null, null);
-            String [] lines=s.split("\n");
-            return lines[1].trim();
-        }catch(Exception e){
-            System.err.println("Erro fatal 4324" + e.toString());
-        }   
-        return null;
-    }
-
-    private String LocalDateTimeCache_windows=null;
-    private String getLocalDateTimeCache_windows(){
-        if ( LocalDateTimeCache_windows == null )
-            LocalDateTimeCache_windows = getLocalDateTime_windows();
-        return LocalDateTimeCache_windows;
-    }
-    
-    public String get_pid_by_text(String a){
-        if ( isWindows() ){
-            load_pss_windows();
-            for ( int i=0;i<pss_parm5.size();i++ )
-                if ( (" "+pss_parm5.get(i)+" ").contains(a) )
-                    return pss_parm1.get(i);
-        }else{
-            load_pss_linux();
-            for ( int i=0;i<pss_parm3.size();i++ )
-                if ( (" "+pss_parm3.get(i)+" ").contains(a) )
-                    return pss_parm1.get(i);
-        }
-        return null;
-    }
-    
-    private ArrayList<String> pss_parm1 = new ArrayList<>();
-    private ArrayList<String> pss_parm2 = new ArrayList<>();
-    private ArrayList<String> pss_parm3 = new ArrayList<>();
-    private ArrayList<String> pss_parm4 = new ArrayList<>();
-    private ArrayList<String> pss_parm5 = new ArrayList<>();
-    private ArrayList<Boolean> pss_flag = new ArrayList<>();
-    public void load_pss_init(){
-        pss_parm1 = new ArrayList<>();
-        pss_parm2 = new ArrayList<>();
-        pss_parm3 = new ArrayList<>();
-        pss_parm4 = new ArrayList<>();
-        pss_parm5 = new ArrayList<>();
-        pss_flag = new ArrayList<>();        
-    }
-    
-    private void load_pss_windows() {        
-        try{
-            load_pss_init();
-            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null, null, null);
-            String [] lines=s_.split("\n");
-            ArrayList<Integer> list_p = new ArrayList<>();
-            boolean isWord=false;
-            for ( int i=0;i<lines.length;i++ ){
-                String s=lines[i];
-                if( i == 0 ){
-                    for ( int j=0;j<s.length();j++ ){
-                        String t=s.substring(j, j+1);
-                        if ( isWord == !t.equals(" ") )
-                            continue;
-                        isWord=!isWord;
-                        if ( isWord )
-                            list_p.add(j);
-                    }
-                    continue;
-                }else{
-                    if ( s.length() < list_p.get(4) )
-                        continue;
-                    String CommandLine = s.substring(list_p.get(0), list_p.get(1)).trim();
-                    String CreationDate = s.substring(list_p.get(1), list_p.get(2)).trim();
-                    String ExecutablePath = s.substring(list_p.get(2), list_p.get(3)).trim();
-                    String Name = s.substring(list_p.get(3), list_p.get(4)).trim();
-                    String ParentProcessId = s.substring(list_p.get(4), list_p.get(5)).trim();
-                    String ProcessId = s.substring(list_p.get(5)).trim();
-                    
-                    CreationDate = CreationDate.split("\\.")[0];
-                    String LocalDateTime = getLocalDateTimeCache_windows().split("\\.")[0];
-                    long seconds=new SimpleDateFormat("yyyyMMddHHmmss").parse(LocalDateTime).getTime() - new SimpleDateFormat("yyyyMMddHHmmss").parse(CreationDate).getTime();
-                    seconds/=1000;
-                    String deltaTime=seconds_to_string(seconds, "format2");
-
-                    pss_parm1.add(ProcessId);
-                    pss_parm2.add(ParentProcessId);
-                    pss_parm3.add(deltaTime);
-                    pss_parm4.add(Name);
-                    pss_parm5.add(CommandLine.length()==0?ExecutablePath:CommandLine);
-                    pss_flag.add(false);
-                }
-            }                            
-        }catch(Exception e){
-            System.err.println("Erro fatal 44556 " + e.toString());
-        }
-    }
-      
-    private void load_pss_linux() {        
-        try{
-            load_pss_init();
-            Process proc;
-            proc = Runtime.getRuntime().exec("ps -ef");
-            int len=0;
-            byte[] b=new byte[1024];
-            boolean ok=false;                    
-            boolean error=false;                    
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
-                baos.write(b, 0, len);
-                ok=true;
-            }
-            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                error=true;
-            }    
-            if ( error ){
-                System.err.println("Erro fatal 99!");
-                System.exit(1);
-            }
-            String [] lines=baos.toString().split("\n");
-            ArrayList<Integer> list_p = new ArrayList<>();
-            for ( int i=0;i<lines.length;i++ ){
-                String [] partes_=lines[i].split(" ");
-                String [] partes=new String[3];
-                int count=0;
-                for ( int j=0;j<partes_.length;j++ ){
-                    if ( partes_[j].equals("") )
-                        continue;
-                    partes[count++]=partes_[j];
-                    if ( count >= 3 )
-                        break;
-                }
-                if ( partes[1].equals("PID") )
-                    continue;
-                pss_parm1.add(partes[1]);
-                pss_parm2.add(partes[2]);
-                pss_parm3.add(lines[i]);
-                pss_parm4.add("n/a"); // nao remover essa linha
-                pss_flag.add(false);
-            }                            
-        }catch(Exception e){
-            System.err.println("Erro fatal 676 " + e.toString());
-        }
-    }
-          
-    private void pss_windows(boolean exigencia_flag){
-        for ( int i=0;i<pss_parm1.size();i++ )
-            if ( !exigencia_flag || pss_flag.get(i) ){
-                if ( pss_parm3.get(i).contains("0:00:00:0") ){ // skip o proprio comando
-                    if ( pss_parm5.get(i).contains("C:\\Windows\\system32\\cmd.exe  /S /D /c\" y grep") )
-                        continue;
-                    if ( pss_parm4.get(i).contains("java.exe") && pss_parm5.get(i).contains(".jar Y grep ") )
-                        continue;
-                }
-                System.out.println(pss_parm1.get(i)+"\t"+pss_parm2.get(i)+"\t"+pss_parm3.get(i)+"\t"+pss_parm4.get(i)+"\t"+pss_parm5.get(i));
-            }
-    }
-          
-    private void pss_linux(boolean exigencia_flag){
-        for ( int i=0;i<pss_parm1.size();i++ )
-            if ( !exigencia_flag || pss_flag.get(i) )
-                System.out.println(pss_parm3.get(i));
-    }
-    
-    private void pid_windows(String pid){
-        load_pss_windows();
-        pid_nav_up(pid, pid+",");
-        pid_nav_down(pid, pid+",");
-        pss_windows(true);
-    }
-    
-    private void pid_linux(String pid){
-        load_pss_linux();
-        pid_nav_up(pid, pid+",");
-        pid_nav_down(pid, pid+",");
-        pss_linux(true);
-    }
-    
-    private void pid_nav_up(String pid, String path){
-        for ( int i=0;i<pss_flag.size();i++ ){
-            if ( pss_parm1.get(i).equals(pid) && !pss_parm4.get(i).equals("svchost.exe") ){
-                pss_flag.set(i, true);
-                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) && !(","+path).contains(","+pss_parm2.get(i)+",") )
-                    pid_nav_up(pss_parm2.get(i),path+pss_parm2.get(i)+",");
-            }
-        }
-    }
-    
-    private void pid_nav_down(String pid, String path){
-        for ( int i=0;i<pss_flag.size();i++ ){
-            if ( pss_parm2.get(i).equals(pid) ){
-                pss_flag.set(i, true);
-                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) && !(","+path).contains(","+pss_parm1.get(i)+",") )
-                    pid_nav_down(pss_parm1.get(i),path+pss_parm1.get(i)+",");
-            }
-        }
-    }
-
     private void uptime(boolean ms){
         boolean show=false;
         
@@ -11799,68 +11546,6 @@ while True:
                 return;
             System.err.println("Error " + e.toString());
         }            
-    }
-    
-    public void kill(String [] parms_){
-        kill(parms_, null, "-9");
-    }
-    
-    public void kill(String [] parms_, OutputStream out, String type){
-        try{
-            String [] parms=new String[0];
-            String [] parms_steps_type2=new String[0];
-            if ( isLinux() ){
-                parms = addParm("kill", parms);
-                parms = addParm(type, parms);
-                for ( int i=0;i<parms_.length;i++ )
-                    parms = addParm(parms_[i], parms);
-            }
-            if ( isWindows() ){
-                if ( type.equals("-9") ){
-                    parms = addParm("taskkill", parms);
-                    parms = addParm("/f", parms);
-                    for ( int i=0;i<parms_.length;i++ ){
-                        parms = addParm("/pid", parms);
-                        parms = addParm(parms_[i], parms);
-                    }
-                }
-                if ( type.equals("-2") ){
-                    parms_steps_type2 = parms_;
-                }
-            }
-            Charset.forName("UTF-8");
-            if ( parms.length == 0 && parms_steps_type2.length == 0 )                
-                erroFatal("erro interno - parametros invalidos.. ");
-            if ( parms.length > 0 ){
-                String s=runtimeExec(null, parms, null, null);
-                if ( s == null )
-                    s=runtimeExecError;
-                s+="\n";
-                if ( out != null )
-                    out.write(s.getBytes());  
-                return;
-            }
-            if ( parms_steps_type2.length > 0 ){                
-                if ( !new File("c:/windows/windows-kill.exe").exists() )
-                    erroFatal("Não foi possível encontrar a ferramenta c:/windows/windows-kill.exe - favor baixar em https://github.com/ElyDotDev/windows-kill/releases");
-                for ( int i=0;i<parms_steps_type2.length;i++ ){
-                    String s=runtimeExec(null, new String[]{"windows-kill", "-2", parms_steps_type2[i]}, null, null);
-                    if ( s == null )
-                        erroFatal(runtimeExecError);
-                    s+="\n";
-                    if ( out != null )
-                        out.write(s.getBytes());            
-                }
-                return;
-            }
-        }catch(Exception e){
-            try{
-                if ( out != null )
-                    out.write(e.toString().getBytes());            
-            }catch(Exception e2){
-                System.err.println("Erro desconhecido");
-            }
-        }
     }
     
     private void format_show_ip(String a, String b){
@@ -13869,6 +13554,324 @@ class Util{
             getListaCompleta_last=now;
         }
         return retorno;
+    }
+    
+    public boolean salvando_file(String texto, File arquivo){
+        return salvando_file(texto, arquivo, false);
+    }
+    
+    public boolean salvando_file(String texto, File arquivo, boolean append) {
+        try{
+            BufferedWriter out = new BufferedWriter(new FileWriter(arquivo, append));
+            out.write(texto);
+            out.flush();
+            out.close();
+            return true;
+        }catch(Exception e){
+            System.err.println(e.toString());
+        }        
+        return false; 
+    }
+    
+    public String[] sliceParm(int n, String[] args) {
+        if ( n == 0 )
+            erroFatal("erro interno sliceParm");
+        String [] retorno=new String[args.length-n];
+        for ( int i=n;i<args.length;i++ )
+            retorno[i-n]=args[i];
+        return retorno;
+    }
+    public String[] sliceParm1N(int n, String[] args) {
+        if ( n == 0 )
+            erroFatal("erro interno sliceParm");
+        String [] retorno=new String[args.length-1];
+        for ( int i=0;i<args.length-1;i++ ){
+            if ( i >= n )
+                retorno[i]=args[i-1];
+            else
+                retorno[i]=args[i];
+        }
+        return retorno;
+    }
+
+    public String[] addParm(String a, String[] args) {
+        return addParm(a, args.length, args);
+    }
+    
+    public String[] addParm(String a, int pos, String[] args){        
+        String [] retorno=new String[args.length+1];
+        retorno[pos]=a;
+        int delta=0;
+        for ( int i=0;i<args.length;i++ ){
+            if ( i == pos )
+                delta=1;
+            retorno[i+delta]=args[i];
+        }
+        return retorno;
+    }
+    
+    public boolean kill_by_text(String a){
+        ArrayList<String> lista=new ArrayList();
+        if ( isWindows() ){
+            load_pss_windows();
+            for ( int i=0;i<pss_parm5.size();i++ )
+                if ( (" "+pss_parm5.get(i)+" ").contains(a) )
+                    lista.add(pss_parm1.get(i));
+        }else{
+            load_pss_linux();
+            for ( int i=0;i<pss_parm3.size();i++ )
+                if ( (" "+pss_parm3.get(i)+" ").contains(a) )
+                    lista.add(pss_parm1.get(i));
+        }
+        String [] pids=arrayList_to_array(lista);
+        if ( pids.length > 0 ){
+            kill(pids);
+            return true;
+        }
+        return false;
+    }
+    
+    public void kill(String [] parms_){
+        kill(parms_, null, "-9");
+    }
+    
+    public void kill(String [] parms_, OutputStream out, String type){
+        try{
+            String [] parms=new String[0];
+            String [] parms_steps_type2=new String[0];
+            if ( isLinux() ){
+                parms = addParm("kill", parms);
+                parms = addParm(type, parms);
+                for ( int i=0;i<parms_.length;i++ )
+                    parms = addParm(parms_[i], parms);
+            }
+            if ( isWindows() ){
+                if ( type.equals("-9") ){
+                    parms = addParm("taskkill", parms);
+                    parms = addParm("/f", parms);
+                    for ( int i=0;i<parms_.length;i++ ){
+                        parms = addParm("/pid", parms);
+                        parms = addParm(parms_[i], parms);
+                    }
+                }
+                if ( type.equals("-2") ){
+                    parms_steps_type2 = parms_;
+                }
+            }
+            Charset.forName("UTF-8");
+            if ( parms.length == 0 && parms_steps_type2.length == 0 )                
+                erroFatal("erro interno - parametros invalidos.. ");
+            if ( parms.length > 0 ){
+                String s=runtimeExec(null, parms, null, null);
+                if ( s == null )
+                    s=runtimeExecError;
+                s+="\n";
+                if ( out != null )
+                    out.write(s.getBytes());  
+                return;
+            }
+            if ( parms_steps_type2.length > 0 ){                
+                if ( !new File("c:/windows/windows-kill.exe").exists() )
+                    erroFatal("Não foi possível encontrar a ferramenta c:/windows/windows-kill.exe - favor baixar em https://github.com/ElyDotDev/windows-kill/releases");
+                for ( int i=0;i<parms_steps_type2.length;i++ ){
+                    String s=runtimeExec(null, new String[]{"windows-kill", "-2", parms_steps_type2[i]}, null, null);
+                    if ( s == null )
+                        erroFatal(runtimeExecError);
+                    s+="\n";
+                    if ( out != null )
+                        out.write(s.getBytes());            
+                }
+                return;
+            }
+        }catch(Exception e){
+            try{
+                if ( out != null )
+                    out.write(e.toString().getBytes());            
+            }catch(Exception e2){
+                System.err.println("Erro desconhecido");
+            }
+        }
+    }
+        
+    public String getLocalDateTime_windows(){
+        try{
+            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null, null, null);
+            String [] lines=s.split("\n");
+            return lines[1].trim();
+        }catch(Exception e){
+            System.err.println("Erro fatal 4324" + e.toString());
+        }   
+        return null;
+    }
+
+    private String LocalDateTimeCache_windows=null;
+    private String getLocalDateTimeCache_windows(){
+        if ( LocalDateTimeCache_windows == null )
+            LocalDateTimeCache_windows = getLocalDateTime_windows();
+        return LocalDateTimeCache_windows;
+    }
+    
+    private ArrayList<String> pss_parm1 = new ArrayList<>();
+    private ArrayList<String> pss_parm2 = new ArrayList<>();
+    private ArrayList<String> pss_parm3 = new ArrayList<>();
+    private ArrayList<String> pss_parm4 = new ArrayList<>();
+    private ArrayList<String> pss_parm5 = new ArrayList<>();
+    private ArrayList<Boolean> pss_flag = new ArrayList<>();
+    public void load_pss_init(){
+        pss_parm1 = new ArrayList<>();
+        pss_parm2 = new ArrayList<>();
+        pss_parm3 = new ArrayList<>();
+        pss_parm4 = new ArrayList<>();
+        pss_parm5 = new ArrayList<>();
+        pss_flag = new ArrayList<>();        
+    }
+    
+    public void load_pss_windows() {        
+        try{
+            load_pss_init();
+            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null, null, null);
+            String [] lines=s_.split("\n");
+            ArrayList<Integer> list_p = new ArrayList<>();
+            boolean isWord=false;
+            for ( int i=0;i<lines.length;i++ ){
+                String s=lines[i];
+                if( i == 0 ){
+                    for ( int j=0;j<s.length();j++ ){
+                        String t=s.substring(j, j+1);
+                        if ( isWord == !t.equals(" ") )
+                            continue;
+                        isWord=!isWord;
+                        if ( isWord )
+                            list_p.add(j);
+                    }
+                    continue;
+                }else{
+                    if ( s.length() < list_p.get(4) )
+                        continue;
+                    String CommandLine = s.substring(list_p.get(0), list_p.get(1)).trim();
+                    String CreationDate = s.substring(list_p.get(1), list_p.get(2)).trim();
+                    String ExecutablePath = s.substring(list_p.get(2), list_p.get(3)).trim();
+                    String Name = s.substring(list_p.get(3), list_p.get(4)).trim();
+                    String ParentProcessId = s.substring(list_p.get(4), list_p.get(5)).trim();
+                    String ProcessId = s.substring(list_p.get(5)).trim();
+                    
+                    CreationDate = CreationDate.split("\\.")[0];
+                    String LocalDateTime = getLocalDateTimeCache_windows().split("\\.")[0];
+                    long seconds=new SimpleDateFormat("yyyyMMddHHmmss").parse(LocalDateTime).getTime() - new SimpleDateFormat("yyyyMMddHHmmss").parse(CreationDate).getTime();
+                    seconds/=1000;
+                    String deltaTime=seconds_to_string(seconds, "format2");
+
+                    pss_parm1.add(ProcessId);
+                    pss_parm2.add(ParentProcessId);
+                    pss_parm3.add(deltaTime);
+                    pss_parm4.add(Name);
+                    pss_parm5.add(CommandLine.length()==0?ExecutablePath:CommandLine);
+                    pss_flag.add(false);
+                }
+            }                            
+        }catch(Exception e){
+            System.err.println("Erro fatal 44556 " + e.toString());
+        }
+    }
+      
+    public void load_pss_linux() {        
+        try{
+            load_pss_init();
+            Process proc;
+            proc = Runtime.getRuntime().exec("ps -ef");
+            int len=0;
+            byte[] b=new byte[1024];
+            boolean ok=false;                    
+            boolean error=false;                    
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+                ok=true;
+            }
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                error=true;
+            }    
+            if ( error ){
+                System.err.println("Erro fatal 99!");
+                System.exit(1);
+            }
+            String [] lines=baos.toString().split("\n");
+            ArrayList<Integer> list_p = new ArrayList<>();
+            for ( int i=0;i<lines.length;i++ ){
+                String [] partes_=lines[i].split(" ");
+                String [] partes=new String[3];
+                int count=0;
+                for ( int j=0;j<partes_.length;j++ ){
+                    if ( partes_[j].equals("") )
+                        continue;
+                    partes[count++]=partes_[j];
+                    if ( count >= 3 )
+                        break;
+                }
+                if ( partes[1].equals("PID") )
+                    continue;
+                pss_parm1.add(partes[1]);
+                pss_parm2.add(partes[2]);
+                pss_parm3.add(lines[i]);
+                pss_parm4.add("n/a"); // nao remover essa linha
+                pss_flag.add(false);
+            }                            
+        }catch(Exception e){
+            System.err.println("Erro fatal 676 " + e.toString());
+        }
+    }
+          
+    public void pss_windows(boolean exigencia_flag){
+        for ( int i=0;i<pss_parm1.size();i++ )
+            if ( !exigencia_flag || pss_flag.get(i) ){
+                if ( pss_parm3.get(i).contains("0:00:00:0") ){ // skip o proprio comando
+                    if ( pss_parm5.get(i).contains("C:\\Windows\\system32\\cmd.exe  /S /D /c\" y grep") )
+                        continue;
+                    if ( pss_parm4.get(i).contains("java.exe") && pss_parm5.get(i).contains(".jar Y grep ") )
+                        continue;
+                }
+                System.out.println(pss_parm1.get(i)+"\t"+pss_parm2.get(i)+"\t"+pss_parm3.get(i)+"\t"+pss_parm4.get(i)+"\t"+pss_parm5.get(i));
+            }
+    }
+          
+    public void pss_linux(boolean exigencia_flag){
+        for ( int i=0;i<pss_parm1.size();i++ )
+            if ( !exigencia_flag || pss_flag.get(i) )
+                System.out.println(pss_parm3.get(i));
+    }
+    
+    public void pid_windows(String pid){
+        load_pss_windows();
+        pid_nav_up(pid, pid+",");
+        pid_nav_down(pid, pid+",");
+        pss_windows(true);
+    }
+    
+    public void pid_linux(String pid){
+        load_pss_linux();
+        pid_nav_up(pid, pid+",");
+        pid_nav_down(pid, pid+",");
+        pss_linux(true);
+    }
+    
+    public void pid_nav_up(String pid, String path){
+        for ( int i=0;i<pss_flag.size();i++ ){
+            if ( pss_parm1.get(i).equals(pid) && !pss_parm4.get(i).equals("svchost.exe") ){
+                pss_flag.set(i, true);
+                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) && !(","+path).contains(","+pss_parm2.get(i)+",") )
+                    pid_nav_up(pss_parm2.get(i),path+pss_parm2.get(i)+",");
+            }
+        }
+    }
+    
+    public void pid_nav_down(String pid, String path){
+        for ( int i=0;i<pss_flag.size();i++ ){
+            if ( pss_parm2.get(i).equals(pid) ){
+                pss_flag.set(i, true);
+                if ( !pss_parm1.get(i).equals(pss_parm2.get(i)) && !(","+path).contains(","+pss_parm1.get(i)+",") )
+                    pid_nav_down(pss_parm1.get(i),path+pss_parm1.get(i)+",");
+            }
+        }
     }
     
     public String fixNameFile(String a){
@@ -17145,18 +17148,220 @@ class XML extends Util{
 
 class PlaylistServer extends Util{
     File _cfg=null;
+    final String [] identify_kill=new String[]{"ignoreIGNORE:INSTANTE:33:"};
+    final Boolean[] new_order=new Boolean[]{false};
+    final String[] instrucoes=new String[]{""};
+    final String[] error=new String[]{""};
+    final String[] trace=new String[]{"0"};
     public PlaylistServer(String cfg){
         if ( cfg != null ){
-            _cfg=new File(cfg);
+            _cfg=new File(cfg);  
+            kill_by_text(identify_kill[0]);
+            new Thread(new Runnable() {
+                Boolean waiting=true;
+                String name_worker=null;
+                Boolean worker_loop=null;
+                String device=null;
+                Integer n_faixas=null;
+                String [] faixa=null;
+                Float vol_worker=null;
+                Float [] vol_faixa=null;
+                String path_vlc=null;
+                Integer play_faixa=null;
+                Integer seconds_play_faixa=null;
+                public void init(){
+                    name_worker=null;
+                    worker_loop=null;
+                    device=null;
+                    n_faixas=null;
+                    faixa=null;
+                    vol_worker=null;
+                    vol_faixa=null;
+                    path_vlc=null;
+                    play_faixa=null;
+                    seconds_play_faixa=null;                    
+                }   
+                public boolean ok(){
+                    if ( name_worker == null
+                         || worker_loop == null
+                         || device == null
+                         || n_faixas == null
+                         || faixa == null
+                         || vol_worker == null
+                         || vol_faixa == null
+                         || path_vlc == null
+                         || play_faixa == null
+                         || seconds_play_faixa == null
+                         || n_faixas == 0
+                    )
+                         return false;
+                    return true;
+                }
+                public String especial_parm(String line, String [] partes, int n) throws Exception{
+                    if ( n == 1 )
+                        return line.substring(partes[0].length()+1);
+                    if ( n == 2 )
+                        return line.substring(partes[0].length()+1+partes[1].length()+1);
+                    throw new Exception("Erro: erro interno! 0909");
+                }
+                public void run(){
+                    try{
+                        while(true){
+                            if ( new_order[0] ){
+                                new_order[0]=false;
+                                if ( instrucoes[0].equals("") ){
+                                    waiting=true;
+                                    error[0]="";
+                                    continue;
+                                }else{
+                                    waiting=false;
+                                    init();
+                                    // instrucoes
+                                    instrucoes[0]=instrucoes[0].replaceAll("\r", "").replaceAll("\n", "|");
+                                    String [] lines=instrucoes[0].split("\\|");
+                                    for ( int i=0;i<lines.length;i++ ){
+                                        String [] partes=lines[i].split(" ");
+                                        error[0]="Erro: analisando a linha " + lines[i];
+                                        if ( partes.length == 0 || partes[0].trim().equals("") )
+                                            continue;
+                                        if ( partes[0].equals("name_worker") ){
+                                            name_worker=especial_parm(lines[i], partes, 1);
+                                            continue;
+                                        }
+                                        if ( partes[0].equals("worker_loop") ){
+                                            worker_loop=partes[1].equals("yes");
+                                            continue;
+                                        }
+                                        if ( partes[0].equals("device") ){
+                                            device=especial_parm(lines[i], partes, 1);
+                                            continue;
+                                        }
+                                        if ( partes[0].equals("n_faixas") ){
+                                            n_faixas=Integer.parseInt(partes[1]);
+                                            faixa=new String[n_faixas];
+                                            vol_faixa=new Float[n_faixas];
+                                            continue;
+                                        }
+                                        if ( partes[0].equals("faixa") ){
+                                            faixa[Integer.parseInt(partes[1])]=especial_parm(lines[i], partes, 2);;
+                                            continue;
+                                        }
+                                        if ( partes[0].equals("vol") ){
+                                            if ( partes[1].equals("worker") ){
+                                                vol_worker=Float.parseFloat(partes[2]);
+                                                continue;
+                                            }
+                                            if ( partes[1].equals("faixa") ){
+                                                vol_faixa[Integer.parseInt(partes[2])]=Float.parseFloat(partes[3]);
+                                                continue;
+                                            }
+                                        }
+                                        if ( partes[0].equals("path_vlc") ){
+                                            path_vlc=especial_parm(lines[i], partes, 1);
+                                            continue;
+                                        }
+                                        if ( partes[0].equals("play") ){
+                                            // opcoes
+                                            // play faixa 2 time 20 seg
+                                            // play faixa 4
+                                            play_faixa=Integer.parseInt(partes[2]);
+                                            if ( partes.length == 5 )
+                                                seconds_play_faixa=Integer.parseInt(partes[4]);
+                                            else
+                                                seconds_play_faixa=0;
+                                            continue;
+                                        }     
+                                        throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
+                                    }
+                                    if ( ok() )
+                                        error[0]="";
+                                    else{
+                                        waiting=true;
+                                        instrucoes[0]="";
+                                        error[0]="Erro: comando imcompleto ou incorreto!";
+                                        continue;
+                                    }
+                                }                                
+                            }
+                            if ( waiting ){
+                                try { Thread.sleep(50); } catch (Exception ee) {}
+                                continue;
+                            }
+                            if ( play_faixa >= n_faixas ){
+                                if ( !worker_loop ){
+                                    waiting=true;
+                                    instrucoes[0]="";
+                                    continue;
+                                }
+                                play_faixa=0;
+                            }  
+                            if ( vol_faixa[play_faixa] == null )
+                                vol_faixa[play_faixa]=1F;
+                            Float gain=vol_worker*vol_faixa[play_faixa];
+                            if ( gain < 0 )
+                                gain=0F;
+                            if ( gain > 1 )
+                                gain=1F;                            
+                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+seconds_play_faixa, "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa] }, new File(path_vlc), null);
+                            if ( runtimeExecError != null && !runtimeExecError.equals("") ){
+                                waiting=true;
+                                instrucoes[0]="";
+                                error[0]=runtimeExecError;
+                                continue;
+                            }
+                            play_faixa++;
+                        }
+                    }catch(Exception e){
+                        if ( error[0].startsWith("Erro: " ) )
+                            error[0]+=" - excp: " + e.toString();
+                        else
+                            error[0]="Erro:: " + e.toString();
+                        if ( !trace[0].equals("") )
+                            error[0]+=" - trace: " + trace[0];
+                        return;
+                    }
+                }
+            }).start();
             if ( _cfg.exists() ){
                 String pergunta=lendo_arquivo(cfg);
                 String resposta=perguntando(pergunta, true);
-            }
+            }            
         }
     }
     public String perguntando(String a, Boolean starting_server){
         if ( a.equals("ping") )
             return "pong";
+        if ( a.equals("status") ){
+            if ( !error[0].equals("") )
+                return error[0];
+            if ( instrucoes[0].equals("") )
+                return "stopped";
+            return instrucoes[0];
+        }
+        if ( a.equals("stop") || a.equals("") ){
+            instrucoes[0]="";
+            new_order[0]=true;
+            if ( _cfg != null && !starting_server )
+                salvando_file(instrucoes[0], _cfg);
+            // kills
+            kill_by_text(identify_kill[0]);
+            return "..";            
+        }
+        if ( a.startsWith("base64 ") ){
+            a=a.substring("base64 ".length());
+            try{
+                a=base64(a, false);
+            }catch(Exception e){
+                return e.toString();
+            }
+        }
+        // kills
+        kill_by_text(identify_kill[0]);
+        instrucoes[0]=a;
+        new_order[0]=true;
+        if ( _cfg != null && !starting_server )
+            salvando_file(instrucoes[0], _cfg);
+        return "..";
         /*
         Na acao status, retornar a lista completa de instruções e o play deve informar o time:
             play faixa 2 time 20 seg            
@@ -17171,19 +17376,21 @@ class PlaylistServer extends Util{
         Na acao back, deve ir para musica anterior
         
         Na instrucao play deve haver várias linhas sendo a final play ...:
-            name_worker abc
+            name_worker Teste Miau
             worker_loop yes
             device {0.0.0.00000000}.{8eee1bfc-5bb7-47ce-ab43-2fb54956292e}
-            n_faixas 3
-            faixa 0 aaa
-            faixa 1 bbb
-            faixa 3 ccc
-            vol worker abc 0.44
-            vol faixa 1 0.33
-            exemplos de play:
-                play faixa 2 time 20 seg
-                play faixa 4
-                play faixa random
+            n_faixas 4
+            faixa 0 D:\ProgramFiles\site\musicas\classicas\12 Continent - The Journey.mkv
+            faixa 1 D:\ProgramFiles\site\musicas\classicas\End Credits (From 'Pirates of the Caribbean - On Stranger Tides'_Score).mkv
+            faixa 2 D:\ProgramFiles\site\musicas\classicas\Rhapsody In Blue - Gershwin.webm
+            faixa 3 D:\ProgramFiles\site\musicas\classicas\Adagio for Strings, Op. 11.mkv
+            vol worker 0.01
+            vol faixa 0 1
+            vol faixa 1 1
+            vol faixa 2 1
+            vol faixa 3 1
+            path_vlc C:\Program Files\VideoLAN\VLC
+            play faixa 0
             obs: play precisa ser a ultima linha necessariamente, senão o comando deve retornar erro
             obs2: se o worker_loop for no, então ao final da playlist, o sistema deverá ficar em stopped
             obs3: uma vez executada esse comando de play com sucesso e nao for starting_server e _cfg não for null, então: deverá armazenar a pergunta aqui recebida. salvando_file(String texto, File _cfg)
@@ -17196,8 +17403,15 @@ class PlaylistServer extends Util{
             xmlHttp.setRequestHeader('acao', 'oi');
             xmlHttp.send(null);
             console.log(xmlHttp.responseText);
-        */        
-        return "..";
+        
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open('GET', '/token', false);
+            xmlHttp.setRequestHeader('acao', 'oi');
+            xmlHttp.send(null);
+            console.log(xmlHttp.responseText);
+        
+        
+        */                
     }
     public String get_html_sem_acao(){
         if ( _cfg == null )
