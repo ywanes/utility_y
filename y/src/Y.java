@@ -14033,6 +14033,7 @@ class Util{
             if ( commands == null )
                 commands=line_commands.split(" ");
             runtimeExecError="";
+            //System.out.println("disparando..:" + String.join("|", commands));            
             Process proc = Runtime.getRuntime().exec(commands, null, file_path);            
             
             Thread ok0=new Thread(){
@@ -17332,11 +17333,13 @@ class PlaylistServer extends Util{
                                 continue;
                             }
                             if ( play_faixa >= n_faixas ){
+                                /*
                                 if ( !worker_loop ){
                                     waiting=true;
                                     instrucoes[0]="";
                                     continue;
                                 }
+                                */
                                 play_faixa=0;
                             }  
                             if ( vol_faixa[play_faixa] == null )
@@ -17347,7 +17350,8 @@ class PlaylistServer extends Util{
                             if ( gain > 1 )
                                 gain=1F;                            
                             String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+seconds_play_faixa, "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa] }, new File(path_vlc), null);
-                            if ( runtimeExecError != null && !runtimeExecError.equals("") ){
+                            seconds_play_faixa=0;
+                            if ( runtimeExecError != null && !runtimeExecError.equals("") && !runtimeExecError.contains("main interface error: no suitable interface module") ){
                                 waiting=true;
                                 instrucoes[0]="";
                                 error[0]=runtimeExecError;
