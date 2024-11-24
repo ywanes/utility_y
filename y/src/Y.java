@@ -17333,13 +17333,11 @@ class PlaylistServer extends Util{
                                 continue;
                             }
                             if ( play_faixa >= n_faixas ){
-                                /*
                                 if ( !worker_loop ){
                                     waiting=true;
                                     instrucoes[0]="";
                                     continue;
                                 }
-                                */
                                 play_faixa=0;
                             }  
                             if ( vol_faixa[play_faixa] == null )
@@ -17350,6 +17348,8 @@ class PlaylistServer extends Util{
                             if ( gain > 1 )
                                 gain=1F;                            
                             String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+seconds_play_faixa, "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa] }, new File(path_vlc), null);
+                            if ( new_order[0] || waiting ) // skip
+                                continue;
                             seconds_play_faixa=0;
                             if ( runtimeExecError != null && !runtimeExecError.equals("") && !runtimeExecError.contains("main interface error: no suitable interface module") ){
                                 waiting=true;
@@ -17442,6 +17442,8 @@ class PlaylistServer extends Util{
             }
         }
         // kills
+        instrucoes[0]="";
+        new_order[0]=true;
         kill_by_text(identify_kill[0]);
         instrucoes[0]=a;
         new_order[0]=true;
