@@ -1916,7 +1916,10 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("test") ){
-            test();
+            //test();
+            System.out.println(
+                getMixerGuidWindows()
+            );
             return;
         }
         if ( args[0].equals("controlc") ){
@@ -14896,9 +14899,48 @@ class Util{
         runtimeExec("ffmpeg.exe", null, null, null);
         return runtimeExecError.startsWith("ffmpeg version");
     }
+
+    public String getMixerGuidWindows(){ // ex: Microfone (HUSKY)#{0.0.1.00000000}.{0b216a1a-1a07-420d-b569-db728eb036cf}
+        String s=runtimeExec("pnputil /enum-devices /connected", null, null, null);            
+        if ( runtimeExecError != null && !runtimeExecError.equals("") )
+            return runtimeExecError;        
+        String [] partes=s.split("\n");        
+        s="";
+        int count=0;
+        String id="";
+        String name="";
+        for ( int i=0;i<partes.length;i++ ){
+            if ( partes[i].length() == 0 ){
+                count=0;
+                continue;
+            }
+            count++;
+            if ( count == 1 ){
+                if ( partes[i].length() > 30 ){
+                    id=partes[i].substring(30).trim();
+                    int p=id.indexOf("{");
+                    if ( p > -1 )
+                        id=id.substring(p);                    
+                }else
+                    id="id";
+                continue;
+            }
+            if ( count == 2 ){
+                if ( partes[i].length() > 30 )
+                    name=partes[i].substring(30).trim();
+                else
+                    name="name";
+                continue;
+            }
+            if ( count == 3 && partes[i].length() > 30 && partes[i].substring(30).trim().equals("AudioEndpoint") ){
+                s+=name+"#"+id+"\n";
+                continue;
+            }
+        }
+        return s;
+    }
     
-    
-    public String getMixerGuidWindows(){
+    public String getMixerGuidWindowsWithRegedit(){ // comando depreciado.. use o getMixerGuidWindows()
         String retorno="";
         String [] commands=new String[]{"Get-ChildItem -Path \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Render\" -recurse", 
                                         "Get-ChildItem -Path \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Capture\" -recurse"};
@@ -17234,6 +17276,8 @@ class PlaylistServer extends Util{
                                         }
                                         if ( partes[0].equals("device") ){
                                             device=especial_parm(lines[i], partes, 1);
+                                            if ( device.equals("auto") )
+                                                device=get_mixer_tv();
                                             continue;
                                         }
                                         if ( partes[0].equals("n_faixas") ){
@@ -17328,9 +17372,47 @@ class PlaylistServer extends Util{
             }            
         }
     }
+    
+    public String get_mixer_tv(){
+        if ( !isWindows() )
+            return "comando só habilitado para windows!";
+        String s=getMixerGuidWindows();
+        String [] partes=s.split("\n");
+        for ( int i=0;i<partes.length;i++ ){
+            if ( partes[i].contains(" TV ") )
+                return partes[i].split("#")[1];
+        }
+        return null;        
+    }
+    
+    public ArrayList<String> getFilesCustom(File f){
+        ArrayList<String> lista=new ArrayList<String>();
+        File [] files=f.listFiles();
+        for ( int i=0;i<files.length;i++ ){
+            if ( files[i].isFile() ){
+                lista.add(files[i].getAbsolutePath());                
+            }else{
+                if ( files[i].isDirectory() )
+                    lista.addAll(getFilesCustom(files[i]));
+            }
+        }
+        return lista;
+    }
     public String perguntando(String a, Boolean starting_server){
         if ( a.equals("ping") )
             return "pong";
+        if ( a.equals("mixer") ){
+            return get_mixer_tv();
+        }
+        if ( a.equals("list") ){
+            String _f="D:\\ProgramFiles\\site\\musicas";
+            File f=new File(_f);
+            if ( !f.exists() )
+                return "Erro: Não foi possível encontrar a pasta " + _f;
+            if ( !f.isDirectory() )
+                return "Erro: Esse caminho não é uma pasta: " + _f;
+            return String.join("|", arrayList_to_array(getFilesCustom(f)));
+        }
         if ( a.equals("status") ){
             if ( !error[0].equals("") )
                 return error[0];

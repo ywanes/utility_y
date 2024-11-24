@@ -6,7 +6,7 @@ var xmlHttp = new XMLHttpRequest();
 <br>
 xmlHttp.open('GET', '/yradio', false);
 <br>
-xmlHttp.setRequestHeader('acao', "base64 "+btoa("name_worker Teste Miau|worker_loop yes|device {0.0.0.00000000}.{8eee1bfc-5bb7-47ce-ab43-2fb54956292e}|n_faixas 2|faixa 0 D:\\ProgramFiles\\site\\musicas\\classicas\\12 Continent - The Journey.mkv|faixa 1 D:\\ProgramFiles\\site\\musicas\\classicas\\End Credits (From 'Pirates of the Caribbean - On Stranger Tides'_Score).mkv|vol worker 0.01|vol faixa 0 1|vol faixa 1 1|path_vlc C:\\Program Files\\VideoLAN\\VLC|play faixa 0"));
+xmlHttp.setRequestHeader('acao', "base64 "+btoa("name_worker Teste Miau|worker_loop yes|device auto|n_faixas 2|faixa 0 D:\\ProgramFiles\\site\\musicas\\classicas\\12 Continent - The Journey.mkv|faixa 1 D:\\ProgramFiles\\site\\musicas\\classicas\\End Credits (From 'Pirates of the Caribbean - On Stranger Tides'_Score).mkv|vol worker 0.01|vol faixa 0 1|vol faixa 1 1|path_vlc C:\\Program Files\\VideoLAN\\VLC|play faixa 0"));
 <br>
 xmlHttp.send(null);
 <br>
@@ -31,12 +31,31 @@ var xmlHttp = new XMLHttpRequest();
 <br>
 xmlHttp.open('GET', '/yradio', false);
 <br>
-xmlHttp.setRequestHeader('acao', "base64 "+btoa("name_worker Teste Miau|worker_loop yes|device {0.0.0.00000000}.{8eee1bfc-5bb7-47ce-ab43-2fb54956292e}|n_faixas 2|faixa 0 D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm|faixa 1 D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm|vol worker 0.01|vol faixa 0 1|vol faixa 1 1|path_vlc C:\\Program Files\\VideoLAN\\VLC|play faixa 0"));
+xmlHttp.setRequestHeader('acao', "base64 "+btoa("name_worker Teste Miau|worker_loop yes|device auto|n_faixas 2|faixa 0 D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm|faixa 1 D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm|vol worker 0.01|vol faixa 0 1|vol faixa 1 1|path_vlc C:\\Program Files\\VideoLAN\\VLC|play faixa 0"));
 <br>
 xmlHttp.send(null);
 <br>
 console.log(xmlHttp.responseText);
 
+
+
+
+
+
+
+<br>
+<br>
+<br>
+<br>
+var xmlHttp = new XMLHttpRequest();
+<br>
+xmlHttp.open('GET', '/yradio', false);
+<br>
+xmlHttp.setRequestHeader('acao', "base64 "+btoa("name_worker Teste Miau|worker_loop yes|device auto|n_faixas 2|faixa 0 D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm|faixa 1 D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm|vol worker 0.03|vol faixa 0 1|vol faixa 1 1|path_vlc C:\\Program Files\\VideoLAN\\VLC|play faixa 0"));
+<br>
+xmlHttp.send(null);
+<br>
+console.log(xmlHttp.responseText);
 
 
 
