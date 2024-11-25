@@ -176,18 +176,26 @@ function img_list(){
 	let matrix={};
 	let elements=get_elementos();
 	let lista=[];
-	for ( let i=0;i<elements.length;i++ ){
-		let key=encodeURI(elements[i]);
-		let obj=history_nick[key];
-		if ( key.indexOf('/series/') == 0 && typeof obj != 'undefined' && obj['tail'] )
-			lista.push({"element": elements[i], "epochMili": obj['epochMili']});			
+	let tags=['/series/', '/filmes/'];
+	for ( let k=0;k<tags.length;k++ ){
+		let lista_aux=[];
+		for ( let i=0;i<elements.length;i++ ){
+			let key=encodeURI(elements[i]);
+			let obj=history_nick[key];
+			if ( key.indexOf(tags[k]) == 0 && typeof obj != 'undefined' && obj['tail'] )
+				lista_aux.push({"element": elements[i], "epochMili": obj['epochMili']});		
+		}
+		lista_aux.sort((a, b) => b['epochMili'] - a['epochMili']);	
+		lista=lista.concat(lista_aux);
 	}
-	lista.sort((a, b) => b['epochMili'] - a['epochMili']);	
 	let s='<table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;">\n';
 	let type='movie';
 	for ( let i=0;i<lista.length;i++ ){
 		s+="<tr>";
-		s+="<td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + lista[i]['element'].substring(1).split('/').join("','") + "']" + ", true, '" + type + "')\">" + remove_extensao(lista[i]['element']) + "</td>";
+		let txt='SERIE -> ' + remove_extensao(lista[i]['element']);
+		if ( remove_extensao(lista[i]['element']).indexOf('/series/') != 0 )
+			txt='FILME -> ' + remove_extensao(lista[i]['element']);
+		s+="<td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + lista[i]['element'].substring(1).split('/').join("','") + "']" + ", true, '" + type + "')\">" + txt + "</td>";
 		s+="</tr>";
 	}
 	s+='</table>\n';
@@ -1232,7 +1240,7 @@ function load_playlist_principal(elements, parm, type){
 	for ( let i=0;i<elements.length;i++ ){
 		let aux='/'+parm.concat(elements[i]).join('/');
 		aux=encodeURI(aux);
-		if ( typeof history_nick[aux] != 'undefined' ){
+		if ( history_nick != null && typeof history_nick[aux] != 'undefined' ){
 			contem_details=true;
 			break;
 		}
@@ -1245,7 +1253,7 @@ function load_playlist_principal(elements, parm, type){
 			aux=encodeURI(aux);
 			let porc=0;
 			let valid=true;
-			if ( typeof history_nick[aux] != 'undefined' ){
+			if ( history_nick != null && typeof history_nick[aux] != 'undefined' ){
 				if ( history_nick[aux]['tail'] ){
 					oneLine+="<td style=\"padding: 0; cursor: pointer;\" onclick=\"remove_playing(this)\" ><svg width=\"40px\" height=\"40px\" viewBox=\"0 0 1024 1024\" class=\"icon\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#008000\" d=\"M745.344 361.344a32 32 0 0145.312 45.312l-288 288a32 32 0 01-45.312 0l-160-160a32 32 0 1145.312-45.312L480 626.752l265.344-265.408z\"></path></svg></td>";
 					tail=true;
