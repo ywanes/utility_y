@@ -13613,13 +13613,33 @@ class Util{
         return retorno;
     }
     
-    public boolean kill_by_text(String a){
+    public boolean kill_by_text(String a){ 
+        return kill_by_text(a, null, null);
+    }
+    
+    public boolean kill_by_text(String a, String b, String c){ // a->like b->notLike c->notLike
         ArrayList<String> lista=new ArrayList();
         if ( isWindows() ){
+            String s_=runtimeExec("cmd /c wmic path win32_process where \"commandline like '%" + a + "%'\" get ProcessId, CommandLine", null, null, null);
+            if ( s_ == null )
+                return false;
+            String [] lines=s_.split("\n");
+            for ( int i=0;i<lines.length;i++ ){
+                if ( i == 0 )
+                    continue;
+                if ( b != null && lines[i].contains(b) )
+                    continue;            
+                if ( c != null && lines[i].contains(c) )
+                    continue;            
+                String [] partes=lines[i].trim().split(" ");
+                lista.add(partes[partes.length-1]);
+            }            
+            /*
             load_pss_windows();
             for ( int i=0;i<pss_parm5.size();i++ )
                 if ( (" "+pss_parm5.get(i)+" ").contains(a) )
                     lista.add(pss_parm1.get(i));
+            */
         }else{
             load_pss_linux();
             for ( int i=0;i<pss_parm3.size();i++ )
@@ -17307,13 +17327,26 @@ class PlaylistServer extends Util{
                                         }
                                         if ( partes[0].equals("play") ){
                                             // opcoes
-                                            // play faixa 2 time 20 seg
+                                            // play faixa 2 1:23
                                             // play faixa 4
                                             play_faixa=Integer.parseInt(partes[2]);
-                                            if ( partes.length == 5 )
-                                                seconds_play_faixa=Integer.parseInt(partes[4]);
-                                            else
-                                                seconds_play_faixa=0;
+                                            if ( partes.length == 4 ){
+                                                String [] h_m_s=partes[3].split(":");
+                                                if ( h_m_s.length > 3 ){
+                                                    throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
+                                                }
+                                                if ( h_m_s.length == 1 ){
+                                                    seconds_play_faixa=Integer.parseInt(h_m_s[0]);
+                                                }else{
+                                                    if ( h_m_s.length == 2 ){
+                                                        seconds_play_faixa=Integer.parseInt(h_m_s[0])*60+Integer.parseInt(h_m_s[1]);                                                        
+                                                    }else{
+                                                        seconds_play_faixa=Integer.parseInt(h_m_s[0])*60*60+Integer.parseInt(h_m_s[1])*60+Integer.parseInt(h_m_s[2]);
+                                                    }
+                                                }
+                                            }else{
+                                                seconds_play_faixa=30;
+                                            }
                                             continue;
                                         }     
                                         throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
@@ -17430,7 +17463,7 @@ class PlaylistServer extends Util{
             if ( _cfg != null && !starting_server )
                 salvando_file(instrucoes[0], _cfg);
             // kills
-            kill_by_text(identify_kill[0]);
+            kill_by_text("ignoreIGNORE:INSTANTE:33:", "cmd /c", "wmic ");
             return "..";            
         }
         if ( a.startsWith("base64 ") ){
@@ -17447,12 +17480,16 @@ class PlaylistServer extends Util{
         kill_by_text(identify_kill[0]);
         instrucoes[0]=a;
         new_order[0]=true;
-        if ( _cfg != null && !starting_server )
-            salvando_file(instrucoes[0], _cfg);
+        if ( _cfg != null && !starting_server ){
+            if ( instrucoes[0].contains("worker_loop no") )
+                salvando_file("", _cfg);
+            else
+                salvando_file(instrucoes[0], _cfg);            
+        }
         return "..";
         /*
         Na acao status, retornar a lista completa de instruções e o play deve informar o time:
-            play faixa 2 time 20 seg            
+            play faixa 2 20
             ou
             stopped
             ou Error abced(em caso da faixa não existir o arquivo ou algum outro tipo de erro)
@@ -17479,6 +17516,8 @@ class PlaylistServer extends Util{
             vol faixa 3 1
             path_vlc C:\Program Files\VideoLAN\VLC
             play faixa 0
+            play faixa 0 34
+            play faixa 0 0:34
             obs: play precisa ser a ultima linha necessariamente, senão o comando deve retornar erro
             obs2: se o worker_loop for no, então ao final da playlist, o sistema deverá ficar em stopped
             obs3: uma vez executada esse comando de play com sucesso e nao for starting_server e _cfg não for null, então: deverá armazenar a pergunta aqui recebida. salvando_file(String texto, File _cfg)
