@@ -75,20 +75,79 @@ function send(a){
 	return xmlHttp.responseText;
 }
 
+
+function get_custom_start(sec_default, name){
+	let matrix={
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm": 5,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\12 Continent - The Journey.mkv": 1,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Adagio for Strings, Op. 11.mkv": 5,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Beethoven - Moonlight Sonata (FULL).webm": 1,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Chopin - Nocturne op.9 No.2.webm": 2,
+		"D:\\ProgramFiles\\site\\musicas\\twosteps\\21 - Breathe.mp3": 1,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Carl Orff - O Fortuna ~ Carmina Burana.mkv": 2,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Dies Irae (Requiem) - Giuseppe Verdi - LEGENDADO PT_BR.mp4": 5,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Edvard Grieg - Peer Gynt - Suite No. 1, Op. 46 - I. Morning Mood.webm": 1,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Everyday - Carly Comando.webm": 1,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\J.S. Bach - Toccata and Fugue in D minor BWV 565.webm": 1,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\K. 183 Mozart Symphony No. 25 in G minor, I Allegro con brio.mkv": 1,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Mozart - Lacrimosa-k1.mkv": 2,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Puccini - Gianni Schicchi - 'O mio babbino caro'.webm": 5,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Tchaikovsky - Piano Concerto No .1 In B Flat Minor, Op. 23 - Allegro Non Troppo E Molto Maestoso.webm": 2,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\The Four Seasons - Summer in G Minor, RV. 315 - III. Presto.mkv": 1,
+		"D:\\ProgramFiles\\site\\musicas\\populares\\Adele - Rolling in the Deep.mp3": 5,
+		"D:\\ProgramFiles\\site\\musicas\\rock\\Dire Straits - Sultans Of Swing (Official Music Video)-h0ffIJ7ZO4U.mkv": 1,
+		"D:\\ProgramFiles\\site\\musicas\\twosteps\\30 - Impossible.webm": 3,
+		"fim": 0
+	}
+	if ( sec_default >= 0 )
+		return sec_default;		
+	if ( typeof matrix[name] != 'undefined' )
+		return matrix[name];
+	else
+		console.log('analisando start: '+name.replaceAll('\\', '\\\\'));
+	return 0;
+}
+
+
+function get_custom_vol(vol_default, name){ // VOLUMEEEE
+	let matrix={
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\12 Continent - The Journey.mkv": 0.3,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Peer Gynt, Op. 23 - IV. In the Hall of the Mountain King.mkv": 6,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Puccini - Gianni Schicchi - 'O mio babbino caro'.webm": 3,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Sarah Brightman And Andrea Bocelli - Time To Say Goodbye [The Best of Andrea Bocelli - 'Vivere'].webm": 0.7,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\The Four Seasons - Summer in G Minor, RV. 315 - III. Presto.mkv": 0.30,
+		"D:\\ProgramFiles\\site\\musicas\\classicas\\Thoughts.mkv": 0.55,
+		"D:\\ProgramFiles\\site\\musicas\\rock\\Dire Straits - Sultans Of Swing (Official Music Video)-h0ffIJ7ZO4U.mkv": 0.5,
+		"fim": 1
+	}
+	if ( typeof matrix[name] != 'undefined' )
+		return matrix[name];
+	if ( name.indexOf("D:\\ProgramFiles\\site\\musicas\\angra\\") == 0 )
+		return 0.16;
+	if ( name.indexOf("D:\\ProgramFiles\\site\\musicas\\populares\\") == 0 )
+		return 0.50;
+	if ( name.indexOf("D:\\ProgramFiles\\site\\musicas\\systemOfADown - Hypnotize\\") == 0 )
+		return 0.40;
+	if ( name.indexOf("D:\\ProgramFiles\\site\\musicas\\twosteps\\") == 0 )
+		return 0.40;
+	return 1;
+}
+
 function minisend(a, c){
 	let b=document.querySelector('input[name="vol"]:checked').value;
 	let faixas=a.trim().split('\n').map(item => item.trim());
 	let n_faixas=faixas.length;
 	let s='\nn_faixas '+n_faixas+'\n';
+	let first=null;
 	for ( let i=0;i<n_faixas;i++ ){
 		s+='faixa '+i+' '+faixas[i]+'\n';
-		s+='vol faixa '+i+' 1\n';
+		s+='cfg faixa '+i+' ' + get_custom_vol(1, faixas[i]) + ' ' + get_custom_start(c, faixas[i]) + '\n';
 	}
 	s+='vol worker '+b+'\n';
 	s=`name_worker TMP
 		worker_loop yes
 		path_vlc C:\\Program Files\\VideoLAN\\VLC
-		device auto` + s + `play faixa 0 `+c;
+		device auto` + s + `play faixa 0`;
 	s=s.trim().split('\n').map(item => item.trim()).join('\n');
 	return send(s);
 }
@@ -111,8 +170,8 @@ function exemplo_call_send(a){
 		faixa 0 D:\\ProgramFiles\\site\\musicas\\systemOfADown - Hypnotize\\04 - Hypnotize.webm
 		faixa 1 D:\\ProgramFiles\\site\\musicas\\systemOfADown - Hypnotize\\04 - Hypnotize.webm
 		vol worker 0.1
-		vol faixa 0 1
-		vol faixa 1 1
+		cfg faixa 0 1 0
+		cfg faixa 1 1 0
 		path_vlc C:\\Program Files\\VideoLAN\\VLC
 		play faixa 0 0`
 	);
@@ -211,12 +270,7 @@ function f_load(){
 function format_and_send_play(a){
 	a=a.split('\n');
 	a=a.map(a => a.substring(1)).map(a => a.substring(0, a.length-1).replaceAll('/', '\\')).join('\n');
-	// custom
-	if ( a.split('\n').length == 1 && a.indexOf('Rhapsody In Blue - Gershwin.webm') > -1 ){
-		minisend(a, 5);
-		return;
-	}
-	minisend(a, 0);
+	minisend(a, -1);
 }
 
 function play(){

@@ -17229,6 +17229,7 @@ class PlaylistServer extends Util{
                 String [] faixa=null;
                 Float vol_worker=null;
                 Float [] vol_faixa=null;
+                Integer [] sec_faixa=null;
                 String path_vlc=null;
                 Integer play_faixa=null;
                 Integer seconds_play_faixa=null;
@@ -17240,9 +17241,9 @@ class PlaylistServer extends Util{
                     faixa=null;
                     vol_worker=null;
                     vol_faixa=null;
+                    sec_faixa=null;
                     path_vlc=null;
                     play_faixa=null;
-                    seconds_play_faixa=null;                    
                 }   
                 public boolean ok(){
                     if ( name_worker == null
@@ -17252,9 +17253,9 @@ class PlaylistServer extends Util{
                          || faixa == null
                          || vol_worker == null
                          || vol_faixa == null
+                         || sec_faixa == null
                          || path_vlc == null
                          || play_faixa == null
-                         || seconds_play_faixa == null
                          || n_faixas == 0
                     )
                          return false;
@@ -17305,6 +17306,7 @@ class PlaylistServer extends Util{
                                             n_faixas=Integer.parseInt(partes[1]);
                                             faixa=new String[n_faixas];
                                             vol_faixa=new Float[n_faixas];
+                                            sec_faixa=new Integer[n_faixas];
                                             continue;
                                         }
                                         if ( partes[0].equals("faixa") ){
@@ -17316,8 +17318,24 @@ class PlaylistServer extends Util{
                                                 vol_worker=Float.parseFloat(partes[2]);
                                                 continue;
                                             }
+                                        }
+                                        if ( partes[0].equals("cfg") ){
                                             if ( partes[1].equals("faixa") ){
-                                                vol_faixa[Integer.parseInt(partes[2])]=Float.parseFloat(partes[3]);
+                                                Integer _faixa=Integer.parseInt(partes[2]);
+                                                vol_faixa[_faixa]=Float.parseFloat(partes[3]);
+                                                String [] h_m_s=partes[4].split(":");
+                                                if ( h_m_s.length > 3 ){
+                                                    throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
+                                                }
+                                                if ( h_m_s.length == 1 ){
+                                                    sec_faixa[_faixa]=Integer.parseInt(h_m_s[0]);
+                                                }else{
+                                                    if ( h_m_s.length == 2 ){
+                                                        sec_faixa[_faixa]=Integer.parseInt(h_m_s[0])*60+Integer.parseInt(h_m_s[1]);                                                        
+                                                    }else{
+                                                        sec_faixa[_faixa]=Integer.parseInt(h_m_s[0])*60*60+Integer.parseInt(h_m_s[1])*60+Integer.parseInt(h_m_s[2]);
+                                                    }
+                                                }                                                
                                                 continue;
                                             }
                                         }
@@ -17326,27 +17344,7 @@ class PlaylistServer extends Util{
                                             continue;
                                         }
                                         if ( partes[0].equals("play") ){
-                                            // opcoes
-                                            // play faixa 2 1:23
-                                            // play faixa 4
                                             play_faixa=Integer.parseInt(partes[2]);
-                                            if ( partes.length == 4 ){
-                                                String [] h_m_s=partes[3].split(":");
-                                                if ( h_m_s.length > 3 ){
-                                                    throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
-                                                }
-                                                if ( h_m_s.length == 1 ){
-                                                    seconds_play_faixa=Integer.parseInt(h_m_s[0]);
-                                                }else{
-                                                    if ( h_m_s.length == 2 ){
-                                                        seconds_play_faixa=Integer.parseInt(h_m_s[0])*60+Integer.parseInt(h_m_s[1]);                                                        
-                                                    }else{
-                                                        seconds_play_faixa=Integer.parseInt(h_m_s[0])*60*60+Integer.parseInt(h_m_s[1])*60+Integer.parseInt(h_m_s[2]);
-                                                    }
-                                                }
-                                            }else{
-                                                seconds_play_faixa=30;
-                                            }
                                             continue;
                                         }     
                                         throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
@@ -17380,7 +17378,7 @@ class PlaylistServer extends Util{
                                 gain=0F;
                             if ( gain > 1 )
                                 gain=1F;                            
-                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+seconds_play_faixa, "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa] }, new File(path_vlc), null);
+                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+sec_faixa[play_faixa], "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa] }, new File(path_vlc), null);
                             if ( new_order[0] || waiting ) // skip
                                 continue;
                             seconds_play_faixa=0;
@@ -17510,14 +17508,12 @@ class PlaylistServer extends Util{
             faixa 2 D:\ProgramFiles\site\musicas\classicas\Rhapsody In Blue - Gershwin.webm
             faixa 3 D:\ProgramFiles\site\musicas\classicas\Adagio for Strings, Op. 11.mkv
             vol worker 0.01
-            vol faixa 0 1
-            vol faixa 1 1
-            vol faixa 2 1
-            vol faixa 3 1
+            cfg faixa 0 1 0
+            cfg faixa 1 1 0
+            cfg faixa 2 1 0
+            cfg faixa 3 1 0
             path_vlc C:\Program Files\VideoLAN\VLC
             play faixa 0
-            play faixa 0 34
-            play faixa 0 0:34
             obs: play precisa ser a ultima linha necessariamente, senão o comando deve retornar erro
             obs2: se o worker_loop for no, então ao final da playlist, o sistema deverá ficar em stopped
             obs3: uma vez executada esse comando de play com sucesso e nao for starting_server e _cfg não for null, então: deverá armazenar a pergunta aqui recebida. salvando_file(String texto, File _cfg)
