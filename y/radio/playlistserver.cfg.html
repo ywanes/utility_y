@@ -1,7 +1,53 @@
 <style>
+
+.bordered {
+  border: solid #ccc 3px;
+  border-radius: 6px;
+}
+
+.bordered td, .bordered th {
+  border-left: 2px solid #ccc;
+  border-top: 2px solid #ccc;
+  padding: 10px;
+}
+
 .btn:active{
   background-color: #666;
   color: white;
+}
+
+input[type="radio"] {
+  width: 30px;
+  height: 30px;
+  border-radius: 15px;
+  border: 2px solid #1FBED6;
+  background-color: white;
+  -webkit-appearance: none; /*to disable the default appearance of radio button*/
+  -moz-appearance: none;
+}
+
+input[type="radio"]:focus { /*no need, if you don't disable default appearance*/
+  outline: none; /*to remove the square border on focus*/
+}
+
+input[type="radio"]:checked { /*no need, if you don't disable default appearance*/
+  background-color: #1FBED6;
+}
+
+input[type="radio"]:checked ~ span:first-of-type {
+  color: white;
+}
+
+label span:first-of-type {
+  position: relative;
+  left: -150px;
+  font-size: 15px;
+  color: #1FBED6;
+}
+
+label span {
+  position: relative;
+  top: -12px;
 }
 
 </style>
@@ -18,7 +64,8 @@ function send(a){
 	return xmlHttp.responseText;
 }
 
-function minisend(a, b, c){
+function minisend(a, c){
+	let b=document.querySelector('input[name="vol"]:checked').value;
 	let faixas=a.trim().split('\n').map(item => item.trim());
 	let n_faixas=faixas.length;
 	let s='\nn_faixas '+n_faixas+'\n';
@@ -39,7 +86,6 @@ function exemplo_call_minisend(){
 	return minisend(
 		`D:\\ProgramFiles\\site\\musicas\\classicas\\12 Continent - The Journey.mkv
 		D:\\ProgramFiles\\site\\musicas\\classicas\\End Credits (From 'Pirates of the Caribbean - On Stranger Tides'_Score).mkv`	
-		, 0.12
 		, 0
 	);
 
@@ -65,7 +111,6 @@ function send2(a){
 	return minisend(
 		`D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm
 		D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm`	
-		, 0.12
 		, 0
 	);
 }
@@ -73,19 +118,36 @@ function send2(a){
 </script>
 
 <html>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="send('stop')">&nbsp;&nbsp;&nbsp;&nbsp;STOP&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="alert(send('status'))">&nbsp;&nbsp;&nbsp;&nbsp;STATUS&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.02, 5)">&nbsp;&nbsp;&nbsp;SONO 0.02&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.03, 5)">&nbsp;&nbsp;&nbsp;SONO 0.03&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.06, 5)">&nbsp;&nbsp;&nbsp;SONO 0.06&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.09, 5)">&nbsp;&nbsp;&nbsp;SONO 0.09&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.12, 5)">&nbsp;&nbsp;&nbsp;SONO 0.12&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.15, 5)">&nbsp;&nbsp;&nbsp;SONO 0.15&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.18, 5)">&nbsp;&nbsp;&nbsp;SONO 0.18&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.21, 5)">&nbsp;&nbsp;&nbsp;SONO 0.21&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.24, 5)">&nbsp;&nbsp;&nbsp;SONO 0.24&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.27, 5)">&nbsp;&nbsp;&nbsp;SONO 0.27&nbsp;&nbsp;&nbsp;&nbsp;</button>
-<br><button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 0.30, 5)">&nbsp;&nbsp;&nbsp;SONO 0.30&nbsp;&nbsp;&nbsp;&nbsp;</button>
+<br><button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="send('stop')">&nbsp;&nbsp;&nbsp;&nbsp;STOP&nbsp;&nbsp;&nbsp;&nbsp;</button>
+   &nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="alert(send('status'))">&nbsp;&nbsp;&nbsp;&nbsp;STAT&nbsp;&nbsp;&nbsp;&nbsp;</button>
+	
+<br><br>
+
+
+<button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 5)">&nbsp;&nbsp;&nbsp;SONO&nbsp;&nbsp;&nbsp;&nbsp;</button>
+
+<br><br><br><br>
+<table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;">
+	<tr>		
+		<td style="width: 700px; display: inline-block; cursor: pointer; color: black; font-size: 44px; font-family: Franklin Gothic Medium;" onclick="">D:\ProgramFiles\site\musicas\classicas\Rhapsody In Blue - Gershwin.webm</td>
+	</tr>
+</table>
+
+
+<br><br><br><br>
+<label><input type="radio" id="vol" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.01"        /><span style="height: 70px; font-size:70px; width: 70px;">0.01</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.02"        /><span style="height: 70px; font-size:70px; width: 70px;">0.02</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.03" checked/><span style="height: 70px; font-size:70px; width: 70px;">0.03</span></label><br>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.06"        /><span style="height: 70px; font-size:70px; width: 70px;">0.06</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.09"        /><span style="height: 70px; font-size:70px; width: 70px;">0.09</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.12"        /><span style="height: 70px; font-size:70px; width: 70px;">0.12</span></label><br>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.15"        /><span style="height: 70px; font-size:70px; width: 70px;">0.15</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.18"        /><span style="height: 70px; font-size:70px; width: 70px;">0.18</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.21"        /><span style="height: 70px; font-size:70px; width: 70px;">0.21</span></label><br>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.24"        /><span style="height: 70px; font-size:70px; width: 70px;">0.24</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.27"        /><span style="height: 70px; font-size:70px; width: 70px;">0.27</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.30"        /><span style="height: 70px; font-size:70px; width: 70px;">0.30</span></label><br>
+  
 
 </html>
 
