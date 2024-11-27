@@ -52,11 +52,22 @@ label span {
 
 </style>
 
-<script type="text/javascript">
+<script type="text/javascript" charset="utf-8">
+
+function btoa2(str) {
+    return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+        function toSolidBytes(match, p1) {
+            return String.fromCharCode('0x' + p1);
+    }));
+}
 
 function send(a){
-	if ( a.replaceAll(' ','') != a )
-		a="base64 " + btoa(a.trim().split('\n').map(item => item.trim()).join('|'));
+	if ( a.replaceAll(' ','') != a ){
+		// se tirar essas duas linhas o celular buga!
+		t1=btoa2(a.trim().split('\n').map(item => item.trim()).join('|'));
+		t2=btoa(a.trim().split('\n').map(item => item.trim()).join('|'));
+		a="base64 " + t1;
+	}
 	var xmlHttp = new XMLHttpRequest();
 	xmlHttp.open('GET', '/yradio', false);
 	xmlHttp.setRequestHeader('acao', a);
@@ -115,27 +126,133 @@ function send2(a){
 	);
 }
 
+this.path='/';
+this.list=[];
+this.len_base=0;
+
+function get_paths(a){
+	a='A'+a+'A';
+	a=a.split('/');
+	a.shift();
+	a.pop();
+	return a;
+}
+
+function set_base(){
+	this.len_base=get_paths(this.path).length;
+}
+
+function get_lista(a){
+	let paths=get_paths(a);
+	let s={};
+	for ( let i=0;i<this.list.length;i++ ){
+		let tmp=get_paths(this.list[i]);
+		if ( tmp.length > paths.length ){
+			let impedimento=false;
+			for ( let j=0;j<paths.length;j++ ){
+				if ( paths[j] != tmp[j] ){
+					impedimento=true;
+					break;
+				}
+			}		
+			if ( !impedimento )
+				s[tmp[paths.length]]=true;
+		}
+	}
+	return Object.keys(s);
+}
+
+this.z=null;
+function update_click(a){
+	update(a.innerHTML);
+}
+
+function update(a){
+	if ( a == '..' && path == '/' )
+		return;
+	if ( a == '.' ){
+		//ok
+	}else{
+		if ( a == '..' ){
+			let s=get_paths(this.path);
+			if ( s.length <= this.len_base ) // block
+				return;
+			if ( s.length > 0 )
+				s.pop();
+			if ( s.length == 0 )
+				this.path='/';
+			else
+				this.path='/'+s.join('/')+'/';
+		}else
+			path+=a+'/';
+	}
+	let lista=get_lista(this.path);
+	let s='';
+	let px='900px';
+	s+='<tr><td style="width: '+px+'; display: inline-block; cursor: pointer; color: black; font-size: 44px; font-family: Franklin Gothic Medium;" onclick="update_click(this)">..</td></td>';
+	for ( let i=0;i<lista.length;i++ )
+		s+='<tr><td style="width: '+px+'; display: inline-block; cursor: pointer; color: black; font-size: 44px; font-family: Franklin Gothic Medium;" onclick="update_click(this)">'+lista[i]+'</td></td>';
+	document.getElementById('tablebase').innerHTML=s;
+	s=get_paths(this.path);
+	for ( let i=0;i<this.len_base;i++ )
+		s.shift();
+	s=s.join('/');
+	document.getElementById('div_path').innerHTML=s;
+}
+
+function f_load(){	
+	this.list=send('list').split('|').map(a => '/'+a.replaceAll('\\', '/')+'/');	
+	this.path='/D:/ProgramFiles/site/musicas/';
+	set_base();
+	this.path='/D:/ProgramFiles/site/musicas/classicas/Rhapsody In Blue - Gershwin.webm/';
+	update('.');
+}
+
+function format_and_send_play(a){
+	a=a.split('\n');
+	a=a.map(a => a.substring(1)).map(a => a.substring(0, a.length-1).replaceAll('/', '\\')).join('\n');
+	// custom
+	if ( a.split('\n').length == 1 && a.indexOf('Rhapsody In Blue - Gershwin.webm') > -1 ){
+		minisend(a, 5);
+		return;
+	}
+	minisend(a, 0);
+}
+
+function play(){
+	let s=get_paths(this.path);
+	if ( s.length > 0 && s[s.length-1].indexOf('.') > -1 )
+		format_and_send_play(this.path);		
+	else{
+		let s2=get_lista(this.path);
+		if ( s2.length > 0 && s2[s2.length-1].indexOf('.') > -1 ){
+			let s3='';
+			for ( let i=0;i<s2.length;i++ )
+				s3+=this.path+s2[i]+'/\n';							
+			format_and_send_play(s3);
+		}else
+			alert('selecione a pasta de musica ou a musica!');
+		
+	}
+}
 </script>
 
+
 <html>
-<br><button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="send('stop')">&nbsp;&nbsp;&nbsp;&nbsp;STOP&nbsp;&nbsp;&nbsp;&nbsp;</button>
-   &nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="alert(send('status'))">&nbsp;&nbsp;&nbsp;&nbsp;STAT&nbsp;&nbsp;&nbsp;&nbsp;</button>
-	
+<body onload="f_load()">
 <br><br>
-
-
-<button style="height: 181px; font-size:70px; width: 616px;" class="btn" type="submit" onclick="minisend('D:\\ProgramFiles\\site\\musicas\\classicas\\Rhapsody In Blue - Gershwin.webm', 5)">&nbsp;&nbsp;&nbsp;SONO&nbsp;&nbsp;&nbsp;&nbsp;</button>
-
-<br><br><br><br>
-<table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;">
-	<tr>		
-		<td style="width: 700px; display: inline-block; cursor: pointer; color: black; font-size: 44px; font-family: Franklin Gothic Medium;" onclick="">D:\ProgramFiles\site\musicas\classicas\Rhapsody In Blue - Gershwin.webm</td>
-	</tr>
-</table>
-
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="send('stop')">&nbsp;&nbsp;&nbsp;STOP&nbsp;&nbsp;&nbsp;&nbsp;</button>
+	&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="alert(send('status'))">&nbsp;&nbsp;&nbsp;STAT&nbsp;&nbsp;&nbsp;&nbsp;</button>
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="location.reload()">RELOAD&nbsp;&nbsp;</button>
+	&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="play()">&nbsp;&nbsp;&nbsp;PLAY&nbsp;&nbsp;&nbsp;&nbsp;</button>
 
 <br><br><br><br>
-<label><input type="radio" id="vol" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.01"        /><span style="height: 70px; font-size:70px; width: 70px;">0.01</span></label>
+<a id="div_path" style="width: 700px; color: black; font-size: 44px; font-family: Franklin Gothic Medium;">...</a>
+<br>
+<table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;"></table>
+<br><br><br><br>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.01"        /><span style="height: 70px; font-size:70px; width: 70px;">0.01</span></label>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.02"        /><span style="height: 70px; font-size:70px; width: 70px;">0.02</span></label>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.03" checked/><span style="height: 70px; font-size:70px; width: 70px;">0.03</span></label><br>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.06"        /><span style="height: 70px; font-size:70px; width: 70px;">0.06</span></label>
@@ -147,7 +264,5 @@ function send2(a){
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.24"        /><span style="height: 70px; font-size:70px; width: 70px;">0.24</span></label>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.27"        /><span style="height: 70px; font-size:70px; width: 70px;">0.27</span></label>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.30"        /><span style="height: 70px; font-size:70px; width: 70px;">0.30</span></label><br>
-  
-
+</body>
 </html>
-
