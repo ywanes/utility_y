@@ -14312,9 +14312,7 @@ class Util{
                 if ( agulha_count == 2 && padding_count == 1 && agulha == 0 ){
                     break;
                 }
-                System.err.println(erroSequenciaIlegal);
-                System.exit(1);
-                break;
+                throw new Exception(erroSequenciaIlegal);
             }
             entrada=byte_to_int_java(buf[0],false);
             // suprimindo \r\n

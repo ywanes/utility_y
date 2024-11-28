@@ -83,8 +83,16 @@ function send(a){
 		//a=a.split('\n').map(item => item.trim()).join('|');
 	}
 	var xmlHttp = new XMLHttpRequest();
-	xmlHttp.open('GET', '/yradio', false);
-	xmlHttp.setRequestHeader('acao', a+'                                                               '); // espaço adicionar para o mobile não bugar!
+	xmlHttp.open('GET', window.location.pathname, false);
+	xmlHttp.setRequestHeader('acao', a+`
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 
+                                                                 																 
+	`); // espaço adicionar para o mobile não bugar!
 	xmlHttp.send(null);
 	return xmlHttp.responseText;
 }
@@ -163,7 +171,10 @@ function minisend(a, c){
 		path_vlc C:\\Program Files\\VideoLAN\\VLC
 		device auto` + s + `play faixa 0`;
 	s=s.trim().split('\n').map(item => item.trim()).join('\n');
-	return send(s);
+	s=send(s);
+	if ( s != '..' )
+		alert(s);
+	return s;
 }
 
 function exemplo_call_minisend(){
