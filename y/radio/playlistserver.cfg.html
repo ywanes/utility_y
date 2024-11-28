@@ -64,13 +64,27 @@ function btoa2(str) {
 function send(a){
 	if ( a.replaceAll(' ','') != a ){
 		// se tirar essas duas linhas o celular buga!
+		// header muito grande buga no celular
 		t1=btoa2(a.trim().split('\n').map(item => item.trim()).join('|'));
-		t2=btoa(a.trim().split('\n').map(item => item.trim()).join('|'));
+		try{
+			t2=btoa(a.trim().split('\n').map(item => item.trim()).join('|'));
+		} catch (error) {
+			let tmp=a.trim().split('\n');
+			for ( let i=0;i<tmp.length;i++ ){
+				try{
+					btoa(tmp[i]);
+				} catch (error) {
+					alert(error + ' - ' + tmp[i]);
+					break;
+				}
+			}
+		}
 		a="base64 " + t1;
+		//a=a.split('\n').map(item => item.trim()).join('|');
 	}
 	var xmlHttp = new XMLHttpRequest();
 	xmlHttp.open('GET', '/yradio', false);
-	xmlHttp.setRequestHeader('acao', a);
+	xmlHttp.setRequestHeader('acao', a+'                                                               '); // espaço adicionar para o mobile não bugar!
 	xmlHttp.send(null);
 	return xmlHttp.responseText;
 }
