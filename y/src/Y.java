@@ -19371,8 +19371,6 @@ class ClientThread extends Util{
                   this.header_userAgent = line.substring(12);
                 if (line.startsWith("acao: ") )
                   this.header_acao = line.substring(6);
-                if (line.startsWith("acao0") )
-                  this.header_acao+= line.substring(6+3); // ex acao001:
                 if (line.startsWith("Redis-ID: ") )
                   this.header_redis_id = line.substring(10);
                 if (line.startsWith("Redis-SIGN: ") )
