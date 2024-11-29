@@ -19295,7 +19295,8 @@ class ClientThread extends Util{
     char[] buffer = new char[2048];
     Writer writer;
     InputStreamReader isr = null;
-    Reader reader;
+    Reader reader = null;
+    BufferedInputStream bis = null;
     String host_display=null;
     public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg) {
         this.titulo_url = titulo_url;
@@ -19311,15 +19312,17 @@ class ClientThread extends Util{
                     input = socket.getInputStream();
                     output = socket.getOutputStream();
                     if (input != null) {
-                        isr = new InputStreamReader(input);
-                        reader = new BufferedReader(isr);
                         writer = new StringWriter();
                         lendo();
                         gravando();
                         socket.close();
                         writer.close();
-                        reader.close();
-                        isr.close();
+                        if ( reader != null )
+                            reader.close();
+                        if ( isr != null )
+                            isr.close();
+                        if ( bis != null )
+                            bis.close();
                     }
                 } catch (Exception e) {
                     System.out.println("----------> Erro ao executar servidor:" + e.toString());
@@ -19327,26 +19330,62 @@ class ClientThread extends Util{
             }
         }.start();
     }
-    private void lendo() throws Exception { // refatorar depois, isso aqui ta muito ruim!!
-        try {  
-            int i = 0;            
-            CharArrayWriter caw=new CharArrayWriter();            
-            while(true){
-                i = reader.read(buffer);
-                if (i < 0 ) 
-                    break;
-                else
-                    caw.write(buffer, 0, i);
-                if ( reader.ready() )
-                    continue;
-                sleepMillis(1);
-                if ( reader.ready() )
-                    continue;
+    
+    private String [] lendo_linhas() throws Exception {
+        isr = new InputStreamReader(input);
+        reader = new BufferedReader(isr);
+                        
+        int i = 0;            
+        CharArrayWriter caw=new CharArrayWriter();            
+        while(true){
+            i = reader.read(buffer);
+            if (i < 0 ) 
                 break;
+            else
+                caw.write(buffer, 0, i);
+            if ( reader.ready() )
+                continue;            
+            sleepMillis(1);
+            if ( reader.ready() )
+                continue;
+            break;
+        }
+        BufferedReader br = new BufferedReader(new StringReader(caw.toString()));
+        ArrayList<String> lines=new ArrayList<>();
+        String line=null;
+        while ((line = br.readLine()) != null)
+            lines.add(line);
+        
+        return arrayList_to_array(lines);        
+    }
+    
+    // nao apagar!!!
+    private String [] lendo_linhasB() throws Exception {
+        bis = new BufferedInputStream(input);
+        byte [] buff=new byte[BUFFER_SIZE];        
+        int len_in=0;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        while(true){
+            len_in=bis.read(buff,0,BUFFER_SIZE);
+            if ( len_in < 0 ){
+                break;
+            }else{
+                baos.write(buff, 0, len_in);
             }
-            BufferedReader br = new BufferedReader(new StringReader(caw.toString()));
-            
-            
+            if ( bis.available() > 0 )
+                continue;
+            break;
+        }
+        return baos.toString().split("\r\n");        
+    }
+    
+    private void lendo() throws Exception { // refatorar depois, isso aqui ta muito ruim!!
+        try { 
+            // lendo_linhas(); falha as vezes
+            // lendo_linhasB(); falha as vezes
+            // header grande falha na leitura com mobile... não sei porque!!
+            String [] partes=lendo_linhas();
+
             String line = null;
             int lineNumber = 0;
             this.header_range = -1;
@@ -19357,7 +19396,8 @@ class ClientThread extends Util{
             this.header_redis_key=null;
             this.header_redis_value=null;            
             this.header_redis_del=null;
-            while ((line = br.readLine()) != null) {            
+            for ( int i=0;i<partes.length;i++ ){
+                line=partes[i];
                 System.out.println("<---|    " + line.replace("\n","\n          "));
                 if (lineNumber == 0 && line.split(" ").length == 3) {
                     this.method = line.split(" ")[0];
