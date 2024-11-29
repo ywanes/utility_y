@@ -19329,7 +19329,6 @@ class ClientThread extends Util{
     }
     private void lendo() throws Exception { // refatorar depois, isso aqui ta muito ruim!!
         try {  
-            
             int i = 0;            
             CharArrayWriter caw=new CharArrayWriter();            
             while(true){
@@ -19340,9 +19339,13 @@ class ClientThread extends Util{
                     caw.write(buffer, 0, i);
                 if ( reader.ready() )
                     continue;
+                sleepMillis(1);
+                if ( reader.ready() )
+                    continue;
                 break;
             }
             BufferedReader br = new BufferedReader(new StringReader(caw.toString()));
+            
             
             String line = null;
             int lineNumber = 0;
@@ -19354,7 +19357,7 @@ class ClientThread extends Util{
             this.header_redis_key=null;
             this.header_redis_value=null;            
             this.header_redis_del=null;
-            while ((line = br.readLine()) != null) {
+            while ((line = br.readLine()) != null) {            
                 System.out.println("<---|    " + line.replace("\n","\n          "));
                 if (lineNumber == 0 && line.split(" ").length == 3) {
                     this.method = line.split(" ")[0];
