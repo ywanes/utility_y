@@ -54,6 +54,21 @@ label span {
 
 <script type="text/javascript" charset="utf-8">
 
+function lpad(a, b, c){ // lpad('4, '0', 3); => 004
+	return String(a).padStart(c, b);
+}
+
+function ofuscador_uri(){	
+	let a=window.location.pathname;
+	if ( a.indexOf('/k=') != 0 && a.indexOf('/') == 0 && a.length > 1 ){
+		a=a.substring(1);
+		let s='';
+		for (let i = 0; i < a.length; i++)
+			s += lpad(a.charCodeAt(i).toString(2), '0', 8);
+		window.location.pathname='/k='+s.replaceAll('0', 'I').replaceAll('1', 'l');// I L
+	}
+}
+
 function btoa2(str) {
     return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
         function toSolidBytes(match, p1) {
@@ -84,15 +99,7 @@ function send(a){
 	}
 	var xmlHttp = new XMLHttpRequest();
 	xmlHttp.open('GET', window.location.pathname, false);
-	xmlHttp.setRequestHeader('acao', a+`
-                                                                 
-                                                                 
-                                                                 
-                                                                 
-                                                                 
-                                                                 
-                                                                 																 
-	`); // espaço adicionar para o mobile não bugar!
+	xmlHttp.setRequestHeader('acao', a); // espaço adicionar para o mobile não bugar!
 	xmlHttp.send(null);
 	return xmlHttp.responseText;
 }
@@ -161,6 +168,7 @@ function minisend(a, c){
 	let n_faixas=faixas.length;
 	let s='\nn_faixas '+n_faixas+'\n';
 	let first=null;
+	let device='tv';
 	for ( let i=0;i<n_faixas;i++ ){
 		s+='faixa '+i+' '+faixas[i]+'\n';
 		s+='cfg faixa '+i+' ' + get_custom_vol(1, faixas[i]) + ' ' + get_custom_start(c, faixas[i]) + '\n';
@@ -169,7 +177,7 @@ function minisend(a, c){
 	s=`name_worker TMP
 		worker_loop yes
 		path_vlc C:\\Program Files\\VideoLAN\\VLC
-		device auto` + s + `play faixa 0`;
+		device ` + device + s + `play faixa 0`;
 	s=s.trim().split('\n').map(item => item.trim()).join('\n');
 	s=send(s);
 	if ( s != '..' )
@@ -284,7 +292,8 @@ function update(a){
 	document.getElementById('div_path').innerHTML=s;
 }
 
-function f_load(){	
+function f_load(){
+	ofuscador_uri();
 	this.list=send('list').split('|').map(a => '/'+a.replaceAll('\\', '/')+'/');	
 	this.path='/D:/ProgramFiles/site/musicas/';
 	set_base();

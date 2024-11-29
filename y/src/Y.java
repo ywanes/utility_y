@@ -17297,7 +17297,11 @@ class PlaylistServer extends Util{
                                         if ( partes[0].equals("device") ){
                                             device=especial_parm(lines[i], partes, 1);
                                             if ( device.equals("auto") )
-                                                device=get_mixer_tv();
+                                                device=get_mixer(" TV ");
+                                            if ( device.equals("tv") )
+                                                device=get_mixer(" TV ");
+                                            if ( device.equals("pc") )
+                                                device=get_mixer("Alto-falantes (HUSKY)");
                                             continue;
                                         }
                                         if ( partes[0].equals("n_faixas") ){
@@ -17407,13 +17411,13 @@ class PlaylistServer extends Util{
         }
     }
     
-    public String get_mixer_tv(){
+    public String get_mixer(String like){
         if ( !isWindows() )
             return "comando só habilitado para windows!";
         String s=getMixerGuidWindows();
         String [] partes=s.split("\n");
         for ( int i=0;i<partes.length;i++ ){
-            if ( partes[i].contains(" TV ") )
+            if ( partes[i].contains(like) )
                 return partes[i].split("#")[1];
         }
         return null;        
@@ -17436,7 +17440,7 @@ class PlaylistServer extends Util{
         if ( a.equals("ping") )
             return "pong";
         if ( a.equals("mixer") ){
-            return get_mixer_tv();
+            return get_mixer(" TV ");
         }
         if ( a.equals("list") ){
             String _f="D:\\ProgramFiles\\site\\musicas";
@@ -19285,6 +19289,7 @@ class HttpServer extends Util{
         }
     }
 }
+
 class ClientThread extends Util{
     String header_redis_id, header_redis_sign, header_redis_key, header_redis_value, header_redis_del, header_userAgent, header_acao, mode, method, uri, protocol, titulo_url, titulo, dir, endsWiths, cfg;
     long header_range=-1;
@@ -19402,6 +19407,16 @@ class ClientThread extends Util{
                 if (lineNumber == 0 && line.split(" ").length == 3) {
                     this.method = line.split(" ")[0];
                     this.uri = line.split(" ")[1];
+                    if ( this.uri.startsWith("/k=") && this.uri.length() > "/k=".length() && this.uri.replaceAll("/k=", "").replaceAll("I", "").replaceAll("l", "").equals("") && this.uri.length()%8 == 3 ){
+                        int _len=this.uri.length();
+                        int _p=3;
+                        StringBuilder _sb=new StringBuilder("/");
+                        while ( _p < _len ){
+                            _sb.append((char)(Integer.parseInt(this.uri.substring(_p, _p+8).replaceAll("I", "0").replaceAll("l", "1"), 2)));
+                            _p+=8;
+                        }
+                        this.uri=_sb.toString();
+                    }                        
                     if ( this.uri.indexOf("?") > -1 )
                         this.uri = this.uri.split("\\?")[0];
                     this.protocol = line.split(" ")[2];
