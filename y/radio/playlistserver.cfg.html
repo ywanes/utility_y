@@ -162,7 +162,9 @@ function get_custom_vol(vol_default, name){ // VOLUMEEEE
 	return 1;
 }
 
-function minisend(a, c){
+function minisend(a, c, n){
+	if ( typeof n == 'undefined' )
+		n=0;
 	let b=document.querySelector('input[name="vol"]:checked').value;
 	let faixas=a.trim().split('\n').map(item => item.trim());
 	let n_faixas=faixas.length;
@@ -177,7 +179,7 @@ function minisend(a, c){
 	s=`name_worker TMP
 		worker_loop yes
 		path_vlc C:\\Program Files\\VideoLAN\\VLC
-		device ` + device + s + `play faixa 0`;
+		device ` + device + s + 'play faixa '+n;
 	s=s.trim().split('\n').map(item => item.trim()).join('\n');
 	s=send(s);
 	if ( s != '..' )
@@ -206,7 +208,7 @@ function exemplo_call_send(a){
 		cfg faixa 0 1 0
 		cfg faixa 1 1 0
 		path_vlc C:\\Program Files\\VideoLAN\\VLC
-		play faixa 0 0`
+		play faixa 0`
 	);
 }
 
@@ -256,10 +258,25 @@ function get_lista(a){
 
 this.z=null;
 function update_click(a){
-	update(a.innerHTML);
+	if ( a.innerHTML == 'PLAY - ' )
+		update(a.parentElement.children[1].innerHTML.replaceAll('&nbsp;',''), a);
+	else
+		update(a.parentElement.children[1].innerHTML.replaceAll('&nbsp;',''));
 }
 
-function update(a){
+function update(a, aux_play){
+	if ( typeof aux_play != 'undefined' ){
+		let a=aux_play.parentElement.parentElement;
+		let b=aux_play.parentElement.parentElement.parentElement;
+		let filhos=b.children;
+		let n=0;
+		for ( let i=0;i<filhos.length;i++ ){
+			if ( filhos[i] == a )
+				n=i-1;
+		}
+		play(n);
+		return;
+	}
 	if ( a == '..' && path == '/' )
 		return;
 	if ( a == '.' ){
@@ -281,9 +298,19 @@ function update(a){
 	let lista=get_lista(this.path);
 	let s='';
 	let px='900px';
-	s+='<tr><td style="width: '+px+'; display: inline-block; cursor: pointer; color: black; font-size: 44px; font-family: Franklin Gothic Medium;" onclick="update_click(this)">..</td></td>';
-	for ( let i=0;i<lista.length;i++ )
-		s+='<tr><td style="width: '+px+'; display: inline-block; cursor: pointer; color: black; font-size: 44px; font-family: Franklin Gothic Medium;" onclick="update_click(this)">'+lista[i]+'</td></td>';
+	let f_play='';
+	if ( lista.length > 0 && lista[0].indexOf('.') > -1 )
+		f_play='<a onclick="update_click(this)">PLAY - </a>';
+	else
+		f_play='<a>&nbsp;</a>';
+	s+='<tr>';
+	s+='<td style="width: '+px+'; display: inline-block; cursor: pointer; color: black; font-size: 44px; font-family: Franklin Gothic Medium;"><a></a><a onclick="update_click(this)">..&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</a></td>';
+	s+='</tr>';
+	for ( let i=0;i<lista.length;i++ ){
+		s+='<tr>';
+		s+='<td style="width: '+px+'; display: inline-block; cursor: pointer; color: black; font-size: 44px; font-family: Franklin Gothic Medium;"">'+f_play+'<a onclick="update_click(this)">'+lista[i]+'</a></td>';
+		s+='</tr>';
+	}
 	document.getElementById('tablebase').innerHTML=s;
 	s=get_paths(this.path);
 	for ( let i=0;i<this.len_base;i++ )
@@ -301,23 +328,23 @@ function f_load(){
 	update('.');
 }
 
-function format_and_send_play(a){
+function format_and_send_play(a, n){
 	a=a.split('\n');
 	a=a.map(a => a.substring(1)).map(a => a.substring(0, a.length-1).replaceAll('/', '\\')).join('\n');
-	minisend(a, -1);
+	minisend(a, -1, n);
 }
 
-function play(){
+function play(n){
 	let s=get_paths(this.path);
 	if ( s.length > 0 && s[s.length-1].indexOf('.') > -1 )
-		format_and_send_play(this.path);		
+		format_and_send_play(this.path, n);		
 	else{
 		let s2=get_lista(this.path);
 		if ( s2.length > 0 && s2[s2.length-1].indexOf('.') > -1 ){
 			let s3='';
 			for ( let i=0;i<s2.length;i++ )
 				s3+=this.path+s2[i]+'/\n';							
-			format_and_send_play(s3);
+			format_and_send_play(s3, n);
 		}else
 			alert('selecione a pasta de musica ou a musica!');
 		
@@ -340,6 +367,12 @@ function play(){
 <br>
 <table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;"></table>
 <br><br><br><br>
+
+
+
+
+
+
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.01"        /><span style="height: 70px; font-size:70px; width: 70px;">0.01</span></label>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.02"        /><span style="height: 70px; font-size:70px; width: 70px;">0.02</span></label>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.03" checked/><span style="height: 70px; font-size:70px; width: 70px;">0.03</span></label><br>
@@ -352,5 +385,11 @@ function play(){
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.24"        /><span style="height: 70px; font-size:70px; width: 70px;">0.24</span></label>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.27"        /><span style="height: 70px; font-size:70px; width: 70px;">0.27</span></label>
 <label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.30"        /><span style="height: 70px; font-size:70px; width: 70px;">0.30</span></label><br>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.40"        /><span style="height: 70px; font-size:70px; width: 70px;">0.40</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.50"        /><span style="height: 70px; font-size:70px; width: 70px;">0.50</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.60"        /><span style="height: 70px; font-size:70px; width: 70px;">0.60</span></label><br>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.70"        /><span style="height: 70px; font-size:70px; width: 70px;">0.70</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.80"        /><span style="height: 70px; font-size:70px; width: 70px;">0.80</span></label>
+<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="1.00"        /><span style="height: 70px; font-size:70px; width: 70px;">1.00</span></label><br>
 </body>
 </html>
