@@ -355,12 +355,18 @@ function play(n){
 
 <html>
 <body onload="f_load()">
+
 <br><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="send('stop')">&nbsp;&nbsp;&nbsp;STOP&nbsp;&nbsp;&nbsp;&nbsp;</button>
 	&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="alert(send('status'))">&nbsp;&nbsp;&nbsp;STAT&nbsp;&nbsp;&nbsp;&nbsp;</button>
+
 <br><br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="location.reload()">RELOAD&nbsp;&nbsp;</button>
 	&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="play()">&nbsp;&nbsp;&nbsp;PLAY&nbsp;&nbsp;&nbsp;&nbsp;</button>
+
+<br><br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="send('back')">BACK&nbsp;&nbsp;</button>
+	&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="send('next')">&nbsp;&nbsp;&nbsp;NEXT&nbsp;&nbsp;&nbsp;&nbsp;</button>
 
 <br><br><br><br>
 <a id="div_path" style="width: 700px; color: black; font-size: 44px; font-family: Franklin Gothic Medium;">...</a>

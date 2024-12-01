@@ -17214,6 +17214,8 @@ class PlaylistServer extends Util{
     final String[] instrucoes=new String[]{""};
     final String[] error=new String[]{""};
     final String[] trace=new String[]{"0"};
+    final Integer[] play_faixa=new Integer[]{0};
+    final Integer[] n_faixas=new Integer[]{0};
     public PlaylistServer(String cfg){
         if ( cfg != null ){
             _cfg=new File(cfg);  
@@ -17223,38 +17225,35 @@ class PlaylistServer extends Util{
                 String name_worker=null;
                 Boolean worker_loop=null;
                 String device=null;
-                Integer n_faixas=null;
                 String [] faixa=null;
                 Float vol_worker=null;
                 Float [] vol_faixa=null;
                 Integer [] sec_faixa=null;
                 String path_vlc=null;
-                Integer play_faixa=null;
                 Integer seconds_play_faixa=null;
                 public void init(){
                     name_worker=null;
                     worker_loop=null;
                     device=null;
-                    n_faixas=null;
                     faixa=null;
                     vol_worker=null;
                     vol_faixa=null;
                     sec_faixa=null;
                     path_vlc=null;
-                    play_faixa=null;
+                    play_faixa[0]=null;
+                    n_faixas[0]=null;
                 }   
                 public boolean ok(){
                     if ( name_worker == null
                          || worker_loop == null
                          || device == null
-                         || n_faixas == null
                          || faixa == null
                          || vol_worker == null
                          || vol_faixa == null
                          || sec_faixa == null
                          || path_vlc == null
-                         || play_faixa == null
-                         || n_faixas == 0
+                         || play_faixa[0] == null
+                         || n_faixas[0] == null
                     )
                          return false;
                     return true;
@@ -17305,10 +17304,10 @@ class PlaylistServer extends Util{
                                             continue;
                                         }
                                         if ( partes[0].equals("n_faixas") ){
-                                            n_faixas=Integer.parseInt(partes[1]);
-                                            faixa=new String[n_faixas];
-                                            vol_faixa=new Float[n_faixas];
-                                            sec_faixa=new Integer[n_faixas];
+                                            n_faixas[0]=Integer.parseInt(partes[1]);
+                                            faixa=new String[n_faixas[0]];
+                                            vol_faixa=new Float[n_faixas[0]];
+                                            sec_faixa=new Integer[n_faixas[0]];
                                             continue;
                                         }
                                         if ( partes[0].equals("faixa") ){
@@ -17347,7 +17346,7 @@ class PlaylistServer extends Util{
                                             continue;
                                         }
                                         if ( partes[0].equals("play") ){
-                                            play_faixa=Integer.parseInt(partes[2]);
+                                            play_faixa[0]=Integer.parseInt(partes[2]);
                                             continue;
                                         }     
                                         throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
@@ -17366,22 +17365,14 @@ class PlaylistServer extends Util{
                                 try { Thread.sleep(50); } catch (Exception ee) {}
                                 continue;
                             }
-                            if ( play_faixa >= n_faixas ){
-                                if ( !worker_loop ){
-                                    waiting=true;
-                                    instrucoes[0]="";
-                                    continue;
-                                }
-                                play_faixa=0;
-                            }  
-                            if ( vol_faixa[play_faixa] == null )
-                                vol_faixa[play_faixa]=1F;
-                            Float gain=vol_worker*vol_faixa[play_faixa];
+                            if ( vol_faixa[play_faixa[0]] == null )
+                                vol_faixa[play_faixa[0]]=1F;
+                            Float gain=vol_worker*vol_faixa[play_faixa[0]];
                             if ( gain < 0 )
                                 gain=0F;
                             if ( gain > 1 )
                                 gain=1F;                            
-                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+sec_faixa[play_faixa], "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa] }, new File(path_vlc), null);
+                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+sec_faixa[play_faixa[0]], "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa[0]] }, new File(path_vlc), null);
                             if ( new_order[0] || waiting ) // skip
                                 continue;
                             seconds_play_faixa=0;
@@ -17391,7 +17382,16 @@ class PlaylistServer extends Util{
                                 error[0]=runtimeExecError;
                                 continue;
                             }
-                            play_faixa++;
+                            if ( play_faixa[0]+1 >= n_faixas[0] ){
+                                if ( !worker_loop ){
+                                    waiting=true;
+                                    instrucoes[0]="";
+                                    continue;
+                                }
+                                play_faixa[0]=0;
+                            }else{
+                                play_faixa[0]++;
+                            }
                         }
                     }catch(Exception e){
                         if ( error[0].startsWith("Erro: " ) )
@@ -17465,6 +17465,33 @@ class PlaylistServer extends Util{
                 salvando_file(instrucoes[0], _cfg);
             // kills
             kill_by_text("ignoreIGNORE:INSTANTE:33:", "cmd /c", "wmic ");
+            return "..";            
+        }
+        if ( a.equals("back") || a.equals("next") ){
+            if ( instrucoes[0].contains("play faixa ") ){
+                Integer _play_faixa=play_faixa[0];
+                Integer _n_faixas=n_faixas[0];
+                if ( _play_faixa != null && _n_faixas != null ){
+                    String [] lines=instrucoes[0].replaceAll("\r", "").replaceAll("\n", "|").split("\\|");
+                    if ( a.equals("back") ){
+                        _play_faixa--;
+                        if ( _play_faixa < 0 )
+                            _play_faixa=_n_faixas-1;
+                    }else{
+                        _play_faixa++;
+                        if ( _play_faixa >= _n_faixas )
+                            _play_faixa=0;
+                    }
+                    for ( int i=0;i<lines.length;i++ )
+                        if ( lines[i].startsWith("play faixa ") )
+                            lines[i]="play faixa "+_play_faixa;
+                    instrucoes[0]="";
+                    new_order[0]=true;
+                    kill_by_text(identify_kill[0]);
+                    instrucoes[0]=String.join("|", lines);
+                    new_order[0]=true;                    
+                }
+            }
             return "..";            
         }
         if ( a.startsWith("base64 ") ){
