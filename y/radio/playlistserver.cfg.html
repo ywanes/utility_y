@@ -108,7 +108,7 @@ async function send_not_work(a){
 	).then(response => response.text());
 }
 
-function send(a){
+function send(a, n){
 	if ( a.replaceAll(' ','') != a ){
 		// se tirar essas duas linhas o celular buga!
 		// header muito grande buga no celular
@@ -133,7 +133,14 @@ function send(a){
 	xmlHttp.open('GET', window.location.pathname, false);
 	xmlHttp.setRequestHeader('acao', a); // espaço adicionar para o mobile não bugar!
 	xmlHttp.send();
-	return xmlHttp.responseText;
+	let s=xmlHttp.responseText;
+	if ( s.indexOf('sequencia ilegal') > -1 ){
+		if ( typeof n == 'undefined' )
+			n=0;		
+		if ( n < 10 )
+			return send(a, n+1);
+	}
+	return s;
 }
 
 function get_custom_start(sec_default, name){
