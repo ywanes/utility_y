@@ -60,13 +60,17 @@ function load_history_nick(){
             for ( let i=0;i<tmp.length;i++ ){
                 if ( tmp[i].indexOf(' ') > 0 ){
                     let tmp2=JSON.parse(tmp[i].substring(tmp[i].indexOf(' ')+1));
-                    history_nick[tmp2.digest]=tmp2;    
+                    history_nick[tmp2.digest]=tmp2;    					
                     history_nick[tmp2.digest]['pai']=get_pai_digest(tmp2.digest);
                     if ( tmp2.digest.indexOf('/series/') == 0 )
                         history_nick[tmp2.digest]['series']=true;
                     else
                         history_nick[tmp2.digest]['series']=false;
                     history_nick[tmp2.digest]['porc']=history_nick[tmp2.digest]['currentTime']/history_nick[tmp2.digest]['duration'];
+					if ( typeof tmp2['untail'] != 'undefined' && tmp2['untail'] )
+						history_nick[tmp2.digest]['untail']=true;
+					else
+						history_nick[tmp2.digest]['untail']=false;
                 }
             }
             let keys=Object.keys(history_nick);
@@ -89,6 +93,10 @@ function load_history_nick(){
                         history_nick[keys[i]]['tail']=false;
                 }
             }
+			for ( let i=0;i<keys.length;i++ ){
+				if ( history_nick[keys[i]]['untail'] )
+					history_nick[keys[i]]['tail']=false;
+			}
         }
     }
     //console.log(history_nick);
@@ -162,7 +170,7 @@ function save_secret(){
     }    
 }
 
-function img_list(){    
+function f_continue(){    
     let nick_name=get_nick_name();
     if ( nick_name == null ){
         alert('Você precisa estar logado!');
@@ -191,10 +199,13 @@ function img_list(){
     let s='<table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;">\n';
     let type='movie';
     for ( let i=0;i<lista.length;i++ ){
-        s+="<tr>";
-        let txt='SERIE -> ' + remove_extensao(lista[i]['element']);
+        s+="<tr>";        
+		s+="<td style=\"padding: 0; cursor: pointer;\" onclick=\"remove_playing(this)\" ><svg width=\"40px\" height=\"40px\" viewBox=\"0 0 1024 1024\" class=\"icon\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#008000\" d=\"M745.344 361.344a32 32 0 0145.312 45.312l-288 288a32 32 0 01-45.312 0l-160-160a32 32 0 1145.312-45.312L480 626.752l265.344-265.408z\"></path></svg></td>";
+		let txt='';
         if ( remove_extensao(lista[i]['element']).indexOf('/series/') != 0 )
             txt='FILME -> ' + remove_extensao(lista[i]['element']);
+		else
+			txt='SERIE -> ' + remove_extensao(lista[i]['element']);
         s+="<td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + lista[i]['element'].substring(1).split('/').join("','") + "']" + ", true, '" + type + "')\">" + txt + "</td>";
         s+="</tr>";
     }
@@ -1361,10 +1372,22 @@ function f_load(){
 }
 
 function remove_playing(e){
-    let a=eval(e.parentElement.children[2].getAttribute('onclick').replace('load_playlist(','').replace(", true, 'movie')",''));
-    console.log('remove_playing: '+a);
-    a.pop();
-    load_playlist(a, true, 'movie');
+    let nick_name=get_nick_name();
+    if ( nick_name != null ){
+		let n=e.parentElement.children.length-1;
+		let a=e.parentElement.children[n].getAttribute('onclick').replace('load_playlist(','').replace(", true, 'movie')",'');
+		a=nick_name + this.playlistmovie_v + '/' + encodeURI(eval(a).join('/'));
+		let b=redis_get(a);
+		if ( b == 'null' ){
+			console.log('nao foi possivel encontrar: '+ '/' + encodeURI(eval(a).join('/')));
+			return;
+		}
+		b=JSON.parse(b);
+		b['untail']=true;
+		redis_set(a, JSON.stringify(b));		
+		load_history_nick();
+		e.parentElement.remove();
+	}
 }
 
 function nick_click(){
@@ -1763,7 +1786,7 @@ function keypress_nick_name(e) {
                             
                                 <table border="0" align="center" style="width: 1%; padding: 0;">
                                     <tr>
-                                        <td style="cursor: pointer;" onclick="img_list()">
+                                        <td style="cursor: pointer;" onclick="f_continue()">
                                             <svg width="160px" height="160px" fill="#55e" viewBox="0 0 32 32" data-name="Layer 1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"><rect height="1" width="12" x="10" y="29"/><rect height="1" width="12" x="10" y="2"/><rect height="1" width="4" x="9" y="5"/><rect height="1" width="4" x="9" y="9"/><rect height="1" width="10" x="13" y="12"/><rect height="1" width="3" x="9" y="12"/><rect height="1" width="10" x="13" y="15"/><rect height="1" width="3" x="9" y="15"/><rect height="1" width="10" x="13" y="18"/><rect height="1" width="3" x="9" y="18"/><rect height="1" width="10" x="13" y="21"/><rect height="1" width="3" x="9" y="21"/><rect height="1" width="10" x="13" y="24"/><rect height="1" width="3" x="9" y="24"/><rect height="1" transform="translate(9.5 41.5) rotate(-90)" width="20" x="15.5" y="15.5"/><path d="M22,2V3h2a1,1,0,0,1,1,1V6h1V4a2,2,0,0,0-2-2Z"/><rect height="1" transform="translate(-9.5 22.5) rotate(-90)" width="20" x="-3.5" y="15.5"/><path d="M10,2V3H8A1,1,0,0,0,7,4V6H6V4A2,2,0,0,1,8,2Z"/><path d="M22,30V29h2a1,1,0,0,0,1-1V26h1v2a2,2,0,0,1-2,2Z"/><path d="M10,30V29H8a1,1,0,0,1-1-1V26H6v2a2,2,0,0,0,2,2Z"/><rect height="5" width="1" x="9" y="5"/><rect height="5" width="1" x="12" y="5"/></svg>
                                         </td>
                                         <td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>

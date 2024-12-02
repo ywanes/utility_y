@@ -17437,6 +17437,7 @@ class PlaylistServer extends Util{
         return lista;
     }
     public String perguntando(String a, Boolean starting_server){
+        String retorno_amigavel="..";
         if ( a.equals("ping") )
             return "pong";
         if ( a.equals("mixer") ){
@@ -17458,6 +17459,25 @@ class PlaylistServer extends Util{
                 return "stopped";
             return instrucoes[0];
         }
+        if ( a.startsWith("vol worker ") ){
+            ////////////////
+            /*
+            if ( !error[0].equals("") )
+                return error[0];
+            if ( instrucoes[0].equals("") )
+                return "stopped";
+            String [] lines=instrucoes[0].replaceAll("\r", "").replaceAll("\n", "|").split("\\|");
+            for ( int i=0;i<lines.length;i++ )
+                if ( lines[i].startsWith("play faixa ") )
+                    lines[i]="vol worker "+"0.03";
+            instrucoes[0]="";
+            new_order[0]=true;
+            kill_by_text(identify_kill[0]);
+            instrucoes[0]=String.join("|", lines);
+            new_order[0]=true;                    
+            */
+            return retorno_amigavel;
+        }
         if ( a.equals("stop") || a.equals("") ){
             instrucoes[0]="";
             new_order[0]=true;
@@ -17465,7 +17485,7 @@ class PlaylistServer extends Util{
                 salvando_file(instrucoes[0], _cfg);
             // kills
             kill_by_text("ignoreIGNORE:INSTANTE:33:", "cmd /c", "wmic ");
-            return "..";            
+            return retorno_amigavel;
         }
         if ( a.equals("back") || a.equals("next") ){
             if ( instrucoes[0].contains("play faixa ") ){
@@ -17492,7 +17512,7 @@ class PlaylistServer extends Util{
                     new_order[0]=true;                    
                 }
             }
-            return "..";            
+            return retorno_amigavel;
         }
         if ( a.startsWith("base64 ") ){
             a=a.substring("base64 ".length());
@@ -17514,7 +17534,7 @@ class PlaylistServer extends Util{
             else
                 salvando_file(instrucoes[0], _cfg);            
         }
-        return "..";
+        return retorno_amigavel;
         /*
         Na acao status, retornar a lista completa de instruções e o play deve informar o time:
             play faixa 2 20
