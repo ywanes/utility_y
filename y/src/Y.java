@@ -17216,6 +17216,7 @@ class PlaylistServer extends Util{
     final String[] trace=new String[]{"0"};
     final Integer[] play_faixa=new Integer[]{0};
     final Integer[] n_faixas=new Integer[]{0};
+    final Long[] epochmili_started=new Long[]{0L};
     public PlaylistServer(String cfg){
         if ( cfg != null ){
             _cfg=new File(cfg);  
@@ -17231,6 +17232,7 @@ class PlaylistServer extends Util{
                 Integer [] sec_faixa=null;
                 String path_vlc=null;
                 Integer seconds_play_faixa=null;
+                Integer seconds_extra=null;
                 public void init(){
                     name_worker=null;
                     worker_loop=null;
@@ -17242,6 +17244,7 @@ class PlaylistServer extends Util{
                     path_vlc=null;
                     play_faixa[0]=null;
                     n_faixas[0]=null;
+                    seconds_extra=0;
                 }   
                 public boolean ok(){
                     if ( name_worker == null
@@ -17277,8 +17280,7 @@ class PlaylistServer extends Util{
                                 }else{
                                     waiting=false;
                                     init();
-                                    // instrucoes
-                                    instrucoes[0]=instrucoes[0].replaceAll("\r", "").replaceAll("\n", "|");
+                                    // instrucoes                                    
                                     String [] lines=instrucoes[0].split("\\|");
                                     for ( int i=0;i<lines.length;i++ ){
                                         String [] partes=lines[i].split(" ");
@@ -17349,14 +17351,18 @@ class PlaylistServer extends Util{
                                             play_faixa[0]=Integer.parseInt(partes[2]);
                                             continue;
                                         }     
+                                        if ( partes[0].equals("seconds_extra") ){
+                                            seconds_extra=Integer.parseInt(partes[1]);
+                                            continue;
+                                        }     
                                         throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
                                     }
                                     if ( ok() )
                                         error[0]="";
                                     else{
                                         waiting=true;
-                                        instrucoes[0]="";
-                                        error[0]="Erro: comando imcompleto ou incorreto!";
+                                        error[0]="Erro: comando incompleto ou incorreto! -> " + instrucoes[0];
+                                        instrucoes[0]="";                                        
                                         continue;
                                     }
                                 }                                
@@ -17371,8 +17377,10 @@ class PlaylistServer extends Util{
                             if ( gain < 0 )
                                 gain=0F;
                             if ( gain > 1 )
-                                gain=1F;                            
-                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+sec_faixa[play_faixa[0]], "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa[0]] }, new File(path_vlc), null);
+                                gain=1F;
+                            epochmili_started[0]=epochmili(null)-seconds_extra;
+                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+(sec_faixa[play_faixa[0]]+seconds_extra), "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa[0]] }, new File(path_vlc), null);
+                            seconds_extra=0;
                             if ( new_order[0] || waiting ) // skip
                                 continue;
                             seconds_play_faixa=0;
@@ -17460,22 +17468,22 @@ class PlaylistServer extends Util{
             return instrucoes[0];
         }
         if ( a.startsWith("vol worker ") ){
-            ////////////////
-            /*
             if ( !error[0].equals("") )
                 return error[0];
             if ( instrucoes[0].equals("") )
                 return "stopped";
-            String [] lines=instrucoes[0].replaceAll("\r", "").replaceAll("\n", "|").split("\\|");
+            String [] lines=instrucoes[0].split("\\|");
             for ( int i=0;i<lines.length;i++ )
-                if ( lines[i].startsWith("play faixa ") )
-                    lines[i]="vol worker "+"0.03";
+                if ( lines[i].startsWith("vol worker ") ){
+                    lines[i]=a;
+                    lines=addParm("seconds_extra "+(int)((epochmili(null)-epochmili_started[0])/1000), i, lines);
+                    break;                    
+                }
             instrucoes[0]="";
             new_order[0]=true;
             kill_by_text(identify_kill[0]);
             instrucoes[0]=String.join("|", lines);
             new_order[0]=true;                    
-            */
             return retorno_amigavel;
         }
         if ( a.equals("stop") || a.equals("") ){
@@ -17492,7 +17500,7 @@ class PlaylistServer extends Util{
                 Integer _play_faixa=play_faixa[0];
                 Integer _n_faixas=n_faixas[0];
                 if ( _play_faixa != null && _n_faixas != null ){
-                    String [] lines=instrucoes[0].replaceAll("\r", "").replaceAll("\n", "|").split("\\|");
+                    String [] lines=instrucoes[0].split("\\|");
                     if ( a.equals("back") ){
                         _play_faixa--;
                         if ( _play_faixa < 0 )
@@ -17526,7 +17534,7 @@ class PlaylistServer extends Util{
         instrucoes[0]="";
         new_order[0]=true;
         kill_by_text(identify_kill[0]);
-        instrucoes[0]=a;
+        instrucoes[0]=a.replaceAll("\r", "").replaceAll("\n", "|");
         new_order[0]=true;
         if ( _cfg != null && !starting_server ){
             if ( instrucoes[0].contains("worker_loop no") )

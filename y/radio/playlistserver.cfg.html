@@ -109,7 +109,8 @@ async function send_not_work(a){
 }
 
 function send(a, n){
-	if ( a.replaceAll(' ','') != a ){
+z=a;
+	if ( a.replaceAll('\n','|').split('\|').length > 1 ){
 		// se tirar essas duas linhas o celular buga!
 		// header muito grande buga no celular
 		t1=btoa2(a.trim().split('\n').map(item => item.trim()).join('|'));
@@ -209,11 +210,11 @@ function minisend(a, c, n){
 	let s='\nn_faixas '+n_faixas+'\n';
 	let first=null;
 	let device='tv';
+	s+='vol worker '+b+'\n';
 	for ( let i=0;i<n_faixas;i++ ){
 		s+='faixa '+i+' '+faixas[i]+'\n';
 		s+='cfg faixa '+i+' ' + get_custom_vol(1, faixas[i]) + ' ' + get_custom_start(c, faixas[i]) + '\n';
 	}
-	s+='vol worker '+b+'\n';
 	s=`name_worker TMP
 		worker_loop yes
 		path_vlc C:\\Program Files\\VideoLAN\\VLC
@@ -388,6 +389,11 @@ function play(n){
 		
 	}
 }
+
+function click_vol(e){
+	send('vol worker ' + e.value);
+}
+
 </script>
 
 
@@ -417,23 +423,23 @@ function play(n){
 
 
 
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.01"        /><span style="height: 70px; font-size:70px; width: 70px;">0.01</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.02"        /><span style="height: 70px; font-size:70px; width: 70px;">0.02</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.03" checked/><span style="height: 70px; font-size:70px; width: 70px;">0.03</span></label><br>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.06"        /><span style="height: 70px; font-size:70px; width: 70px;">0.06</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.09"        /><span style="height: 70px; font-size:70px; width: 70px;">0.09</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.12"        /><span style="height: 70px; font-size:70px; width: 70px;">0.12</span></label><br>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.15"        /><span style="height: 70px; font-size:70px; width: 70px;">0.15</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.18"        /><span style="height: 70px; font-size:70px; width: 70px;">0.18</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.21"        /><span style="height: 70px; font-size:70px; width: 70px;">0.21</span></label><br>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.24"        /><span style="height: 70px; font-size:70px; width: 70px;">0.24</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.27"        /><span style="height: 70px; font-size:70px; width: 70px;">0.27</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.30"        /><span style="height: 70px; font-size:70px; width: 70px;">0.30</span></label><br>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.40"        /><span style="height: 70px; font-size:70px; width: 70px;">0.40</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.50"        /><span style="height: 70px; font-size:70px; width: 70px;">0.50</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.60"        /><span style="height: 70px; font-size:70px; width: 70px;">0.60</span></label><br>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.70"        /><span style="height: 70px; font-size:70px; width: 70px;">0.70</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.80"        /><span style="height: 70px; font-size:70px; width: 70px;">0.80</span></label>
-<label><input type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="1.00"        /><span style="height: 70px; font-size:70px; width: 70px;">1.00</span></label><br>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.01"        /><span style="height: 70px; font-size:70px; width: 70px;">0.01</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.02"        /><span style="height: 70px; font-size:70px; width: 70px;">0.02</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.03" checked/><span style="height: 70px; font-size:70px; width: 70px;">0.03</span></label><br>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.06"        /><span style="height: 70px; font-size:70px; width: 70px;">0.06</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.09"        /><span style="height: 70px; font-size:70px; width: 70px;">0.09</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.12"        /><span style="height: 70px; font-size:70px; width: 70px;">0.12</span></label><br>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.15"        /><span style="height: 70px; font-size:70px; width: 70px;">0.15</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.18"        /><span style="height: 70px; font-size:70px; width: 70px;">0.18</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.21"        /><span style="height: 70px; font-size:70px; width: 70px;">0.21</span></label><br>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.24"        /><span style="height: 70px; font-size:70px; width: 70px;">0.24</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.27"        /><span style="height: 70px; font-size:70px; width: 70px;">0.27</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.30"        /><span style="height: 70px; font-size:70px; width: 70px;">0.30</span></label><br>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.40"        /><span style="height: 70px; font-size:70px; width: 70px;">0.40</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.50"        /><span style="height: 70px; font-size:70px; width: 70px;">0.50</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.60"        /><span style="height: 70px; font-size:70px; width: 70px;">0.60</span></label><br>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.70"        /><span style="height: 70px; font-size:70px; width: 70px;">0.70</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="0.80"        /><span style="height: 70px; font-size:70px; width: 70px;">0.80</span></label>
+<label><input onclick="click_vol(this)" type="radio" name="vol" style="height: 70px; font-size:70px; width: 170px;" value="1.00"        /><span style="height: 70px; font-size:70px; width: 70px;">1.00</span></label><br>
 </body>
 </html>
