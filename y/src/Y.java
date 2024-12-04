@@ -13584,6 +13584,9 @@ class Util{
             retorno[i-n]=args[i];
         return retorno;
     }
+    public String[] removeParm(int n, String[] args) {
+        return sliceParm1N(n, args);
+    }
     public String[] sliceParm1N(int n, String[] args) {
         if ( n == 0 )
             erroFatal("erro interno sliceParm");
@@ -17232,7 +17235,7 @@ class PlaylistServer extends Util{
                 Integer [] sec_faixa=null;
                 String path_vlc=null;
                 Integer seconds_play_faixa=null;
-                Integer seconds_extra=null;
+                Boolean seconds_extra=null;
                 public void init(){
                     name_worker=null;
                     worker_loop=null;
@@ -17244,7 +17247,7 @@ class PlaylistServer extends Util{
                     path_vlc=null;
                     play_faixa[0]=null;
                     n_faixas[0]=null;
-                    seconds_extra=0;
+                    seconds_extra=false;
                 }   
                 public boolean ok(){
                     if ( name_worker == null
@@ -17317,11 +17320,9 @@ class PlaylistServer extends Util{
                                             faixa[Integer.parseInt(partes[1])]=faixa[Integer.parseInt(partes[1])].replaceAll("&amp;", "&");
                                             continue;
                                         }
-                                        if ( partes[0].equals("vol") ){
-                                            if ( partes[1].equals("worker") ){
-                                                vol_worker=Float.parseFloat(partes[2]);
-                                                continue;
-                                            }
+                                        if ( partes[0].equals("vol") && partes[1].equals("worker") ){
+                                            vol_worker=Float.parseFloat(partes[2]);
+                                            continue;
                                         }
                                         if ( partes[0].equals("cfg") ){
                                             if ( partes[1].equals("faixa") ){
@@ -17352,11 +17353,13 @@ class PlaylistServer extends Util{
                                             continue;
                                         }     
                                         if ( partes[0].equals("seconds_extra") ){
-                                            seconds_extra=Integer.parseInt(partes[1]);
+                                            seconds_extra=true;                                            
+                                            lines=removeParm(i, lines);
                                             continue;
                                         }     
                                         throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);
                                     }
+                                    instrucoes[0]=String.join("|", lines);
                                     if ( ok() )
                                         error[0]="";
                                     else{
@@ -17378,9 +17381,13 @@ class PlaylistServer extends Util{
                                 gain=0F;
                             if ( gain > 1 )
                                 gain=1F;
-                            epochmili_started[0]=epochmili(null)-seconds_extra;
-                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+(sec_faixa[play_faixa[0]]+seconds_extra), "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa[0]] }, new File(path_vlc), null);
-                            seconds_extra=0;
+                            Integer _time=sec_faixa[play_faixa[0]];
+                            if ( !seconds_extra )
+                                epochmili_started[0]=epochmili(null);
+                            else
+                                _time+=(int)((epochmili(null)-epochmili_started[0])/1000);
+                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+_time, "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa[0]] }, new File(path_vlc), null);
+                            seconds_extra=false;
                             if ( new_order[0] || waiting ) // skip
                                 continue;
                             seconds_play_faixa=0;
@@ -17473,12 +17480,19 @@ class PlaylistServer extends Util{
             if ( instrucoes[0].equals("") )
                 return "stopped";
             String [] lines=instrucoes[0].split("\\|");
-            for ( int i=0;i<lines.length;i++ )
+            boolean added=false;
+            for ( int i=0;i<lines.length;i++ ){
                 if ( lines[i].startsWith("vol worker ") ){
-                    lines[i]=a;
-                    lines=addParm("seconds_extra "+(int)((epochmili(null)-epochmili_started[0])/1000), i, lines);
-                    break;                    
+                    lines[i]=a;                    
+                    continue;
                 }
+                if ( lines[i].equals("seconds_extra") ){ // validacao de segurança.. provavelmente não deverá entrar aqui!
+                    added=true;
+                    continue;
+                }
+            }
+            if ( !added )
+                lines=addParm("seconds_extra", lines);
             instrucoes[0]="";
             new_order[0]=true;
             kill_by_text(identify_kill[0]);
