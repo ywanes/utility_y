@@ -112,6 +112,7 @@ function go_home(){
     document.getElementById('div_index').style="display: ; position: relative; top: -34px;";
     document.getElementById('principal').style="display: none;";
     document.getElementById('principal').innerHTML='';        
+	document.getElementById('principal').parentElement.parentElement.setAttribute('valign', 'top');
     document.getElementById('nick_name').style='display: none';
     document.getElementById('btn_aplicar_nick').style='display: none';
     document.getElementById('nick').style='';
@@ -240,6 +241,7 @@ function load_movie(parm, table_click){
     document.getElementById('nav').style="display: none;";
     document.getElementById('div_index').style="display: none; position: relative; top: -34px;";
     document.getElementById('principal').style="";
+	document.getElementById('principal').parentElement.parentElement.setAttribute('valign', 'center');	
     document.getElementById('principal').innerHTML=`
           <div class="video-container">
             <video src="`+src+`" id="video"></video>
