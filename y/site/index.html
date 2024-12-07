@@ -119,7 +119,22 @@ function go_home(){
     load_history_nick();
 }
 
-function human_sort(a){
+function human_sort_custom(a){ // custom - extensao estava atrapalhando o sort
+    let s={};
+	let a2=[];
+	let a3=[];
+	for ( let i=0;i<a.length;i++ ){
+		let m=a[i].split('.')[0];
+		s[m]=a[i];
+		a2.push(m);
+	}
+	human_sort(a2);
+	for ( let i=0;i<a2.length;i++ )
+		a3.push(s[a2[i]]);
+	return a3;
+}
+
+function human_sort(a){	
     a.sort(new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'}).compare);
 }
 
@@ -1242,9 +1257,10 @@ function get_elementos_filtrados(parm){
     let partes=get_elementos();
     let elements = [];
     for ( let i=0;i<partes.length;i++ )
-        if ( partes[i].length > filter.length && partes[i].indexOf(filter) == 0 && partes[i].substring(filter.length).indexOf('/') == -1 )
-            elements.push(partes[i].substring(filter.length));            
-    human_sort(elements);
+        if ( partes[i].length > filter.length && partes[i].indexOf(filter) == 0 && partes[i].substring(filter.length).indexOf('/') == -1 ){
+            elements.push(partes[i].substring(filter.length));            			
+		}
+    elements=human_sort_custom(elements);
     return elements;
 }
 
