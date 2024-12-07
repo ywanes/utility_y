@@ -17486,6 +17486,10 @@ class PlaylistServer extends Util{
                     lines[i]=a;                    
                     continue;
                 }
+                if ( lines[i].startsWith("play faixa ") ){
+                    lines[i]="play faixa " + play_faixa[0];
+                    continue;
+                }
                 if ( lines[i].equals("seconds_extra") ){ // validacao de segurança.. provavelmente não deverá entrar aqui!
                     added=true;
                     continue;
