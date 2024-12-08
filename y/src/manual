@@ -41,6 +41,7 @@ usage:
   [y head]
   [y tail]
   [y cut]
+  [y yt]
   [y curl]
   [y cors]
   [y [sed|tr]]
@@ -319,6 +320,10 @@ Exemplos...
     cat arquivo | y cut -c5-
     cat arquivo | y cut -c5
     cat arquivo | y cut -c5-10,15-17
+[y yt]
+    y yt
+    obs: irá exibir a msg:
+    cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py http...
 [y curl]
     echo '{"id":1}' | y curl \
         -H "Content-Type: application/json" \

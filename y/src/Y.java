@@ -980,7 +980,11 @@ cat buffer.log
         if ( args[0].equals("cors") ){            
             cors(args);
             return;
-        }        
+        }  
+        if ( args[0].equals("yt") ){
+            System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py http...");
+            return;
+        }
         if ( args[0].equals("curl") ){
             String [] args2 = new String[args.length];            
             System.arraycopy(args, 0, args2, 0, args.length);
@@ -14005,20 +14009,19 @@ class Util{
             String primeira_interface=a.split(";;;")[0];
             if ( primeira_interface.contains("::") ){
                 String [] ips=primeira_interface.split(";;")[1].split(";");
-                String achou="";
+                String achou="";                
                 for ( int i=0;i<ips.length;i++ ){
+                    if ( !ips[i].contains(":") || ips[i].contains("::") )
+                        continue;
                     for ( int j=0;j<ips.length;j++ ){
-                        if ( ips[j].contains("::") && ips[i].contains(":") && !ips[i].contains("::") ){
-                            //ok
-                        }else                            
+                        if ( !ips[j].contains("::") )
                             continue;
                         if ( ips[i].startsWith(ips[j].split("::")[0]) ){
                             achou=ips[j];
                             break;
                         }
                     }
-                    if ( !achou.equals("") )
-                        break;
+                    break;
                 }
                 if ( achou.equals("") )
                     achou="NAO_ACHOU";
@@ -19957,6 +19960,8 @@ class ClientThread extends Util{
 
 
 
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -20004,6 +20009,7 @@ class ClientThread extends Util{
 /* class by manual */                + "  [y head]\n"
 /* class by manual */                + "  [y tail]\n"
 /* class by manual */                + "  [y cut]\n"
+/* class by manual */                + "  [y yt]\n"
 /* class by manual */                + "  [y curl]\n"
 /* class by manual */                + "  [y cors]\n"
 /* class by manual */                + "  [y [sed|tr]]\n"
@@ -20282,6 +20288,10 @@ class ClientThread extends Util{
 /* class by manual */                + "    cat arquivo | y cut -c5-\n"
 /* class by manual */                + "    cat arquivo | y cut -c5\n"
 /* class by manual */                + "    cat arquivo | y cut -c5-10,15-17\n"
+/* class by manual */                + "[y yt]\n"
+/* class by manual */                + "    y yt\n"
+/* class by manual */                + "    obs: ira exibir a msg:\n"
+/* class by manual */                + "    cd D:\\\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py http...\n"
 /* class by manual */                + "[y curl]\n"
 /* class by manual */                + "    echo '{\"id\":1}' | y curl \\\n"
 /* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
@@ -20808,6 +20818,7 @@ class ClientThread extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
