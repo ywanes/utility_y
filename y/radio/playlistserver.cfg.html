@@ -201,22 +201,25 @@ function get_custom_vol(vol_default, name){ // VOLUMEEEE
 	return 1;
 }
 
-function minisend(a, c, n){
-	if ( typeof n == 'undefined' )
+function minisend(a, c, n, worker_loop){ // n -> faixa
+	if ( typeof n == 'undefined' || n == null )
 		n=0;
+	if ( typeof worker_loop == 'undefined' || worker_loop == null )
+		worker_loop='yes'
 	let b=document.querySelector('input[name="vol"]:checked').value;
 	let faixas=a.trim().split('\n').map(item => item.trim());
 	let n_faixas=faixas.length;
 	let s='\nn_faixas '+n_faixas+'\n';
 	let first=null;
 	let device='tv';
+	device='pc';
 	s+='vol worker '+b+'\n';
 	for ( let i=0;i<n_faixas;i++ ){
 		s+='faixa '+i+' '+faixas[i]+'\n';
 		s+='cfg faixa '+i+' ' + get_custom_vol(1, faixas[i]) + ' ' + get_custom_start(c, faixas[i]) + '\n';
 	}
 	s=`name_worker TMP
-		worker_loop yes
+		worker_loop ` + worker_loop + `
 		path_vlc C:\\Program Files\\VideoLAN\\VLC
 		device ` + device + s + 'play faixa '+n;
 	s=s.trim().split('\n').map(item => item.trim()).join('\n');
@@ -367,23 +370,23 @@ function f_load(){
 	update('.');
 }
 
-function format_and_send_play(a, n){
+function format_and_send_play(a, n, worker_loop){ // n -> faixa
 	a=a.split('\n');
 	a=a.map(a => a.substring(1)).map(a => a.substring(0, a.length-1).replaceAll('/', '\\')).join('\n');
-	minisend(a, -1, n);
+	minisend(a, -1, n, worker_loop);
 }
 
-function play(n){
+function play(n, worker_loop){ // n -> faixa
 	let s=get_paths(this.path);
 	if ( s.length > 0 && s[s.length-1].indexOf('.') > -1 )
-		format_and_send_play(this.path, n);		
+		format_and_send_play(this.path, n, worker_loop);		
 	else{
 		let s2=get_lista(this.path);
 		if ( s2.length > 0 && s2[s2.length-1].indexOf('.') > -1 ){
 			let s3='';
 			for ( let i=0;i<s2.length;i++ )
 				s3+=this.path+s2[i]+'/\n';							
-			format_and_send_play(s3, n);
+			format_and_send_play(s3, n, worker_loop);
 		}else
 			alert('selecione a pasta de musica ou a musica!');
 		
@@ -405,7 +408,7 @@ function click_vol(e){
 	&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="alert(send('status'))">&nbsp;&nbsp;&nbsp;STAT&nbsp;&nbsp;&nbsp;&nbsp;</button>
 
 <br><br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="location.reload()">RELOAD&nbsp;&nbsp;</button>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="play(null, 'no')">1PLAY&nbsp;&nbsp;</button>
 	&nbsp;<button style="height: 181px; font-size:70px; width: 316px;" class="btn" type="submit" onclick="play()">&nbsp;&nbsp;&nbsp;PLAY&nbsp;&nbsp;&nbsp;&nbsp;</button>
 
 <br><br>
