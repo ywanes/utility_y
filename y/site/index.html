@@ -169,6 +169,37 @@ function AES_Init() {  AES_Sbox_Inv = new Array(256);  for (var i = 0; i < 256; 
 function encodeAES(_txt, _key) {  var key = getkeyAES(_key);  AES_Init();  AES_ExpandKey(key);  var block = StringToArray(_txt);  var miniblock = new Array(16);  for ( var i=0;i<block.length;i+=16 ){      for (var j = 0; j < 16; j++) miniblock[j] = block[i + j];      AES_Encrypt(miniblock, key);      for (var j = 0; j < 16; j++) block[i + j] = miniblock[j];  }  AES_Done();  return ToBase64(block);}
 function decodeAES(_txt, _key) {  var key = getkeyAES(_key);  AES_Init();  AES_ExpandKey(key);  var block = FromBase64(_txt);  var miniblock = new Array(16);  for (var i = 0; i < block.length; i += 16) {      for (var j = 0; j < 16; j++) miniblock[j] = block[i + j];      AES_Decrypt(miniblock, key);      for (var j = 0; j < 16; j++) block[i + j] = miniblock[j];  }  AES_Done();  return ArrayToString(block);}
 
+function clean_secret(){
+	document.getElementById("text_secret").value='';
+}
+
+function copy_clipboard_secret(){
+	if ( navigator.clipboard ){
+		var copyText = document.getElementById("text_secret");
+		copyText.select();
+		copyText.setSelectionRange(0, 99999); // For mobile devices
+		navigator.clipboard.writeText(copyText.value);
+		copyText.setSelectionRange(0, 0);
+	}else{
+        const textArea = document.createElement("textarea");
+		if ( document.getElementById("text_secret").value.length == 0 )
+			textArea.value=' ';
+		else
+			textArea.value = document.getElementById("text_secret").value;
+        textArea.style.position = "absolute";
+        textArea.style.left = "-999999px";
+        document.body.prepend(textArea);
+        textArea.select();
+        try {
+            document.execCommand('copy');
+        } catch (error) {
+            console.error(error);
+        } finally {
+            textArea.remove();
+        }
+	}
+}
+
 function save_secret(){
     let nick_name=get_nick_name();
     if ( nick_name == null ){
@@ -245,7 +276,12 @@ function img_secret(){
     let text_secret=redis_get('secret-'+nick_name);
     if ( text_secret == 'null' )
         text_secret='';
-    document.getElementById('principal').innerHTML='&nbsp;&nbsp;<button style="height: 121px;" type="submit" onclick="save_secret()">&nbsp;&nbsp;&nbsp;&nbsp;SALVAR&nbsp;&nbsp;&nbsp;&nbsp;</button><br><br>&nbsp;&nbsp;<textarea id="text_secret" style="width: 80%; height: 500px; padding: 12px 20px; box-sizing: border-box; border: 2px solid #ccc; border-radius: 4px; background-color: #ccc; font-size: 16px; resize: none;"></textarea>';
+    document.getElementById('principal').innerHTML=
+		'&nbsp;&nbsp;<button style="height: 121px;" type="submit" onclick="save_secret()">&nbsp;&nbsp;&nbsp;&nbsp;SALVAR&nbsp;&nbsp;&nbsp;&nbsp;</button>' + 
+		'&nbsp;&nbsp;<button style="height: 121px;" type="submit" onclick="copy_clipboard_secret()">&nbsp;&nbsp;&nbsp;&nbsp;COPY CLIPBOARD&nbsp;&nbsp;&nbsp;&nbsp;</button>' + 		
+		'&nbsp;&nbsp;<button style="height: 121px;" type="submit" onclick="clean_secret()">&nbsp;&nbsp;&nbsp;&nbsp;CLEAN&nbsp;&nbsp;&nbsp;&nbsp;</button>' + 
+		'<br><br>&nbsp;&nbsp;<textarea id="text_secret" style="width: 80%; height: 500px; padding: 12px 20px; box-sizing: border-box; border: 2px solid #ccc; border-radius: 4px; background-color: #ccc; font-size: 16px; resize: none;"></textarea>'
+		;
     document.getElementById('text_secret').value=decodeAES(text_secret, nick_name);
     document.getElementById('principal').style="";
 }
