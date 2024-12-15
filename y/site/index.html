@@ -4,6 +4,7 @@ let global=`[GLOBAL]`;
 let ref_=window.location.origin;
 let ref_8100=ref_.substr(0,ref_.lastIndexOf(':'))+':8100';
 let history_nick=null;
+this.timer=-1;
 this.inicializado=false;// nao colocar var
 this.inicializado2=false;// nao colocar var
 let contador_save_station1=0;
@@ -314,6 +315,9 @@ function load_movie(parm, table_click){
                         </td>
                     </tr>
                 </table>
+            </div>
+            <div class="controls-container1">            
+                <a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;"></a>
             </div>
             <div class="controls-container">
               <div id="cueTimer" style="opacity: 0; left: 90px;">00:00</div>
@@ -704,8 +708,19 @@ function load_movie(parm, table_click){
             save_station1();
           }
         }
+		try{
+          if ( this.timer >= 0 ){		  	  
+            document.getElementsByClassName('controls-container1')[0].children[0].innerHTML=format_seconds(this.timer);		    
+			this.timer--;
+          }else
+            document.getElementsByClassName('controls-container1')[0].children[0].innerHTML='';
+		}catch(err){}
       }, 1000);
     }
+}
+
+function f_timer(minutes){
+	this.timer=minutes*60;
 }
 
 function load_music(parm, elements){    
@@ -1437,6 +1452,7 @@ function f_load(){
   load_station_nick1();
   document.getElementById('login').style='';
   load_history_nick();  
+  console.log("f_timer(40);");
 }
 
 function remove_playing(e){
@@ -1634,6 +1650,17 @@ function keypress_nick_name(e) {
   position: fixed;
   top: 4px;
   left: 4px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;  
+  transition: opacity 0.5s linear;
+}
+
+.video-container .controls-container1 {
+  position: fixed;
+  top: 4px;
+  left: 400px;
   width: 100%;
   display: flex;
   flex-direction: column;
