@@ -221,6 +221,8 @@ function save_secret(){
 }
 
 function f_continue(){    
+	if ( verify_buttom_reload() ) // enable buttom reload
+		return;
     let nick_name=get_nick_name();
     if ( nick_name == null ){
         alert('Você precisa estar logado!');
