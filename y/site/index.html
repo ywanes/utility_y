@@ -471,7 +471,7 @@ function load_movie(parm, table_click){
     }
     var mili_click=0;
     var mili_dclick=0;
-    function clickingVideo(n){
+    function clickingVideo(n){	  
       if ( n == 1 ){
         mili_click=Date.now();
         setTimeout(
@@ -480,8 +480,10 @@ function load_movie(parm, table_click){
               clickVideo();
           },
         250);
-      }else
+      }else{
         mili_dclick=Date.now();
+		toggleFullScreen(null, null);
+      }
     }
     if ( !this.inicializado ){
         document.addEventListener('click', function(e) {  
@@ -536,8 +538,11 @@ function load_movie(parm, table_click){
           displayControls();
         });
         document.addEventListener('dblclick', () => {
+		  //acao usada em click video
+		  /*
           if ( getVideo() == null ) return;
           toggleFullScreen(null, null);
+		  */
         });
     }
     function cueTime(e){
