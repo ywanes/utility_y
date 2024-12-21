@@ -686,7 +686,7 @@ cat buffer.log
                         String [] paths=(String [])objs[0];
                         String virtualname=(String)objs[1];
                         boolean lvlStore=(Boolean)objs[2];
-                        zip_add_router(paths, virtualname, lvlStore, System.out);
+                        zip_add_router(paths, virtualname, lvlStore, System.out, null);
                         return;
                     }
                 }
@@ -2021,7 +2021,7 @@ cat buffer.log
                 s.close();
             }
         }catch(Exception e){
-            if ( copiaByStream_count_print_on == 0 ){
+            if ( !copiaByStream_count_print_on ){
                 System.err.println("Erro socket_1_file: "+ e.toString());
                 System.exit(1);
             }
@@ -2976,7 +2976,8 @@ cat buffer.log
         return true;
     }
     
-    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer, String [] paths){
+    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer, String [] paths){        
+        /////////////////////
         try{        
             final PipedOutputStream pos1=new PipedOutputStream();
             final PipedInputStream pis1=new PipedInputStream();
@@ -2993,7 +2994,7 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_add_router(paths, "", true, pos1);
+                            zip_add_router(paths, "", true, pos1, "enviando - ");
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -3044,7 +3045,7 @@ cat buffer.log
                             pos2.close();
                         }catch(Exception e){                                     
                             if ( e.toString().equals("java.io.IOException: Read end dead") ){
-                                if ( copiaByStream_count_print_on == 0 ){
+                                if ( !copiaByStream_count_print_on ){
                                     System.err.println("Senha invalida!");
                                     System.exit(1);
                                 }
@@ -3076,8 +3077,8 @@ cat buffer.log
 
             step1.join();
             step2.join();
-            step3.join();
-            print_cursor("\nFim!", false);
+            step3.join();            
+            print_cursor_speed(0, null, "\nFim!", false);
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
             System.exit(1);
@@ -4674,13 +4675,13 @@ cat buffer.log
         return null;
     }
     
-    private void zip_add_router(String [] paths, String virtual_name, boolean isLvlStore, OutputStream out) throws Exception {
+    private void zip_add_router(String [] paths, String virtual_name, boolean isLvlStore, OutputStream out, String pre_line_print_on) throws Exception {
         this.virtual_name = virtual_name;                
         zip_output = new java.util.zip.ZipOutputStream(out);   
         if ( isLvlStore )
             zip_output.setLevel(ZipOutputStream.STORED);        
         valida_paths(paths);
-        zip_add(paths);
+        zip_add(paths, pre_line_print_on);
         zip_output.closeEntry();
         zip_output.flush();
         zip_output.close();        
@@ -4698,15 +4699,18 @@ cat buffer.log
     private ArrayList<String> zip_elementos=null;
     private ArrayList<Long> zip_elementos_lastModified=null;
     private String virtual_name;
-    private void zip_add(String [] paths) throws Exception {
+    private void zip_add(String [] paths, String pre_line_print_on) throws Exception {
         int len;
         java.util.zip.ZipEntry e=null;
         if ( paths.length == 0 ){            
             e=new java.util.zip.ZipEntry(virtual_name);
             zip_output.putNextEntry(e);
             byte[] buf = new byte[BUFFER_SIZE];                                    
-            while ((len = readBytes(buf)) > -1)
+            while ((len = readBytes(buf)) > -1){
                 zip_output.write(buf, 0, len);
+                if ( pre_line_print_on != null )
+                    print_cursor_speed(len, pre_line_print_on, null, true);
+            }
             closeBytes();
         }else{
             for ( int i_=0; i_<paths.length;i_++ ){
@@ -4722,6 +4726,8 @@ cat buffer.log
                     size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
                     while ((len = readBytes(buf)) > -1){
                         zip_output.write(buf, 0, len);
+                        if ( pre_line_print_on != null )
+                            print_cursor_speed(len, pre_line_print_on, null, true);
                         size+=len;
                         if ( elem != null && size > size_alert ){
                             System.err.println("Erro, sistema anti loop ativado!");
@@ -4749,6 +4755,8 @@ cat buffer.log
                             byte[] buf = new byte[BUFFER_SIZE];                        
                             while ((len = readBytes(buf)) > -1){
                                 zip_output.write(buf, 0, len);                
+                                if ( pre_line_print_on != null )
+                                    print_cursor_speed(len, pre_line_print_on, null, true);
                                 size+=len;
                                 if ( elem != null && size > size_alert ){
                                     System.err.println("Erro, sistema anti loop ativado!!");
@@ -9008,15 +9016,15 @@ cat buffer.log
         return b;
     }    
 
-    public long copiaByStream_count_print_on=0;
+    public boolean copiaByStream_count_print_on=false;
     private void copiaByStream(InputStream pipe_in, OutputStream pipe_out, boolean print_on) throws Exception {
         byte[] buf = new byte[BUFFER_SIZE];            
         int len;
         while ((len = pipe_in.read(buf)) > -1){
             pipe_out.write(buf, 0, len);
             if ( print_on ){
-                copiaByStream_count_print_on+=len;
-                print_cursor(copiaByStream_count_print_on+" bytes...", true);
+                print_cursor_speed(len, "recebendo - ", null, true);
+                copiaByStream_count_print_on=true;
             }
         }
         pipe_out.flush();
@@ -11817,11 +11825,11 @@ while True:
                     if ( send ){
                         while( true ){
                             os.write(buffer, 0, len_buffer);
-                            print_cursor_speed(len_buffer);
+                            print_cursor_speed(len_buffer, null, null, false);
                         }
                     }else{
                         while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
-                            print_cursor_speed(len);
+                            print_cursor_speed(len, null, null, false);
                         }
                     }
                     s.close();
@@ -11833,17 +11841,17 @@ while True:
                     if ( send ){
                         while( true ){
                             os.write(buffer, 0, len_buffer);
-                            print_cursor_speed(len_buffer);
+                            print_cursor_speed(len_buffer, null, null, false);
                         }
                     }else{
                         while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
-                            print_cursor_speed(len);
+                            print_cursor_speed(len, null, null, false);
                         }
                     }
                     s.close();
                 }
             }catch(Exception e){
-                if ( copiaByStream_count_print_on == 0 ){
+                if ( !copiaByStream_count_print_on ){
                     System.err.println("Erro socket_1_file: "+ e.toString());
                     System.exit(1);
                 }
@@ -14408,29 +14416,17 @@ class Util{
     public static int random(int min, int max){
         return java.util.concurrent.ThreadLocalRandom.current().nextInt(min, max + 1);        
     }
-        
-    private static long print_cursor_timer_mili=-1;
-    public static void print_cursor(String a, boolean on_timer){
-        if ( on_timer ){
-            if ( print_cursor_timer_mili == -1 ){
-                print_cursor_timer_mili=System.currentTimeMillis();
-                return;
-            }else{
-                long tmp=System.currentTimeMillis();
-                if ( tmp > print_cursor_timer_mili + 500 ){
-                    print_cursor_timer_mili=tmp;
-                    System.out.print("\r"+a+"                                             \r");
-                }else
-                    return;
-            }                
-        }else{
-            System.out.print("\r"+a+"                                             \r");
-        }
-    }
+
     private static long print_cursor_speed_timer_mili=-1;
-    private static long print_cursor_speed_count_n=0;
-    public static void print_cursor_speed(int n){
-        print_cursor_speed_count_n+=n;
+    private static long print_cursor_speed_count_len_bytes=0;
+    private static long print_cursor_speed_count_total_len_bytes=0;
+    public static void print_cursor_speed(int len_bytes, String pre_line, String force_finish, Boolean show_total){
+        if ( force_finish != null ){
+            System.out.println("\r"+force_finish+"                                                                                ");
+            return;
+        }
+        print_cursor_speed_count_len_bytes+=len_bytes;
+        print_cursor_speed_count_total_len_bytes+=len_bytes;
         if ( print_cursor_speed_timer_mili == -1 ){
             print_cursor_speed_timer_mili=System.currentTimeMillis();            
             return;
@@ -14438,8 +14434,18 @@ class Util{
             long tmp=System.currentTimeMillis();
             if ( tmp > print_cursor_speed_timer_mili + 1000 ){
                 print_cursor_speed_timer_mili=tmp;
-                System.out.print("\r"+bytes_to_text(print_cursor_speed_count_n)+"/s - "  + bits_to_text(print_cursor_speed_count_n)+"/s                                               \r");
-                print_cursor_speed_count_n=0;
+                if ( pre_line != null ){
+                    if ( show_total )
+                        System.out.print("\r"+pre_line+print_cursor_speed_count_total_len_bytes+" bytes - "+bytes_to_text(print_cursor_speed_count_total_len_bytes)+" - "+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s                                               \r");
+                    else
+                        System.out.print("\r"+pre_line+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s                                               \r");
+                }else{
+                    if ( show_total )
+                        System.out.print("\r"+print_cursor_speed_count_total_len_bytes+" bytes - "+bytes_to_text(print_cursor_speed_count_total_len_bytes)+" - "+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s                                               \r");
+                    else
+                        System.out.print("\r"+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s                                               \r");
+                }
+                print_cursor_speed_count_len_bytes=0;
             }else
                 return;
         }                
