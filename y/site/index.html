@@ -127,7 +127,9 @@ function human_sort_custom(a){ // custom - extensao estava atrapalhando o sort
 	let a2=[];
 	let a3=[];
 	for ( let i=0;i<a.length;i++ ){
-		let m=a[i].split('.')[0];
+		let m=a[i];
+		if ( a[i].lastIndexOf('.') > -1 )
+			m=a[i].substring(0,a[i].lastIndexOf('.'));
 		s[m]=a[i];
 		a2.push(m);
 	}
