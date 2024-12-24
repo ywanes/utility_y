@@ -411,12 +411,12 @@ function load_movie(parm, table_click){
     _back=back_next[0];
     f_back=function(){
         if ( _back != null && _back.length > 0 )
-            load_playlist(_back, null, 'movie');
+            load_playlist(_back, null, 'movie', 'f_back');
     }
     _next=back_next[1];
     f_next=function(){
         if ( _next != null && _next.length > 0 )
-            load_playlist(_next, null, 'movie');
+            load_playlist(_next, null, 'movie', 'f_next');
     }
     if ( _back == null || _back.length == 0 )
         back.setAttribute('style', 'filter: blur(4px)');
@@ -1384,8 +1384,10 @@ function prepara_principal(){
     document.getElementById('principal').innerHTML='';
 }
 
-function load_playlist(parm, table_click, type){
-	if ( verify_buttom_reload() ) // enable buttom reload
+function load_playlist(parm, table_click, type, type_action_block_verify_buttom_reload){
+	if ( type_action_block_verify_buttom_reload == 'undefined' )
+		type_action_block_verify_buttom_reload=null;
+	if ( type_action_block_verify_buttom_reload == null && verify_buttom_reload() ) // enable buttom reload
 		return;
     prepara_principal();
     let elements=get_elementos_filtrados(parm);
