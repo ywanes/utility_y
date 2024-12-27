@@ -861,6 +861,10 @@ cat buffer.log
             }
             return;
         }             
+        if ( args[0].equals("connGui") ){
+            new ConnGui();
+            return;
+        }
         if ( args[0].equals("lower") ){
             String line=null;
             while ( (line=readLine()) != null )
@@ -19900,6 +19904,288 @@ class ClientThread extends Util{
     }
 }
 
+class ConnGui extends javax.swing.JFrame {
+    public ConnGui() {
+        System.out.println("Somente 1 server ou 1 connect eh permitido!");
+        initComponents();
+        setVisible(true);
+    }
+    
+    private void insert_error(String a){
+        if ( a.equals("java.net.ConnectException: Connection refused: connect") ){
+            label_status.setText("Nao foi possivel conectar!");
+            insert_list("Nao foi possivel conectar!");
+            label_status.setForeground(java.awt.Color.red);
+            return;
+        }    
+        if ( a.equals("java.net.SocketException: Connection reset") ){
+            label_status.setText("Desconectado!");
+            insert_list("Desconectado!");
+            label_status.setForeground(java.awt.Color.red);
+            return;
+        }
+        if ( a.equals("java.net.BindException: Cannot assign requested address: bind") ){
+            label_status.setText("Porta nao disponivel!");
+            insert_list("Porta nao disponivel!");
+            label_status.setForeground(java.awt.Color.red);
+            return;
+        }     
+        if ( a.equals("java.net.BindException: Address already in use: bind") ){
+            label_status.setText("Porta em uso!");
+            insert_list("Porta em uso!");
+            label_status.setForeground(java.awt.Color.red);
+            return;
+        }             
+        insert_list("Erro: " + a);
+    }
+    private void btn_connectActionPerformed(java.awt.event.ActionEvent e) {                                            
+        clicked++;
+        if ( clicked > 1 ){
+            label_status.setText("feche o programa!");
+            label_status.setForeground(java.awt.Color.red);
+            insert_list("connect ou server ja foi usado!, feche o programa!");
+            return;
+        }
+        btn_connect.setEnabled(false);
+        btn_server.setEnabled(false);        
+        try{
+            socket=new java.net.Socket(txt_ip.getText(), Integer.parseInt(txt_port.getText()));            
+            label_status.setText("connected");
+            label_status.setForeground(java.awt.Color.green);
+            new Thread() {
+                public void run() {
+                    try {
+                        java.io.InputStream input = socket.getInputStream();
+                        output = socket.getOutputStream();
+                        byte [] buff=new byte[1024];
+                        while(true){
+                            int len=input.read(buff, 0, buff.length);
+                            if ( len < 0 )                                
+                                break;
+                            if ( len == 0 )
+                                continue;
+                            String s="receive: ";
+                            for ( int i=0;i<len;i++ ){
+                                int p=(int)buff[i];
+                                if ( p < 0 )
+                                    p+=128;
+                                s+=" "+p;
+                            }                        
+                            insert_list(s);
+                        }  
+                    }catch(Exception ee){
+                        insert_error(ee.toString());
+                        try{
+                            socket.close();
+                        }catch(Exception eee){
+                            
+                        }
+                    }
+                }
+            }.start();            
+        }catch(Exception ee){
+            insert_error(ee.toString());
+        }                
+    }                                           
+    
+    private javax.swing.DefaultListModel<String> model = null;
+    private void insert_list(String a){
+        if ( model == null ){
+            model = new javax.swing.DefaultListModel<>();        
+            list.setModel(model);        
+        }
+        model.add(0, a);
+        System.out.println(a);
+    }
+    
+    private java.net.Socket socket = null;
+    private java.net.ServerSocket serverSocket = null;
+    private java.io.OutputStream output=null;
+    private int clicked=0;
+    private void btn_serverActionPerformed(java.awt.event.ActionEvent e){
+        clicked++;
+        if ( clicked > 1 ){
+            label_status.setText("feche o programa!");
+            label_status.setForeground(java.awt.Color.red);
+            insert_list("connect ou server ja foi usado!, feche o programa!");
+            return;
+        }
+        btn_connect.setEnabled(false);
+        btn_server.setEnabled(false);
+        try {
+            serverSocket = new java.net.ServerSocket(Integer.parseInt(txt_port.getText()), 1, java.net.InetAddress.getByName(txt_ip.getText()));
+            label_status.setText("server on");
+            label_status.setForeground(java.awt.Color.green);
+            new Thread() {
+                public void run() {
+                    try {
+                        socket = serverSocket.accept();
+                        try{
+                            serverSocket.close();
+                        }catch(Exception ee){
+                            
+                        }                                
+                        java.io.InputStream input = socket.getInputStream();
+                        output = socket.getOutputStream();
+                        byte [] buff=new byte[1024];
+                        while(true){
+                            int len=input.read(buff, 0, buff.length);
+                            if ( len < 0 )                                
+                                break;
+                            if ( len == 0 )
+                                continue;
+                            String s="recebido: ";
+                            for ( int i=0;i<len;i++ ){
+                                int p=(int)buff[i];
+                                if ( p < 0 )
+                                    p+=128;
+                                s+=" "+p;
+                            }                        
+                            insert_list(s);
+                        }  
+                    }catch(Exception ee) {
+                        insert_error(ee.toString());
+                    }
+                }
+            }.start();            
+        }catch(Exception ee){
+            insert_error(ee.toString());
+        }
+    }                                          
+
+    private void btn_sendActionPerformed(java.awt.event.ActionEvent e) {                                         
+        if ( output == null ){
+            insert_list("erro: nao conectado!");
+        }else{
+            try{
+                String s=txt.getText();
+                if ( s.length() == 0 )
+                    return;
+                byte [] bytes=s.getBytes();
+                String d="enviado: " + s + " - bytes:";
+                for ( int i=0;i<bytes.length;i++ ){
+                    int t=(int)bytes[i];
+                    if ( t < 0 )
+                        t+=128;
+                    d+=" "+t;
+                }
+                insert_list(d);
+                output.write(txt.getText().getBytes());
+            }catch(Exception ee){
+                insert_list("erro: " + ee.toString());
+            }
+        }
+    }                                        
+
+    private void initComponents() {
+        txt_ip = new javax.swing.JTextField();
+        btn_connect = new javax.swing.JButton();
+        btn_server = new javax.swing.JButton();
+        txt_port = new javax.swing.JTextField();
+        jScrollPane1 = new javax.swing.JScrollPane();
+        list = new javax.swing.JList<>();
+        txt = new javax.swing.JTextField();
+        btn_send = new javax.swing.JButton();
+        label_status = new javax.swing.JLabel();
+
+        setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+
+        txt_ip.setText("127.0.0.1");
+
+        btn_connect.setText("connect");
+        btn_connect.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_connectActionPerformed(evt);
+            }
+        });
+
+        btn_server.setText("server");
+        btn_server.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_serverActionPerformed(evt);
+            }
+        });
+
+        txt_port.setText("300");
+
+        list.setModel(new javax.swing.AbstractListModel<String>() {
+            String[] strings = { };
+            public int getSize() { return strings.length; }
+            public String getElementAt(int i) { return strings[i]; }
+        });
+        jScrollPane1.setViewportView(list);
+
+        txt.setText("88");
+
+        btn_send.setText("send");
+        btn_send.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btn_sendActionPerformed(evt);
+            }
+        });
+
+        label_status.setText("Status: ");
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addGroup(layout.createSequentialGroup()
+                            .addComponent(txt_ip, javax.swing.GroupLayout.PREFERRED_SIZE, 220, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(txt_port, javax.swing.GroupLayout.PREFERRED_SIZE, 220, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGroup(layout.createSequentialGroup()
+                            .addComponent(btn_connect)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(btn_server)
+                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(label_status, javax.swing.GroupLayout.PREFERRED_SIZE, 151, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addComponent(jScrollPane1))
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(txt, javax.swing.GroupLayout.PREFERRED_SIZE, 357, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btn_send)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txt_ip, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txt_port, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btn_connect)
+                    .addComponent(btn_server)
+                    .addComponent(label_status))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txt, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btn_send))
+                .addContainerGap(24, Short.MAX_VALUE))
+        );
+
+        pack();
+    }
+    
+    private javax.swing.JButton btn_connect;
+    private javax.swing.JButton btn_send;
+    private javax.swing.JButton btn_server;
+    private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JLabel label_status;
+    private javax.swing.JList<String> list;
+    private javax.swing.JTextField txt;
+    private javax.swing.JTextField txt_ip;
+    private javax.swing.JTextField txt_port;
+}
+
 /* class Wget */ // download do Wget muito instavel, melhor refatorar para curl
 /* class Wget */ //String [] args2 = {"-h"};               
 /* class Wget */ //String [] args2 = {"-ban","%d0","-only_before","-list_mp3","-list_diretories","http://195.122.253.112/public/mp3/"};        
@@ -19958,8 +20244,6 @@ class ClientThread extends Util{
 /* class Diff  */ private List<Diff_Change> buildRevision(Diff_PathNode actualPath, List<T> orig, List<T> rev) { Objects.requireNonNull(actualPath, "path is null"); Objects.requireNonNull(orig, "original sequence is null"); Objects.requireNonNull(rev, "revised sequence is null"); Diff_PathNode path = actualPath; List<Diff_Change> changes = new ArrayList<>(); if (path.isSnake()) { path = path.prev; } while (path != null && path.prev != null && path.prev.j >= 0) { if (path.isSnake()) { throw new IllegalStateException("bad diffpath: found snake when looking for diff"); } int i = path.i; int j = path.j; path = path.prev; int ianchor = path.i; int janchor = path.j; if (ianchor == i && janchor != j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_INSERT, ianchor, i, janchor, j)); } else if (ianchor != i && janchor == j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_DELETE, ianchor, i, janchor, j)); } else { changes.add(new Diff_Change(Diff_DiffRow.TAG_CHANGE, ianchor, i, janchor, j)); } if (path.isSnake()) { path = path.prev; } } return changes; } } class Diff_PathNode { public final int i; public final int j; public final Diff_PathNode prev; public final boolean snake; public final boolean bootstrap; public Diff_PathNode(int i, int j, boolean snake, boolean bootstrap, Diff_PathNode prev) { this.i = i; this.j = j; this.bootstrap = bootstrap; if (snake) { this.prev = prev; } else { this.prev = prev == null ? null : prev.previousSnake(); } this.snake = snake; } public boolean isSnake() { return snake; } public boolean isBootstrap() { return bootstrap; } 
 /* class Diff  */ public final Diff_PathNode previousSnake() { if (isBootstrap()) { return null; } if (!isSnake() && prev != null) { return prev.previousSnake(); } return this; } public String toString() { StringBuilder buf = new StringBuilder("["); Diff_PathNode node = this; while (node != null) { buf.append("("); buf.append(Integer.toString(node.i)); buf.append(","); buf.append(Integer.toString(node.j)); buf.append(")"); node = node.prev; } buf.append("]"); return buf.toString(); } } class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public Diff_Patch() { this(10); } public Diff_Patch(int estimatedPatchSize) { deltas = new ArrayList<>(estimatedPatchSize); } public List<T> applyTo(List<T> target) throws Exception { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.applyTo(result); } return result; } public List<T> restore(List<T> target) { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.restore(result); } return result; } public void addDelta(Diff_AbstractDelta<T> delta) { deltas.add(delta); } public List<Diff_AbstractDelta<T>> getDeltas() { Collections.sort(deltas, java.util.Comparator.comparing(d -> d.getSource().getPosition())); return deltas; } public String toString() { return "Patch{" + "deltas=" + deltas + '}'; } public static <T> Diff_Patch<T> generate(List<T> original, List<T> revised) throws Exception { Diff_MyersDiff m=new Diff_MyersDiff<>(); List<Diff_Change> changes=m.computeDiff(original, revised); 
 /* class Diff  */ Diff_Patch<T> patch = new Diff_Patch<>(changes.size()); for (Diff_Change change : changes) { Diff_Chunk<T> orgChunk = new Diff_Chunk<>(change.startOriginal, new ArrayList<>(original.subList(change.startOriginal, change.endOriginal))); Diff_Chunk<T> revChunk = new Diff_Chunk<>(change.startRevised, new ArrayList<>(revised.subList(change.startRevised, change.endRevised))); switch (change.deltaType) { case Diff_DiffRow.TAG_DELETE: patch.addDelta(new Diff_DeleteDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_INSERT: patch.addDelta(new Diff_InsertDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_CHANGE: patch.addDelta(new Diff_ChangeDelta<>(orgChunk, revChunk)); break; } } return patch; } } 
-
-
 
 
 
@@ -20087,10 +20371,11 @@ class ClientThread extends Util{
 /* class by manual */                + "  [y test]\n"
 /* class by manual */                + "  [y controlc]\n"
 /* class by manual */                + "  [y random]\n"
-/* class by manual */                + "  [y var]\n"
 /* class by manual */                + "  [y talk]\n"
 /* class by manual */                + "  [y sign]\n"
 /* class by manual */                + "  [y overflix]\n"
+/* class by manual */                + "  [y connGui]\n"
+/* class by manual */                + "  [y var]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -20728,6 +21013,9 @@ class ClientThread extends Util{
 /* class by manual */                + "    obs: -vToken => mostra iexplorer.exe e nao fecha.\n"
 /* class by manual */                + "         -o => force out path\n"
 /* class by manual */                + "         -tags => verbose profundo\n"
+/* class by manual */                + "[y connGui]\n"
+/* class by manual */                + "    connGui\n"
+/* class by manual */                + "    obs: teste de conexao(server e client)\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
 /* class by manual */                + "    Obs: execucao por parametro de variavel\n"
@@ -20824,10 +21112,6 @@ class ClientThread extends Util{
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
 
 
 

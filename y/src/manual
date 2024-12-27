@@ -113,10 +113,11 @@ usage:
   [y test]
   [y controlc]
   [y random]
-  [y var]
   [y talk]
   [y sign]
   [y overflix]
+  [y connGui]
+  [y var]
   [y [update|u]]
   [y help]
 
@@ -754,6 +755,9 @@ Exemplos...
     obs: -vToken => mostra iexplorer.exe e não fecha.
          -o => force out path
          -tags => verbose profundo
+[y connGui]
+    connGui
+    obs: teste de conexao(server e client)
 [y var]
     y var
     Obs: execução por parametro de variavel
