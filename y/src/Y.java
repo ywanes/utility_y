@@ -1630,19 +1630,15 @@ cat buffer.log
             return;            
         }
         if ( args[0].equals("pss")){
-            if ( os(true).endsWith("Windows") ){
-                load_pss_windows();
-                pss_windows(false);
-                return;
-            }else{
-                if ( os(true).endsWith("Linux") ){
-                    load_pss_linux();
-                    pss_linux(false);
-                    return;
-                }
+            String [] filter=null;
+            if ( args.length > 1){
+                if ( args.length == 4 )
+                    filter=pids_search(args[1], args[2], args[3], false);
+                else
+                    filter=pids_search(args[1], null, null, false);
             }
-            System.err.println("Nao implementado para esse sistema operacional!");
-            System.exit(1);
+            pss(filter);
+            return;
         }
         if ( args[0].equals("pid") && args.length == 2 ){
             if ( os(true).endsWith("Windows") ){
@@ -2980,8 +2976,7 @@ cat buffer.log
         return true;
     }
     
-    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer, String [] paths){        
-        /////////////////////
+    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer, String [] paths){                
         try{        
             final PipedOutputStream pos1=new PipedOutputStream();
             final PipedInputStream pis1=new PipedInputStream();
@@ -11885,6 +11880,7 @@ while True:
     Color [] lock_frames_color=null;
     boolean [] states_frames=null;
     private void lock(String w){
+        kill_by_text(" y lock ");
         GraphicsDevice[] gs=null;
         boolean hasConfigurationDevice=true;
         try{
@@ -13632,16 +13628,29 @@ class Util{
         return retorno;
     }
     
-    public boolean kill_by_text(String a){ 
-        return kill_by_text(a, null, null);
+    public void pss(String [] filter){
+        if ( os(true).endsWith("Windows") ){
+            load_pss_windows();
+            pss_windows(false, filter);
+            return;
+        }else{
+            if ( os(true).endsWith("Linux") ){
+                load_pss_linux();
+                pss_linux(false, filter);
+                return;
+            }
+        }
+        System.err.println("Nao implementado para esse sistema operacional!");
+        System.exit(1);        
     }
     
-    public boolean kill_by_text(String a, String b, String c){ // a->like b->notLike c->notLike
+    public String [] pids_search(String a, String b, String c, boolean include_current_pid){ // a->like b->notLike c->notLike
+        String current=getCurrentPID()+"";
         ArrayList<String> lista=new ArrayList();
         if ( isWindows() ){
             String s_=runtimeExec("cmd /c wmic path win32_process where \"commandline like '%" + a + "%'\" get ProcessId, CommandLine", null, null, null);
             if ( s_ == null )
-                return false;
+                return new String[]{};
             String [] lines=s_.split("\n");
             for ( int i=0;i<lines.length;i++ ){
                 if ( i == 0 )
@@ -13651,21 +13660,25 @@ class Util{
                 if ( c != null && lines[i].contains(c) )
                     continue;            
                 String [] partes=lines[i].trim().split(" ");
+                if ( !include_current_pid && partes[partes.length-1].equals(current) )
+                    continue;
                 lista.add(partes[partes.length-1]);
             }            
-            /*
-            load_pss_windows();
-            for ( int i=0;i<pss_parm5.size();i++ )
-                if ( (" "+pss_parm5.get(i)+" ").contains(a) )
-                    lista.add(pss_parm1.get(i));
-            */
         }else{
             load_pss_linux();
             for ( int i=0;i<pss_parm3.size();i++ )
                 if ( (" "+pss_parm3.get(i)+" ").contains(a) )
                     lista.add(pss_parm1.get(i));
         }
-        String [] pids=arrayList_to_array(lista);
+        return arrayList_to_array(lista);        
+    }
+    
+    public boolean kill_by_text(String a){ 
+        return kill_by_text(a, null, null, false);
+    }
+    
+    public boolean kill_by_text(String a, String b, String c, boolean include_current_pid){ // a->like b->notLike c->notLike
+        String [] pids=pids_search(a, b, c, include_current_pid);
         if ( pids.length > 0 ){
             kill(pids);
             return true;
@@ -13770,6 +13783,7 @@ class Util{
     
     public void load_pss_windows() {        
         try{
+            String currentPID=getCurrentPID()+"";
             load_pss_init();
             String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null, null, null);
             String [] lines=s_.split("\n");
@@ -13802,7 +13816,10 @@ class Util{
                     long seconds=new SimpleDateFormat("yyyyMMddHHmmss").parse(LocalDateTime).getTime() - new SimpleDateFormat("yyyyMMddHHmmss").parse(CreationDate).getTime();
                     seconds/=1000;
                     String deltaTime=seconds_to_string(seconds, "format2");
-
+                    
+                    // skip current pid
+                    if ( currentPID.equals(ProcessId) || currentPID.equals(ParentProcessId) )
+                        continue;
                     pss_parm1.add(ProcessId);
                     pss_parm2.add(ParentProcessId);
                     pss_parm3.add(deltaTime);
@@ -13863,8 +13880,12 @@ class Util{
         }
     }
           
-    public void pss_windows(boolean exigencia_flag){
-        for ( int i=0;i<pss_parm1.size();i++ )
+    public int getCurrentPID(){
+        return Integer.parseInt(java.lang.management.ManagementFactory.getRuntimeMXBean().getName().split("@")[0]);
+    }
+    
+    public void pss_windows(boolean exigencia_flag, String [] filter){
+        for ( int i=0;i<pss_parm1.size();i++ ){
             if ( !exigencia_flag || pss_flag.get(i) ){
                 if ( pss_parm3.get(i).contains("0:00:00:0") ){ // skip o proprio comando
                     if ( pss_parm5.get(i).contains("C:\\Windows\\system32\\cmd.exe  /S /D /c\" y grep") )
@@ -13872,11 +13893,21 @@ class Util{
                     if ( pss_parm4.get(i).contains("java.exe") && pss_parm5.get(i).contains(".jar Y grep ") )
                         continue;
                 }
-                System.out.println(pss_parm1.get(i)+"\t"+pss_parm2.get(i)+"\t"+pss_parm3.get(i)+"\t"+pss_parm4.get(i)+"\t"+pss_parm5.get(i));
+                if ( filter == null )
+                    System.out.println(pss_parm1.get(i)+"\t"+pss_parm2.get(i)+"\t"+pss_parm3.get(i)+"\t"+pss_parm4.get(i)+"\t"+pss_parm5.get(i));
+                else{
+                    for ( int j=0;j<filter.length;j++ ){
+                        if ( filter[j].equals(pss_parm1.get(i)) ){
+                            System.out.println(pss_parm1.get(i)+"\t"+pss_parm2.get(i)+"\t"+pss_parm3.get(i)+"\t"+pss_parm4.get(i)+"\t"+pss_parm5.get(i));
+                            break;
+                        }
+                    }
+                }
             }
+        }
     }
           
-    public void pss_linux(boolean exigencia_flag){
+    public void pss_linux(boolean exigencia_flag, String [] filter){
         for ( int i=0;i<pss_parm1.size();i++ )
             if ( !exigencia_flag || pss_flag.get(i) )
                 System.out.println(pss_parm3.get(i));
@@ -13886,14 +13917,14 @@ class Util{
         load_pss_windows();
         pid_nav_up(pid, pid+",");
         pid_nav_down(pid, pid+",");
-        pss_windows(true);
+        pss_windows(true, null);
     }
     
     public void pid_linux(String pid){
         load_pss_linux();
         pid_nav_up(pid, pid+",");
         pid_nav_down(pid, pid+",");
-        pss_linux(true);
+        pss_linux(true, null);
     }
     
     public void pid_nav_up(String pid, String path){
@@ -17523,7 +17554,7 @@ class PlaylistServer extends Util{
             if ( _cfg != null && !starting_server )
                 salvando_file(instrucoes[0], _cfg);
             // kills
-            kill_by_text("ignoreIGNORE:INSTANTE:33:", "cmd /c", "wmic ");
+            kill_by_text("ignoreIGNORE:INSTANTE:33:", "cmd /c", "wmic ", false);
             return retorno_amigavel;
         }
         if ( a.equals("back") || a.equals("next") ){
@@ -20019,7 +20050,7 @@ class ConnGui extends javax.swing.JFrame {
             new Thread() {
                 public void run() {
                     try {
-                        socket = serverSocket.accept();
+                        socket = serverSocket.accept();                                                                        
                         try{
                             serverSocket.close();
                         }catch(Exception ee){
@@ -20244,7 +20275,6 @@ class ConnGui extends javax.swing.JFrame {
 /* class Diff  */ private List<Diff_Change> buildRevision(Diff_PathNode actualPath, List<T> orig, List<T> rev) { Objects.requireNonNull(actualPath, "path is null"); Objects.requireNonNull(orig, "original sequence is null"); Objects.requireNonNull(rev, "revised sequence is null"); Diff_PathNode path = actualPath; List<Diff_Change> changes = new ArrayList<>(); if (path.isSnake()) { path = path.prev; } while (path != null && path.prev != null && path.prev.j >= 0) { if (path.isSnake()) { throw new IllegalStateException("bad diffpath: found snake when looking for diff"); } int i = path.i; int j = path.j; path = path.prev; int ianchor = path.i; int janchor = path.j; if (ianchor == i && janchor != j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_INSERT, ianchor, i, janchor, j)); } else if (ianchor != i && janchor == j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_DELETE, ianchor, i, janchor, j)); } else { changes.add(new Diff_Change(Diff_DiffRow.TAG_CHANGE, ianchor, i, janchor, j)); } if (path.isSnake()) { path = path.prev; } } return changes; } } class Diff_PathNode { public final int i; public final int j; public final Diff_PathNode prev; public final boolean snake; public final boolean bootstrap; public Diff_PathNode(int i, int j, boolean snake, boolean bootstrap, Diff_PathNode prev) { this.i = i; this.j = j; this.bootstrap = bootstrap; if (snake) { this.prev = prev; } else { this.prev = prev == null ? null : prev.previousSnake(); } this.snake = snake; } public boolean isSnake() { return snake; } public boolean isBootstrap() { return bootstrap; } 
 /* class Diff  */ public final Diff_PathNode previousSnake() { if (isBootstrap()) { return null; } if (!isSnake() && prev != null) { return prev.previousSnake(); } return this; } public String toString() { StringBuilder buf = new StringBuilder("["); Diff_PathNode node = this; while (node != null) { buf.append("("); buf.append(Integer.toString(node.i)); buf.append(","); buf.append(Integer.toString(node.j)); buf.append(")"); node = node.prev; } buf.append("]"); return buf.toString(); } } class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public Diff_Patch() { this(10); } public Diff_Patch(int estimatedPatchSize) { deltas = new ArrayList<>(estimatedPatchSize); } public List<T> applyTo(List<T> target) throws Exception { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.applyTo(result); } return result; } public List<T> restore(List<T> target) { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.restore(result); } return result; } public void addDelta(Diff_AbstractDelta<T> delta) { deltas.add(delta); } public List<Diff_AbstractDelta<T>> getDeltas() { Collections.sort(deltas, java.util.Comparator.comparing(d -> d.getSource().getPosition())); return deltas; } public String toString() { return "Patch{" + "deltas=" + deltas + '}'; } public static <T> Diff_Patch<T> generate(List<T> original, List<T> revised) throws Exception { Diff_MyersDiff m=new Diff_MyersDiff<>(); List<Diff_Change> changes=m.computeDiff(original, revised); 
 /* class Diff  */ Diff_Patch<T> patch = new Diff_Patch<>(changes.size()); for (Diff_Change change : changes) { Diff_Chunk<T> orgChunk = new Diff_Chunk<>(change.startOriginal, new ArrayList<>(original.subList(change.startOriginal, change.endOriginal))); Diff_Chunk<T> revChunk = new Diff_Chunk<>(change.startRevised, new ArrayList<>(revised.subList(change.startRevised, change.endRevised))); switch (change.deltaType) { case Diff_DiffRow.TAG_DELETE: patch.addDelta(new Diff_DeleteDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_INSERT: patch.addDelta(new Diff_InsertDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_CHANGE: patch.addDelta(new Diff_ChangeDelta<>(orgChunk, revChunk)); break; } } return patch; } } 
-
 
 
 
@@ -20858,6 +20888,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
 /* class by manual */                + "[y pss]\n"
 /* class by manual */                + "    y pss\n"
+/* class by manual */                + "    y pss \" y lock \"\n"
+/* class by manual */                + "    y pss \"buscando\" \"nao buscando\" \"nao buscando\"\n"
 /* class by manual */                + "[y pid]\n"
 /* class by manual */                + "    y pid 222\n"
 /* class by manual */                + "    Obs: onde 222 e o processId encontrado em y pss\n"

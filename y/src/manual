@@ -600,6 +600,8 @@ Exemplos...
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
 [y pss]
     y pss
+    y pss " y lock "
+    y pss "buscando" "nao buscando" "nao buscando"
 [y pid]
     y pid 222
     Obs: onde 222 é o processId encontrado em y pss
