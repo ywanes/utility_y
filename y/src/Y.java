@@ -6175,6 +6175,8 @@ cat buffer.log
     }
     
     public void talk(String [] args){
+        // https://ttsmp3.com/
+        // https://speechma.com/
         try{
             Object [] objs = get_parms_msg_lang_list_copy(args);
             if ( objs == null ){
