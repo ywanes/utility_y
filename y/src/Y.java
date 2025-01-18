@@ -20491,6 +20491,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y overflix]\n"
 /* class by manual */                + "  [y connGui]\n"
 /* class by manual */                + "  [y var]\n"
+/* class by manual */                + "  [y cotaca]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -21145,6 +21146,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    linux:\n"
 /* class by manual */                + "    export var='\"cat\" \"a\"' && y var\n"
 /* class by manual */                + "    export var='\"cat\" \"a\"' && y var -ignore FLAG_HERE\n"
+/* class by manual */                + "[y cotacao]\n"
+/* class by manual */                + "    y cotacao\n"
 /* class by manual */                + "[y help]\n"
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
@@ -21233,6 +21236,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
