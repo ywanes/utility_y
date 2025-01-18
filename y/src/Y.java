@@ -1824,14 +1824,11 @@ cat buffer.log
                 return;
         }
         if ( args[0].equals("lock") ){
-            if ( args.length == 1 ){
-                lock(null);
-                return;
-            }
-            if ( args.length > 1 && args[1].equals("w") ){
-                lock("w");
-                return;
-            }
+            String p1=null;
+            if ( args.length > 1 )
+                p1=args[1];
+            lock(p1);
+            return;
         }
         if ( args[0].equals("monitor") ){
             if ( !isWindows() )
@@ -11964,8 +11961,10 @@ while True:
     Frame [] lock_frames=null;
     Color [] lock_frames_color=null;
     boolean [] states_frames=null;
-    private void lock(String w){
+    private void lock(String parm){
         kill_by_text(" y lock ");
+        if ( parm != null && parm.equals("0") )
+            return;
         GraphicsDevice[] gs=null;
         boolean hasConfigurationDevice=true;
         try{
@@ -11982,7 +11981,7 @@ while True:
                 lock_frames[i] = new Frame(gs[i].getDefaultConfiguration());
             else
                 lock_frames[i] = new Frame();
-            if ( w == null )
+            if ( parm == null )
                 lock_frames_color[i]=Color.black;                
             else
                 lock_frames_color[i]=Color.white;
@@ -11992,7 +11991,7 @@ while True:
                 lock_frames[i].setUndecorated(true); // tira borda do aplicativo
                 lock_frames[i].setExtendedState(lock_frames[i].MAXIMIZED_BOTH);        
             }
-            if ( w == null )
+            if ( parm == null )
                 lock_frames[i].setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
             else
                 lock_frames[i].setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(2,2,2), new Point( 0, 0), "" ));            
@@ -21078,6 +21077,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "[y lock]\n"
 /* class by manual */                + "    y lock\n"
 /* class by manual */                + "    y lock w\n"
+/* class by manual */                + "    y lock 0 -> desliga o lock\n"
 /* class by manual */                + "    obs: gera black screen\n"
 /* class by manual */                + "    obs2: y lock w -> white screen\n"
 /* class by manual */                + "[y monitor]\n"

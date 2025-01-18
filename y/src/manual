@@ -705,6 +705,7 @@ Exemplos...
 [y lock]
     y lock
     y lock w
+    y lock 0 -> desliga lock
     obs: gera black screen
     obs2: y lock w -> white screen
 [y monitor]
