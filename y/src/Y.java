@@ -344,15 +344,19 @@ cat buffer.log
         args=initEnvByParm(args);
         System.setProperty("https.protocols", "TLSv1.1");
         System.setProperty("line.separator", "\n");
-		//REMOVED_GRAAL_START
+        //REMOVED_GRAAL_START
         try_load_libraries();
         try_load_ORAs();	
-		//REMOVED_GRAAL_END		
+        //REMOVED_GRAAL_END		
 
         if ( args.length == 0 ){
             System.err.println(      
                 somente_mini("/y/manual")
             );
+            return;
+        }
+        if ( args.length > 0 && args[0].equals("cotacao") ){
+            cotacao();
             return;
         }
         if ( args.length > 0 && args[0].equals("var") )
@@ -2855,7 +2859,34 @@ cat buffer.log
                 return true;
         return false;
     }
-    
+    private void cotacao(){
+        String s="";
+        s=curl_string("https://api.bybit.com/v5/market/tickers?category=spot");
+        cotacao_carro(s, "\"USDTBRL\"", "\"lastPrice\"", "Dolar      => {} R$");
+        cotacao_carro(s, "\"BTCUSDT\"", "\"lastPrice\"", "BTC(Dolar) => {} $ ");
+        cotacao_carro(s, "\"BTCBRL\"", "\"lastPrice\"",  "BTC(Reais) => {} R$");
+    }    
+    private void cotacao_carro(String a, String b, String c, String d){
+        String s="";
+        int p1=a.indexOf(b);
+        String [] partes=null;
+        if ( p1 > 0 ){
+            p1=a.indexOf(c, p1+1);
+            if ( p1 > 0 ){
+                s=a.substring(p1, p1+30);
+                partes=s.split("\"");
+                System.out.println(d.replace("{}", 
+            lpad(
+                format_virgula(
+                            partes[3].replace(".", ",")
+                            , 3
+                        ), 
+                    12,
+                    " "
+                    )));
+            }
+        }
+    }
     private String [] get_var(){
         String varLine=getEnv("var");
         if ( varLine == null )
@@ -4461,7 +4492,27 @@ cat buffer.log
         }
         countLinhas[0]++;
     }
-
+    public String format_virgula(String a, int len){
+        String b="";
+        String c="";
+        if ( ! a.contains(",") ){
+            b=a;
+        }else{
+            String [] partes=a.split(",");
+            if ( partes.length > 2 || partes.length == 0 )
+                erroFatal("Erro interno!");
+            if ( partes.length == 2 ){
+                b=partes[0];
+                c=partes[1];
+            }else
+                b=partes[0];
+        }
+        int limit=1000;
+        while(c.length()<len && limit-->0){
+            c+="0";
+        }
+        return b+","+c;
+    }
     public String lpad(long inputLong, int length,String append) {
         if ( inputLong < 0 )
             return lpad(true,(inputLong+"").substring(1),length,append);
@@ -6209,9 +6260,34 @@ cat buffer.log
             }
             if ( lang == null )
                 lang="Brazilian_Portuguese_Ricardo";
-            if ( msg == null )
+            if ( msg == null ){
                 msg=String.join(" ", readAllLines());
-            msg=msg.trim();
+                msg=msg.trim();
+                talk_msg(msg, lang, copy);
+            }else{
+                if ( msg.equals("cat") ){
+                    InputStream inputStream_pipe=System.in;
+                    byte[] buf = new byte[BUFFER_SIZE];
+                    int len=0;
+                    while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                        ByteArrayOutputStream baos=new ByteArrayOutputStream();
+                        baos.write(buf, 0, len);
+                        msg=baos.toString().trim();
+                        talk_msg(msg, lang, copy);
+                    }
+                    System.exit(1);
+                }else{
+                    msg=msg.trim();
+                    talk_msg(msg, lang, copy);
+                }
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+    
+    public void talk_msg(String msg, String lang, String copy){
+        try{
             if ( msg.equals("") )
                 erroFatal("Erro, Texto em branco!");
             String dir="/ProgramFiles";
@@ -6272,7 +6348,7 @@ cat buffer.log
                 );
         }catch(Exception e){
             erroFatal(e);
-        }
+        }                    
     }
     
     public void sign(String [] args){
@@ -21040,6 +21116,10 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Ricardo -msg oi\n"
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Vitoria -msg \"desliga esse computador, agora!\" -o \"d:/ProgramFiles/musicas_ia/talk.wav\"\n"
 /* class by manual */                + "    y echo oi | y talk\n"
+/* class by manual */                + "    y talk cat\n"
+/* class by manual */                + "    oi 1\n"
+/* class by manual */                + "    oi 2\n"
+/* class by manual */                + "    oi 3\n"
 /* class by manual */                + "[y sign]\n"
 /* class by manual */                + "    y sign -msg \"Hello\" -pass \"My passphrase\"\n"
 /* class by manual */                + "    y sign -verify -msg \"Hello\" -publicKey \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==\" -signature \"MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA==\"\n"
@@ -21153,6 +21233,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

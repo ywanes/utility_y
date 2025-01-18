@@ -118,6 +118,7 @@ usage:
   [y overflix]
   [y connGui]
   [y var]
+  [y cotaca]
   [y [update|u]]
   [y help]
 
@@ -743,6 +744,10 @@ Exemplos...
     y talk -lang Brazilian_Portuguese_Ricardo -msg oi
     y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "d:/ProgramFiles/musicas_ia/talk.wav"
     y echo oi | y talk
+    y talk cat
+    oi 1
+    oi 2
+    oi 3
 [y sign]
     y sign -msg "Hello" -pass "My passphrase"
     y sign -verify -msg "Hello" -publicKey "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==" -signature "MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA=="
@@ -768,6 +773,8 @@ Exemplos...
     linux:
     export var='"cat" "a"' && y var
     export var='"cat" "a"' && y var -ignore FLAG_HERE
+[y cotacao]
+    y cotacao
 [y help]
     y help <command>
     y help router
