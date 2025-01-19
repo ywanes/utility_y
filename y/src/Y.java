@@ -21077,7 +21077,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "[y lock]\n"
 /* class by manual */                + "    y lock\n"
 /* class by manual */                + "    y lock w\n"
-/* class by manual */                + "    y lock 0 -> desliga o lock\n"
+/* class by manual */                + "    y lock 0 -> desliga lock\n"
 /* class by manual */                + "    obs: gera black screen\n"
 /* class by manual */                + "    obs2: y lock w -> white screen\n"
 /* class by manual */                + "[y monitor]\n"
@@ -21152,8 +21152,11 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y help <command>\n"
 /* class by manual */                + "    y help router\n"
 /* class by manual */                + "\n"
-/* class by manual */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
-/* class by manual */                + "Exemplo de conn: -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
+/* class by manual */                + "Exemplos de conn: \n"
+/* class by manual */                + "    -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
+/* class by manual */                + "    -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
+/* class by manual */                + "    -conn \"jdbc:sqlserver://localhost:1433;databaseName=MyDatabase;user=myUsername;password=myPassword;\"\n"
+/* class by manual */                + "    -conn \"jdbc:mysql://localhost:3306|login|senha\"\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Observacoes:\n"
 /* class by manual */                + "entrada de dados pode ser feito por |\n"
@@ -21236,6 +21239,9 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
 
 
 

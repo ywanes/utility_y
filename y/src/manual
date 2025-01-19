@@ -780,8 +780,11 @@ Exemplos...
     y help <command>
     y help router
 
-Exemplo de conn: -conn "jdbc:oracle:thin:@//host_name:1521/service_name|login|senha"
-Exemplo de conn: -conn "jdbc:oracle:thin:@host_name:1566:sid_name|login|senha"
+Exemplos de conn: 
+    -conn "jdbc:oracle:thin:@//host_name:1521/service_name|login|senha"
+    -conn "jdbc:oracle:thin:@host_name:1566:sid_name|login|senha"
+    -conn "jdbc:sqlserver://localhost:1433;databaseName=MyDatabase;user=myUsername;password=myPassword;"
+    -conn "jdbc:mysql://localhost:3306|login|senha"
 
 Observações:
 entrada de dados pode ser feito por |
