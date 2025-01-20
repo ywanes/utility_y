@@ -117,7 +117,7 @@ function go_home(){
 	document.getElementById('principal').parentElement.parentElement.setAttribute('valign', 'top');
     document.getElementById('nick_name').style='display: none';
     document.getElementById('btn_aplicar_nick').style='display: none';
-    document.getElementById('nick').style='';
+    document.getElementById('nick').style='font-size: 24px; font-family: Franklin Gothic Medium;';
     load_history_nick();
 	verify_buttom_reload();
 }
@@ -266,7 +266,7 @@ function f_continue(){
     s+='</table>\n';
     if ( lista.length > 0 ){
         prepara_principal();
-        document.getElementById('nav').innerHTML='<h1 style="color: rgb(51,102,204);">&nbsp;Continue:</h1>';
+        document.getElementById('nav').innerHTML='<h1 style="color: rgb(51,102,204); font-size: 34px; font-family: Franklin Gothic Medium;">&nbsp;Continue:</h1>';
         document.getElementById('principal').innerHTML=s;
     }else{
         alert('Lista vazia!!');
@@ -325,7 +325,7 @@ function load_movie(parm, table_click){
             </div>
             <div class="controls-container">
               <div id="cueTimer" style="opacity: 0; left: 90px;">00:00</div>
-              <div class="progress-controls">
+              <div class="progress-controls" style="height: 30;">
                 <div class="progress-bar">
                   <div class="watched-bar"></div>
                   <div class="playhead"></div>
@@ -1837,7 +1837,7 @@ function keypress_nick_name(e) {
                             </td>
                             <td style="padding: 0;">
                                 <a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;">
-                                    <div id="nick" onclick="nick_click()">offline</div>
+                                    <div id="nick" onclick="nick_click()" style="font-size: 24px; font-family: Franklin Gothic Medium;">offline</div>
                                 </a>
                             </td>
                             <td style="padding: 0;">
