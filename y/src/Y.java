@@ -2856,14 +2856,33 @@ cat buffer.log
                 return true;
         return false;
     }
+
     private void cotacao(){
-        String s="";
-        s=curl_string("https://api.bybit.com/v5/market/tickers?category=spot");
-        cotacao_carro(s, "\"USDTBRL\"", "\"lastPrice\"", "Dolar      => {} R$");
-        cotacao_carro(s, "\"BTCUSDT\"", "\"lastPrice\"", "BTC(Dolar) => {} $ ");
-        cotacao_carro(s, "\"BTCBRL\"", "\"lastPrice\"",  "BTC(Reais) => {} R$");
-    }    
-    private void cotacao_carro(String a, String b, String c, String d){
+        String aux="";
+        aux=curl_string("https://api.bybit.com/v5/market/tickers?category=spot");
+        String USDT_BRL=cotacao_bybit(aux, "\"USDTBRL\"", "\"lastPrice\""); // 6.07
+        String BTC_USDT=cotacao_bybit(aux, "\"BTCUSDT\"", "\"lastPrice\"");
+        String BTC_BRL=cotacao_bybit(aux, "\"BTCBRL\"", "\"lastPrice\"");
+        
+        aux=curl_string("https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=TRUMP-USDT");
+        String TRUMP_USDT=cotacao_kucoin(aux);
+        String TRUMP_BRL=Float.parseFloat(TRUMP_USDT)*Float.parseFloat(USDT_BRL)+"";
+        
+        String f_USDT_BRL=lpad(format_virgula(USDT_BRL.replace(".", ","), 3), 12," ");
+        String f_BTC_USDT=lpad(format_virgula(BTC_USDT.replace(".", ","), 3), 12," ");
+        String f_BTC_BRL=lpad(format_virgula(BTC_BRL.replace(".", ","), 3), 12," ");
+        String f_TRUMP_USDT=lpad(format_virgula(TRUMP_USDT.replace(".", ","), 3), 12," ");
+        String f_TRUMP_BRL=lpad(format_virgula(TRUMP_BRL.replace(".", ","), 3), 12," ");
+        
+        System.out.println("Dolar        => {} R$".replace("{}", f_USDT_BRL));
+        System.out.println("BTC(Dolar)   => {} $ ".replace("{}", f_BTC_USDT));
+        System.out.println("BTC(Reais)   => {} R$".replace("{}", f_BTC_BRL));
+        System.out.println("TRUMP(Dolar) => {} $ ".replace("{}", f_TRUMP_USDT));
+        System.out.println("TRUMP(Reais) => {} R$".replace("{}", f_TRUMP_BRL));
+        
+    }
+    
+    public String cotacao_bybit(String a, String b, String c){
         String s="";
         int p1=a.indexOf(b);
         String [] partes=null;
@@ -2872,18 +2891,19 @@ cat buffer.log
             if ( p1 > 0 ){
                 s=a.substring(p1, p1+30);
                 partes=s.split("\"");
-                System.out.println(d.replace("{}", 
-            lpad(
-                format_virgula(
-                            partes[3].replace(".", ",")
-                            , 3
-                        ), 
-                    12,
-                    " "
-                    )));
+                return partes[3];
             }
-        }
+        }        
+        return "";
     }
+    
+    public String cotacao_kucoin(String a){
+        String [] partes=a.split("\"");
+        if ( partes.length > 33 && partes[13].equals("price") )
+            return partes[15];
+        return "";
+    }
+    
     private String [] get_var(){
         String varLine=getEnv("var");
         if ( varLine == null )
@@ -4489,6 +4509,11 @@ cat buffer.log
         }
         countLinhas[0]++;
     }
+    public void mostra_array(String [] a){
+        for ( int i=0;i<a.length;i++ )
+            System.out.println(i + " -> >>" + a[i] + "<<");        
+    }
+    
     public String format_virgula(String a, int len){
         String b="";
         String c="";
