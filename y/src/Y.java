@@ -15075,8 +15075,12 @@ class Util{
             return s;
         String [] partes=s.split("\r\n\r\n");
         ArrayList<String> elementos=new ArrayList<String>();
-        for ( int i=0;i<partes.length;i++ )
-            elementos.addAll(getPivot(partes[i], "\r\n"));
+        for ( int i=0;i<partes.length;i++ ){
+            String [] partes2=partes[i].split("\r\n");
+            for ( int j=1;j<partes2.length;j++ ){
+                elementos.addAll(getPivot(partes2[0]+"\r\n"+partes2[j], "\r\n"));
+            }
+        }
         for ( int i=0;i<elementos.size();i++ ){
             String tmp=elementos.get(i);            
             if ( tmp.startsWith("L3CacheSize: ") ){
@@ -15103,21 +15107,9 @@ class Util{
                 retorno+=tmp+"\r\n";
                 continue;
             }
-            if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionGPU: ")){
+            if ( tmp.startsWith("Caption: ") && !tmp.equals("Caption: Microsoft Remote Display Adapter") ){
                 String value=tmp.substring("Caption: ".length());
                 tmp="CaptionGPU: " +value;
-                retorno+=tmp+"\r\n";
-                continue;
-            }
-            if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionGPU2: ")){
-                String value=tmp.substring("Caption: ".length());
-                tmp="CaptionGPU2: " +value;
-                retorno+=tmp+"\r\n";
-                continue;
-            }
-            if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionGPU3: ")){
-                String value=tmp.substring("Caption: ".length());
-                tmp="CaptionGPU3: " +value;
                 retorno+=tmp+"\r\n";
                 continue;
             }
