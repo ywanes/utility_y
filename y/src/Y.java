@@ -15082,32 +15082,57 @@ class Util{
             if ( tmp.startsWith("L3CacheSize: ") ){
                 String value=tmp.substring("L3CacheSize: ".length());
                 tmp="L3CacheSize: "+bytes_to_text(Long.parseLong(value)*1024);
+                retorno+=tmp+"\r\n";
+                continue;
             }
             if ( tmp.startsWith("TotalPhysicalMemory: ") ){
                 String value=tmp.substring("TotalPhysicalMemory: ".length());
                 tmp="TotalPhysicalMemory: "+bytes_to_text(Long.parseLong(value));
+                retorno+=tmp+"\r\n";
+                continue;
             }
             if ( tmp.startsWith("AdapterRAM: ") ){ // bugado só mostra até 4giga
                 String value=tmp.substring("AdapterRAM: ".length());
                 tmp="TotalPhysicalMemoryGPU: "+bytes_to_text(Long.parseLong(value));
+                retorno+=tmp+"\r\n";
+                continue;
             }
             if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionOS: ")){
                 String value=tmp.substring("Caption: ".length());
                 tmp="CaptionOS: " +value;
+                retorno+=tmp+"\r\n";
+                continue;
             }
             if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionGPU: ")){
                 String value=tmp.substring("Caption: ".length());
                 tmp="CaptionGPU: " +value;
+                retorno+=tmp+"\r\n";
+                continue;
+            }
+            if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionGPU2: ")){
+                String value=tmp.substring("Caption: ".length());
+                tmp="CaptionGPU2: " +value;
+                retorno+=tmp+"\r\n";
+                continue;
+            }
+            if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionGPU3: ")){
+                String value=tmp.substring("Caption: ".length());
+                tmp="CaptionGPU3: " +value;
+                retorno+=tmp+"\r\n";
+                continue;
             }
             if ( tmp.startsWith("LoadPercentage: ") && !retorno.contains("CPU: ")){
                 String value=tmp.substring("LoadPercentage: ".length());
                 tmp="CPU: " +value;
+                retorno+=tmp+"\r\n";
+                continue;
             }
             if ( tmp.startsWith("ThreadCount: ") && !retorno.contains("CPUThreads: ")){
                 String value=tmp.substring("ThreadCount: ".length());
                 tmp="CPUThreads: " +value;
+                retorno+=tmp+"\r\n";
+                continue;
             }
-            retorno+=tmp+"\r\n";
         }
         return retorno;
     }
