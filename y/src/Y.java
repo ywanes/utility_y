@@ -1877,6 +1877,10 @@ cat buffer.log
             mkv(new File("."), verbose, force);
             return;
         }
+        if ( args[0].equals("thumbnail") ){
+            thumbnail(new File("."), 0);
+            return;
+        }
         if ( args[0].equals("insta") && args.length >= 2 ){
             if ( args.length == 3 )
                 args=new String[]{args[0], args[1]+"="+args[2]};
@@ -4512,6 +4516,20 @@ cat buffer.log
     public void mostra_array(String [] a){
         for ( int i=0;i<a.length;i++ )
             System.out.println(i + " -> >>" + a[i] + "<<");        
+    }
+    public int find_array(String [] a, String filtro, boolean equal){
+        for ( int i=0;i<a.length;i++ ){
+            if ( a[i].equals(filtro) && equal )
+                return i;
+            if ( a[i].contains(filtro) && !equal )
+                return i;
+        }
+        return -1;
+    }
+    public String [] array_copy(String [] a){
+        String [] a2 = new String[a.length];            
+        System.arraycopy(a, 0, a2, 0, a.length);
+        return a2;
     }
     
     public String format_virgula(String a, int len){
@@ -12375,6 +12393,106 @@ while True:
         }    
     }
     
+    public String thumbnail(File a, int nivel){
+        ////////////
+        String target=null;
+        if ( !a.exists() )
+            erroFatal("Não foi possível encontrar o caminho " + a.getAbsolutePath());
+        if ( nivel == 0 && a.isFile() )
+            erroFatal("Erro interno, não é possível nivel 0 com arquivo!");
+        if ( a.isFile() ){
+            if ( a.getAbsolutePath().endsWith(".png") )
+                return null;
+            if ( new File(a.getAbsolutePath()+".png").exists() )
+                return null; 
+            ////////////// filtro
+            //if ( !a.getAbsolutePath().contains("9-1-1-1x02.mp4") )
+            //    return null;
+            return a.getAbsolutePath();
+        }else{
+            if ( a.isDirectory() ){
+                File [] files=a.listFiles();
+                for ( int i=0;i<files.length;i++ ){                    
+                    String s=thumbnail(files[i], nivel+1);
+                    if ( s != null ){
+                        if ( nivel == 0 ){
+                            target=s;
+                            break;
+                        }
+                        return s;
+                    }
+                }
+            }
+        }
+        
+        if ( !new File("c:/tmp").exists() || !new File("c:/tmp").isDirectory() ){
+            System.out.println("Favor criar a pasta c:/tmp");
+            System.exit(1);            
+        }
+        String path="c:/tmp/runthumbnail.bat";
+        try{
+            if ( target == null ){
+                salvando_file("echo fim", new File(path));            
+            }else{
+                runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + target + "\""}, null, null);
+                String msg=runtimeExecError;
+                if ( msg.contains("Cannot run") )
+                    erroFatal("Nao foi possivel encontrar o ffmpeg!");
+                String [] partes=msg.replace("\r", "").split("\n");        
+                String [] partes_base=array_copy(partes);
+                int p=find_array(partes, "Stream #0:0", false);
+                if ( p > -1 ){
+                    String fps=partes[p];
+                    String duration="";
+                    partes=fps.trim().split(" ");
+                    p=find_array(partes, "fps,", true);
+                    if ( p > -1 && p < partes.length-1 ){
+                        fps=partes[p+1];                        
+                        // arredondar para cima
+                        float aux=Float.parseFloat(fps);
+                        int ifps = (int)aux;
+                        if ( aux != (float)((int)aux) )
+                            ifps = ((int)aux)+1;                        
+                        fps=ifps*10+"";
+                        p=find_array(partes_base, "Duration:", false);
+                        if ( p > -1 ){
+                            partes=partes_base[p].trim().split(" ");
+                            duration=partes[1].replace(",", "");
+                            if ( duration.split("\\.").length == 2 )
+                                duration=duration.split("\\.")[0];
+                            aux=((float)duration_to_seconds(duration)/10)/15;
+                            if ( aux != (float)((int)aux) )
+                                duration = ((int)aux+1)+"";
+                            else
+                                duration = (int)aux+"";                            
+                            salvando_file(
+                                "ffmpeg -i \"" + target + "\" -filter_complex \"select='not(mod(n," + fps + "))',scale=150:84,tile=layout=15x" + duration + "\" -vframes 1 \"" + target + ".png\"", 
+                                new File(path));            
+                            System.out.println("Execute o comando a seguir para sua comodidade: y thumbnail && c:/tmp/runthumbnail.bat");
+                            return null;
+                        }
+                        System.out.println("Não foi possível decodificar::: " + target);
+                        mostra_array(partes);
+                        mostra_array(partes_base);
+                        System.exit(1);
+                    }                    
+                    System.out.println("Não foi possível decodificar:: " + target);
+                    mostra_array(partes);
+                    mostra_array(partes_base);
+                    System.exit(1);
+                }
+                System.out.println("Não foi possível decodificar: " + target);
+                mostra_array(partes);
+                mostra_array(partes_base);
+                System.exit(1);
+            }
+        }catch(Exception e){
+            System.out.println("Nao foi possivel gravar o arquivo " + path + " " + e.toString());
+            System.exit(1);
+        }
+        return null;
+    }
+    
     public boolean bat_mkv_init=false;
     public boolean bat_mkv_inited=false;
     public void bat_mkv(String a){
@@ -14370,6 +14488,13 @@ class Util{
         return days+":"+(hours<10?"0":"")+hours+":"+(minutes<10?"0":"")+minutes+":"+(seconds<10?"0":"")+seconds;
     }
     
+    public int duration_to_seconds(String a){
+        if ( a.split(":").length == 3 ){
+            return Integer.parseInt(a.split(":")[0])*60*60+Integer.parseInt(a.split(":")[1])*60+Integer.parseInt(a.split(":")[2]);
+        }
+        return -1;
+    }
+            
     public static int byte_to_int_java(byte a,boolean dif_128) {
         // os bytes em java vem 0..127 e -128..-1 totalizando 256
         // implementacao manual de Byte.toUnsignedInt(a)

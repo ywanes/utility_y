@@ -106,6 +106,7 @@ usage:
   [y printScreen]
   [y paste]
   [y mkv]
+  [y thumbnail]
   [y insta]
   [y bmp]
   [y decodeUrl]
@@ -721,6 +722,8 @@ Exemplos...
     y mkv -v
     y mkv -force
     obs: ffmpeg -i "A.mkv" -qscale 0 "A.mp4"
+[y thumbnail]
+    y thumbnail
 [y insta]
     y insta [url]
 [y bmp]

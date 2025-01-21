@@ -148,8 +148,12 @@ function get_elementos(){
     let len=partes[0].length;
     let retorno=[];
     for ( let i=0;i<partes.length;i++ )
-        if ( partes[i].length > len )
+        if ( partes[i].length > len ){
+			// skip thumbnail
+			if ( partes[i].lastIndexOf('.png') > 0 && partes[i].lastIndexOf('.png') + 4 == partes[i].length )
+				continue;
             retorno.push(partes[i].substring(len));
+		}
     retorno.push();
     return retorno;
 }
