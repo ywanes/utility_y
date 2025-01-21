@@ -12336,6 +12336,7 @@ while True:
             String [] partes=msg.replace("\r", "").split("\n");
             boolean inicio=false;
             String removes="";
+            String principal=null;
             boolean video=false;
             boolean audio=false;
             for ( int j=0;j<partes.length;j++ ){
@@ -12360,6 +12361,7 @@ while True:
                     }
                     if ( !audio && p3.equals("Audio")){
                         if (p2.contains("(por)") || partes[j].contains("Audio: mp3") ){
+                            principal=p1;
                             audio=true;
                             if ( verbose )
                                 System.out.println("audio identificado");
@@ -12382,6 +12384,23 @@ while True:
             // conversao direta
             // ffmpeg -i "A.mkv" -qscale 0 "A.mp4"
             String display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
+            // se eng 0:1 tiver default e forced e por(portugues) tiver nada 0:2
+            // primeiro marcar -disposition:1 default sendo 1 para eng assim ficará eng com default
+            // segundo marcar com -disposition:2 forced ai deixa por(portugues) com forced, ai funciona
+            //if ( principal != null )
+            //    display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0 -max_muxing_queue_size 1024 -c:v copy -disposition:" + principal + " forced -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
+            /*
+                exemplo
+                y mv "Atypical.S02E01.720p.WEB-DL.DDP5.1.x264-DUAL.WWW.COMANDOTORRENTS.COM.mkv" a.mkv
+                y echo 1 | ffmpeg -i a.mkv -map 0 -max_muxing_queue_size 1024 -c:v copy -disposition:1 default -metadata newTag="newTag20240116" b.mkv
+                y echo 1 | ffmpeg -i b.mkv -map 0 -max_muxing_queue_size 1024 -c:v copy -disposition:2 forced -metadata newTag="newTag20240116" c.mkv
+                y mv c.mkv Atypical.S02E01.720p.mkv
+                y rm b.mkv
+                y echo 1
+                // mesmo tirando =>
+                // -default-forced
+                // o trem fica bugado nessa serie
+            */
             System.out.println(display_mkv);
             bat_mkv(display_mkv);
             System.exit(0);
