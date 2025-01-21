@@ -721,7 +721,9 @@ Exemplos...
     y mkv
     y mkv -v
     y mkv -force
+    y mkv -lento
     obs: ffmpeg -i "A.mkv" -qscale 0 "A.mp4"
+    obs: -lento tem outro algotirmo de conversão, as vezes é necessario e tudo tiver bugando
 [y thumbnail]
     y thumbnail
 [y insta]

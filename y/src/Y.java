@@ -1864,17 +1864,14 @@ cat buffer.log
         if ( args[0].equals("mkv") ){
             boolean verbose=false;
             boolean force=false;
-            if ( 
-                (args.length == 2 && args[1].equals("-v")) 
-                || (args.length == 3 && args[2].equals("-v"))
-            )
+            boolean lento=false;
+            if ( find_array(args, "-v", true) > 0 )
                 verbose=true;
-            if ( 
-                (args.length == 2 && args[1].equals("-force")) 
-                || (args.length == 3 && args[2].equals("-force"))
-            )
-                force=true;            
-            mkv(new File("."), verbose, force);
+            if ( find_array(args, "-force", true) > 0 )
+                force=true;
+            if ( find_array(args, "-lento", true) > 0 )
+                lento=true;
+            mkv(new File("."), verbose, force, lento);
             return;
         }
         if ( args[0].equals("thumbnail") ){
@@ -12305,8 +12302,8 @@ while True:
         }
     }
     
-    public void mkv(File f, boolean verbose, boolean force){  
-        bat_mkv(null);
+    public void mkv(File f, boolean verbose, boolean force, boolean lento){  
+        bat_mkv(null, lento);
         String edited="_EDITED.mkv";
         File [] files=f.listFiles();
         String newTag="newTag20240116";
@@ -12324,7 +12321,7 @@ while True:
             if ( new File(item+edited).exists() ){
                 String display_mkv="y mv \"" + item+edited + "\" \"" + item + "\"";
                 System.out.println(display_mkv);
-                bat_mkv(display_mkv);
+                bat_mkv(display_mkv, lento);
                 System.exit(0);
             }            
             runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""}, null, null);
@@ -12384,31 +12381,19 @@ while True:
             // conversao direta
             // ffmpeg -i "A.mkv" -qscale 0 "A.mp4"
             String display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
-            // se eng 0:1 tiver default e forced e por(portugues) tiver nada 0:2
-            // primeiro marcar -disposition:1 default sendo 1 para eng assim ficará eng com default
-            // segundo marcar com -disposition:2 forced ai deixa por(portugues) com forced, ai funciona
-            //if ( principal != null )
-            //    display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0 -max_muxing_queue_size 1024 -c:v copy -disposition:" + principal + " forced -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
-            /*
-                exemplo
-                y mv "Atypical.S02E01.720p.WEB-DL.DDP5.1.x264-DUAL.WWW.COMANDOTORRENTS.COM.mkv" a.mkv
-                y echo 1 | ffmpeg -i a.mkv -map 0 -max_muxing_queue_size 1024 -c:v copy -disposition:1 default -metadata newTag="newTag20240116" b.mkv
-                y echo 1 | ffmpeg -i b.mkv -map 0 -max_muxing_queue_size 1024 -c:v copy -disposition:2 forced -metadata newTag="newTag20240116" c.mkv
-                y mv c.mkv Atypical.S02E01.720p.mkv
-                y rm b.mkv
-                y echo 1
-                // mesmo tirando =>
-                // -default-forced
-                // o trem fica bugado nessa serie
-            */
+            
+            // mais lento mas funciona
+            if ( principal != null && lento )
+                display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0:0 -map 0:" + principal + " -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
+            
             System.out.println(display_mkv);
-            bat_mkv(display_mkv);
+            bat_mkv(display_mkv, lento);
             System.exit(0);
         }
         // pastas
         for ( int i=0;i<files.length;i++ ){
             if ( files[i].isDirectory() )
-                mkv(files[i], verbose, force);
+                mkv(files[i], verbose, force, lento);
         }    
     }
     
@@ -12514,7 +12499,7 @@ while True:
     
     public boolean bat_mkv_init=false;
     public boolean bat_mkv_inited=false;
-    public void bat_mkv(String a){
+    public void bat_mkv(String a, boolean lento){
         bat_mkv_init=false;
         if ( a == null ){            
             if ( bat_mkv_inited )
@@ -12532,7 +12517,10 @@ while True:
         try{
             if ( ! bat_mkv_init ){
                 salvando_file(a, new File(path));
-                System.out.println("Execute o comando a seguir para sua comodidade: y mkv && c:/tmp/runmkv.bat");
+                if ( lento )
+                    System.out.println("Execute o comando a seguir para sua comodidade: y mkv -lento && c:/tmp/runmkv.bat");
+                else
+                    System.out.println("Execute o comando a seguir para sua comodidade: y mkv && c:/tmp/runmkv.bat");
             }else
                 salvando_file("echo fim", new File(path));            
         }catch(Exception e){
@@ -20552,6 +20540,8 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -20664,6 +20654,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y printScreen]\n"
 /* class by manual */                + "  [y paste]\n"
 /* class by manual */                + "  [y mkv]\n"
+/* class by manual */                + "  [y thumbnail]\n"
 /* class by manual */                + "  [y insta]\n"
 /* class by manual */                + "  [y bmp]\n"
 /* class by manual */                + "  [y decodeUrl]\n"
@@ -21278,7 +21269,11 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y mkv\n"
 /* class by manual */                + "    y mkv -v\n"
 /* class by manual */                + "    y mkv -force\n"
+/* class by manual */                + "    y mkv -lento\n"
 /* class by manual */                + "    obs: ffmpeg -i \"A.mkv\" -qscale 0 \"A.mp4\"\n"
+/* class by manual */                + "    obs: -lento tem outro algotirmo de conversao, as vezes e necessario e tudo tiver bugando\n"
+/* class by manual */                + "[y thumbnail]\n"
+/* class by manual */                + "    y thumbnail\n"
 /* class by manual */                + "[y insta]\n"
 /* class by manual */                + "    y insta [url]\n"
 /* class by manual */                + "[y bmp]\n"
@@ -21425,6 +21420,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
