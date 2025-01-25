@@ -11015,7 +11015,7 @@ cat buffer.log
                         ipv4=ip;
                 }else{ 
                     if ( ip.contains(":") ){ // ipv6
-                        if ( ip.startsWith("fe") ){
+                        if ( ip.startsWith("fe") || ip.startsWith("fd") ){
                             if ( ipv6_nat == null )
                                 ipv6_nat=ip;
                         }else{
