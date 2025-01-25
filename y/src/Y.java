@@ -12397,8 +12397,7 @@ while True:
         }    
     }
     
-    public String thumbnail(File a, int nivel){
-        ////////////
+    public String thumbnail(File a, int nivel){        
         String target=null;
         if ( !a.exists() )
             erroFatal("Não foi possível encontrar o caminho " + a.getAbsolutePath());
@@ -12409,7 +12408,7 @@ while True:
                 return null;
             if ( new File(a.getAbsolutePath()+".png").exists() )
                 return null; 
-            ////////////// filtro
+            // filtro
             //if ( !a.getAbsolutePath().contains("9-1-1-1x02.mp4") )
             //    return null;
             return a.getAbsolutePath();
@@ -15702,7 +15701,7 @@ class Util{
         if ( p == null )
             System.exit(0);
         java.awt.Point location=p.getLocation();  
-        Color c=robotGet().getPixelColor(location.x, location.y);
+        Color c=robotGet().getPixelColor(location.x, location.y);        
         return new Integer[]{location.x, location.y, c.getRed(), c.getGreen(), c.getBlue(), c.getRGB()};
     }
 
@@ -15859,7 +15858,7 @@ class Util{
             final int n_control=i;
             workers[n_control]=new Thread(){
                 public void run(){
-                    try{
+                    try{                        
                         java.awt.Robot robot=new java.awt.Robot();
                         java.awt.Rectangle rec = new java.awt.Rectangle(java.awt.Toolkit.getDefaultToolkit().getScreenSize());
                         while(true){    
@@ -15868,6 +15867,14 @@ class Util{
                             }
                             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();                            
                             BufferedImage tmp=robot.createScreenCapture(rec);
+                            
+                            // add mouse
+                            BufferedImage bi = new BufferedImage(1,1,1);
+                            int x = MouseInfo.getPointerInfo().getLocation().x;
+                            int y = MouseInfo.getPointerInfo().getLocation().y;
+                            Graphics2D graphics2D = tmp.createGraphics();
+                            graphics2D.drawImage(bi, x, y, 4, 4, null);
+                            
                             rGISBP_control_time[n_control]=epochmili(null);
                             javax.imageio.ImageIO.write(tmp, format_web, baos);
                             rGISBP_data[n_control]=baos.toByteArray();
