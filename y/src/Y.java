@@ -15869,12 +15869,11 @@ class Util{
                             BufferedImage tmp=robot.createScreenCapture(rec);
                             
                             // add mouse
-                            BufferedImage bi = new BufferedImage(1,1,1);
                             int x = MouseInfo.getPointerInfo().getLocation().x;
                             int y = MouseInfo.getPointerInfo().getLocation().y;
                             Graphics2D graphics2D = tmp.createGraphics();
-                            graphics2D.drawImage(bi, x, y, 4, 4, null);
-                            
+                            detectMoved(x, y, 1000, graphics2D);
+                            rastroMoved(x, y, 1000, graphics2D);
                             rGISBP_control_time[n_control]=epochmili(null);
                             javax.imageio.ImageIO.write(tmp, format_web, baos);
                             rGISBP_data[n_control]=baos.toByteArray();
@@ -15887,6 +15886,67 @@ class Util{
             };
             workers[n_control].start();
         }    
+    }
+    
+    public void rastroMoved(int _x, int _y, long duracao, Graphics2D graphics2D){
+        // img rgb 150000 com duracao 3x3 buffer e drawImage 5x5
+        // recomendado duracao de 200ms
+    }
+    
+    public void detectMoved(int _x, int _y, long delay, Graphics2D graphics2D){
+        if ( detectMoved(_x, _y, delay) ){
+            BufferedImage bi = new BufferedImage(5,5,1);
+            int a=0;
+            int b=150000;
+            bi.setRGB(0, 0, b);
+            bi.setRGB(0, 1, b);
+            bi.setRGB(0, 2, b);
+            bi.setRGB(0, 3, b);
+            bi.setRGB(0, 4, b);
+            bi.setRGB(1, 0, b);
+            bi.setRGB(1, 1, a);
+            bi.setRGB(1, 2, a);
+            bi.setRGB(1, 3, a);
+            bi.setRGB(1, 4, b);
+            bi.setRGB(2, 0, b);
+            bi.setRGB(2, 1,a);
+            bi.setRGB(2, 2, b);
+            bi.setRGB(2, 3, a);
+            bi.setRGB(2, 4, b);
+            bi.setRGB(3, 0, b);
+            bi.setRGB(3, 1, a);
+            bi.setRGB(3, 2, a);
+            bi.setRGB(3, 3, a);
+            bi.setRGB(3, 4, b);
+            bi.setRGB(4, 0, b);
+            bi.setRGB(4, 1, b);
+            bi.setRGB(4, 2, b);
+            bi.setRGB(4, 3, b);
+            bi.setRGB(4, 4, b);                            
+            graphics2D.drawImage(bi, _x, _y, 15, 15, null);  
+        }
+    }
+    
+    long detectMoved_inicio=0; 
+    int detectMoved_x=-1;
+    int detectMoved_y=-1;
+    public boolean detectMoved(int _x, int _y, long delay){
+        if ( detectMoved_inicio == 0 ){
+            detectMoved_inicio=epochmili(null);
+            detectMoved_x=_x;
+            detectMoved_y=_y;
+            return true;
+        }  
+        long tmp=epochmili(null);
+        if ( _x == detectMoved_x && _y == detectMoved_y ){
+            if ( tmp < detectMoved_inicio+1000 )
+                return true;
+            return false;
+        }
+        detectMoved_inicio=tmp;
+        detectMoved_x=_x;
+        detectMoved_y=_y;
+        return false;
     }
     
     public byte[] robotGetImgScreenBytesParallels(){
