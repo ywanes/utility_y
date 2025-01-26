@@ -15945,6 +15945,8 @@ class Util{
                             //rastroMoved(x, y, 500, graphics2D);
                             
                             rGISBP_control_time[n_control]=epochmili(null);
+                            baos.write( (rGISBP_control_time[n_control]+"").getBytes() );
+                            
                             javax.imageio.ImageIO.write(tmp, format_web, baos);
                             rGISBP_data[n_control]=baos.toByteArray();
                             rGISBP_control[n_control]=true;
@@ -18122,23 +18124,40 @@ class Texto_longo extends Util{
         "    var count_fps=0;\n" +
         "    try{\n" +
         "      socket = new WebSocket(\"ws://\"+window.location.href.split('://')[1].replace('/',''));\n" +
-        "      socket.binaryType = \"blob\";\n" +
+        "      socket.binaryType = \"arraybuffer\";\n" +
         "      socket.addEventListener(\"open\", (event) => {\n" +
         "        socket.send(\"1\");\n" +
         "      });\n" +
         "      socket.addEventListener(\"message\", (event) => {\n" +
+        "        var sync=null;\n" +
         "        try{\n" +
-        "          if ( event.data instanceof Blob ){\n" +
+        "          if ( event.data instanceof ArrayBuffer ){\n" +
         "            var s = event.data;\n" +
-        "            s = s.slice(0, s.size, \"image/[FORMATWEB]\");\n" +
-        "            var link = window.URL.createObjectURL(s);\n" +
-        "            document.getElementById(\"imgId\").src = link;    \n" +
-        "            socket.send('3');\n" +
-        "            count_fps++;\n" +
+        "            var epoch = s.slice(0, 13);\n" +
+        "            s = s.slice(13);\n" +
+        "            epoch = new Uint8Array(epoch);\n" +
+        "            menor=null;\n" +
+        "            if ( sync == null )\n" +
+        "              sync=epoch;\n" +
+        "            else{\n" +
+        "              for ( var i=0;i<sync.length;i++ ){\n" +
+        "                if ( menor == null && epoch[i] != sync[i] )\n" +
+        "                  menor = epoch[i] < sync[i];\n" +
+        "              }\n" +
+        "            }\n" +
+        "            if ( menor == null || menor == false ){\n" +
+        "              s = new Blob([s]);\n" +                
+        "              var link = window.URL.createObjectURL(s);\n" +
+        "              document.getElementById(\"imgId\").src = link;    \n" +
+        "              socket.send('3');\n" +
+        "              count_fps++;\n" +
+        "            }else{\n" +
+        "              console.log('skip');\n" +
+        "            }\n" +
         "          }\n" +
         "          if ( event.data == '2' )\n" +
         "            socket.send('3');\n" +
-        "        }catch(error){console.log('.');}\n" +
+        "        }catch(error){console.log(error + ' . ');}\n" +
         "      });\n" +
         "      socket.addEventListener(\"error\", (event) => {\n" +
         "        document.children[0].innerHTML=error_msg;\n" +
