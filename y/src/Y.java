@@ -15936,6 +15936,8 @@ class Util{
                             }
                             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();                            
                             BufferedImage tmp=robot.createScreenCapture(rec);
+                            rGISBP_control_time[n_control]=epochmili(null);
+                            baos.write( (rGISBP_control_time[n_control]+"").getBytes() );
                             
                             // add mouse
                             int x = MouseInfo.getPointerInfo().getLocation().x;
@@ -15943,9 +15945,6 @@ class Util{
                             Graphics2D graphics2D = tmp.createGraphics();
                             detectMoved(x, y, 500, graphics2D);
                             //rastroMoved(x, y, 500, graphics2D);
-                            
-                            rGISBP_control_time[n_control]=epochmili(null);
-                            baos.write( (rGISBP_control_time[n_control]+"").getBytes() );
                             
                             javax.imageio.ImageIO.write(tmp, format_web, baos);
                             rGISBP_data[n_control]=baos.toByteArray();
