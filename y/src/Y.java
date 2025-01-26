@@ -13819,23 +13819,60 @@ class Util{
             System.err.println(e.toString());
         }        
         return false; 
-    }
-    
-    public String[] sliceParm(int n, String[] args) {
-        if ( n == 0 )
+    }    
+    public String[] sliceParm(int qty, String[] args){ // remove uma quantidade, sempre as iniciais
+        if ( qty == 0 )
             erroFatal("erro interno sliceParm");
-        String [] retorno=new String[args.length-n];
-        for ( int i=n;i<args.length;i++ )
-            retorno[i-n]=args[i];
+        String [] retorno=new String[args.length-qty];
+        for ( int i=qty;i<args.length;i++ )
+            retorno[i-qty]=args[i];
         return retorno;
     }
-    public String[] removeParm(int n, String[] args) {
-        return sliceParm1N(n, args);
+    public int[] sliceParm(int qty, int[] args){ // remove uma quantidade, sempre as iniciais
+        if ( qty == 0 )
+            erroFatal("erro interno sliceParm");
+        int [] retorno=new int[args.length-qty];
+        for ( int i=qty;i<args.length;i++ )
+            retorno[i-qty]=args[i];
+        return retorno;
     }
-    public String[] sliceParm1N(int n, String[] args) {
+    public long[] sliceParm(int qty, long[] args){ // remove uma quantidade, sempre as iniciais
+        if ( qty == 0 )
+            erroFatal("erro interno sliceParm");
+        long [] retorno=new long[args.length-qty];
+        for ( int i=qty;i<args.length;i++ )
+            retorno[i-qty]=args[i];
+        return retorno;
+    }
+    
+    public String[] removeParm(int n, String[] args){ // deleta 1 item
         if ( n == 0 )
             erroFatal("erro interno sliceParm");
         String [] retorno=new String[args.length-1];
+        for ( int i=0;i<args.length-1;i++ ){
+            if ( i >= n )
+                retorno[i]=args[i-1];
+            else
+                retorno[i]=args[i];
+        }
+        return retorno;
+    }
+    public int[] removeParm(int n, int[] args){ // deleta 1 item
+        if ( n == 0 )
+            erroFatal("erro interno sliceParm");
+        int [] retorno=new int[args.length-1];
+        for ( int i=0;i<args.length-1;i++ ){
+            if ( i >= n )
+                retorno[i]=args[i-1];
+            else
+                retorno[i]=args[i];
+        }
+        return retorno;
+    }
+    public long[] removeParm(int n, long[] args){ // deleta 1 item
+        if ( n == 0 )
+            erroFatal("erro interno sliceParm");
+        long [] retorno=new long[args.length-1];
         for ( int i=0;i<args.length-1;i++ ){
             if ( i >= n )
                 retorno[i]=args[i-1];
@@ -13861,6 +13898,38 @@ class Util{
         return retorno;
     }
     
+    public int[] addParm(int a, int[] args) {
+        return addParm(a, args.length, args);
+    }
+    
+    public int[] addParm(int a, int pos, int[] args){        
+        int [] retorno=new int[args.length+1];
+        retorno[pos]=a;
+        int delta=0;
+        for ( int i=0;i<args.length;i++ ){
+            if ( i == pos )
+                delta=1;
+            retorno[i+delta]=args[i];
+        }
+        return retorno;
+    }    
+    
+    public long[] addParm(long a, long[] args) {
+        return addParm(a, args.length, args);
+    }
+    
+    public long[] addParm(long a, int pos, long[] args){        
+        long [] retorno=new long[args.length+1];
+        retorno[pos]=a;
+        int delta=0;
+        for ( int i=0;i<args.length;i++ ){
+            if ( i == pos )
+                delta=1;
+            retorno[i+delta]=args[i];
+        }
+        return retorno;
+    }    
+        
     public void pss(String [] filter){
         if ( os(true).endsWith("Windows") ){
             load_pss_windows();
@@ -15872,8 +15941,9 @@ class Util{
                             int x = MouseInfo.getPointerInfo().getLocation().x;
                             int y = MouseInfo.getPointerInfo().getLocation().y;
                             Graphics2D graphics2D = tmp.createGraphics();
-                            detectMoved(x, y, 1000, graphics2D);
-                            rastroMoved(x, y, 1000, graphics2D);
+                            detectMoved(x, y, 500, graphics2D);
+                            //rastroMoved(x, y, 500, graphics2D);
+                            
                             rGISBP_control_time[n_control]=epochmili(null);
                             javax.imageio.ImageIO.write(tmp, format_web, baos);
                             rGISBP_data[n_control]=baos.toByteArray();
@@ -15888,13 +15958,40 @@ class Util{
         }    
     }
     
+    public int [] rastroMoved_x=new int[0];
+    public int [] rastroMoved_y=new int[0];    
+    public long [] rastroMoved_time=new long[0];
     public void rastroMoved(int _x, int _y, long duracao, Graphics2D graphics2D){
-        // img rgb 150000 com duracao 3x3 buffer e drawImage 5x5
-        // recomendado duracao de 200ms
+        long _time=epochmili(null);
+        rastroMoved_x = addParm(_x, rastroMoved_x);
+        rastroMoved_y = addParm(_y, rastroMoved_y);
+        rastroMoved_time = addParm(_time, rastroMoved_time);
+        int pos=rastroMoved_x.length;
+        while(--pos >= 0){
+            if ( rastroMoved_time[pos] > _time+duracao ){
+                rastroMoved_x=removeParm(pos, rastroMoved_x);
+                rastroMoved_y=removeParm(pos, rastroMoved_y);
+                rastroMoved_time=removeParm(pos, rastroMoved_time);
+                continue;
+            }
+            BufferedImage bi = new BufferedImage(3,3,1);
+            int a=150000;
+            bi.setRGB(0, 0, a);
+            bi.setRGB(0, 1, a);
+            bi.setRGB(0, 2, a);
+            bi.setRGB(1, 0, a);
+            bi.setRGB(1, 1, a);
+            bi.setRGB(1, 2, a);
+            bi.setRGB(2, 0, a);
+            bi.setRGB(2, 1, a);
+            bi.setRGB(2, 2, a);
+            graphics2D.drawImage(bi, _x, _y, 50, 50, null);          
+        }
     }
     
     public void detectMoved(int _x, int _y, long delay, Graphics2D graphics2D){
         if ( detectMoved(_x, _y, delay) ){
+            /*
             BufferedImage bi = new BufferedImage(5,5,1);
             int a=0;
             int b=150000;
@@ -15923,10 +16020,26 @@ class Util{
             bi.setRGB(4, 2, b);
             bi.setRGB(4, 3, b);
             bi.setRGB(4, 4, b);                            
-            graphics2D.drawImage(bi, _x, _y, 15, 15, null);  
+            graphics2D.drawImage(bi, _x, _y, 35, 35, null);  
+            */
+            
+            BufferedImage bi = new BufferedImage(3,3,1);
+            int a=150000;
+            bi.setRGB(0, 0, a);
+            bi.setRGB(0, 1, a);
+            bi.setRGB(0, 2, a);
+            bi.setRGB(1, 0, a);
+            bi.setRGB(1, 1, a);
+            bi.setRGB(1, 2, a);
+            bi.setRGB(2, 0, a);
+            bi.setRGB(2, 1, a);
+            bi.setRGB(2, 2, a);
+            graphics2D.drawImage(bi, _x, _y, 18, 18, null);          
+            
         }
     }
     
+
     long detectMoved_inicio=0; 
     int detectMoved_x=-1;
     int detectMoved_y=-1;
@@ -15946,7 +16059,7 @@ class Util{
         detectMoved_inicio=tmp;
         detectMoved_x=_x;
         detectMoved_y=_y;
-        return false;
+        return true;
     }
     
     public byte[] robotGetImgScreenBytesParallels(){
