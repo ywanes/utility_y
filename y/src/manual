@@ -695,6 +695,7 @@ Exemplos...
     y kill 3434 3435
     y kill -9 3434 3435
     y kill -2 3434 3435
+    y kill text -Dnetbeans netbeans
 [y win]
     y win
     obs: mostra se o windows e office estão ativado

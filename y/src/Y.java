@@ -1797,6 +1797,11 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("kill") && args.length >= 2 ){
+            if ( args.length > 2 && args[1].equals("text") ){
+                for ( int i=2;i<args.length;i++ )
+                    kill_by_text(args[i]);
+                return;
+            }
             String [] args2=new String[args.length];
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1, args2);
@@ -1833,7 +1838,7 @@ cat buffer.log
         if ( args[0].equals("monitor") ){
             if ( !isWindows() )
                 erroFatal("implementado somente para windows!");
-            if ( args.length >= 2 && args[1].equals("cpu") ){
+            if ( args.length == 1 || (args.length >= 2 && args[1].equals("cpu")) ){
                 boolean oneLine=false;
                 if ( args.length >= 3 && args[2].equals("oneLine") )
                     oneLine=true;
@@ -21441,6 +21446,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y kill 3434 3435\n"
 /* class by manual */                + "    y kill -9 3434 3435\n"
 /* class by manual */                + "    y kill -2 3434 3435\n"
+/* class by manual */                + "    y kill text -Dnetbeans netbeans\n"
 /* class by manual */                + "[y win]\n"
 /* class by manual */                + "    y win\n"
 /* class by manual */                + "    obs: mostra se o windows e office estao ativado\n"
@@ -21618,6 +21624,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
