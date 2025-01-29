@@ -609,6 +609,7 @@ Exemplos...
     Obs: onde 222 é o processId encontrado em y pss
 [y date]
     y date
+    y date "+%s%N" # epoch
     y date "+%Y%m%d_%H%M%S"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N"    

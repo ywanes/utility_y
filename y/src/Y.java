@@ -20753,6 +20753,9 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
+
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -21368,6 +21371,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    Obs: onde 222 e o processId encontrado em y pss\n"
 /* class by manual */                + "[y date]\n"
 /* class by manual */                + "    y date\n"
+/* class by manual */                + "    y date \"+%s%N\" # epoch\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\"    \n"
@@ -21632,6 +21636,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
