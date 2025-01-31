@@ -552,6 +552,21 @@ function load_movie(parm, table_click){
         });
     }
     function cueTime(e){
+		/*
+		add thumbnail
+<div id="tmp" style="background: var(--thumbnail) -60px -60px no-repeat;width: 150px;height: 84px;"></div>
+document.documentElement.style.setProperty('--thumbnail', "url('http://..........:8000/filmes/A%20Origem.mp4.png2')");
+var aa=150;var ab=84;document.getElementById('tmp').setAttribute('style', 'background: var(--thumbnail) -' + aa + 'px -' + ab + 'px no-repeat;width: 150px;height: 84px;');
+
+function urlExists(url) {
+    var http = new XMLHttpRequest();
+    http.open('HEAD', url, false);
+    http.send();
+	return http.status == 200;
+}
+urlExists('http://........../filmes/A%20Origem.mp4.png2');
+		*/
+		
       const pos = (e.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;
       document.getElementById('cueTimer').innerText=format_seconds(getVideo().duration-pos*getVideo().duration);
       z=document.createElement("canvas").getContext('2d').measureText(document.getElementById('cueTimer').innerText).width;
