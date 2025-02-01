@@ -574,8 +574,14 @@ function load_movie(parm, table_click){
 		let current_seconds_remining = float_to_int(getVideo().duration-current_porc*getVideo().duration);		
 		
 		document.getElementById('cueTimer').innerText=format_seconds(current_seconds_remining);
-		//let z=e.pageX - document.createElement("canvas").getContext('2d').measureText(document.getElementById('cueTimer').innerText).width * 0.7;
-		let z=e.pageX;
+		var z=e.pageX - document.createElement("canvas").getContext('2d').measureText(document.getElementById('cueTimer').innerText).width * 0.7;
+		var z2=e.pageX - 76;
+		if ( z2 < 18 ){
+			var delta=18-z2;
+			z+=delta;
+			z2+=delta;
+		}
+		
 		document.getElementById('cueTimer').setAttribute('style', 'opacity: 1; margin: 0px ' + z + 'px 0px; color: #FEFEFE;');  
 		
 		if ( document.documentElement.style.getPropertyValue('--thumbnail') != '' ){
@@ -584,7 +590,7 @@ function load_movie(parm, table_click){
 			let leny = 84;
 			let _x = (n_frame%15)*lenx;
 			let _y = float_to_int(n_frame/15)*leny;
-			document.getElementById('dthumbnail').setAttribute('style', 'border: 2px solid gray; margin: 0px ' + z + 'px; background: var(--thumbnail) -' + _x + 'px -' + _y + 'px no-repeat;width: ' + lenx + 'px;height: ' + leny + 'px;');
+			document.getElementById('dthumbnail').setAttribute('style', 'border: 2px solid gray; margin: 0px ' + z2 + 'px; background: var(--thumbnail) -' + _x + 'px -' + _y + 'px no-repeat;width: ' + lenx + 'px;height: ' + leny + 'px;');
 		}else
 			document.getElementById('dthumbnail').setAttribute('style', '');
 		
