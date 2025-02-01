@@ -182,6 +182,10 @@ function clean_secret(){
 	document.getElementById("text_secret").value='';
 }
 
+function float_to_int(a){
+	return parseInt(a);
+}
+
 function copy_clipboard_secret(){
 	if ( navigator.clipboard ){
 		var copyText = document.getElementById("text_secret");
@@ -328,7 +332,7 @@ function load_movie(parm, table_click){
                 <a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;"></a>
             </div>
             <div class="controls-container">
-			  <div id="dthumbnail"></div>			  
+			  <div id="dthumbnail"></div>
               <div id="cueTimer" style="opacity: 0; left: 90px;">00:00</div>
               <div class="progress-controls" style="height: 30;">
                 <div class="progress-bar">
@@ -401,7 +405,7 @@ function load_movie(parm, table_click){
 		http.send();
 		return http.status == 200;
 	}
-	if ( urlExists(document.getElementById('video').src + '.png') )
+	if ( urlExists(getVideo().src + '.png') )
 		document.documentElement.style.setProperty('--thumbnail', "url('" + document.getElementById('video').src + ".png')");
 	else
 		document.documentElement.style.setProperty('--thumbnail', '');
@@ -563,29 +567,37 @@ function load_movie(parm, table_click){
           toggleFullScreen(null, null);
 		  */
         });
-    }
+    }	
     function cueTime(e){
-		////////////add thumbnail
+		let current_porc = (e.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;
+		let current_seconds = float_to_int(current_porc*getVideo().duration);		
+		let current_seconds_remining = float_to_int(getVideo().duration-current_porc*getVideo().duration);		
+		
+		document.getElementById('cueTimer').innerText=format_seconds(current_seconds_remining);
+		//let z=e.pageX - document.createElement("canvas").getContext('2d').measureText(document.getElementById('cueTimer').innerText).width * 0.7;
+		let z=e.pageX;
+		document.getElementById('cueTimer').setAttribute('style', 'opacity: 1; margin: 0px ' + z + 'px 0px; color: #FEFEFE;');  
+		
 		if ( document.documentElement.style.getPropertyValue('--thumbnail') != '' ){
-			var aa=150;var ab=84;document.getElementById('dthumbnail').setAttribute('style', 'margin: 0px 636.645px; background: var(--thumbnail) -' + aa + 'px -' + ab + 'px no-repeat;width: 150px;height: 84px;');
-		}else{
-			var aa=150;var ab=84;document.getElementById('dthumbnail').setAttribute('style', '');
-		}
+			let n_frame = float_to_int(current_seconds/10);
+			let lenx = 150;
+			let leny = 84;
+			let _x = (n_frame%15)*lenx;
+			let _y = float_to_int(n_frame/15)*leny;
+			document.getElementById('dthumbnail').setAttribute('style', 'border: 2px solid gray; margin: 0px ' + z + 'px; background: var(--thumbnail) -' + _x + 'px -' + _y + 'px no-repeat;width: ' + lenx + 'px;height: ' + leny + 'px;');
+		}else
+			document.getElementById('dthumbnail').setAttribute('style', '');
+		
 
 		
-      const pos = (e.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;
-      document.getElementById('cueTimer').innerText=format_seconds(getVideo().duration-pos*getVideo().duration);
-      z=document.createElement("canvas").getContext('2d').measureText(document.getElementById('cueTimer').innerText).width;
-      z=e.pageX-z*0.7;  
-      document.getElementById('cueTimer').setAttribute('style', 'opacity: 1; margin: 0px ' + z + 'px 0px; color: #FEFEFE;');  
     }
     function format_seconds(seconds_){
-      let seconds = parseInt(seconds_);
+      let seconds = float_to_int(seconds_);
       if (seconds < 0)
         seconds=0;
-      let hour=parseInt(seconds/(60*60));
+      let hour=float_to_int(seconds/(60*60));
       seconds-=hour*60*60;
-      let minute=parseInt(seconds/60);
+      let minute=float_to_int(seconds/60);
       seconds-=minute*60;
       second=seconds;
       if ( minute < 10 )
@@ -906,12 +918,12 @@ function load_music(parm, elements){
                     a.children[i].children[0].style.fontSize = sz + "px";
                 }
                 A_mais=function(){
-                  let sz = 3 + parseInt(document.getElementById("f11").getAttribute("sz"));
+                  let sz = 3 + float_to_int(document.getElementById("f11").getAttribute("sz"));
                   document.getElementById("f11").setAttribute("sz", sz);
                   A_update(sz);
                 }
                 A_menos=function(){
-                  let sz = -3 + parseInt(document.getElementById("f11").getAttribute("sz"));
+                  let sz = -3 + float_to_int(document.getElementById("f11").getAttribute("sz"));
                   document.getElementById("f11").setAttribute("sz", sz);
                   A_update(sz);
                 }
@@ -921,12 +933,12 @@ function load_music(parm, elements){
                     a.children[i].children[0].style.width = wi + "px";
                 }
                 W_mais=function(){
-                  let wi = 50 + parseInt(document.getElementById("f11").getAttribute("wi"));
+                  let wi = 50 + float_to_int(document.getElementById("f11").getAttribute("wi"));
                   document.getElementById("f11").setAttribute("wi", wi);
                   W_update(wi);
                 }
                 W_menos=function(){
-                  let wi = -50 + parseInt(document.getElementById("f11").getAttribute("wi"));
+                  let wi = -50 + float_to_int(document.getElementById("f11").getAttribute("wi"));
                   document.getElementById("f11").setAttribute("wi", wi);
                   W_update(wi);
                 }
@@ -1111,7 +1123,7 @@ function load_music(parm, elements){
                 }
                 function getFaixaChildrenToSeconds(p){
                   p=p.split(' ')[1].split(':');
-                  return parseInt(p[2])+parseInt(p[1])*60+parseInt(p[0])*60*60;
+                  return float_to_int(p[2])+float_to_int(p[1])*60+float_to_int(p[0])*60*60;
                 }
                 function getStart(e){
                   if ( ( e.innerText.trim().indexOf('-') == 0 || e.innerText.trim().indexOf('+') == 0 ) && e.innerText.trim().split(' ').length > 1 && e.innerText.trim().split(' ')[1].length == 8 && e.innerText.trim().split(' ')[1].split(':').length == 3 ){
