@@ -12482,7 +12482,7 @@ while True:
                             else
                                 duration = (int)aux+"";                            
                             salvando_file(
-                                "ffmpeg -i \"" + target + "\" -filter_complex \"select='not(mod(n," + fps + "))',scale=150:84,tile=layout=15x" + duration + "\" -vframes 1 \"" + target + ".png\"", 
+                                "y echo 1 | ffmpeg -i \"" + target + "\" -filter_complex \"select='not(mod(n," + fps + "))',scale=150:84,tile=layout=15x" + duration + "\" -vframes 1 \"" + target + ".png\"",
                                 new File(path));            
                             System.out.println("Execute o comando a seguir para sua comodidade: y thumbnail && c:/tmp/runthumbnail.bat");
                             return null;
