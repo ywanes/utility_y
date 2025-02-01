@@ -576,8 +576,9 @@ function load_movie(parm, table_click){
 		document.getElementById('cueTimer').innerText=format_seconds(current_seconds_remining);
 		var z=e.pageX - document.createElement("canvas").getContext('2d').measureText(document.getElementById('cueTimer').innerText).width * 0.7;
 		var z2=e.pageX - 76;
-		if ( z2 < 18 ){
-			var delta=18-z2;
+		var _limit=37;
+		if ( z2 < _limit ){
+			var delta=_limit-z2;
 			z+=delta;
 			z2+=delta;
 		}
