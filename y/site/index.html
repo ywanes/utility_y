@@ -328,6 +328,7 @@ function load_movie(parm, table_click){
                 <a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;"></a>
             </div>
             <div class="controls-container">
+			  <div id="dthumbnail"></div>			  
               <div id="cueTimer" style="opacity: 0; left: 90px;">00:00</div>
               <div class="progress-controls" style="height: 30;">
                 <div class="progress-bar">
@@ -394,6 +395,17 @@ function load_movie(parm, table_click){
           </div>      
     `;
     
+	urlExists=function(url) {
+		var http = new XMLHttpRequest();
+		http.open('HEAD', url, false);
+		http.send();
+		return http.status == 200;
+	}
+	if ( urlExists(document.getElementById('video').src + '.png') )
+		document.documentElement.style.setProperty('--thumbnail', "url('" + document.getElementById('video').src + ".png')");
+	else
+		document.documentElement.style.setProperty('--thumbnail', '');
+	
     var data={};        
     var video = document.querySelector('.video-container video');
 
@@ -436,6 +448,7 @@ function load_movie(parm, table_click){
     var controlsTimeout;
     document.querySelector('.video-container .controls-container').style.opacity = '0';
     document.querySelector('.video-container .controls-container0').style.opacity = '0';
+	
     watchedBar.style.width = '0px';
     pauseButton.style.display = 'none';
     minimizeButton.style.display = 'none';
@@ -450,8 +463,8 @@ function load_movie(parm, table_click){
         }
         controlsTimeout = setTimeout(() => {
           if ( document.querySelector('.video-container .controls-container') != null ){
-              document.querySelector('.video-container .controls-container').style.opacity = '0';
-              document.querySelector('.video-container .controls-container0').style.opacity = '0';
+            document.querySelector('.video-container .controls-container').style.opacity = '0';
+            document.querySelector('.video-container .controls-container0').style.opacity = '0';
             document.body.style.cursor = 'none';
           }
         }, 1100);
@@ -552,20 +565,13 @@ function load_movie(parm, table_click){
         });
     }
     function cueTime(e){
-		/*
-		add thumbnail
-<div id="tmp" style="background: var(--thumbnail) -60px -60px no-repeat;width: 150px;height: 84px;"></div>
-document.documentElement.style.setProperty('--thumbnail', "url('http://..........:8000/filmes/A%20Origem.mp4.png2')");
-var aa=150;var ab=84;document.getElementById('tmp').setAttribute('style', 'background: var(--thumbnail) -' + aa + 'px -' + ab + 'px no-repeat;width: 150px;height: 84px;');
+		////////////add thumbnail
+		if ( document.documentElement.style.getPropertyValue('--thumbnail') != '' ){
+			var aa=150;var ab=84;document.getElementById('dthumbnail').setAttribute('style', 'margin: 0px 636.645px; background: var(--thumbnail) -' + aa + 'px -' + ab + 'px no-repeat;width: 150px;height: 84px;');
+		}else{
+			var aa=150;var ab=84;document.getElementById('dthumbnail').setAttribute('style', '');
+		}
 
-function urlExists(url) {
-    var http = new XMLHttpRequest();
-    http.open('HEAD', url, false);
-    http.send();
-	return http.status == 200;
-}
-urlExists('http://........../filmes/A%20Origem.mp4.png2');
-		*/
 		
       const pos = (e.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;
       document.getElementById('cueTimer').innerText=format_seconds(getVideo().duration-pos*getVideo().duration);
@@ -619,7 +625,7 @@ urlExists('http://........../filmes/A%20Origem.mp4.png2');
       }
     });
     progressBar.addEventListener('mousemove', function(e) { cueTime(e); });
-    progressBar.addEventListener('mouseleave', function(e) { document.getElementById('cueTimer').style.opacity = 0; });
+    progressBar.addEventListener('mouseleave', function(e) { document.getElementById('cueTimer').style.opacity = 0; document.getElementById('dthumbnail').setAttribute('style', ''); });
     progressBar.addEventListener('click', (event) => {
       const pos = (event.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;
       getVideo().currentTime = pos * getVideo().duration;
