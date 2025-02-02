@@ -416,6 +416,7 @@ cat buffer.log
                     executeInsert(conn,System.in);
                     return;
                 }
+                ////////////////
                 if ( app.equals("execute") ){
                     execute(conn,parm);
                     return;
@@ -4352,8 +4353,10 @@ cat buffer.log
                 parm=removePontoEVirgual(parm);
             
             stmt = con.createStatement();
-            stmt.execute(parm);
-            System.out.println("OK");
+            if ( stmt.execute(parm) )
+                System.out.println("OK");
+            else
+                System.out.println("NOK");
         }
         catch(Exception e)
         {
@@ -12456,7 +12459,13 @@ while True:
                     erroFatal("Nao foi possivel encontrar o ffmpeg!");
                 String [] partes=msg.replace("\r", "").split("\n");        
                 String [] partes_base=array_copy(partes);
-                int p=find_array(partes, "Stream #0:0", false);
+                int p=-1;
+                for ( int i=0;i<10;i++ ){
+                    p=find_array(partes, "Stream #0:"+i, false);
+                    if ( partes[p].contains(" fps, ") )
+                        break;
+                    p=-1;
+                }
                 if ( p > -1 ){
                     String fps=partes[p];
                     String duration="";
@@ -12487,17 +12496,17 @@ while True:
                             System.out.println("Execute o comando a seguir para sua comodidade: y thumbnail && c:/tmp/runthumbnail.bat");
                             return null;
                         }
-                        System.out.println("Não foi possível decodificar::: " + target);
+                        System.out.println("Não foi possível decodificar Duration: " + target);
                         mostra_array(partes);
                         mostra_array(partes_base);
                         System.exit(1);
                     }                    
-                    System.out.println("Não foi possível decodificar:: " + target);
+                    System.out.println("Não foi possível decodificar fps: " + target);
                     mostra_array(partes);
                     mostra_array(partes_base);
                     System.exit(1);
                 }
-                System.out.println("Não foi possível decodificar: " + target);
+                System.out.println("Não foi possível decodificar Stream #0:0: " + target);
                 mostra_array(partes);
                 mostra_array(partes_base);
                 System.exit(1);
