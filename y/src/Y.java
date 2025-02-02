@@ -12457,6 +12457,8 @@ while True:
                 String msg=runtimeExecError;
                 if ( msg.contains("Cannot run") )
                     erroFatal("Nao foi possivel encontrar o ffmpeg!");
+                if ( msg.contains("Invalid data found") )
+                    erroFatal("Invalid data found - " + target);
                 String [] partes=msg.replace("\r", "").split("\n");        
                 String [] partes_base=array_copy(partes);
                 int p=-1;
