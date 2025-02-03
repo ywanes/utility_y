@@ -560,13 +560,8 @@ function load_movie(parm, table_click){
           if ( getVideo() == null ) return;
           displayControls();
         });
-        document.addEventListener('dblclick', () => {
-		  //acao usada em click video
-		  /*
-          if ( getVideo() == null ) return;
-          toggleFullScreen(null, null);
-		  */
-        });
+		//acao migrada para click video
+        //document.addEventListener('dblclick', () => {});
     }	
     function cueTime(e){
 		let current_porc = (e.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;
