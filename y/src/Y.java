@@ -4565,32 +4565,7 @@ cat buffer.log
             c+="0";
         }
         return b+","+c;
-    }
-    public String lpad(long inputLong, int length,String append) {
-        if ( inputLong < 0 )
-            return lpad(true,(inputLong+"").substring(1),length,append);
-        else
-            return lpad(false,inputLong+"",length,append);
-    }
-
-    public String lpad(String inputString, int length,String append) {
-        return lpad(false,inputString,length,append);
-    }
-
-    public String lpad(boolean sinalNegativo, String inputString, int length,String append) {
-        int len_input=inputString.length();
-        if ( len_input >= length) {
-            if ( sinalNegativo )
-                return "-"+inputString;
-            else
-                return inputString;
-        }
-        StringBuilder sb = new StringBuilder(sinalNegativo?"-":"");
-        for ( int i=0;i<length-len_input;i++ )
-            sb.append(append);
-        sb.append(inputString);
-        return sb.toString();
-    }
+    }    
 
     public String gettoken(String hash){
         
@@ -10798,7 +10773,7 @@ cat buffer.log
     private void cronometro(String parm){
         if ( parm == null ){
             try{
-                System.out.print("startado. pressione enter para mais flags.");
+                System.out.println("startado. pressione enter para mais flags.");
                 InputStream inputStream_pipe=System.in;
                 byte[] buf = new byte[BUFFER_SIZE];
                 int len=0;
@@ -10811,11 +10786,10 @@ cat buffer.log
                         elem[i]=(Long)lista.get(i);
                     String s="";
                     for ( int i=1;i<lista.size();i++ ){
-                        if( i == 1 ){
-                            s=(elem[i]-elem[i-1])+" mili";
-                        }else{
-                            s=(elem[i]-elem[i-1]) + " mili - " + (elem[i]-elem[0]) + " mili total";                                
-                        }
+                        if( i == 1 )
+                            s=cronometro_format(elem[i]-elem[i-1], elem[i]-elem[i-1]);
+                        else
+                            s=cronometro_format(elem[i]-elem[i-1], elem[i]-elem[0]);
                     }                        
                     System.out.print(s);
                 }
@@ -10840,11 +10814,10 @@ cat buffer.log
                     for ( int i=0;i<partes.length;i++ )
                         elem[i]=Long.parseLong(partes[i]);
                     for ( int i=1;i<partes.length;i++ ){
-                        if( i == 1 ){
-                            System.out.println((elem[i]-elem[i-1])+" mili");
-                        }else{
-                            System.out.println((elem[i]-elem[i-1]) + " mili - " + (elem[i]-elem[0]) + " mili total");
-                        }
+                        if( i == 1 )
+                            System.out.println(cronometro_format(elem[i]-elem[i-1], elem[i]-elem[i-1]));
+                        else
+                            System.out.println(cronometro_format(elem[i]-elem[i-1], elem[i]-elem[0]));
                     }
                     if ( ! new File(".cron_flag").delete() )
                         System.out.println("Erro, nao foi possivel apagar a flag!");
@@ -10854,6 +10827,10 @@ cat buffer.log
         }
     }
     
+    private String cronometro_format(long a, long b){
+        return miliseconds_to_string(a) + " - " + miliseconds_to_string(b) + " total";
+    }
+
     private String ping(String a, int timeout){
         try{
             InetAddress address = InetAddress.getByName(a);
@@ -12967,7 +12944,7 @@ class multiCurl extends Util{
             progress_finished_len_memory[i]=0L;
             progress_len[i]=0L;
         }
-    }
+    }    
     
     public void start_monitor() throws Exception{
         final PipedInputStream pipedInputStream=new PipedInputStream();
@@ -13828,6 +13805,32 @@ class Util{
         return retorno;
     }
     
+    public String lpad(long inputLong, int length,String append) {
+        if ( inputLong < 0 )
+            return lpad(true,(inputLong+"").substring(1),length,append);
+        else
+            return lpad(false,inputLong+"",length,append);
+    }
+
+    public String lpad(String inputString, int length,String append) {
+        return lpad(false,inputString,length,append);
+    }
+
+    public String lpad(boolean sinalNegativo, String inputString, int length,String append) {
+        int len_input=inputString.length();
+        if ( len_input >= length) {
+            if ( sinalNegativo )
+                return "-"+inputString;
+            else
+                return inputString;
+        }
+        StringBuilder sb = new StringBuilder(sinalNegativo?"-":"");
+        for ( int i=0;i<length-len_input;i++ )
+            sb.append(append);
+        sb.append(inputString);
+        return sb.toString();
+    }
+    
     public boolean salvando_file(String texto, File arquivo){
         return salvando_file(texto, arquivo, false);
     }
@@ -14547,6 +14550,12 @@ class Util{
         return baos;
     }
     
+    public String miliseconds_to_string(long miliseconds){
+        long _miliseconds=miliseconds%1000;
+        long seconds=(miliseconds-_miliseconds)/1000;
+        return seconds_to_string(seconds, "format2") + "." + lpad(_miliseconds, 3, "0");
+    }
+    
     public String seconds_to_string(long seconds, String format){
         String s=null;
         long second = 1;
@@ -14568,7 +14577,7 @@ class Util{
             seconds-=minute;
             minutes++;
         }
-        if ( format.equals("format1") ){
+        if ( format.equals("format1") ){ // format2 padrao
             s="up ";
             if ( !s.equals("up ") || days > 0 ){
                 s+=" "+days+" days,";
