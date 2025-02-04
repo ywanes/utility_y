@@ -20882,7 +20882,6 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -21621,6 +21620,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y mkv -lento\n"
 /* class by manual */                + "    obs: ffmpeg -i \"A.mkv\" -qscale 0 \"A.mp4\"\n"
 /* class by manual */                + "    obs: -lento tem outro algotirmo de conversao, as vezes e necessario e tudo tiver bugando\n"
+/* class by manual */                + "    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo \"y echo 1 | ffmpeg -i {} -qscale 0 {}Z\" | y tr \"rmvb\\\"Z\" \"mp4\\\"\"\n"
 /* class by manual */                + "[y thumbnail]\n"
 /* class by manual */                + "    y thumbnail\n"
 /* class by manual */                + "[y insta]\n"
@@ -21769,6 +21769,9 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
 
 
 
