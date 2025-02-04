@@ -26,6 +26,7 @@ usage:
   [y progressBar]
   [y xargs]
   [y cat]
+  [y dns|host]
   [y lower]
   [y upper]
   [y removeAcentos]
@@ -258,6 +259,11 @@ Exemplos...
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
+[y dns|host]
+    y host examplo.com
+    y dns example.com
+    y dns example.com 8.8.8.8
+    obs: em desenvolvimento, a resposta ainda não é muito legível!
 [y lower]
     y echo AA | y lower
 [y upper]

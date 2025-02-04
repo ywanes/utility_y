@@ -847,6 +847,14 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args.length > 1 && (args[0].equals("dns") || args[0].equals("host")) ){
+            String name=args[1];
+            String source_dns=null;
+            if ( args.length > 2 )
+                source_dns=args[2];
+            dns(name, source_dns);
+            return;
+        }
         if ( args[0].equals("overflix") && args.length > 1 ){
             if ( ! isWindows() )
                 erroFatal("overflix implementado somente para o windows");            
@@ -5220,6 +5228,105 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
+    
+    public void dns(String name, String source_dns){ // codigo com problema!
+        try{
+            if ( source_dns == null )
+                source_dns="8.8.8.8";
+            InetAddress dnsServer = InetAddress.getByName(source_dns);
+            int dnsPort = 53;
+            DatagramSocket socket = new DatagramSocket();
+            byte[] query = buildDnsQuery(name);
+            DatagramPacket requestPacket = new DatagramPacket(query, query.length, dnsServer, dnsPort);
+            socket.send(requestPacket);
+            byte[] buffer = new byte[1024];
+            DatagramPacket responsePacket = new DatagramPacket(buffer, buffer.length);
+            socket.receive(responsePacket);
+            byte [] s=responsePacket.getData();
+            int len=responsePacket.getLength();
+            String response = new String(s, 0, len, "UTF-8");
+            for ( int i=0;i<len;i++ ){
+                int p=(int)s[i];
+                if ( p < 0 )
+                    p+=256;
+                System.out.print(" " + p);
+            }
+            System.out.println("");
+            System.out.println("Resposta DNS: " + response);
+            socket.close();
+
+/*
+#python3            
+>>> import socket
+>>>
+>>> # Cria um socket UDP
+>>> sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+>>>
+>>> # Endereço do servidor DNS
+>>> dns_server = ("8.8.8.8", 53)
+>>>
+>>> # Consulta DNS (exemplo simplificado)
+>>> query = b"\x00\x00\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07example\x03com\x00\x00\x01\x00\x01"
+>>>
+>>> # Envia a consulta
+>>> sock.sendto(query, dns_server)
+29
+>>>
+>>> # Recebe a resposta
+>>> response, _ = sock.recvfrom(512)
+>>> print(response)
+b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01\x00\x01\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04\x17\xc0\xe4T\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04`\x07\x80\xc6\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04\x17\xd7\x00\x88\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04\x17\xc0\xe4P\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04`\x07\x80\xaf\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04\x17\xd7\x00\x8a'
+>>>
+*/            
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+        
+
+    private byte[] buildDnsQuery(String domain) {
+        // ID da consulta (2 bytes)
+        byte[] query = new byte[100 + domain.length() + 2];
+        query[0] = (byte) 0x12; // ID (exemplo)
+        query[1] = (byte) 0x34; // ID (exemplo)
+
+        // Flags (2 bytes)
+        query[2] = 0x01; // QR (0), Opcode (0000), AA (0), TC (0), RD (1)
+        query[3] = 0x00; // RA (0), Z (000), RCODE (0000)
+
+        // QDCOUNT (1 pergunta)
+        query[4] = 0x00;
+        query[5] = 0x01;
+
+        // ANCOUNT, NSCOUNT, ARCOUNT (0)
+        query[6] = 0x00;
+        query[7] = 0x00;
+        query[8] = 0x00;
+        query[9] = 0x00;
+        query[10] = 0x00;
+        query[11] = 0x00;
+
+        // Nome do domínio (exemplo: "example.com")
+        int index = 12;
+        String[] parts = domain.split("\\.");
+        for (String part : parts) {
+            query[index++] = (byte) part.length();
+            for (char c : part.toCharArray()) {
+                query[index++] = (byte) c;
+            }
+        }
+        query[index++] = 0x00; // Fim do nome do domínio
+
+        // Tipo (A record = 1)
+        query[index++] = 0x00;
+        query[index++] = 0x01;
+
+        // Classe (IN = 1)
+        query[index++] = 0x00;
+        query[index++] = 0x01;
+
+        return query;
+    }    
     
     public String overflix_busca(String [] args_){
         String s="";
@@ -20808,6 +20915,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y dns|host]\n"
 /* class by manual */                + "  [y lower]\n"
 /* class by manual */                + "  [y upper]\n"
 /* class by manual */                + "  [y removeAcentos]\n"
@@ -20901,7 +21009,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y overflix]\n"
 /* class by manual */                + "  [y connGui]\n"
 /* class by manual */                + "  [y var]\n"
-/* class by manual */                + "  [y cotaca]\n"
+/* class by manual */                + "  [y cotacao]\n"
 /* class by manual */                + "  [y [update|u]]\n"
 /* class by manual */                + "  [y help]\n"
 /* class by manual */                + "\n"
@@ -21040,6 +21148,11 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y dns|host]\n"
+/* class by manual */                + "    y host examplo.com\n"
+/* class by manual */                + "    y dns example.com\n"
+/* class by manual */                + "    y dns example.com 8.8.8.8\n"
+/* class by manual */                + "    obs: em desenvolvimento, a resposta ainda nao e muito legivel!\n"
 /* class by manual */                + "[y lower]\n"
 /* class by manual */                + "    y echo AA | y lower\n"
 /* class by manual */                + "[y upper]\n"
@@ -21656,6 +21769,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
