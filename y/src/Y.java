@@ -21618,9 +21618,9 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y mkv -v\n"
 /* class by manual */                + "    y mkv -force\n"
 /* class by manual */                + "    y mkv -lento\n"
-/* class by manual */                + "    obs: ffmpeg -i \"A.mkv\" -qscale 0 \"A.mp4\"\n"
+/* class by manual */                + "    obs: ffmpeg -i \"A.mkv\" -qscale 0 -max_muxing_queue_size 1024 \"A.mp4\"\n"
 /* class by manual */                + "    obs: -lento tem outro algotirmo de conversao, as vezes e necessario e tudo tiver bugando\n"
-/* class by manual */                + "    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo \"y echo 1 | ffmpeg -i {} -qscale 0 {}Z\" | y tr \"rmvb\\\"Z\" \"mp4\\\"\"\n"
+/* class by manual */                + "    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo \"y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z\" | y tr \"rmvb\\\"Z\" \"mp4\\\"\"\n"
 /* class by manual */                + "[y thumbnail]\n"
 /* class by manual */                + "    y thumbnail\n"
 /* class by manual */                + "[y insta]\n"
@@ -21769,6 +21769,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

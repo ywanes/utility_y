@@ -730,9 +730,9 @@ Exemplos...
     y mkv -v
     y mkv -force
     y mkv -lento
-    obs: ffmpeg -i "A.mkv" -qscale 0 "A.mp4"
+    obs: ffmpeg -i "A.mkv" -qscale 0 -max_muxing_queue_size 1024 "A.mp4"
     obs: -lento tem outro algotirmo de conversão, as vezes é necessario e tudo tiver bugando
-    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo "y echo 1 | ffmpeg -i {} -qscale 0 {}Z" | y tr "rmvb\"Z" "mp4\""
+    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo "y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z" | y tr "rmvb\"Z" "mp4\""
 [y thumbnail]
     y thumbnail
 [y insta]
