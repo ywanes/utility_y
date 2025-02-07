@@ -10805,7 +10805,7 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
             
         String command="";
         if ( System.getProperty("user.dir").contains("/") )
-            command = "ln -s \"" + fonte + "\" \"" + new_ + "\"";
+            command = "ln -s '" + fonte + "' '" + new_ + "'";
         else
             command = "cmd /c mklink /j \"" + new_ + "\" \"" + fonte + "\"";
         
@@ -20904,6 +20904,7 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -21507,12 +21508,10 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y regua\n"
 /* class by manual */                + "    y regua 90\n"
 /* class by manual */                + "[y link]\n"
-/* class by manual */                + "    y link \"/opt/original\" \"original_linked\"\n"
-/* class by manual */                + "    y link \"c:\\\\tmp\\\\original\" \"original_linked\"\n"
-/* class by manual */                + "    y link \"\" \"b\"\n"
-/* class by manual */                + "    obs: original_linked sendo o link criado que aponta para /opt/original\n"
-/* class by manual */                + "    internal command windows: mklink /j \"original_linked\" \"c:\\\\tmp\\\\original\"\n"
-/* class by manual */                + "    internal command nao windows: ln -s \"/opt/original\" \"original_linked\"\n"
+/* class by manual */                + "    y link \"source\" \"new_\"\n"
+/* class by manual */                + "    y link \"c:\\\\tmp\\\\source\" \"new_\"\n"
+/* class by manual */                + "    comando windows: mklink /j \"new_\" \"c:\\\\tmp\\\\source\"\n"
+/* class by manual */                + "    comando nao windows: ln -s '/opt/source' 'new_'\n"
 /* class by manual */                + "[y os]\n"
 /* class by manual */                + "    y os\n"
 /* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
@@ -21792,6 +21791,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
