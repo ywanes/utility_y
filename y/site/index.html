@@ -13,7 +13,7 @@ this.playlistmovie_v='-playlistmovie-v-20241110-';
 this.playlistmovie_v_global='playlistmovie-v-20241101-global';
 this.playlistmovie_v_nick_name='playlistmovie-v-20241101-nick_name';
 this.playlist_v='playlist-v-20231018-';
-
+let error_NaN_load='ERROR TIMEOUT LOAD';
 
 function toggleFullScreen(event, op){    
     o_que_ta=document.fullscreenElement;
@@ -510,6 +510,10 @@ function load_movie(parm, table_click){
     }
     if ( !this.inicializado ){
         document.addEventListener('click', function(e) {  
+           if ( document.getElementsByClassName('time-remaining')[0].innerText == error_NaN_load ){
+             alert('error timeout load!');
+             return;		
+           }
            if ( getVideo() == null ) return;
            console.log('tagName clicked: ' + e.target.tagName);
            if ( e.target.tagName == 'VIDEO' ){
@@ -590,8 +594,6 @@ function load_movie(parm, table_click){
 		}else
 			document.getElementById('dthumbnail').setAttribute('style', '');
 		
-
-		
     }
     function format_seconds(seconds_){
       let seconds = float_to_int(seconds_);
@@ -610,6 +612,8 @@ function load_movie(parm, table_click){
         second='0'+second;
       else
         second=''+second;
+      if ( isNaN(hour) )
+	    return error_NaN_load;
       return hour+':'+minute+':'+second;
     }
     function volumeclick(){
@@ -642,6 +646,8 @@ function load_movie(parm, table_click){
     progressBar.addEventListener('mouseleave', function(e) { document.getElementById('cueTimer').style.opacity = 0; document.getElementById('dthumbnail').setAttribute('style', ''); });
     progressBar.addEventListener('click', (event) => {
       const pos = (event.pageX  - (progressBar.offsetLeft + progressBar.offsetParent.offsetLeft)) / progressBar.offsetWidth;
+	  if ( document.getElementsByClassName('time-remaining')[0].innerText == error_NaN_load )
+	    return;
       getVideo().currentTime = pos * getVideo().duration;
     });
 
@@ -662,7 +668,7 @@ function load_movie(parm, table_click){
     }
     function save_station1(){
       let nick_name=get_nick_name();
-      if ( document.getElementById('video') != null && getDigest1() != null && nick_name != null ){
+      if ( document.getElementById('video') != null && getDigest1() != null && nick_name != null && document.getElementsByClassName('time-remaining')[0].innerText != error_NaN_load ){        
         contador_save_station1+=1;
         if ( contador_save_station1 < 5 && !sign_first ){
           return;
@@ -1044,12 +1050,14 @@ function load_music(parm, elements){
                   };
                   if ( !this.inicializado2 ){
                       document.addEventListener('click', function(e) {  
+                           if ( document.getElementsByClassName('time-remaining')[0].innerText == error_NaN_load )
+                             return;
                            if ( document.getElementById('p') == null )
                              return;
                            let tagName=e.target.tagName;
                            if ( tagName == 'TD' && e.target.getAttribute('ok') != null )
                              tagName='TD_ok';
-                           console.log('tagName clicked: ' + tagName);
+                           console.log('tagName clicked:: ' + tagName);
                            if ( tagName == 'CANVAS' || tagName == 'BODY' || tagName == 'DIV' || tagName == 'VIDEO' || tagName == 'TD_ok' ){
                              if ( document.getElementById("f11").style.display == "none" ){
                                DisableFullscreen();
