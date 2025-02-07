@@ -416,7 +416,6 @@ cat buffer.log
                     executeInsert(conn,System.in);
                     return;
                 }
-                ////////////////
                 if ( app.equals("execute") ){
                     execute(conn,parm);
                     return;
@@ -866,15 +865,7 @@ cat buffer.log
                 document.cookie='ips4_member_id=82450';
                 document.cookie='ips4_login_key=addd863af56dcdeb48ef159ceda239ba';                
                 */
-                if ( !args[args.length-1].toLowerCase().startsWith("http://") &&  !args[args.length-1].toLowerCase().startsWith("https://") && !args[1].equals("p") )
-                    args=addParm("p", 1, args);
-                if ( args[1].equals("p") ){
-                    System.out.print(
-                        overflix_busca(args)+
-                        superflixapi_busca(args)
-                    );
-                }else                    
-                    overflix(args);                
+                overflix(args);                
             }catch(Exception e){
                 erroFatal(e);
             }
@@ -5733,7 +5724,7 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
     
     multiCurl overflix_multi=null;
     public void overflix(String [] args) throws Exception{             
-        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags(args);
+        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath(args);
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
@@ -5741,13 +5732,14 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
         Boolean vToken=(Boolean)objs[4];
         String o_force_out=(String)objs[5];
         Boolean tags=(Boolean)objs[6];
+        String outPath=(String)objs[7];
         
         if ( url.startsWith("https://superflixapi.dev/filme/") ){
             superflixapi(url);
             return;
         }
         
-        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out, tags);
+        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out, tags, outPath);
         
         if ( overflix_multi != null ){
             overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
@@ -5763,7 +5755,8 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
     public String overflix_error="";
     public boolean skiping_show=true;
     public int skiping_hide_count=0;
-    public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, String titulo_serie, Boolean cam, String o_force_out, Boolean tags) throws Exception{
+    public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, 
+                             String titulo_serie, Boolean cam, String o_force_out, Boolean tags, String outPath) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
@@ -5793,7 +5786,7 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
             //    cam=true;
             for ( int i=0;i<partes.length;i++ ){
                 overflix_verbose(verbose, tags, "TAG:1");
-                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags);
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
             }
             return;
         }
@@ -5822,7 +5815,7 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ ){
                 overflix_verbose(verbose, tags, "TAG:3");
-                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags);
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
             }
             // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
@@ -5832,7 +5825,7 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
                 while ( html.contains("load("+next_temporada+")") ){
                     overflix_verbose(verbose, tags, "TAG:4");
                     url=url.split("=")[0]+"="+next_temporada;
-                    overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags);
+                    overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 }
             }
@@ -5850,10 +5843,10 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
                 overflix_verbose(verbose, tags, "TAG:6");
                 if ( partes[i].startsWith("https://mixdrop.ps") ){
                     overflix_verbose(verbose, tags, "TAG:601");
-                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags);
+                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
                 }else{
                     overflix_verbose(verbose, tags, "TAG:602");
-                    overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags);
+                    overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
                 }
                 return;
             }
@@ -5887,7 +5880,7 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
         // use mix
         if ( mix != null ){
             overflix_verbose(verbose, tags, "TAG:8");
-            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags);
+            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
             return;
         }
         
@@ -5914,8 +5907,10 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
             else{
                 if ( titulo_serie != null )
                     dir="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
-            }
+            }                            
             String out=dir+titulo;
+            if ( outPath != null )
+                out=outPath+"\\"+titulo;
             if ( o_force_out != null )
                 out=o_force_out;
             
@@ -9592,7 +9587,7 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
         return new Object []{msg, lang, list, copy};
     }        
         
-    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags(String [] args){
+    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath(String [] args){
         String url=null;
         Boolean verbose=false;
         Boolean onlyLink=false;
@@ -9600,8 +9595,16 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
         Boolean vToken=false;
         String o=null;
         Boolean tags=false;
+        String outPath=null;
         
+        Boolean aux_p=false;
+
         args=sliceParm(1, args);
+        
+        if ( args.length > 0 && args[0].equals("p") ){
+            aux_p=true;
+            args=sliceParm(1, args);
+        }
         
         while(args.length > 0){
             if ( args.length > 0 && args[0].equals("-onlyLink") ){
@@ -9625,6 +9628,12 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
                 args=sliceParm(1, args);
                 continue;
             }
+            if ( args.length > 1 && args[0].equals("-outPath") ){
+                args=sliceParm(1, args);
+                outPath=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
             if ( args.length > 0 && args[0].equals("-v") ){
                 args=sliceParm(1, args);
                 verbose=true;
@@ -9643,11 +9652,21 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
             }            
             return null;
         }      
+        
         if ( url == null )
             return null;
+        
+        if ( aux_p || ( !url.toLowerCase().startsWith("http://") && !url.toLowerCase().startsWith("https://") ) ){
+            System.out.print(
+                overflix_busca(args)+
+                superflixapi_busca(args)
+            );
+            System.exit(0);
+        }
+        
         if ( onlyLink && onlyPreLink )
             return null;
-        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags};
+        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath};
     }        
            
     private Object [] get_parms_f_mixer_line_wav_mp3_volume(String [] args){
@@ -20884,6 +20903,7 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -21664,6 +21684,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y overflix -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
 /* class by manual */                + "    y overflix -onlyPreLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"    \n"
 /* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
+/* class by manual */                + "    y overflix \"https://encontre.tv/assistir-ruptura-2x4-dublado-online-46643/\" -outPath \"D:\\ProgramFiles\\site\\series\\Ruptura\"\n"
 /* class by manual */                + "    obs: -vToken => mostra iexplorer.exe e nao fecha.\n"
 /* class by manual */                + "         -o => force out path\n"
 /* class by manual */                + "         -tags => verbose profundo\n"
@@ -21771,6 +21792,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

@@ -774,6 +774,7 @@ Exemplos...
     y overflix -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
     y overflix -onlyPreLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"    
     y overflix -v -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
+    y overflix "https://encontre.tv/assistir-ruptura-2x4-dublado-online-46643/" -outPath "D:\ProgramFiles\site\series\Ruptura"
     obs: -vToken => mostra iexplorer.exe e não fecha.
          -o => force out path
          -tags => verbose profundo
