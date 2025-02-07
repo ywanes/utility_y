@@ -20498,17 +20498,19 @@ class ClientThread extends Util{
         }
         return result;
     }
-    private void transf_bytes(OutputStream output, String nav, long resume, long lenTarget) throws Exception {
+    private void transf_bytes(OutputStream output, String nav, long header_range_resume, long lenTarget) throws Exception {
         int count;
         DataInputStream dis = new DataInputStream(new FileInputStream(nav));
         byte[] buffer = new byte[8192];
-        if ( resume > 0 ) 
-            dis.skip(resume);
-        if ( resume > 0 && lenTarget < buffer.length )
+        if ( header_range_resume > 0 ) 
+            dis.skip(header_range_resume);
+        if ( header_range_resume > 0 && lenTarget < buffer.length )
             buffer = new byte[(int)lenTarget];
         while ((count = dis.read(buffer)) > 0){
+            //gera lentidao para teste
+            //sleepMillis(50);
             output.write(buffer, 0, count);
-            if ( resume > 0 ){
+            if ( header_range_resume > 0 ){
                 lenTarget-=count;
                 if ( lenTarget <= 0 )
                     break;    
