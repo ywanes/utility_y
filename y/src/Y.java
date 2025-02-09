@@ -849,7 +849,7 @@ cat buffer.log
         if ( args[0].equals("users") ){
             if ( !isWindows() )
                 erroFatal("comando suportado somente para windows");
-            users(false);
+            System.out.println(getUsers());
             return;
         }
         if ( args[0].equals("disconnect") ){
@@ -5234,21 +5234,36 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
-    public boolean users(boolean displayOnlyAtivo){
-        String s=runtimeExec(null, new String[]{"query", "user"}, null, null);                    
-        boolean ativo=s.contains(" Ativo ");
-        if ( displayOnlyAtivo && !ativo ){
-            //nada
-        }else            
-            System.out.println(s);
-        return ativo;
+    public String getUsers(){
+        return runtimeExec(null, new String[]{"query", "user"}, null, null);                    
+    }
+    public String getUserAtivo(String a){        
+        String [] partes=a.split("\n");
+        for ( int i=0;i<partes.length;i++ ){
+            partes[i]=partes[i].trim();
+            int limit=1000;
+            while(partes[i].contains("  ") && limit-->0 )
+                partes[i]=partes[i].replace("  "," ");
+            String [] partes2=partes[i].split(" ");
+            if ( partes2[3].equals("Ativo") )
+                return partes2[2];
+        }
+        return null;
     }
     public void disconnect(boolean seAtivoDesconectaLoop1Segundo){
-        if ( users(true) ){
-            runtimeExec("tsdiscon", null, null, null);
-            System.out.println("disconnected!");
+        if ( seAtivoDesconectaLoop1Segundo ){
+            while(true){
+                String id=getUserAtivo(getUsers());
+                if ( id != null )
+                    runtimeExec(null, new String[]{"tsdiscon", id}, null, null);
+                sleepSeconds(2);                
+            }
+        }else{
+            String id=getUserAtivo(getUsers());
+            if ( id != null )
+                runtimeExec(null, new String[]{"tsdiscon", id}, null, null);
+            System.out.println("disconnected!!");
         }
-        sleepSeconds(1);
     }
     public void dns(String name, String source_dns){ // codigo com problema!
         try{
