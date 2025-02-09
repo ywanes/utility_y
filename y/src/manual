@@ -26,6 +26,8 @@ usage:
   [y progressBar]
   [y xargs]
   [y cat]
+  [y users]
+  [y disconnect]
   [y dns|host]
   [y lower]
   [y upper]
@@ -259,6 +261,11 @@ Exemplos...
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
+[y users]
+    y users
+[y disconnect]
+    y disconnect
+    y disconnect seAtivoDesconectaLoop1Segundo
 [y dns|host]
     y host examplo.com
     y dns example.com

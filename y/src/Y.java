@@ -846,6 +846,21 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args[0].equals("users") ){
+            if ( !isWindows() )
+                erroFatal("comando suportado somente para windows");
+            users(false);
+            return;
+        }
+        if ( args[0].equals("disconnect") ){
+            if ( !isWindows() )
+                erroFatal("comando suportado somente para windows");
+            if ( args.length > 1 && args[1].equals("seAtivoDesconectaLoop1Segundo"))
+                disconnect(true);
+            else
+                disconnect(false);
+            return;
+        }
         if ( args.length > 1 && (args[0].equals("dns") || args[0].equals("host")) ){
             String name=args[1];
             String source_dns=null;
@@ -5219,7 +5234,22 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
-    
+    public boolean users(boolean displayOnlyAtivo){
+        String s=runtimeExec(null, new String[]{"query", "user"}, null, null);                    
+        boolean ativo=s.contains(" Ativo ");
+        if ( displayOnlyAtivo && !ativo ){
+            //nada
+        }else            
+            System.out.println(s);
+        return ativo;
+    }
+    public void disconnect(boolean seAtivoDesconectaLoop1Segundo){
+        if ( users(true) ){
+            runtimeExec("tsdiscon", null, null, null);
+            System.out.println("disconnected!");
+        }
+        sleepSeconds(1);
+    }
     public void dns(String name, String source_dns){ // codigo com problema!
         try{
             if ( source_dns == null )
@@ -5319,11 +5349,8 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
         return query;
     }    
     
-    public String overflix_busca(String [] args_){
+    public String overflix_busca(String [] args){
         String s="";
-        String [] args=new String[args_.length];
-        System.arraycopy(args_, 0, args, 0, args_.length);
-        args=sliceParm(2, args);
         if ( args.length == 0 )
             erroFatal("Erro de parametro!");
         String url="https://encontre.tv/pesquisar/?p=" + String.join("+", args);
@@ -5360,11 +5387,8 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
         return s;
     }
     
-    public String superflixapi_busca(String [] args_){
+    public String superflixapi_busca(String [] args){
         String s="";
-        String [] args=new String[args_.length];
-        System.arraycopy(args_, 0, args, 0, args_.length);
-        args=sliceParm(2, args);
         if ( args.length == 0 )
             erroFatal("Erro de parametro!");
         String search=String.join("%20", args);
@@ -9598,7 +9622,8 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
         String outPath=null;
         
         Boolean aux_p=false;
-
+        String [] extras=new String[0];
+        
         args=sliceParm(1, args);
         
         if ( args.length > 0 && args[0].equals("p") ){
@@ -9650,20 +9675,22 @@ b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01
                 args=sliceParm(1, args);
                 continue;
             }            
-            return null;
+            extras=addParm(args[0], extras);
+            args=sliceParm(1, args);
         }      
         
         if ( url == null )
-            return null;
-        
+            return null;        
         if ( aux_p || ( !url.toLowerCase().startsWith("http://") && !url.toLowerCase().startsWith("https://") ) ){
+            extras=addParm(url, 0, extras);
             System.out.print(
-                overflix_busca(args)+
-                superflixapi_busca(args)
+                overflix_busca(extras)+
+                superflixapi_busca(extras)
             );
             System.exit(0);
-        }
-        
+        }        
+        if ( extras.length > 0 )
+            return null;
         if ( onlyLink && onlyPreLink )
             return null;
         return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath};
@@ -20937,6 +20964,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y users]\n"
+/* class by manual */                + "  [y disconnect]\n"
 /* class by manual */                + "  [y dns|host]\n"
 /* class by manual */                + "  [y lower]\n"
 /* class by manual */                + "  [y upper]\n"
@@ -21170,6 +21199,11 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y users]\n"
+/* class by manual */                + "    y users\n"
+/* class by manual */                + "[y disconnect]\n"
+/* class by manual */                + "    y disconnect\n"
+/* class by manual */                + "    y disconnect seAtivoDesconectaLoop1Segundo\n"
 /* class by manual */                + "[y dns|host]\n"
 /* class by manual */                + "    y host examplo.com\n"
 /* class by manual */                + "    y dns example.com\n"
