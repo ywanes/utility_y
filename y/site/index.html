@@ -510,11 +510,12 @@ function load_movie(parm, table_click){
     }
     if ( !this.inicializado ){
         document.addEventListener('click', function(e) {  
+           if ( getVideo() == null ) 
+             return;
            if ( document.getElementsByClassName('time-remaining')[0].innerText == error_NaN_load ){
              alert('error timeout load!');
              return;		
            }
-           if ( getVideo() == null ) return;
            console.log('tagName clicked: ' + e.target.tagName);
            if ( e.target.tagName == 'VIDEO' ){
              clickingVideo(e.detail); // 1 - click, 2 - doubleclick
