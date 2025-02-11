@@ -5367,8 +5367,39 @@ cat buffer.log
                     s+=format_zeros_ipv6(ipAddress.getHostAddress())+"\n";
                 else
                     s+=ipAddress.getHostAddress()+"\n";
-            }else
-                buffer.position(buffer.position() + rdLength);
+            }else{    
+                /*
+                if (type == 0x0006) { // Tipo SOA
+                    System.out.println("Resposta SOA encontrada:");
+                    System.out.println("Nome: " + name);
+                    System.out.println("Tipo: SOA (0x0006)");
+                    System.out.println("Classe: " + dnsClass);
+                    System.out.println("TTL: " + ttl);
+                    System.out.println("Comprimento dos dados: " + rdLength);
+
+                    // Lê os dados SOA
+                    String mname = dns_readName(buffer, response);
+                    String rname = dns_readName(buffer, response);
+                    long serial = buffer.getInt() & 0xFFFFFFFFL;
+                    long refresh = buffer.getInt() & 0xFFFFFFFFL;
+                    long retry = buffer.getInt() & 0xFFFFFFFFL;
+                    long expire = buffer.getInt() & 0xFFFFFFFFL;
+                    long minimum = buffer.getInt() & 0xFFFFFFFFL;
+
+                    System.out.println("MNAME: " + mname);
+                    System.out.println("RNAME: " + rname);
+                    System.out.println("Serial: " + serial);
+                    System.out.println("Refresh: " + refresh);
+                    System.out.println("Retry: " + retry);
+                    System.out.println("Expire: " + expire);
+                    System.out.println("Minimum: " + minimum);
+                }
+                else
+                {
+                */
+                    buffer.position(buffer.position() + rdLength);
+                //}
+            }
         }
         return s;
     }
