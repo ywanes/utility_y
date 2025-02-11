@@ -846,6 +846,10 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args[0].equals("meuip") ){
+            meuip();
+            return;
+        }
         if ( args[0].equals("users") ){
             if ( !isWindows() )
                 erroFatal("comando suportado somente para windows");
@@ -866,7 +870,7 @@ cat buffer.log
             String source_dns=null;
             if ( args.length > 2 )
                 source_dns=args[2];
-            dns(name, source_dns);
+            System.out.print(dns(name, source_dns));
             return;
         }
         if ( args[0].equals("overflix") && args.length > 1 ){
@@ -5250,6 +5254,11 @@ cat buffer.log
         }
         return null;
     }
+    public void meuip(){
+        System.out.print(
+            curl_string("http://checkip.amazonaws.com/").trim()
+        );
+    }
     public void disconnect(boolean seAtivoDesconectaLoop1Segundo){
         if ( seAtivoDesconectaLoop1Segundo ){
             while(true){
@@ -5265,105 +5274,161 @@ cat buffer.log
             System.out.println("disconnected!!");
         }
     }
-    public void dns(String name, String source_dns){ // codigo com problema!
-        try{
-            if ( source_dns == null )
-                source_dns="8.8.8.8";
-            InetAddress dnsServer = InetAddress.getByName(source_dns);
-            int dnsPort = 53;
-            DatagramSocket socket = new DatagramSocket();
-            byte[] query = buildDnsQuery(name);
-            DatagramPacket requestPacket = new DatagramPacket(query, query.length, dnsServer, dnsPort);
-            socket.send(requestPacket);
-            byte[] buffer = new byte[1024];
-            DatagramPacket responsePacket = new DatagramPacket(buffer, buffer.length);
-            socket.receive(responsePacket);
-            byte [] s=responsePacket.getData();
-            int len=responsePacket.getLength();
-            String response = new String(s, 0, len, "UTF-8");
-            for ( int i=0;i<len;i++ ){
-                int p=(int)s[i];
-                if ( p < 0 )
-                    p+=256;
-                System.out.print(" " + p);
-            }
-            System.out.println("");
-            System.out.println("Resposta DNS: " + response);
-            socket.close();
-
-/*
-#python3            
->>> import socket
->>>
->>> # Cria um socket UDP
->>> sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
->>>
->>> # Endereço do servidor DNS
->>> dns_server = ("8.8.8.8", 53)
->>>
->>> # Consulta DNS (exemplo simplificado)
->>> query = b"\x00\x00\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00\x07example\x03com\x00\x00\x01\x00\x01"
->>>
->>> # Envia a consulta
->>> sock.sendto(query, dns_server)
-29
->>>
->>> # Recebe a resposta
->>> response, _ = sock.recvfrom(512)
->>> print(response)
-b'\x00\x00\x81\x80\x00\x01\x00\x06\x00\x00\x00\x00\x07example\x03com\x00\x00\x01\x00\x01\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04\x17\xc0\xe4T\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04`\x07\x80\xc6\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04\x17\xd7\x00\x88\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04\x17\xc0\xe4P\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04`\x07\x80\xaf\xc0\x0c\x00\x01\x00\x01\x00\x00\x00.\x00\x04\x17\xd7\x00\x8a'
->>>
-*/            
-        }catch(Exception e){
-            erroFatal(e);
-        }
+    public String dns(String domain, String dnsServer){
+        // System.out.print(dns("example.com", "8.8.8.8"));
+        if ( dnsServer == null )
+            dnsServer="8.8.8.8";
+        String [] servidorName=new String[]{null};
+        String s=dns(domain, dnsServer, 53, 0x0001, 4, true, servidorName) +
+               dns(domain, "8.8.8.8", 53, 0x001C, 16, true, servidorName);
+        if ( s.length() > 0 )
+            s="ServidorDnsUtilizado: "+servidorName[0]+"\n\n"+s;
+        return s;
     }
-        
-
-    private byte[] buildDnsQuery(String domain) {
-        // ID da consulta (2 bytes)
-        byte[] query = new byte[100 + domain.length() + 2];
-        query[0] = (byte) 0x12; // ID (exemplo)
-        query[1] = (byte) 0x34; // ID (exemplo)
-
-        // Flags (2 bytes)
-        query[2] = 0x01; // QR (0), Opcode (0000), AA (0), TC (0), RD (1)
-        query[3] = 0x00; // RA (0), Z (000), RCODE (0000)
-
-        // QDCOUNT (1 pergunta)
-        query[4] = 0x00;
-        query[5] = 0x01;
-
-        // ANCOUNT, NSCOUNT, ARCOUNT (0)
-        query[6] = 0x00;
-        query[7] = 0x00;
-        query[8] = 0x00;
-        query[9] = 0x00;
-        query[10] = 0x00;
-        query[11] = 0x00;
-
-        // Nome do domínio (exemplo: "example.com")
-        int index = 12;
-        String[] parts = domain.split("\\.");
-        for (String part : parts) {
-            query[index++] = (byte) part.length();
-            for (char c : part.toCharArray()) {
-                query[index++] = (byte) c;
+    public String dns(String domain, String dnsServer, int dnsPort, int type_, int len_type, boolean modoResumido, String [] servidorName){
+        // ipv4 -> type_ 0x0001 len_type 4
+        // ipv6 -> type_ 0x001C len_type 16
+        try {
+            int BUFFER_SIZE = 1024;        
+            java.net.DatagramSocket socket = new java.net.DatagramSocket();
+            socket.setSoTimeout(5000);
+            byte[] query = dns_buildDNSQuery(domain, type_);
+            java.net.InetAddress serverAddress = java.net.InetAddress.getByName(dnsServer);
+            if ( servidorName[0] == null || isMaskIp(servidorName[0]) )
+                servidorName[0]=serverAddress.getHostName();
+            java.net.DatagramPacket packet = new java.net.DatagramPacket(query, query.length, serverAddress, dnsPort);
+            socket.send(packet);
+            byte[] responseBuffer = new byte[BUFFER_SIZE];
+            java.net.DatagramPacket responsePacket = new java.net.DatagramPacket(responseBuffer, responseBuffer.length);
+            socket.receive(responsePacket);
+            String s=dns_processDNSResponse(responsePacket.getData(), responsePacket.getLength(), type_, len_type, modoResumido);
+            socket.close();
+            return s;
+        } catch (java.net.SocketTimeoutException e) {
+            System.err.println("Timeout: Nenhuma resposta recebida do servidor DNS.");
+            System.exit(1);
+        } catch (Exception e) {
+            System.err.println("Erro de comunicação: " + e.getMessage());
+            System.exit(1);
+        }        
+        return "";
+    }
+    public boolean isMaskIp(String a){
+        String filter=".:0123456789";
+        int len=a.length();
+        for ( int i=0;i<len;i++ ){
+            if ( !filter.contains(a.substring(i, i+1)) )
+                return false;                
+        }
+        return true;
+                
+    }
+    public byte[] dns_buildDNSQuery(String domain, int type_) {
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.allocate(1024);
+        buffer.putShort((short) 0x1234); // ID (aleatório)
+        buffer.putShort((short) 0x0100); // Flags (query padrão)
+        buffer.putShort((short) 1);      // QDCOUNT (1 pergunta)
+        buffer.putShort((short) 0);      // ANCOUNT (0 respostas)
+        buffer.putShort((short) 0);      // NSCOUNT (0 autoritativas)
+        buffer.putShort((short) 0);      // ARCOUNT (0 adicionais)
+        for (String part : domain.split("\\.")) {
+            buffer.put((byte) part.length()); // Tamanho do rótulo
+            buffer.put(part.getBytes());      // Rótulo
+        }
+        buffer.put((byte) 0); // Fim do domínio
+        buffer.putShort((short) type_);
+        buffer.putShort((short) 0x0001); // Classe IN (0x0001)
+        byte[] query = new byte[buffer.position()];
+        buffer.flip();
+        buffer.get(query);
+        return query;
+    }
+    public String dns_processDNSResponse(byte[] response, int length, int type_, int len_type, boolean modoResumido) throws Exception {
+        String s="";
+        java.nio.ByteBuffer buffer = java.nio.ByteBuffer.wrap(response, 0, length);
+        int id = buffer.getShort() & 0xFFFF;
+        int flags = buffer.getShort() & 0xFFFF;
+        int qdCount = buffer.getShort() & 0xFFFF;
+        int anCount = buffer.getShort() & 0xFFFF;
+        int nsCount = buffer.getShort() & 0xFFFF;
+        int arCount = buffer.getShort() & 0xFFFF;
+        dns_skipQuestionSection(buffer);
+        for (int i = 0; i < anCount + nsCount + arCount; i++) {
+            String name = dns_readName(buffer, response);
+            int type = buffer.getShort() & 0xFFFF;
+            int dnsClass = buffer.getShort() & 0xFFFF;
+            long ttl = buffer.getInt() & 0xFFFFFFFFL;
+            int rdLength = buffer.getShort() & 0xFFFF;
+            if (type == type_){
+                byte[] ipBytes = new byte[len_type];
+                buffer.get(ipBytes);
+                java.net.InetAddress ipAddress = java.net.InetAddress.getByAddress(ipBytes);
+                if ( modoResumido )
+                    s+=format_zeros_ipv6(ipAddress.getHostAddress())+"\n";
+                else
+                    s+=ipAddress.getHostAddress()+"\n";
+            }else
+                buffer.position(buffer.position() + rdLength);
+        }
+        return s;
+    }
+    public String format_zeros_ipv6(String a){
+        if ( !a.contains(":") )
+            return a;
+        int limit=200;
+        while(limit--> 0){
+            int len=a.length();
+            if ( a.contains("::") )
+                a=a.replaceFirst("::0:","::");
+            else
+                a=a.replaceFirst(":0:","::");
+            if ( a.length() >= len )
+                break;                
+        }
+        return a;
+    }
+    public void dns_skipQuestionSection(java.nio.ByteBuffer buffer) {
+        while (true) {
+            int length = buffer.get() & 0xFF;
+            if (length == 0) break;
+            buffer.position(buffer.position() + length);
+        }
+        buffer.getShort(); // Tipo
+        buffer.getShort(); // Classe
+    }
+    private String dns_readName(java.nio.ByteBuffer buffer, byte[] response) {
+        StringBuilder name = new StringBuilder();
+        int length;
+        while ((length = buffer.get() & 0xFF) != 0) {
+            if ((length & 0xC0) == 0xC0) { // Ponteiro
+                int offset = ((length & 0x3F) << 8) | (buffer.get() & 0xFF);
+                return name + dns_readNameFromOffset(response, offset);
+            } else { // Rótulo normal
+                if (name.length() > 0) name.append('.');
+                byte[] label = new byte[length];
+                buffer.get(label);
+                name.append(new String(label));
             }
         }
-        query[index++] = 0x00; // Fim do nome do domínio
-
-        // Tipo (A record = 1)
-        query[index++] = 0x00;
-        query[index++] = 0x01;
-
-        // Classe (IN = 1)
-        query[index++] = 0x00;
-        query[index++] = 0x01;
-
-        return query;
-    }    
-    
+        return name.toString();
+    }
+    private String dns_readNameFromOffset(byte[] response, int offset) {
+        StringBuilder name = new StringBuilder();
+        int length;
+        while ((length = response[offset++] & 0xFF) != 0) {
+            if ((length & 0xC0) == 0xC0) { // Ponteiro
+                int newOffset = ((length & 0x3F) << 8) | (response[offset] & 0xFF);
+                return name + dns_readNameFromOffset(response, newOffset);
+            } else { // Rótulo normal
+                if (name.length() > 0) name.append('.');
+                byte[] label = new byte[length];
+                System.arraycopy(response, offset, label, 0, length);
+                name.append(new String(label));
+                offset += length;
+            }
+        }
+        return name.toString();
+    }        
     public String overflix_busca(String [] args){
         String s="";
         if ( args.length == 0 )
@@ -21224,6 +21289,16 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y dns example.com\n"
 /* class by manual */                + "    y dns example.com 8.8.8.8\n"
 /* class by manual */                + "    obs: em desenvolvimento, a resposta ainda nao e muito legivel!\n"
+/* class by manual */                + "    alguns dns's:\n"
+/* class by manual */                + "      dns.adguard.com\n"
+/* class by manual */                + "      dns.sse.cisco.com\n"
+/* class by manual */                + "      dns.google # google\n"
+/* class by manual */                + "      one.one.one.one # Cloudflare\n"
+/* class by manual */                + "      dns.opendns.com # usado pela claro\n"
+/* class by manual */                + "      dns9.quad9.net\n"
+/* class by manual */                + "      security-filter-dns.cleanbrowsing.org\n"
+/* class by manual */                + "      resolver1.telesp.net.br # usado pela vivo\n"
+/* class by manual */                + "      resolver2.telesp.net.br # usado pela vivo\n"
 /* class by manual */                + "[y lower]\n"
 /* class by manual */                + "    y echo AA | y lower\n"
 /* class by manual */                + "[y upper]\n"
@@ -21840,6 +21915,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

@@ -271,6 +271,16 @@ Exemplos...
     y dns example.com
     y dns example.com 8.8.8.8
     obs: em desenvolvimento, a resposta ainda não é muito legível!
+    alguns dns's:
+      dns.adguard.com
+      dns.sse.cisco.com
+      dns.google # google
+      one.one.one.one # Cloudflare
+      dns.opendns.com # usado pela claro
+      dns9.quad9.net
+      security-filter-dns.cleanbrowsing.org
+      resolver1.telesp.net.br # usado pela vivo
+      resolver2.telesp.net.br # usado pela vivo
 [y lower]
     y echo AA | y lower
 [y upper]
