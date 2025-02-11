@@ -5256,7 +5256,12 @@ cat buffer.log
     }
     public void meuip(){
         System.out.print(
-            curl_string("http://checkip.amazonaws.com/").trim()
+            //alternativa https://api.ipify.org ipv4
+            //            https://api64.ipify.org ipv6
+            //            ipinfo.io
+            //            ipinfo.io/ip
+            //            ifconfig.me
+            curl_string("https://checkip.amazonaws.com/").trim()
         );
     }
     public void disconnect(boolean seAtivoDesconectaLoop1Segundo){
