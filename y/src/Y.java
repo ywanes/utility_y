@@ -870,6 +870,16 @@ cat buffer.log
             String source_dns=null;
             if ( args.length > 2 )
                 source_dns=args[2];
+            if ( name.startsWith("http://" ) || name.startsWith("https://" ) ){
+                try{
+                    java.net.URL url=new java.net.URL("http://203.cloudns.cl:8000/");            
+                    if ( source_dns == null )
+                        System.out.println("execute o comando desse modo:\ny " + args[0] + " " + url.getHost());                  
+                    else
+                        System.out.println("execute o comando desse modo:\ny " + args[0] + " " + url.getHost() + " " + source_dns );
+                }catch(Exception e){}
+                return;
+            }
             System.out.print(dns(name, source_dns));
             return;
         }
