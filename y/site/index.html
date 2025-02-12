@@ -126,7 +126,7 @@ function human_sort_custom(a){ // custom - extensao estava atrapalhando o sort
 	let a2=[]; // list  labelName # para ordenacao
 	let a3=[]; // list  realName  # ordenado pelo labelName
 	for ( let i=0;i<a.length;i++ ){
-		let m=remove_extensao(a[i]);
+		let m=format_name(a[i]);
 		s[m]=a[i];
 		a2.push(m);
 	}
@@ -261,10 +261,10 @@ function f_continue(){
         s+="<tr>";        
 		s+="<td style=\"padding: 0; cursor: pointer;\" onclick=\"remove_playing(this)\" ><svg width=\"40px\" height=\"40px\" viewBox=\"0 0 1024 1024\" class=\"icon\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#008000\" d=\"M745.344 361.344a32 32 0 0145.312 45.312l-288 288a32 32 0 01-45.312 0l-160-160a32 32 0 1145.312-45.312L480 626.752l265.344-265.408z\"></path></svg></td>";
 		let txt='';
-        if ( remove_extensao(lista[i]['element']).indexOf('/series/') != 0 )
-            txt='FILME -> ' + remove_extensao(lista[i]['element']);
+        if ( format_name(lista[i]['element']).indexOf('/series/') != 0 )
+            txt='FILME -> ' + format_name(lista[i]['element']);
 		else
-			txt='SERIE -> ' + remove_extensao(lista[i]['element']);
+			txt='SERIE -> ' + format_name(lista[i]['element']);
         s+="<td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + lista[i]['element'].substring(1).split('/').join("','") + "']" + ", true, '" + type + "')\">" + txt + "</td>";
         s+="</tr>";
     }
@@ -364,7 +364,7 @@ function load_movie(parm, table_click){
                 </button>
                 <button id="volume"></button>
                 <p class="title">                
-                  <span class="series"></span><span class="episode">`+remove_extensao(parm[parm.length-1])+`</span>
+                  <span class="series"></span><span class="episode">`+format_name(parm[parm.length-1])+`</span>
                 </p>
                 <a onclick="go_home()" style="display: inline-block; cursor: pointer;">            
                     <svg width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"> <g clip-path="url(#clip0)"> <path fill-rule="evenodd" clip-rule="evenodd" d="M12.5882 3.66429C12.2376 3.40927 11.7625 3.40927 11.4119 3.66429L5.00007 8.32743V20C5.00007 20.5523 5.44779 21 6.00007 21H8.00007V15C8.00007 13.3432 9.34322 12 11.0001 12H13.0001C14.6569 12 16.0001 13.3432 16.0001 15V21H18.0001C18.5524 21 19.0001 20.5523 19.0001 20V8.32743L12.5882 3.66429ZM21.0001 9.78198L22.4119 10.8088C22.8586 11.1336 23.484 11.0349 23.8088 10.5882C24.1336 10.1415 24.0349 9.51613 23.5882 9.19129L13.7646 2.04681C12.7126 1.28176 11.2875 1.28176 10.2356 2.04681L0.411899 9.19129C-0.0347537 9.51613 -0.133504 10.1415 0.191334 10.5882C0.516173 11.0349 1.14159 11.1336 1.58824 10.8088L3.00007 9.78198V20C3.00007 21.6569 4.34322 23 6.00007 23H18.0001C19.6569 23 21.0001 21.6569 21.0001 20V9.78198ZM14.0001 21V15C14.0001 14.4477 13.5524 14 13.0001 14H11.0001C10.4478 14 10.0001 14.4477 10.0001 15V21H14.0001Z" fill="#293644"></path> </g> <defs> <clipPath id="clip0"> <rect width="24" height="24" fill="white"></rect> </clipPath> </defs> </svg>        
@@ -795,7 +795,7 @@ function load_music(parm, elements){
                       tmp_si='40';                  
                   }
                   for ( let i=0;i<elements.length;i++ ){
-                    tmp+="<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: " + tmp_wi + "px; font-size: " + tmp_si + "px; font-family: Franklin Gothic Medium;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + src+elements[i] + "\" >" + remove_extensao(elements[i]) + "</td></tr>\n";
+                    tmp+="<tr><td style=\"display: inline-block; cursor: pointer; color: white; width: " + tmp_wi + "px; font-size: " + tmp_si + "px; font-family: Franklin Gothic Medium;\" onclick=\"click_faixa(this,'humanClick')\" name=\"" + src+elements[i] + "\" >" + format_name(elements[i]) + "</td></tr>\n";
                   }
                   document.getElementById('principal').innerHTML=`
                         <style>canvas {position: relative;top: 0%;left: 50%;margin-left: -50vmin;width: 100vmin;height: 100vmin;}</style>
@@ -1402,7 +1402,7 @@ function load_playlist_principal(elements, parm, type){
                 oneLine+="<td></td>";
             }    
         }
-        oneLine+="<td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + parm.concat(elements[i]).join("','") + "']" + ", true, '" + type + "')\">" + remove_extensao(elements[i]) + "</td>";
+        oneLine+="<td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + parm.concat(elements[i]).join("','") + "']" + ", true, '" + type + "')\">" + format_name(elements[i]) + "</td>";
         oneLine+="</tr>\n";
         if ( tail )
             s0+=oneLine;
@@ -1583,16 +1583,18 @@ function saneamentoValue(a){
   return a.replaceAll(':', '_').replaceAll('/', '_').replaceAll('+', '_');
 }
 
-function remove_extensao(a){
+function format_name(a){
   let pos=a.lastIndexOf('.');
   if ( pos > 0 && pos < a.length-1 )
     a=a.substring(0,pos);
   a=a.replaceAll(' - ', '|').replaceAll('-', ' ').replaceAll('|', ' - ');
   a=a.replaceAll(' dublado www.encontrei.tv','');
   a=a.replaceAll('.',' ');
+  a=a.replaceAll('/', ' / ');
   a=a.toLowerCase().replace(/(?:^|\s)\S/g, function(b) {
     return b.toUpperCase();
   });
+  a=a.replaceAll(' / ', '/');
   return a;
 }
 
