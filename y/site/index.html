@@ -805,7 +805,7 @@ function load_music(parm, elements){
                         <div id="f11bg" style="display: none" >
                           <canvas></canvas>
                         </div>
-                        <div id="f11" tailmousef11="n" tailvideo="n" onmousef11="n" ocorr="0" sz="40" wi="800">
+                        <div id="f11" tailmousef11="n" tailvideo="n" onmousef11="n" ocorr="0" sz="` + tmp_si + `" wi="` + tmp_wi + `">
                         <meta charset="utf-8">
                         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
                         <div id="master"></div>                        
@@ -1051,8 +1051,9 @@ function load_music(parm, elements){
                   };
                   if ( !this.inicializado2 ){
                       document.addEventListener('click', function(e) {  
-                           if ( document.getElementsByClassName('time-remaining')[0].innerText == error_NaN_load )
-                             return;
+                           // music not need this command
+                           //if ( document.getElementsByClassName('time-remaining')[0].innerText == error_NaN_load )
+                           //  return;
                            if ( document.getElementById('p') == null )
                              return;
                            let tagName=e.target.tagName;
