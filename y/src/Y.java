@@ -185,14 +185,13 @@ import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
-import javax.sound.sampled.AudioFileFormat;
 import javax.sound.sampled.AudioFormat;
 import javax.swing.JOptionPane;
 
 
 public class Y extends Util{    
-    //public static String local_env=null;
-    public static String local_env="c:\\tmp";
+    public static String local_env=null;
+    //public static String local_env="c:\\tmp";
     
     public static String linhaCSV=null;
     public static int ponteiroLinhaCSV=0;        
@@ -1729,6 +1728,10 @@ cat buffer.log
                 cronometro(null);
                 return;
             }
+        }
+        if ( args[0].equals("steam") ){
+            steam(args);
+            return;
         }
         if ( args[0].equals("clear") || args[0].equals("clean") || args[0].equals("cls") ){
             clear_cls();
@@ -4657,7 +4660,17 @@ cat buffer.log
         }catch (Exception e){
             System.err.println("Não foi possível carregar a biblioteca SQL Server");
             System.exit(1);
-        }                    
+        }        
+        try{
+            Class.forName("org.postgresql.util.PGJDBCMain");
+        }catch (Exception e){
+            /*
+            if ( isWindows() )
+                System.err.println("warming... comando pendente!!\ncurl \"https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar\" > \"c:\\y\\postgresql-42.7.5.jar\"");
+            else
+                System.err.println("warming... comando pendente!!\ncurl https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar > /opt/y/postgresql-42.7.5.jar");
+            */
+        }                
     }	
 	//REMOVED_GRAAL_END
 	//REMOVED_GRAAL_START
@@ -11104,8 +11117,10 @@ cat buffer.log
                     System.out.println("Erro, nao foi possivel ler a flag!");
             }
         }
+    }    
+    public void steam(String [] args){
+        System.out.println("em deselvolvimento");
     }
-    
     private String cronometro_format(long a, long b){
         return miliseconds_to_string(a) + " - " + miliseconds_to_string(b) + " total";
     }
@@ -21056,8 +21071,6 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
-
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -21153,6 +21166,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y pid]\n"
 /* class by manual */                + "  [y date]\n"
 /* class by manual */                + "  [y cronometro]\n"
+/* class by manual */                + "  [y steam]\n"
 /* class by manual */                + "  [y [cls|clear|clean]]\n"
 /* class by manual */                + "  [y ping]\n"
 /* class by manual */                + "  [y pings]\n"
@@ -21258,6 +21272,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    cat arquivo.xml | y xml mostraTags\n"
 /* class by manual */                + "[y token]\n"
 /* class by manual */                + "    y token value\n"
+/* class by manual */                + "    obs: y token value -> retorna o hash\n"
+/* class by manual */                + "    obs2: e preciso ja ter o TOKEN_Y definido\n"
 /* class by manual */                + "[y gettoken]\n"
 /* class by manual */                + "    y gettoken hash\n"
 /* class by manual */                + "[y json]\n"
@@ -21710,6 +21726,13 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y cronometro flag\n"
 /* class by manual */                + "    y cronometro end\n"
 /* class by manual */                + "    obs: \"y cronometro\" dispara o comando equivalente a flag a cada enter pressionado.\n"
+/* class by manual */                + "[y steam]\n"
+/* class by manual */                + "    y steam friends\n"
+/* class by manual */                + "    y steam friends status\n"
+/* class by manual */                + "    y steam status 232323\n"
+/* class by manual */                + "    obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323\n"
+/* class by manual */                + "    obs2: cria sua STEAM_API_KEY aqui -> https://steamcommunity.com/dev/apikey -> 123\n"
+/* class by manual */                + "    obs3: pegue seu STEAM_ID no profile, exemplo -> https://steamcommunity.com/profiles/232323/ -> 232323\n"
 /* class by manual */                + "[y clear]\n"
 /* class by manual */                + "    y clear\n"
 /* class by manual */                + "    obs: alternativa y cls\n"
@@ -21875,10 +21898,11 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y help router\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Exemplos de conn: \n"
-/* class by manual */                + "    -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\"\n"
-/* class by manual */                + "    -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\"\n"
-/* class by manual */                + "    -conn \"jdbc:sqlserver://localhost:1433;databaseName=MyDatabase;user=myUsername;password=myPassword;\"\n"
-/* class by manual */                + "    -conn \"jdbc:mysql://localhost:3306|login|senha\"\n"
+/* class by manual */                + "    y banco -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\" select \"select 1\"\n"
+/* class by manual */                + "    y banco -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\" select \"select 1\"\n"
+/* class by manual */                + "    y banco -conn \"jdbc:sqlserver://localhost:1433;databaseName=MyDatabase;user=myUsername;password=myPassword;\" select \"select 1\"\n"
+/* class by manual */                + "    y banco -conn \"jdbc:mysql://localhost:3306|login|senha\" select \"select 1\"\n"
+/* class by manual */                + "    y banco -conn \"jdbc:postgresql://localhost:5432/|login|senha\" select \"select 1\"\n"
 /* class by manual */                + "\n"
 /* class by manual */                + "Observacoes:\n"
 /* class by manual */                + "entrada de dados pode ser feito por |\n"
@@ -21961,6 +21985,11 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
+
 
 
 

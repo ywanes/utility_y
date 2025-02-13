@@ -53,7 +53,7 @@ then
 fi
 alias pss='ps -ef'
 export PATH="$PATH":.
-alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
+alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/postgresql-42.7.5.jar:/opt/y/jsch-0.1.55.jar:. Y'
 rm -f /opt/.u_flag
 alias u='/opt/.u'
 alias uu='/opt/.u_c'
@@ -134,7 +134,7 @@ EOF
 chmod 777 /opt/env_
 
 cat <<'EOF'> /opt/y/compila
-javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
+javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:postgresql-42.7.5.jar:jsch-0.1.55.jar:. Y.java
 EOF
 chmod 777 /opt/y/compila
 
@@ -142,7 +142,7 @@ cat <<'EOF'> /opt/y/compila2
 rm -f Y.java >/dev/null
 #wget http://203.cloudns.cl:8000/z_outros/src/Y.java
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
+javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:postgresql-42.7.5.jar:jsch-0.1.55.jar:. Y.java
 EOF
 chmod 777 /opt/y/compila2
 
@@ -159,12 +159,16 @@ if [ ! -e mysql-connector-java-8.0.26.jar ]
 then
     curl https://adams.cms.waikato.ac.nz/nexus/repository/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar > mysql-connector-java-8.0.26.jar
 fi
+if [ ! -e postgresql-42.7.5.jar ]
+then
+    curl https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar > postgresql-42.7.5.jar
+fi
 if [ ! -e jsch-0.1.55.jar ]
 then
     curl https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar > jsch-0.1.55.jar
 fi
 curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:jsch-0.1.55.jar:. Y.java
+javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:postgresql-42.7.5.jar:jsch-0.1.55.jar:. Y.java
 EOF
 
 cat <<'EOF'> /opt/.u

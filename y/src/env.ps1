@@ -51,9 +51,10 @@ cd c:/y
 Invoke-WebRequest -uri "https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar" -Method "GET"  -Outfile ojdbc6.jar
 Invoke-WebRequest -uri "https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar" -Method "GET"  -Outfile sqljdbc4-3.0.jar
 Invoke-WebRequest -uri "https://adams.cms.waikato.ac.nz/nexus/repository/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar" -Method "GET"  -Outfile mysql-connector-java-8.0.26.jar
+Invoke-WebRequest -uri "https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar" -Method "GET"  -Outfile postgresql-42.7.5.jar
 Invoke-WebRequest -uri "https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar" -Method "GET"  -Outfile jsch-0.1.55.jar
 Invoke-WebRequest -uri "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java" -Method "GET"  -Outfile Y.java
-c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;jsch-0.1.55.jar;." Y.java
+c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;." Y.java
 
 Set-Content c:/windows/y.bat '@echo off
 (set \n=^^^
@@ -67,7 +68,7 @@ echo %* | y trataEcho -ignore "Se Vc esta lendo esta msg, significa que ocorreu 
 if "%1" equ "printf" (
 echo %* | y trataPrintf -ignore "Se Vc esta lendo esta msg, significa que ocorreu o bug de " na quantidade impar"
 ) else (
-java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
+java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\postgresql-42.7.5.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
 )
 )
 '
@@ -90,11 +91,11 @@ Set-Content config_y.reg 'Windows Registry Editor Version 5.00
 
 
 Set-Content compila2.cmd 'curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;jsch-0.1.55.jar;. Y.java
+javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;. Y.java
 '
 
 Set-Content compilaCurl.cmd 'curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
-javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;jsch-0.1.55.jar;. Y.java
+javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;. Y.java
 pause
 '
 

@@ -89,6 +89,7 @@ usage:
   [y pid]
   [y date]
   [y cronometro]
+  [y steam]
   [y [cls|clear|clean]]
   [y ping]
   [y pings]
@@ -194,6 +195,8 @@ Exemplos...
     cat arquivo.xml | y xml mostraTags
 [y token]
     y token value
+    obs: y token value -> retorna o hash
+    obs2: é preciso ja ter o TOKEN_Y definido
 [y gettoken]
     y gettoken hash
 [y json]
@@ -646,6 +649,13 @@ Exemplos...
     y cronometro flag
     y cronometro end
     obs: "y cronometro" dispara o comando equivalente a flag a cada enter pressionado.
+[y steam]
+    y steam friends
+    y steam friends status
+    y steam status 232323
+    obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323
+    obs2: cria sua STEAM_API_KEY aqui -> https://steamcommunity.com/dev/apikey -> 123
+    obs3: pegue seu STEAM_ID no profile, exemplo -> https://steamcommunity.com/profiles/232323/ -> 232323
 [y clear]
     y clear
     obs: alternativa y cls
@@ -811,10 +821,11 @@ Exemplos...
     y help router
 
 Exemplos de conn: 
-    -conn "jdbc:oracle:thin:@//host_name:1521/service_name|login|senha"
-    -conn "jdbc:oracle:thin:@host_name:1566:sid_name|login|senha"
-    -conn "jdbc:sqlserver://localhost:1433;databaseName=MyDatabase;user=myUsername;password=myPassword;"
-    -conn "jdbc:mysql://localhost:3306|login|senha"
+    y banco -conn "jdbc:oracle:thin:@//host_name:1521/service_name|login|senha" select "select 1"
+    y banco -conn "jdbc:oracle:thin:@host_name:1566:sid_name|login|senha" select "select 1"
+    y banco -conn "jdbc:sqlserver://localhost:1433;databaseName=MyDatabase;user=myUsername;password=myPassword;" select "select 1"
+    y banco -conn "jdbc:mysql://localhost:3306|login|senha" select "select 1"
+    y banco -conn "jdbc:postgresql://localhost:5432/|login|senha" select "select 1"
 
 Observações:
 entrada de dados pode ser feito por |
