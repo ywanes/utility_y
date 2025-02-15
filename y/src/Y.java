@@ -4694,6 +4694,23 @@ cat buffer.log
         return null;
     }
 
+    class CustomClassLoader extends ClassLoader {
+        @Override protected Class<?> findClass(String name) throws ClassNotFoundException { 
+            //if ( verbose )
+                System.out.println("finding... " + name);
+            if ( classes.containsKey(name) ){ 
+                try { 
+                    byte[] data=(byte [])classes.get(name);
+                    return defineClass(name,data,0,data.length);        
+                }catch(Exception e){ 
+                    System.err.println("Erro no carregamento da classe "+name); 
+                    System.exit(1); 
+                } 
+            } 
+            return super.findClass(name); 
+        } 
+    }    
+    
     public void loadJar_load(String[] list_main, boolean verbose) throws Exception {
         ClassLoader classLoader=new ClassLoader() {            
             @Override protected Class<?> findClass(String name) throws ClassNotFoundException { 
@@ -4712,27 +4729,51 @@ cat buffer.log
             } 
         };         
         for ( int i=0;i<list_main.length;i++ ){
+            if ( false ){
+                ClassLoader cl = ClassLoader.getSystemClassLoader();
+                Class<?> clazz = cl.getClass();
+                java.lang.reflect.Method method = clazz.getSuperclass().getDeclaredMethod("addURL", new Class[] {URL.class});
+                method.setAccessible(true);
+                method.invoke(cl, new Object[] {new File("C:/y/postgresql-42.7.5B.jar").toURI().toURL()});                
+                Class.forName("org.postgresql.util.PGJDBCMain");
+            }
+            if ( false ){
+                File dir1 = new File("C:\\y\\postgresql-42.7.5B.jar");
+                URL[] urls = {
+                    dir1.toURI().toURL()
+                };
+                URLClassLoader newClassLoader = new URLClassLoader(urls, this.getClass().getClassLoader());                
+                Thread.currentThread().setContextClassLoader(newClassLoader);                
+                Class.forName("org.postgresql.util.PGJDBCMain");
+            }
             if ( true ){
-                Class.forName(list_main[i], true, classLoader);
-                //Class.forName(list_main[i], true, Class.forName("Y").getClassLoader());
+                Thread.currentThread().setContextClassLoader(new CustomClassLoader());                
+                Class.forName("org.postgresql.util.PGJDBCMain");
+            }
+            if ( false ){
+                Class c=classLoader.loadClass(list_main[i]);                             
+                c.forName("org.postgresql.util.PGJDBCMain");
+            }
+            if ( false ){
+                Class cls=Class.forName(list_main[i], true, classLoader);
+                //Class.forName(list_main[i], true, this.getClass().getClassLoader());
             }
             if ( false ){                
                 Class c=classLoader.loadClass(list_main[i]);                             
                 java.lang.reflect.Method method=c.getDeclaredMethod("main", String[].class );
                 method.invoke(null, new Object[]{ new String[]{} } ); 
             }
-
+            if ( false ){                
+                Class cls=Class.forName(list_main[i], true,new CustomClassLoader());
+                java.lang.reflect.Constructor c = cls.getConstructor();
+                c.newInstance();
+                Class.forName("org.postgresql.util.PGJDBCMain");
+            }
             if ( false ){
                 Class cls=classLoader.loadClass(list_main[i]);
                 java.lang.reflect.Constructor c = cls.getConstructor();
                 c.newInstance();
             }
-            
-            if ( false ){
-                Class cls=classLoader.loadClass(list_main[i]);
-                cls.newInstance();
-            }
-            
             
             if ( false ){
                 List<String> items = new ArrayList<String>(classes.keySet());
@@ -4783,11 +4824,42 @@ cat buffer.log
             
             
             /*
-            loadJar("C:\\y\\postgresql-42.7.5.jar", true);
+            loadJar("C:\\y\\postgresql-42.7.5B.jar", true);
             System.out.println("");
             try {Thread.sleep(1000);} catch (InterruptedException e) { }  
             if ( loadJar_mainManifest != null )
                 loadJar_load(new String[]{loadJar_mainManifest}, true);
+            */
+            
+            /*
+            File jarFile = new File("C:\\y\\postgresql-42.7.5B.jar");
+            URL jarUrl = jarFile.toURI().toURL();
+            URLClassLoader customClassLoader = new URLClassLoader(new URL[]{jarUrl});
+            Class<?> loadedClass = Class.forName("org.postgresql.util.PGJDBCMain", true, customClassLoader);
+            */
+            
+            /*
+            File file = new File("C:\\y\\postgresql-42.7.5B.jar");
+            URL url = file.toURI().toURL();
+            URLClassLoader classLoader = new URLClassLoader(new URL[]{url});
+            Class<?> loadedClass = classLoader.loadClass("org.postgresql.util.PGJDBCMain");
+            Object instance = loadedClass.getDeclaredConstructor().newInstance();
+            */
+            //Class cls=Class.forName("org.postgresql.util.PGJDBCMain2");
+            //cls.getDeclaredConstructor().newInstance();
+            
+            /*
+            File newClasspathEntry = new File("C:\\y\\postgresql-42.7.5B.jar");
+            URL newClasspathUrl = newClasspathEntry.toURI().toURL();
+            ClassLoader currentClassLoader = Thread.currentThread().getContextClassLoader();
+            URLClassLoader newClassLoader = new URLClassLoader(
+                new URL[]{newClasspathUrl}, // Novo caminho a ser adicionado
+                currentClassLoader          // ClassLoader pai (para herdar o classpath existente)
+            );
+            Thread.currentThread().setContextClassLoader(newClassLoader);
+            String className = "org.postgresql.util.PGJDBCMain"; // Nome totalmente qualificado da classe
+            Class<?> loadedClass = newClassLoader.loadClass(className);
+            Object instance = loadedClass.getDeclaredConstructor().newInstance();
             */
             
             //cd c:\y && cls && compila2 && y banco "conn,nuvem" select "select 1"
