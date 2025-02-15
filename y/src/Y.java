@@ -4714,6 +4714,7 @@ cat buffer.log
         for ( int i=0;i<list_main.length;i++ ){
             if ( true ){
                 Class.forName(list_main[i], true, classLoader);
+                //Class.forName(list_main[i], true, Class.forName("Y").getClassLoader());
             }
             if ( false ){                
                 Class c=classLoader.loadClass(list_main[i]);                             
@@ -4782,13 +4783,14 @@ cat buffer.log
             
             
             /*
-            loadJar("C:\\y\\postgresql-42.7.5B.jar", true);
+            loadJar("C:\\y\\postgresql-42.7.5.jar", true);
             System.out.println("");
             try {Thread.sleep(1000);} catch (InterruptedException e) { }  
             if ( loadJar_mainManifest != null )
                 loadJar_load(new String[]{loadJar_mainManifest}, true);
             */
             
+            //cd c:\y && cls && compila2 && y banco "conn,nuvem" select "select 1"
             Class.forName("org.postgresql.util.PGJDBCMain");
         }catch (Exception e){
             System.out.println(e.toString());
