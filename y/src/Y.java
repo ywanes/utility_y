@@ -4647,6 +4647,113 @@ cat buffer.log
         return lendo_arquivo(dir_token+md5);
     }
 
+    static String loadJar_mainManifest=null;
+    static java.util.HashMap classes=new java.util.HashMap();
+    private void loadJar(String path, boolean verbose) throws Exception{
+        loadJar_mainManifest=null;
+        java.util.jar.JarFile jarFile = new java.util.jar.JarFile(path);
+        java.util.Enumeration<java.util.jar.JarEntry> e = jarFile.entries();
+        while (e.hasMoreElements()) {
+            java.util.jar.JarEntry je = e.nextElement();
+            // org/a/b/c$1.class
+            if(je.getName().equals("META-INF/MANIFEST.MF") ){
+                byte [] bytes=getBytesInputStream(jarFile.getInputStream(je));
+                loadJar_mainManifest=loadJar_getMainClassName(new String(bytes));
+                continue;
+            }
+            if(je.isDirectory() || !je.getName().endsWith(".class")){
+                continue;
+            }        
+            String key=je.getName().replace("/",".");
+            key=key.substring(0,key.length()-6);
+            byte [] value=getBytesInputStream(jarFile.getInputStream(je));
+            if ( verbose )
+                System.out.println("put: " + key);
+            classes.put(key, value);
+        }        
+    }
+    
+    public byte [] getBytesInputStream(java.io.InputStream is) throws Exception{
+        byte [] buf=new byte[1024];
+        int len=0;        
+        java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream();
+        while( (len=is.read(buf, 0, buf.length)) > 0 )
+            baos.write(buf, 0, len);        
+        return baos.toByteArray();
+    }
+    
+    public String loadJar_getMainClassName(String a){
+        String [] partes=a.split("\r\n");
+        for ( int i=0;i<partes.length;i++ ){
+            if ( partes[i].startsWith("Main-Class: ") ){
+                String [] partes2=partes[i].split(" ");
+                if ( partes2.length == 2 )
+                    return partes2[1];
+            }
+        }
+        return null;
+    }
+
+    public void loadJar_load(String[] list_main, boolean verbose) throws Exception {
+        ClassLoader classLoader=new ClassLoader() {            
+            @Override protected Class<?> findClass(String name) throws ClassNotFoundException { 
+                if ( verbose )
+                    System.out.println("finding... " + name);
+                if ( classes.containsKey(name) ){ 
+                    try { 
+                        byte[] data=(byte [])classes.get(name);
+                        return defineClass(name,data,0,data.length);        
+                    }catch(Exception e){ 
+                        System.err.println("Erro no carregamento da classe "+name); 
+                        System.exit(1); 
+                    } 
+                } 
+                return super.findClass(name); 
+            } 
+        };         
+        for ( int i=0;i<list_main.length;i++ ){
+            if ( true ){
+                Class.forName(list_main[i], true, classLoader);
+            }
+            if ( false ){                
+                Class c=classLoader.loadClass(list_main[i]);                             
+                java.lang.reflect.Method method=c.getDeclaredMethod("main", String[].class );
+                method.invoke(null, new Object[]{ new String[]{} } ); 
+            }
+
+            if ( false ){
+                Class cls=classLoader.loadClass(list_main[i]);
+                java.lang.reflect.Constructor c = cls.getConstructor();
+                c.newInstance();
+            }
+            
+            if ( false ){
+                Class cls=classLoader.loadClass(list_main[i]);
+                cls.newInstance();
+            }
+            
+            
+            if ( false ){
+                List<String> items = new ArrayList<String>(classes.keySet());
+                for ( int j=0;j<items.size();j++ ){
+                    /*
+                    if ( items.get(j).equals("org.osgi.service.jdbc.DataSourceFactory")
+                    )
+                        continue;
+                    */
+                    System.out.println(".. " + items.get(j));
+                    classLoader.loadClass(items.get(j));
+                }
+            }
+            
+            /*
+            Constructor c = cls.getConstructor(); // we get the implicit constructor without parameters
+            Plugin plugin = (Plugin) c.newInstance(); // we instantiate it, no parameters
+            Method m = cls.getDeclaredMethod("main", Integer.TYPE);            
+            */
+        }
+    }
+    
 	//REMOVED_GRAAL_START
     public void try_load_libraries(){
         try{
@@ -4662,8 +4769,29 @@ cat buffer.log
             System.exit(1);
         }        
         try{
+            /*
+            //Class.forName("org.postgresql.util.PGJDBCMain");
+            java.io.File jarFile = new java.io.File("C:\\y\\postgresql-42.7.5B.jar");
+            java.net.URL jarUrl = jarFile.toURI().toURL();
+            java.net.URLClassLoader classLoader = new java.net.URLClassLoader(new java.net.URL[]{jarUrl});            
+            Class<?> loadedClass = classLoader.loadClass("org.postgresql.util.PGJDBCMain");
+            System.out.println("Class loaded successfully: " + loadedClass.getName());
+            //loadedClass.getDeclaredConstructor().newInstance();
+            //classLoader.loadClass("org.postgresql.util.PGJDBCMain");
+            */
+            
+            
+            /*
+            loadJar("C:\\y\\postgresql-42.7.5B.jar", true);
+            System.out.println("");
+            try {Thread.sleep(1000);} catch (InterruptedException e) { }  
+            if ( loadJar_mainManifest != null )
+                loadJar_load(new String[]{loadJar_mainManifest}, true);
+            */
+            
             Class.forName("org.postgresql.util.PGJDBCMain");
         }catch (Exception e){
+            System.out.println(e.toString());
             /*
             if ( isWindows() )
                 System.err.println("warming... comando pendente!!\ncurl \"https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar\" > \"c:\\y\\postgresql-42.7.5.jar\"");
