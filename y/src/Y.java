@@ -4746,7 +4746,7 @@ cat buffer.log
                 Thread.currentThread().setContextClassLoader(newClassLoader);                
                 Class.forName("org.postgresql.util.PGJDBCMain");
             }
-            if ( true ){
+            if ( false ){
                 Thread.currentThread().setContextClassLoader(new CustomClassLoader());                
                 Class.forName("org.postgresql.util.PGJDBCMain");
             }
@@ -4754,9 +4754,26 @@ cat buffer.log
                 Class c=classLoader.loadClass(list_main[i]);                             
                 c.forName("org.postgresql.util.PGJDBCMain");
             }
+            //java.sql.Driver d=(java.sql.Driver)cls;
+            if ( false ){
+                Class cls=Class.forName(list_main[i], true,new CustomClassLoader());
+                java.lang.reflect.Constructor c = cls.getConstructor();
+                c.newInstance();
+                java.sql.Driver d=(java.sql.Driver)c.newInstance();
+                System.out.println(11);
+            }
+            if ( false ){
+                Class cls=Class.forName("org.postgresql.Driver", true, classLoader);                
+                //Class.forName(list_main[i], true, this.getClass().getClassLoader());
+            }
             if ( false ){
                 Class cls=Class.forName(list_main[i], true, classLoader);
                 //Class.forName(list_main[i], true, this.getClass().getClassLoader());
+            }
+            if ( false ){                
+                Class c=classLoader.loadClass("org.postgresql.Driver");                             
+                java.lang.reflect.Method method=c.getDeclaredMethod("main", String[].class );
+                method.invoke(null, new Object[]{ new String[]{} } ); 
             }
             if ( false ){                
                 Class c=classLoader.loadClass(list_main[i]);                             
@@ -4822,7 +4839,6 @@ cat buffer.log
             //classLoader.loadClass("org.postgresql.util.PGJDBCMain");
             */
             
-            
             /*
             loadJar("C:\\y\\postgresql-42.7.5B.jar", true);
             System.out.println("");
@@ -4863,9 +4879,12 @@ cat buffer.log
             */
             
             //cd c:\y && cls && compila2 && y banco "conn,nuvem" select "select 1"
+            // nao precisa
             Class.forName("org.postgresql.util.PGJDBCMain");
+            //Class.forName("org.postgresql.Driver");
         }catch (Exception e){
-            System.out.println(e.toString());
+            // comentar depois
+            //System.out.println(e.toString());
             /*
             if ( isWindows() )
                 System.err.println("warming... comando pendente!!\ncurl \"https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar\" > \"c:\\y\\postgresql-42.7.5.jar\"");
