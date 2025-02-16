@@ -1027,6 +1027,7 @@ cat buffer.log
         if ( args[0].equals("yt") ){
             System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(title)s.%(ext)s\" http...");
             System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist)s.%(playlist_index)03d.%(title)s.%(ext)s\" http...");
+            System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist)s.%(upload_date)s.%(title)s.%(ext)s\" http...");
             return;
         }
         if ( args[0].equals("curl") ){
