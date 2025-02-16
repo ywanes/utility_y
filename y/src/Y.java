@@ -132,6 +132,7 @@ import java.nio.file.attribute.PosixFilePermission;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
@@ -1967,12 +1968,7 @@ cat buffer.log
         }
         if ( args[0].equals("test") ){ // "teste"
             try{
-                JSch jsch = new JSch();
-                Session session = jsch.getSession(args[2], args[1], 22);
-                session.setPassword(args[3]);
-                session.setConfig("StrictHostKeyChecking", "no"); // Cuidado: isso ignora a verificação do host
-                session.connect();
-                System.out.println("fim");
+                test("");
             }catch(Exception e){
                 System.err.println(".. "+ e.toString());
                 System.exit(1);
@@ -4647,15 +4643,58 @@ cat buffer.log
         return lendo_arquivo(dir_token+md5);
     }
 
+    public Connection loadJar_getConnection(String url, String user, String password) throws Exception{
+        if ( url.startsWith("jdbc:postgresql:") )
+            return loadJar_getConnection("postgresql-42.7.5.jar", "org.postgresql.Driver", "https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/", url, user, password);
+        return null;
+    }
+    public Connection loadJar_getConnection(String jar, String className, String indexOfdown, String url, String user, String password) throws Exception{
+        String outJar="";
+        if ( isWindows() )
+            outJar="C:\\y\\"+jar;
+        else
+            outJar="/opt/y/"+jar;
+        if ( !new File(jar).exists() ){
+            if ( isWindows() )
+                System.err.println("warming... comando pendente!!\ncurl \"" + indexOfdown + jar + "\" > \"c:\\y\\" + jar + "\"");
+            else
+                System.err.println("warming... comando pendente!!\ncurl " + indexOfdown + jar + " > /opt/y/" + jar);            
+            return null;
+        }
+        loadJar(outJar);
+        Class cls = loadJar_classLoader.loadClass(className);
+        java.sql.Driver d=(java.sql.Driver)cls.getDeclaredConstructor().newInstance();
+        java.util.Properties info = new java.util.Properties();
+        info.put("user", user);
+        info.put("password", password);
+        Connection con=d.connect(url, info);                    
+        return con;
+    }
+
+    public static ClassLoader loadJar_classLoader=new ClassLoader() {            
+        @Override protected Class<?> findClass(String name) throws ClassNotFoundException { 
+            //System.out.println("finding... " + name);
+            if ( classes.containsKey(name) ){ 
+                try { 
+                    byte[] data=(byte [])classes.get(name);
+                    return defineClass(name,data,0,data.length);        
+                }catch(Exception e){ 
+                    System.err.println("Erro no carregamento da classe "+name); 
+                    System.exit(1); 
+                } 
+            } 
+            return super.findClass(name); 
+        } 
+    };                    
+
     static String loadJar_mainManifest=null;
     static java.util.HashMap classes=new java.util.HashMap();
-    private void loadJar(String path, boolean verbose) throws Exception{
+    private void loadJar(String path) throws Exception{
         loadJar_mainManifest=null;
         java.util.jar.JarFile jarFile = new java.util.jar.JarFile(path);
         java.util.Enumeration<java.util.jar.JarEntry> e = jarFile.entries();
         while (e.hasMoreElements()) {
             java.util.jar.JarEntry je = e.nextElement();
-            // org/a/b/c$1.class
             if(je.getName().equals("META-INF/MANIFEST.MF") ){
                 byte [] bytes=getBytesInputStream(jarFile.getInputStream(je));
                 loadJar_mainManifest=loadJar_getMainClassName(new String(bytes));
@@ -4667,21 +4706,11 @@ cat buffer.log
             String key=je.getName().replace("/",".");
             key=key.substring(0,key.length()-6);
             byte [] value=getBytesInputStream(jarFile.getInputStream(je));
-            if ( verbose )
-                System.out.println("put: " + key);
+            //System.out.println("put: " + key);
             classes.put(key, value);
         }        
-    }
-    
-    public byte [] getBytesInputStream(java.io.InputStream is) throws Exception{
-        byte [] buf=new byte[1024];
-        int len=0;        
-        java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream();
-        while( (len=is.read(buf, 0, buf.length)) > 0 )
-            baos.write(buf, 0, len);        
-        return baos.toByteArray();
-    }
-    
+    }    
+
     public String loadJar_getMainClassName(String a){
         String [] partes=a.split("\r\n");
         for ( int i=0;i<partes.length;i++ ){
@@ -4694,124 +4723,7 @@ cat buffer.log
         return null;
     }
 
-    class CustomClassLoader extends ClassLoader {
-        @Override protected Class<?> findClass(String name) throws ClassNotFoundException { 
-            //if ( verbose )
-                System.out.println("finding... " + name);
-            if ( classes.containsKey(name) ){ 
-                try { 
-                    byte[] data=(byte [])classes.get(name);
-                    return defineClass(name,data,0,data.length);        
-                }catch(Exception e){ 
-                    System.err.println("Erro no carregamento da classe "+name); 
-                    System.exit(1); 
-                } 
-            } 
-            return super.findClass(name); 
-        } 
-    }    
-    
-    public void loadJar_load(String[] list_main, boolean verbose) throws Exception {
-        ClassLoader classLoader=new ClassLoader() {            
-            @Override protected Class<?> findClass(String name) throws ClassNotFoundException { 
-                if ( verbose )
-                    System.out.println("finding... " + name);
-                if ( classes.containsKey(name) ){ 
-                    try { 
-                        byte[] data=(byte [])classes.get(name);
-                        return defineClass(name,data,0,data.length);        
-                    }catch(Exception e){ 
-                        System.err.println("Erro no carregamento da classe "+name); 
-                        System.exit(1); 
-                    } 
-                } 
-                return super.findClass(name); 
-            } 
-        };         
-        for ( int i=0;i<list_main.length;i++ ){
-            if ( false ){
-                ClassLoader cl = ClassLoader.getSystemClassLoader();
-                Class<?> clazz = cl.getClass();
-                java.lang.reflect.Method method = clazz.getSuperclass().getDeclaredMethod("addURL", new Class[] {URL.class});
-                method.setAccessible(true);
-                method.invoke(cl, new Object[] {new File("C:/y/postgresql-42.7.5B.jar").toURI().toURL()});                
-                Class.forName("org.postgresql.util.PGJDBCMain");
-            }
-            if ( false ){
-                File dir1 = new File("C:\\y\\postgresql-42.7.5B.jar");
-                URL[] urls = {
-                    dir1.toURI().toURL()
-                };
-                URLClassLoader newClassLoader = new URLClassLoader(urls, this.getClass().getClassLoader());                
-                Thread.currentThread().setContextClassLoader(newClassLoader);                
-                Class.forName("org.postgresql.util.PGJDBCMain");
-            }
-            if ( false ){
-                Thread.currentThread().setContextClassLoader(new CustomClassLoader());                
-                Class.forName("org.postgresql.util.PGJDBCMain");
-            }
-            if ( false ){
-                Class c=classLoader.loadClass(list_main[i]);                             
-                c.forName("org.postgresql.util.PGJDBCMain");
-            }
-            //java.sql.Driver d=(java.sql.Driver)cls;
-            if ( false ){
-                Class cls=Class.forName(list_main[i], true,new CustomClassLoader());
-                java.lang.reflect.Constructor c = cls.getConstructor();
-                c.newInstance();
-                java.sql.Driver d=(java.sql.Driver)c.newInstance();
-                System.out.println(11);
-            }
-            if ( false ){
-                Class cls=Class.forName("org.postgresql.Driver", true, classLoader);                
-                //Class.forName(list_main[i], true, this.getClass().getClassLoader());
-            }
-            if ( false ){
-                Class cls=Class.forName(list_main[i], true, classLoader);
-                //Class.forName(list_main[i], true, this.getClass().getClassLoader());
-            }
-            if ( false ){                
-                Class c=classLoader.loadClass("org.postgresql.Driver");                             
-                java.lang.reflect.Method method=c.getDeclaredMethod("main", String[].class );
-                method.invoke(null, new Object[]{ new String[]{} } ); 
-            }
-            if ( false ){                
-                Class c=classLoader.loadClass(list_main[i]);                             
-                java.lang.reflect.Method method=c.getDeclaredMethod("main", String[].class );
-                method.invoke(null, new Object[]{ new String[]{} } ); 
-            }
-            if ( false ){                
-                Class cls=Class.forName(list_main[i], true,new CustomClassLoader());
-                java.lang.reflect.Constructor c = cls.getConstructor();
-                c.newInstance();
-                Class.forName("org.postgresql.util.PGJDBCMain");
-            }
-            if ( false ){
-                Class cls=classLoader.loadClass(list_main[i]);
-                java.lang.reflect.Constructor c = cls.getConstructor();
-                c.newInstance();
-            }
-            
-            if ( false ){
-                List<String> items = new ArrayList<String>(classes.keySet());
-                for ( int j=0;j<items.size();j++ ){
-                    /*
-                    if ( items.get(j).equals("org.osgi.service.jdbc.DataSourceFactory")
-                    )
-                        continue;
-                    */
-                    System.out.println(".. " + items.get(j));
-                    classLoader.loadClass(items.get(j));
-                }
-            }
-            
-            /*
-            Constructor c = cls.getConstructor(); // we get the implicit constructor without parameters
-            Plugin plugin = (Plugin) c.newInstance(); // we instantiate it, no parameters
-            Method m = cls.getDeclaredMethod("main", Integer.TYPE);            
-            */
-        }
-    }
+
     
 	//REMOVED_GRAAL_START
     public void try_load_libraries(){
@@ -4846,6 +4758,7 @@ cat buffer.log
             if ( loadJar_mainManifest != null )
                 loadJar_load(new String[]{loadJar_mainManifest}, true);
             */
+            //Class.forName("org.postgresql.Driver");
             
             /*
             File jarFile = new File("C:\\y\\postgresql-42.7.5B.jar");
@@ -4880,8 +4793,10 @@ cat buffer.log
             
             //cd c:\y && cls && compila2 && y banco "conn,nuvem" select "select 1"
             // nao precisa
-            Class.forName("org.postgresql.util.PGJDBCMain");
+            //Class.forName("org.postgresql.util.PGJDBCMain");
             //Class.forName("org.postgresql.Driver");
+            
+            //https://github.com/pgjdbc/pgjdbc/blob/master/pgjdbc/src/main/java/org/postgresql/Driver.java
         }catch (Exception e){
             // comentar depois
             //System.out.println(e.toString());
@@ -5011,12 +4926,22 @@ cat buffer.log
                 String par = stringcon.split("\\|")[0];
                 String user = stringcon.split("\\|")[1];
                 String pass = stringcon.split("\\|")[2];
+                String erro=null;
                 try {
                     //Class.forName("oracle.jdbc.OracleDriver");
-                    return DriverManager.getConnection(par, user, pass);
-                } catch (Exception x) {
-                    System.err.println("Erro na conexão:"+x.toString());
+                    return DriverManager.getConnection(par, user, pass);                    
+                } catch (Exception x) {  
+                    erro=x.toString();                    
                 }
+                try{
+                    Connection conn=loadJar_getConnection(par, user, pass);                    
+                    if ( conn != null )
+                        return conn;                    
+                }catch(Exception e){
+                    //System.err.println("Erro na conexão:: "+e.toString());
+                    return null;
+                }
+                System.err.println("Erro na conexão:"+erro);
             }
         }
         return null;
@@ -13270,7 +13195,7 @@ while True:
     private String [] tests_hash_err=null;
     private String dir_tests="/tmp/tests_y";
     private String file_command_test=null;
-    private void test(String args){    
+    private void test(String args) throws Exception{            
         try{
             //init
             if ( isWindows() ){
@@ -14318,6 +14243,15 @@ class Util{
             getListaCompleta_last=now;
         }
         return retorno;
+    }
+    
+    public byte [] getBytesInputStream(java.io.InputStream is) throws Exception{
+        byte [] buf=new byte[1024];
+        int len=0;        
+        java.io.ByteArrayOutputStream baos=new java.io.ByteArrayOutputStream();
+        while( (len=is.read(buf, 0, buf.length)) > 0 )
+            baos.write(buf, 0, len);        
+        return baos.toByteArray();
     }
     
     public String lpad(long inputLong, int length,String append) {
