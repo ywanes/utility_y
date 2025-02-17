@@ -2006,13 +2006,13 @@ cat buffer.log
             if ( args.length == 2 )
                 retorno=helplikecase(args[1], false);
             if ( retorno == null )
-                System.err.println(
+                System.out.println(
                     "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
                     + lendo_arquivo_pacote("/y/manual")
                     + "\n\nUtilitário Y versão:" + lendo_arquivo_pacote("/y/versao")
                 );
             else
-                System.err.println(
+                System.out.println(
                     retorno
                 );
             return;
