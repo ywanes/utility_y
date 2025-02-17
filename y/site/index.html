@@ -98,7 +98,8 @@ function load_history_nick(){
 					history_nick[keys[i]]['tail']=false;
 			}
         }
-    }
+    }else
+		set_nick('offline');
     //console.log(history_nick);
 }
 
@@ -1551,6 +1552,10 @@ function get_nick_name(){
     return null;
 }
 
+function set_nick(a){
+    document.getElementById('nick').innerHTML='offline';
+}
+
 function get_nick_session(){
     return document.getElementById('nick_name').getAttribute('Redis-ID');
 }
@@ -1576,7 +1581,15 @@ function aplicar_nick(sistemico){
         if ( document.getElementById('nick_name').getAttribute('Redis-ID') == null )
             document.getElementById('nick_name').setAttribute('Redis-ID', Math.random() * 1);
 		document.getElementById('nick').style='';
-    }
+    }else{
+		if ( document.getElementById('nick_name').value == 'offline' ){
+			document.getElementById('nick').innerHTML='offline';
+			document.getElementById('nick_name').style='display: none';
+			document.getElementById('btn_aplicar_nick').style='display: none';
+			document.getElementById('nick').style='';
+			alert('nenhum nick foi considerado!');
+		}
+	}
     
 }
 
@@ -1892,7 +1905,7 @@ function keypress_nick_name(e) {
 								</td>
 								<td style="padding: 0;">
 									<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;">
-										<div id="nick" onclick="nick_click()" style="font-size: 24px; font-family: Franklin Gothic Medium;">offline</div>
+										<div id="nick" onclick="nick_click()" style="font-size: 24px; font-family: Franklin Gothic Medium;"></div>
 									</a>
 								</td>
 								<td style="padding: 0;">
