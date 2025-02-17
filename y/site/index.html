@@ -1575,8 +1575,9 @@ function aplicar_nick(sistemico){
         }
         if ( document.getElementById('nick_name').getAttribute('Redis-ID') == null )
             document.getElementById('nick_name').setAttribute('Redis-ID', Math.random() * 1);
+		document.getElementById('nick').style='';
     }
-    document.getElementById('nick').style='';
+    
 }
 
 function saneamentoValue(a){
@@ -1891,7 +1892,7 @@ function keypress_nick_name(e) {
 								</td>
 								<td style="padding: 0;">
 									<a style="display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;">
-										<div id="nick" onclick="nick_click()" style="font-size: 24px; font-family: Franklin Gothic Medium;"></div>
+										<div id="nick" onclick="nick_click()" style="font-size: 24px; font-family: Franklin Gothic Medium;">offline</div>
 									</a>
 								</td>
 								<td style="padding: 0;">
