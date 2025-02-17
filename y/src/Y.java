@@ -4667,11 +4667,11 @@ cat buffer.log
             outJar="C:\\y\\"+jar;
         else
             outJar="/opt/y/"+jar;
-        if ( !new File(jar).exists() ){
+        if ( !new File(outJar).exists() ){
             if ( isWindows() )
-                System.err.println("warming... comando pendente!!\ncurl \"" + indexOfdown + jar + "\" > \"c:\\y\\" + jar + "\"");
+                System.err.println("warming... comando pendente!!\ncurl \"" + indexOfdown + jar + "\" > \" " + outJar + "\"");
             else
-                System.err.println("warming... comando pendente!!\ncurl " + indexOfdown + jar + " > /opt/y/" + jar);            
+                System.err.println("warming... comando pendente!!\ncurl " + indexOfdown + jar + "\" > \" " + outJar + "\"");
             return null;
         }
         loadJar(outJar);
@@ -4941,7 +4941,7 @@ cat buffer.log
                 String pass = stringcon.split("\\|")[2];
                 String erro=null;
                 try {
-                    //Class.forName("oracle.jdbc.OracleDriver");
+                    //Class.forName("oracle.jdbc.OracleDriver");                    
                     return DriverManager.getConnection(par, user, pass);                    
                 } catch (Exception x) {  
                     erro=x.toString();                    
@@ -4951,7 +4951,7 @@ cat buffer.log
                     if ( conn != null )
                         return conn;                    
                 }catch(Exception e){
-                    //System.err.println("Erro na conexão:: "+e.toString());
+                    System.err.println("Erro na conexão:: "+e.toString());
                     return null;
                 }
                 System.err.println("Erro na conexão:"+erro);
