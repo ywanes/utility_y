@@ -26,6 +26,7 @@ usage:
   [y progressBar]
   [y xargs]
   [y cat]
+  [y cep]
   [y users]
   [y disconnect]
   [y dns|host]
@@ -264,6 +265,10 @@ Exemplos...
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
+[y cep]
+    y cep /sp/campinas/almeida prado
+    y cep 13083-750
+    y cep 13083750
 [y users]
     y users
 [y disconnect]

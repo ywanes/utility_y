@@ -846,6 +846,10 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args[0].equals("cep") && args.length > 1 ){
+            cep(args);
+            return;
+        }
         if ( args[0].equals("meuip") ){
             meuip();
             return;
@@ -3530,6 +3534,13 @@ cat buffer.log
                 return false;
         return true;
     }
+    private boolean isNumeric(String a){
+        String tmp="0123456789";
+        for ( int i=0;i<a.length();i++ )
+            if ( tmp.indexOf(a.substring(i,i+1)) == -1 )
+                return false;
+        return true;
+    }
     
     private String[] getNegativaStartEnd(String[] args) {
         String negativa="N";        
@@ -3633,7 +3644,7 @@ cat buffer.log
                         continue;
                     }
                     if ( tipo_cadastrado(tipos.get(i)) ){
-                        if ( tipo_numerico(tipos.get(i)) && tmp.startsWith("."))
+                        if ( banco_tipo_numerico(tipos.get(i)) && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             if ( flag_natal )
@@ -3740,7 +3751,7 @@ cat buffer.log
                         continue;
                     }
                     if ( tipo_cadastrado(tipos.get(i)) ){
-                        if ( tipo_numerico(tipos.get(i)) && tmp.startsWith("."))
+                        if ( banco_tipo_numerico(tipos.get(i)) && tmp.startsWith("."))
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             if ( flag_natal )
@@ -4074,7 +4085,7 @@ cat buffer.log
                         continue;
                     }
                     if ( tipo_cadastrado(tipos.get(i)) ){
-                        if ( tipo_numerico(tipos.get(i)) && tmp.startsWith(".") )
+                        if ( banco_tipo_numerico(tipos.get(i)) && tmp.startsWith(".") )
                             tmp="0"+tmp;
                         if ( tipos.get(i) == 93 ) // DATA
                             if ( flag_natal )
@@ -4092,14 +4103,14 @@ cat buffer.log
                         {
                             if ( i == campos.size()-1 && !com_separador_final ){
                                 header+="\""+campos.get(i)+"\"";
-                                if ( onlychar && tipo_numerico(tipos.get(i)) ){
+                                if ( onlychar && banco_tipo_numerico(tipos.get(i)) ){
                                     first_detail+=tmp;
                                 }else{
                                     first_detail+="\""+tmp+"\"";
                                 }
                             }else{
                                 header+="\""+campos.get(i)+"\""+getSeparadorCSV();
-                                if ( onlychar && tipo_numerico(tipos.get(i)) ){
+                                if ( onlychar && banco_tipo_numerico(tipos.get(i)) ){
                                     first_detail+=tmp+getSeparadorCSV();
                                 }else{
                                     first_detail+="\""+tmp+"\""+getSeparadorCSV();
@@ -4107,12 +4118,12 @@ cat buffer.log
                             }
                         }else{
                             // nao imprime delimitador em onlychar e tipos.get(i) == 2
-                            if ( onlychar && tipo_numerico(tipos.get(i)) ){
+                            if ( onlychar && banco_tipo_numerico(tipos.get(i)) ){
                             }else{
                                 sb.append("\"");
                             }
                             sb.append(tmp);
-                            if ( onlychar && tipo_numerico(tipos.get(i)) ){
+                            if ( onlychar && banco_tipo_numerico(tipos.get(i)) ){
                             }else{
                                 sb.append("\"");
                             }
@@ -5408,6 +5419,29 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
+    public void cep(String [] args){
+        /////////////
+        args=sliceParm(1, args);
+        String parm=String.join(" ", args);
+        String parm2=parm.replaceAll("\\.", "").replaceAll("-", "");
+        String s="";
+        if ( isNumeric(parm2) ){
+            s=curl_string("https://viacep.com.br/ws/" + parm2 + "/json/");
+            if ( curl_error != null || curl_response_status == 400 )
+                System.out.println("Não foi possíver encontrar!");
+            else
+                System.out.println(s);
+        }else{
+            parm=parm.trim();
+            if ( !parm.startsWith("/") || parm.endsWith("/") || parm.split("/").length != 4 )
+                erroFatal("preenchimento incorreto!");
+            s=curl_string("https://viacep.com.br/ws" + parm.replace(" ", "%20") + "/json/");
+            if ( curl_error != null || curl_response_status == 400 )
+                System.out.println("Não foi possíver encontrar!");
+            else
+                System.out.println(s);
+        }
+    }        
     public String getUsers(){
         return runtimeExec(null, new String[]{"query", "user"}, null, null);                    
     }
@@ -12150,7 +12184,7 @@ while True:
         // return a == -9 || a == -5 || a == -3 || a == -1 || a == 1 || a == 2 || a == 3 || a == 4 || a == 12 || a == 93 || a == 2005;                
     }
     
-    private boolean tipo_numerico(int a) {
+    private boolean banco_tipo_numerico(int a) {
         return a == 2 || a == 3 || a == 4;
     }
 
@@ -14322,7 +14356,7 @@ class Util{
         return retorno;
     }
     
-    public String[] removeParm(int n, String[] args){ // deleta 1 item
+    public String[] removeParm(int n, String[] args){ // deleta 1 item. n=posicao
         if ( n == 0 )
             erroFatal("erro interno sliceParm");
         String [] retorno=new String[args.length-1];
@@ -21227,6 +21261,7 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -21259,6 +21294,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y cep]\n"
 /* class by manual */                + "  [y users]\n"
 /* class by manual */                + "  [y disconnect]\n"
 /* class by manual */                + "  [y dns|host]\n"
@@ -21497,6 +21533,10 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y cep]\n"
+/* class by manual */                + "    y cep /sp/campinas/almeida prado\n"
+/* class by manual */                + "    y cep 13083-750\n"
+/* class by manual */                + "    y cep 13083750\n"
 /* class by manual */                + "[y users]\n"
 /* class by manual */                + "    y users\n"
 /* class by manual */                + "[y disconnect]\n"
@@ -22141,6 +22181,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
