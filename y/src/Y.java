@@ -11374,7 +11374,7 @@ cat buffer.log
         //"primaryclanid";"timecreated";"personastateflags";"gameextrainfo";"gameid"        
         baos = new java.io.ByteArrayOutputStream();
         selectCSV_texto(null, null, "select steamid,personastate,personaname from this", false, new java.io.ByteArrayInputStream(s.getBytes()), baos);        
-        return baos.toString();
+        return baos.toString().replaceAll("\\\\\"", "\"");
     }
     private String cronometro_format(long a, long b){
         return miliseconds_to_string(a) + " - " + miliseconds_to_string(b) + " total";
