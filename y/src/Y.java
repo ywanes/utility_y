@@ -317,7 +317,7 @@ cat buffer.log
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","nomeAba","N A (AccountLeads)"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","exportAll"};                                        
         
-        //args=new String[]{"selectCSV","-csv","c:\\tmp\\tmp\\a.csv","select CAMPO2, CAMPO2 from this"};                                        
+        //args=new String[]{"selectCSV_banco","-csv","c:\\tmp\\tmp\\a.csv","select CAMPO2, CAMPO2 from this"};                                        
         
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","mostraEstrutura"};
         //args=new String[]{"xlsxToCSV","C:\\tmp\\aa\\a.xlsx","numeroAba","1"};
@@ -409,7 +409,7 @@ cat buffer.log
                     return;
                 }
                 if ( app.equals("selectCSV") ){ // y banco
-                    selectCSV(conn,parm);
+                    selectCSV_banco(conn,parm);
                     return;
                 }
                 if ( app.equals("executeInsert") ){
@@ -487,9 +487,9 @@ cat buffer.log
             return;
         }
         
-        if ( args[0].equals("selectCSV") ){
+        if ( args[0].equals("selectCSV") ){ // nao banco
             try{
-                selectCSV(args);
+                selectCSV_texto(args);
                 return;
             }catch(Exception e){
                 System.err.println(e.toString());
@@ -1736,7 +1736,7 @@ cat buffer.log
                 return;
             }
         }
-        if ( args[0].equals("steam") ){
+        if ( args[0].equals("steam") && args.length > 1 ){
             steam(args);
             return;
         }
@@ -3193,8 +3193,8 @@ cat buffer.log
         //[y banco -conn ... select select..]
         //[y banco -conn ... selectInsert]
         //[y banco -conn ... selectInsert select..]
-        //[y banco -conn ... selectCSV]
-        //[y banco -conn ... selectCSV select..]
+        //[y banco -conn ... selectCSV_banco]
+        //[y banco -conn ... selectCSV_banco select..]
         //[y banco -conn ... executeInsert]
         //[y banco -conn ... execute]
         //[y banco -conn ... execute execute..]
@@ -3202,8 +3202,8 @@ cat buffer.log
         //[y banco conn,hash select select..]
         //[y banco conn,hash selectInsert]
         //[y banco conn,hash selectInsert select..]
-        //[y banco conn,hash selectCSV]
-        //[y banco conn,hash selectCSV select..]
+        //[y banco conn,hash selectCSV_banco]
+        //[y banco conn,hash selectCSV_banco select..]
         //[y banco conn,hash executeInsert]
         //[y banco conn,hash execute]
         //[y banco conn,hash execute execute..]
@@ -3880,7 +3880,7 @@ cat buffer.log
         
     }
 
-    // comando "y selectCSV"(nao confundir com "y banco selectCSV")
+    
     public String [] selectCSV_camposName=null;
     public String [] selectCSV_camposValue=null;
     public String [] selectCSV_camposNameSaida=null;
@@ -3893,7 +3893,7 @@ cat buffer.log
     public long sqlCount = 0;
     public long sqlLimit = -1;
     public String csv_sep_output=",";
-    public void selectCSV(String[] args) throws Exception {        
+    public void selectCSV_texto(String[] args) throws Exception {
         Object [] csvFile_sqlFile_sqlText=get_csvFile_sqlFile_sqlText_outJson(args);
         if ( csvFile_sqlFile_sqlText == null ){
             comando_invalido(args);
@@ -3905,7 +3905,6 @@ cat buffer.log
         String sqlText=(String)csvFile_sqlFile_sqlText[2];
         outJson=(Boolean)csvFile_sqlFile_sqlText[3];
         OutputStream out=System.out;
-        
         if ( !sqlFile.equals("") ){
             String line=null;
             sqlText="";
@@ -3920,9 +3919,17 @@ cat buffer.log
             return;
         }
         
+        selectCSV_texto(csvFile, sqlFile, sqlText, outJson, System.in, out);
+    }
+    
+    public void selectCSV_texto(String csvFile, String sqlFile, String sqlText, Boolean outJson, InputStream is, OutputStream out) throws Exception {                
         try{
+            if ( csvFile == null )
+                csvFile="";
             if ( ! csvFile.equals("") )
                 readLine(csvFile);
+            else
+                readLine(is);
             String line;            
             int qntCamposCSV=0;
             String valorColuna=null;
@@ -3987,8 +3994,8 @@ cat buffer.log
         out.close();
     }
 
-    // comando "y banco selectCSV"(nao confundir com "y selectCSV")
-    public void selectCSV(String conn,String parm){
+    // comando "y banco selectCSV_banco"(nao confundir com "y selectCSV_banco")
+    public void selectCSV_banco(String conn,String parm){
         
         boolean onlychar=false;
         String onlychar_=getEnv("CSV_ONLYCHAR_Y");
@@ -5420,8 +5427,7 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
-    public void cep(String [] args){
-        /////////////
+    public void cep(String [] args){        
         args=sliceParm(1, args);
         String parm=String.join(" ", args);
         String parm2=parm.replaceAll("\\.", "").replaceAll("-", "");
@@ -11301,7 +11307,74 @@ cat buffer.log
         }
     }    
     public void steam(String [] args){
-        System.out.println("em deselvolvimento");
+        try{
+            args=sliceParm(1, args);
+            String token=gettoken("steam");
+            if ( token == null )
+                erroFatal("Nao foi possível encontrar o token steam, digite y help steam para mais informacoes!");
+            token=token.trim().split("\n")[0];
+            if( token.startsWith(":") || token.endsWith(":") || token.split(":").length != 2 )
+                erroFatal("conteudo do token incorreto!");
+            String [] partes=token.split(":");
+            String steam_api_key=partes[0];
+            String steam_id=partes[1];        
+            if ( !isHex(steam_api_key) )
+                erroFatal("conteudo do token incorreto!");
+            if ( !isNumeric(steam_id) )
+                erroFatal("conteudo do token incorreto, o steam_id precisa ser numérico!");
+
+            if ( args.length == 1 && args[0].equals("friends") ){
+                System.out.println(steam_friends(steam_api_key, steam_id));
+            }else{
+                if ( args.length == 2 && args[0].equals("friends") && args[1].equals("status") ){
+                    String s=steam_friends(steam_api_key, steam_id);
+                    s=String.join(",", s.split("\n"));
+                    s=steam_status(steam_api_key, s);
+                    System.err.println("0-offline, 1-online, 3-ausente");
+                    System.out.println(s);
+                }else{
+                    if ( args.length == 2 && args[0].equals("status") && isNumeric(args[1]) ){
+                        String s=steam_status(steam_api_key, args[1]);
+                        System.err.println("0-offline, 1-online, 3-ausente");
+                        System.out.println(s);                        
+                    }else{
+                        erroFatal("Parametros invalidos");
+                    }
+                }
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }        
+    }
+    public String steam_friends(String steam_api_key, String steam_id) throws Exception{
+        String s=curl_string("https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=" + steam_api_key + "&steamid=" + steam_id + "&relationship=friend");
+        if ( curl_response_status != 200 )
+            erroFatal("Status code:"+curl_response_status);
+        if ( curl_error != null )
+            erroFatal("Erro: "+curl_error);
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem['steamid'] for elem in data['friendslist']['friends']]", false, false, false, false, true, baos);
+        s=baos.toString();
+        s=s.trim().replace("\"","");
+        return s;
+    }
+    public String steam_status(String steam_api_key, String steam_ids) throws Exception{
+        String s=curl_string("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + steam_api_key + "&steamids=" + steam_ids);
+        if ( curl_response_status != 200 )
+            erroFatal("Status code:"+curl_response_status);
+        if ( curl_error != null )
+            erroFatal("Erro: "+curl_error);        
+        // removendo commentpermission. alguns usuarios nao estão trazendo no json o commentpermission e está bugando tudo.
+        s=s.replaceAll("\"commentpermission\":0,","").replaceAll("\"commentpermission\":1,","").replaceAll("\"commentpermission\":2,","");        
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem for elem in data['response']['players']]", false, false, false, false, false, baos);
+        s=baos.toString();
+        //"steamid";"communityvisibilitystate";"profilestate";"personaname";"profileurl";
+        //"avatar";"avatarmedium";"avatarfull";"avatarhash";"lastlogoff";"personastate";
+        //"primaryclanid";"timecreated";"personastateflags";"gameextrainfo";"gameid"        
+        baos = new java.io.ByteArrayOutputStream();
+        selectCSV_texto(null, null, "select steamid,personastate,personaname from this", false, new java.io.ByteArrayInputStream(s.getBytes()), baos);        
+        return baos.toString();
     }
     private String cronometro_format(long a, long b){
         return miliseconds_to_string(a) + " - " + miliseconds_to_string(b) + " total";
@@ -13502,7 +13575,7 @@ class multiCurl extends Util{
 
 class grammarsWhere extends Util{
     // teste:
-    // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV "select b c, a from this where b = 'b31'" 
+    // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV_banco "select b c, a from this where b = 'b31'" 
     
     public static String [] transferPai=null;
     public static String [] transferFilhoStr=null;
@@ -13561,7 +13634,7 @@ class grammarsWhere extends Util{
     };
     
     // teste:
-    // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV "select b c, a from this where b = 'b31'"     
+    // cd /opt/y;compila2;echo '[{"a": "a21", "b": "b31"},{"a": "a22", "b": "b32"}]' | y json "[elem for elem in data]" | y selectCSV_banco "select b c, a from this where b = 'b31'"     
     public static String where="";
     public static ArrayList<Node> nodes=new ArrayList<Node>();
     public static ArrayList<Node> nodesTemplate=null;
@@ -16753,7 +16826,7 @@ class JSON extends Util{
       Define o filtro, ex data['items']['itemsB']
     */
     private boolean setFilter(){ // "[elem['id'] for elem in data['items']['itemsB']]"
-        if ( command.startsWith("[") && command.endsWith("]") ) // "[elem['id'] for elem in data['items']]" -> "elem['id'] for elem in data['items']['itemsB']"
+        if ( command.startsWith("[") && command.endsWith("]") ) // tira o [ e ] das bordas de "[elem['id'] for elem in data['items']['items2']]"
             command=command.substring(1,command.length()-1); 
         else
             return false;
