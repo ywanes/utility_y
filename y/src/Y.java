@@ -487,7 +487,7 @@ cat buffer.log
             return;
         }
         
-        if ( args[0].equals("selectCSV") ){ // nao banco
+        if ( args[0].equals("selectCSV") ){ // selectCSV_texto
             try{
                 selectCSV_texto(args);
                 return;
@@ -3880,7 +3880,6 @@ cat buffer.log
         }        
         
     }
-
     
     public String [] selectCSV_camposName=null;
     public String [] selectCSV_camposValue=null;
@@ -3927,9 +3926,15 @@ cat buffer.log
     // ao rodar pela segunda vez ou mais o header nao aparece! bug.     
     public void selectCSV_texto(String csvFile, String sqlFile, String sqlText, Boolean outJson, InputStream is, OutputStream out) throws Exception {                
         // init
-        separadorCSVCache=null;      
+        separadorCSVCache=null;                 
+        //////////////////
+        // bug y cls && y u && y steam friends clan status
+        //System.out.println("selectCSV_header " + selectCSV_header + " selectCSV_headerPrinted " + selectCSV_headerPrinted);        
+        //linhaCSV=null;
+        //ponteiroLinhaCSV=0;                
         //selectCSV_header=null;
         //selectCSV_headerPrinted=false;
+        //gw=null;
         
         try{
             if ( csvFile == null )
@@ -11337,6 +11342,10 @@ cat buffer.log
                                 s=String.join(",", s.split("\n"));
                                 s=steam_status(steam_api_key, s);                                
                                 String clan=steam_getClanBySteamId(s, steam_id).trim();
+////////////////////
+// contornando bug
+selectCSV_header=null;
+selectCSV_headerPrinted=false;                                
                                 String statusClan=steam_statusByClan(s, clan);
                                 System.err.println("0-offline, 1-online, 3-ausente");
                                 System.out.println(statusClan);
@@ -11356,6 +11365,8 @@ cat buffer.log
             erroFatal("Status code:"+curl_response_status);
         if ( curl_error != null )
             erroFatal("Erro: "+curl_error);        
+//System.out.println("input steam_friends");
+//System.out.println(s);
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();        
         new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem['steamid'] for elem in data['friendslist']['friends']]", false, false, false, false, true, baos);
         s=baos.toString();
@@ -11382,6 +11393,8 @@ cat buffer.log
     }
     public String steam_status(String steam_api_key, String steam_ids) throws Exception{
         String s=steam_raw(steam_api_key, steam_ids);
+//System.out.println("input steam_status");
+//System.out.println(s);        
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem for elem in data['response']['players']]", false, false, false, false, false, baos);
         s=baos.toString();
@@ -11390,11 +11403,15 @@ cat buffer.log
         return baos.toString().replaceAll("\\\\\"", "\"");
     }
     public String steam_getClanBySteamId(String txt, String steam_id) throws Exception{
+//System.out.println("input steam_getClanBySteamId");
+//System.out.println(txt);                
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         selectCSV_texto(null, null, "select primaryclanid from this where steamid = '" + steam_id + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
         return baos.toString().replaceAll("\"","").trim();
     }
     public String steam_statusByClan(String txt, String clan) throws Exception{
+//System.out.println("input steam_statusByClan");
+//System.out.println(txt);                
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         selectCSV_texto(null, null, "select " + steam_campos + " from this where primaryclanid = '" + clan + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
         return baos.toString();
@@ -13328,6 +13345,1637 @@ while True:
     private String dir_tests="/tmp/tests_y";
     private String file_command_test=null;
     private void test(String args) throws Exception{            
+
+        // y cls && y u && y test | y head -5
+        
+        String steam_id="76561197995079629";
+        String clan="103582791429521408";
+//System.out.println("input steam_friends");
+        String s="{\"friendslist\":{\"friends\":[{\"steamid\":\"76561197963453770\",\"relationship\":\"friend\",\"friend_since\":1726452189},{\"steamid\":\"76561197968251181\",\"relationship\":\"friend\",\"friend_since\":1694885152},{\"steamid\":\"76561197982280491\",\"relationship\":\"friend\",\"friend_since\":1244685602},{\"steamid\":\"76561197988181181\",\"relationship\":\"friend\",\"friend_since\":1244821510},{\"steamid\":\"76561197990618302\",\"relationship\":\"friend\",\"friend_since\":1370657112},{\"steamid\":\"76561198010207122\",\"relationship\":\"friend\",\"friend_since\":1649891804},{\"steamid\":\"76561198033910448\",\"relationship\":\"friend\",\"friend_since\":1727310182},{\"steamid\":\"76561198044847395\",\"relationship\":\"friend\",\"friend_since\":1404067741},{\"steamid\":\"76561198047632697\",\"relationship\":\"friend\",\"friend_since\":1670197811},{\"steamid\":\"76561198054466282\",\"relationship\":\"friend\",\"friend_since\":1596510532},{\"steamid\":\"76561198058085893\",\"relationship\":\"friend\",\"friend_since\":1729925269},{\"steamid\":\"76561198063140379\",\"relationship\":\"friend\",\"friend_since\":1542711916},{\"steamid\":\"76561198063802273\",\"relationship\":\"friend\",\"friend_since\":1452714896},{\"steamid\":\"76561198064679140\",\"relationship\":\"friend\",\"friend_since\":1586412731},{\"steamid\":\"76561198066323542\",\"relationship\":\"friend\",\"friend_since\":1600131471},{\"steamid\":\"76561198069031885\",\"relationship\":\"friend\",\"friend_since\":1623599955},{\"steamid\":\"76561198070637802\",\"relationship\":\"friend\",\"friend_since\":1708224692},{\"steamid\":\"76561198076559008\",\"relationship\":\"friend\",\"friend_since\":1727544694},{\"steamid\":\"76561198080614485\",\"relationship\":\"friend\",\"friend_since\":1704494487},{\"steamid\":\"76561198080928754\",\"relationship\":\"friend\",\"friend_since\":1700450160},{\"steamid\":\"76561198081732932\",\"relationship\":\"friend\",\"friend_since\":1559511733},{\"steamid\":\"76561198082788407\",\"relationship\":\"friend\",\"friend_since\":1395269527},{\"steamid\":\"76561198084472947\",\"relationship\":\"friend\",\"friend_since\":1583703381},{\"steamid\":\"76561198085263025\",\"relationship\":\"friend\",\"friend_since\":1586101256},{\"steamid\":\"76561198087126465\",\"relationship\":\"friend\",\"friend_since\":1621807982},{\"steamid\":\"76561198092636377\",\"relationship\":\"friend\",\"friend_since\":1601303385},{\"steamid\":\"76561198093743772\",\"relationship\":\"friend\",\"friend_since\":1651459782},{\"steamid\":\"76561198094130820\",\"relationship\":\"friend\",\"friend_since\":1584899133},{\"steamid\":\"76561198097967224\",\"relationship\":\"friend\",\"friend_since\":1616537178},{\"steamid\":\"76561198103717610\",\"relationship\":\"friend\",\"friend_since\":1618963816},{\"steamid\":\"76561198113592437\",\"relationship\":\"friend\",\"friend_since\":1663013013},{\"steamid\":\"76561198114449236\",\"relationship\":\"friend\",\"friend_since\":1572276841},{\"steamid\":\"76561198119398280\",\"relationship\":\"friend\",\"friend_since\":1614043044},{\"steamid\":\"76561198123321851\",\"relationship\":\"friend\",\"friend_since\":1739845672},{\"steamid\":\"76561198123813858\",\"relationship\":\"friend\",\"friend_since\":1613324489},{\"steamid\":\"76561198133119142\",\"relationship\":\"friend\",\"friend_since\":1607460331},{\"steamid\":\"76561198144135086\",\"relationship\":\"friend\",\"friend_since\":1619997519},{\"steamid\":\"76561198147595380\",\"relationship\":\"friend\",\"friend_since\":1592524704},{\"steamid\":\"76561198165812879\",\"relationship\":\"friend\",\"friend_since\":1581129657},{\"steamid\":\"76561198179188665\",\"relationship\":\"friend\",\"friend_since\":1697083760},{\"steamid\":\"76561198179602225\",\"relationship\":\"friend\",\"friend_since\":1666301370},{\"steamid\":\"76561198192688921\",\"relationship\":\"friend\",\"friend_since\":1617479632},{\"steamid\":\"76561198256762951\",\"relationship\":\"friend\",\"friend_since\":1552745785},{\"steamid\":\"76561198268358858\",\"relationship\":\"friend\",\"friend_since\":1656036737},{\"steamid\":\"76561198274923218\",\"relationship\":\"friend\",\"friend_since\":1586268442},{\"steamid\":\"76561198301561994\",\"relationship\":\"friend\",\"friend_since\":1575327438},{\"steamid\":\"76561198357647756\",\"relationship\":\"friend\",\"friend_since\":1599705134},{\"steamid\":\"76561198358793177\",\"relationship\":\"friend\",\"friend_since\":1614004973},{\"steamid\":\"76561198360852592\",\"relationship\":\"friend\",\"friend_since\":1677876522},{\"steamid\":\"76561198422839493\",\"relationship\":\"friend\",\"friend_since\":1598794619},{\"steamid\":\"76561198833133000\",\"relationship\":\"friend\",\"friend_since\":1739327113},{\"steamid\":\"76561198836224169\",\"relationship\":\"friend\",\"friend_since\":1670948396},{\"steamid\":\"76561198875023372\",\"relationship\":\"friend\",\"friend_since\":1584307945},{\"steamid\":\"76561198973365741\",\"relationship\":\"friend\",\"friend_since\":1585632167},{\"steamid\":\"76561199107307317\",\"relationship\":\"friend\",\"friend_since\":1731987590},{\"steamid\":\"76561199244091345\",\"relationship\":\"friend\",\"friend_since\":1666745635},{\"steamid\":\"76561199434803932\",\"relationship\":\"friend\",\"friend_since\":1707677420},{\"steamid\":\"76561199505207307\",\"relationship\":\"friend\",\"friend_since\":1684001167}]}}";        
+        java.io.ByteArrayOutputStream baos=null;
+        baos = new java.io.ByteArrayOutputStream();        
+        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem['steamid'] for elem in data['friendslist']['friends']]", false, false, false, false, true, baos);
+
+//System.out.println("input steam_status");
+        s="{\n" +
+"  \"response\": {\n" +
+"    \"players\": [\n" +
+"      {\n" +
+"        \"steamid\": \"76561198070637802\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Insanin\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198070637802/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc_full.jpg\",\n" +
+"        \"avatarhash\": \"c5b55c892dcbe3099450e1b08038993efafae1bc\",\n" +
+"        \"lastlogoff\": 1739945649,\n" +
+"        \"personastate\": 1,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791462233891\",\n" +
+"        \"timecreated\": 1346393110,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"15\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198268358858\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Aятємιѕια\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/artemisiasalvatore/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191_full.jpg\",\n" +
+"        \"avatarhash\": \"6146b44f80ef22f40b0cc893a93c0d1966609191\",\n" +
+"        \"lastlogoff\": 1739936568,\n" +
+"        \"personastate\": 1,\n" +
+"        \"realname\": \"‎Aятємιѕια\",\n" +
+"        \"primaryclanid\": \"103582791462370555\",\n" +
+"        \"timecreated\": 1450200134,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198047632697\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"AnnE_\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/Alineamarilha/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295_full.jpg\",\n" +
+"        \"avatarhash\": \"661d10348c5871545af54a1f7c383b7b21856295\",\n" +
+"        \"lastlogoff\": 1739325844,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Aline\",\n" +
+"        \"primaryclanid\": \"103582791462288912\",\n" +
+"        \"timecreated\": 1314433209,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": 8872\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198133119142\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"kasandra あなたは私の愛だけである\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198133119142/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13_full.jpg\",\n" +
+"        \"avatarhash\": \"07a814cd6a51a18c3cf2d5dc51488a106b22fc13\",\n" +
+"        \"lastlogoff\": 1739942314,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791465927004\",\n" +
+"        \"timecreated\": 1397574943,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"PE\",\n" +
+"        \"locstatecode\": \"25\",\n" +
+"        \"loccityid\": 31426\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198058085893\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Steimer\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/steimer/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15_full.jpg\",\n" +
+"        \"avatarhash\": \"4aacaad661339a4e3e1bdf07da25a4baecc4bb15\",\n" +
+"        \"lastlogoff\": 1739953564,\n" +
+"        \"personastate\": 3,\n" +
+"        \"realname\": \"Steimer\",\n" +
+"        \"primaryclanid\": \"103582791434110545\",\n" +
+"        \"timecreated\": 1328227141,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"26\",\n" +
+"        \"loccityid\": 7956\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198357647756\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"HIM\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/pristinamel/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5_full.jpg\",\n" +
+"        \"avatarhash\": \"b763c40e36a5ad3e3986d9914ee1d713cbf495f5\",\n" +
+"        \"lastlogoff\": 1729255226,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791457094503\",\n" +
+"        \"timecreated\": 1483578519,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"04\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198080614485\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"♡ Thauyta ♡\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198080614485/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06_full.jpg\",\n" +
+"        \"avatarhash\": \"f96f4c31807b79fff3455d2f3a264134b926bc06\",\n" +
+"        \"lastlogoff\": 1739745172,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Anna\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1357402955,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198192688921\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Ametist4\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198192688921/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928_full.jpg\",\n" +
+"        \"avatarhash\": \"276d92ac03f4a9fd04e1af470be07492cc8f4928\",\n" +
+"        \"lastlogoff\": 1735949893,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"ametista02\",\n" +
+"        \"primaryclanid\": \"103582791469239912\",\n" +
+"        \"timecreated\": 1429488784,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198973365741\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Matadora de gr1ngo\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198973365741/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d_full.jpg\",\n" +
+"        \"avatarhash\": \"82017e8608bb675bb6a5a1c75c34a6979025ec4d\",\n" +
+"        \"lastlogoff\": 1739908028,\n" +
+"        \"personastate\": 4,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1561662050,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"Dota 2\",\n" +
+"        \"gameid\": \"570\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561197988181181\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"K\\\"\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561197988181181/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8_full.jpg\",\n" +
+"        \"avatarhash\": \"28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8\",\n" +
+"        \"lastlogoff\": 1739759915,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Victor\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1171569194,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": 8522\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198123321851\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"V de Veveko\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/gilgameshlaw/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9_full.jpg\",\n" +
+"        \"avatarhash\": \"cf82ae74614b254a799a038429d9d2b0a4633cd9\",\n" +
+"        \"lastlogoff\": 1739979956,\n" +
+"        \"personastate\": 1,\n" +
+"        \"realname\": \"Gilgamesh\",\n" +
+"        \"primaryclanid\": \"103582791441064370\",\n" +
+"        \"timecreated\": 1390075701,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"21\",\n" +
+"        \"loccityid\": 8670\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198064679140\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"kinha\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/ericaberaca/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9_full.jpg\",\n" +
+"        \"avatarhash\": \"93fd8818f51c34df54c8919de9ee42b162686df9\",\n" +
+"        \"lastlogoff\": 1739928159,\n" +
+"        \"personastate\": 1,\n" +
+"        \"realname\": \"Érica\",\n" +
+"        \"primaryclanid\": \"103582791434200842\",\n" +
+"        \"timecreated\": 1338659171,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"Dota 2\",\n" +
+"        \"gameid\": \"570\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"05\",\n" +
+"        \"loccityid\": 7455\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198044847395\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Fazendeiro\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/Fazendeiro/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc_full.jpg\",\n" +
+"        \"avatarhash\": \"bd0d93950323a61926954b8e93bda1dcab2210fc\",\n" +
+"        \"lastlogoff\": 1739908088,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Fábio Nogueira\",\n" +
+"        \"primaryclanid\": \"103582791435066810\",\n" +
+"        \"timecreated\": 1309998096,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"11\",\n" +
+"        \"loccityid\": 7481\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198063140379\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Don \",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/mkny/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f_full.jpg\",\n" +
+"        \"avatarhash\": \"be014c8e55a40f7944317b10cbd6bdff71d9a66f\",\n" +
+"        \"lastlogoff\": 1739930540,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791434073173\",\n" +
+"        \"timecreated\": 1336311510,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198092636377\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Sumaya\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198092636377/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a_full.jpg\",\n" +
+"        \"avatarhash\": \"3f8de59341f57e1e11f60c1c434613ee4cdd830a\",\n" +
+"        \"lastlogoff\": 1739930241,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Thamires\",\n" +
+"        \"primaryclanid\": \"103582791436115554\",\n" +
+"        \"timecreated\": 1369663212,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198082788407\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"WashingtonG33K\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/washingtong33k/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3_full.jpg\",\n" +
+"        \"avatarhash\": \"53197ee829aaad6398669c95f0adc3c5b5be87b3\",\n" +
+"        \"lastlogoff\": 1723933237,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Batata Frita com Queijo\",\n" +
+"        \"primaryclanid\": \"103582791435141219\",\n" +
+"        \"timecreated\": 1359557045,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198114449236\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Shadow Queen\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/rahysaknopff/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd_full.jpg\",\n" +
+"        \"avatarhash\": \"0b1df0e50ce48db8ca906913dd74b497585140bd\",\n" +
+"        \"lastlogoff\": 1739134225,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Rahysa Knopff\",\n" +
+"        \"primaryclanid\": \"103582791436962890\",\n" +
+"        \"timecreated\": 1384271547,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"11\",\n" +
+"        \"loccityid\": 7481\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561199434803932\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"14\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561199434803932/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595_full.jpg\",\n" +
+"        \"avatarhash\": \"9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595\",\n" +
+"        \"lastlogoff\": 1725328215,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1668407994,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198080928754\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Foda-se\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198080928754/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6_full.jpg\",\n" +
+"        \"avatarhash\": \"7dd032a1c5f1cb44d2701e53e4c29af614aa55c6\",\n" +
+"        \"lastlogoff\": 1717868068,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791433918171\",\n" +
+"        \"timecreated\": 1357608111,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": 8383\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198076559008\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"OneBullet\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/onebulletbr/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e_full.jpg\",\n" +
+"        \"avatarhash\": \"db8279b9a1ee3d7e062fc759947ad77dfda65d7e\",\n" +
+"        \"lastlogoff\": 1739966823,\n" +
+"        \"personastate\": 3,\n" +
+"        \"realname\": \"Guilherme\",\n" +
+"        \"primaryclanid\": \"103582791438549009\",\n" +
+"        \"timecreated\": 1353673168,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": 7321\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198422839493\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Tata\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198422839493/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae_full.jpg\",\n" +
+"        \"avatarhash\": \"1c9f67fe9a412f5005dea8f61f384cdafb0701ae\",\n" +
+"        \"lastlogoff\": 1734283394,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Taís\",\n" +
+"        \"primaryclanid\": \"103582791469239912\",\n" +
+"        \"timecreated\": 1505689472,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198113592437\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Gessica | Jhuly\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/gessic22/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea_full.jpg\",\n" +
+"        \"avatarhash\": \"420993ab6da5d1e5c0dba8e3de69c74d10b622ea\",\n" +
+"        \"lastlogoff\": 1739931219,\n" +
+"        \"personastate\": 3,\n" +
+"        \"realname\": \"Gessica Xavier\",\n" +
+"        \"primaryclanid\": \"103582791458113819\",\n" +
+"        \"timecreated\": 1383664195,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": 8940\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198081732932\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Thaaa *-*\",\n" +
+"        \"commentpermission\": 2,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198081732932/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c_full.jpg\",\n" +
+"        \"avatarhash\": \"87e70558fa0f7c1793926e1811b4f7e2df97370c\",\n" +
+"        \"lastlogoff\": 1739648118,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Tha\",\n" +
+"        \"primaryclanid\": \"103582791434299330\",\n" +
+"        \"timecreated\": 1358543922,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198833133000\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"*-*Lia¡¡\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198833133000/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572_full.jpg\",\n" +
+"        \"avatarhash\": \"78e50a3176bed159e8bc31961488cd49f0986572\",\n" +
+"        \"lastlogoff\": 1739972024,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"uwu\",\n" +
+"        \"primaryclanid\": \"103582791440211049\",\n" +
+"        \"timecreated\": 1525014690,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561197995079629\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Analista de Sistemas\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561197995079629/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9_full.jpg\",\n" +
+"        \"avatarhash\": \"1cbdad019f2dc96cec438b9aca8ee43a45f0ead9\",\n" +
+"        \"lastlogoff\": 1739928474,\n" +
+"        \"personastate\": 1,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1198329803,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561199244091345\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Exterminador do Teu FUROOO\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561199244091345/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b_full.jpg\",\n" +
+"        \"avatarhash\": \"a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b\",\n" +
+"        \"lastlogoff\": 1728874260,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1644961069,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198147595380\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"LenTejitaSSS\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198147595380/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b_full.jpg\",\n" +
+"        \"avatarhash\": \"e089e215846eafd728dea11dad8e7ab3115a860b\",\n" +
+"        \"lastlogoff\": 1739945195,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791463146011\",\n" +
+"        \"timecreated\": 1406732490,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198085263025\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Ur$!nH凸\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198085263025/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94_full.jpg\",\n" +
+"        \"avatarhash\": \"194cd97f243b8c6dfca318a0bff73b5e338a7b94\",\n" +
+"        \"lastlogoff\": 1739942210,\n" +
+"        \"personastate\": 4,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791433833633\",\n" +
+"        \"timecreated\": 1362254010,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198093743772\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"DADDY_SHARK_AM\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198093743772/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420_full.jpg\",\n" +
+"        \"avatarhash\": \"390d56b5e6d8e750b32a52e490872c42426fe420\",\n" +
+"        \"lastlogoff\": 1728790454,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Arquimedes Queiroz\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1370587916,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"04\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198119398280\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Woolf\",\n" +
+"        \"commentpermission\": 2,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/TheRockWolf/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a_full.jpg\",\n" +
+"        \"avatarhash\": \"27de0dd31e22240463fcb2e62b9b637d8d7e4b3a\",\n" +
+"        \"lastlogoff\": 1739933411,\n" +
+"        \"personastate\": 1,\n" +
+"        \"realname\": \"Vinicius G. V.\",\n" +
+"        \"primaryclanid\": \"103582791463311816\",\n" +
+"        \"timecreated\": 1387914849,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"Dota 2\",\n" +
+"        \"gameid\": \"570\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198094130820\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"mariana4fun\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/mariana4fun/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1_full.jpg\",\n" +
+"        \"avatarhash\": \"2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1\",\n" +
+"        \"lastlogoff\": 1736941368,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Mariana\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1370888078,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198087126465\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Frist_\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/frist_/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299_full.jpg\",\n" +
+"        \"avatarhash\": \"0fe28877f6abc9d7f2c21ccbf171620c6efd0299\",\n" +
+"        \"lastlogoff\": 1739838347,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1364186605,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198256762951\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"TOMIOKA  100%\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198256762951/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4_full.jpg\",\n" +
+"        \"avatarhash\": \"53159d54f68b8df620768a2ce3301286131bdef4\",\n" +
+"        \"lastlogoff\": 1739842355,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791457220425\",\n" +
+"        \"timecreated\": 1445663545,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561197982280491\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Gramanho\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561197982280491/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776_full.jpg\",\n" +
+"        \"avatarhash\": \"c8fa10e5306b3224f213cb1e5cc15041cdba7776\",\n" +
+"        \"lastlogoff\": 1739939158,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"~R\",\n" +
+"        \"primaryclanid\": \"103582791429639803\",\n" +
+"        \"timecreated\": 1146076718,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": 8872\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198097967224\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"jeeh ♡\",\n" +
+"        \"commentpermission\": 2,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198097967224/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc_full.jpg\",\n" +
+"        \"avatarhash\": \"13134e00fa32da39d80ede48b8a612e46412ffcc\",\n" +
+"        \"lastlogoff\": 1739932877,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1373813825,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198165812879\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Gatinho \",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198165812879/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77_full.jpg\",\n" +
+"        \"avatarhash\": \"acfc625c67711d07b78532a507bfe0b22c361a77\",\n" +
+"        \"lastlogoff\": 1738455915,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Layne Castro\",\n" +
+"        \"primaryclanid\": \"103582791434125179\",\n" +
+"        \"timecreated\": 1417367902,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"16\",\n" +
+"        \"loccityid\": 7195\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198836224169\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Mariane\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198836224169/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d_full.jpg\",\n" +
+"        \"avatarhash\": \"0276d0ff9f393cde97a7d423e19e895f03aef62d\",\n" +
+"        \"lastlogoff\": 1735345928,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1526583117,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198033910448\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"BAN\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198033910448/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a_full.jpg\",\n" +
+"        \"avatarhash\": \"186e77a5d4153389e778dcf9518c678341b3653a\",\n" +
+"        \"lastlogoff\": 1739845333,\n" +
+"        \"personastate\": 3,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1290287886,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561197963453770\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Kairox\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/kairo/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6_full.jpg\",\n" +
+"        \"avatarhash\": \"fa56a391d267be5caf5baee64b0d79ddcc8c8dc6\",\n" +
+"        \"lastlogoff\": 1739930718,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"não falo!\",\n" +
+"        \"primaryclanid\": \"103582791429533935\",\n" +
+"        \"timecreated\": 1071890311,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": 7573\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198179188665\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Fr@nn\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/205189388/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790_full.jpg\",\n" +
+"        \"avatarhash\": \"c88d60326a4edde3a0ae2d1f3e6088f0a72f3790\",\n" +
+"        \"lastlogoff\": 1739028527,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791434277245\",\n" +
+"        \"timecreated\": 1423789569,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"AR\",\n" +
+"        \"locstatecode\": \"01\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198179602225\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"★ ̶ ̶A̶l̶i̶n̶e̶ ̶̶★\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198179602225/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff_full.jpg\",\n" +
+"        \"avatarhash\": \"5e29ad43d8750121a30161934c5a414d86f4b7ff\",\n" +
+"        \"lastlogoff\": 1739748078,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Vitor\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1423957418,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"04\",\n" +
+"        \"loccityid\": 8175\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198301561994\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"EL GATO BRANCO\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/maxlanyo/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1_full.jpg\",\n" +
+"        \"avatarhash\": \"4843292afa3d8f743963dac8e2059f8e0fe493b1\",\n" +
+"        \"lastlogoff\": 1739654288,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"EL GATO BRANCO\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1461590323,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198084472947\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Eligna Wild\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/lignayk/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3_full.jpg\",\n" +
+"        \"avatarhash\": \"4c481539ef1c83b247eaceab90d63f2850288ca3\",\n" +
+"        \"lastlogoff\": 1739894945,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"aka Yasmin Krug\",\n" +
+"        \"primaryclanid\": \"103582791439524576\",\n" +
+"        \"timecreated\": 1361497903,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"IS\",\n" +
+"        \"locstatecode\": \"24\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561197990618302\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"y2\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/ywanes/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2_full.jpg\",\n" +
+"        \"avatarhash\": \"d965601fc6f904c609615d6e9c27ac9318e941c2\",\n" +
+"        \"lastlogoff\": 1482530552,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"ywanes\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1182042667,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198010207122\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Skynet\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/theskynetrmk/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b_full.jpg\",\n" +
+"        \"avatarhash\": \"148ff422f2245ab66abfeabf3f7506861d6b703b\",\n" +
+"        \"lastlogoff\": 1739935569,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791441064370\",\n" +
+"        \"timecreated\": 1242954597,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561197968251181\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Marizinha\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/Marizinha/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9_full.jpg\",\n" +
+"        \"avatarhash\": \"49f9614a5819ff327245e0d768ed2cee0945f2a9\",\n" +
+"        \"lastlogoff\": 1739751100,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Mariana\",\n" +
+"        \"primaryclanid\": \"103582791429525440\",\n" +
+"        \"timecreated\": 1092515247,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"21\",\n" +
+"        \"loccityid\": 8670\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198123813858\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Samye\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/aimeuovo/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda_full.jpg\",\n" +
+"        \"avatarhash\": \"75326d97393768d7035f8528d688aaf5cb6f5fda\",\n" +
+"        \"lastlogoff\": 1722553836,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Sam\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1390426406,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198054466282\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Jéssica Diabética\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/jessicadiabetica/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7_full.jpg\",\n" +
+"        \"avatarhash\": \"d7f8113599e8a71c2c42ef38361668f072182fd7\",\n" +
+"        \"lastlogoff\": 1739976143,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1323874926,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198274923218\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"And\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198274923218/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9_full.jpg\",\n" +
+"        \"avatarhash\": \"72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9\",\n" +
+"        \"lastlogoff\": 1737590556,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791455234009\",\n" +
+"        \"timecreated\": 1452022142,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198063802273\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Alighieri\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198063802273/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376_full.jpg\",\n" +
+"        \"avatarhash\": \"b2069595ed4bdf5c572c2415419502a0e5f82376\",\n" +
+"        \"lastlogoff\": 1736636202,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Antonio Neto\",\n" +
+"        \"primaryclanid\": \"103582791433351456\",\n" +
+"        \"timecreated\": 1337292264,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"27\",\n" +
+"        \"loccityid\": 8872\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561199107307317\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"EL_bucica\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561199107307317/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058_full.jpg\",\n" +
+"        \"avatarhash\": \"b6ccee122120f625d6dbda841f6048a9d1f02058\",\n" +
+"        \"lastlogoff\": 1739930199,\n" +
+"        \"personastate\": 3,\n" +
+"        \"realname\": \"BUCICA\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1605482526,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"15\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198069031885\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Duffy #T1\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/hyppinnus/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab_full.jpg\",\n" +
+"        \"avatarhash\": \"7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab\",\n" +
+"        \"lastlogoff\": 1739941691,\n" +
+"        \"personastate\": 1,\n" +
+"        \"realname\": \"Alexandre Anacleto Gonçalves\",\n" +
+"        \"primaryclanid\": \"103582791436345794\",\n" +
+"        \"timecreated\": 1344647840,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"06\",\n" +
+"        \"loccityid\": 8193\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561199505207307\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"leoparron6\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561199505207307/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9_full.jpg\",\n" +
+"        \"avatarhash\": \"335c40e542285f281006d41fa740ba3c6653c1a9\",\n" +
+"        \"lastlogoff\": 1739069545,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1684000866,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198360852592\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"ZharvakkA :)\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198360852592/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af_full.jpg\",\n" +
+"        \"avatarhash\": \"15f5f0cabd5fc14da928843e697961cab38259af\",\n" +
+"        \"lastlogoff\": 1739915630,\n" +
+"        \"personastate\": 4,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1485042756,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198358793177\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"zakai7979\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198358793177/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg\",\n" +
+"        \"avatarhash\": \"fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb\",\n" +
+"        \"lastlogoff\": 1717355564,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1484396926,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198875023372\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Ana ❥\",\n" +
+"        \"commentpermission\": \"\",\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/anapss/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344_full.jpg\",\n" +
+"        \"avatarhash\": \"d3e03b62c29af0c3b6fe9b477613babcd07d7344\",\n" +
+"        \"lastlogoff\": 1738973565,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Ana Paula\",\n" +
+"        \"primaryclanid\": \"103582791429521408\",\n" +
+"        \"timecreated\": 1544292054,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198103717610\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Ⱪiusⱪy\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/id/kiusky/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1_full.jpg\",\n" +
+"        \"avatarhash\": \"32e8e5d095eb9771176d094f65627c5de6c2c6a1\",\n" +
+"        \"lastlogoff\": 1739932653,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Kiusky Saints\",\n" +
+"        \"primaryclanid\": \"103582791462370555\",\n" +
+"        \"timecreated\": 1377006144,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"\",\n" +
+"        \"loccityid\": \"\"\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198066323542\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Kill3r\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198066323542/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e_full.jpg\",\n" +
+"        \"avatarhash\": \"8dfe278c7493b6984540e57ecd57b791df13841e\",\n" +
+"        \"lastlogoff\": 1739927814,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"Quem zoa com nome é tao maduro, olha perfil é fresco enzo\",\n" +
+"        \"primaryclanid\": \"103582791434025213\",\n" +
+"        \"timecreated\": 1341158922,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BA\",\n" +
+"        \"locstatecode\": \"01\",\n" +
+"        \"loccityid\": 5910\n" +
+"      },\n" +
+"      {\n" +
+"        \"steamid\": \"76561198144135086\",\n" +
+"        \"communityvisibilitystate\": 3,\n" +
+"        \"profilestate\": 1,\n" +
+"        \"personaname\": \"Bayer\",\n" +
+"        \"commentpermission\": 1,\n" +
+"        \"profileurl\": \"https://steamcommunity.com/profiles/76561198144135086/\",\n" +
+"        \"avatar\": \"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f.jpg\",\n" +
+"        \"avatarmedium\": \"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f_medium.jpg\",\n" +
+"        \"avatarfull\": \"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f_full.jpg\",\n" +
+"        \"avatarhash\": \"6e7e6ad61468290f5149097624e3dd867158b03f\",\n" +
+"        \"lastlogoff\": 1739975443,\n" +
+"        \"personastate\": 0,\n" +
+"        \"realname\": \"bruno guilherme zimmer bayer\",\n" +
+"        \"primaryclanid\": \"103582791439844667\",\n" +
+"        \"timecreated\": 1404909696,\n" +
+"        \"personastateflags\": 0,\n" +
+"        \"gameserverip\": \"\",\n" +
+"        \"gameserversteamid\": \"\",\n" +
+"        \"gameextrainfo\": \"\",\n" +
+"        \"gameid\": \"\",\n" +
+"        \"loccountrycode\": \"BR\",\n" +
+"        \"locstatecode\": \"23\",\n" +
+"        \"loccityid\": 8890\n" +
+"      }\n" +
+"    ]\n" +
+"  }\n" +
+"}";
+        baos = new java.io.ByteArrayOutputStream();
+        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem for elem in data['response']['players']]", false, false, false, false, false, baos);
+
+//System.out.println("input steam_getClanBySteamId");
+//System.out.println(txt);                
+        String txt="\"steamid\",\"personastate\",\"personaname\",\"realname\",\"gameextrainfo\",\"gameid\",\"primaryclanid\",\"communityvisibilitystate\",\"profilestate\",\"commentpermission\",\"profileurl\",\"avatar\",\"avatarmedium\",\"avatarfull\",\"avatarhash\",\"lastlogoff\",\"timecreated\",\"personastateflags\",\"gameserverip\",\"gameserversteamid\",\"loccountrycode\",\"locstatecode\",\"loccityid\"\n" +
+"\"76561198070637802\",\"1\",\"Insanin\",\"\",\"\",\"\",\"103582791462233891\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198070637802/\",\"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc.jpg\",\"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc_medium.jpg\",\"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc_full.jpg\",\"c5b55c892dcbe3099450e1b08038993efafae1bc\",\"1739945649\",\"1346393110\",\"0\",\"\",\"\",\"BR\",\"15\",\"\"\n" +
+"\"76561198268358858\",\"1\",\"Aятємιѕια\",\"‎Aятємιѕια\",\"\",\"\",\"103582791462370555\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/artemisiasalvatore/\",\"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191.jpg\",\"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191_medium.jpg\",\"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191_full.jpg\",\"6146b44f80ef22f40b0cc893a93c0d1966609191\",\"1739936568\",\"1450200134\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198047632697\",\"0\",\"AnnE_\",\"Aline\",\"\",\"\",\"103582791462288912\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/Alineamarilha/\",\"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295.jpg\",\"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295_medium.jpg\",\"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295_full.jpg\",\"661d10348c5871545af54a1f7c383b7b21856295\",\"1739325844\",\"1314433209\",\"0\",\"\",\"\",\"BR\",\"27\",\"8872\"\n" +
+"\"76561198133119142\",\"0\",\"kasandra あなたは私の愛だけである\",\"\",\"\",\"\",\"103582791465927004\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198133119142/\",\"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13.jpg\",\"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13_medium.jpg\",\"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13_full.jpg\",\"07a814cd6a51a18c3cf2d5dc51488a106b22fc13\",\"1739942314\",\"1397574943\",\"0\",\"\",\"\",\"PE\",\"25\",\"31426\"\n" +
+"\"76561198058085893\",\"3\",\"Steimer\",\"Steimer\",\"\",\"\",\"103582791434110545\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/steimer/\",\"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15.jpg\",\"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15_medium.jpg\",\"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15_full.jpg\",\"4aacaad661339a4e3e1bdf07da25a4baecc4bb15\",\"1739953564\",\"1328227141\",\"0\",\"\",\"\",\"BR\",\"26\",\"7956\"\n" +
+"\"76561198357647756\",\"0\",\"HIM\",\"\",\"\",\"\",\"103582791457094503\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/pristinamel/\",\"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5.jpg\",\"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5_medium.jpg\",\"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5_full.jpg\",\"b763c40e36a5ad3e3986d9914ee1d713cbf495f5\",\"1729255226\",\"1483578519\",\"0\",\"\",\"\",\"BR\",\"04\",\"\"\n" +
+"\"76561198080614485\",\"0\",\"♡ Thauyta ♡\",\"Anna\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198080614485/\",\"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06.jpg\",\"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06_medium.jpg\",\"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06_full.jpg\",\"f96f4c31807b79fff3455d2f3a264134b926bc06\",\"1739745172\",\"1357402955\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198192688921\",\"0\",\"Ametist4\",\"ametista02\",\"\",\"\",\"103582791469239912\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198192688921/\",\"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928.jpg\",\"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928_medium.jpg\",\"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928_full.jpg\",\"276d92ac03f4a9fd04e1af470be07492cc8f4928\",\"1735949893\",\"1429488784\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198973365741\",\"4\",\"Matadora de gr1ngo\",\"\",\"Dota 2\",\"570\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198973365741/\",\"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d.jpg\",\"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d_medium.jpg\",\"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d_full.jpg\",\"82017e8608bb675bb6a5a1c75c34a6979025ec4d\",\"1739908028\",\"1561662050\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561197988181181\",\"0\",\"K\"\"\",\"Victor\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561197988181181/\",\"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8.jpg\",\"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8_medium.jpg\",\"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8_full.jpg\",\"28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8\",\"1739759915\",\"1171569194\",\"0\",\"\",\"\",\"BR\",\"27\",\"8522\"\n" +
+"\"76561198123321851\",\"1\",\"V de Veveko\",\"Gilgamesh\",\"\",\"\",\"103582791441064370\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/gilgameshlaw/\",\"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9.jpg\",\"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9_medium.jpg\",\"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9_full.jpg\",\"cf82ae74614b254a799a038429d9d2b0a4633cd9\",\"1739979956\",\"1390075701\",\"0\",\"\",\"\",\"BR\",\"21\",\"8670\"\n" +
+"\"76561198064679140\",\"1\",\"kinha\",\"Érica\",\"Dota 2\",\"570\",\"103582791434200842\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/ericaberaca/\",\"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9.jpg\",\"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9_medium.jpg\",\"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9_full.jpg\",\"93fd8818f51c34df54c8919de9ee42b162686df9\",\"1739928159\",\"1338659171\",\"0\",\"\",\"\",\"BR\",\"05\",\"7455\"\n" +
+"\"76561198044847395\",\"0\",\"Fazendeiro\",\"Fábio Nogueira\",\"\",\"\",\"103582791435066810\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/Fazendeiro/\",\"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc.jpg\",\"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc_medium.jpg\",\"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc_full.jpg\",\"bd0d93950323a61926954b8e93bda1dcab2210fc\",\"1739908088\",\"1309998096\",\"0\",\"\",\"\",\"BR\",\"11\",\"7481\"\n" +
+"\"76561198063140379\",\"0\",\"Don \",\"\",\"\",\"\",\"103582791434073173\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/mkny/\",\"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f.jpg\",\"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f_medium.jpg\",\"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f_full.jpg\",\"be014c8e55a40f7944317b10cbd6bdff71d9a66f\",\"1739930540\",\"1336311510\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198092636377\",\"0\",\"Sumaya\",\"Thamires\",\"\",\"\",\"103582791436115554\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198092636377/\",\"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a.jpg\",\"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a_medium.jpg\",\"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a_full.jpg\",\"3f8de59341f57e1e11f60c1c434613ee4cdd830a\",\"1739930241\",\"1369663212\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198082788407\",\"0\",\"WashingtonG33K\",\"Batata Frita com Queijo\",\"\",\"\",\"103582791435141219\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/washingtong33k/\",\"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3.jpg\",\"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3_medium.jpg\",\"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3_full.jpg\",\"53197ee829aaad6398669c95f0adc3c5b5be87b3\",\"1723933237\",\"1359557045\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198114449236\",\"0\",\"Shadow Queen\",\"Rahysa Knopff\",\"\",\"\",\"103582791436962890\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/rahysaknopff/\",\"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd.jpg\",\"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd_medium.jpg\",\"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd_full.jpg\",\"0b1df0e50ce48db8ca906913dd74b497585140bd\",\"1739134225\",\"1384271547\",\"0\",\"\",\"\",\"BR\",\"11\",\"7481\"\n" +
+"\"76561199434803932\",\"0\",\"14\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561199434803932/\",\"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595.jpg\",\"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595_medium.jpg\",\"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595_full.jpg\",\"9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595\",\"1725328215\",\"1668407994\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198080928754\",\"0\",\"Foda-se\",\"\",\"\",\"\",\"103582791433918171\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198080928754/\",\"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6.jpg\",\"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6_medium.jpg\",\"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6_full.jpg\",\"7dd032a1c5f1cb44d2701e53e4c29af614aa55c6\",\"1717868068\",\"1357608111\",\"0\",\"\",\"\",\"BR\",\"27\",\"8383\"\n" +
+"\"76561198076559008\",\"3\",\"OneBullet\",\"Guilherme\",\"\",\"\",\"103582791438549009\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/onebulletbr/\",\"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e.jpg\",\"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e_medium.jpg\",\"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e_full.jpg\",\"db8279b9a1ee3d7e062fc759947ad77dfda65d7e\",\"1739966823\",\"1353673168\",\"0\",\"\",\"\",\"BR\",\"27\",\"7321\"\n" +
+"\"76561198422839493\",\"0\",\"Tata\",\"Taís\",\"\",\"\",\"103582791469239912\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198422839493/\",\"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae.jpg\",\"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae_medium.jpg\",\"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae_full.jpg\",\"1c9f67fe9a412f5005dea8f61f384cdafb0701ae\",\"1734283394\",\"1505689472\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198113592437\",\"3\",\"Gessica | Jhuly\",\"Gessica Xavier\",\"\",\"\",\"103582791458113819\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/gessic22/\",\"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea.jpg\",\"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea_medium.jpg\",\"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea_full.jpg\",\"420993ab6da5d1e5c0dba8e3de69c74d10b622ea\",\"1739931219\",\"1383664195\",\"0\",\"\",\"\",\"BR\",\"27\",\"8940\"\n" +
+"\"76561198081732932\",\"0\",\"Thaaa *-*\",\"Tha\",\"\",\"\",\"103582791434299330\",\"3\",\"1\",\"2\",\"https://steamcommunity.com/profiles/76561198081732932/\",\"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c.jpg\",\"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c_medium.jpg\",\"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c_full.jpg\",\"87e70558fa0f7c1793926e1811b4f7e2df97370c\",\"1739648118\",\"1358543922\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198833133000\",\"0\",\"*-*Lia¡¡\",\"uwu\",\"\",\"\",\"103582791440211049\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198833133000/\",\"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572.jpg\",\"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572_medium.jpg\",\"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572_full.jpg\",\"78e50a3176bed159e8bc31961488cd49f0986572\",\"1739972024\",\"1525014690\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561197995079629\",\"1\",\"Analista de Sistemas\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561197995079629/\",\"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9.jpg\",\"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9_medium.jpg\",\"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9_full.jpg\",\"1cbdad019f2dc96cec438b9aca8ee43a45f0ead9\",\"1739928474\",\"1198329803\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561199244091345\",\"0\",\"Exterminador do Teu FUROOO\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561199244091345/\",\"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b.jpg\",\"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b_medium.jpg\",\"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b_full.jpg\",\"a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b\",\"1728874260\",\"1644961069\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198147595380\",\"0\",\"LenTejitaSSS\",\"\",\"\",\"\",\"103582791463146011\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198147595380/\",\"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b.jpg\",\"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b_medium.jpg\",\"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b_full.jpg\",\"e089e215846eafd728dea11dad8e7ab3115a860b\",\"1739945195\",\"1406732490\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198085263025\",\"4\",\"Ur$!nH凸\",\"\",\"\",\"\",\"103582791433833633\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198085263025/\",\"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94.jpg\",\"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94_medium.jpg\",\"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94_full.jpg\",\"194cd97f243b8c6dfca318a0bff73b5e338a7b94\",\"1739942210\",\"1362254010\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198093743772\",\"0\",\"DADDY_SHARK_AM\",\"Arquimedes Queiroz\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198093743772/\",\"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420.jpg\",\"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420_medium.jpg\",\"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420_full.jpg\",\"390d56b5e6d8e750b32a52e490872c42426fe420\",\"1728790454\",\"1370587916\",\"0\",\"\",\"\",\"BR\",\"04\",\"\"\n" +
+"\"76561198119398280\",\"1\",\"Woolf\",\"Vinicius G. V.\",\"Dota 2\",\"570\",\"103582791463311816\",\"3\",\"1\",\"2\",\"https://steamcommunity.com/id/TheRockWolf/\",\"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a.jpg\",\"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a_medium.jpg\",\"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a_full.jpg\",\"27de0dd31e22240463fcb2e62b9b637d8d7e4b3a\",\"1739933411\",\"1387914849\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198094130820\",\"0\",\"mariana4fun\",\"Mariana\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/mariana4fun/\",\"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1.jpg\",\"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1_medium.jpg\",\"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1_full.jpg\",\"2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1\",\"1736941368\",\"1370888078\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198087126465\",\"0\",\"Frist_\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/frist_/\",\"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299.jpg\",\"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299_medium.jpg\",\"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299_full.jpg\",\"0fe28877f6abc9d7f2c21ccbf171620c6efd0299\",\"1739838347\",\"1364186605\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198256762951\",\"0\",\"TOMIOKA  100%\",\"\",\"\",\"\",\"103582791457220425\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198256762951/\",\"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4.jpg\",\"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4_medium.jpg\",\"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4_full.jpg\",\"53159d54f68b8df620768a2ce3301286131bdef4\",\"1739842355\",\"1445663545\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561197982280491\",\"0\",\"Gramanho\",\"~R\",\"\",\"\",\"103582791429639803\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561197982280491/\",\"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776.jpg\",\"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776_medium.jpg\",\"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776_full.jpg\",\"c8fa10e5306b3224f213cb1e5cc15041cdba7776\",\"1739939158\",\"1146076718\",\"0\",\"\",\"\",\"BR\",\"27\",\"8872\"\n" +
+"\"76561198097967224\",\"0\",\"jeeh ♡\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"2\",\"https://steamcommunity.com/profiles/76561198097967224/\",\"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc.jpg\",\"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc_medium.jpg\",\"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc_full.jpg\",\"13134e00fa32da39d80ede48b8a612e46412ffcc\",\"1739932877\",\"1373813825\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198165812879\",\"0\",\"Gatinho \",\"Layne Castro\",\"\",\"\",\"103582791434125179\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198165812879/\",\"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77.jpg\",\"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77_medium.jpg\",\"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77_full.jpg\",\"acfc625c67711d07b78532a507bfe0b22c361a77\",\"1738455915\",\"1417367902\",\"0\",\"\",\"\",\"BR\",\"16\",\"7195\"\n" +
+"\"76561198836224169\",\"0\",\"Mariane\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198836224169/\",\"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d.jpg\",\"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d_medium.jpg\",\"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d_full.jpg\",\"0276d0ff9f393cde97a7d423e19e895f03aef62d\",\"1735345928\",\"1526583117\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198033910448\",\"3\",\"BAN\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198033910448/\",\"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a.jpg\",\"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a_medium.jpg\",\"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a_full.jpg\",\"186e77a5d4153389e778dcf9518c678341b3653a\",\"1739845333\",\"1290287886\",\"0\",\"\",\"\",\"BR\",\"27\",\"\"\n" +
+"\"76561197963453770\",\"0\",\"Kairox\",\"não falo!\",\"\",\"\",\"103582791429533935\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/kairo/\",\"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6.jpg\",\"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6_medium.jpg\",\"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6_full.jpg\",\"fa56a391d267be5caf5baee64b0d79ddcc8c8dc6\",\"1739930718\",\"1071890311\",\"0\",\"\",\"\",\"BR\",\"27\",\"7573\"\n" +
+"\"76561198179188665\",\"0\",\"Fr@nn\",\"\",\"\",\"\",\"103582791434277245\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/205189388/\",\"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790.jpg\",\"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790_medium.jpg\",\"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790_full.jpg\",\"c88d60326a4edde3a0ae2d1f3e6088f0a72f3790\",\"1739028527\",\"1423789569\",\"0\",\"\",\"\",\"AR\",\"01\",\"\"\n" +
+"\"76561198179602225\",\"0\",\"★ ̶ ̶A̶l̶i̶n̶e̶ ̶̶★\",\"Vitor\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198179602225/\",\"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff.jpg\",\"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff_medium.jpg\",\"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff_full.jpg\",\"5e29ad43d8750121a30161934c5a414d86f4b7ff\",\"1739748078\",\"1423957418\",\"0\",\"\",\"\",\"BR\",\"04\",\"8175\"\n" +
+"\"76561198301561994\",\"0\",\"EL GATO BRANCO\",\"EL GATO BRANCO\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/maxlanyo/\",\"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1.jpg\",\"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1_medium.jpg\",\"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1_full.jpg\",\"4843292afa3d8f743963dac8e2059f8e0fe493b1\",\"1739654288\",\"1461590323\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198084472947\",\"0\",\"Eligna Wild\",\"aka Yasmin Krug\",\"\",\"\",\"103582791439524576\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/lignayk/\",\"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3.jpg\",\"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3_medium.jpg\",\"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3_full.jpg\",\"4c481539ef1c83b247eaceab90d63f2850288ca3\",\"1739894945\",\"1361497903\",\"0\",\"\",\"\",\"IS\",\"24\",\"\"\n" +
+"\"76561197990618302\",\"0\",\"y2\",\"ywanes\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/ywanes/\",\"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2.jpg\",\"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2_medium.jpg\",\"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2_full.jpg\",\"d965601fc6f904c609615d6e9c27ac9318e941c2\",\"1482530552\",\"1182042667\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198010207122\",\"0\",\"Skynet\",\"\",\"\",\"\",\"103582791441064370\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/theskynetrmk/\",\"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b.jpg\",\"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b_medium.jpg\",\"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b_full.jpg\",\"148ff422f2245ab66abfeabf3f7506861d6b703b\",\"1739935569\",\"1242954597\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561197968251181\",\"0\",\"Marizinha\",\"Mariana\",\"\",\"\",\"103582791429525440\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/Marizinha/\",\"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9.jpg\",\"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9_medium.jpg\",\"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9_full.jpg\",\"49f9614a5819ff327245e0d768ed2cee0945f2a9\",\"1739751100\",\"1092515247\",\"0\",\"\",\"\",\"BR\",\"21\",\"8670\"\n" +
+"\"76561198123813858\",\"0\",\"Samye\",\"Sam\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/aimeuovo/\",\"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda.jpg\",\"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda_medium.jpg\",\"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda_full.jpg\",\"75326d97393768d7035f8528d688aaf5cb6f5fda\",\"1722553836\",\"1390426406\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198054466282\",\"0\",\"Jéssica Diabética\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/jessicadiabetica/\",\"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7.jpg\",\"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7_medium.jpg\",\"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7_full.jpg\",\"d7f8113599e8a71c2c42ef38361668f072182fd7\",\"1739976143\",\"1323874926\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198274923218\",\"0\",\"And\",\"\",\"\",\"\",\"103582791455234009\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198274923218/\",\"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9.jpg\",\"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9_medium.jpg\",\"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9_full.jpg\",\"72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9\",\"1737590556\",\"1452022142\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198063802273\",\"0\",\"Alighieri\",\"Antonio Neto\",\"\",\"\",\"103582791433351456\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198063802273/\",\"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376.jpg\",\"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376_medium.jpg\",\"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376_full.jpg\",\"b2069595ed4bdf5c572c2415419502a0e5f82376\",\"1736636202\",\"1337292264\",\"0\",\"\",\"\",\"BR\",\"27\",\"8872\"\n" +
+"\"76561199107307317\",\"3\",\"EL_bucica\",\"BUCICA\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561199107307317/\",\"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058.jpg\",\"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058_medium.jpg\",\"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058_full.jpg\",\"b6ccee122120f625d6dbda841f6048a9d1f02058\",\"1739930199\",\"1605482526\",\"0\",\"\",\"\",\"BR\",\"15\",\"\"\n" +
+"\"76561198069031885\",\"1\",\"Duffy #T1\",\"Alexandre Anacleto Gonçalves\",\"\",\"\",\"103582791436345794\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/hyppinnus/\",\"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab.jpg\",\"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab_medium.jpg\",\"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab_full.jpg\",\"7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab\",\"1739941691\",\"1344647840\",\"0\",\"\",\"\",\"BR\",\"06\",\"8193\"\n" +
+"\"76561199505207307\",\"0\",\"leoparron6\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561199505207307/\",\"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9.jpg\",\"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9_medium.jpg\",\"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9_full.jpg\",\"335c40e542285f281006d41fa740ba3c6653c1a9\",\"1739069545\",\"1684000866\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198360852592\",\"4\",\"ZharvakkA :)\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198360852592/\",\"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af.jpg\",\"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af_medium.jpg\",\"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af_full.jpg\",\"15f5f0cabd5fc14da928843e697961cab38259af\",\"1739915630\",\"1485042756\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198358793177\",\"0\",\"zakai7979\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198358793177/\",\"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb.jpg\",\"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg\",\"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg\",\"fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb\",\"1717355564\",\"1484396926\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198875023372\",\"0\",\"Ana ❥\",\"Ana Paula\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/anapss/\",\"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344.jpg\",\"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344_medium.jpg\",\"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344_full.jpg\",\"d3e03b62c29af0c3b6fe9b477613babcd07d7344\",\"1738973565\",\"1544292054\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198103717610\",\"0\",\"Ⱪiusⱪy\",\"Kiusky Saints\",\"\",\"\",\"103582791462370555\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/kiusky/\",\"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1.jpg\",\"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1_medium.jpg\",\"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1_full.jpg\",\"32e8e5d095eb9771176d094f65627c5de6c2c6a1\",\"1739932653\",\"1377006144\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198066323542\",\"0\",\"Kill3r\",\"Quem zoa com nome é tao maduro, olha perfil é fresco enzo\",\"\",\"\",\"103582791434025213\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198066323542/\",\"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e.jpg\",\"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e_medium.jpg\",\"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e_full.jpg\",\"8dfe278c7493b6984540e57ecd57b791df13841e\",\"1739927814\",\"1341158922\",\"0\",\"\",\"\",\"BA\",\"01\",\"5910\"\n" +
+"\"76561198144135086\",\"0\",\"Bayer\",\"bruno guilherme zimmer bayer\",\"\",\"\",\"103582791439844667\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198144135086/\",\"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f.jpg\",\"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f_medium.jpg\",\"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f_full.jpg\",\"6e7e6ad61468290f5149097624e3dd867158b03f\",\"1739975443\",\"1404909696\",\"0\",\"\",\"\",\"BR\",\"23\",\"8890\"";
+        baos = new java.io.ByteArrayOutputStream();
+        selectCSV_texto(null, null, "select primaryclanid from this where steamid = '" + steam_id + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
+
+//System.out.println("input steam_statusByClan");
+//System.out.println(txt);                
+        txt="\"steamid\",\"personastate\",\"personaname\",\"realname\",\"gameextrainfo\",\"gameid\",\"primaryclanid\",\"communityvisibilitystate\",\"profilestate\",\"commentpermission\",\"profileurl\",\"avatar\",\"avatarmedium\",\"avatarfull\",\"avatarhash\",\"lastlogoff\",\"timecreated\",\"personastateflags\",\"gameserverip\",\"gameserversteamid\",\"loccountrycode\",\"locstatecode\",\"loccityid\"\n" +
+"\"76561198070637802\",\"1\",\"Insanin\",\"\",\"\",\"\",\"103582791462233891\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198070637802/\",\"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc.jpg\",\"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc_medium.jpg\",\"https://avatars.steamstatic.com/c5b55c892dcbe3099450e1b08038993efafae1bc_full.jpg\",\"c5b55c892dcbe3099450e1b08038993efafae1bc\",\"1739945649\",\"1346393110\",\"0\",\"\",\"\",\"BR\",\"15\",\"\"\n" +
+"\"76561198268358858\",\"1\",\"Aятємιѕια\",\"‎Aятємιѕια\",\"\",\"\",\"103582791462370555\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/artemisiasalvatore/\",\"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191.jpg\",\"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191_medium.jpg\",\"https://avatars.steamstatic.com/6146b44f80ef22f40b0cc893a93c0d1966609191_full.jpg\",\"6146b44f80ef22f40b0cc893a93c0d1966609191\",\"1739936568\",\"1450200134\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198047632697\",\"0\",\"AnnE_\",\"Aline\",\"\",\"\",\"103582791462288912\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/Alineamarilha/\",\"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295.jpg\",\"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295_medium.jpg\",\"https://avatars.steamstatic.com/661d10348c5871545af54a1f7c383b7b21856295_full.jpg\",\"661d10348c5871545af54a1f7c383b7b21856295\",\"1739325844\",\"1314433209\",\"0\",\"\",\"\",\"BR\",\"27\",\"8872\"\n" +
+"\"76561198133119142\",\"0\",\"kasandra あなたは私の愛だけである\",\"\",\"\",\"\",\"103582791465927004\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198133119142/\",\"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13.jpg\",\"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13_medium.jpg\",\"https://avatars.steamstatic.com/07a814cd6a51a18c3cf2d5dc51488a106b22fc13_full.jpg\",\"07a814cd6a51a18c3cf2d5dc51488a106b22fc13\",\"1739942314\",\"1397574943\",\"0\",\"\",\"\",\"PE\",\"25\",\"31426\"\n" +
+"\"76561198058085893\",\"3\",\"Steimer\",\"Steimer\",\"\",\"\",\"103582791434110545\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/steimer/\",\"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15.jpg\",\"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15_medium.jpg\",\"https://avatars.steamstatic.com/4aacaad661339a4e3e1bdf07da25a4baecc4bb15_full.jpg\",\"4aacaad661339a4e3e1bdf07da25a4baecc4bb15\",\"1739953564\",\"1328227141\",\"0\",\"\",\"\",\"BR\",\"26\",\"7956\"\n" +
+"\"76561198357647756\",\"0\",\"HIM\",\"\",\"\",\"\",\"103582791457094503\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/pristinamel/\",\"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5.jpg\",\"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5_medium.jpg\",\"https://avatars.steamstatic.com/b763c40e36a5ad3e3986d9914ee1d713cbf495f5_full.jpg\",\"b763c40e36a5ad3e3986d9914ee1d713cbf495f5\",\"1729255226\",\"1483578519\",\"0\",\"\",\"\",\"BR\",\"04\",\"\"\n" +
+"\"76561198080614485\",\"0\",\"♡ Thauyta ♡\",\"Anna\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198080614485/\",\"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06.jpg\",\"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06_medium.jpg\",\"https://avatars.steamstatic.com/f96f4c31807b79fff3455d2f3a264134b926bc06_full.jpg\",\"f96f4c31807b79fff3455d2f3a264134b926bc06\",\"1739745172\",\"1357402955\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198192688921\",\"0\",\"Ametist4\",\"ametista02\",\"\",\"\",\"103582791469239912\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198192688921/\",\"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928.jpg\",\"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928_medium.jpg\",\"https://avatars.steamstatic.com/276d92ac03f4a9fd04e1af470be07492cc8f4928_full.jpg\",\"276d92ac03f4a9fd04e1af470be07492cc8f4928\",\"1735949893\",\"1429488784\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198973365741\",\"4\",\"Matadora de gr1ngo\",\"\",\"Dota 2\",\"570\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198973365741/\",\"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d.jpg\",\"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d_medium.jpg\",\"https://avatars.steamstatic.com/82017e8608bb675bb6a5a1c75c34a6979025ec4d_full.jpg\",\"82017e8608bb675bb6a5a1c75c34a6979025ec4d\",\"1739908028\",\"1561662050\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561197988181181\",\"0\",\"K\"\"\",\"Victor\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561197988181181/\",\"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8.jpg\",\"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8_medium.jpg\",\"https://avatars.steamstatic.com/28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8_full.jpg\",\"28c5d9783ed598a5e309ed2ed49bc88f5f91bbc8\",\"1739759915\",\"1171569194\",\"0\",\"\",\"\",\"BR\",\"27\",\"8522\"\n" +
+"\"76561198123321851\",\"1\",\"V de Veveko\",\"Gilgamesh\",\"\",\"\",\"103582791441064370\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/gilgameshlaw/\",\"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9.jpg\",\"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9_medium.jpg\",\"https://avatars.steamstatic.com/cf82ae74614b254a799a038429d9d2b0a4633cd9_full.jpg\",\"cf82ae74614b254a799a038429d9d2b0a4633cd9\",\"1739979956\",\"1390075701\",\"0\",\"\",\"\",\"BR\",\"21\",\"8670\"\n" +
+"\"76561198064679140\",\"1\",\"kinha\",\"Érica\",\"Dota 2\",\"570\",\"103582791434200842\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/ericaberaca/\",\"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9.jpg\",\"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9_medium.jpg\",\"https://avatars.steamstatic.com/93fd8818f51c34df54c8919de9ee42b162686df9_full.jpg\",\"93fd8818f51c34df54c8919de9ee42b162686df9\",\"1739928159\",\"1338659171\",\"0\",\"\",\"\",\"BR\",\"05\",\"7455\"\n" +
+"\"76561198044847395\",\"0\",\"Fazendeiro\",\"Fábio Nogueira\",\"\",\"\",\"103582791435066810\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/Fazendeiro/\",\"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc.jpg\",\"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc_medium.jpg\",\"https://avatars.steamstatic.com/bd0d93950323a61926954b8e93bda1dcab2210fc_full.jpg\",\"bd0d93950323a61926954b8e93bda1dcab2210fc\",\"1739908088\",\"1309998096\",\"0\",\"\",\"\",\"BR\",\"11\",\"7481\"\n" +
+"\"76561198063140379\",\"0\",\"Don \",\"\",\"\",\"\",\"103582791434073173\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/mkny/\",\"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f.jpg\",\"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f_medium.jpg\",\"https://avatars.steamstatic.com/be014c8e55a40f7944317b10cbd6bdff71d9a66f_full.jpg\",\"be014c8e55a40f7944317b10cbd6bdff71d9a66f\",\"1739930540\",\"1336311510\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198092636377\",\"0\",\"Sumaya\",\"Thamires\",\"\",\"\",\"103582791436115554\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198092636377/\",\"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a.jpg\",\"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a_medium.jpg\",\"https://avatars.steamstatic.com/3f8de59341f57e1e11f60c1c434613ee4cdd830a_full.jpg\",\"3f8de59341f57e1e11f60c1c434613ee4cdd830a\",\"1739930241\",\"1369663212\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198082788407\",\"0\",\"WashingtonG33K\",\"Batata Frita com Queijo\",\"\",\"\",\"103582791435141219\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/washingtong33k/\",\"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3.jpg\",\"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3_medium.jpg\",\"https://avatars.steamstatic.com/53197ee829aaad6398669c95f0adc3c5b5be87b3_full.jpg\",\"53197ee829aaad6398669c95f0adc3c5b5be87b3\",\"1723933237\",\"1359557045\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198114449236\",\"0\",\"Shadow Queen\",\"Rahysa Knopff\",\"\",\"\",\"103582791436962890\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/rahysaknopff/\",\"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd.jpg\",\"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd_medium.jpg\",\"https://avatars.steamstatic.com/0b1df0e50ce48db8ca906913dd74b497585140bd_full.jpg\",\"0b1df0e50ce48db8ca906913dd74b497585140bd\",\"1739134225\",\"1384271547\",\"0\",\"\",\"\",\"BR\",\"11\",\"7481\"\n" +
+"\"76561199434803932\",\"0\",\"14\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561199434803932/\",\"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595.jpg\",\"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595_medium.jpg\",\"https://avatars.steamstatic.com/9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595_full.jpg\",\"9c79cec3c5814fc16dc66ee1a7a41fa43bcf2595\",\"1725328215\",\"1668407994\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198080928754\",\"0\",\"Foda-se\",\"\",\"\",\"\",\"103582791433918171\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198080928754/\",\"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6.jpg\",\"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6_medium.jpg\",\"https://avatars.steamstatic.com/7dd032a1c5f1cb44d2701e53e4c29af614aa55c6_full.jpg\",\"7dd032a1c5f1cb44d2701e53e4c29af614aa55c6\",\"1717868068\",\"1357608111\",\"0\",\"\",\"\",\"BR\",\"27\",\"8383\"\n" +
+"\"76561198076559008\",\"3\",\"OneBullet\",\"Guilherme\",\"\",\"\",\"103582791438549009\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/onebulletbr/\",\"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e.jpg\",\"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e_medium.jpg\",\"https://avatars.steamstatic.com/db8279b9a1ee3d7e062fc759947ad77dfda65d7e_full.jpg\",\"db8279b9a1ee3d7e062fc759947ad77dfda65d7e\",\"1739966823\",\"1353673168\",\"0\",\"\",\"\",\"BR\",\"27\",\"7321\"\n" +
+"\"76561198422839493\",\"0\",\"Tata\",\"Taís\",\"\",\"\",\"103582791469239912\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198422839493/\",\"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae.jpg\",\"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae_medium.jpg\",\"https://avatars.steamstatic.com/1c9f67fe9a412f5005dea8f61f384cdafb0701ae_full.jpg\",\"1c9f67fe9a412f5005dea8f61f384cdafb0701ae\",\"1734283394\",\"1505689472\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198113592437\",\"3\",\"Gessica | Jhuly\",\"Gessica Xavier\",\"\",\"\",\"103582791458113819\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/gessic22/\",\"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea.jpg\",\"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea_medium.jpg\",\"https://avatars.steamstatic.com/420993ab6da5d1e5c0dba8e3de69c74d10b622ea_full.jpg\",\"420993ab6da5d1e5c0dba8e3de69c74d10b622ea\",\"1739931219\",\"1383664195\",\"0\",\"\",\"\",\"BR\",\"27\",\"8940\"\n" +
+"\"76561198081732932\",\"0\",\"Thaaa *-*\",\"Tha\",\"\",\"\",\"103582791434299330\",\"3\",\"1\",\"2\",\"https://steamcommunity.com/profiles/76561198081732932/\",\"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c.jpg\",\"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c_medium.jpg\",\"https://avatars.steamstatic.com/87e70558fa0f7c1793926e1811b4f7e2df97370c_full.jpg\",\"87e70558fa0f7c1793926e1811b4f7e2df97370c\",\"1739648118\",\"1358543922\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198833133000\",\"0\",\"*-*Lia¡¡\",\"uwu\",\"\",\"\",\"103582791440211049\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198833133000/\",\"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572.jpg\",\"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572_medium.jpg\",\"https://avatars.steamstatic.com/78e50a3176bed159e8bc31961488cd49f0986572_full.jpg\",\"78e50a3176bed159e8bc31961488cd49f0986572\",\"1739972024\",\"1525014690\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561197995079629\",\"1\",\"Analista de Sistemas\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561197995079629/\",\"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9.jpg\",\"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9_medium.jpg\",\"https://avatars.steamstatic.com/1cbdad019f2dc96cec438b9aca8ee43a45f0ead9_full.jpg\",\"1cbdad019f2dc96cec438b9aca8ee43a45f0ead9\",\"1739928474\",\"1198329803\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561199244091345\",\"0\",\"Exterminador do Teu FUROOO\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561199244091345/\",\"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b.jpg\",\"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b_medium.jpg\",\"https://avatars.steamstatic.com/a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b_full.jpg\",\"a3464599d9fcca1e9e1c2fccd6a49b10eb32e84b\",\"1728874260\",\"1644961069\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198147595380\",\"0\",\"LenTejitaSSS\",\"\",\"\",\"\",\"103582791463146011\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198147595380/\",\"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b.jpg\",\"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b_medium.jpg\",\"https://avatars.steamstatic.com/e089e215846eafd728dea11dad8e7ab3115a860b_full.jpg\",\"e089e215846eafd728dea11dad8e7ab3115a860b\",\"1739945195\",\"1406732490\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198085263025\",\"4\",\"Ur$!nH凸\",\"\",\"\",\"\",\"103582791433833633\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198085263025/\",\"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94.jpg\",\"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94_medium.jpg\",\"https://avatars.steamstatic.com/194cd97f243b8c6dfca318a0bff73b5e338a7b94_full.jpg\",\"194cd97f243b8c6dfca318a0bff73b5e338a7b94\",\"1739942210\",\"1362254010\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198093743772\",\"0\",\"DADDY_SHARK_AM\",\"Arquimedes Queiroz\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198093743772/\",\"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420.jpg\",\"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420_medium.jpg\",\"https://avatars.steamstatic.com/390d56b5e6d8e750b32a52e490872c42426fe420_full.jpg\",\"390d56b5e6d8e750b32a52e490872c42426fe420\",\"1728790454\",\"1370587916\",\"0\",\"\",\"\",\"BR\",\"04\",\"\"\n" +
+"\"76561198119398280\",\"1\",\"Woolf\",\"Vinicius G. V.\",\"Dota 2\",\"570\",\"103582791463311816\",\"3\",\"1\",\"2\",\"https://steamcommunity.com/id/TheRockWolf/\",\"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a.jpg\",\"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a_medium.jpg\",\"https://avatars.steamstatic.com/27de0dd31e22240463fcb2e62b9b637d8d7e4b3a_full.jpg\",\"27de0dd31e22240463fcb2e62b9b637d8d7e4b3a\",\"1739933411\",\"1387914849\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198094130820\",\"0\",\"mariana4fun\",\"Mariana\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/mariana4fun/\",\"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1.jpg\",\"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1_medium.jpg\",\"https://avatars.steamstatic.com/2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1_full.jpg\",\"2038f2b2ce0ea7d0ed28a9b050cd1f8f8f5e55f1\",\"1736941368\",\"1370888078\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198087126465\",\"0\",\"Frist_\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/frist_/\",\"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299.jpg\",\"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299_medium.jpg\",\"https://avatars.steamstatic.com/0fe28877f6abc9d7f2c21ccbf171620c6efd0299_full.jpg\",\"0fe28877f6abc9d7f2c21ccbf171620c6efd0299\",\"1739838347\",\"1364186605\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198256762951\",\"0\",\"TOMIOKA  100%\",\"\",\"\",\"\",\"103582791457220425\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198256762951/\",\"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4.jpg\",\"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4_medium.jpg\",\"https://avatars.steamstatic.com/53159d54f68b8df620768a2ce3301286131bdef4_full.jpg\",\"53159d54f68b8df620768a2ce3301286131bdef4\",\"1739842355\",\"1445663545\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561197982280491\",\"0\",\"Gramanho\",\"~R\",\"\",\"\",\"103582791429639803\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561197982280491/\",\"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776.jpg\",\"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776_medium.jpg\",\"https://avatars.steamstatic.com/c8fa10e5306b3224f213cb1e5cc15041cdba7776_full.jpg\",\"c8fa10e5306b3224f213cb1e5cc15041cdba7776\",\"1739939158\",\"1146076718\",\"0\",\"\",\"\",\"BR\",\"27\",\"8872\"\n" +
+"\"76561198097967224\",\"0\",\"jeeh ♡\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"2\",\"https://steamcommunity.com/profiles/76561198097967224/\",\"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc.jpg\",\"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc_medium.jpg\",\"https://avatars.steamstatic.com/13134e00fa32da39d80ede48b8a612e46412ffcc_full.jpg\",\"13134e00fa32da39d80ede48b8a612e46412ffcc\",\"1739932877\",\"1373813825\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198165812879\",\"0\",\"Gatinho \",\"Layne Castro\",\"\",\"\",\"103582791434125179\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198165812879/\",\"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77.jpg\",\"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77_medium.jpg\",\"https://avatars.steamstatic.com/acfc625c67711d07b78532a507bfe0b22c361a77_full.jpg\",\"acfc625c67711d07b78532a507bfe0b22c361a77\",\"1738455915\",\"1417367902\",\"0\",\"\",\"\",\"BR\",\"16\",\"7195\"\n" +
+"\"76561198836224169\",\"0\",\"Mariane\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198836224169/\",\"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d.jpg\",\"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d_medium.jpg\",\"https://avatars.steamstatic.com/0276d0ff9f393cde97a7d423e19e895f03aef62d_full.jpg\",\"0276d0ff9f393cde97a7d423e19e895f03aef62d\",\"1735345928\",\"1526583117\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198033910448\",\"3\",\"BAN\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198033910448/\",\"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a.jpg\",\"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a_medium.jpg\",\"https://avatars.steamstatic.com/186e77a5d4153389e778dcf9518c678341b3653a_full.jpg\",\"186e77a5d4153389e778dcf9518c678341b3653a\",\"1739845333\",\"1290287886\",\"0\",\"\",\"\",\"BR\",\"27\",\"\"\n" +
+"\"76561197963453770\",\"0\",\"Kairox\",\"não falo!\",\"\",\"\",\"103582791429533935\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/kairo/\",\"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6.jpg\",\"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6_medium.jpg\",\"https://avatars.steamstatic.com/fa56a391d267be5caf5baee64b0d79ddcc8c8dc6_full.jpg\",\"fa56a391d267be5caf5baee64b0d79ddcc8c8dc6\",\"1739930718\",\"1071890311\",\"0\",\"\",\"\",\"BR\",\"27\",\"7573\"\n" +
+"\"76561198179188665\",\"0\",\"Fr@nn\",\"\",\"\",\"\",\"103582791434277245\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/205189388/\",\"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790.jpg\",\"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790_medium.jpg\",\"https://avatars.steamstatic.com/c88d60326a4edde3a0ae2d1f3e6088f0a72f3790_full.jpg\",\"c88d60326a4edde3a0ae2d1f3e6088f0a72f3790\",\"1739028527\",\"1423789569\",\"0\",\"\",\"\",\"AR\",\"01\",\"\"\n" +
+"\"76561198179602225\",\"0\",\"★ ̶ ̶A̶l̶i̶n̶e̶ ̶̶★\",\"Vitor\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198179602225/\",\"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff.jpg\",\"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff_medium.jpg\",\"https://avatars.steamstatic.com/5e29ad43d8750121a30161934c5a414d86f4b7ff_full.jpg\",\"5e29ad43d8750121a30161934c5a414d86f4b7ff\",\"1739748078\",\"1423957418\",\"0\",\"\",\"\",\"BR\",\"04\",\"8175\"\n" +
+"\"76561198301561994\",\"0\",\"EL GATO BRANCO\",\"EL GATO BRANCO\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/maxlanyo/\",\"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1.jpg\",\"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1_medium.jpg\",\"https://avatars.steamstatic.com/4843292afa3d8f743963dac8e2059f8e0fe493b1_full.jpg\",\"4843292afa3d8f743963dac8e2059f8e0fe493b1\",\"1739654288\",\"1461590323\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198084472947\",\"0\",\"Eligna Wild\",\"aka Yasmin Krug\",\"\",\"\",\"103582791439524576\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/lignayk/\",\"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3.jpg\",\"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3_medium.jpg\",\"https://avatars.steamstatic.com/4c481539ef1c83b247eaceab90d63f2850288ca3_full.jpg\",\"4c481539ef1c83b247eaceab90d63f2850288ca3\",\"1739894945\",\"1361497903\",\"0\",\"\",\"\",\"IS\",\"24\",\"\"\n" +
+"\"76561197990618302\",\"0\",\"y2\",\"ywanes\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/ywanes/\",\"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2.jpg\",\"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2_medium.jpg\",\"https://avatars.steamstatic.com/d965601fc6f904c609615d6e9c27ac9318e941c2_full.jpg\",\"d965601fc6f904c609615d6e9c27ac9318e941c2\",\"1482530552\",\"1182042667\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198010207122\",\"0\",\"Skynet\",\"\",\"\",\"\",\"103582791441064370\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/theskynetrmk/\",\"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b.jpg\",\"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b_medium.jpg\",\"https://avatars.steamstatic.com/148ff422f2245ab66abfeabf3f7506861d6b703b_full.jpg\",\"148ff422f2245ab66abfeabf3f7506861d6b703b\",\"1739935569\",\"1242954597\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561197968251181\",\"0\",\"Marizinha\",\"Mariana\",\"\",\"\",\"103582791429525440\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/Marizinha/\",\"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9.jpg\",\"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9_medium.jpg\",\"https://avatars.steamstatic.com/49f9614a5819ff327245e0d768ed2cee0945f2a9_full.jpg\",\"49f9614a5819ff327245e0d768ed2cee0945f2a9\",\"1739751100\",\"1092515247\",\"0\",\"\",\"\",\"BR\",\"21\",\"8670\"\n" +
+"\"76561198123813858\",\"0\",\"Samye\",\"Sam\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/aimeuovo/\",\"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda.jpg\",\"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda_medium.jpg\",\"https://avatars.steamstatic.com/75326d97393768d7035f8528d688aaf5cb6f5fda_full.jpg\",\"75326d97393768d7035f8528d688aaf5cb6f5fda\",\"1722553836\",\"1390426406\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198054466282\",\"0\",\"Jéssica Diabética\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/jessicadiabetica/\",\"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7.jpg\",\"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7_medium.jpg\",\"https://avatars.steamstatic.com/d7f8113599e8a71c2c42ef38361668f072182fd7_full.jpg\",\"d7f8113599e8a71c2c42ef38361668f072182fd7\",\"1739976143\",\"1323874926\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198274923218\",\"0\",\"And\",\"\",\"\",\"\",\"103582791455234009\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198274923218/\",\"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9.jpg\",\"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9_medium.jpg\",\"https://avatars.steamstatic.com/72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9_full.jpg\",\"72e3bcc4c5ddae33a559d5fd08b674d8644bc7e9\",\"1737590556\",\"1452022142\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198063802273\",\"0\",\"Alighieri\",\"Antonio Neto\",\"\",\"\",\"103582791433351456\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198063802273/\",\"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376.jpg\",\"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376_medium.jpg\",\"https://avatars.steamstatic.com/b2069595ed4bdf5c572c2415419502a0e5f82376_full.jpg\",\"b2069595ed4bdf5c572c2415419502a0e5f82376\",\"1736636202\",\"1337292264\",\"0\",\"\",\"\",\"BR\",\"27\",\"8872\"\n" +
+"\"76561199107307317\",\"3\",\"EL_bucica\",\"BUCICA\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561199107307317/\",\"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058.jpg\",\"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058_medium.jpg\",\"https://avatars.steamstatic.com/b6ccee122120f625d6dbda841f6048a9d1f02058_full.jpg\",\"b6ccee122120f625d6dbda841f6048a9d1f02058\",\"1739930199\",\"1605482526\",\"0\",\"\",\"\",\"BR\",\"15\",\"\"\n" +
+"\"76561198069031885\",\"1\",\"Duffy #T1\",\"Alexandre Anacleto Gonçalves\",\"\",\"\",\"103582791436345794\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/hyppinnus/\",\"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab.jpg\",\"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab_medium.jpg\",\"https://avatars.steamstatic.com/7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab_full.jpg\",\"7a9f6a736e9c4e6ddebe7e321fa1a2e69ee4aaab\",\"1739941691\",\"1344647840\",\"0\",\"\",\"\",\"BR\",\"06\",\"8193\"\n" +
+"\"76561199505207307\",\"0\",\"leoparron6\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561199505207307/\",\"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9.jpg\",\"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9_medium.jpg\",\"https://avatars.steamstatic.com/335c40e542285f281006d41fa740ba3c6653c1a9_full.jpg\",\"335c40e542285f281006d41fa740ba3c6653c1a9\",\"1739069545\",\"1684000866\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198360852592\",\"4\",\"ZharvakkA :)\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198360852592/\",\"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af.jpg\",\"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af_medium.jpg\",\"https://avatars.steamstatic.com/15f5f0cabd5fc14da928843e697961cab38259af_full.jpg\",\"15f5f0cabd5fc14da928843e697961cab38259af\",\"1739915630\",\"1485042756\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198358793177\",\"0\",\"zakai7979\",\"\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/profiles/76561198358793177/\",\"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb.jpg\",\"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_medium.jpg\",\"https://avatars.steamstatic.com/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb_full.jpg\",\"fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb\",\"1717355564\",\"1484396926\",\"0\",\"\",\"\",\"\",\"\",\"\"\n" +
+"\"76561198875023372\",\"0\",\"Ana ❥\",\"Ana Paula\",\"\",\"\",\"103582791429521408\",\"3\",\"1\",\"\",\"https://steamcommunity.com/id/anapss/\",\"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344.jpg\",\"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344_medium.jpg\",\"https://avatars.steamstatic.com/d3e03b62c29af0c3b6fe9b477613babcd07d7344_full.jpg\",\"d3e03b62c29af0c3b6fe9b477613babcd07d7344\",\"1738973565\",\"1544292054\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198103717610\",\"0\",\"Ⱪiusⱪy\",\"Kiusky Saints\",\"\",\"\",\"103582791462370555\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/id/kiusky/\",\"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1.jpg\",\"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1_medium.jpg\",\"https://avatars.steamstatic.com/32e8e5d095eb9771176d094f65627c5de6c2c6a1_full.jpg\",\"32e8e5d095eb9771176d094f65627c5de6c2c6a1\",\"1739932653\",\"1377006144\",\"0\",\"\",\"\",\"BR\",\"\",\"\"\n" +
+"\"76561198066323542\",\"0\",\"Kill3r\",\"Quem zoa com nome é tao maduro, olha perfil é fresco enzo\",\"\",\"\",\"103582791434025213\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198066323542/\",\"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e.jpg\",\"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e_medium.jpg\",\"https://avatars.steamstatic.com/8dfe278c7493b6984540e57ecd57b791df13841e_full.jpg\",\"8dfe278c7493b6984540e57ecd57b791df13841e\",\"1739927814\",\"1341158922\",\"0\",\"\",\"\",\"BA\",\"01\",\"5910\"\n" +
+"\"76561198144135086\",\"0\",\"Bayer\",\"bruno guilherme zimmer bayer\",\"\",\"\",\"103582791439844667\",\"3\",\"1\",\"1\",\"https://steamcommunity.com/profiles/76561198144135086/\",\"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f.jpg\",\"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f_medium.jpg\",\"https://avatars.steamstatic.com/6e7e6ad61468290f5149097624e3dd867158b03f_full.jpg\",\"6e7e6ad61468290f5149097624e3dd867158b03f\",\"1739975443\",\"1404909696\",\"0\",\"\",\"\",\"BR\",\"23\",\"8890\"";
+        baos = new java.io.ByteArrayOutputStream();
+        
+        selectCSV_texto(null, null, "select " + steam_campos + " from this where primaryclanid = '" + clan + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
+        System.out.println(baos.toString());
+
+        
+    }
+    private void test2(String args) throws Exception{            
         try{
             //init
             if ( isWindows() ){
@@ -16919,6 +18567,7 @@ class JSON extends Util{
     */
     JSON(InputStream is, String command, boolean mostraTabela, 
                 boolean mostraEstrutura, boolean mostraEstruturaDebug, boolean list_on, boolean noHeader, OutputStream _os){ // "[elem['id'] for elem in data['items']]"        
+        
         try{
             if ( command == null )
                 command="";
