@@ -3842,7 +3842,7 @@ cat buffer.log
                 if ( line.trim().equals("") && qntCamposCSV > 1 )
                     break;
                 sb=new StringBuilder();
-                readColunaCSV(line); // init linhaCSV                
+                readColunaCSV(line); // set linhaCSV para poder usar readColunaCSV e init
                 for ( int i=0;i<qntCamposCSV;i++ ){                    
                     if ( linhaCSV != null ){
                         valorColuna=readColunaCSV();
@@ -3975,15 +3975,12 @@ cat buffer.log
                 if ( line.trim().equals("") && qntCamposCSV > 1 )
                     break;
                 
-                readColunaCSV(line); // init linhaCSV                                
-                for ( int i=0;i<qntCamposCSV;i++ ){                    
-                    if ( linhaCSV != null ){
-                        valorColuna=readColunaCSV();
-                        if ( valorColuna == null )
-                            linhaCSV=null; // nao precisar ler mais nada    
-                    }
-                    selectCSV_camposValue[i]=valorColuna;
-                }   
+                readColunaCSV(line); // set linhaCSV para poder usar readColunaCSV e init
+                for ( int i=0;i<qntCamposCSV;i++ )
+                    selectCSV_camposValue[i]=null;
+                for ( int i=0;i<qntCamposCSV;i++ )
+                    if ( (selectCSV_camposValue[i]=readColunaCSV()) == null )
+                        break;
                 processaRegistroSqlParaSelectCSV(out, sqlText);                
             }
             closeLine();
