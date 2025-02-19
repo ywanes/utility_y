@@ -1737,6 +1737,7 @@ cat buffer.log
             }
         }
         if ( args[0].equals("steam") && args.length > 1 ){
+            // y friends clan status -> aparentemente o campo primaryclanid não é o clan, ta bugado!
             steam(args);
             return;
         }
@@ -1909,11 +1910,11 @@ cat buffer.log
             boolean verbose=false;
             boolean force=false;
             boolean lento=false;
-            if ( find_array(args, "-v", true) > 0 )
+            if ( findParm(args, "-v", true) > 0 )
                 verbose=true;
-            if ( find_array(args, "-force", true) > 0 )
+            if ( findParm(args, "-force", true) > 0 )
                 force=true;
-            if ( find_array(args, "-lento", true) > 0 )
+            if ( findParm(args, "-lento", true) > 0 )
                 lento=true;
             mkv(new File("."), verbose, force, lento);
             return;
@@ -3922,20 +3923,27 @@ cat buffer.log
         selectCSV_texto(csvFile, sqlFile, sqlText, outJson, System.in, out);
     }
     
+    // usar mais de uma ver essa funcao pode dar muita dor de cabeça. tem muito parametro statico
+    // ao rodar pela segunda vez ou mais o header nao aparece! bug.     
     public void selectCSV_texto(String csvFile, String sqlFile, String sqlText, Boolean outJson, InputStream is, OutputStream out) throws Exception {                
+        // init
+        separadorCSVCache=null;      
+        //selectCSV_header=null;
+        //selectCSV_headerPrinted=false;
+        
         try{
             if ( csvFile == null )
                 csvFile="";
             if ( ! csvFile.equals("") )
                 readLine(csvFile);
             else
-                readLine(is);
+                readLine(is);            
             String line;            
             int qntCamposCSV=0;
             String valorColuna=null;
                 
             while ( (line=readLine()) != null ){                
-                if ( qntCamposCSV == 0 ){ // tratando header
+                if ( qntCamposCSV == 0 ){ // tratando header                   
                     // automatic change CSV_SEP_Y ; to ,
                     if ( line.contains(",") && !line.contains(";") && ( getEnv("CSV_SEP_Y") == null || getEnv("CSV_SEP_Y").equals(";") ) )
                         setEnv("CSV_SEP_Y", ",");
@@ -3955,15 +3963,14 @@ cat buffer.log
                             sb.append(csv_sep_output);
                     }
                     sb.append("\n");
-                    selectCSV_header=sb.toString();
+                    selectCSV_header=sb.toString();                                        
                     continue;
                 }
                 
                 if ( line.trim().equals("") && qntCamposCSV > 1 )
                     break;
                 
-                readColunaCSV(line); // init linhaCSV                
-                
+                readColunaCSV(line); // init linhaCSV                                
                 for ( int i=0;i<qntCamposCSV;i++ ){                    
                     if ( linhaCSV != null ){
                         valorColuna=readColunaCSV();
@@ -3972,7 +3979,7 @@ cat buffer.log
                     }
                     selectCSV_camposValue[i]=valorColuna;
                 }   
-                processaRegistroSqlParaSelectCSV(out);                
+                processaRegistroSqlParaSelectCSV(out, sqlText);                
             }
             closeLine();
             if( outJson ){
@@ -4572,24 +4579,6 @@ cat buffer.log
             countLinhas[1]=0;                
         }
         countLinhas[0]++;
-    }
-    public void mostra_array(String [] a){
-        for ( int i=0;i<a.length;i++ )
-            System.out.println(i + " -> >>" + a[i] + "<<");        
-    }
-    public int find_array(String [] a, String filtro, boolean equal){
-        for ( int i=0;i<a.length;i++ ){
-            if ( a[i].equals(filtro) && equal )
-                return i;
-            if ( a[i].contains(filtro) && !equal )
-                return i;
-        }
-        return -1;
-    }
-    public String [] array_copy(String [] a){
-        String [] a2 = new String[a.length];            
-        System.arraycopy(a, 0, a2, 0, a.length);
-        return a2;
     }
     
     public String format_virgula(String a, int len){
@@ -8632,6 +8621,14 @@ cat buffer.log
         return data;
     }
 
+    public void comando_invalido(String[] args) {
+        //Comando inválido
+        System.err.print("Comando inválido: [y");
+        for ( int i=0;i<args.length;i++ )
+            System.err.print(" "+args[i]);
+        System.err.println("]");
+    }
+
     public void createjobexecute(String conn) throws Exception {
         String line;
         String SQL="";
@@ -9113,7 +9110,7 @@ cat buffer.log
         return new Arquivos().lendo_arquivo_pacote(caminho);
     }
 
-    public void MetodoGaranteAPermanenciaDeAlgunsImportsJava()
+    public void MetodoGaranteAPermanenciaDeAlgunsImportsJava() // nao remover
     {
         FilterOutputStream a;
         IOException b;
@@ -9671,7 +9668,7 @@ cat buffer.log
         return a;
     }
     
-    private void processaRegistroSqlParaSelectCSV(OutputStream out) throws Exception {
+    private void processaRegistroSqlParaSelectCSV(OutputStream out, String tmppppp) throws Exception {
         StringBuilder sb=new StringBuilder();
         boolean achou=false;
         
@@ -9720,7 +9717,7 @@ cat buffer.log
                     }
                 }
                 if ( ! achou )
-                    throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo: "+selectCSV_camposNameSaida[i]);
+                    throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo:: "+selectCSV_camposNameSaida[i]);
                 sb.append("\"");
                 if ( i < selectCSV_camposNameSaida.length-1 )
                     sb.append(csv_sep_output);
@@ -11325,12 +11322,27 @@ cat buffer.log
                     System.err.println("0-offline, 1-online, 3-ausente");
                     System.out.println(s);
                 }else{
-                    if ( args.length == 2 && args[0].equals("status") && isNumeric(args[1]) ){
+                    if ( args.length == 2 && args[0].equals("status") && isNumeric(args[1].replaceAll("\\,","")) ){
                         String s=steam_status(steam_api_key, args[1]);
                         System.err.println("0-offline, 1-online, 3-ausente");
                         System.out.println(s);                        
                     }else{
-                        erroFatal("Parametros invalidos");
+                        if ( args.length == 1 && args[0].equals("raw") ){
+                            String s=steam_friends(steam_api_key, steam_id);
+                            s=String.join(",", s.split("\n"));
+                            System.out.println(steam_raw(steam_api_key, s));
+                        }else{
+                            if ( args.length == 3 && args[0].equals("friends") && args[1].equals("clan") && args[2].equals("status") ){                            
+                                String s=steam_friends(steam_api_key, steam_id);
+                                s=String.join(",", s.split("\n"));
+                                s=steam_status(steam_api_key, s);                                
+                                String clan=steam_getClanBySteamId(s, steam_id).trim();
+                                String statusClan=steam_statusByClan(s, clan);
+                                System.err.println("0-offline, 1-online, 3-ausente");
+                                System.out.println(statusClan);
+                            }else
+                                erroFatal("Parametros invalidos");
+                        }
                     }
                 }
             }
@@ -11343,30 +11355,49 @@ cat buffer.log
         if ( curl_response_status != 200 )
             erroFatal("Status code:"+curl_response_status);
         if ( curl_error != null )
-            erroFatal("Erro: "+curl_error);
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            erroFatal("Erro: "+curl_error);        
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();        
         new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem['steamid'] for elem in data['friendslist']['friends']]", false, false, false, false, true, baos);
         s=baos.toString();
         s=s.trim().replace("\"","");
+        s+="\n"+steam_id;
         return s;
     }
-    public String steam_status(String steam_api_key, String steam_ids) throws Exception{
+    String steam_campos_base="steamid,communityvisibilitystate,profilestate,personaname,commentpermission,profileurl,avatar,avatarmedium,avatarfull,avatarhash,lastlogoff,personastate,realname,primaryclanid,timecreated,personastateflags,gameserverip,gameserversteamid,gameextrainfo,gameid,loccountrycode,locstatecode,loccityid";
+    String steam_campos="steamid,personastate,personaname,realname,gameextrainfo,gameid,primaryclanid,communityvisibilitystate,profilestate,commentpermission,profileurl,avatar,avatarmedium,avatarfull,avatarhash,lastlogoff,timecreated,personastateflags,gameserverip,gameserversteamid,loccountrycode,locstatecode,loccityid";
+    public String steam_raw(String steam_api_key, String steam_ids) throws Exception{
         String s=curl_string("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + steam_api_key + "&steamids=" + steam_ids);
         if ( curl_response_status != 200 )
             erroFatal("Status code:"+curl_response_status);
         if ( curl_error != null )
             erroFatal("Erro: "+curl_error);        
-        // removendo commentpermission. alguns usuarios nao estão trazendo no json o commentpermission e está bugando tudo.
-        s=s.replaceAll("\"commentpermission\":0,","").replaceAll("\"commentpermission\":1,","").replaceAll("\"commentpermission\":2,","");        
+        //monta estrutura
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), null, false, true, false, false, false, baos);
+        s=baos.toString();
+        //normaliza os campos
+        String opcional=steam_campos_base;                         
+        s=normalizeFieldsJson(s, "        ", opcional);
+        return s;
+    }
+    public String steam_status(String steam_api_key, String steam_ids) throws Exception{
+        String s=steam_raw(steam_api_key, steam_ids);
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem for elem in data['response']['players']]", false, false, false, false, false, baos);
         s=baos.toString();
-        //"steamid";"communityvisibilitystate";"profilestate";"personaname";"profileurl";
-        //"avatar";"avatarmedium";"avatarfull";"avatarhash";"lastlogoff";"personastate";
-        //"primaryclanid";"timecreated";"personastateflags";"gameextrainfo";"gameid"        
         baos = new java.io.ByteArrayOutputStream();
-        selectCSV_texto(null, null, "select steamid,personastate,personaname from this", false, new java.io.ByteArrayInputStream(s.getBytes()), baos);        
+        selectCSV_texto(null, null, "select " + steam_campos + " from this", false, new java.io.ByteArrayInputStream(s.getBytes()), baos);
         return baos.toString().replaceAll("\\\\\"", "\"");
+    }
+    public String steam_getClanBySteamId(String txt, String steam_id) throws Exception{
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        selectCSV_texto(null, null, "select primaryclanid from this where steamid = '" + steam_id + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
+        return baos.toString().replaceAll("\"","").trim();
+    }
+    public String steam_statusByClan(String txt, String clan) throws Exception{
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+        selectCSV_texto(null, null, "select " + steam_campos + " from this where primaryclanid = '" + clan + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
+        return baos.toString();
     }
     private String cronometro_format(long a, long b){
         return miliseconds_to_string(a) + " - " + miliseconds_to_string(b) + " total";
@@ -12981,7 +13012,7 @@ while True:
                 String [] partes_base=array_copy(partes);
                 int p=-1;
                 for ( int i=0;i<10;i++ ){
-                    p=find_array(partes, "Stream #0:"+i, false);
+                    p=findParm(partes, "Stream #0:"+i, false);
                     if ( partes[p].contains(" fps, ") )
                         break;
                     p=-1;
@@ -12990,7 +13021,7 @@ while True:
                     String fps=partes[p];
                     String duration="";
                     partes=fps.trim().split(" ");
-                    p=find_array(partes, "fps,", true);
+                    p=findParm(partes, "fps,", true);
                     if ( p > -1 && p < partes.length-1 ){
                         fps=partes[p+1];                        
                         // arredondar para cima
@@ -12999,7 +13030,7 @@ while True:
                         if ( aux != (float)((int)aux) )
                             ifps = ((int)aux)+1;                        
                         fps=ifps*10+"";
-                        p=find_array(partes_base, "Duration:", false);
+                        p=findParm(partes_base, "Duration:", false);
                         if ( p > -1 ){
                             partes=partes_base[p].trim().split(" ");
                             duration=partes[1].replace(",", "");
@@ -13630,14 +13661,27 @@ class grammarsWhere extends Util{
     public static String where="";
     public static ArrayList<Node> nodes=new ArrayList<Node>();
     public static ArrayList<Node> nodesTemplate=null;
-    public static String [] selectCSV_camposName=null; // nome original(nao eh o alias)
+    public static String [] selectCSV_camposName=null; // nome original(nao eh o alias)    
     grammarsWhere(String [] selectCSV_camposName, String where){
+        init();
         this.selectCSV_camposName=selectCSV_camposName;
         this.where=where;        
         initTransfer();
         initNodes();
         //mostrandoNodes(nodes);
         //mostrandoTransfer(transferPai, transferFilhoStr);
+    }
+    public static void init(){
+        transferPai=null;
+        transferFilhoStr=null;
+        transferFilho=null;        
+        where="";
+        nodes=new ArrayList<Node>();
+        nodesTemplate=null;
+        selectCSV_camposName=null;
+        transfere_cache = new ArrayList<>();
+        transfere_count=0;
+        transfere_reading=false;        
     }
     public static boolean ok(String [] selectCSV_camposValue){    
         setCampos(selectCSV_camposValue);
@@ -14315,14 +14359,6 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
-    public void comando_invalido(String[] args) {
-        //Comando inválido
-        System.err.print("Comando inválido: [y");
-        for ( int i=0;i<args.length;i++ )
-            System.err.print(" "+args[i]);
-        System.err.println("]");
-    }
-    
     public static Redis redis=null;
     public static HashMap redis_sign=new HashMap();
     public final static HashMap [] redis_map=new HashMap[]{new HashMap()};
@@ -14354,6 +14390,160 @@ class Util{
         return retorno;
     }
     
+    public void mostra_array(String [] a){
+        for ( int i=0;i<a.length;i++ )
+            System.out.println(i + " -> >>" + a[i] + "<<");        
+    }
+    public String [] array_copy(String [] a){
+        String [] a2 = new String[a.length];            
+        System.arraycopy(a, 0, a2, 0, a.length);
+        return a2;
+    }
+    
+    public String normalizeFieldsJson(String txt, String nivel, String preCamposOpcional){
+        /*
+        modifica disso
+        {
+          "response": {
+            "players": [
+              {
+                "profilestate": 1,
+                "personaname": "AA",
+                "commentpermission": 1
+              },
+              {
+                "profilestate": 2,
+                "commentpermission": 2
+              }
+            ]
+          }
+        }
+        para isso:
+        {
+          "response": {
+            "players": [
+              {
+                "profilestate": 1,
+                "personaname": "AA",
+                "commentpermission": 1
+              },
+              {
+                "profilestate": 2,
+                "personaname": "",
+                "commentpermission": 2
+              }
+            ]
+          }
+        }
+        
+        */
+        String [] partes=txt.split("\n");
+        boolean tail_inside=false;
+        int count_nova_key=0;
+        String [] key=new String[0];
+        String [] line=new String[0];        
+        String [] nova_key=new String[0];        
+        String [] nova_line=new String[0];        
+        //         "timecreated": 1390075701,
+        //         key->timecreated
+        //         line->         "timecreated": 1390075701
+        
+        // pegando ou atualizando novas keys
+        if ( preCamposOpcional == null )
+            preCamposOpcional="";
+        if ( !preCamposOpcional.equals("") )
+            nova_key=preCamposOpcional.split(",");
+        for ( int i=0;i<partes.length;i++ ){
+            boolean inside=partes[i].startsWith(nivel+"\"");
+            if ( inside == true && tail_inside == false ){
+                count_nova_key=0;
+            }
+            if ( inside ){
+                String key_=partes[i].trim().split("\"")[1];
+                key=addParm(partes[i].trim().split("\"")[1], key);
+                if ( count_nova_key == nova_key.length || !key_.equals(nova_key[count_nova_key]) ){
+                    int p=findParm(nova_key, key_, true);
+                    if ( p > 0 )
+                        count_nova_key=p;
+                    else{
+                        nova_key=addParm(key_, count_nova_key, nova_key);                        
+                    }
+                }
+                count_nova_key++;
+            }
+            if ( inside && partes[i].endsWith(",") )
+                line=addParm(partes[i].substring(0, partes[i].length()-1), line);
+            else
+                line=addParm(partes[i], line);
+            tail_inside=inside;
+        }
+        
+        //mostra_array(nova_key);
+        
+        // inserindo linhas novas
+        String tail_line=null;
+        count_nova_key=0;
+        tail_inside=false;
+        int limit=1000;
+        for ( int i=0;i<line.length;i++ ){            
+            boolean completa=false;
+            if ( tail_line != null ){
+                boolean inside=tail_line.startsWith(nivel+"\"");                
+                boolean inside_atual=line[i].startsWith(nivel+"\"");                
+                if ( inside == true && tail_inside == false ){
+                    count_nova_key=0;
+                }
+                if ( inside ){
+                    limit=1000;
+                    String key_=tail_line.trim().split("\"")[1];
+                    while(limit-->0){                        
+                        if ( !key_.equals(nova_key[count_nova_key]) ){
+                            nova_line=addParm(nivel+"\""+nova_key[count_nova_key]+"\": \"\"", nova_line);                        
+                            count_nova_key++;
+                            continue;
+                        }
+                        break;
+                    }
+                    count_nova_key++;
+                    //completa
+                    if ( !inside_atual && count_nova_key < nova_key.length )
+                        completa=true;
+                }
+                tail_inside=inside;
+            }
+            nova_line=addParm(tail_line, nova_line);
+            limit=1000;
+            while ( completa && limit-->0 && count_nova_key < nova_key.length ){
+                nova_line=addParm(nivel+"\""+nova_key[count_nova_key]+"\": \"\"", nova_line);                        
+                count_nova_key++;                        
+            }                
+            tail_line=line[i];            
+        }
+        if ( tail_line != null )
+            nova_line=addParm(tail_line, nova_line);
+        
+        // colocando virgula no ponto certo
+        tail_line=null;
+        count_nova_key=0;
+        tail_inside=false; 
+        String s="";
+        for ( int i=0;i<nova_line.length;i++ ){            
+            if ( tail_line != null ){
+                boolean inside=tail_line.startsWith(nivel+"\"");
+                boolean inside_atual=nova_line[i].startsWith(nivel+"\"");
+                if ( inside_atual && inside )
+                    s+=tail_line+",\n";
+                else
+                    s+=tail_line+"\n";
+                tail_inside=inside;
+            }
+            tail_line=nova_line[i];            
+        }
+        if ( tail_line != null )
+            s+=tail_line+"\n";
+        return s;
+    }
+           
     public byte [] getBytesInputStream(java.io.InputStream is) throws Exception{
         byte [] buf=new byte[1024];
         int len=0;        
@@ -14467,6 +14657,16 @@ class Util{
         return retorno;
     }
 
+    public int findParm(String [] a, String filtro, boolean equal){
+        for ( int i=0;i<a.length;i++ ){
+            if ( a[i].equals(filtro) && equal )
+                return i;
+            if ( a[i].contains(filtro) && !equal )
+                return i;
+        }
+        return -1;
+    }
+    
     public String[] addParm(String a, String[] args) {
         return addParm(a, args.length, args);
     }
@@ -15451,7 +15651,7 @@ class Util{
     }
     public final static int BUFFER_SIZE=1024;
     
-    private static String separadorCSVCache=null;
+    public static String separadorCSVCache=null;
     public static String getSeparadorCSV(){
         if ( separadorCSVCache != null )
             return separadorCSVCache;
@@ -17099,6 +17299,7 @@ class JSON extends Util{
             a = a.substring(0, a.length()-1);
         return a;
     }
+     
 }
 
 class Ponte extends Util{
@@ -22255,3 +22456,33 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
