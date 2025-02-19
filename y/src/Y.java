@@ -8632,14 +8632,6 @@ cat buffer.log
         return data;
     }
 
-    public void comando_invalido(String[] args) {
-        //Comando inválido
-        System.err.print("Comando inválido: [y");
-        for ( int i=0;i<args.length;i++ )
-            System.err.print(" "+args[i]);
-        System.err.println("]");
-    }
-
     public void createjobexecute(String conn) throws Exception {
         String line;
         String SQL="";
@@ -14322,6 +14314,14 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public void comando_invalido(String[] args) {
+        //Comando inválido
+        System.err.print("Comando inválido: [y");
+        for ( int i=0;i<args.length;i++ )
+            System.err.print(" "+args[i]);
+        System.err.println("]");
+    }
     
     public static Redis redis=null;
     public static HashMap redis_sign=new HashMap();
@@ -22255,33 +22255,3 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
