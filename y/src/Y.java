@@ -11350,26 +11350,41 @@ cat buffer.log
                                 System.err.println("0-offline, 1-online, 3-ausente");
                                 System.out.println(statusClan);
                             }else{
-                                if ( args.length == 3 && args[0].equals("flag") && isNumeric(args[1]) && isNumeric(args[2]) ){
-                                    /*
+                                if ( (args.length == 3 || args.length == 4) && args[0].equals("flag") && isNumeric(args[1]) && isNumeric(args[2]) ){
+                                    String som_path=null;
+                                    if ( args.length == 4 ){
+                                        som_path=args[3];
+                                        if ( !new File(som_path).exists() )
+                                            erroFatal("Erro, não foi possivel encontrar o arquivo "+som_path);
+                                    }
                                     long seconds=Long.parseLong(args[2]);                                                                        
                                     String header="\n##\n##  monitoring: " + args[1] + " a cada " + args[2] + " segundos!\n##\n\n\n";
                                     String status="";
+                                    int tail_status_code=1;
+                                    int status_code=1;
                                     while(true){                                        
                                         System.out.println("\n##\n##  monitoring: " + args[1] + " a cada " + args[2] + " segundos!\n##\n\n");
                                         String s=steam_status(steam_api_key, args[1]);
                                         s=steam_personastate(s);
-                                        if ( s.equals("\"0\"") )
+                                        if ( s.equals("0") ){
+                                            status_code=0;
                                             status=flag_off;
-                                        if ( s.equals("\"1\"") )
+                                        }
+                                        if ( s.equals("1") ){
+                                            status_code=1;
                                             status=flag_on;
-                                        if ( s.equals("\"3\"") )
+                                        }
+                                        if ( s.equals("3") ){
+                                            status_code=3;
                                             status=flag_away;
+                                        }
                                         clear_cls();
                                         System.out.println(header+status);
+                                        if ( status_code == 1 && tail_status_code != 1 && som_path!=null )
+                                            runtimeExec(som_path, null, null, null);
                                         sleepSeconds(seconds);
+                                        tail_status_code=status_code;
                                     }
-                                    */
                                 }else
                                     erroFatal("Parametros invalidos");                                
                             }
@@ -11382,16 +11397,14 @@ cat buffer.log
         }        
     }
     public String steam_friends(String steam_api_key, String steam_id) throws Exception{
-        String s=curl_string("https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=" + steam_api_key + "&steamid=" + steam_id + "&relationship=friend");
+        String s=curl_string("https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=" + steam_api_key + "&steamid=" + steam_id + "&relationship=friend");        
         if ( curl_response_status != 200 )
             erroFatal("Status code:"+curl_response_status);
         if ( curl_error != null )
             erroFatal("Erro: "+curl_error);        
-        //System.out.println("input steam_friends");
-        //System.out.println(s);
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();        
-        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem['steamid'] for elem in data['friendslist']['friends']]", false, false, false, false, true, baos);
-        s=baos.toString();
+        s=runtimeExecY(new String []{"json", "[elem['steamid'] for elem in data['friendslist']['friends']]"}, s.getBytes());
+        if ( s == null )
+            erroFatal("Erro: " + runtimeExecError);
         s=s.trim().replace("\"","");
         s+="\n"+steam_id;
         return s;
@@ -11405,9 +11418,9 @@ cat buffer.log
         if ( curl_error != null )
             erroFatal("Erro: "+curl_error);        
         //monta estrutura
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), null, false, true, false, false, false, baos);
-        s=baos.toString();
+        s=runtimeExecY(new String []{"json", "mostraEstrutura"}, s.getBytes());
+        if ( s == null )
+            erroFatal("Erro: " + runtimeExecError);
         //normaliza os campos
         String opcional=steam_campos_base;                         
         s=normalizeFieldsJson(s, "        ", opcional);
@@ -11415,35 +11428,36 @@ cat buffer.log
     }
     public String steam_status(String steam_api_key, String steam_ids) throws Exception{
         String s=steam_raw(steam_api_key, steam_ids);
-        //System.out.println("input steam_status");
-        //System.out.println(s);        
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem for elem in data['response']['players']]", false, false, false, false, false, baos);
-        s=baos.toString();
-        baos = new java.io.ByteArrayOutputStream();
-        selectCSV_texto(null, null, "select " + steam_campos + " from this", false, new java.io.ByteArrayInputStream(s.getBytes()), baos);
-        return baos.toString().replaceAll("\\\\\"", "\"");
+        s=runtimeExecY(new String []{"json", "[elem for elem in data['response']['players']]"}, s.getBytes());
+        if ( s == null )
+            erroFatal("Erro: " + runtimeExecError);
+        s=runtimeExecY(new String []{"selectCSV", "select " + steam_campos + " from this"}, s.getBytes());
+        if ( s == null )
+            erroFatal("Erro: " + runtimeExecError);
+        s=s.replaceAll("\\\\\"", "\"");
+        return s;
     }
     public String steam_getClanBySteamId(String txt, String steam_id) throws Exception{
-        //System.out.println("input steam_getClanBySteamId");
-        //System.out.println(txt);                
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-        selectCSV_texto(null, null, "select primaryclanid from this where steamid = '" + steam_id + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
-        return baos.toString().replaceAll("\"","").trim();
+        String s=runtimeExecY(new String []{"selectCSV", "select primaryclanid from this where steamid = '" + steam_id + "'"}, txt.getBytes());
+        if ( s == null )
+            erroFatal("Erro: " + runtimeExecError);
+        String [] partes=s.split("\n");
+        s=partes[partes.length-1];
+        s=s.replaceAll("\"","").trim();
+        return s;
     }
     public String steam_statusByClan(String txt, String clan) throws Exception{
-        //System.out.println("input steam_statusByClan");
-        //System.out.println(txt);                
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-        selectCSV_texto(null, null, "select " + steam_campos + " from this where primaryclanid = '" + clan + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
-        return baos.toString();
+        String s=runtimeExecY(new String []{"selectCSV", "select " + steam_campos + " from this where primaryclanid = '" + clan + "'"}, txt.getBytes());
+        if ( s == null )
+            erroFatal("Erro: " + runtimeExecError);
+        return s;
     }
     public String steam_personastate(String txt) throws Exception{
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-//System.out.println(txt);        
-        selectCSV_texto(null, null, "select personastate from this", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
-        String [] partes=baos.toString().split("\n");
-        return partes[partes.length-1];
+        String s=runtimeExecY(new String []{"selectCSV", "select personastate from this"}, txt.getBytes());
+        String [] partes=s.split("\n");
+        s=partes[partes.length-1];
+        s=s.replaceAll("\"","").trim();
+        return s;
     }
     private String cronometro_format(long a, long b){
         return miliseconds_to_string(a) + " - " + miliseconds_to_string(b) + " total";
@@ -16924,6 +16938,21 @@ class Util{
     }
     
     public static PlaylistServer playlistserver=null;
+
+    public String runtimeExecY(String [] commands, byte [] std_in){
+        String cp="c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\postgresql-42.7.5.jar;c:\\y\\jsch-0.1.55.jar";
+        File path_y=new File("C:\\y");
+        if ( commands == null || commands.length == 0 )
+            erroFatal("Erro interno 220");
+        commands=addParm("cmd", 0, commands);
+        commands=addParm("/c", 1, commands);
+        commands=addParm("java", 2, commands);
+        commands=addParm("-Dfile.encoding=UTF-8", 3, commands);
+        commands=addParm("-cp", 4, commands);
+        commands=addParm(cp, 5, commands);
+        commands=addParm("Y", 6, commands);
+        return runtimeExec(null, commands, path_y, std_in);
+    }
     
     public String runtimeExecError = "";
     public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in){
@@ -16931,20 +16960,19 @@ class Util{
             if ( commands == null )
                 commands=line_commands.split(" ");
             runtimeExecError="";
-            //System.out.println("disparando..:" + String.join("|", commands));            
             Process proc = Runtime.getRuntime().exec(commands, null, file_path);            
             
             Thread ok0=new Thread(){
                 public void run(){
                     try{
-                        if ( std_in != null ){    
+                        if ( std_in != null ){                                
                             OutputStream os=proc.getOutputStream();
                             os.write(std_in);
                             os.flush();
                             os.close();
                         }
                     }catch(Exception e1){
-                        runtimeExecError="Erro interno 210";
+                        runtimeExecError="Erro interno 210 - " + e1.toString();
                     }
                 }
             };
@@ -23937,6 +23965,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y steam friends clan status\n"
 /* class by manual */                + "    y steam status 232323\n"
 /* class by manual */                + "    y steam flag 76561198010207122 20\n"
+/* class by manual */                + "    y steam flag 76561198010207122 20 D:\\daemon\\scripts_geral\\steam_flag_1.bat\n"
 /* class by manual */                + "    obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323\n"
 /* class by manual */                + "    obs2: cria sua STEAM_API_KEY aqui -> https://steamcommunity.com/dev/apikey -> 123\n"
 /* class by manual */                + "    obs3: pegue seu STEAM_ID no profile, exemplo -> https://steamcommunity.com/profiles/232323/ -> 232323\n"
@@ -24193,6 +24222,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

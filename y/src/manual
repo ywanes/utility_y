@@ -660,6 +660,7 @@ Exemplos...
     y steam friends clan status
     y steam status 232323
     y steam flag 76561198010207122 20
+    y steam flag 76561198010207122 20 D:\daemon\scripts_geral\steam_flag_1.bat
     obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323
     obs2: cria sua STEAM_API_KEY aqui -> https://steamcommunity.com/dev/apikey -> 123
     obs3: pegue seu STEAM_ID no profile, exemplo -> https://steamcommunity.com/profiles/232323/ -> 232323
