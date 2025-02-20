@@ -23271,7 +23271,6 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -23935,6 +23934,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "[y steam]\n"
 /* class by manual */                + "    y steam friends\n"
 /* class by manual */                + "    y steam friends status\n"
+/* class by manual */                + "    y steam friends clan status\n"
 /* class by manual */                + "    y steam status 232323\n"
 /* class by manual */                + "    y steam flag 76561198010207122 20\n"
 /* class by manual */                + "    obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323\n"
@@ -24193,6 +24193,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

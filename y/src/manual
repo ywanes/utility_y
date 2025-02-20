@@ -657,6 +657,7 @@ Exemplos...
 [y steam]
     y steam friends
     y steam friends status
+    y steam friends clan status
     y steam status 232323
     y steam flag 76561198010207122 20
     obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323
