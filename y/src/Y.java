@@ -1797,7 +1797,11 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("mixer") ){
-            mixer();
+            if ( args.length > 1 ){
+                System.out.println(get_mixer(args[1]));
+                return;
+            }
+            getMixers(null, null, true, false, false, false);
             return;
         }
         if ( args[0].equals("gravador") ){
@@ -11339,15 +11343,36 @@ cat buffer.log
                                 s=String.join(",", s.split("\n"));
                                 s=steam_status(steam_api_key, s);                                
                                 String clan=steam_getClanBySteamId(s, steam_id).trim();
-////////////////////
-// contornando bug
-selectCSV_header=null;
-selectCSV_headerPrinted=false;                                
+                                // contornando bug
+                                selectCSV_header=null;
+                                selectCSV_headerPrinted=false;                                
                                 String statusClan=steam_statusByClan(s, clan);
                                 System.err.println("0-offline, 1-online, 3-ausente");
                                 System.out.println(statusClan);
-                            }else
-                                erroFatal("Parametros invalidos");
+                            }else{
+                                if ( args.length == 3 && args[0].equals("flag") && isNumeric(args[1]) && isNumeric(args[2]) ){
+                                    /*
+                                    long seconds=Long.parseLong(args[2]);                                                                        
+                                    String header="\n##\n##  monitoring: " + args[1] + " a cada " + args[2] + " segundos!\n##\n\n\n";
+                                    String status="";
+                                    while(true){                                        
+                                        System.out.println("\n##\n##  monitoring: " + args[1] + " a cada " + args[2] + " segundos!\n##\n\n");
+                                        String s=steam_status(steam_api_key, args[1]);
+                                        s=steam_personastate(s);
+                                        if ( s.equals("\"0\"") )
+                                            status=flag_off;
+                                        if ( s.equals("\"1\"") )
+                                            status=flag_on;
+                                        if ( s.equals("\"3\"") )
+                                            status=flag_away;
+                                        clear_cls();
+                                        System.out.println(header+status);
+                                        sleepSeconds(seconds);
+                                    }
+                                    */
+                                }else
+                                    erroFatal("Parametros invalidos");                                
+                            }
                         }
                     }
                 }
@@ -11362,8 +11387,8 @@ selectCSV_headerPrinted=false;
             erroFatal("Status code:"+curl_response_status);
         if ( curl_error != null )
             erroFatal("Erro: "+curl_error);        
-//System.out.println("input steam_friends");
-//System.out.println(s);
+        //System.out.println("input steam_friends");
+        //System.out.println(s);
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();        
         new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem['steamid'] for elem in data['friendslist']['friends']]", false, false, false, false, true, baos);
         s=baos.toString();
@@ -11390,8 +11415,8 @@ selectCSV_headerPrinted=false;
     }
     public String steam_status(String steam_api_key, String steam_ids) throws Exception{
         String s=steam_raw(steam_api_key, steam_ids);
-//System.out.println("input steam_status");
-//System.out.println(s);        
+        //System.out.println("input steam_status");
+        //System.out.println(s);        
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "[elem for elem in data['response']['players']]", false, false, false, false, false, baos);
         s=baos.toString();
@@ -11400,18 +11425,25 @@ selectCSV_headerPrinted=false;
         return baos.toString().replaceAll("\\\\\"", "\"");
     }
     public String steam_getClanBySteamId(String txt, String steam_id) throws Exception{
-//System.out.println("input steam_getClanBySteamId");
-//System.out.println(txt);                
+        //System.out.println("input steam_getClanBySteamId");
+        //System.out.println(txt);                
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         selectCSV_texto(null, null, "select primaryclanid from this where steamid = '" + steam_id + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
         return baos.toString().replaceAll("\"","").trim();
     }
     public String steam_statusByClan(String txt, String clan) throws Exception{
-//System.out.println("input steam_statusByClan");
-//System.out.println(txt);                
+        //System.out.println("input steam_statusByClan");
+        //System.out.println(txt);                
         java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
         selectCSV_texto(null, null, "select " + steam_campos + " from this where primaryclanid = '" + clan + "'", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
         return baos.toString();
+    }
+    public String steam_personastate(String txt) throws Exception{
+        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+//System.out.println(txt);        
+        selectCSV_texto(null, null, "select personastate from this", false, new java.io.ByteArrayInputStream(txt.getBytes()), baos);
+        String [] partes=baos.toString().split("\n");
+        return partes[partes.length-1];
     }
     private String cronometro_format(long a, long b){
         return miliseconds_to_string(a) + " - " + miliseconds_to_string(b) + " total";
@@ -12138,10 +12170,6 @@ while True:
         } catch (Exception e) {
             erro_amigavel_exception(e);
         }        
-    }
-    
-    public void mixer(){
-        getMixers(null, null, true, false, false, false);        
     }
     
     public void call(String [] args){
@@ -16004,6 +16032,18 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+    public String get_mixer(String like){
+        if ( !isWindows() )
+            return "comando só habilitado para windows!";
+        String s=getMixerGuidWindows();
+        String [] partes=s.split("\n");
+        for ( int i=0;i<partes.length;i++ ){
+            if ( partes[i].contains(like) )
+                return partes[i].split("#")[1];
+        }
+        return null;        
+    }
+    
     public static Redis redis=null;
     public static HashMap redis_sign=new HashMap();
     public final static HashMap [] redis_map=new HashMap[]{new HashMap()};
@@ -16344,6 +16384,63 @@ class Util{
         return retorno;
     }    
     
+    String flag_off=    "  ####   ######  ######\n" +
+                        " #    #  #       #\n" +
+                        " #    #  #####   #####\n" +
+                        " #    #  #       #\n" +
+                        " #    #  #       #\n" +
+                        "  ####   #       #\n" +
+                        "\n";
+    String flag_away=   "   ##    #    #    ##     #   #\n" +
+                        "  #  #   #    #   #  #     # #\n" +
+                        " #    #  #    #  #    #     #\n" +
+                        " ######  # ## #  ######     #\n" +
+                        " #    #  ##  ##  #    #     #\n" +
+                        " #    #  #    #  #    #     #\n";
+    String flag_on= "                  #################################################           ######                                     ######\n" +
+                    "                  #################################################           #######                                    ######\n" +
+                    "                  #################################################           ########                                   ######\n" +
+                    "                  #################################################           #########                                  ######\n" +
+                    "                  #######                                   #######           ##########                                 ######\n" +
+                    "                  #######                                   #######           ###########                                ######\n" +
+                    "                  #######                                   #######           ############                               ######\n" +
+                    "                  #######                                   #######           ###### ######                              ######\n" +
+                    "                  #######                                   #######           ######  ######                             ######\n" +
+                    "                  #######                                   #######           ######   ######                            ######\n" +
+                    "                  #######                                   #######           ######    ######                           ######\n" +
+                    "                  #######                                   #######           ######     ######                          ######\n" +
+                    "                  #######                                   #######           ######      ######                         ######\n" +
+                    "                  #######                                   #######           ######       ######                        ######\n" +
+                    "                  #######                                   #######           ######        ######                       ######\n" +
+                    "                  #######                                   #######           ######         ######                      ######\n" +
+                    "                  #######                                   #######           ######          ######                     ######\n" +
+                    "                  #######                                   #######           ######           ######                    ######\n" +
+                    "                  #######                                   #######           ######            ######                   ######\n" +
+                    "                  #######                                   #######           ######             ######                  ######\n" +
+                    "                  #######                                   #######           ######              ######                 ######\n" +
+                    "                  #######                                   #######           ######               ######                ######\n" +
+                    "                  #######                                   #######           ######                ######               ######\n" +
+                    "                  #######                                   #######           ######                 ######              ######\n" +
+                    "                  #######                                   #######           ######                  ######             ######\n" +
+                    "                  #######                                   #######           ######                   ######            ######\n" +
+                    "                  #######                                   #######           ######                    ######           ######\n" +
+                    "                  #######                                   #######           ######                     ######          ######\n" +
+                    "                  #######                                   #######           ######                      ######         ######\n" +
+                    "                  #######                                   #######           ######                       ######        ######\n" +
+                    "                  #######                                   #######           ######                        ######       ######\n" +
+                    "                  #######                                   #######           ######                         ######      ######\n" +
+                    "                  #######                                   #######           ######                          ######     ######\n" +
+                    "                  #######                                   #######           ######                           ######    ######\n" +
+                    "                  #######                                   #######           ######                            ######   ######\n" +
+                    "                  #######                                   #######           ######                             ######  ######\n" +
+                    "                  #######                                   #######           ######                              ###### ######\n" +
+                    "                  #######                                   #######           ######                               ############\n" +
+                    "                  #######                                   #######           ######                                ###########\n" +
+                    "                  #######                                   #######           ######                                 ##########\n" +
+                    "                  #################################################           ######                                  #########\n" +
+                    "                  #################################################           ######                                   ########\n" +
+                    "                  #################################################           ######                                    #######\n" +
+                    "                  #################################################           ######                                     ######\n";
     public long[] addParm(long a, long[] args) {
         return addParm(a, args.length, args);
     }
@@ -18128,6 +18225,10 @@ class Util{
     
     public void sleepSeconds(int seconds){
         sleepMillis((long)(seconds*1000));        
+    }
+
+    public void sleepSeconds(long seconds){
+        sleepMillis(seconds*1000);        
     }
 
     public void sleepMillis(long mili){
@@ -20345,18 +20446,6 @@ class PlaylistServer extends Util{
                 String resposta=perguntando(pergunta, true);
             }            
         }
-    }
-    
-    public String get_mixer(String like){
-        if ( !isWindows() )
-            return "comando só habilitado para windows!";
-        String s=getMixerGuidWindows();
-        String [] partes=s.split("\n");
-        for ( int i=0;i<partes.length;i++ ){
-            if ( partes[i].contains(like) )
-                return partes[i].split("#")[1];
-        }
-        return null;        
     }
     
     public ArrayList<String> getFilesCustom(File f){
@@ -23847,6 +23936,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y steam friends\n"
 /* class by manual */                + "    y steam friends status\n"
 /* class by manual */                + "    y steam status 232323\n"
+/* class by manual */                + "    y steam flag 76561198010207122 20\n"
 /* class by manual */                + "    obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323\n"
 /* class by manual */                + "    obs2: cria sua STEAM_API_KEY aqui -> https://steamcommunity.com/dev/apikey -> 123\n"
 /* class by manual */                + "    obs3: pegue seu STEAM_ID no profile, exemplo -> https://steamcommunity.com/profiles/232323/ -> 232323\n"
@@ -23892,6 +23982,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    kr w\n"
 /* class by manual */                + "[y mixer]\n"
 /* class by manual */                + "    y mixer\n"
+/* class by manual */                + "    y mixer \" TV \"\n"
 /* class by manual */                + "    obs: lista os mixers\n"
 /* class by manual */                + "[y gravador]\n"
 /* class by manual */                + "    y gravador file.wav\n"
@@ -24102,6 +24193,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
