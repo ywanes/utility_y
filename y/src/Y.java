@@ -802,19 +802,35 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("echo") ){
-            echo(args);
+            try{
+                echo(args);
+            }catch(Exception e){
+                erroFatal(e);
+            }            
             return;
         }      
         if ( args[0].equals("trataEcho") ){
-            trataEcho();
+            try{
+                trataEcho();
+            }catch(Exception e){
+                erroFatal(e);
+            }            
             return;
         }      
         if ( args[0].equals("trataPrintf") ){
-            trataPrintf();
+            try{
+                trataPrintf();
+            }catch(Exception e){
+                erroFatal(e);
+            }            
             return;
         }      
         if ( args[0].equals("printf") ){
-            System.out.print(printf(args));
+            try{
+                printf(args, System.out);
+            }catch(Exception e){
+                erroFatal(e);
+            }
             return;
         }              
         if ( args[0].equals("print") ){
@@ -5251,10 +5267,11 @@ cat buffer.log
         }
     }
     
-    public void trataEcho()
-    {
+    public void trataEcho() throws Exception{
         String [] args = bind_asterisk(new String[]{"echo", readString().substring(5).trim()});
-        String result=printf(args);
+        ByteArrayOutputStream baos=new ByteArrayOutputStream();
+        printf(args, baos);
+        String result=baos.toString();
         if ( 
             (result.startsWith("'") && result.endsWith("'"))
             || (result.startsWith("\"") && result.endsWith("\""))
@@ -5264,15 +5281,16 @@ cat buffer.log
             System.out.println(result);
     }
             
-    public void echo(String [] args)
-    {
+    public void echo(String [] args) throws Exception{
         args = bind_asterisk(args);        
-        System.out.println(printf(args));
+        printf(args, System.out);
     }
 
-    public void trataPrintf(){
+    public void trataPrintf() throws Exception{
         String [] args = bind_asterisk(new String[]{"printf", readString().substring(7).trim()});
-        String result=printf(args);
+        ByteArrayOutputStream baos=new ByteArrayOutputStream();
+        printf(args, baos);
+        String result=baos.toString();
         if ( 
             (result.startsWith("'") && result.endsWith("'"))
             || (result.startsWith("\"") && result.endsWith("\""))
@@ -5282,14 +5300,76 @@ cat buffer.log
             System.out.print(result);        
     }
             
-    public String printf(String [] args)
-    {
+    public static String [] printf_cor_name=      new String[]{"VERDE", "VERMELHO", "AZUL", "BRANCO"};
+    public static int    [] printf_cor_name_id=   new int   []{32,      31,         34,     97};
+    public static String [] printf_cor_bg_name=   new String[]{"CINZA", "BRANCO"};
+    public static int    [] printf_cor_bg_name_id=new int   []{100,     107};
+    public void printf(String [] args, OutputStream os) throws Exception{
+        if ( args.length == 2 && args[1].equals("[COR]") ){
+            printf_list_cor(os);
+            return;
+        }
+        if ( args.length > 2 && (
+            args[1].equals("[COR]")
+            || ( args[1].startsWith("[COR/") && args[1].endsWith("]") && args[1].substring(1, args[1].length()-1).split("/").length <= 3 ) 
+        )){
+            String cor="";
+            String cor_nada="[m";
+            String [] partes=args[1].substring(1, args[1].length()-1).split("/");
+            if ( partes.length == 1 )
+                cor=cor_nada;                
+            else
+                if ( partes.length == 2 ){
+                    int p=findParm(printf_cor_name, partes[1], true);
+                    if ( p == -1 )
+                        erroFatal("Não foi possível interpretar " + args[1]);
+                    cor="[" + printf_cor_name_id[p] + "m";                    
+                }else{
+                    int p=findParm(printf_cor_name, partes[1], true);
+                    if ( p == -1 )
+                        erroFatal("Não foi possível interpretar " + args[1]);
+                    int p2=findParm(printf_cor_bg_name, partes[2], true);
+                    if ( p2 == -1 )
+                        erroFatal("Não foi possível interpretar " + args[1]);
+                    cor="[" + printf_cor_bg_name_id[p2] + ";" + printf_cor_name_id[p] + "m";
+                }
+            args=removeParm(1, args); // remove parm cor
+            printf_cor(cor, os);            
+        }
         String result="";
         if ( args.length > 1 )
             result=args[1];
         for ( int i=2;i<args.length;i++ )
             result+=" "+args[i];        
-        return result;
+        os.write(result.getBytes());        
+    }
+    public void printf_list_cor(OutputStream os) throws Exception{
+        printf_cor("[m", os);
+        for ( int i=0;i<printf_cor_name.length;i++ ){
+            printf_cor("[" + printf_cor_name_id[i] + "my printf \"[COR/" + printf_cor_name[i] + "]\" \"oi\"", os);
+            printf_cor("[m", os);
+            os.write("\n".getBytes());
+        }
+        for ( int i=0;i<printf_cor_name.length;i++ ){
+            for ( int j=0;j<printf_cor_bg_name.length;j++ ){
+                if ( printf_cor_name[i].equals(printf_cor_bg_name[j]) )
+                    continue;
+                printf_cor("[" + printf_cor_bg_name_id[j] + ";" + printf_cor_name_id[i] + "my printf \"[COR/" + printf_cor_name[i] + "/" + printf_cor_bg_name[j] + "]\" \"oi\"", os);
+                printf_cor("[m", os);
+                os.write("\n".getBytes());
+            }
+        }
+        printf_cor("[my printf \"[COR]\" \"\"", os);
+        os.write("\n".getBytes());
+    }
+    public void printf_cor(String cor, OutputStream os) throws Exception{
+        byte [] bytes=new byte[]{(byte)27};
+        int limit=1000;
+        while(limit-->0 && cor.length() > 0){
+            bytes=addParm((byte)cor.charAt(0), bytes);
+            cor=cor.substring(1);                        
+        }
+        os.write(bytes);
     }
     private void cursorUp(int n){
         try{
@@ -16323,9 +16403,9 @@ class Util{
         if ( n == 0 )
             erroFatal("erro interno sliceParm");
         String [] retorno=new String[args.length-1];
-        for ( int i=0;i<args.length-1;i++ ){
-            if ( i >= n )
-                retorno[i]=args[i-1];
+        for ( int i=0;i<args.length;i++ ){
+            if ( i > n )
+                retorno[i-1]=args[i];
             else
                 retorno[i]=args[i];
         }
@@ -16335,9 +16415,9 @@ class Util{
         if ( n == 0 )
             erroFatal("erro interno sliceParm");
         int [] retorno=new int[args.length-1];
-        for ( int i=0;i<args.length-1;i++ ){
-            if ( i >= n )
-                retorno[i]=args[i-1];
+        for ( int i=0;i<args.length;i++ ){
+            if ( i > n )
+                retorno[i-1]=args[i];
             else
                 retorno[i]=args[i];
         }
@@ -16347,9 +16427,9 @@ class Util{
         if ( n == 0 )
             erroFatal("erro interno sliceParm");
         long [] retorno=new long[args.length-1];
-        for ( int i=0;i<args.length-1;i++ ){
-            if ( i >= n )
-                retorno[i]=args[i-1];
+        for ( int i=0;i<args.length;i++ ){
+            if ( i > n )
+                retorno[i-1]=args[i];
             else
                 retorno[i]=args[i];
         }
@@ -16388,6 +16468,22 @@ class Util{
     
     public int[] addParm(int a, int pos, int[] args){        
         int [] retorno=new int[args.length+1];
+        retorno[pos]=a;
+        int delta=0;
+        for ( int i=0;i<args.length;i++ ){
+            if ( i == pos )
+                delta=1;
+            retorno[i+delta]=args[i];
+        }
+        return retorno;
+    }    
+    
+    public byte[] addParm(byte a, byte[] args) {
+        return addParm(a, args.length, args);
+    }
+    
+    public byte[] addParm(byte a, int pos, byte[] args){        
+        byte [] retorno=new byte[args.length+1];
         retorno[pos]=a;
         int delta=0;
         for ( int i=0;i<args.length;i++ ){
@@ -23299,6 +23395,8 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -23554,10 +23652,24 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    echo \"a b c\"\n"
 /* class by manual */                + "    echo \"a*\"\n"
 /* class by manual */                + "[y printf]\n"
-/* class by manual */                + "    echo a b c\n"
-/* class by manual */                + "    echo \"a b c\"\n"
+/* class by manual */                + "    y printf a b c\n"
+/* class by manual */                + "    y printf \"a b c\"\n"
+/* class by manual */                + "    y printf \"[COR/VERDE]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/VERMELHO]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/AZUL]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/BRANCO]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/VERDE/CINZA]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/VERDE/BRANCO]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/VERMELHO/CINZA]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/VERMELHO/BRANCO]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/AZUL/CINZA]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/AZUL/BRANCO]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR/BRANCO/CINZA]\" \"oi\"\n"
+/* class by manual */                + "    y printf \"[COR]\" \"\"\n"
+/* class by manual */                + "    y printf \"[COR]\" => lista as cores disponiveis ja colorindo\n"
 /* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
 /* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
+/* class by manual */                + "    obs3: no windows usar y printf [COR]\n"
 /* class by manual */                + "[y sdiff]\n"
 /* class by manual */                + "    y sdiff file1.txt file2.txt\n"
 /* class by manual */                + "[y progressBar]\n"

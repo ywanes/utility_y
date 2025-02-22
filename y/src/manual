@@ -249,10 +249,24 @@ Exemplos...
     echo "a b c"
     echo "a*"
 [y printf]
-    echo a b c
-    echo "a b c"
+    y printf a b c
+    y printf "a b c"
+    y printf "[COR/VERDE]" "oi"
+    y printf "[COR/VERMELHO]" "oi"
+    y printf "[COR/AZUL]" "oi"
+    y printf "[COR/BRANCO]" "oi"
+    y printf "[COR/VERDE/CINZA]" "oi"
+    y printf "[COR/VERDE/BRANCO]" "oi"
+    y printf "[COR/VERMELHO/CINZA]" "oi"
+    y printf "[COR/VERMELHO/BRANCO]" "oi"
+    y printf "[COR/AZUL/CINZA]" "oi"
+    y printf "[COR/AZUL/BRANCO]" "oi"
+    y printf "[COR/BRANCO/CINZA]" "oi"
+    y printf "[COR]" ""
+    y printf "[COR]" => lista as cores disponiveis ja colorindo
     obs: diferente do echo, o printf nao gera \n no final
     obs2: echo -n AA gera o mesmo efeito que, printf AA
+    obs3: no windows usar y printf [COR]
 [y sdiff]
     y sdiff file1.txt file2.txt
 [y progressBar]
