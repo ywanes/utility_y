@@ -12698,10 +12698,99 @@ while True:
         if ( count_false == 0 )
             System.exit(0);
     }
+        
+/*
+///////////////
+// candidato novo lock
+///////////////
+import org.lwjgl.*;
+import org.lwjgl.glfw.*;
+import org.lwjgl.opengl.*;
+import static org.lwjgl.glfw.GLFW.*;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.system.MemoryUtil.*;
+
+// https://github.com/LWJGL/lwjgl3/releases -> lwjgl-*.zip
+// -cp "C:\jars\lib7\lwjgl\lwjgl.jar;C:\jars\lib7\lwjgl-opengl\lwjgl-opengl.jar;C:\jars\lib7\lwjgl-glfw\lwjgl-glfw.jar"
+// https://build.lwjgl.org/stable/windows/x64/lwjgl.dll
+// https://build.lwjgl.org/stable/windows/x64/glfw.dll
+// https://build.lwjgl.org/stable/windows/x64/lwjgl_opengl.dll
+// dll em pasta corrente e jar em -cp
+// javac -cp "C:\jars\lib7\lwjgl\lwjgl.jar;C:\jars\lib7\lwjgl-opengl\lwjgl-opengl.jar;C:\jars\lib7\lwjgl-glfw\lwjgl-glfw.jar" java3D.java
+// java -cp "C:\jars\lib7\lwjgl\lwjgl.jar;C:\jars\lib7\lwjgl-opengl\lwjgl-opengl.jar;C:\jars\lib7\lwjgl-glfw\lwjgl-glfw.jar;." -Dorg.lwjgl.util.Debug=true java3D
+
+public class JavaApplication4 {
+    
+    public static void main(String[] args) {
+        new JavaApplication4().run();
+    }
+    public void run(){
+        init();
+        long [] monitores=getMonitores();
+        //long [] monitores_selecionados=new long[]{monitores[2], monitores[3]};
+        long [] monitores_selecionados=new long[]{monitores[3]};
+        long [] monitores_criados=new long[monitores_selecionados.length];
+        createElement(monitores_selecionados, monitores_criados);
+        loop(monitores_selecionados, monitores_criados);
+    }
+    public void loop(long [] monitores, long [] criados){
+        GL.createCapabilities();        
+        Float f=1.0f;
+        glClearColor(f, f, f, f);
+        while(true){
+            for (int i=0;i<monitores.length;i++){
+                if ( glfwWindowShouldClose(criados[i]) ){
+                    System.exit(1);
+                    continue;
+                }
+                //if ( f == 1.0f ){f=0.0f;}else{f=1.0f;}
+                //glClearColor(f, f, f, f);
+                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+                glfwSwapBuffers(criados[i]);
+                glfwPollEvents();
+            }
+        }
+    }
+    public void createElement(long [] monitores, long [] criados){
+        for (int i=0;i<monitores.length;i++){
+            long monitor=monitores[i];
+            GLFWVidMode vidmode = glfwGetVideoMode(monitor);
+            long window = glfwCreateWindow(vidmode.width(), vidmode.height(), "", monitor, NULL);                
+            if ( window == NULL ) 
+                throw new RuntimeException("Failed to create the GLFW window");
+            glfwSetKeyCallback(window, (_window, key, scancode, action, mods) -> {
+                if ( key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE )
+                    glfwSetWindowShouldClose(_window, true);
+            });
+            glfwSetMouseButtonCallback(window, (_window, mouse, scancode, action) -> {
+                System.out.println(mouse);// 0 esq//1 dir
+            });
+            glfwMakeContextCurrent(window);
+            criados[i]=window;
+        }        
+    }
+    public long [] getMonitores(){        
+        PointerBuffer pb=glfwGetMonitors();
+        int size=pb.limit();
+        long [] monitores=new long[size];
+        for ( int i=0;i<size;i++ )
+            monitores[i]=pb.get(i);
+        return monitores;
+    }
+    public void init(){
+        GLFWErrorCallback.createPrint(System.err).set();
+        if ( !glfwInit() )
+                throw new IllegalStateException("Unable to initialize GLFW");
+        glfwDefaultWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+    }
+}
+*/
     
     Frame [] lock_frames=null;
     Color [] lock_frames_color=null;
-    boolean [] states_frames=null;
+    boolean [] states_frames=null;    
     private void lock(String parm){
         kill_by_text(" y lock ");
         if ( parm != null && parm.equals("0") )
