@@ -743,6 +743,8 @@ Exemplos...
 [y remote]
     y remote
     y remote -ip localhost
+    y remote -ip localhost -port 7777 -fps 30
+    obs: fps pode conter 30 e 60. 30 é o padrão
 [y injectMicLine]
     y cat file.line | y injectMicLine
 [y kill]

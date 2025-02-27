@@ -9893,7 +9893,55 @@ cat buffer.log
             System.err.println("Error: "+ex.toString());
         }
     }
-
+    
+    public Object [] get_parms_ip_port_fps(String [] args){
+        String ip=null;
+        int port=7777;
+        int fps=30;
+        
+        args=sliceParm(1, args);
+        
+        while(true){
+            if ( args.length > 1 && args[0].equals("-ip") ){
+                args=sliceParm(1, args);
+                ip=args[0];                
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-port") ){
+                args=sliceParm(1, args);
+                port=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-fps") ){
+                args=sliceParm(1, args);
+                fps=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && ip == null ){
+                ip=args[0];
+                args=sliceParm(1, args);
+                continue;                
+            }
+            break;
+        }
+        if ( ip == null ){
+            String [] ipv4_ipv6=ips(true, 15, false, false);
+            if ( ip == null )
+                ip = ipv4_ipv6[1];
+            if ( ip == null )
+                ip = ipv4_ipv6[0];        
+        }
+        if ( ip == null )
+            erroFatal("Não foi possível encontrar o ip!");
+        if ( fps != 30 && fps != 60 )
+            erroFatal("valor de fps invalido. só permitido 30 e 60");
+        if ( ip.contains(":") )
+            ip="["+ip+"]";
+        return new Object []{ip, port, fps};
+    }
     private Object [] get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor_noLogLocal(String [] args){        
         String host0=null;
         int port0=-1;
@@ -12344,21 +12392,19 @@ while True:
     
     public void remote(String [] args){
         try{
-            String ip=null;
-            if ( args.length == 3 && args[1].equals("-ip") )
-                ip=args[2];
-            String [] ipv4_ipv6=ips(true, 15, false, false);
-            if ( ip == null )
-                ip = ipv4_ipv6[1];
-            if ( ip == null )
-                ip = ipv4_ipv6[0];        
-            int port = 7777;      
-            if ( ip.contains(":") )
-                ip="["+ip+"]";
+            Object [] objs = get_parms_ip_port_fps(args);
+            if ( objs == null ){
+                comando_invalido(args);
+                System.exit(0);
+            }
+            String ip=(String)objs[0];
+            int port=(Integer)objs[1];
+            int fps=(Integer)objs[2];
+            
             System.out.println("http://"+ip+":"+port);
             String format_web="jpg";
             String html=new Texto_longo().get_html_and_header_remote(format_web);
-            robotGetImgScreenBytesParallels_start(format_web);
+            robotGetImgScreenBytesParallels_start(format_web, fps);
             WebSocketServer wss=new WebSocketServer(new InetSocketAddress(ip, port), html){
                 public void onOpen(WebSocket conn, ClientHandshake handshake) {}
                 public void onClose(WebSocket conn, int code, String reason, boolean remote) {}
@@ -12698,96 +12744,7 @@ while True:
         if ( count_false == 0 )
             System.exit(0);
     }
-        
-/*
-///////////////
-// candidato novo lock
-///////////////
-import org.lwjgl.*;
-import org.lwjgl.glfw.*;
-import org.lwjgl.opengl.*;
-import static org.lwjgl.glfw.GLFW.*;
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.system.MemoryUtil.*;
-
-// https://github.com/LWJGL/lwjgl3/releases -> lwjgl-*.zip
-// -cp "C:\jars\lib7\lwjgl\lwjgl.jar;C:\jars\lib7\lwjgl-opengl\lwjgl-opengl.jar;C:\jars\lib7\lwjgl-glfw\lwjgl-glfw.jar"
-// https://build.lwjgl.org/stable/windows/x64/lwjgl.dll
-// https://build.lwjgl.org/stable/windows/x64/glfw.dll
-// https://build.lwjgl.org/stable/windows/x64/lwjgl_opengl.dll
-// dll em pasta corrente e jar em -cp
-// javac -cp "C:\jars\lib7\lwjgl\lwjgl.jar;C:\jars\lib7\lwjgl-opengl\lwjgl-opengl.jar;C:\jars\lib7\lwjgl-glfw\lwjgl-glfw.jar" java3D.java
-// java -cp "C:\jars\lib7\lwjgl\lwjgl.jar;C:\jars\lib7\lwjgl-opengl\lwjgl-opengl.jar;C:\jars\lib7\lwjgl-glfw\lwjgl-glfw.jar;." -Dorg.lwjgl.util.Debug=true java3D
-
-public class JavaApplication4 {
-    
-    public static void main(String[] args) {
-        new JavaApplication4().run();
-    }
-    public void run(){
-        init();
-        long [] monitores=getMonitores();
-        //long [] monitores_selecionados=new long[]{monitores[2], monitores[3]};
-        long [] monitores_selecionados=new long[]{monitores[3]};
-        long [] monitores_criados=new long[monitores_selecionados.length];
-        createElement(monitores_selecionados, monitores_criados);
-        loop(monitores_selecionados, monitores_criados);
-    }
-    public void loop(long [] monitores, long [] criados){
-        GL.createCapabilities();        
-        Float f=1.0f;
-        glClearColor(f, f, f, f);
-        while(true){
-            for (int i=0;i<monitores.length;i++){
-                if ( glfwWindowShouldClose(criados[i]) ){
-                    System.exit(1);
-                    continue;
-                }
-                //if ( f == 1.0f ){f=0.0f;}else{f=1.0f;}
-                //glClearColor(f, f, f, f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                glfwSwapBuffers(criados[i]);
-                glfwPollEvents();
-            }
-        }
-    }
-    public void createElement(long [] monitores, long [] criados){
-        for (int i=0;i<monitores.length;i++){
-            long monitor=monitores[i];
-            GLFWVidMode vidmode = glfwGetVideoMode(monitor);
-            long window = glfwCreateWindow(vidmode.width(), vidmode.height(), "", monitor, NULL);                
-            if ( window == NULL ) 
-                throw new RuntimeException("Failed to create the GLFW window");
-            glfwSetKeyCallback(window, (_window, key, scancode, action, mods) -> {
-                if ( key == GLFW_KEY_ESCAPE && action == GLFW_RELEASE )
-                    glfwSetWindowShouldClose(_window, true);
-            });
-            glfwSetMouseButtonCallback(window, (_window, mouse, scancode, action) -> {
-                System.out.println(mouse);// 0 esq//1 dir
-            });
-            glfwMakeContextCurrent(window);
-            criados[i]=window;
-        }        
-    }
-    public long [] getMonitores(){        
-        PointerBuffer pb=glfwGetMonitors();
-        int size=pb.limit();
-        long [] monitores=new long[size];
-        for ( int i=0;i<size;i++ )
-            monitores[i]=pb.get(i);
-        return monitores;
-    }
-    public void init(){
-        GLFWErrorCallback.createPrint(System.err).set();
-        if ( !glfwInit() )
-                throw new IllegalStateException("Unable to initialize GLFW");
-        glfwDefaultWindowHints();
-        glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
-        glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-    }
-}
-*/
-    
+     
     Frame [] lock_frames=null;
     Color [] lock_frames_color=null;
     boolean [] states_frames=null;    
@@ -18668,11 +18625,12 @@ class Util{
     byte [][] rGISBP_data=null;
     boolean [] rGISBP_control=null;
     long [] rGISBP_control_time=null; // ajuda no sincronismo
-    public void robotGetImgScreenBytesParallels_start(String format_web) throws Exception{
+    public void robotGetImgScreenBytesParallels_start(String format_web, int fps) throws Exception{
         rGISBP_data=new byte[rGISBP_len][0];        
         rGISBP_control=new boolean[rGISBP_len];
         rGISBP_control_time=new long[rGISBP_len];
         Thread [] workers=new Thread[rGISBP_len];
+        final long [] sleep_fps=new long[]{fps==30?130:1};
         for ( int i=0;i<rGISBP_len;i++ ){
             final int n_control=i;
             workers[n_control]=new Thread(){
@@ -18682,7 +18640,7 @@ class Util{
                         java.awt.Rectangle rec = new java.awt.Rectangle(java.awt.Toolkit.getDefaultToolkit().getScreenSize());
                         while(true){    
                             while(rGISBP_control[n_control]){
-                                sleepMillis(1);
+                                sleepMillis(sleep_fps[0]); // fps controlado aqui
                             }
                             java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();                            
                             BufferedImage tmp=robot.createScreenCapture(rec);
@@ -18742,38 +18700,6 @@ class Util{
     
     public void detectMoved(int _x, int _y, long delay, Graphics2D graphics2D){
         if ( detectMoved(_x, _y, delay) ){
-            /*
-            BufferedImage bi = new BufferedImage(5,5,1);
-            int a=0;
-            int b=150000;
-            bi.setRGB(0, 0, b);
-            bi.setRGB(0, 1, b);
-            bi.setRGB(0, 2, b);
-            bi.setRGB(0, 3, b);
-            bi.setRGB(0, 4, b);
-            bi.setRGB(1, 0, b);
-            bi.setRGB(1, 1, a);
-            bi.setRGB(1, 2, a);
-            bi.setRGB(1, 3, a);
-            bi.setRGB(1, 4, b);
-            bi.setRGB(2, 0, b);
-            bi.setRGB(2, 1,a);
-            bi.setRGB(2, 2, b);
-            bi.setRGB(2, 3, a);
-            bi.setRGB(2, 4, b);
-            bi.setRGB(3, 0, b);
-            bi.setRGB(3, 1, a);
-            bi.setRGB(3, 2, a);
-            bi.setRGB(3, 3, a);
-            bi.setRGB(3, 4, b);
-            bi.setRGB(4, 0, b);
-            bi.setRGB(4, 1, b);
-            bi.setRGB(4, 2, b);
-            bi.setRGB(4, 3, b);
-            bi.setRGB(4, 4, b);                            
-            graphics2D.drawImage(bi, _x, _y, 35, 35, null);  
-            */
-            
             BufferedImage bi = new BufferedImage(3,3,1);
             int a=150000;
             bi.setRGB(0, 0, a);
@@ -18785,8 +18711,7 @@ class Util{
             bi.setRGB(2, 0, a);
             bi.setRGB(2, 1, a);
             bi.setRGB(2, 2, a);
-            graphics2D.drawImage(bi, _x, _y, 18, 18, null);          
-            
+            graphics2D.drawImage(bi, _x, _y, 18, 18, null);                      
         }
     }
     
@@ -24235,6 +24160,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "[y remote]\n"
 /* class by manual */                + "    y remote\n"
 /* class by manual */                + "    y remote -ip localhost\n"
+/* class by manual */                + "    y remote -ip localhost -port 7777 -fps 30\n"
+/* class by manual */                + "    obs: fps pode conter 30 e 60. 30 e o padrao\n"
 /* class by manual */                + "[y injectMicLine]\n"
 /* class by manual */                + "    y cat file.line | y injectMicLine\n"
 /* class by manual */                + "[y kill]\n"
@@ -24423,6 +24350,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
