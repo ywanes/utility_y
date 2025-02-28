@@ -1600,25 +1600,35 @@ cat buffer.log
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 find(args.length>1?args[1]:null, true, 0, true, null, null, null, true, null, baos);
                 String [] partes=baos.toString().split("\n");
+                int char_d=100;
+                int char_l=108;
+                int char_hifen=45;
                 Arrays.sort(partes, new Comparator<String>() {
                     public int compare(String a, String b){
                         if ( b.length() == 0 )
                             return 1;
                         if ( a.length() == 0 )
                             return -1;
+                        // "p"astas e "l"inks são prioridade 1 na ordenação
+                        // "-"hifen(arquivo) são prioridade 2
                         int p1=a.charAt(0);
                         int p2=b.charAt(0);
-                        if ( p1 != 100 )
-                            p1=2;
-                        else
+                        if ( 
+                            (p1 != char_d && p1 != char_l && p1 != char_hifen)
+                            || (p2 != char_d && p2 != char_l && p2 != char_hifen)
+                        )
+                            erroFatal("Erro interno, tipo de elemento não identificado!");
+                        if ( p1 == char_d || p1 == char_l )
                             p1=1;
-                        if ( p2 != 100 )
-                            p2=2;
                         else
+                            p1=2;
+                        if ( p2 == char_d || p2 == char_l )
                             p2=1;
+                        else
+                            p2=2;
                         if ( p1 != p2 )
-                            return p1 - p2;
-                        return a.substring(17).compareTo(b.substring(17));
+                            return p1 - p2;                        
+                        return a.substring(16).compareTo(b.substring(16));
                     }
                 }); 
                 System.out.println(String.join("\n", partes));

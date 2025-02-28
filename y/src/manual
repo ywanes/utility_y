@@ -461,6 +461,8 @@ Exemplos...
     y rm file1 file2
     y rm -R pasta
     y rm -R pasta1 file1
+    obs: por questão de segurança, link simbolico não pode ser apagado recursivamente com "-R", essa etapa é ignorada
+    obs2: item simbolico pode ser apagado de modo comum, sem recursão. ex: y rm elemento
 [y cp]
     y cp file1 file2
     y cp -R pasta1 pasta2
