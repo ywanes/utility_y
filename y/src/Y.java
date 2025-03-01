@@ -862,6 +862,23 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args[0].equals("audio") ){
+            audio(args);
+            return;
+        }
+        if ( args[0].equals("isWindowsAdm") ){
+            if ( !isWindows() )
+                erroFatal("comando somente implementado para windows!");
+            System.out.println(isWindowsAdm()?"sim":"nao");
+            return;
+        }
+        //isWindowsAdm
+        if ( args[0].equals("devices") ){
+            if ( !isWindows() )
+                erroFatal("comando implementado somente para windows!");
+            devices(args);
+            return;
+        }        
         if ( args[0].equals("cep") && args.length > 1 ){
             cep(args);
             return;
@@ -5512,6 +5529,196 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
+    public void audio(String [] args){
+        if ( !isWindows() )
+            erroFatal("comando somente para windows!");
+        Object [] objs=get_parms_vol_mute_setvol_setmute(args);
+        if ( objs == null )
+            erroFatal("Erro de parametros!");
+        Boolean vol=(Boolean)objs[0];
+        Boolean mute=(Boolean)objs[1];
+        String setvol=(String)objs[2];
+        String setmute=(String)objs[3];
+        String template="Add-Type -TypeDefinition @'\n" +
+            "using System.Runtime.InteropServices;\n" +
+            "[Guid(\"5CDF2C82-841E-4546-9722-0CF74078229A\"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]\n" +
+            "interface IAudioEndpointVolume {\n" +
+            "  // f(), g(), ... are unused COM method slots. Define these if you care\n" +
+            "  int f(); int g(); int h(); int i();\n" +
+            "  int SetMasterVolumeLevelScalar(float fLevel, System.Guid pguidEventContext);\n" +
+            "  int j();\n" +
+            "  int GetMasterVolumeLevelScalar(out float pfLevel);\n" +
+            "  int k(); int l(); int m(); int n();\n" +
+            "  int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, System.Guid pguidEventContext);\n" +
+            "  int GetMute(out bool pbMute);\n" +
+            "}\n" +
+            "[Guid(\"D666063F-1587-4E43-81F1-B948E807363F\"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]\n" +
+            "interface IMMDevice {\n" +
+            "  int Activate(ref System.Guid id, int clsCtx, int activationParams, out IAudioEndpointVolume aev);\n" +
+            "}\n" +
+            "[Guid(\"A95664D2-9614-4F35-A746-DE8DB63617E6\"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]\n" +
+            "interface IMMDeviceEnumerator {\n" +
+            "  int f(); // Unused\n" +
+            "  int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice endpoint);\n" +
+            "}\n" +
+            "[ComImport, Guid(\"BCDE0395-E52F-467C-8E3D-C4579291692E\")] class MMDeviceEnumeratorComObject { }\n" +
+            "public class Audio {\n" +
+            "  static IAudioEndpointVolume Vol() {\n" +
+            "    var enumerator = new MMDeviceEnumeratorComObject() as IMMDeviceEnumerator;\n" +
+            "    IMMDevice dev = null;\n" +
+            "    Marshal.ThrowExceptionForHR(enumerator.GetDefaultAudioEndpoint(/*eRender*/ 0, /*eMultimedia*/ 1, out dev));\n" +
+            "    IAudioEndpointVolume epv = null;\n" +
+            "    var epvid = typeof(IAudioEndpointVolume).GUID;\n" +
+            "    Marshal.ThrowExceptionForHR(dev.Activate(ref epvid, /*CLSCTX_ALL*/ 23, 0, out epv));\n" +
+            "    return epv;\n" +
+            "  }\n" +
+            "  public static float Volume {\n" +
+            "    get {float v = -1; Marshal.ThrowExceptionForHR(Vol().GetMasterVolumeLevelScalar(out v)); return v;}\n" +
+            "    set {Marshal.ThrowExceptionForHR(Vol().SetMasterVolumeLevelScalar(value, System.Guid.Empty));}\n" +
+            "  }\n" +
+            "  public static bool Mute {\n" +
+            "    get { bool mute; Marshal.ThrowExceptionForHR(Vol().GetMute(out mute)); return mute; }\n" +
+            "    set { Marshal.ThrowExceptionForHR(Vol().SetMute(value, System.Guid.Empty)); }\n" +
+            "  }\n" +
+            "}\n" +
+            "'@\n" +
+            "\n"; // se remover essa quebra de linha extra da pau!!
+        String text="?";
+        if ( vol )
+            text=template+"[Audio]::Volume";
+        if ( mute )
+            text=template+"[Audio]::Mute";
+        if ( setvol != null || setmute != null ){
+            if ( !isWindowsAdm() )
+                erroFatal("Erro, vc precisa ser adm para comandos do tipo set!");
+            if ( setvol != null )
+                text=template+"[Audio]::Volume = " + setvol.replace(",", ".");
+            if ( setmute != null ){
+                if ( !setmute.equals("true") && !setmute.equals("false") )
+                    erroFatal("comando invalido!");
+                setmute="$"+setmute;
+                text=template+"[Audio]::Mute = " + setmute;
+            }
+        }        
+        String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes(), null);
+        if ( s == null || s.equals("") ){
+            if ( runtimeExecError != null && !runtimeExecError.equals("") )
+                erroFatal("Erro, comando invalido...\n\n"+runtimeExecError);
+        }
+        if ( !s.trim().equals("") ){
+            s=s.replace(",", ".").replace("True", "true").replace("False", "false").trim();
+            if ( s.startsWith("0.") )
+                s=format_float(Float.parseFloat(s), 5);
+            System.out.println(s);
+        }
+    }
+    public void devices(String [] args){
+        args=sliceParm(1, args);
+        System.out.println(get_devices(args));
+    }
+    public String get_devices(String [] filtros){
+        // exemplo filtros
+        // new String []{"-classe", "AudioEndpoint", "-classe", "Net"}
+        String s=runtimeExec("pnputil /enum-devices", null, null, null, true);
+        if ( runtimeExecError != null && !runtimeExecError.equals("") )
+            return runtimeExecError;        
+        String [] partes=s.split("\n");
+        String parcial="";
+        String retorno="";
+        boolean achou=false;
+        if ( filtros.length%2 == 1 )
+            erroFatal("erro interno, preenchimento de filtro incorreto!");
+        for ( int i=0;i<partes.length;i++ ){
+            if ( partes[i].equals("Utilitário PnP da Microsoft") )
+                continue;            
+            if ( partes[i].equals("") ){
+                if ( achou || filtros.length == 0 )
+                    retorno+=parcial;
+                achou=false;
+                parcial="\n";
+                continue;
+            }
+            int p=partes[i].indexOf(":");
+            if ( p == -1 )
+                erroFatal("não foi possível interpretar a linha: " + partes[i]);
+            String s1=partes[i].substring(0, p);
+            String s2=partes[i].substring(p+1).trim();
+            if ( s1.equals("ID da Instância") ){
+                parcial+="id         : " + s2+"\n";
+                for ( int j=0;j<filtros.length;j+=2 ){
+                    if ( filtros[j].equals("-id") && filtros[j+1].equals(s2) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                continue;
+            }
+            if ( s1.equals("Descrição do Dispositivo") ){
+                parcial+="nome       : " + s2+"\n";
+                for ( int j=0;j<filtros.length;j+=2 ){
+                    if ( filtros[j].equals("-nome") && filtros[j+1].equals(s2) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                continue;
+            }
+            if ( s1.equals("Nome da Classe") ){
+                parcial+="classe     : " + s2+"\n";
+                for ( int j=0;j<filtros.length;j+=2 ){
+                    if ( filtros[j].equals("-classe") && filtros[j+1].equals(s2) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                continue;
+            }
+            if ( s1.equals("GUID de Classe") ){
+                parcial+="guid       : " + s2+"\n";
+                for ( int j=0;j<filtros.length;j+=2 ){
+                    if ( filtros[j].equals("-guid") && filtros[j+1].equals(s2) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                continue;
+            }
+            if ( s1.equals("Nome do Fabricante") ){
+                parcial+="fabricante : " + s2+"\n";
+                for ( int j=0;j<filtros.length;j+=2 ){
+                    if ( filtros[j].equals("-fabricante") && filtros[j+1].equals(s2) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                continue;
+            }
+            if ( s1.equals("Status") ){
+                parcial+="status     : " + s2+"\n";
+                for ( int j=0;j<filtros.length;j+=2 ){
+                    if ( filtros[j].equals("-status") && filtros[j+1].equals(s2) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                continue;
+            }
+            if ( s1.equals("Nome do Driver") ){
+                parcial+="drive      : " + s2+"\n";
+                for ( int j=0;j<filtros.length;j+=2 ){
+                    if ( filtros[j].equals("-drive") && filtros[j+1].equals(s2) ){
+                        achou=true;
+                        break;
+                    }
+                }
+                continue;
+            }
+        }
+        if ( !parcial.equals("") && (achou || filtros.length == 0) )
+            retorno+=parcial;
+        
+        return retorno;
+    }    
     public void cep(String [] args){        
         args=sliceParm(1, args);
         String parm=String.join(" ", args);
@@ -5535,7 +5742,7 @@ cat buffer.log
         }
     }        
     public String getUsers(){
-        return runtimeExec(null, new String[]{"query", "user"}, null, null);                    
+        return runtimeExec(null, new String[]{"query", "user"}, null, null, null);
     }
     public String getUserAtivo(String a){        
         String [] partes=a.split("\n");
@@ -5565,13 +5772,13 @@ cat buffer.log
             while(true){
                 String id=getUserAtivo(getUsers());
                 if ( id != null )
-                    runtimeExec(null, new String[]{"tsdiscon", id}, null, null);
+                    runtimeExec(null, new String[]{"tsdiscon", id}, null, null, null);
                 sleepSeconds(2);                
             }
         }else{
             String id=getUserAtivo(getUsers());
             if ( id != null )
-                runtimeExec(null, new String[]{"tsdiscon", id}, null, null);
+                runtimeExec(null, new String[]{"tsdiscon", id}, null, null, null);
             System.out.println("disconnected!!");
         }
     }
@@ -6123,7 +6330,7 @@ cat buffer.log
             fos_audio.close();
             fos_video.close();
 
-            runtimeExec("ffmpeg -i \""+mp4_name+"\" -i \""+wav_name+"\" -c:v copy -c:a aac \"" + filme + "\"", null, null, null);
+            runtimeExec("ffmpeg -i \""+mp4_name+"\" -i \""+wav_name+"\" -c:v copy -c:a aac \"" + filme + "\"", null, null, null, null);
             new File(mp4_name).delete();
             new File(wav_name).delete();
             System.out.print("\r                                                                              ");
@@ -6430,7 +6637,7 @@ cat buffer.log
                             _quit + "\n" + 
                             ""; 
                         //taskkill /im iexplore.exe /f
-                        s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                        s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes(), null);
                         if ( s == null )
                             s="";
                         int limitLoop=1;                
@@ -6452,7 +6659,7 @@ cat buffer.log
                             "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" + 
                             _quit + "\n" + 
                             "";                     
-                            s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+                            s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes(), null);
                             sleepSeconds(1);
                         }    
                         if ( s == null )
@@ -6896,7 +7103,7 @@ cat buffer.log
                 curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null, null, null, null, null);
             }
             if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav").exists() ){
-                runtimeExec(null, new String[]{"ffmpeg","-i",sha1+".mp3",sha1+".wav"}, new File(dir+"/talk/"+lang+"/"+pre), null); 
+                runtimeExec(null, new String[]{"ffmpeg","-i",sha1+".mp3",sha1+".wav"}, new File(dir+"/talk/"+lang+"/"+pre), null, null); 
                 if ( runtimeExecError != null && !runtimeExecError.contains("size=") )
                     erroFatal(runtimeExecError);
             }
@@ -10156,6 +10363,50 @@ cat buffer.log
         return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath};
     }        
            
+    private Object [] get_parms_vol_mute_setvol_setmute(String [] args){
+        Boolean vol=false;
+        Boolean mute=false;
+        String setvol=null;
+        String setmute=null;
+        
+        args=sliceParm(1, args);
+                
+        while(args.length > 0){
+            if ( args.length > 0 && args[0].equals("vol") ){
+                vol=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && args[0].equals("mute") ){
+                mute=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("setvol") ){
+                args=sliceParm(1, args);
+                setvol=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("setmute") ){
+                args=sliceParm(1, args);
+                setmute=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+        }      
+        if (
+            (
+                (vol?1:0)
+                +(mute?1:0)
+                +(setvol!=null?1:0)
+                +(setmute!=null?1:0)
+            ) != 1
+        )
+            return null;
+        return new Object []{vol, mute, setvol, setmute};
+    }        
+               
     private Object [] get_parms_f_mixer_line_wav_mp3_volume(String [] args){
         String f=null;        
         String mixer=null;
@@ -11325,7 +11576,7 @@ cat buffer.log
         String s1_aux="";  
         for ( int i=0;i<command.length;i++ ){
             try {          
-                String s = runtimeExec(command[i], null, null, null).trim();
+                String s = runtimeExec(command[i], null, null, null, null).trim();
                 if ( s == null ){
                     if ( runtimeExecError.contains("Permission denied") ){                        
                         System.err.println("Permission denied!");
@@ -11519,7 +11770,7 @@ cat buffer.log
                                         clear_cls();
                                         System.out.println(header+status);
                                         if ( status_code == 1 && tail_status_code != 1 && som_path!=null )
-                                            runtimeExec(som_path, null, null, null);
+                                            runtimeExec(som_path, null, null, null, null);
                                         sleepSeconds(seconds);
                                         tail_status_code=status_code;
                                     }
@@ -12617,7 +12868,7 @@ while True:
     
     private void win(){
         try{
-            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus", null, null, null);
+            String s=runtimeExec("cmd /c wmic path softwareLicensingProduct get PartialProductKey,Description,LicenseStatus", null, null, null, null);
             if ( s == null )
                 erroFatal(4311);
             String [] lines=s.split("\n");
@@ -12848,7 +13099,7 @@ while True:
        
     public void monitor(boolean oneLine){
         while(true){
-            String s=runtimeExec("wmic cpu get loadpercentage", null, null, null);
+            String s=runtimeExec("wmic cpu get loadpercentage", null, null, null, null);
             if ( s == null )
                 break;
             String [] partes=s.split("\r\n");
@@ -13081,7 +13332,7 @@ while True:
                 bat_mkv(display_mkv, lento);
                 System.exit(0);
             }            
-            runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""}, null, null);
+            runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""}, null, null, null);
             String msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
@@ -13194,7 +13445,7 @@ while True:
             if ( target == null ){
                 salvando_file("echo fim", new File(path));            
             }else{
-                runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + target + "\""}, null, null);
+                runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + target + "\""}, null, null, null);
                 String msg=runtimeExecError;
                 if ( msg.contains("Cannot run") )
                     erroFatal("Nao foi possivel encontrar o ffmpeg!");
@@ -13327,8 +13578,8 @@ while True:
                 erroFatal("Ocorreu um erro ao tentar gravar o arquivo " + dir+"/"+id+"/"+id+".mp4");
         }
         if ( !new File(dir+"/"+id+"/out-0001.bmp").exists() ){
-            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -r 1 -i " + id + ".mp4 -r 1 out-%04d.bmp"}, new File(dir+"/"+id), null);
-            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -i " + id + ".mp4 -qscale:v 2 out-%04d.jpg"}, new File(dir+"/"+id), null);
+            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -r 1 -i " + id + ".mp4 -r 1 out-%04d.bmp"}, new File(dir+"/"+id), null, null);
+            runtimeExec(null, new String[]{"cmd", "/c", "ffmpeg -i " + id + ".mp4 -qscale:v 2 out-%04d.jpg"}, new File(dir+"/"+id), null, null);
             if ( !new File(dir+"/"+id+"/out-0001.bmp").exists() )
                 erroFatal("Nao foi possivel encontrar o utilitario ffmpef");
         }
@@ -13338,7 +13589,7 @@ while True:
                 continue;
             if ( new File(dir+"/"+id+"/"+files[i].getName()+".assinatura.txt").exists() )
                 continue;
-            String txt = runtimeExec(null, new String[]{"cmd", "/c", "y bmp -file " + files[i].getName() + " -len 64"}, new File(dir+"/"+id), null);
+            String txt = runtimeExec(null, new String[]{"cmd", "/c", "y bmp -file " + files[i].getName() + " -len 64"}, new File(dir+"/"+id), null, null);
             if ( ! salvando_file(txt, new File(dir+"/"+id+"/"+files[i].getName()+".assinatura.txt")) )
                 erroFatal("Nao foi possivel gravar o arquivo " + dir+"/"+id+"/"+files[i].getName()+".assinatura.txt");
             if ( ! salvando_file("", new File(dir+"/"+id+"/"+files[i].getName()) ) )
@@ -13381,7 +13632,7 @@ while True:
             if ( ! salvando_file(pre_saida + saida + pos_saida, new File(dir+"/"+id+".html")) )
                 erroFatal("Ocorreu um erro na gravacao do arquivo " + dir+"/"+id+".html");
         }
-        runtimeExec(null, new String[]{"cmd", "/c", dir+"/"+id+".html"}, null, null);
+        runtimeExec(null, new String[]{"cmd", "/c", dir+"/"+id+".html"}, null, null, null);
     }
     
     public int insta_diff(String [] partes1, String [] partes2, int corte){
@@ -16192,8 +16443,12 @@ class Util{
                 return partes[i].split("#")[1];
         }
         return null;        
+    }    
+    public String format_float(Float a, int precisao){
+        // 0.07000001 -> 0.07
+        BigDecimal bd = new BigDecimal(a).setScale(precisao, java.math.RoundingMode.HALF_EVEN);
+        return bd.doubleValue()+"";
     }
-    
     public static Redis redis=null;
     public static HashMap redis_sign=new HashMap();
     public final static HashMap [] redis_map=new HashMap[]{new HashMap()};
@@ -16448,7 +16703,7 @@ class Util{
     }
     public long[] sliceParm(int qty, long[] args){ // remove uma quantidade, sempre as iniciais
         if ( qty == 0 )
-            erroFatal("erro interno sliceParm");
+            erroFatal("erro interno sliceParm.. quantidade não pode ser 0");
         long [] retorno=new long[args.length-qty];
         for ( int i=qty;i<args.length;i++ )
             retorno[i-qty]=args[i];
@@ -16456,8 +16711,6 @@ class Util{
     }
     
     public String[] removeParm(int n, String[] args){ // deleta 1 item. n=posicao
-        if ( n == 0 )
-            erroFatal("erro interno sliceParm");
         String [] retorno=new String[args.length-1];
         for ( int i=0;i<args.length;i++ ){
             if ( i > n )
@@ -16643,7 +16896,7 @@ class Util{
         String current=getCurrentPID()+"";
         ArrayList<String> lista=new ArrayList();
         if ( isWindows() ){
-            String s_=runtimeExec("cmd /c wmic path win32_process where \"commandline like '%" + a + "%'\" get ProcessId, CommandLine", null, null, null);
+            String s_=runtimeExec("cmd /c wmic path win32_process where \"commandline like '%" + a + "%'\" get ProcessId, CommandLine", null, null, null, null);
             if ( s_ == null )
                 return new String[]{};
             String [] lines=s_.split("\n");
@@ -16712,7 +16965,7 @@ class Util{
             if ( parms.length == 0 && parms_steps_type2.length == 0 )                
                 erroFatal("erro interno - parametros invalidos.. ");
             if ( parms.length > 0 ){
-                String s=runtimeExec(null, parms, null, null);
+                String s=runtimeExec(null, parms, null, null, null);
                 if ( s == null )
                     s=runtimeExecError;
                 s+="\n";
@@ -16724,7 +16977,7 @@ class Util{
                 if ( !new File("c:/windows/windows-kill.exe").exists() )
                     erroFatal("Não foi possível encontrar a ferramenta c:/windows/windows-kill.exe - favor baixar em https://github.com/ElyDotDev/windows-kill/releases");
                 for ( int i=0;i<parms_steps_type2.length;i++ ){
-                    String s=runtimeExec(null, new String[]{"windows-kill", "-2", parms_steps_type2[i]}, null, null);
+                    String s=runtimeExec(null, new String[]{"windows-kill", "-2", parms_steps_type2[i]}, null, null, null);
                     if ( s == null )
                         erroFatal(runtimeExecError);
                     s+="\n";
@@ -16745,7 +16998,7 @@ class Util{
         
     public String getLocalDateTime_windows(){
         try{
-            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null, null, null);
+            String s=runtimeExec("cmd /c wmic path Win32_OperatingSystem get LocalDateTime", null, null, null, null);
             String [] lines=s.split("\n");
             return lines[1].trim();
         }catch(Exception e){
@@ -16780,7 +17033,7 @@ class Util{
         try{
             String currentPID=getCurrentPID()+"";
             load_pss_init();
-            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null, null, null);
+            String s_=runtimeExec("cmd /c wmic path win32_process get CommandLine,CreationDate,ExecutablePath,Name,ParentProcessId,ProcessId", null, null, null, null);
             String [] lines=s_.split("\n");
             ArrayList<Integer> list_p = new ArrayList<>();
             boolean isWord=false;
@@ -17103,11 +17356,11 @@ class Util{
         commands=addParm("-cp", 4, commands);
         commands=addParm(cp, 5, commands);
         commands=addParm("Y", 6, commands);
-        return runtimeExec(null, commands, path_y, std_in);
+        return runtimeExec(null, commands, path_y, std_in, null);
     }
     
     public String runtimeExecError = "";
-    public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in){
+    public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in, Boolean charset_windows){
         try{
             if ( commands == null )
                 commands=line_commands.split(" ");
@@ -17167,7 +17420,10 @@ class Util{
             nok.join();
             if ( !runtimeExecError.equals("") )
                 return null;
-            String s=baos.toString("UTF-8").replace("\r\n","\n");
+            String charset="UTF-8";
+            if ( charset_windows != null && charset_windows )
+                charset="ISO-8859-1";
+            String s=baos.toString(charset).replace("\r\n","\n");
             String [] linhas=s.split("\n");
             if ( commands.length >= 3 && commands[0].equals("cmd") && commands[1].equals("/c") && linhas[0].endsWith(": 65001")){
                 s="";
@@ -17837,7 +18093,7 @@ class Util{
                 "Linux",
             };
             for ( int i=0;i<commands.length;i++ ){
-                String s=runtimeExec(commands[i], null, null, null);
+                String s=runtimeExec(commands[i], null, null, null, null);
                 if ( s == null )
                     continue;
                 if ( getType ){
@@ -17922,7 +18178,7 @@ class Util{
             return s;
         if ( ! s.contains("Distributor ID:\tUbuntu") )
             return s;
-        String tmp=runtimeExec("uname -r", null, null, null);
+        String tmp=runtimeExec("uname -r", null, null, null, null);
         if ( tmp == null )
             return s;
         return s+"Kernell:\t" + tmp;       
@@ -17931,7 +18187,7 @@ class Util{
     public String tryGetFirewallInWindowsByOs(String s, String type){
         if ( ! type.equals("Windows") )
             return s;
-        String tmp=runtimeExec("netsh advfirewall show allprofiles state", null, null, null);
+        String tmp=runtimeExec("netsh advfirewall show allprofiles state", null, null, null, null);
         if ( tmp == null )
             return s;        
         String [] partes=tmp.split("\n");
@@ -18001,12 +18257,12 @@ class Util{
     }
 
     public boolean isFfmpeg(){
-        runtimeExec("ffmpeg.exe", null, null, null);
+        runtimeExec("ffmpeg.exe", null, null, null, null);
         return runtimeExecError.startsWith("ffmpeg version");
     }
 
     public String getMixerGuidWindows(){ // ex: Microfone (HUSKY)#{0.0.1.00000000}.{0b216a1a-1a07-420d-b569-db728eb036cf}
-        String s=runtimeExec("pnputil /enum-devices /connected", null, null, null);            
+        String s=runtimeExec("pnputil /enum-devices /connected", null, null, null, null);
         if ( runtimeExecError != null && !runtimeExecError.equals("") )
             return runtimeExecError;        
         String [] partes=s.split("\n");        
@@ -18050,7 +18306,7 @@ class Util{
         String [] commands=new String[]{"Get-ChildItem -Path \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Render\" -recurse", 
                                         "Get-ChildItem -Path \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\MMDevices\\Audio\\Capture\" -recurse"};
         for ( int j=0;j<commands.length;j++ ){                                
-            String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, commands[j].getBytes());
+            String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, commands[j].getBytes(), null);
             if ( s == null || s.equals("") )
                 erroFatal(runtimeExecError);
             String [] partes=s.split("\n");
@@ -18116,7 +18372,7 @@ class Util{
             "$id1 = [audio]::GetDefault(1)\n" +
             "write-host \"Default Speaker: $(getFriendlyName $id0)\" \n" +
             "write-host \"Default Micro: $(getFriendlyName $id1)\""; 
-        String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes());
+        String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes(), null);
         if ( s == null || s.equals("") )
             return "";//erroFatal(runtimeExecError);
         return s;
@@ -18124,7 +18380,7 @@ class Util{
     
     
     public boolean isWindowsAdm(){
-        return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null, null) != null;
+        return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null, null, null) != null;
     }
     
     public boolean isLinux(){
@@ -20556,7 +20812,7 @@ class PlaylistServer extends Util{
                                 epochmili_started[0]=epochmili(null);
                             else
                                 _time+=(int)((epochmili(null)-epochmili_started[0])/1000);
-                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+_time, "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa[0]] }, new File(path_vlc), null);
+                            String s=runtimeExec(null, new String[]{"cmd", "/c", "vlc", identify_kill[0], "--mmdevice-audio-device="+device, "--start-time="+_time, "--gain="+gain, "-Incurse", "--play-and-exit", "--no-video", faixa[play_faixa[0]] }, new File(path_vlc), null, null);
                             seconds_extra=false;
                             if ( new_order[0] || waiting ) // skip
                                 continue;
@@ -23453,6 +23709,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y devices]\n"
 /* class by manual */                + "  [y cep]\n"
 /* class by manual */                + "  [y users]\n"
 /* class by manual */                + "  [y disconnect]\n"
@@ -23706,6 +23963,13 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y devices]\n"
+/* class by manual */                + "    y devices\n"
+/* class by manual */                + "    y devices \"-classe\" \"AudioEndpoint\" \"-classe\" \"Net\"\n"
+/* class by manual */                + "    obs: pnputil /disable-device [id]\n"
+/* class by manual */                + "         pnputil /disable-device \"USB\\VID_045E&PID_00DB\\6&870CE29&0&1\"\n"
+/* class by manual */                + "         pnputil /enable-device \"USB\\VID_045E&PID_00DB\\6&870CE29&0&1\"\n"
+/* class by manual */                + "    obs2: comando para windows\n"
 /* class by manual */                + "[y cep]\n"
 /* class by manual */                + "    y cep /sp/campinas/almeida prado\n"
 /* class by manual */                + "    y cep 13083-750\n"
@@ -23888,6 +24152,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y rm file1 file2\n"
 /* class by manual */                + "    y rm -R pasta\n"
 /* class by manual */                + "    y rm -R pasta1 file1\n"
+/* class by manual */                + "    obs: por questao de seguranca, link simbolico nao pode ser apagado recursivamente com \"-R\", essa etapa e ignorada\n"
+/* class by manual */                + "    obs2: item simbolico pode ser apagado de modo comum, sem recursao. ex: y rm elemento\n"
 /* class by manual */                + "[y cp]\n"
 /* class by manual */                + "    y cp file1 file2\n"
 /* class by manual */                + "    y cp -R pasta1 pasta2\n"
@@ -24360,32 +24626,6 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

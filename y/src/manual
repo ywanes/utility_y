@@ -26,6 +26,9 @@ usage:
   [y progressBar]
   [y xargs]
   [y cat]
+  [y audio]
+  [y isWindowsAdm]
+  [y devices]
   [y cep]
   [y users]
   [y disconnect]
@@ -279,6 +282,22 @@ Exemplos...
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
+[y audio]
+    y audio vol
+    y audio mute
+    y audio setvol 0.75
+    y audio setmute true
+    obs: setvol e setmute precisa ser adm
+    obs2: verificando se esta adm: y isWindowsAdm
+[y isWindowsAdm]
+    y isWindowsAdm
+[y devices]
+    y devices
+    y devices "-classe" "AudioEndpoint" "-classe" "Net"
+    obs: pnputil /disable-device [id]
+         pnputil /disable-device "USB\VID_045E&PID_00DB\6&870CE29&0&1"
+         pnputil /enable-device "USB\VID_045E&PID_00DB\6&870CE29&0&1"
+    obs2: comando para windows
 [y cep]
     y cep /sp/campinas/almeida prado
     y cep 13083-750
