@@ -5532,13 +5532,15 @@ cat buffer.log
     public void audio(String [] args){
         if ( !isWindows() )
             erroFatal("comando somente para windows!");
-        Object [] objs=get_parms_vol_mute_setvol_setmute(args);
+        Object [] objs=get_parms_vol_mute_setvol_setmute_program_mutingWhileProgramInPrincipalMonitor(args);
         if ( objs == null )
             erroFatal("Erro de parametros!");
         Boolean vol=(Boolean)objs[0];
         Boolean mute=(Boolean)objs[1];
         String setvol=(String)objs[2];
         String setmute=(String)objs[3];
+        String program=(String)objs[4];
+        String mutingWhileProgramInPrincipalMonitor=(String)objs[5];
         String template="Add-Type -TypeDefinition @'\n" +
             "using System.Runtime.InteropServices;\n" +
             "[Guid(\"5CDF2C82-841E-4546-9722-0CF74078229A\"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]\n" +
@@ -5584,32 +5586,94 @@ cat buffer.log
             "'@\n" +
             "\n"; // se remover essa quebra de linha extra da pau!!
         String text="?";
-        if ( vol )
-            text=template+"[Audio]::Volume";
-        if ( mute )
-            text=template+"[Audio]::Mute";
-        if ( setvol != null || setmute != null ){
-            if ( !isWindowsAdm() )
-                erroFatal("Erro, vc precisa ser adm para comandos do tipo set!");
-            if ( setvol != null )
-                text=template+"[Audio]::Volume = " + setvol.replace(",", ".");
-            if ( setmute != null ){
-                if ( !setmute.equals("true") && !setmute.equals("false") )
-                    erroFatal("comando invalido!");
-                setmute="$"+setmute;
-                text=template+"[Audio]::Mute = " + setmute;
+        if ( program != null ){
+            if ( vol )
+                erroFatal("mostrar volume não implementado!");
+            if ( mute )
+                erroFatal("mostrar mute não implementado!");
+            if ( setvol != null || setmute != null ){
+                if ( setvol != null )
+                    text="nircmd setappvolume \"" + program + "\" " + setvol;
+                if ( setmute != null ){
+                    if ( !setmute.equals("true") && !setmute.equals("false") )
+                        erroFatal("comando invalido!");
+                    if ( setmute.equals("true") )
+                        text="nircmd muteappvolume \"" + program + "\" 1";
+                    else
+                        text="nircmd muteappvolume \"" + program + "\" 0";
+                }
             }
-        }        
-        String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes(), null);
-        if ( s == null || s.equals("") ){
-            if ( runtimeExecError != null && !runtimeExecError.equals("") )
-                erroFatal("Erro, comando invalido...\n\n"+runtimeExecError);
-        }
-        if ( !s.trim().equals("") ){
-            s=s.replace(",", ".").replace("True", "true").replace("False", "false").trim();
-            if ( s.startsWith("0.") )
-                s=format_float(Float.parseFloat(s), 5);
-            System.out.println(s);
+            String s=runtimeExec(text, null, null, text.getBytes(), null);
+            if ( s == null || s.equals("") ){
+                if ( runtimeExecError != null && !runtimeExecError.equals("") ){
+                    if ( runtimeExecError.contains("nircmd") )
+                        erroFatal("Erro, não foi encontrado o programa nircmd(e coloque na pasta programfiles), baixe ele aqui: https://github.com/ywanes/utility_y/tree/master/y/utils_exe");
+                    erroFatal("Erro, comando invalido...\n\n"+runtimeExecError);
+                }
+            }
+        }else{
+            if ( mutingWhileProgramInPrincipalMonitor != null ){
+                try{
+                    Boolean in_out=null;
+                    Boolean in_out_tail=null;
+                    while(true){
+                        Integer[] xyrgb=robotMouseGetXYAndRGB();
+                        //System.out.println(xyrgb[0]+" "+xyrgb[1]);
+                        in_out = xyrgb[0] >= 0 && xyrgb[0] <= 1920 && xyrgb[1] >= 0 && xyrgb[1] <= 1080;
+                        if ( in_out_tail == null || in_out != in_out_tail ){
+                            String lbl="";
+                            text="";
+                            if ( !in_out ){//muta
+                                lbl="mutou na coordenada x:"+xyrgb[0]+" y:"+xyrgb[1];
+                                text="nircmd muteappvolume \"" + mutingWhileProgramInPrincipalMonitor + "\" 1";
+                            }else{
+                                lbl="desmutou na coordenada x:"+xyrgb[0]+" y:"+xyrgb[1];
+                                text="nircmd muteappvolume \"" + mutingWhileProgramInPrincipalMonitor + "\" 0";
+                            }
+                            runtimeExec(text, null, null, text.getBytes(), null);
+                            if ( runtimeExecError != null && !runtimeExecError.equals("") ){
+                                if ( runtimeExecError.contains("nircmd") )
+                                    erroFatal("Erro, não foi encontrado o programa nircmd(e coloque na pasta programfiles), baixe ele aqui: https://github.com/ywanes/utility_y/tree/master/y/utils_exe");
+                                erroFatal("Erro, comando invalido...\n\n"+runtimeExecError);
+                            }else{
+                                System.out.println(lbl);
+                            }
+                        }                        
+                        robotMouseSleep(0.1F);                
+                        in_out_tail=in_out;
+                    }
+                }catch(Exception e){
+                    erroFatal(e);
+                }
+            }else{
+                if ( vol )
+                    text=template+"[Audio]::Volume";
+                if ( mute )
+                    text=template+"[Audio]::Mute";
+                if ( setvol != null || setmute != null ){
+                    if ( !isWindowsAdm() )
+                        erroFatal("Erro, vc precisa ser adm para comandos do tipo set!");
+                    if ( setvol != null )
+                        text=template+"[Audio]::Volume = " + setvol.replace(",", ".");
+                    if ( setmute != null ){
+                        if ( !setmute.equals("true") && !setmute.equals("false") )
+                            erroFatal("comando invalido!");
+                        setmute="$"+setmute;
+                        text=template+"[Audio]::Mute = " + setmute;
+                    }
+                }                    
+                String s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes(), null);
+                if ( s == null || s.equals("") ){
+                    if ( runtimeExecError != null && !runtimeExecError.equals("") )
+                        erroFatal("Erro, comando invalido...\n\n"+runtimeExecError);
+                }
+                if ( !s.trim().equals("") ){
+                    s=s.replace(",", ".").replace("True", "true").replace("False", "false").trim();
+                    if ( s.startsWith("0.") )
+                        s=format_float(Float.parseFloat(s), 5);
+                    System.out.println(s);
+                }            
+            }
         }
     }
     public void devices(String [] args){
@@ -10363,11 +10427,13 @@ cat buffer.log
         return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath};
     }        
            
-    private Object [] get_parms_vol_mute_setvol_setmute(String [] args){
+    private Object [] get_parms_vol_mute_setvol_setmute_program_mutingWhileProgramInPrincipalMonitor(String [] args){
         Boolean vol=false;
         Boolean mute=false;
         String setvol=null;
         String setmute=null;
+        String program=null;
+        String mutingWhileProgramInPrincipalMonitor=null;
         
         args=sliceParm(1, args);
                 
@@ -10394,6 +10460,18 @@ cat buffer.log
                 args=sliceParm(1, args);
                 continue;
             }
+            if ( args.length > 1 && args[0].equals("program") ){
+                args=sliceParm(1, args);
+                program=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("mutingWhileProgramInPrincipalMonitor") ){
+                args=sliceParm(1, args);
+                mutingWhileProgramInPrincipalMonitor=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
         }      
         if (
             (
@@ -10401,10 +10479,11 @@ cat buffer.log
                 +(mute?1:0)
                 +(setvol!=null?1:0)
                 +(setmute!=null?1:0)
+                +(mutingWhileProgramInPrincipalMonitor!=null?1:0)
             ) != 1
         )
             return null;
-        return new Object []{vol, mute, setvol, setmute};
+        return new Object []{vol, mute, setvol, setmute, program, mutingWhileProgramInPrincipalMonitor};
     }        
                
     private Object [] get_parms_f_mixer_line_wav_mp3_volume(String [] args){
@@ -23709,6 +23788,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y audio]\n"
+/* class by manual */                + "  [y isWindowsAdm]\n"
 /* class by manual */                + "  [y devices]\n"
 /* class by manual */                + "  [y cep]\n"
 /* class by manual */                + "  [y users]\n"
@@ -23963,6 +24044,16 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y audio]\n"
+/* class by manual */                + "    y audio vol\n"
+/* class by manual */                + "    y audio mute\n"
+/* class by manual */                + "    y audio setvol 0.75\n"
+/* class by manual */                + "    y audio setmute true\n"
+/* class by manual */                + "    y audio mutingWhileProgramInPrincipalMonitor WorldOfTanks.exe\n"
+/* class by manual */                + "    obs: setvol e setmute precisa ser adm\n"
+/* class by manual */                + "    obs2: verificando se esta adm: y isWindowsAdm\n"
+/* class by manual */                + "[y isWindowsAdm]\n"
+/* class by manual */                + "    y isWindowsAdm\n"
 /* class by manual */                + "[y devices]\n"
 /* class by manual */                + "    y devices\n"
 /* class by manual */                + "    y devices \"-classe\" \"AudioEndpoint\" \"-classe\" \"Net\"\n"
@@ -24626,6 +24717,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
