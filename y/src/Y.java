@@ -7521,6 +7521,19 @@ cat buffer.log
         curl(new FileOutputStream(path), "", "GET", false, false, url, null, null, null, null, null);
     }
     
+    public String curl_string_retry_429(String url, int vezes, int wait){
+        String s="";
+        for ( int i=0;i<vezes;i++ ){
+            s=curl_baos(url).toString();
+            if ( curl_response_status == 429 ){
+                sleepSeconds(wait);
+                continue;
+            }
+            break;
+        }
+        return s;
+    }
+    
     public String curl_string(String url){
         return curl_baos(url).toString();
     }
@@ -11831,7 +11844,6 @@ cat buffer.log
                                     int tail_status_code=1;
                                     int status_code=1;
                                     while(true){                                        
-                                        System.out.println("\n##\n##  monitoring: " + args[1] + " a cada " + args[2] + " segundos!\n##\n\n");
                                         String s=steam_status(steam_api_key, args[1]);
                                         s=steam_personastate(s);
                                         if ( s.equals("0") ){
@@ -11864,8 +11876,11 @@ cat buffer.log
             erroFatal(e);
         }        
     }
+    public String steam_custom_curl(String url){
+        return curl_string_retry_429(url, 3, 100);
+    }
     public String steam_friends(String steam_api_key, String steam_id) throws Exception{
-        String s=curl_string("https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=" + steam_api_key + "&steamid=" + steam_id + "&relationship=friend");        
+        String s=steam_custom_curl("https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=" + steam_api_key + "&steamid=" + steam_id + "&relationship=friend");
         if ( curl_response_status != 200 )
             erroFatal("Status code:"+curl_response_status);
         if ( curl_error != null )
@@ -11880,7 +11895,7 @@ cat buffer.log
     String steam_campos_base="steamid,communityvisibilitystate,profilestate,personaname,commentpermission,profileurl,avatar,avatarmedium,avatarfull,avatarhash,lastlogoff,personastate,realname,primaryclanid,timecreated,personastateflags,gameserverip,gameserversteamid,gameextrainfo,gameid,loccountrycode,locstatecode,loccityid";
     String steam_campos="steamid,personastate,personaname,realname,gameextrainfo,gameid,primaryclanid,communityvisibilitystate,profilestate,commentpermission,profileurl,avatar,avatarmedium,avatarfull,avatarhash,lastlogoff,timecreated,personastateflags,gameserverip,gameserversteamid,loccountrycode,locstatecode,loccityid";
     public String steam_raw(String steam_api_key, String steam_ids) throws Exception{
-        String s=curl_string("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + steam_api_key + "&steamids=" + steam_ids);
+        String s=steam_custom_curl("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=" + steam_api_key + "&steamids=" + steam_ids);
         if ( curl_response_status != 200 )
             erroFatal("Status code:"+curl_response_status);
         if ( curl_error != null )
