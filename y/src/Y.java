@@ -2050,7 +2050,7 @@ cat buffer.log
             update();
             return;
         }
-        if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){
+        if ( args[0].equals("help") || args[0].equals("-help") || args[0].equals("--help") ){            
             String retorno=null;
             if ( args.length == 2 )
                 retorno=helplikecase(args[1], false);
@@ -6472,10 +6472,10 @@ cat buffer.log
         
         overflix_verbose(verbose, tags, url);
             
-        String html=curl_string(url);
+        String html=overflix_custom_curl(url);
         if ( curl_response_status == 301 ){
             url=curl_response_location;
-            html=curl_string(url);
+            html=overflix_custom_curl(url);
         }
         if ( curl_response_status != 200 ){
             overflix_error+="Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html+"\n";
@@ -6669,6 +6669,10 @@ cat buffer.log
         return;
     }
     
+    public String overflix_custom_curl(String url){
+        return curl_string_retry(url, 10, 10, new int[]{500, 525});
+    }
+            
     public void overflix_verbose(boolean verbose, boolean tags, String a){
         if ( a.startsWith("TAG") && !tags )
             return;
@@ -7521,14 +7525,21 @@ cat buffer.log
         curl(new FileOutputStream(path), "", "GET", false, false, url, null, null, null, null, null);
     }
     
-    public String curl_string_retry_429(String url, int vezes, int wait){
+    public String curl_string_retry(String url, int vezes, int wait, int [] status_codes){
         String s="";
         for ( int i=0;i<vezes;i++ ){
             s=curl_baos(url).toString();
-            if ( curl_response_status == 429 ){
+            boolean flag_continue=false;
+            for ( int j=0;j<status_codes.length;j++ ){
+                if ( curl_response_status == status_codes[j] ){
+                    flag_continue=true;
+                    break;                    
+                }
+            }
+            if ( flag_continue ){
                 sleepSeconds(wait);
                 continue;
-            }
+            }            
             break;
         }
         return s;
@@ -11877,7 +11888,7 @@ cat buffer.log
         }        
     }
     public String steam_custom_curl(String url){
-        return curl_string_retry_429(url, 3, 100);
+        return curl_string_retry(url, 3, 100, new int[]{429});
     }
     public String steam_friends(String steam_api_key, String steam_id) throws Exception{
         String s=steam_custom_curl("https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=" + steam_api_key + "&steamid=" + steam_id + "&relationship=friend");
