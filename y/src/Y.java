@@ -16818,7 +16818,7 @@ class Util{
     public String[] removeParm(int n, String[] args){ // deleta 1 item. n=posicao
         String [] retorno=new String[args.length-1];
         for ( int i=0;i<args.length;i++ ){
-            if ( i > n )
+            if ( i >= n )
                 retorno[i-1]=args[i];
             else
                 retorno[i]=args[i];
@@ -20885,7 +20885,8 @@ class PlaylistServer extends Util{
                                         }     
                                         if ( partes[0].equals("seconds_extra") ){
                                             seconds_extra=true;                                            
-                                            lines=removeParm(i, lines);
+                                            //lines=removeParm(i, lines);
+                                            //i--;
                                             continue;
                                         }     
                                         throw new Exception("Erro: Erro fatal!, não foi possivel interpretar a linha " + lines[i]);

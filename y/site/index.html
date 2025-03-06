@@ -1696,6 +1696,8 @@ function format_name(a){
     return b.toUpperCase();
   });
   a=a.replaceAll(' / ', '/');
+  if ( a.length > 135 )
+    a=a.substring(0, 130)+' ...';
   return a;
 }
 
