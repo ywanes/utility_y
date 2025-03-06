@@ -1569,7 +1569,9 @@ cat buffer.log
             String cfg=(String)parm_[10];
             String redisDir=(String)parm_[11];
             Long redisSeconds=(Long)parm_[12];
-            new HttpServer(mode, host, port, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds);
+            String redisAll=(String)parm_[13];
+            String redisLike=(String)parm_[14];
+            new HttpServer(mode, host, port, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike);
             return;
         }
         
@@ -3933,6 +3935,7 @@ cat buffer.log
     public String [] selectCSV_camposNameSaida=null;
     public String [] selectCSV_camposNameSaidaAlias=null;    
     public String [] selectCSV_tratativasWhere=null; 
+    public long selectCSV_rownum=1;
     public String selectCSV_header=null;
     public boolean selectCSV_headerPrinted=false;
     public boolean outJson=false;
@@ -3973,7 +3976,8 @@ cat buffer.log
     // ao rodar pela segunda vez ou mais o header nao aparece! bug.     
     public void selectCSV_texto(String csvFile, String sqlFile, String sqlText, Boolean outJson, InputStream is, OutputStream out) throws Exception {                
         // init
-        separadorCSVCache=null;                 
+        separadorCSVCache=null;  
+        selectCSV_rownum=1;
         //////////////////
         // bug y cls && y u && y steam friends clan status
         //System.out.println("selectCSV_header " + selectCSV_header + " selectCSV_headerPrinted " + selectCSV_headerPrinted);        
@@ -10107,6 +10111,10 @@ cat buffer.log
                         break;
                     }
                 }
+                if ( ! achou && selectCSV_camposNameSaida[i].equals("rownum") ){
+                    sb.append(selectCSV_rownum++ + "");
+                    achou=true;
+                }
                 if ( ! achou )
                     throw_erroDeInterpretacaoDeSQL("ORAZ: 99 - Não foi possível interpretar o campo:: "+selectCSV_camposNameSaida[i]);
                 sb.append("\"");
@@ -10950,6 +10958,8 @@ cat buffer.log
         String cfg=null;
         String redisDir=null;
         Long redisSeconds=null;
+        String redisAll="[ALL]";
+        String redisLike="-playlistmovie-"; // template
                 
         args=sliceParm(1,args);
         while(args.length > 0){
@@ -11008,6 +11018,18 @@ cat buffer.log
                 args=sliceParm(1,args);
                 continue;
             }
+            if ( args[0].equals("-redisAll") ){
+                args=sliceParm(1,args);
+                redisAll=args[0].trim();
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-redisLike") ){
+                args=sliceParm(1,args);
+                redisLike=args[0].trim();
+                args=sliceParm(1,args);
+                continue;
+            }
             if ( args[0].equals("-endsWiths") ){
                 args=sliceParm(1,args);
                 endsWiths=args[0];
@@ -11038,7 +11060,7 @@ cat buffer.log
             erroFatal("Erro de parametros, mode playlistserver exige valor de cfg");
         if ( redisDir == null && redisSeconds != null )
             erroFatal("Erro de parametros, não é possível usar o parametro redisSeconds sem usar o redisDir");
-        return new Object[]{mode, host, port, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds};
+        return new Object[]{mode, host, port, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike};
     }
 
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
@@ -16393,12 +16415,16 @@ class Redis extends Util{
     String [] path=null;
     String sep="\\";
     Long redisSeconds=60L;
+    String redisAll=null;
+    String redisLike=null;
     Thread t=null;
     ArrayList<String> del_list=new ArrayList<String>();
-    public Redis(String redisDir, Long redisSeconds){        
+    public Redis(String redisDir, Long redisSeconds, String redisAll, String redisLike){        
         if ( redisDir != null && !redisDir.equals("") ){
             // sync in file Redis
             this.redisSeconds=redisSeconds;
+            this.redisAll=redisAll;
+            this.redisLike=redisLike;
             f_redis=new File(redisDir);
             if ( !f_redis.exists() || !f_redis.isDirectory() )
                 erroFatal("Esse caminho não existe ou não é um diretório: " + redisDir);
@@ -22840,7 +22866,9 @@ class HttpServer extends Util{
     int port;
     Boolean noLogLocal=false;
     Socket socket = null;    
-    public HttpServer(String mode, String host, Integer port, String titulo_url, String titulo, String dir, String endsWiths, String ips_banidos, String log_ips, Boolean noLogLocal, String cfg, String redisDir, Long redisSeconds){
+    public HttpServer(String mode, String host, Integer port, String titulo_url, String titulo, String dir, 
+                      String endsWiths, String ips_banidos, String log_ips, Boolean noLogLocal, String cfg, 
+                      String redisDir, Long redisSeconds, String redisAll, String redisLike){
         this.mode = mode;
         this.host = host;
         this.port = port;
@@ -22854,7 +22882,7 @@ class HttpServer extends Util{
         this.cfg = cfg;
         try{
             if ( redisDir != null )
-                redis=new Redis(redisDir, redisSeconds);
+                redis=new Redis(redisDir, redisSeconds, redisAll, redisLike);
             serve();
         }catch(Exception e){
             System.err.println(e.toString());
@@ -23083,13 +23111,21 @@ class ClientThread extends Util{
             }
             if ( header_redis_key != null && !header_redis_key.equals("") && !header_redis_key.contains(" ") && header_redis_key.equals(fixNameFile(header_redis_key)) ){
                 // getAll
-                if ( header_redis_key.equals("*") ){                    
+                if ( header_redis_key.equals(redis.redisAll) ){                    
                     output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n"+redis.getAll()).getBytes() );
                     return;                    
                 }
                 // getLike e get 
                 if ( header_redis_value == null ){                    
                     if ( header_redis_key.endsWith("*") ){
+                        if ( header_redis_key.replaceAll("\\*", "").length() != header_redis_key.length()-1 ){
+                            output.write(  ("HTTP/1.1 203 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\ncomando invalido!! assinatura mal formada de like!").getBytes() );
+                            return;
+                        }
+                        if ( !header_redis_key.contains(redis.redisLike) ){
+                            output.write(  ("HTTP/1.1 203 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\ncomando invalido!! assinatura mal formada de like!!").getBytes() );
+                            return;
+                        }
                         // getLike
                         output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n"+redis.getLike(header_redis_key.substring(0, header_redis_key.length()-1))).getBytes() );
                         return;
@@ -23968,6 +24004,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    echo \"select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert\n"
 /* class by manual */                + "[y selectCSV]\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this\"\n"
+/* class by manual */                + "    y cat file.csv | y selectCSV \"select rownum,* from this\"\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this where a = '3'\"\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this limit 10\"\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this limit 10\" -outJson\n"
@@ -23975,6 +24012,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y selectCSV -csv file.csv \"select * from this\"\n"
 /* class by manual */                + "    y selectCSV -csv file.csv -sql consulta.sql\n"
 /* class by manual */                + "    obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean\n"
+/* class by manual */                + "    obs2: se usar rownum com where ele podera mostrar o numero errado! esse bug sera corrigido depois\n"
 /* class by manual */                + "[y xlsxToCSV]\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx mostraEstrutura\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx listaAbas\n"
@@ -24399,15 +24437,17 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    Exemplo de ips_banidos: \"8.8.8.8,4.4.4.4\"\n"
 /* class by manual */                + "    Exemplo de log_ips: \"c:\\tmp\\ips.log\"\n"
 /* class by manual */                + "    -redisDir \"\"\n"
-/* class by manual */                + "    -redisDir \"c:\\tmp\\tmp\" -redisSeconds \"600\"\n"
+/* class by manual */                + "    -redisDir \"c:\\tmp\\tmp\" -redisSeconds \"600\" -redisAll \"[ALL]\" -redisLike \"-playlistmovie-\"\n"
 /* class by manual */                + "    curl redis:\n"
-/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: *\"\n"
+/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: [ALL]\"\n"
+/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: user-playlistmovie-z2-*\"\n"
 /* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\"\n"
 /* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-DEL: A\"\n"
 /* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # retorna 200 ou 203\n"
 /* class by manual */                + "    obs, como funciona o SIGN(add key value concorrente):\n"
 /* class by manual */                + "      Em caso de =>                   -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # ele retorna 200. \"Redis-SIGN: Y\" forca o valor \"C\" para SIGN\n"
 /* class by manual */                + "      Em caso de um sign diferente => -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C2\"                   # ele retorna 203 negando a gravacao, pois KEY A esta com SIGN C e nao C2.\n"
+/* class by manual */                + "    obs2: key iniciada com 'secret-' nao e exibida nem com o comando configurado [ALL]\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "[y pwd]\n"
@@ -24744,6 +24784,9 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
 
 
 

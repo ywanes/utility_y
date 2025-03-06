@@ -179,6 +179,7 @@ Exemplos...
     echo "select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert
 [y selectCSV]
     y cat file.csv | y selectCSV "select * from this"
+    y cat file.csv | y selectCSV "select rownum,* from this"
     y cat file.csv | y selectCSV "select * from this where a = '3'"
     y cat file.csv | y selectCSV "select * from this limit 10"
     y cat file.csv | y selectCSV "select * from this limit 10" -outJson
@@ -186,6 +187,7 @@ Exemplos...
     y selectCSV -csv file.csv "select * from this"
     y selectCSV -csv file.csv -sql consulta.sql
     obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean
+    obs2: se usar rownum com where ele poderá mostrar o numero errado! esse bug será corrigido depois
 [y xlsxToCSV]
     xlsxToCSV arquivo.xlsx mostraEstrutura
     xlsxToCSV arquivo.xlsx listaAbas
@@ -610,15 +612,17 @@ Exemplos...
     Exemplo de ips_banidos: "8.8.8.8,4.4.4.4"
     Exemplo de log_ips: "c:\tmp\ips.log"
     -redisDir ""
-    -redisDir "c:\tmp\tmp" -redisSeconds "600"
+    -redisDir "c:\tmp\tmp" -redisSeconds "600" -redisAll "[ALL]" -redisLike "-playlistmovie-"
     curl redis:
-    y curl "http://site:1000/" -H "Redis-KEY: *"
+    y curl "http://site:1000/" -H "Redis-KEY: [ALL]"
+    y curl "http://site:1000/" -H "Redis-KEY: user-playlistmovie-z2-*"
     y curl "http://site:1000/" -H "Redis-KEY: A" -H "Redis-VALUE: B"
     y curl "http://site:1000/" -H "Redis-DEL: A"
     y curl "http://site:1000/" -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C" -H "Redis-SIGN: Y" # retorna 200 ou 203
     obs, como funciona o SIGN(add key value concorrente):
       Em caso de =>                   -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C" -H "Redis-SIGN: Y" # ele retorna 200. "Redis-SIGN: Y" força o valor "C" para SIGN
       Em caso de um sign diferente => -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C2"                   # ele retorna 203 negando a gravação, pois KEY A está com SIGN C e não C2.
+    obs2: key iniciada com 'secret-' não é exibida nem com o comando configurado [ALL]
 [y wget]
     y wget -h
 [y pwd]
