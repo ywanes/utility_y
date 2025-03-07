@@ -24004,7 +24004,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    echo \"select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert\n"
 /* class by manual */                + "[y selectCSV]\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this\"\n"
-/* class by manual */                + "    y cat file.csv | y selectCSV \"select rownum,* from this\"\n"
+/* class by manual */                + "    y cat file.csv | y selectCSV \"select rownum seq,* from this\"\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this where a = '3'\"\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this limit 10\"\n"
 /* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this limit 10\" -outJson\n"
@@ -24784,11 +24784,6 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
 
 
 

@@ -179,7 +179,7 @@ Exemplos...
     echo "select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert
 [y selectCSV]
     y cat file.csv | y selectCSV "select * from this"
-    y cat file.csv | y selectCSV "select rownum,* from this"
+    y cat file.csv | y selectCSV "select rownum seq,* from this"
     y cat file.csv | y selectCSV "select * from this where a = '3'"
     y cat file.csv | y selectCSV "select * from this limit 10"
     y cat file.csv | y selectCSV "select * from this limit 10" -outJson
