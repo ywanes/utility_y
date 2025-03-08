@@ -1972,20 +1972,38 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("mkv") ){
-            boolean verbose=false;
-            boolean force=false;
-            boolean lento=false;
-            if ( findParm(args, "-v", true) > 0 )
-                verbose=true;
-            if ( findParm(args, "-force", true) > 0 )
-                force=true;
-            if ( findParm(args, "-lento", true) > 0 )
-                lento=true;
-            mkv(new File("."), verbose, force, lento);
+            try{
+                boolean verbose=false;
+                boolean force=false;
+                boolean lento=false;
+                String tail="";
+                if ( findParm(args, "-v", true) > 0 )
+                    verbose=true;
+                if ( findParm(args, "-force", true) > 0 )
+                    force=true;
+                if ( findParm(args, "-lento", true) > 0 )
+                    lento=true;
+                while(true){
+                    String s=mkv(new File("."), verbose, force, lento, tail);
+                    if ( s.equals("") )
+                        break;
+                    tail=s;                    
+                }
+                System.out.println("fim");
+            }catch(Exception e){
+                erroFatal(e);
+            }
             return;
-        }
+        }        
         if ( args[0].equals("thumbnail") ){
-            thumbnail(new File("."), 0);
+            String tail="";
+            while(true){
+                String s=thumbnail(new File("."), 0, tail);
+                if ( s.equals("") )                    
+                    break;                            
+                tail=s;
+            }
+            System.out.println("fim");
             return;
         }
         if ( args[0].equals("insta") && args.length >= 2 ){
@@ -13460,12 +13478,12 @@ while True:
         }
     }
     
-    public void mkv(File f, boolean verbose, boolean force, boolean lento){  
-        bat_mkv(null, lento);
-        String edited="_EDITED.mkv";
+    public String mkv(File f, boolean verbose, boolean force, boolean lento, String tail) throws Exception{
         File [] files=f.listFiles();
+        String edited="_EDITED.mkv";
         String newTag="newTag20240116";
-        // arquivos
+        String display_mkv="";
+        String msg="";
         for ( int i=0;i<files.length;i++ ){
             if ( verbose )
                 System.out.println("File: " + files[i].getAbsolutePath());
@@ -13477,13 +13495,14 @@ while True:
                 continue;
             String item=files[i].getAbsolutePath().replace("\\","/").replace("/./","/");
             if ( new File(item+edited).exists() ){
-                String display_mkv="y mv \"" + item+edited + "\" \"" + item + "\"";
-                System.out.println(display_mkv);
-                bat_mkv(display_mkv, lento);
-                System.exit(0);
+                display_mkv="y mv \"" + item+edited + "\" \"" + item + "\"";
+                if ( display_mkv.equals(tail) )
+                    erroFatal("Erro: aparentemente o processo está em loop!\n" + display_mkv);
+                mv(new File(item+edited),new File(item));
+                return display_mkv;
             }            
             runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + item + "\""}, null, null, null);
-            String msg=runtimeExecError;
+            msg=runtimeExecError;
             if ( msg.contains("Cannot run") )
                 erroFatal("Nao foi possivel encontrar o ffmpeg!");
             if ( !force && msg.contains("NEWTAG          : " + newTag) ) // mkv ja modificado
@@ -13523,7 +13542,7 @@ while True:
                             continue;
                         }
                     }
-                    removes+=" -map -0:a:" + p1 + " ";
+                    removes+=" -map -0:a:" + p1;
                 }
             }
             if ( !video ){
@@ -13538,162 +13557,118 @@ while True:
                 continue;  
             // conversao direta
             // ffmpeg -i "A.mkv" -qscale 0 "A.mp4"
-            String display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0 " + removes + " -max_muxing_queue_size 1024 -c:v copy -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
+            String [] input=null;
+            input=new String []{"ffmpeg", "-i", item, "-map", "0"};
+            input=addParm(removes.trim().split(" "), input);
+            input=addParm(new String[]{"-max_muxing_queue_size", "1024", "-c:v", "copy", "-metadata", "newTag=\"" + newTag + "\"", item + edited}, input);
             
             // mais lento mas funciona
             if ( principal != null && lento )
-                display_mkv="y echo 1 | ffmpeg -i \"" + item + "\" -map 0:0 -map 0:" + principal + " -metadata newTag=\"" + newTag + "\" \"" + item + edited + "\"";            
+                input=new String []{"ffmpeg", "-i", item, "-map", "0:0", "-map" , "0:"+principal, "-metadata", "newTag=\"" + newTag + "\"", item + edited};
             
-            System.out.println(display_mkv);
-            bat_mkv(display_mkv, lento);
-            System.exit(0);
+            display_mkv=item;
+            if ( display_mkv.equals(tail) )
+                erroFatal("Erro: aparentemente o processo está em loop!\n" + display_mkv);            
+            System.out.println("processando: " + item);
+            runtimeExec(null, input, null, null, null);
+            return display_mkv;
         }
         // pastas
         for ( int i=0;i<files.length;i++ ){
-            if ( files[i].isDirectory() )
-                mkv(files[i], verbose, force, lento);
-        }    
+            if ( files[i].isDirectory() ){
+                String s=mkv(files[i], verbose, force, lento, tail);
+                if ( s.equals("") )
+                    continue;
+                return s;
+            }
+        }            
+        return "";
     }
     
-    public String thumbnail(File a, int nivel){        
-        String target=null;
+    public String thumbnail(File a, int nivel, String tail){                
         if ( !a.exists() )
             erroFatal("Não foi possível encontrar o caminho " + a.getAbsolutePath());
         if ( nivel == 0 && a.isFile() )
             erroFatal("Erro interno, não é possível nivel 0 com arquivo!");
         if ( a.isFile() ){
             if ( a.getAbsolutePath().endsWith(".png") )
-                return null;
+                return "";
             if ( new File(a.getAbsolutePath()+".png").exists() )
-                return null; 
-            // filtro
-            //if ( !a.getAbsolutePath().contains("9-1-1-1x02.mp4") )
-            //    return null;
-            return a.getAbsolutePath();
+                return ""; 
         }else{
             if ( a.isDirectory() ){
                 File [] files=a.listFiles();
                 for ( int i=0;i<files.length;i++ ){                    
-                    String s=thumbnail(files[i], nivel+1);
-                    if ( s != null ){
-                        if ( nivel == 0 ){
-                            target=s;
-                            break;
-                        }
+                    String s=thumbnail(files[i], nivel+1, tail);
+                    if ( !s.equals("") )
                         return s;
-                    }
                 }
+                return "";
             }
         }
-        
-        if ( !new File("c:/tmp").exists() || !new File("c:/tmp").isDirectory() ){
-            System.out.println("Favor criar a pasta c:/tmp");
-            System.exit(1);            
+        String target=a.getAbsolutePath();
+        runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + target + "\""}, null, null, null);
+        String msg=runtimeExecError;
+        if ( msg.contains("Cannot run") )
+            erroFatal("Nao foi possivel encontrar o ffmpeg!");
+        if ( msg.contains("Invalid data found") )
+            erroFatal("Invalid data found - " + target);
+        String [] partes=msg.replace("\r", "").split("\n");        
+        String [] partes_base=array_copy(partes);
+        int p=-1;
+        for ( int i=0;i<10;i++ ){
+            p=findParm(partes, "Stream #0:"+i, false);
+            if ( partes[p].contains(" fps, ") )
+                break;
+            p=-1;
         }
-        String path="c:/tmp/runthumbnail.bat";
-        try{
-            if ( target == null ){
-                salvando_file("echo fim", new File(path));            
-            }else{
-                runtimeExec(null, new String[]{"ffmpeg", "-i", "\"" + target + "\""}, null, null, null);
-                String msg=runtimeExecError;
-                if ( msg.contains("Cannot run") )
-                    erroFatal("Nao foi possivel encontrar o ffmpeg!");
-                if ( msg.contains("Invalid data found") )
-                    erroFatal("Invalid data found - " + target);
-                String [] partes=msg.replace("\r", "").split("\n");        
-                String [] partes_base=array_copy(partes);
-                int p=-1;
-                for ( int i=0;i<10;i++ ){
-                    p=findParm(partes, "Stream #0:"+i, false);
-                    if ( partes[p].contains(" fps, ") )
-                        break;
-                    p=-1;
-                }
+        if ( p > -1 ){
+            String fps=partes[p];
+            String duration="";
+            partes=fps.trim().split(" ");
+            p=findParm(partes, "fps,", true);
+            if ( p > -1 && p < partes.length-1 ){
+                fps=partes[p+1];                        
+                // arredondar para cima
+                float aux=Float.parseFloat(fps);
+                int ifps = (int)aux;
+                if ( aux != (float)((int)aux) )
+                    ifps = ((int)aux)+1;                        
+                fps=ifps*10+"";
+                p=findParm(partes_base, "Duration:", false);
                 if ( p > -1 ){
-                    String fps=partes[p];
-                    String duration="";
-                    partes=fps.trim().split(" ");
-                    p=findParm(partes, "fps,", true);
-                    if ( p > -1 && p < partes.length-1 ){
-                        fps=partes[p+1];                        
-                        // arredondar para cima
-                        float aux=Float.parseFloat(fps);
-                        int ifps = (int)aux;
-                        if ( aux != (float)((int)aux) )
-                            ifps = ((int)aux)+1;                        
-                        fps=ifps*10+"";
-                        p=findParm(partes_base, "Duration:", false);
-                        if ( p > -1 ){
-                            partes=partes_base[p].trim().split(" ");
-                            duration=partes[1].replace(",", "");
-                            if ( duration.split("\\.").length == 2 )
-                                duration=duration.split("\\.")[0];
-                            aux=((float)duration_to_seconds(duration)/10)/15;
-                            if ( aux != (float)((int)aux) )
-                                duration = ((int)aux+1)+"";
-                            else
-                                duration = (int)aux+"";                            
-                            salvando_file(
-                                "y echo 1 | ffmpeg -i \"" + target + "\" -filter_complex \"select='not(mod(n," + fps + "))',scale=150:84,tile=layout=15x" + duration + "\" -vframes 1 \"" + target + ".png\"",
-                                new File(path));            
-                            System.out.println("Execute o comando a seguir para sua comodidade: y thumbnail && c:/tmp/runthumbnail.bat");
-                            return null;
-                        }
-                        System.out.println("Não foi possível decodificar Duration: " + target);
-                        mostra_array(partes);
-                        mostra_array(partes_base);
-                        System.exit(1);
-                    }                    
-                    System.out.println("Não foi possível decodificar fps: " + target);
-                    mostra_array(partes);
-                    mostra_array(partes_base);
-                    System.exit(1);
+                    partes=partes_base[p].trim().split(" ");
+                    duration=partes[1].replace(",", "");
+                    if ( duration.split("\\.").length == 2 )
+                        duration=duration.split("\\.")[0];
+                    aux=((float)duration_to_seconds(duration)/10)/15;
+                    if ( aux != (float)((int)aux) )
+                        duration = ((int)aux+1)+"";
+                    else
+                        duration = (int)aux+"";                            
+                    if ( target.equals(tail) )
+                        erroFatal("Erro: sistema anti loop ativado: " + target);
+                    System.out.println("processando: " + target.replace("\\.\\", "\\"));
+                    runtimeExec(null, new String[]{"ffmpeg", "-i", target, "-filter_complex", "select='not(mod(n," + fps + "))',scale=150:84,tile=layout=15x" + duration, "-vframes", "1", target + ".png"}, null, null, null);
+                    return target;
                 }
-                System.out.println("Não foi possível decodificar Stream #0:0: " + target);
+                System.out.println("Não foi possível decodificar Duration: " + target);
                 mostra_array(partes);
                 mostra_array(partes_base);
                 System.exit(1);
-            }
-        }catch(Exception e){
-            System.out.println("Nao foi possivel gravar o arquivo " + path + " " + e.toString());
+            }                    
+            System.out.println("Não foi possível decodificar fps: " + target);
+            mostra_array(partes);
+            mostra_array(partes_base);
             System.exit(1);
         }
-        return null;
-    }
+        System.out.println("Não foi possível decodificar Stream #0:0: " + target);
+        mostra_array(partes);
+        mostra_array(partes_base);
+        System.exit(1);        
+        return "";
+    }        
     
-    public boolean bat_mkv_init=false;
-    public boolean bat_mkv_inited=false;
-    public void bat_mkv(String a, boolean lento){
-        bat_mkv_init=false;
-        if ( a == null ){            
-            if ( bat_mkv_inited )
-                return;
-            else
-                bat_mkv_inited=true;
-            bat_mkv_init=true;
-        }
-        if ( !new File("c:/tmp").exists() || !new File("c:/tmp").isDirectory() ){
-            System.out.println("Favor criar a pasta c:/tmp");
-            System.exit(1);
-            return;
-        }
-        String path="c:/tmp/runmkv.bat";
-        try{
-            if ( ! bat_mkv_init ){
-                salvando_file(a, new File(path));
-                if ( lento )
-                    System.out.println("Execute o comando a seguir para sua comodidade: y mkv -lento && c:/tmp/runmkv.bat");
-                else
-                    System.out.println("Execute o comando a seguir para sua comodidade: y mkv && c:/tmp/runmkv.bat");
-            }else
-                salvando_file("echo fim", new File(path));            
-        }catch(Exception e){
-            System.out.println("Nao foi possivel gravar o arquivo " + path + " " + e.toString());
-            System.exit(1);
-        }
-    }
-
     public void insta(String id){
         String url="https://www.instagram.com/reels/" + id + "/";
         String dir="d:/insta";                
@@ -16926,6 +16901,15 @@ class Util{
                 delta=1;
             retorno[i+delta]=args[i];
         }
+        return retorno;
+    }
+    
+    public String[] addParm(String [] args0, String[] args) {
+        String [] retorno=new String[args0.length+args.length];
+        for ( int i=0;i<args.length;i++ )
+            retorno[i]=args[i];
+        for ( int i=0;i<args0.length;i++ )
+            retorno[i+args.length]=args0[i];
         return retorno;
     }
     
