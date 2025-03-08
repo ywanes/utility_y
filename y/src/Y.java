@@ -1945,6 +1945,22 @@ cat buffer.log
                 return;
             }
         }
+        if ( args[0].equals("ocr") ){
+            try{
+                byte [] input=null;
+                if ( args.length == 1 )
+                    input=readAllBytes();                    
+                else
+                    if ( args.length == 2 ){
+                        input=readAllBytes(args[1]);
+                    }else
+                        erroFatal("parametros invalidos!");
+                ocr(input, System.out);
+            }catch(Exception e){
+                erroFatal(e);
+            }
+            return;
+        }
         if ( args[0].equals("dotaMutandoAll") ){
             if ( args.length > 1 )
                 sleepSeconds(Integer.parseInt(args[1]));
@@ -13254,6 +13270,13 @@ while True:
         }
     }
     
+    public void ocr(byte [] input, OutputStream os) throws Exception{
+        String s=runtimeExec(null, new String[]{"tesseract.exe", "-", "-"}, new File("D:\\ProgramFiles\\Tesseract-OCR"), input, null);
+        if ( ! runtimeExecError.equals("") && !runtimeExecError.contains("Detected") )
+            erroFatal("Erro: " + runtimeExecError);
+        os.write(s.getBytes());
+    }
+    
     public void dotaMutandoAll(){
         try{
             robotMouseMove(188+1400, 768); // fechar painel previsoes
@@ -17549,8 +17572,6 @@ class Util{
             ok0.join();
             ok.join();
             nok.join();
-            if ( !runtimeExecError.equals("") )
-                return null;
             String charset="UTF-8";
             if ( charset_windows != null && charset_windows )
                 charset="ISO-8859-1";
@@ -17561,6 +17582,8 @@ class Util{
                 for ( int i=1;i<linhas.length;i++ )
                     s+=linhas[i]+"\n";
             }
+            if ( !runtimeExecError.equals("") && s.equals("") )
+                return null;
             return s;
         }catch(Exception e){
             runtimeExecError=e.toString();            
@@ -18165,6 +18188,15 @@ class Util{
             return true;
         }
         return false;
+    }
+    
+    public byte[] readAllBytes(){
+        byte[] tmp = new byte[BUFFER_SIZE];
+        int len=0;
+        ByteArrayOutputStream baos=new ByteArrayOutputStream();
+        while( (len=readBytes(tmp, 0, BUFFER_SIZE)) >= 0 )
+            baos.write(tmp, 0, len);
+        return baos.toByteArray();
     }
     
     public void closeBytes(){
@@ -24624,6 +24656,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "[y printScreen]\n"
 /* class by manual */                + "    y printScreen\n"
 /* class by manual */                + "    y printScreen 2\n"
+/* class by manual */                + "    obs: pasta padrao: d:/ProgramFiles/screens\n"
 /* class by manual */                + "[y paste]\n"
 /* class by manual */                + "    y paste file1 file2\n"
 /* class by manual */                + "[y mkv]\n"
@@ -24784,6 +24817,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

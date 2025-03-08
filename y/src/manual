@@ -112,6 +112,7 @@ usage:
   [y lock]
   [y monitor]
   [y printScreen]
+  [y ocr]
   [y paste]
   [y mkv]
   [y thumbnail]
@@ -799,6 +800,13 @@ Exemplos...
 [y printScreen]
     y printScreen
     y printScreen 2
+    obs: pasta padrão: d:/ProgramFiles/screens
+[y ocr]
+    y ocr D:\ProgramFiles\screens\sc_20250307_223317_533_3950.bmp
+    y cat D:\ProgramFiles\screens\sc_20250307_223317_533_3950.bmp | y ocr
+    obs: é preciso instalar o programa tesseract
+    download: https://github.com/tesseract-ocr/tesseract/releases/
+    pasta instalado: "D:\ProgramFiles\Tesseract-OCR"
 [y paste]
     y paste file1 file2
 [y mkv]
