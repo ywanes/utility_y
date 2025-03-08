@@ -13802,6 +13802,10 @@ while True:
         return count;
     }
     
+    public void bmp_editing(byte [] a, int[] freeze, int rgb, int len_x_check, int len_y_check){
+        /////////////////
+    }
+    
     public void bmp(File path, Integer len_block, OutputStream os) throws Exception{          
         byte[] entrada_ = new byte[1];
         int c=0;
