@@ -23973,6 +23973,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y lock]\n"
 /* class by manual */                + "  [y monitor]\n"
 /* class by manual */                + "  [y printScreen]\n"
+/* class by manual */                + "  [y ocr]\n"
 /* class by manual */                + "  [y paste]\n"
 /* class by manual */                + "  [y mkv]\n"
 /* class by manual */                + "  [y thumbnail]\n"
@@ -24661,6 +24662,12 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y printScreen\n"
 /* class by manual */                + "    y printScreen 2\n"
 /* class by manual */                + "    obs: pasta padrao: d:/ProgramFiles/screens\n"
+/* class by manual */                + "[y ocr]\n"
+/* class by manual */                + "    y ocr D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp\n"
+/* class by manual */                + "    y cat D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp | y ocr\n"
+/* class by manual */                + "    obs: e preciso instalar o programa tesseract\n"
+/* class by manual */                + "    download: https://github.com/tesseract-ocr/tesseract/releases/\n"
+/* class by manual */                + "    pasta instalado: \"D:\\ProgramFiles\\Tesseract-OCR\"\n"
 /* class by manual */                + "[y paste]\n"
 /* class by manual */                + "    y paste file1 file2\n"
 /* class by manual */                + "[y mkv]\n"
@@ -24821,6 +24828,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
