@@ -13338,14 +13338,14 @@ while True:
             else
                 erroFatal("não foi possivel abrir o painel.. programa sendo finalizado!");
             
+            String [] players=ocr_getNamesDota();
             String [] naoBloquearEssesNomes=new String[]{"cynet [Fowl]", "Analista de Sistema..."};
-            String [] names=ocr_getNamesDota();
-            if ( names == null ){
+            if ( players == null ){
                 System.out.println("warning.. names não detectados!" );
-                names=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
+                players=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
             }else{
                 System.out.println("jogadores:");
-                mostra_array(names);
+                mostra_array(players);
             }
             
             int n_eu_mesmo=1;
