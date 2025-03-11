@@ -13290,12 +13290,14 @@ while True:
     
     public void dotaMutandoAll(){
         try{
-            robotMouseMove(188+1400, 768); // fechar painel previsoes
+            
+            // fechar painel previsoes
+            robotMouseMove(188+1400, 768);
             sleepMillis(50);
-
             robotMouseClickEsq();
             sleepMillis(50);
 
+            // verifica dota aberto
             System.out.println("dota mutando all...");
             System.out.println("analisando se a tela esta com o dota aberto:");
             if ( robotCheckRGB(239, 891, "49 54 56") )
@@ -13303,7 +13305,8 @@ while True:
             else
                 erroFatal("Não.. programa sendo finalizado!");
 
-            boolean painel_previsoes=robotCheckRGB(188, 768, "255 255 255"); // previsoes aberto
+            // fecha painel de previsoes
+            boolean painel_previsoes=robotCheckRGB(188, 768, "255 255 255");
             if ( painel_previsoes ){
                 robotMouseMove(188, 768); // fechar painel previsoes
                 sleepMillis(50);
@@ -13312,12 +13315,13 @@ while True:
                 sleepMillis(50);
             }
                 
-            robotMouseMove(998, 480); // meio da tela
+            // seleciona jogo para demover cmd na frente
+            robotMouseMove(998, 480); 
             sleepMillis(50);
-
             robotMouseClickEsq();
             sleepMillis(50);
 
+            // verifica se painel esta aberto
             System.out.println("analisando se o painel esta fechado:");
             boolean painel_fechado=robotCheckRGB(175, 839, "64 69 73"); // painel fechado
             if ( painel_fechado )
@@ -13325,19 +13329,21 @@ while True:
             else
                 erroFatal("Aberto.. programa sendo finalizado!");
 
+            // abrindo painel
             System.out.println("abrindo painel...");
             robotMouseMove(123, 27); // abrir painel
             sleepMillis(50);
-
             robotMouseClickEsq();
             sleepMillis(150);
             
-            painel_fechado=robotCheckRGB(175, 839, "64 69 73"); // painel fechado
+            // verifica se o painel ainda esta aberto
+            painel_fechado=robotCheckRGB(175, 839, "64 69 73"); 
             if ( !painel_fechado )
                 System.out.println("painel aberto!");
             else
                 erroFatal("não foi possivel abrir o painel.. programa sendo finalizado!");
             
+            // pega nome dos jogadores por ocr
             String [] players=ocr_getNamesDota();
             String [] naoBloquearEssesNomes=new String[]{"cynet [Fowl]", "Analista de Sistema..."};
             if ( players == null ){
@@ -13348,100 +13354,72 @@ while True:
                 mostra_array(players);
             }
             
-            int n_eu_mesmo=1;
-            int[] parms=null;
-            String rgb_="255 73 73";
-            for ( int i=0;i<5;i++ ){
-                parms=new int[]{827, 121+(70*i), i+1};        
-                if ( robotCheckRGB(parms[0], parms[1], "63 70 70") ){ // eu mesmo
-                    System.out.println("eu mesmo como jogador  " + i+1);
-                    n_eu_mesmo=i+1;
+            // mutando os jogadores
+            int n_eu_mesmo=0; // 0 até 9
+            for ( int i=0;i<10;i++ ){
+                int _x=827;
+                int _y=121+(70*i)+(i>=5?31:0);
+                if ( robotCheckRGB(_x, _y, "63 70 70") ){ // eu mesmo
+                    System.out.println("eu mesmo como jogador  " + i);
+                    n_eu_mesmo=i;
                     continue;
                 }
-                boolean jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-                System.out.println("analisando jogador " + parms[2]);
-                if ( jogador_mutado ){
-                    System.out.println("jogador ja mutado!");                    
+                if ( robotCheckRGB(_x, _y, "255 73 73") ){ // mutado
+                    System.out.println("jogador " + i + " ja mutado!");                    
                 }else{
-                    System.out.println("mutando...");
-                    robotMouseMove(parms[0]+5, parms[1]);
+                    System.out.println("mutando o jogador " + i);
+                    robotMouseMove(_x+5, _y);
                     sleepMillis(50);
-
                     robotMouseClickEsq();
                     sleepMillis(50);
                 }
-            }
+            }            
 
-            for ( int i=0;i<5;i++ ){
-                parms=new int[]{827, 502+(70*i), i+6};            
-                if ( robotCheckRGB(parms[0], parms[1], "63 70 70") ){ // eu mesmo
-                    System.out.println("eu mesmo como jogador  " + i+6);
-                    n_eu_mesmo=i+6;
-                    continue;
-                }
-                boolean jogador_mutado=robotCheckRGB(parms[0], parms[1], rgb_); // jogador mutado
-                System.out.println("analisando jogador " + parms[2]);
-                if ( jogador_mutado ){
-                    System.out.println("jogador ja mutado!");
-                }else{
-                    System.out.println("mutando...");
-                    robotMouseMove(parms[0]+5, parms[1]);
-                    sleepMillis(50);
-
-                    robotMouseClickEsq();
-                    sleepMillis(50);
-                }
-            }
-            
+            // click central para fechar painel
             robotMouseMove(998, 480); // meio da tela
             sleepMillis(150);
             
+            // verifica se painel de ajuda está fechado
             boolean painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
             System.out.println("analisando painel de ajuda");
-            if ( !painel_ajuda_berto ){
-                System.out.println("abrindo painel de ajuda");
-                robotMouseMove(853, 834);
-                sleepMillis(150);
-
-                robotMouseClickEsq();
-                sleepMillis(150);
-                painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
-                if ( painel_ajuda_berto ){
-                    System.out.println("painel de ajuda aberto");
-                }else{
-                    //erroFatal("Erro, falha ao abrir o painel de ajuda");
-                }
-                
-                
-                // jogador 6 -> y: 489
-                // jogador 1 -> y: 170
-                // jogador 10 -> y: 434
-                // jogador 9 -> y: 433
-                int ref_y=113;
-                int delta=n_eu_mesmo;
-                if ( n_eu_mesmo > 5 ){
-                    ref_y=432;
-                    delta-=5;
-                }
-                for ( int i=0;i<5;i++ ){
-                    if ( i+1 == delta )
-                        continue;
-                    robotMouseMove(1096, ref_y+(57*i));
-                    sleepMillis(50);
-                    System.out.println("removendo ajuda...");
-                    robotMouseClickEsq();
-                    sleepMillis(50);                    
-                }
-
-                robotMouseMove(998+400, 480); // meio da tela
-                sleepMillis(50);
-
-                robotMouseClickEsq();
-                sleepMillis(50);
-                System.out.println("fim");
-            }else{
+            if ( painel_ajuda_berto )
                 erroFatal("Erro, painel de ajuda ja aberto");
+            
+            // abrindo bainel de ajuda
+            System.out.println("abrindo painel de ajuda");
+            robotMouseMove(853, 834);
+            sleepMillis(150);
+
+            // verifica se painel de ajuda está aberto
+            robotMouseClickEsq();
+            sleepMillis(150);
+            painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
+            if ( painel_ajuda_berto ){
+                System.out.println("painel de ajuda aberto");
+            }else{
+                //erroFatal("Erro, falha ao abrir o painel de ajuda");
             }
+
+            // removendo ajuda
+            int ref_y=n_eu_mesmo>=5?432:113;
+            // delta precisa ficar em top 5
+            int delta=n_eu_mesmo>=5?(n_eu_mesmo-5):n_eu_mesmo;
+            for ( int i=0;i<5;i++ ){
+                if ( i == delta )
+                    continue;
+                robotMouseMove(1096, ref_y+(57*i));
+                sleepMillis(50);
+                System.out.println("removendo ajuda...");
+                robotMouseClickEsq();
+                sleepMillis(50);                    
+            }
+
+            // fechando painel de ajuda
+            robotMouseMove(998+400, 480); 
+            sleepMillis(50);
+            robotMouseClickEsq();
+            sleepMillis(50);
+            System.out.println("fim");
         }catch(Exception e){
             erroFatal(e);
         }
