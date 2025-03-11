@@ -11974,7 +11974,7 @@ cat buffer.log
         }        
     }
     public String steam_custom_curl(String url){
-        return curl_string_retry(url, 3, 100, new int[]{429});
+        return curl_string_retry(url, 3, 100, new int[]{429, 502});
     }
     public String steam_friends(String steam_api_key, String steam_id) throws Exception{
         String s=steam_custom_curl("https://api.steampowered.com/ISteamUser/GetFriendList/v1/?key=" + steam_api_key + "&steamid=" + steam_id + "&relationship=friend");
