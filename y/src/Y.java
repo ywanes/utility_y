@@ -1962,10 +1962,15 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("dotaMutandoAll") ){
-            if ( args.length > 1 )
-                sleepSeconds(Integer.parseInt(args[1]));
-            dotaMutandoAll();
-            return;
+            // exemplo
+            // y dotaMutandoAll -sleep 3 -nicks "cynet [Fowl],Analista de Sistema..."
+            Object [] objs=get_parm_sleep_nicks(args);            
+            if ( objs != null ){
+                Integer sleep=(Integer)objs[0];
+                String nicks=(String)objs[1];
+                dotaMutandoAll(sleep, nicks);                
+                return;
+            }
         }
         if ( args[0].equals("paste") && args.length == 3 && new File(args[1]).exists() && new File(args[2]).exists() && new File(args[1]).isFile() && new File(args[2]).isFile() ){            
             paste(new File(args[1]), new File(args[2]));
@@ -10890,6 +10895,31 @@ cat buffer.log
         return new Object []{ip, port, server, send, pass, paths};
     }
 
+    private Object [] get_parm_sleep_nicks(String [] args){
+        Integer sleep=null;
+        String nicks=null;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length > 0){
+            if ( args.length > 1 && args[0].equals("-sleep")){
+                args=sliceParm(1, args);
+                sleep=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("-nicks")){
+                args=sliceParm(1, args);
+                nicks=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            erroFatal("parametros invalidos!");
+        }
+        
+        return new Object []{sleep, nicks};
+    }
+    
     // usado para speed e call
     private Object [] get_parm_ip_port_server_send(String [] args){
         String ip=null;
@@ -13288,8 +13318,13 @@ while True:
         }
     }
     
-    public void dotaMutandoAll(){
+    public void dotaMutandoAll(Integer sleep, String nicks){
+        if ( sleep != null )
+            sleepSeconds(sleep);
         try{
+            // variaveis auxiliares
+            int _x=0;
+            int _y=0;
             
             // fechar painel previsoes
             robotMouseMove(188+1400, 768);
@@ -13298,11 +13333,8 @@ while True:
             sleepMillis(50);
 
             // verifica dota aberto
-            System.out.println("dota mutando all...");
-            System.out.println("analisando se a tela esta com o dota aberto:");
-            if ( robotCheckRGB(239, 891, "49 54 56") )
-                System.out.println("Sim");
-            else
+            System.out.println("analisando se a tela esta com o dota aberto");
+            if ( !robotCheckRGB(239, 891, "49 54 56") )
                 erroFatal("Não.. programa sendo finalizado!");
 
             // fecha painel de previsoes
@@ -13310,7 +13342,6 @@ while True:
             if ( painel_previsoes ){
                 robotMouseMove(188, 768); // fechar painel previsoes
                 sleepMillis(50);
-
                 robotMouseClickEsq();
                 sleepMillis(50);
             }
@@ -13322,11 +13353,9 @@ while True:
             sleepMillis(50);
 
             // verifica se painel esta aberto
-            System.out.println("analisando se o painel esta fechado:");
+            System.out.println("analisando se o painel esta fechado");
             boolean painel_fechado=robotCheckRGB(175, 839, "64 69 73"); // painel fechado
-            if ( painel_fechado )
-                System.out.println("Ok, fechado");
-            else
+            if ( !painel_fechado )
                 erroFatal("Aberto.. programa sendo finalizado!");
 
             // abrindo painel
@@ -13336,42 +13365,46 @@ while True:
             robotMouseClickEsq();
             sleepMillis(150);
             
-            // verifica se o painel ainda esta aberto
+            // verifica se o painel ainda esta fechado
             painel_fechado=robotCheckRGB(175, 839, "64 69 73"); 
-            if ( !painel_fechado )
-                System.out.println("painel aberto!");
-            else
+            if ( painel_fechado )
                 erroFatal("não foi possivel abrir o painel.. programa sendo finalizado!");
             
-            // pega nome dos jogadores por ocr
+            // get players by OCR
             String [] players=ocr_getNamesDota();
             String [] naoBloquearEssesNomes=new String[]{"cynet [Fowl]", "Analista de Sistema..."};
+            if ( nicks != null )
+                naoBloquearEssesNomes=nicks.split(",");
             if ( players == null ){
                 System.out.println("warning.. names não detectados!" );
                 players=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
             }else{
-                System.out.println("jogadores:");
+                System.out.println("jogadores reconhecidos:");
                 mostra_array(players);
             }
             
             // mutando os jogadores
             int n_eu_mesmo=0; // 0 até 9
             for ( int i=0;i<10;i++ ){
-                int _x=827;
-                int _y=121+(70*i)+(i>=5?31:0);
+                _x=827;
+                _y=121+(70*i)+(i>=5?31:0);
                 if ( robotCheckRGB(_x, _y, "63 70 70") ){ // eu mesmo
                     System.out.println("eu mesmo como jogador  " + i);
                     n_eu_mesmo=i;
                     continue;
                 }
                 if ( robotCheckRGB(_x, _y, "255 73 73") ){ // mutado
-                    System.out.println("jogador " + i + " ja mutado!");                    
-                }else{
-                    System.out.println("mutando o jogador " + i);
-                    robotMouseMove(_x+5, _y);
-                    sleepMillis(50);
-                    robotMouseClickEsq();
-                    sleepMillis(50);
+                    System.out.println("jogador [" + i + "] - " + players[i] + " ja mutado!");                    
+                }else{                    
+                    if ( findParm(naoBloquearEssesNomes, players[i], true) > 0 )
+                        System.out.println("o jogador [" + i + "] - " + players[i] + " não pode ser mutado!");
+                    else{                        
+                        robotMouseMove(_x+5, _y);
+                        sleepMillis(50);
+                        robotMouseClickEsq();
+                        sleepMillis(50);
+                        System.out.println("mutando o jogador [" + i + "] - " + players[i]);
+                    }
                 }
             }            
 
@@ -13381,7 +13414,6 @@ while True:
             
             // verifica se painel de ajuda está fechado
             boolean painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
-            System.out.println("analisando painel de ajuda");
             if ( painel_ajuda_berto )
                 erroFatal("Erro, painel de ajuda ja aberto");
             
@@ -13394,24 +13426,23 @@ while True:
             robotMouseClickEsq();
             sleepMillis(150);
             painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
-            if ( painel_ajuda_berto ){
-                System.out.println("painel de ajuda aberto");
-            }else{
-                //erroFatal("Erro, falha ao abrir o painel de ajuda");
-            }
+            if ( !painel_ajuda_berto )
+                erroFatal("Erro, falha ao abrir o painel de ajuda");
 
             // removendo ajuda
-            int ref_y=n_eu_mesmo>=5?432:113;
-            // delta precisa ficar em top 5
-            int delta=n_eu_mesmo>=5?(n_eu_mesmo-5):n_eu_mesmo;
-            for ( int i=0;i<5;i++ ){
-                if ( i == delta )
+            for ( int i=0;i<10;i++ ){
+                _y=113+(57*i)+(i>=5?34:0);
+                if ( i == n_eu_mesmo )
                     continue;
-                robotMouseMove(1096, ref_y+(57*i));
-                sleepMillis(50);
-                System.out.println("removendo ajuda...");
-                robotMouseClickEsq();
-                sleepMillis(50);                    
+                if ( findParm(naoBloquearEssesNomes, players[i], true) > 0 )
+                    System.out.println("o jogador [" + i + "] - " + players[i] + " não pode ter a ajuda removida!");
+                else{                                        
+                    robotMouseMove(1096, _y);
+                    sleepMillis(50);                
+                    robotMouseClickEsq();
+                    sleepMillis(50);
+                    System.out.println("removendo ajuda do jogador [" + i + "] - " + players[i]);
+                }
             }
 
             // fechando painel de ajuda
