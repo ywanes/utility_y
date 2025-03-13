@@ -168,7 +168,7 @@ function load_nav(parm, table_click, type){
         s=barra_branca+space+"<a onclick=\"load_playlist(" + "['" + parm.join("','") + "']" + "," + table_click + " ,'" + type + "')\" style=\"display: inline-block; cursor: pointer; font-family: Franklin Gothic Medium;\">" + parm[parm.length-1] + "</a>" + space+s;        
     }    
     s=barra_branca+space+'<a onclick="go_home()" style="display: inline-block; cursor: pointer; font-family: Franklin Gothic Medium;">Home</a>'+space+s;        
-    document.getElementById('nav').innerHTML='<h1 style="color: rgb(51,102,204);">&nbsp;'+s+'</h1>';
+    document.getElementById('nav').innerHTML='<h1 style="color: #007BFF;">&nbsp;'+s+'</h1>';
 }
 
 //criptografia js - jsaes
@@ -274,7 +274,7 @@ function f_continue(){
     s+='</table>\n';
     if ( lista.length > 0 ){
         prepara_principal();
-        document.getElementById('nav').innerHTML='<h1 style="color: rgb(51,102,204); font-size: 34px; font-family: Franklin Gothic Medium;">&nbsp;Continue:</h1>';
+        document.getElementById('nav').innerHTML='<h1 style="color: #007BFF; font-size: 34px; font-family: Franklin Gothic Medium;">&nbsp;Continue:</h1>';
 							   
         document.getElementById('principal').innerHTML=s;
 		document.getElementById('search').focus();
@@ -1454,8 +1454,8 @@ function load_playlist_principal(elements, parm, type){
         s1+=oneLine;
     }
 	if (type != 'music'){
-        s+='<tr><td colspan="3"><a style="color: blue; font-size: 34px; font-family: Franklin Gothic Medium;">Playing</a></td></tr>'+s0;
-        s+='<tr><td colspan="3"><a style="color: blue; font-size: 34px; font-family: Franklin Gothic Medium;">Títulos</a></td></tr>'+s1;
+        s+='<tr><td colspan="3"><a style="color: #007BFF; font-size: 34px; font-family: Franklin Gothic Medium;">Playing</a></td></tr>'+s0;
+        s+='<tr><td colspan="3"><a style="color: #007BFF; font-size: 34px; font-family: Franklin Gothic Medium;">Títulos</a></td></tr>'+s1;
 	}else{
         s+=s0;
         s+=s1;
