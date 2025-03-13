@@ -1963,7 +1963,7 @@ cat buffer.log
         }
         if ( args[0].equals("dotaMutandoAll") ){
             // exemplo
-            // y dotaMutandoAll -sleep 3 -nicks "Skynet [F.owi],cynet [Fowl],Analista de Sistema..."
+            // y dotaMutandoAll -sleep 3 -nicks "Skynet,Analista de Sistema"
             Object [] objs=get_parm_sleep_nicks(args);            
             if ( objs != null ){
                 Integer sleep=(Integer)objs[0];
@@ -13372,7 +13372,7 @@ while True:
             
             // get players by OCR
             String [] players=ocr_getNamesDota();
-            String [] naoBloquearEssesNomes=new String[]{"Skynet [F.owi],cynet [Fowl],Analista de Sistema..."};
+            String [] naoBloquearEssesNomes=new String[]{"Skynet","Analista de Sistema"};
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
@@ -13395,7 +13395,7 @@ while True:
                     n_eu_mesmo=i;
                     continue;
                 }
-                if ( findParm(naoBloquearEssesNomes, players[i], true) >= 0 ){
+                if ( findParm(new String[]{players[i]}, naoBloquearEssesNomes, false) >= 0 ){
                     System.out.println("jogador [" + i + "] - " + players[i] + " não pode ser mutado!");
                 }else{                    
                     if ( robotCheckRGB(_x, _y, "255 73 73") ){ // mutado
@@ -13438,7 +13438,7 @@ while True:
                 if ( n_eu_mesmo<5 != i<5 )
                     continue;
                 _y=113+(57*i)+(i>=5?34:0);
-                if ( findParm(naoBloquearEssesNomes, players[i], true) >= 0 )
+                if ( findParm(new String[]{players[i]}, naoBloquearEssesNomes, false) >= 0 )
                     System.out.println("o jogador [" + i + "] - " + players[i] + " não pode ter a ajuda removida!");
                 else{                                        
                     robotMouseMove(1096, _y);
@@ -15345,6 +15345,18 @@ class Util{
                 return i;
             if ( a[i].contains(filtro) && !equal )
                 return i;
+        }
+        return -1;
+    }
+    
+    public int findParm(String [] a, String [] filtro, boolean equal){
+        for ( int i=0;i<a.length;i++ ){
+            for ( int j=0;j<filtro.length;j++ ){
+                if ( a[i].equals(filtro[j]) && equal )
+                    return i;
+                if ( a[i].contains(filtro[j]) && !equal )
+                    return i;
+            }
         }
         return -1;
     }
