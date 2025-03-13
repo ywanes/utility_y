@@ -1963,7 +1963,7 @@ cat buffer.log
         }
         if ( args[0].equals("dotaMutandoAll") ){
             // exemplo
-            // y dotaMutandoAll -sleep 3 -nicks "Skynet,Analista de Sistema"
+            // y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema"
             Object [] objs=get_parm_sleep_nicks(args);            
             if ( objs != null ){
                 Integer sleep=(Integer)objs[0];
@@ -13372,7 +13372,7 @@ while True:
             
             // get players by OCR
             String [] players=ocr_getNamesDota();
-            String [] naoBloquearEssesNomes=new String[]{"Skynet","Analista de Sistema"};
+            String [] naoBloquearEssesNomes=new String[]{"ynet","Analista de Sistema"};
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
@@ -13452,7 +13452,9 @@ while True:
             robotMouseMove(998+400, 480); 
             sleepMillis(50);
             robotMouseClickEsq();
+            robotMouseMove(998+400, 480); 
             sleepMillis(50);
+            robotMouseClickEsq();
             System.out.println("fim");
         }catch(Exception e){
             erroFatal(e);
