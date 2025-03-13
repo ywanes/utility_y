@@ -3,6 +3,7 @@ let global=`[GLOBAL]`;
 let ref_=window.location.origin;
 let ref_8100=ref_.substr(0,ref_.lastIndexOf(':'))+':8100';
 let history_nick=null;
+let elementos=null;
 this.timer=-1;
 this.inicializado=false;// nao colocar var
 this.inicializado2=false;// nao colocar var
@@ -141,19 +142,18 @@ function human_sort(a){
     a.sort(new Intl.Collator(undefined, {numeric: true, sensitivity: 'base'}).compare);
 }
 
-function get_elementos(){
+function load_elementos(){
     let partes=global.split('\n');
     let len=partes[0].length;
-    let retorno=[];
+    elementos=[];
     for ( let i=0;i<partes.length;i++ )
         if ( partes[i].length > len ){
 			// skip thumbnail
 			if ( partes[i].lastIndexOf('.png') > 0 && partes[i].lastIndexOf('.png') + 4 == partes[i].length )
 				continue;
-            retorno.push(partes[i].substring(len));
+            elementos.push(partes[i].substring(len));
 		}
-    retorno.push();
-    return retorno;
+    elementos.push();
 }
 
 
@@ -242,7 +242,7 @@ function f_continue(){
     }
     
     let matrix={};
-    let elements=get_elementos();
+    let elements=elementos;
     let lista=[];
     let tags=['/series/', '/filmes/'];
     for ( let k=0;k<tags.length;k++ ){
@@ -1375,7 +1375,7 @@ function get_back_next(_parm){
 
 function get_elementos_filtrados(parm){
     let filter='/'+parm.join('/')+'/';
-    let partes=get_elementos();
+    let partes=elementos;
     let elements = [];
     for ( let i=0;i<partes.length;i++ )
         if ( partes[i].length > filter.length && partes[i].indexOf(filter) == 0 && partes[i].substring(filter.length).indexOf('/') == -1 ){
@@ -1385,12 +1385,33 @@ function get_elementos_filtrados(parm){
     return elements;
 }
 
+function item_in_list_encodeURI(a, b){ // 'a' in ['a', 'b']
+    if ( a == null || b == null )
+        return false;
+    for ( var i=0;i<b.length;i++ )
+        if ( a == encodeURI(b[i]) )
+            return true;
+    return false;
+}
+
+function like_dict_tail(a, b){ // '/aa/bb/' in {"aa/bb/cc": ...}
+    if ( a == null || b == null )
+        return false;
+    let keys=Object.keys(b);
+    for ( var i=0;i<keys.length;i++ ){
+        if ( keys[i].indexOf(a) == 0 && b[keys[i]]['tail'] && item_in_list_encodeURI(keys[i], elementos) )
+            return true;
+	}
+    return false;
+}
+
 function load_playlist_principal(elements, parm, type){
     let s='<input id="search" type="text" class="search-input" placeholder="Digite sua pesquisa..." onkeyup="search_pressing(this, event,\'screen_movie_serie\')">' + 
 	      '<table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;">\n';
     let s0=''; // resumos
     let s1=''; // lista
     let contem_details=false;
+    let contem_details_filho=false;
     for ( let i=0;i<elements.length;i++ ){
         let aux='/'+parm.concat(elements[i]).join('/');
         aux=encodeURI(aux);
@@ -1398,13 +1419,16 @@ function load_playlist_principal(elements, parm, type){
             contem_details=true;
             break;
         }
+        if ( history_nick != null && like_dict_tail(aux+'/', history_nick) ){
+            contem_details_filho=true;
+        }
     }
     for ( let i=0;i<elements.length;i++ ){
         let oneLine="<tr>";
         let tail=false;
+        let aux='/'+parm.concat(elements[i]).join('/');
+        aux=encodeURI(aux);
         if ( contem_details ){
-            let aux='/'+parm.concat(elements[i]).join('/');
-            aux=encodeURI(aux);
             let porc=0;
             let valid=true;
             if ( history_nick != null && typeof history_nick[aux] != 'undefined' ){
@@ -1418,15 +1442,24 @@ function load_playlist_principal(elements, parm, type){
                 oneLine+="<td></td>";
                 oneLine+="<td></td>";
             }    
-        }
+        }else{
+			if ( contem_details_filho && like_dict_tail(aux+'/', history_nick) ){
+                tail=true;
+			}
+		}
         oneLine+="<td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + parm.concat(elements[i]).join("','") + "']" + ", true, '" + type + "')\">" + format_name(elements[i]) + "</td>";
         oneLine+="</tr>\n";
         if ( tail )
             s0+=oneLine;
         s1+=oneLine;
     }
-    s+='<tr><td colspan="3"><a style="color: white; font-size: 34px; font-family: Franklin Gothic Medium;">Playing</a></td></tr>'+s0;
-    s+='<tr><td colspan="3"><a style="color: white; font-size: 34px; font-family: Franklin Gothic Medium;">Títulos</a></td></tr>'+s1;
+	if (type != 'music'){
+        s+='<tr><td colspan="3"><a style="color: blue; font-size: 34px; font-family: Franklin Gothic Medium;">Playing</a></td></tr>'+s0;
+        s+='<tr><td colspan="3"><a style="color: blue; font-size: 34px; font-family: Franklin Gothic Medium;">Títulos</a></td></tr>'+s1;
+	}else{
+        s+=s0;
+        s+=s1;
+	}
     s+='</table>\n';    
     document.getElementById('principal').innerHTML=s;
     window.scrollBy(0,-99999);
@@ -1555,6 +1588,7 @@ function f_load(){
   load_station_nick1();
   document.getElementById('login').style='';
   load_history_nick();  
+  load_elementos();
   console.log("f_timer(40);");
 }
 
