@@ -13427,10 +13427,15 @@ while True:
             sleepMillis(150);
 
             // verifica se painel de ajuda está aberto
+            /*
+            // esse codigo só olha o painel se estiver em baixo
             painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
-            if ( !painel_ajuda_berto )
+            if ( !painel_ajuda_berto ){
+                robotMouseMove(987, 662);
                 erroFatal("Erro, falha ao abrir o painel de ajuda");
-
+            }
+            */
+            
             // removendo ajuda
             for ( int i=0;i<10;i++ ){
                 if ( i == n_eu_mesmo )
