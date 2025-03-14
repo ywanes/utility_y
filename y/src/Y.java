@@ -5302,8 +5302,10 @@ cat buffer.log
                             System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+pre_dir+dir);
                             System.exit(1);
                         }
-                    }else
+                    }else{
                         tmp.mkdir();
+                        tmp.setLastModified(lastModified);
+                    }
                 }
             }
         }
