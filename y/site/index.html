@@ -1652,9 +1652,10 @@ function search_pressing(e, event, _source){
     let _t=document.getElementById('tablebase').children[0].children;
     for ( let i=0;i<_t.length;i++ )
       if ( 
-		e.value.trim() == '' 
-		|| ( _t[i].children[0].getAttribute('colspan') == null && _t[i].children.length == 3 && like(e.value, _t[i].children[2].innerText) )
-		|| ( _t[i].children[0].getAttribute('colspan') == null && _t[i].children.length == 1 && like(e.value, _t[i].children[0].innerText) )
+		e.value.trim() == ''
+		|| _t[i].children[0].getAttribute('colspan') != null
+		|| ( _t[i].children.length == 3 && like(e.value, _t[i].children[2].innerText) )
+		|| ( _t[i].children.length == 1 && like(e.value, _t[i].children[0].innerText) )
       )
         _t[i].setAttribute('style', 'display: ');
       else
