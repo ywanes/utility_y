@@ -13538,6 +13538,8 @@ while True:
                     inicio=true;
                 if ( !inicio )
                     continue;
+                if ( partes[j].contains("Video Media Handler") )
+                    continue;
                 if ( partes[j].contains("Video") || partes[j].contains("Stream") ){
                     if ( verbose )
                         System.out.println(partes[j]);
