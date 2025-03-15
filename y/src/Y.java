@@ -3266,7 +3266,7 @@ cat buffer.log
             step1.join();
             step2.join();
             step3.join();            
-            print_cursor_speed(0, null, "\nFim!", false);
+            print_cursor_speed(0, null, "\nFim!", false, null);
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
             System.exit(1);
@@ -5079,7 +5079,7 @@ cat buffer.log
             while ((len = readBytes(buf)) > -1){
                 zip_output.write(buf, 0, len);
                 if ( pre_line_print_on != null )
-                    print_cursor_speed(len, pre_line_print_on, null, true);
+                    print_cursor_speed(len, pre_line_print_on, null, true, null);
             }
             closeBytes();
         }else{
@@ -5097,7 +5097,7 @@ cat buffer.log
                     while ((len = readBytes(buf)) > -1){
                         zip_output.write(buf, 0, len);
                         if ( pre_line_print_on != null )
-                            print_cursor_speed(len, pre_line_print_on, null, true);
+                            print_cursor_speed(len, pre_line_print_on, null, true, null);
                         size+=len;
                         if ( elem != null && size > size_alert ){
                             System.err.println("Erro, sistema anti loop ativado!");
@@ -5126,7 +5126,7 @@ cat buffer.log
                             while ((len = readBytes(buf)) > -1){
                                 zip_output.write(buf, 0, len);                
                                 if ( pre_line_print_on != null )
-                                    print_cursor_speed(len, pre_line_print_on, null, true);
+                                    print_cursor_speed(len, pre_line_print_on, null, true, null);
                                 size+=len;
                                 if ( elem != null && size > size_alert ){
                                     System.err.println("Erro, sistema anti loop ativado!!");
@@ -5273,16 +5273,16 @@ cat buffer.log
                     }
                     if ( filtro == null ){
                         tmp=new File(pre_dir+dir);
-                        copiaByStream(is,new FileOutputStream(tmp),true);
+                        copiaByStream(is, new FileOutputStream(tmp), dir);
                         tmp.setLastModified(lastModified);
                     }else{
                         if ( filtro.equals(dir) ){
                             zip_extract_count_encontrados++;
                             if ( out_console ){
-                                copiaByStream(is,System.out,false);
+                                copiaByStream(is, System.out, null);
                             }else{
                                 tmp=new File(pre_dir+dir);
-                                copiaByStream(is,new FileOutputStream(tmp),true);
+                                copiaByStream(is, new FileOutputStream(tmp), dir);
                                 tmp.setLastModified(lastModified);
                             }
                         }
@@ -10004,13 +10004,13 @@ cat buffer.log
     }    
 
     public boolean copiaByStream_count_print_on=false;
-    private void copiaByStream(InputStream pipe_in, OutputStream pipe_out, boolean print_on) throws Exception {
+    private void copiaByStream(InputStream pipe_in, OutputStream pipe_out, String label_on) throws Exception {
         byte[] buf = new byte[BUFFER_SIZE];            
         int len;
         while ((len = pipe_in.read(buf)) > -1){
             pipe_out.write(buf, 0, len);
-            if ( print_on ){
-                print_cursor_speed(len, "recebendo - ", null, true);
+            if ( label_on != null  ){
+                print_cursor_speed(len, "recebendo - ", null, true, label_on);
                 copiaByStream_count_print_on=true;
             }
         }
@@ -13187,11 +13187,11 @@ while True:
                     if ( send ){
                         while( true ){
                             os.write(buffer, 0, len_buffer);
-                            print_cursor_speed(len_buffer, null, null, false);
+                            print_cursor_speed(len_buffer, null, null, false, null);
                         }
                     }else{
                         while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
-                            print_cursor_speed(len, null, null, false);
+                            print_cursor_speed(len, null, null, false, null);
                         }
                     }
                     s.close();
@@ -13203,11 +13203,11 @@ while True:
                     if ( send ){
                         while( true ){
                             os.write(buffer, 0, len_buffer);
-                            print_cursor_speed(len_buffer, null, null, false);
+                            print_cursor_speed(len_buffer, null, null, false, null);
                         }
                     }else{
                         while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
-                            print_cursor_speed(len, null, null, false);
+                            print_cursor_speed(len, null, null, false, null);
                         }
                     }
                     s.close();
@@ -15281,6 +15281,13 @@ class Util{
         return baos.toByteArray();
     }
     
+    public String get_spaces(long n){
+        StringBuilder sb=new StringBuilder();
+        for ( long i=0;i<n;i++ )
+            sb.append(" ");
+        return sb.toString();
+    }
+    
     public String lpad(long inputLong, int length,String append) {
         if ( inputLong < 0 )
             return lpad(true,(inputLong+"").substring(1),length,append);
@@ -16389,10 +16396,12 @@ class Util{
         return java.util.concurrent.ThreadLocalRandom.current().nextInt(min, max + 1);        
     }
 
-    private static long print_cursor_speed_timer_mili=-1;
-    private static long print_cursor_speed_count_len_bytes=0;
-    private static long print_cursor_speed_count_total_len_bytes=0;
-    public static void print_cursor_speed(int len_bytes, String pre_line, String force_finish, Boolean show_total){
+    private long print_cursor_speed_timer_mili=-1;
+    private long print_cursor_speed_count_len_bytes=0;
+    private long print_cursor_speed_count_total_len_bytes=0;
+    public void print_cursor_speed(int len_bytes, String pre_line, String force_finish, Boolean show_total, String label_on){
+        if ( label_on == null )
+            label_on="";
         if ( force_finish != null ){
             System.out.println("\r"+force_finish+"                                                                                ");
             return;
@@ -16406,17 +16415,25 @@ class Util{
             long tmp=System.currentTimeMillis();
             if ( tmp > print_cursor_speed_timer_mili + 1000 ){
                 print_cursor_speed_timer_mili=tmp;
+                String o=null;                
+                String o2="";
                 if ( pre_line != null ){
                     if ( show_total )
-                        System.out.print("\r"+pre_line+print_cursor_speed_count_total_len_bytes+" bytes - "+bytes_to_text(print_cursor_speed_count_total_len_bytes)+" - "+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s                                               \r");
+                        o="\r"+pre_line+print_cursor_speed_count_total_len_bytes+" bytes - "+bytes_to_text(print_cursor_speed_count_total_len_bytes)+" - "+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s - " + label_on;
                     else
-                        System.out.print("\r"+pre_line+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s                                               \r");
+                        o="\r"+pre_line+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s - " + label_on;
                 }else{
                     if ( show_total )
-                        System.out.print("\r"+print_cursor_speed_count_total_len_bytes+" bytes - "+bytes_to_text(print_cursor_speed_count_total_len_bytes)+" - "+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s                                               \r");
+                        o="\r"+print_cursor_speed_count_total_len_bytes+" bytes - "+bytes_to_text(print_cursor_speed_count_total_len_bytes)+" - "+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s - " + label_on;
                     else
-                        System.out.print("\r"+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s                                               \r");
+                        o="\r"+bytes_to_text(print_cursor_speed_count_len_bytes)+"/s - "  + bits_to_text(print_cursor_speed_count_len_bytes)+"/s - " + label_on;
                 }
+                int len_o=o.length();
+                if ( len_o < 130 )
+                    o2=get_spaces(130-len_o);
+                System.out.print(o);
+                System.out.print(o2);
+                System.out.print("\r");
                 print_cursor_speed_count_len_bytes=0;
             }else
                 return;
@@ -17113,11 +17130,11 @@ class Util{
     // %z no linux significa -0300, aqui esta sendo usado para empregar o zoneid America/Sao_Paulo    
     // no java, print de zzzz com zondeId America/Sao_Paulo sai Fuso horário de Brasília
     // lista de zoneid => java.time.ZoneId.getAvailableZoneIds()
-    public  String [] format_codes_date_in= new String []{"%z"  , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",  "%Z" };
-    public  String [] format_codes_date_out=new String []{"zzzz",  "dd", "MM", "yyyy", "HH", "mm", "ss", "SSS", "X"  };    
-    public  String format_america_sao_paulo_zoneid="America/Sao_Paulo";
-    public  String format_america_sao_paulo_zzzz=get_zzzz(format_america_sao_paulo_zoneid);
-    public  String date_(String format_out_, String date_from, String format_in_, String date_from_ntp) throws Exception{
+    public String [] format_codes_date_in= new String []{"%z"  , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",  "%Z" };
+    public String [] format_codes_date_out=new String []{"zzzz",  "dd", "MM", "yyyy", "HH", "mm", "ss", "SSS", "X"  };    
+    public String format_america_sao_paulo_zoneid="America/Sao_Paulo";
+    public String format_america_sao_paulo_zzzz=get_zzzz(format_america_sao_paulo_zoneid);
+    public String date_(String format_out_, String date_from, String format_in_, String date_from_ntp) throws Exception{
         if ( date_from_ntp != null ){            
             date_from=getSecondsByNtp(date_from_ntp)+"";
             format_in_="+%s";
@@ -17164,7 +17181,7 @@ class Util{
         return out.format(new Date());
     }
     
-    public  Date date_from_mask(String date_, String format){ // y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+    public Date date_from_mask(String date_, String format){ // y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
         if ( date_ == null || format == null )
             return new Date();
         if ( format.startsWith("\\+") )
