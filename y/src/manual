@@ -682,13 +682,47 @@ Exemplos...
     Obs: onde 222 é o processId encontrado em y pss
 [y date]
     y date
-    y date "+%s%N" # epoch
+    y date "+%s" # epoch
+    y date "+%s%N" # epochmili
     y date "+%Y%m%d_%H%M%S"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N"    
+    y date from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%N_%z"
     y date "+%s%N" from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%N_%z"
     y date "+%s%N" from "20240625_102251_345_UTC" mask "+%Y%m%d_%H%M%S_%N_%z"
     y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N" fromNTP time.google.com
+    y date fromNTP _ && y date
+    fromNTP's:
+        y date fromNTP pool.ntp.org
+        y date fromNTP time.google.com
+        y date fromNTP time.windows.com
+        y date fromNTP time.apple.com
+        y date fromNTP ntp.ubuntu.com
+        y date fromNTP time.nist.gov
+        y date fromNTP ntp.br # NTP mantido pelo NIC.br (Núcleo de Informação e Coordenação do Ponto BR), ideal para usuários no Brasil.
+        y date fromNTP ntp.pt
+        y date fromNTP ntp.org
+        y date fromNTP 0.africa.pool.ntp.org #(África)
+        y date fromNTP 0.asia.pool.ntp.org #(Ásia)
+        y date fromNTP 0.europe.pool.ntp.org #(Europa)
+        y date fromNTP 0.north-america.pool.ntp.org #(América do Norte)
+        y date fromNTP 0.oceania.pool.ntp.org #(Oceania)
+        y date fromNTP 0.south-america.pool.ntp.org #(América do Sul)
+        y date fromNTP 0.br.pool.ntp.org #(Brasil)
+        y date fromNTP 0.us.pool.ntp.org #(Estados Unidos)
+        y date fromNTP 0.de.pool.ntp.org #(Alemanha)
+        y date fromNTP 0.fr.pool.ntp.org #(França)
+        y date fromNTP 0.uk.pool.ntp.org #(Reino Unido)
+        y date fromNTP 0.jp.pool.ntp.org #(Japão)
+        y date fromNTP 0.au.pool.ntp.org #(Austrália)
+        y date fromNTP 0.ca.pool.ntp.org #(Canadá)
+        y date fromNTP 0.pt.pool.ntp.org #(Portugal)
+        y date fromNTP 0.es.pool.ntp.org #(Espanha)
+        y date fromNTP 0.it.pool.ntp.org #(Itália)
+        y date fromNTP 0.ru.pool.ntp.org #(Rússia)
+        y date fromNTP 0.cn.pool.ntp.org #(China)
+        y date fromNTP 0.in.pool.ntp.org #(Índia)
 [y uptime]
     y uptime
     y uptime -ms

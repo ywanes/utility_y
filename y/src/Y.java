@@ -1743,20 +1743,17 @@ cat buffer.log
             }
         }
         if ( args[0].equals("date")){
-            if ( args.length == 1 ){
-                System.out.println(date_(null, null, null));
-                return;
-            }
-            if ( args.length == 2 ){
-                System.out.println(date_(args[1], null, null));
-                return;
-            }
-            if ( args.length == 5 && args[1].equals("from") && args[3].equals("mask") ){
-                System.out.println(date_(null, args[2], args[4]));
-                return;
-            }
-            if ( args.length == 6 && args[2].equals("from") && args[4].equals("mask") ){
-                System.out.println(date_(args[1], args[3], args[5]));
+            Object [] objs=get_parm_date_(args);            
+            if ( objs != null ){
+                String format_out_=(String)objs[0];
+                String date_from=(String)objs[1];
+                String format_in_=(String)objs[2];
+                String date_from_ntp=(String)objs[3];
+                try{
+                    System.out.println(date_(format_out_, date_from, format_in_, date_from_ntp));
+                }catch(Exception e){
+                    erroFatal(e);
+                }
                 return;
             }
         }
@@ -10897,6 +10894,49 @@ cat buffer.log
         return new Object []{ip, port, server, send, pass, paths};
     }
 
+    private Object [] get_parm_date_(String [] args){
+        String format_out_=null;
+        String date_from=null;
+        String format_in_=null;
+        String date_from_ntp=null;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length > 0){
+            if ( args.length > 1 && args[0].equals("from")){
+                args=sliceParm(1, args);
+                date_from=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("mask")){
+                args=sliceParm(1, args);
+                format_in_=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 1 && args[0].equals("fromNTP")){
+                args=sliceParm(1, args);
+                date_from_ntp=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args[0].trim().startsWith("#") ){
+                while(args.length > 0)
+                    args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && format_out_ == null ){
+                format_out_=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            erroFatal("parametros inválidos!");
+        }
+        
+        return new Object []{format_out_, date_from, format_in_, date_from_ntp};
+    }        
+    
     private Object [] get_parm_sleep_nicks(String [] args){
         Integer sleep=null;
         String nicks=null;
@@ -13312,7 +13352,7 @@ while True:
                 new File("d:/ProgramFiles").mkdir();
             if ( !new File("d:/ProgramFiles/screens").exists() )
                 new File("d:/ProgramFiles/screens").mkdir();
-            String s="d:/ProgramFiles/screens/sc_"+date_("+%Y%m%d_%H%M%S_%N", null, null) + "_" + random(1000,9999)+".bmp";                    
+            String s="d:/ProgramFiles/screens/sc_"+date_("+%Y%m%d_%H%M%S_%N", null, null, null) + "_" + random(1000,9999)+".bmp";                    
             javax.imageio.ImageIO.write(robotGetImgScreen(a), "bmp", new File(s));
             System.out.println("printScreen: " + s);
         }catch(Exception e){
@@ -13374,7 +13414,7 @@ while True:
             
             // get players by OCR
             String [] players=ocr_getNamesDota();
-            ///////////skynet
+            // skynet
             String [] naoBloquearEssesNomes="ynet,Analista de Sistema,neBullet".split(",");
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
@@ -13917,32 +13957,7 @@ while True:
     private String [] tests_hash_err=null;
     private String dir_tests="/tmp/tests_y";
     private String file_command_test=null;
-    private void test(String args) throws Exception{            
-        ////////////////
-        //byte [] tmp=robotGetImgScreenBytes("bmp");
-        byte [] tmp=readAllBytes("D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp");
-        //bmp_editing(tmp, new int[]{145, 90, 335, 115}, 0, 1920, 1080);
-        bmp_editing(tmp, 
-            new int[]{
-                145, 1080-115, 335, 1080-90,
-                145, 1080-(115+70), 335, 1080-(90+70),
-                145, 1080-(115+70*2), 335, 1080-(90+70*2),
-                145, 1080-(115+70*3), 335, 1080-(90+70*3),
-                145, 1080-(115+70*4), 335, 1080-(90+70*4),
-                145, 1080-(115+380+70*0), 335, 1080-(90+380+70*0),
-                145, 1080-(115+380+70*1), 335, 1080-(90+380+70*1),
-                145, 1080-(115+380+70*2), 335, 1080-(90+380+70*2),
-                145, 1080-(115+380+70*4), 335, 1080-(90+380+70*4),
-                145, 1080-(115+380+70*3), 335, 1080-(90+380+70*3)
-            }, 
-        0, 1920, 1080);
-        //////// bmp_editing(tmp, new int[]{145, 90, 335, 115}, 0, 1920, 1080);
-        
-        
-        OutputStream os=new FileOutputStream("c:\\tmp\\tmp\\tmp.bmp");
-        os.write(tmp);        
-    }
-    private void test2(String args) throws Exception{            
+    private void test(String args) throws Exception{                            
         try{
             //init
             if ( isWindows() ){
@@ -14977,6 +14992,23 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public Long getSecondsByNtp(String url) throws Exception{
+        if ( url == null || url.equals("_") )
+            url="pool.ntp.org";
+        byte[] buffer = new byte[48];
+        java.net.DatagramPacket packet = new java.net.DatagramPacket(buffer, buffer.length, java.net.InetAddress.getByName(url), 123);
+        buffer[0] = 0x1B;
+        java.net.DatagramSocket socket = new java.net.DatagramSocket();
+        socket.send(packet);
+        socket.receive(packet);
+        socket.close();
+        long seconds = 0;
+        for (int i = 0; i < 4; i++)
+            seconds = (seconds << 8) | (buffer[40 + i] & 0xFF);
+        seconds-=2208988800L;
+        return seconds;
+    }
     
     public String get_mixer(String like){
         if ( !isWindows() )
@@ -17081,11 +17113,17 @@ class Util{
     // %z no linux significa -0300, aqui esta sendo usado para empregar o zoneid America/Sao_Paulo    
     // no java, print de zzzz com zondeId America/Sao_Paulo sai Fuso horário de Brasília
     // lista de zoneid => java.time.ZoneId.getAvailableZoneIds()
-    public static String [] format_codes_date_in= new String []{"%z"  , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",  "%Z" };
-    public static String [] format_codes_date_out=new String []{"zzzz",  "dd", "MM", "yyyy", "HH", "mm", "ss", "SSS", "X"  };    
-    public static String format_america_sao_paulo_zoneid="America/Sao_Paulo";
-    public static String format_america_sao_paulo_zzzz=get_zzzz(format_america_sao_paulo_zoneid);
-    public static String date_(String format_out_, String date_from, String format_in_){ // y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+    public  String [] format_codes_date_in= new String []{"%z"  , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",  "%Z" };
+    public  String [] format_codes_date_out=new String []{"zzzz",  "dd", "MM", "yyyy", "HH", "mm", "ss", "SSS", "X"  };    
+    public  String format_america_sao_paulo_zoneid="America/Sao_Paulo";
+    public  String format_america_sao_paulo_zzzz=get_zzzz(format_america_sao_paulo_zoneid);
+    public  String date_(String format_out_, String date_from, String format_in_, String date_from_ntp) throws Exception{
+        if ( date_from_ntp != null ){            
+            date_from=getSecondsByNtp(date_from_ntp)+"";
+            format_in_="+%s";
+            date_from_ntp=null;
+            return date_(format_out_, date_from, format_in_, date_from_ntp);
+        }
         StringBuilder sb=new StringBuilder();
         String format_out="+%d/%m/%Y %H:%M:%S";
         if ( format_out_ != null )
@@ -17126,7 +17164,7 @@ class Util{
         return out.format(new Date());
     }
     
-    public static Date date_from_mask(String date_, String format){ // y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+    public  Date date_from_mask(String date_, String format){ // y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
         if ( date_ == null || format == null )
             return new Date();
         if ( format.startsWith("\\+") )
@@ -17183,7 +17221,7 @@ class Util{
     
     private static int identify_log=0; // 1 -> File, 2 -> POST    
     private static FileWriter cache_log=null;    
-    public static void log_serverRouter(String log, Boolean noLogLocal, String ip_origem, boolean banido){
+    public void log_serverRouter(String log, Boolean noLogLocal, String ip_origem, boolean banido){
         String tag_ip=" ip: ";
         if ( banido )
             tag_ip=" ip BANIDO: ";
@@ -17202,7 +17240,7 @@ class Util{
         if ( identify_log == 1 ){
             try{
                 if ( !noLogLocal || !ip_origem.contains(":0:0:0:") ){
-                    cache_log.write(date_(null, null, null));
+                    cache_log.write(date_(null, null, null, null));
                     cache_log.write(tag_ip);
                     cache_log.write(ip_origem);
                     cache_log.write("\n");
@@ -23029,13 +23067,47 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    Obs: onde 222 e o processId encontrado em y pss\n"
 /* class by manual */                + "[y date]\n"
 /* class by manual */                + "    y date\n"
-/* class by manual */                + "    y date \"+%s%N\" # epoch\n"
+/* class by manual */                + "    y date \"+%s\" # epoch\n"
+/* class by manual */                + "    y date \"+%s%N\" # epochmili\n"
 /* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\"    \n"
+/* class by manual */                + "    y date from \"20240625_102251_345_America/Sao_Paulo\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_America/Sao_Paulo\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_UTC\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_-03\" mask \"+%Y%m%d_%H%M%S_%N_%Z\"\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\" fromNTP time.google.com\n"
+/* class by manual */                + "    y date fromNTP _ && y date\n"
+/* class by manual */                + "    fromNTP's:\n"
+/* class by manual */                + "        y date fromNTP pool.ntp.org\n"
+/* class by manual */                + "        y date fromNTP time.google.com\n"
+/* class by manual */                + "        y date fromNTP time.windows.com\n"
+/* class by manual */                + "        y date fromNTP time.apple.com\n"
+/* class by manual */                + "        y date fromNTP ntp.ubuntu.com\n"
+/* class by manual */                + "        y date fromNTP time.nist.gov\n"
+/* class by manual */                + "        y date fromNTP ntp.br # NTP mantido pelo NIC.br (Nucleo de Informacao e Coordenacao do Ponto BR), ideal para usuarios no Brasil.\n"
+/* class by manual */                + "        y date fromNTP ntp.pt\n"
+/* class by manual */                + "        y date fromNTP ntp.org\n"
+/* class by manual */                + "        y date fromNTP 0.africa.pool.ntp.org #(Africa)\n"
+/* class by manual */                + "        y date fromNTP 0.asia.pool.ntp.org #(Asia)\n"
+/* class by manual */                + "        y date fromNTP 0.europe.pool.ntp.org #(Europa)\n"
+/* class by manual */                + "        y date fromNTP 0.north-america.pool.ntp.org #(America do Norte)\n"
+/* class by manual */                + "        y date fromNTP 0.oceania.pool.ntp.org #(Oceania)\n"
+/* class by manual */                + "        y date fromNTP 0.south-america.pool.ntp.org #(America do Sul)\n"
+/* class by manual */                + "        y date fromNTP 0.br.pool.ntp.org #(Brasil)\n"
+/* class by manual */                + "        y date fromNTP 0.us.pool.ntp.org #(Estados Unidos)\n"
+/* class by manual */                + "        y date fromNTP 0.de.pool.ntp.org #(Alemanha)\n"
+/* class by manual */                + "        y date fromNTP 0.fr.pool.ntp.org #(Franca)\n"
+/* class by manual */                + "        y date fromNTP 0.uk.pool.ntp.org #(Reino Unido)\n"
+/* class by manual */                + "        y date fromNTP 0.jp.pool.ntp.org #(Japao)\n"
+/* class by manual */                + "        y date fromNTP 0.au.pool.ntp.org #(Australia)\n"
+/* class by manual */                + "        y date fromNTP 0.ca.pool.ntp.org #(Canada)\n"
+/* class by manual */                + "        y date fromNTP 0.pt.pool.ntp.org #(Portugal)\n"
+/* class by manual */                + "        y date fromNTP 0.es.pool.ntp.org #(Espanha)\n"
+/* class by manual */                + "        y date fromNTP 0.it.pool.ntp.org #(Italia)\n"
+/* class by manual */                + "        y date fromNTP 0.ru.pool.ntp.org #(Russia)\n"
+/* class by manual */                + "        y date fromNTP 0.cn.pool.ntp.org #(China)\n"
+/* class by manual */                + "        y date fromNTP 0.in.pool.ntp.org #(India)\n"
 /* class by manual */                + "[y uptime]\n"
 /* class by manual */                + "    y uptime\n"
 /* class by manual */                + "    y uptime -ms\n"
@@ -23317,6 +23389,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
