@@ -652,7 +652,7 @@ function load_movie(parm, table_click){
       if ( getVideo() != null ){
         watchedBar.style.width = ((getVideo().currentTime / getVideo().duration) * 100) + '%';        
 		document.getElementsByClassName('time-remaining')[0].innerHTML = format_seconds(getVideo().duration - getVideo().currentTime);
-        update_url( '/#'+parm.join('/') );
+        update_url( '/?'+parm.join('/') );
       }
     });
     progressBar.addEventListener('mousemove', function(e) { cueTime(e); });
@@ -792,7 +792,7 @@ function f_timer(minutes){
 
 function load_music(parm, elements){    
                 var src='/'+parm.join('/')+'/';
-                update_url( '/#'+parm.join('/') );
+                update_url( '/?'+parm.join('/') );
                 document.getElementById('login').style="display: none;";
                 document.getElementById('nav').style="display: none;";
                 document.getElementById('div_index').style="display: none; position: relative; top: -34px;";
@@ -1545,17 +1545,17 @@ function reload(){
 
 function get_resume(){
   let uri=decodeURI(window.location.href);
-  if ( uri.indexOf('#') > 0 ){
-    detect=uri.split('#')[1].split('/')[0];
-    type='?';
+  if ( uri.indexOf('?') > 0 ){
+    detect=uri.split('?')[1].split('/')[0];
+    type='??';
     if ( detect == 'series' || detect == 'filmes' )
         type='movie';
     if ( detect == 'musicas' )
         type='music';
     return {"uri": uri, 
 			"type": type, 
-			"onclick": "load_playlist(" + "['" + uri.split('#')[1].split('/').join("','") + "']" + ", true, '" + type + "')",
-			"titulo": uri.split('#')[1]
+			"onclick": "load_playlist(" + "['" + uri.split('?')[1].split('/').join("','") + "']" + ", true, '" + type + "')",
+			"titulo": uri.split('?')[1]
 			};
   }
   return null;
@@ -1565,21 +1565,6 @@ this.epoch_load=getEpochMili();
 function f_load(){  
   document.getElementById('resume').style="display: none";
   document.getElementById('body_copy').setAttribute('style_copy', document.getElementById('body').getAttribute('style'));
-  /*
-  let uri=decodeURI(window.location.href);
-  if ( uri.indexOf('#') > 0 ){
-    detect=uri.split('#')[1].split('/')[0];
-    type='?';
-    if ( detect == 'series' || detect == 'filmes' )
-        type='movie';
-    if ( detect == 'musicas' )
-        type='music';
-    //let s="<a style=\"display: inline-block; cursor: pointer;\" class=\"btn_resume\" onclick=\"load_playlist(" + "['" + uri.split('#')[1].split('/').join("','") + "']" + ", true, '" + type + "')\">" + uri.split('#')[1] + "</a>";
-	
-    document.getElementById('resume').style='';
-    document.getElementById('resume').innerHTML="<table border=\"0\" align=\"center\"><tr><td>"+s+"</td></tr></table>";
-  }
-  */
   _resume=get_resume();
   if ( _resume != null ){
     document.getElementById('resume').style='';
