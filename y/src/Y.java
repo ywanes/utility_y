@@ -13375,7 +13375,7 @@ while True:
             // get players by OCR
             String [] players=ocr_getNamesDota();
             ///////////skynet
-            String [] naoBloquearEssesNomes=new String[]{"ynet","Analista de Sistema,neBullet"};
+            String [] naoBloquearEssesNomes="ynet,Analista de Sistema,neBullet".split(",");
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
