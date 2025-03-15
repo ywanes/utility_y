@@ -1963,7 +1963,7 @@ cat buffer.log
         }
         if ( args[0].equals("dotaMutandoAll") ){
             // exemplo
-            // y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema"
+            // y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,OneBullet"
             Object [] objs=get_parm_sleep_nicks(args);            
             if ( objs != null ){
                 Integer sleep=(Integer)objs[0];
@@ -13374,7 +13374,8 @@ while True:
             
             // get players by OCR
             String [] players=ocr_getNamesDota();
-            String [] naoBloquearEssesNomes=new String[]{"ynet","Analista de Sistema"};
+            ///////////skynet
+            String [] naoBloquearEssesNomes=new String[]{"ynet","Analista de Sistema,OneBullet"};
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
@@ -22338,7 +22339,6 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -22371,6 +22371,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y dotaMutandoAll]\n"
 /* class by manual */                + "  [y audio]\n"
 /* class by manual */                + "  [y isWindowsAdm]\n"
 /* class by manual */                + "  [y devices]\n"
@@ -22630,6 +22631,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y dotaMutandoAll]\n"
+/* class by manual */                + "    y dotaMutandoAll -sleep 3 -nicks \"ynet,Analista de Sistema,OneBullet\"\n"
 /* class by manual */                + "[y audio]\n"
 /* class by manual */                + "    y audio vol\n"
 /* class by manual */                + "    y audio mute\n"

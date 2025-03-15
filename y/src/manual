@@ -26,6 +26,7 @@ usage:
   [y progressBar]
   [y xargs]
   [y cat]
+  [y dotaMutandoAll]
   [y audio]
   [y isWindowsAdm]
   [y devices]
@@ -285,6 +286,8 @@ Exemplos...
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
+[y dotaMutandoAll]
+    y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,OneBullet"
 [y audio]
     y audio vol
     y audio mute
