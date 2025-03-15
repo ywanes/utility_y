@@ -1963,7 +1963,7 @@ cat buffer.log
         }
         if ( args[0].equals("dotaMutandoAll") ){
             // exemplo
-            // y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,OneBullet"
+            // y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,neBullet"
             Object [] objs=get_parm_sleep_nicks(args);            
             if ( objs != null ){
                 Integer sleep=(Integer)objs[0];
@@ -13375,7 +13375,7 @@ while True:
             // get players by OCR
             String [] players=ocr_getNamesDota();
             ///////////skynet
-            String [] naoBloquearEssesNomes=new String[]{"ynet","Analista de Sistema,OneBullet"};
+            String [] naoBloquearEssesNomes=new String[]{"ynet","Analista de Sistema,neBullet"};
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
@@ -22632,7 +22632,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
 /* class by manual */                + "[y dotaMutandoAll]\n"
-/* class by manual */                + "    y dotaMutandoAll -sleep 3 -nicks \"ynet,Analista de Sistema,OneBullet\"\n"
+/* class by manual */                + "    y dotaMutandoAll -sleep 3 -nicks \"ynet,Analista de Sistema,neBullet\"\n"
 /* class by manual */                + "[y audio]\n"
 /* class by manual */                + "    y audio vol\n"
 /* class by manual */                + "    y audio mute\n"
