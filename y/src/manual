@@ -79,7 +79,7 @@ usage:
   [y sshinfo]
   [y sftp]
   [y serverRouter]
-  [y httpServer]
+  [y [httpServer|hs]]
   [y wget]
   [y pwd]
   [y find]
@@ -573,7 +573,7 @@ Exemplos...
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22
     obs: user,pass ou user
-[y serverRouter]
+[y [serverRouter|sr]]
     y serverRouter [ipA] 8080 [ipB] 9090
     y serverRouter 192.168.0.100 8080 127.0.0.1 9090
     y serverRouter 192.168.0.100 8080 127.0.0.1 9090 show

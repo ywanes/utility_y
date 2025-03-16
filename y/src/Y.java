@@ -1539,7 +1539,7 @@ cat buffer.log
             return;
         }  
         //REMOVED_GRAAL_END	
-        if ( args[0].equals("serverRouter"))
+        if ( args[0].equals("serverRouter") || args[0].equals("sr") )
         {
             if ( args.length > 1 && args[1].contains(" ") ){
                 String [] args2=args[1].split(" ");
@@ -1551,7 +1551,7 @@ cat buffer.log
             serverRouter(args);
             return;            
         }
-        if ( args[0].equals("httpServer"))
+        if ( args[0].equals("httpServer") || args[0].equals("hs") )
         {
             Object [] parm_=get_parm_httpserver(args);
             if ( parm_ == null )
@@ -22491,7 +22491,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y sshinfo]\n"
 /* class by manual */                + "  [y sftp]\n"
 /* class by manual */                + "  [y serverRouter]\n"
-/* class by manual */                + "  [y httpServer]\n"
+/* class by manual */                + "  [y [httpServer|hs]]\n"
 /* class by manual */                + "  [y wget]\n"
 /* class by manual */                + "  [y pwd]\n"
 /* class by manual */                + "  [y find]\n"
@@ -22985,7 +22985,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    y sftp user,pass@servidor\n"
 /* class by manual */                + "    y sftp user,pass@servidor 22\n"
 /* class by manual */                + "    obs: user,pass ou user\n"
-/* class by manual */                + "[y serverRouter]\n"
+/* class by manual */                + "[y [serverRouter|sr]]\n"
 /* class by manual */                + "    y serverRouter [ipA] 8080 [ipB] 9090\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090\n"
 /* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 show\n"
@@ -23419,8 +23419,6 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
 
 
 
