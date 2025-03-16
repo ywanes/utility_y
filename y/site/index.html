@@ -1554,7 +1554,7 @@ function get_resume(){
         type='music';
     return {"uri": uri, 
 			"type": type, 
-			"onclick": "load_playlist(" + "['" + uri.split('?')[1].split('/').join("','") + "']" + ", true, '" + type + "')",
+			"onclick": "load_playlist(" + "['" + uri.split('?')[1].split('/').join("','") + "']" + ", true, '" + type + "', 'resume')",
 			"titulo": uri.split('?')[1]
 			};
   }
