@@ -855,6 +855,8 @@ Exemplos...
     obs: -lento tem outro algotirmo de conversão, as vezes é necessario e tudo tiver bugando
     dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo "y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z" | y tr "rmvb\"Z" "mp4\""
     aviso: "Audio: ac3 (ac-3 " de mp4 não funciona na web
+    checando:
+    cd d:\ProgramFiles\site\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep "Input #0" "(por): Audio: ac3"
 [y thumbnail]
     y thumbnail
 [y insta]

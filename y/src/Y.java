@@ -1973,6 +1973,12 @@ cat buffer.log
             paste(new File(args[1]), new File(args[2]));
             return;
         }
+        
+        if ( args[0].equals("ffmpeg") ){
+            System.out.println(ffmpeg(args));
+            return;
+        }
+        
         if ( args[0].equals("mkv") ){
             try{
                 boolean verbose=false;
@@ -13538,6 +13544,13 @@ while True:
         }
     }
     
+    public String ffmpeg(String [] args){
+        runtimeExec(null, args, null, null, null);
+        String msg=runtimeExecError;
+        if ( runtimeExecError.contains("Cannot run") )
+            erroFatal("Nao foi possivel encontrar o ffmpeg!");
+        return runtimeExecError;        
+    }
     public String mkv(File f, boolean verbose, boolean force, boolean lento, String tail) throws Exception{
         File [] files=f.listFiles();
         String edited="_EDITED.mkv";
@@ -22393,8 +22406,6 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
-
-
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -23256,6 +23267,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs: -lento tem outro algotirmo de conversao, as vezes e necessario e tudo tiver bugando\n"
 /* class by manual */                + "    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo \"y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z\" | y tr \"rmvb\\\"Z\" \"mp4\\\"\"\n"
 /* class by manual */                + "    aviso: \"Audio: ac3 (ac-3 \" de mp4 nao funciona na web\n"
+/* class by manual */                + "    checando:\n"
+/* class by manual */                + "    cd d:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep \"Input #0\" \"(por): Audio: ac3\"\n"
 /* class by manual */                + "[y thumbnail]\n"
 /* class by manual */                + "    y thumbnail\n"
 /* class by manual */                + "[y insta]\n"
