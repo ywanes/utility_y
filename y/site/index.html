@@ -1688,11 +1688,11 @@ function search_pressing(e, event, _source){
         _t[i].setAttribute('style', 'display: none');
     return;
   }  
-  console.log(' item não implementado no search_pressing: ' + _source);
+  console.log('item não implementado no search_pressing: ' + _source);
 }
 
 function like(a, b){ // like('b', 'aBc') // true
-  return remove_acentos(b).toLowerCase().indexOf(remove_acentos(a)) >= 0;
+  return remove_acentos(b).toLowerCase().indexOf(remove_acentos(a).toLowerCase()) >= 0;
 }
 
 function remove_acentos(a){
