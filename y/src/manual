@@ -159,6 +159,7 @@ Exemplos...
     cat listaDeInsert.sql | y banco conn,hash executeInsert
     echo "insert into tabela1 values(1,2,3)" | y banco conn,hash executeInsert
     echo "insert into tabela1 values(1,2,3);" | y banco conn,hash executeInsert
+    obs: bug?. Use execute
 [y banco conn,hash execute [|execute..]]
     echo "truncate table tabela1" | y banco conn,hash execute
     y banco conn,hash execute "drop table tabela1"

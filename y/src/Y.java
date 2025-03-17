@@ -22576,6 +22576,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    cat listaDeInsert.sql | y banco conn,hash executeInsert\n"
 /* class by manual */                + "    echo \"insert into tabela1 values(1,2,3)\" | y banco conn,hash executeInsert\n"
 /* class by manual */                + "    echo \"insert into tabela1 values(1,2,3);\" | y banco conn,hash executeInsert\n"
+/* class by manual */                + "    obs: bug?. Use execute\n"
 /* class by manual */                + "[y banco conn,hash execute [|execute..]]\n"
 /* class by manual */                + "    echo \"truncate table tabela1\" | y banco conn,hash execute\n"
 /* class by manual */                + "    y banco conn,hash execute \"drop table tabela1\"\n"
@@ -23424,6 +23425,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
