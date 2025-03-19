@@ -11185,6 +11185,8 @@ cat buffer.log
             erroFatal("Erro de parametros, mode playlistserver exige valor de cfg");
         if ( redisDir == null && redisSeconds != null )
             erroFatal("Erro de parametros, não é possível usar o parametro redisSeconds sem usar o redisDir");
+        if ( mode != null && findParm(new String[]{"playlist", "playlistmovie", "playlistserver", "webdav"}, mode, true) == -1 )
+            erroFatal("-mode " + mode + " inválido!");
         if ( mode != null && !mode.equals("webdav") && !pass.equals("") )
             erroFatal("-pass só pode ser usado com -mode webdav");
         return new Object[]{mode, host, port, pass, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike};
