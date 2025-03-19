@@ -15033,6 +15033,9 @@ class WebDAVServer extends Util{
                     case "DELETE":
                         handleDelete(out, decodedPath);
                         break;
+                    case "MOVE":
+                        handleMove(in, out, decodedPath, headers);
+                        break;
                     case "PROPFIND":
                         handlePropfind(in, out, decodedPath, headers);
                         break;
@@ -15040,7 +15043,7 @@ class WebDAVServer extends Util{
                         handleOptions(out);
                         break;
                     default:
-                        sendResponse(out, "HTTP/1.1 501 Not Implemented", "Method not supported");
+                        sendResponse(out, "HTTP/1.1 501 Not Implemented -> " + method + " - " + decodedPath, "Method not supported");
                         break;
                 }
 
@@ -15248,6 +15251,80 @@ class WebDAVServer extends Util{
 
             // Resposta de sucesso
             sendResponse(out, "HTTP/1.1 204 No Content", "");
+        }
+
+        private void handleMove(InputStream in, OutputStream out, String sourcePath, Map<String, String> headers) throws IOException {
+            // Extrair o cabeçalho Destination
+            String destinationHeader = headers.get("destination");
+            if (destinationHeader == null) {
+                sendResponse(out, "HTTP/1.1 400 Bad Request", "Destination header is required");
+                return;
+            }
+
+            // Decodificar o caminho de destino
+            URI destinationUri;
+            try {
+                destinationUri = new URI(destinationHeader);
+            } catch (URISyntaxException e) {
+                sendResponse(out, "HTTP/1.1 400 Bad Request", "Invalid Destination header");
+                return;
+            }
+
+            String destinationPath = destinationUri.getPath();
+            String decodedDestinationPath = URLDecoder.decode(destinationPath, "UTF-8");
+
+            // Verificar se o destino está dentro do diretório raiz do servidor
+            File sourceFile = new File("." + sourcePath);
+            File destinationFile = new File("." + decodedDestinationPath);
+
+            if ( !destinationFile.getCanonicalPath().startsWith(new File(".").getCanonicalPath()) ){                
+                sendResponse(out, "HTTP/1.1 403 Forbidden - Destination is outside the server root directory", "Destination is outside the server root directory");
+                return;
+            }
+
+            // Verificar symbolic links
+            if (isSymbolicLink(sourceFile) || isSymbolicLink(destinationFile)) {
+                sendResponse(out, "HTTP/1.1 403 Forbidden - Moving symbolic links is not allowed", "Moving symbolic links is not allowed");
+                return;
+            }
+
+            // Verificar se o recurso de origem existe
+            if (!sourceFile.exists()) {
+                sendResponse(out, "HTTP/1.1 404 Not Found", "Source resource not found");
+                return;
+            }
+
+            // Verificar se o recurso de destino já existe
+            boolean overwrite = headers.getOrDefault("overwrite", "T").equalsIgnoreCase("T");
+            if (destinationFile.exists() && !overwrite) {
+                sendResponse(out, "HTTP/1.1 412 Precondition Failed - Destination resource already exists and overwrite is disabled", "Destination resource already exists and overwrite is disabled");
+                return;
+            }
+
+            // Verificar se o diretório pai do destino existe
+            File parentDir = destinationFile.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                sendResponse(out, "HTTP/1.1 409 Conflict - Parent directory of destination does not exist", "Parent directory of destination does not exist");
+                return;
+            }
+
+            // Mover o recurso
+            try {
+                boolean success = sourceFile.renameTo(destinationFile);
+                if (!success) {
+                    sendResponse(out, "HTTP/1.1 500 Internal Server Error - Failed to move resource", "Failed to move resource");
+                    return;
+                }
+
+                // Resposta de sucesso
+                if (destinationFile.exists()) {
+                    sendResponse(out, "HTTP/1.1 204 No Content", ""); // Recurso sobrescrito
+                } else {
+                    sendResponse(out, "HTTP/1.1 201 Created", "Resource moved"); // Recurso criado
+                }
+            } catch (SecurityException e) {
+                sendResponse(out, "HTTP/1.1 403 Forbidden - Permission denied", "Permission denied");
+            }
         }
 
         private boolean isSymbolicLink(File f)throws IOException {
