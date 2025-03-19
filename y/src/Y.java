@@ -134,6 +134,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
@@ -1559,19 +1560,24 @@ cat buffer.log
             String mode=(String)parm_[0];
             String host=(String)parm_[1];
             Integer port=(Integer)parm_[2];
-            String titulo_url=(String)parm_[3];
-            String titulo=(String)parm_[4];
-            String dir=(String)parm_[5];
-            String endsWiths=(String)parm_[6];
-            String ips_banidos=(String)parm_[7];
-            String log_ips=(String)parm_[8];
-            Boolean noLogLocal=(Boolean)parm_[9];
-            String cfg=(String)parm_[10];
-            String redisDir=(String)parm_[11];
-            Long redisSeconds=(Long)parm_[12];
-            String redisAll=(String)parm_[13];
-            String redisLike=(String)parm_[14];
-            new HttpServer(mode, host, port, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike);
+            String pass=(String)parm_[3];
+            String titulo_url=(String)parm_[4];
+            String titulo=(String)parm_[5];
+            String dir=(String)parm_[6];
+            String endsWiths=(String)parm_[7];
+            String ips_banidos=(String)parm_[8];
+            String log_ips=(String)parm_[9];
+            Boolean noLogLocal=(Boolean)parm_[10];
+            String cfg=(String)parm_[11];
+            String redisDir=(String)parm_[12];
+            Long redisSeconds=(Long)parm_[13];
+            String redisAll=(String)parm_[14];
+            String redisLike=(String)parm_[15];
+            if ( mode != null && mode.equals("webdav") ){
+                new WebDAVServer(host, port, pass);
+                return;
+            }
+            new HttpServer(mode, host, port, pass, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike);
             return;
         }
         
@@ -1960,7 +1966,7 @@ cat buffer.log
         }
         if ( args[0].equals("dotaMutandoAll") ){
             // exemplo
-            // y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,neBullet"
+            // y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,eBullet,iusky"
             Object [] objs=get_parm_sleep_nicks(args);            
             if ( objs != null ){
                 Integer sleep=(Integer)objs[0];
@@ -11060,6 +11066,7 @@ cat buffer.log
         String mode=null;
         String host="127.0.0.1";
         Integer port=8888;
+        String pass="";
         String tituloUrl="";
         String titulo="titulo";
         String dir=".";
@@ -11095,6 +11102,12 @@ cat buffer.log
             if ( args[0].equals("-port") ){
                 args=sliceParm(1,args);
                 port=Integer.parseInt(args[0]);
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-pass") ){
+                args=sliceParm(1,args);
+                pass=args[0];
                 args=sliceParm(1,args);
                 continue;
             }
@@ -11172,7 +11185,9 @@ cat buffer.log
             erroFatal("Erro de parametros, mode playlistserver exige valor de cfg");
         if ( redisDir == null && redisSeconds != null )
             erroFatal("Erro de parametros, não é possível usar o parametro redisSeconds sem usar o redisDir");
-        return new Object[]{mode, host, port, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike};
+        if ( mode != null && !mode.equals("webdav") && !pass.equals("") )
+            erroFatal("-pass só pode ser usado com -mode webdav");
+        return new Object[]{mode, host, port, pass, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike};
     }
 
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
@@ -13425,7 +13440,7 @@ while True:
             // get players by OCR
             String [] players=ocr_getNamesDota();
             // skynet
-            String [] naoBloquearEssesNomes="ynet,Analista de Sistema,neBullet".split(",");
+            String [] naoBloquearEssesNomes="ynet,Analista de Sistema,eBullet,iusky".split(",");
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
@@ -14856,6 +14871,512 @@ class grammarsWhere extends Util{
     }
 }
 
+class WebDAVServer extends Util{
+    private static final Map<String, String> USERS = new HashMap<>();
+
+    public WebDAVServer(String host, int port, String pass){
+        try{
+            if ( pass != null && !pass.equals("") ){
+                String [] partes=pass.split(",");
+                if ( partes.length > 0 ){
+                    if ( partes.length%2 == 1 ){
+                        erroFatal("parametro -pass incorreto! " + pass);
+                    }
+                    for ( int i=0;i<partes.length;i+=2 ){
+                        USERS.put(partes[i], partes[i+1]);
+                    }
+                }
+            }
+            if ( host == null ){
+                try{
+                    host=InetAddress.getLocalHost().getHostName();
+                }catch(Exception e){
+                    System.out.println("warning: procurando ip ...");
+                    host=getListaIPs().get(0);
+                    System.out.println("warning: ip localizado -> "+host);
+                }                    
+            }
+
+            ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName(host));
+            String host_display="http://" + host + ":" + port;
+            if (host.contains(":"))
+                host_display="http://[" + host + "]:" + port;
+            System.out.println("Service opened: " + host_display + "\ndir: " + new File(".").getAbsolutePath() );
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                new Thread(new WebDAVHandler(clientSocket)).start();
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+
+    private class WebDAVHandler implements Runnable {
+        private final Socket clientSocket;
+
+        public WebDAVHandler(Socket clientSocket) {
+            this.clientSocket = clientSocket;
+        }
+
+        @Override
+        public void run() {
+            try (InputStream in = clientSocket.getInputStream();
+                 OutputStream out = clientSocket.getOutputStream()) {
+
+                // Ler o header byte por byte
+                StringBuilder headerBuilder = new StringBuilder();
+                int prevByte = -1;
+                int currByte;
+
+                while ((currByte = in.read()) != -1) {
+                    headerBuilder.append((char) currByte);
+
+                    // Verificar se encontramos o fim do header (\r\n\r\n)
+                    if (prevByte == '\r' && currByte == '\n') {
+                        int nextByte1 = in.read();
+                        int nextByte2 = in.read();
+
+                        if (nextByte1 == '\r' && nextByte2 == '\n') {
+                            // Fim do header encontrado
+                            headerBuilder.append((char) nextByte1).append((char) nextByte2);
+                            break;
+                        } else {
+                            headerBuilder.append((char) nextByte1).append((char) nextByte2);
+                        }
+                    }
+
+                    prevByte = currByte;
+                }
+
+                // Processar o header
+                String header = headerBuilder.toString();
+                String[] headerLines = header.split("\r\n");
+                String requestLine = headerLines[0];
+
+                // Extrair método e caminho
+                String[] requestParts = requestLine.split(" ");
+                String method = requestParts[0];
+                String path = requestParts[1];
+
+                // Decodificar o caminho da URL
+                String decodedPath = URLDecoder.decode(path, "UTF-8");
+
+                // Extrair cabeçalhos
+                Map<String, String> headers = new HashMap<>();
+                for (int i = 1; i < headerLines.length; i++) {
+                    String[] headerParts = headerLines[i].split(":", 2);
+                    if (headerParts.length == 2) {
+                        headers.put(headerParts[0].trim().toLowerCase(), headerParts[1].trim());
+                    }
+                }
+
+                // Verificar autenticação
+                if (USERS.size() > 0 && !isAuthenticated(headers, out)) {
+                    return; // Se não autenticado, encerra a conexão
+                }
+
+                // Processar a requisição
+                switch (method) {
+                    case "GET":
+                        handleGet(out, decodedPath);
+                        break;
+                    case "PUT":
+                        handlePut(in, out, decodedPath, headers);
+                        break;
+                    case "MKCOL":
+                        handleMkcol(out, decodedPath);
+                        break;
+                    case "DELETE":
+                        handleDelete(out, decodedPath);
+                        break;
+                    case "PROPFIND":
+                        handlePropfind(in, out, decodedPath, headers);
+                        break;
+                    case "OPTIONS":
+                        handleOptions(out);
+                        break;
+                    default:
+                        sendResponse(out, "HTTP/1.1 501 Not Implemented", "Method not supported");
+                        break;
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    clientSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        private boolean isAuthenticated(Map<String, String> headers, OutputStream out) throws IOException {
+            String authHeader = headers.get("authorization");
+            if (authHeader == null || !authHeader.startsWith("Basic ")) {
+                // Solicitar autenticação
+                sendResponse(out, "HTTP/1.1 401 Unauthorized", "Unauthorized", "WWW-Authenticate: Basic realm=\"WebDAV\"");
+                return false;
+            }
+
+            // Decodificar credenciais
+            String credentials = new String(Base64.getDecoder().decode(authHeader.substring("Basic ".length())));
+            String[] userPass = credentials.split(":");
+            if (userPass.length != 2) {
+                sendResponse(out, "HTTP/1.1 401 Unauthorized", "Invalid credentials");
+                return false;
+            }
+
+            String username = userPass[0];
+            String password = userPass[1];
+
+            // Verificar usuário e senha
+            if (!USERS.containsKey(username) || !USERS.get(username).equals(password)) {
+                sendResponse(out, "HTTP/1.1 401 Unauthorized", "Invalid username or password");
+                return false;
+            }
+
+            return true; // Autenticado com sucesso
+        }
+
+        private void handleGet(OutputStream out, String path) throws IOException {
+            File file = new File("." + path);
+
+            // Verificar se o arquivo/diretório existe
+            if (!file.exists()) {
+                sendResponse(out, "HTTP/1.1 404 Not Found", "Resource not found");
+                return;
+            }
+
+            // Se for um arquivo, enviar o conteúdo
+            if (file.isFile()) {
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    // Enviar cabeçalhos de resposta
+                    String responseHeaders = "HTTP/1.1 200 OK\r\n" +
+                            "Content-Type: application/octet-stream\r\n" +
+                            "Content-Length: " + file.length() + "\r\n" +
+                            "\r\n";
+                    out.write(responseHeaders.getBytes());
+
+                    // Enviar o conteúdo do arquivo
+                    byte[] buffer = new byte[1024];
+                    int bytesRead;
+                    while ((bytesRead = fis.read(buffer)) != -1) {
+                        out.write(buffer, 0, bytesRead);
+                    }
+                } catch (IOException e) {
+                    // Em caso de erro ao ler o arquivo
+                    sendResponse(out, "HTTP/1.1 500 Internal Server Error", "Failed to read file: " + e.getMessage());
+                }
+            }
+            // Se for um diretório, listar o conteúdo
+            else if (file.isDirectory()) {
+                File[] files = file.listFiles();
+                if (files == null) {
+                    sendResponse(out, "HTTP/1.1 500 Internal Server Error", "Failed to list directory contents");
+                    return;
+                }
+
+                // Construir a lista de arquivos e diretórios
+                StringBuilder directoryListing = new StringBuilder();
+                directoryListing.append("<html><body><h1>Directory Listing: ").append(path).append("</h1><ul>");
+
+                // Adicionar link para o diretório pai (..)
+                if (!path.equals("/")) {
+                    String parentPath = new File(path).getParent();
+                    if (parentPath == null) {
+                        parentPath = "/";
+                    }
+                    directoryListing.append("<li>[DIR] <a href=\"").append(parentPath).append("\">..</a></li>");
+                }
+
+                // Listar arquivos e diretórios
+                for (File f : files) {
+                    String name = f.getName();
+                    String type = f.isDirectory() ? "DIR" : "FILE";
+                    directoryListing.append("<li>[").append(type).append("] <a href=\"").append(path.endsWith("/") ? "" : "/").append(name).append("\">").append(name).append("</a></li>");
+                }
+
+                directoryListing.append("</ul></body></html>");
+
+                // Enviar a lista como resposta
+                sendResponse(out, "HTTP/1.1 200 OK", directoryListing.toString(), "Content-Type: text/html");
+            }
+        }
+
+        private void handlePut(InputStream in, OutputStream out, String path, Map<String, String> headers) throws IOException {
+            File file = new File("." + path);
+
+            // Verificar se o diretório pai existe
+            File parentDir = file.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                sendResponse(out, "HTTP/1.1 409 Conflict", "Parent directory does not exist");
+                return;
+            }
+
+            // Obter o tamanho do conteúdo (Content-Length)
+            int contentLength = Integer.parseInt(headers.getOrDefault("content-length", "0"));
+            if (contentLength <= 0) {
+                sendResponse(out, "HTTP/1.1 411 Length Required", "Content-Length header is required");
+                return;
+            }
+
+            // Criar ou sobrescrever o arquivo
+            try (FileOutputStream fos = new FileOutputStream(file)) {
+                byte[] buffer = new byte[1024];
+                int bytesRead;
+                int totalBytesRead = 0;
+
+                // Ler o corpo da requisição e gravar no arquivo
+                while (totalBytesRead < contentLength) {
+                    bytesRead = in.read(buffer, 0, Math.min(buffer.length, contentLength - totalBytesRead));
+                    if (bytesRead == -1) {
+                        // Fim do fluxo de entrada inesperado
+                        sendResponse(out, "HTTP/1.1 500 Internal Server Error", "Unexpected end of input stream");
+                        return;
+                    }
+                    fos.write(buffer, 0, bytesRead);
+                    totalBytesRead += bytesRead;
+                }
+
+                // Resposta de sucesso
+                if (file.exists()) {
+                    sendResponse(out, "HTTP/1.1 204 No Content", ""); // Arquivo atualizado
+                } else {
+                    sendResponse(out, "HTTP/1.1 201 Created", "File created"); // Arquivo criado
+                }
+            } catch (IOException e) {
+                sendResponse(out, "HTTP/1.1 500 Internal Server Error", "Failed to write file: " + e.getMessage());
+            }
+        }
+
+        private void handleMkcol(OutputStream out, String path) throws IOException {
+            File dir = new File("." + path);
+            if (dir.mkdir()) {
+                sendResponse(out, "HTTP/1.1 201 Created", "Directory created");
+            } else {
+                sendResponse(out, "HTTP/1.1 409 Conflict", "Directory already exists or invalid path");
+            }
+        }
+
+        public boolean detect_recursive_isSymbolicLink=false;
+        private void handleDelete(OutputStream out, String path) throws IOException {
+            if ( !isWindows() ){
+                sendResponse(out, "HTTP/1.1 403 Forbidden - Delete not implemented in this S.O", "Delete not implemented in this S.O");
+                return;
+            }
+            detect_recursive_isSymbolicLink=false;
+            File file = new File("." + path);
+
+            // Verificar se o recurso existe
+            if (!file.exists()) {
+                sendResponse(out, "HTTP/1.1 404 Not Found", "Resource not found");
+                return;
+            }
+
+            // Verificar se é um symbolic link
+            if (isSymbolicLink(file)) {
+                sendResponse(out, "HTTP/1.1 403 Forbidden - Deletion of symbolic links is not allowed", "Deletion of symbolic links is not allowed");
+                return;
+            }
+
+            // Excluir recursivamente (se for um diretório)
+            if (file.isDirectory()) {
+                if (!deleteDirectory(file)) {
+                    if ( detect_recursive_isSymbolicLink ){
+                        sendResponse(out, "HTTP/1.1 403 Forbidden - Deletion of symbolic links is not allowed", "Deletion of symbolic links is not allowed");
+                        return;                        
+                    }
+                    sendResponse(out, "HTTP/1.1 500 Internal Server Error", "Failed to delete directory");
+                    return;
+                }
+            } else {
+                // Excluir arquivo
+                if (!file.delete()) {
+                    if ( detect_recursive_isSymbolicLink ){
+                        sendResponse(out, "HTTP/1.1 403 Forbidden - Deletion of symbolic links is not allowed", "Deletion of symbolic links is not allowed");
+                        return;                        
+                    }
+                    sendResponse(out, "HTTP/1.1 500 Internal Server Error", "Failed to delete file");
+                    return;
+                }
+            }
+
+            // Resposta de sucesso
+            sendResponse(out, "HTTP/1.1 204 No Content", "");
+        }
+
+        private boolean isSymbolicLink(File f)throws IOException {
+            java.nio.file.Path ab_path=f.toPath().toAbsolutePath();
+            java.nio.file.Path parent_path=ab_path.getParent();
+            java.nio.file.Path real_path=null;
+            int n=0;
+            n=1;
+            if ( Files.isSymbolicLink(f.toPath()) ){
+                n=2;
+                return true;
+            }
+            n=3;
+            try{
+                real_path=ab_path.toRealPath();
+            }catch(Exception e){
+                return false;
+            }
+            if ( !isWindows() ){
+                n=4;
+                return false;
+            }
+            n=5;
+            if ( !ab_path.toString().toUpperCase().equals(parent_path.toString().toUpperCase()) ){
+                n=6;
+                if ( real_path.toString().toUpperCase().equals( (parent_path.toRealPath().toString()+"\\"+f.getName()).toUpperCase() )){
+                    n=7;
+                    return false;
+                }
+            }
+            n=8;
+            if ( !ab_path.toString().toUpperCase().equals(real_path.toString().toUpperCase()) ){
+                n=9;
+                return true;
+            }
+            return false;
+        }
+
+        /**
+         * Exclui um diretório e seu conteúdo recursivamente.
+         * Retorna false se encontrar um symbolic link ou falhar ao excluir.
+         */
+        private boolean deleteDirectory(File directory) throws IOException {
+            File[] files = directory.listFiles();
+            if (files == null) {
+                return false; // Falha ao listar o conteúdo do diretório
+            }
+
+            for (File file : files) {
+                // Verificar se é um symbolic link
+                if (isSymbolicLink(file)) {
+                    detect_recursive_isSymbolicLink=true;
+                    return false; // Não permite exclusão se houver symbolic links
+                }
+
+                // Excluir recursivamente
+                if (file.isDirectory()) {
+                    if (!deleteDirectory(file)) {
+                        return false; // Falha ao excluir subdiretório
+                    }
+                } else {
+                    if (!file.delete()) {
+                        return false; // Falha ao excluir arquivo
+                    }
+                }
+            }
+
+            // Excluir o diretório principal
+            return directory.delete();
+        }
+
+        private void handlePropfind(InputStream in, OutputStream out, String path, Map<String, String> headers) throws IOException {
+            File file = new File("." + path);
+            if (!file.exists()) {
+                sendResponse(out, "HTTP/1.1 404 Not Found", "Resource not found");
+                return;
+            }
+
+            // Verificar profundidade (Depth header)
+            String depth = headers.getOrDefault("depth", "0");
+            if (!depth.equals("0") && !depth.equals("1") && !depth.equals("infinity")) {
+                sendResponse(out, "HTTP/1.1 400 Bad Request", "Invalid Depth header");
+                return;
+            }
+
+            // Gerar resposta XML
+            StringBuilder xmlResponse = new StringBuilder();
+            xmlResponse.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+                    .append("<D:multistatus xmlns:D=\"DAV:\">\n");
+
+            // Adicionar propriedades do recurso solicitado
+            appendResourceProperties(xmlResponse, file, path);
+
+            // Se for um diretório, listar seus membros
+            if (file.isDirectory() && (depth.equals("1") || depth.equals("infinity"))) {
+                File[] members = file.listFiles();
+                if (members != null) {
+                    for (File member : members) {
+                        String memberPath = path + (path.endsWith("/") ? "" : "/") + member.getName();
+                        appendResourceProperties(xmlResponse, member, memberPath);
+                    }
+                }
+            }
+
+            xmlResponse.append("</D:multistatus>");
+
+            // Enviar resposta
+            sendResponse(out, "HTTP/1.1 207 Multi-Status", xmlResponse.toString(), "Content-Type: application/xml; charset=utf-8");
+        }
+
+        private void appendResourceProperties(StringBuilder xmlResponse, File file, String path) {
+            // Escapar caracteres especiais no nome do arquivo/diretório
+            String escapedPath = escapeXml(path);
+            String escapedName = escapeXml(file.getName());
+
+            xmlResponse.append("  <D:response>\n")
+                    .append("    <D:href>").append(escapedPath).append("</D:href>\n")
+                    .append("    <D:propstat>\n")
+                    .append("      <D:prop>\n")
+                    .append("        <D:getlastmodified>").append(new Date(file.lastModified())).append("</D:getlastmodified>\n")
+                    .append("        <D:getcontentlength>").append(file.length()).append("</D:getcontentlength>\n")
+                    .append("        <D:resourcetype>")
+                    .append(file.isDirectory() ? "<D:collection/>" : "")
+                    .append("</D:resourcetype>\n")
+                    .append("      </D:prop>\n")
+                    .append("      <D:status>HTTP/1.1 200 OK</D:status>\n")
+                    .append("    </D:propstat>\n")
+                    .append("  </D:response>\n");
+        }
+
+        private String escapeXml(String input) {
+            if (input == null) {
+                return "";
+            }
+            return input.replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                        .replace("\"", "&quot;")
+                        .replace("'", "&apos;");
+        }
+
+        private void handleOptions(OutputStream out) throws IOException {
+            // Lista de métodos suportados
+            String allowedMethods = "OPTIONS, GET, PUT, MKCOL, DELETE, PROPFIND";
+            // Nível de conformidade WebDAV (1 para básico, 2 para avançado)
+            String davHeader = "1";
+
+            // Resposta
+            String response = "HTTP/1.1 200 OK\r\n" +
+                    "Allow: " + allowedMethods + "\r\n" +
+                    "DAV: " + davHeader + "\r\n" +
+                    "Content-Length: 0\r\n" +
+                    "\r\n";
+            out.write(response.getBytes());
+        }
+
+        private void sendResponse(OutputStream out, String status, String body) throws IOException {
+            sendResponse(out, status, body, null);
+        }
+
+        private void sendResponse(OutputStream out, String status, String body, String additionalHeader) throws IOException {
+            String response = status + "\r\n" +
+                    "Content-Type: text/plain\r\n" +
+                    "Content-Length: " + body.length() + "\r\n" +
+                    (additionalHeader != null ? additionalHeader + "\r\n" : "") +
+                    "\r\n" +
+                    body;
+            out.write(response.getBytes());
+        }
+    }
+}
+
 class Redis extends Util{
     File f_redis=null;
     String [] path=null;
@@ -15009,6 +15530,33 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public static ArrayList<String> getListaIPs()
+    {     
+        ArrayList<String> lista=new ArrayList<String>();
+        ArrayList<String> lista2=new ArrayList<String>();
+
+        try {
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp())
+                    continue;
+                java.util.Enumeration<InetAddress> addresses = iface.getInetAddresses();
+                while(addresses.hasMoreElements()) {
+                    InetAddress addr = addresses.nextElement();
+                    if ( addr.getHostAddress().startsWith("192.168.0.") || addr.getHostAddress().startsWith("192.168.1.") )
+                        lista.add(addr.getHostAddress());                       
+                    else
+                        lista2.add(addr.getHostAddress());                       
+                }
+            }
+        } catch (java.net.SocketException e) {
+            throw new RuntimeException(e);
+        } 
+        lista.addAll(lista2);        
+        return lista;
+    }
     
     public Long getSecondsByNtp(String url) throws Exception{
         if ( url == null || url.equals("_") )
@@ -18637,33 +19185,6 @@ class Ponte extends Util{
         }
 
     }
-
-    public static ArrayList<String> getListaIPs()
-    {     
-        ArrayList<String> lista=new ArrayList<String>();
-        ArrayList<String> lista2=new ArrayList<String>();
-
-        try {
-            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                java.net.NetworkInterface iface = interfaces.nextElement();
-                if (iface.isLoopback() || !iface.isUp())
-                    continue;
-                java.util.Enumeration<InetAddress> addresses = iface.getInetAddresses();
-                while(addresses.hasMoreElements()) {
-                    InetAddress addr = addresses.nextElement();
-                    if ( addr.getHostAddress().startsWith("192.168.0.") || addr.getHostAddress().startsWith("192.168.1.") )
-                        lista.add(addr.getHostAddress());                       
-                    else
-                        lista2.add(addr.getHostAddress());                       
-                }
-            }
-        } catch (java.net.SocketException e) {
-            throw new RuntimeException(e);
-        } 
-        lista.addAll(lista2);        
-        return lista;
-    }
     
     public String padLeftZeros(String inputString, int length) {
         if (inputString.length() >= length) {
@@ -21457,16 +21978,17 @@ namespace LoopbackWithMic
 // new HttpServer(...)
 // host(pode ser ""), port, titulo_url, titulo, dir, endsWiths(ex: "","jar,zip"), ips_banidos(ex: "","8.8.8.8,4.4.4.4")
 class HttpServer extends Util{
-    String mode, host, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log_ips, cfg;
+    String mode, host, pass, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log_ips, cfg;
     int port;
     Boolean noLogLocal=false;
     Socket socket = null;    
-    public HttpServer(String mode, String host, Integer port, String titulo_url, String titulo, String dir, 
+    public HttpServer(String mode, String host, Integer port, String pass, String titulo_url, String titulo, String dir, 
                       String endsWiths, String ips_banidos, String log_ips, Boolean noLogLocal, String cfg, 
                       String redisDir, Long redisSeconds, String redisAll, String redisLike){
         this.mode = mode;
         this.host = host;
         this.port = port;
+        this.pass = pass; // ainda não implementado aqui
         this.titulo_url = titulo_url;
         this.titulo = titulo;
         this.dir = dir;
@@ -22411,6 +22933,7 @@ class ConnGui extends javax.swing.JFrame {
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -22495,7 +23018,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y ssh]\n"
 /* class by manual */                + "  [y sshinfo]\n"
 /* class by manual */                + "  [y sftp]\n"
-/* class by manual */                + "  [y serverRouter]\n"
+/* class by manual */                + "  [y [serverRouter|sr]]\n"
 /* class by manual */                + "  [y [httpServer|hs]]\n"
 /* class by manual */                + "  [y wget]\n"
 /* class by manual */                + "  [y pwd]\n"
@@ -23015,12 +23538,13 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "        \"-suprimeReceive\" \"5 0 0 0\"\n"
 /* class by manual */                + "        -ips_banidos 2804:14d:ac80:8889::\n"
 /* class by manual */                + "        -xor 100\n"
-/* class by manual */                + "[y httpServer]\n"
+/* class by manual */                + "[y [httpServer|hs]]\n"
 /* class by manual */                + "    y httpServer\n"
-/* class by manual */                + "    set var=\"httpServer -mode playlist -host 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer -mode playlist -host 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt -noLogLocal\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer -mode playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer -mode playlistserver 192.168.0.100 8888 -cfg d:/ProgramFiles/playlistserver.cfg\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlist\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-log_ips\" \"d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlist\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-log_ips\" \"d:/ProgramFiles/log_ips/log_8888.txt\" \"-noLogLocal\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlistmovie\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-log_ips\" \"d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlistserver\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-cfg\" \"d:/ProgramFiles/playlistserver.cfg\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"webdav\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-pass\" \"admin,admin123,user,user123\" && y var\n"
 /* class by manual */                + "    windows:\n"
 /* class by manual */                + "    set var=\"httpServer\" \"-host\" \"127.0.0.1\" \"-port\" \"8888\" \"-titulo_url_token\" \"\" \"-titulo\" \"titulo\" \"-dir\" \".\" \"-endsWith\" \"\" \"-ips_banidos\" \"\" \"-log_ips\" \"\" && y var\n"
 /* class by manual */                + "    linux:\n"
@@ -23045,6 +23569,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "      Em caso de =>                   -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # ele retorna 200. \"Redis-SIGN: Y\" forca o valor \"C\" para SIGN\n"
 /* class by manual */                + "      Em caso de um sign diferente => -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C2\"                   # ele retorna 203 negando a gravacao, pois KEY A esta com SIGN C e nao C2.\n"
 /* class by manual */                + "    obs2: key iniciada com 'secret-' nao e exibida nem com o comando configurado [ALL]\n"
+/* class by manual */                + "    obs3: -mode webdav so suporta os parametros -host, -port e -pass. No preenchimento de -pass e separado por virgula a cadeia user,senha,user,senha...\n"
+/* class by manual */                + "    obs4: o parametro -pass so esta implementado para o -mode webdav\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "[y pwd]\n"
@@ -23425,6 +23951,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

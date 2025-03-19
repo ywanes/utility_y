@@ -78,7 +78,7 @@ usage:
   [y ssh]
   [y sshinfo]
   [y sftp]
-  [y serverRouter]
+  [y [serverRouter|sr]]
   [y [httpServer|hs]]
   [y wget]
   [y pwd]
@@ -598,12 +598,13 @@ Exemplos...
         "-suprimeReceive" "5 0 0 0"
         -ips_banidos 2804:14d:ac80:8889::
         -xor 100
-[y httpServer]
+[y [httpServer|hs]]
     y httpServer
-    set var="httpServer -mode playlist -host 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt" && y var
-    set var="httpServer -mode playlist -host 192.168.0.100 -port 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt -noLogLocal" && y var
-    set var="httpServer -mode playlistmovie 192.168.0.100 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt" && y var
-    set var="httpServer -mode playlistserver 192.168.0.100 8888 -cfg d:/ProgramFiles/playlistserver.cfg" && y var
+    set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" && y var
+    set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" "-noLogLocal" && y var
+    set var="httpServer" "-mode" "playlistmovie" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" && y var
+    set var="httpServer" "-mode" "playlistserver" "-host" "192.168.0.100" "-port" "8888" "-cfg" "d:/ProgramFiles/playlistserver.cfg" && y var
+    set var="httpServer" "-mode" "webdav" "-host" "192.168.0.100" "-port" "8888" "-pass" "admin,admin123,user,user123" && y var
     windows:
     set var="httpServer" "-host" "127.0.0.1" "-port" "8888" "-titulo_url_token" "" "-titulo" "titulo" "-dir" "." "-endsWith" "" "-ips_banidos" "" "-log_ips" "" && y var
     linux:
@@ -628,6 +629,8 @@ Exemplos...
       Em caso de =>                   -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C" -H "Redis-SIGN: Y" # ele retorna 200. "Redis-SIGN: Y" força o valor "C" para SIGN
       Em caso de um sign diferente => -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C2"                   # ele retorna 203 negando a gravação, pois KEY A está com SIGN C e não C2.
     obs2: key iniciada com 'secret-' não é exibida nem com o comando configurado [ALL]
+    obs3: -mode webdav só suporta os parametros -host, -port e -pass. No preenchimento de -pass é separado por virgula a cadeia user,senha,user,senha...
+    obs4: o parametro -pass só esta implementado para o -mode webdav
 [y wget]
     y wget -h
 [y pwd]
