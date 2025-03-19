@@ -1580,7 +1580,19 @@ cat buffer.log
             new HttpServer(mode, host, port, pass, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike);
             return;
         }
-        
+        if ( args[0].equals("httpProxy") || args[0].equals("hp") )
+        {
+            // teste
+            //curl -v -x "localhost:8080" "https://api.bybit.com/v5/market/tickers?category=spot&symbol=BTCUSDT"
+            Object [] parm_=get_parm_httpproxy(args);
+            if ( parm_ == null )
+                erroFatal("Erro de parametros!");
+            String host=(String)parm_[0];
+            Integer port=(Integer)parm_[1];
+            Boolean verbose=(Boolean)parm_[2];
+            new ProxyServer(host, port, verbose);
+            return;
+        }        
         if ( args[0].equals("wget")){
             wget(args);
             return;            
@@ -11192,6 +11204,35 @@ cat buffer.log
         return new Object[]{mode, host, port, pass, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike};
     }
 
+    private Object [] get_parm_httpproxy(String [] args){
+        String host="localhost";
+        Integer port=8080;
+        Boolean verbose=false;
+                
+        args=sliceParm(1,args);
+        while(args.length > 0){
+            if ( args[0].equals("-ip") ){
+                args=sliceParm(1,args);
+                host=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-port") ){
+                args=sliceParm(1,args);
+                port=Integer.parseInt(args[0]);
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-verbose") ){
+                args=sliceParm(1,args);
+                verbose=true;
+                continue;
+            }
+            return null;
+        }        
+        return new Object[]{host, port, verbose};
+    }
+    
     private Object [] get_parm_path_symbol_mtime_type_pre_pos(String [] args){
         String path=null;
         boolean acceptSymbolicLink=false;
@@ -22867,6 +22908,224 @@ class ConnGui extends javax.swing.JFrame {
     private javax.swing.JTextField txt_port;
 }
 
+class ProxyServer {
+    private String host="localhost";
+    private int PROXY_PORT = 8080;
+    private boolean verbose = false; // Modo verbose desativado por padrão
+    public ProxyServer(String host, int port, boolean verbose_){
+        this.host=host;
+        this.PROXY_PORT=port;
+        this.verbose=verbose_;
+
+        try (ServerSocket serverSocket = new ServerSocket(PROXY_PORT)) {
+            System.out.println("Servidor Proxy escutando na porta " + PROXY_PORT);
+
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Conexão recebida de: " + clientSocket.getInetAddress());
+
+                // Cria uma thread para lidar com a requisição do cliente
+                new Thread(() -> {
+                    try {
+                        handleClientRequest(clientSocket);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }).start();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleClientRequest(Socket clientSocket) throws IOException {
+        try (BufferedReader clientInput = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             OutputStream clientOutput = clientSocket.getOutputStream()) {
+
+            // Lê a primeira linha da requisição (ex: GET /path HTTP/1.1)
+            String requestLine = clientInput.readLine();
+            if (requestLine == null || requestLine.isEmpty()) {
+                return; // Requisição inválida
+            }
+
+            // Extrai o método, caminho e versão HTTP
+            String[] requestParts = requestLine.split(" ");
+            if (requestParts.length < 3) {
+                return; // Requisição malformada
+            }
+
+            String method = requestParts[0]; // Ex: GET
+            String path = requestParts[1];  // Ex: /index.html
+            String httpVersion = requestParts[2]; // Ex: HTTP/1.1
+
+            // Lê o cabeçalho "Host" e outros cabeçalhos
+            String hostHeader = "";
+            StringBuilder requestHeaders = new StringBuilder();
+            String line;
+            while (!(line = clientInput.readLine()).isEmpty()) {
+                requestHeaders.append(line).append("\r\n");
+                if (line.startsWith("Host:")) {
+                    hostHeader = line.substring("Host:".length()).trim();
+                }
+            }
+
+            if (hostHeader.isEmpty()) {
+                return; // Host não especificado
+            }
+
+            // Modo verbose: exibe os cabeçalhos da requisição
+            if (verbose) {
+                System.out.println("=== Request ===");
+                System.out.println(requestLine);
+                System.out.print(requestHeaders.toString());
+                System.out.println("=========================================");
+            }
+
+            // Extrai o host e a porta do cabeçalho "Host"
+            String host;
+            int port;
+            if (hostHeader.contains(":")) {
+                String[] hostParts = hostHeader.split(":");
+                host = hostParts[0];
+                port = Integer.parseInt(hostParts[1]);
+            } else {
+                host = hostHeader;
+                port = 80; // Porta padrão para HTTP
+            }
+
+            // Verifica se é uma requisição HTTPS (CONNECT)
+            if (method.equalsIgnoreCase("CONNECT")) {
+                // Requisição HTTPS (Tunelamento SSL/TLS)
+                handleHttpsRequest(clientSocket, host, port, clientOutput);
+            } else {
+                // Requisição HTTP
+                handleHttpRequest(clientSocket, host, port, method, path, httpVersion, requestHeaders.toString(), clientInput, clientOutput);
+            }
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private void handleHttpRequest(Socket clientSocket, String host, int port, String method, String path,
+                                         String httpVersion, String requestHeaders, BufferedReader clientInput, OutputStream clientOutput) {
+        try (Socket targetSocket = new Socket(host, port);
+             BufferedReader targetInput = new BufferedReader(new InputStreamReader(targetSocket.getInputStream()));
+             OutputStream targetOutput = targetSocket.getOutputStream()) {
+
+            // Reconstroi a requisição para o servidor de destino
+            StringBuilder requestBuilder = new StringBuilder();
+            requestBuilder.append(method).append(" ").append(path).append(" ").append(httpVersion).append("\r\n");
+            requestBuilder.append(requestHeaders); // Inclui os cabeçalhos originais
+            requestBuilder.append("\r\n");
+
+            // Modo verbose: exibe os cabeçalhos da requisição encaminhada
+            if (verbose) {
+                System.out.println("=== Requisicao Encaminhada ===");
+                System.out.print(requestBuilder.toString());
+                System.out.println("===========================================");
+            }
+
+            // Encaminha a requisição para o servidor de destino
+            targetOutput.write(requestBuilder.toString().getBytes());
+            targetOutput.flush();
+
+            // Lê a resposta do servidor de destino
+            StringBuilder responseHeaders = new StringBuilder();
+            String responseLine;
+            while ((responseLine = targetInput.readLine()) != null) {
+                responseHeaders.append(responseLine).append("\r\n");
+                if (responseLine.isEmpty()) {
+                    break; // Fim dos cabeçalhos
+                }
+            }
+
+            // Modo verbose: exibe os cabeçalhos da resposta
+            if (verbose) {
+                System.out.println("=== Response ===");
+                System.out.print(responseHeaders.toString());
+                System.out.println("========================================");
+            }
+
+            // Encaminha os cabeçalhos da resposta para o cliente
+            clientOutput.write(responseHeaders.toString().getBytes());
+            clientOutput.flush();
+
+            // Encaminha o corpo da resposta para o cliente
+            forwardData(targetSocket.getInputStream(), clientOutput, "Resposta HTTP", false); // false = HTTP
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleHttpsRequest(Socket clientSocket, String host, int port, OutputStream clientOutput) {
+        try (Socket targetSocket = new Socket(host, port)) {
+            // Envia uma resposta 200 para o cliente (indicando que o túnel foi estabelecido)
+            String response = "HTTP/1.1 200 Connection Established\r\n\r\n";
+            clientOutput.write(response.getBytes());
+            clientOutput.flush();
+
+            // Modo verbose: exibe os cabeçalhos da resposta de estabelecimento do túnel
+            if (verbose) {
+                System.out.println("=== Cabecalhos da Resposta (Tunel HTTPS) ===");
+                System.out.print(response);
+                System.out.println("===========================================");
+            }
+
+            // Estabelece o túnel entre o cliente e o servidor de destino
+            InputStream clientInput = clientSocket.getInputStream();
+            OutputStream targetOutput = targetSocket.getOutputStream();
+
+            // Encaminha os dados entre o cliente e o servidor de destino
+            Thread clientToTarget = new Thread(() -> {
+                try {
+                    forwardData(clientInput, targetOutput, "Cliente -> Servidor (HTTPS)", true); // true = HTTPS
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            Thread targetToClient = new Thread(() -> {
+                try {
+                    forwardData(targetSocket.getInputStream(), clientOutput, "Servidor -> Cliente (HTTPS)", true); // true = HTTPS
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            });
+
+            clientToTarget.start();
+            targetToClient.start();
+
+            clientToTarget.join();
+            targetToClient.join();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void forwardData(InputStream input, OutputStream output, String description, boolean isHttps) throws IOException {
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        while ((bytesRead = input.read(buffer)) != -1) {
+            output.write(buffer, 0, bytesRead);
+            output.flush();
+
+            // Modo verbose: exibe os cabeçalhos (se não for HTTPS)
+            if (verbose && !isHttps) {
+                String data = new String(buffer, 0, bytesRead);
+                if (data.contains("\r\n\r\n")) { // Verifica se há cabeçalhos
+                    System.out.println("=== " + description + " ===");
+                    System.out.print(data.substring(0, data.indexOf("\r\n\r\n"))); // Exibe apenas os cabeçalhos
+                    System.out.println("=========================");
+                }
+            }
+        }
+    }
+}
+
 /* class Wget */ // download do Wget muito instavel, melhor refatorar para curl
 /* class Wget */ //String [] args2 = {"-h"};               
 /* class Wget */ //String [] args2 = {"-ban","%d0","-only_before","-list_mp3","-list_diretories","http://195.122.253.112/public/mp3/"};        
@@ -22926,7 +23185,6 @@ class ConnGui extends javax.swing.JFrame {
 /* class Diff  */ private List<Diff_Change> buildRevision(Diff_PathNode actualPath, List<T> orig, List<T> rev) { Objects.requireNonNull(actualPath, "path is null"); Objects.requireNonNull(orig, "original sequence is null"); Objects.requireNonNull(rev, "revised sequence is null"); Diff_PathNode path = actualPath; List<Diff_Change> changes = new ArrayList<>(); if (path.isSnake()) { path = path.prev; } while (path != null && path.prev != null && path.prev.j >= 0) { if (path.isSnake()) { throw new IllegalStateException("bad diffpath: found snake when looking for diff"); } int i = path.i; int j = path.j; path = path.prev; int ianchor = path.i; int janchor = path.j; if (ianchor == i && janchor != j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_INSERT, ianchor, i, janchor, j)); } else if (ianchor != i && janchor == j) { changes.add(new Diff_Change(Diff_DiffRow.TAG_DELETE, ianchor, i, janchor, j)); } else { changes.add(new Diff_Change(Diff_DiffRow.TAG_CHANGE, ianchor, i, janchor, j)); } if (path.isSnake()) { path = path.prev; } } return changes; } } class Diff_PathNode { public final int i; public final int j; public final Diff_PathNode prev; public final boolean snake; public final boolean bootstrap; public Diff_PathNode(int i, int j, boolean snake, boolean bootstrap, Diff_PathNode prev) { this.i = i; this.j = j; this.bootstrap = bootstrap; if (snake) { this.prev = prev; } else { this.prev = prev == null ? null : prev.previousSnake(); } this.snake = snake; } public boolean isSnake() { return snake; } public boolean isBootstrap() { return bootstrap; } 
 /* class Diff  */ public final Diff_PathNode previousSnake() { if (isBootstrap()) { return null; } if (!isSnake() && prev != null) { return prev.previousSnake(); } return this; } public String toString() { StringBuilder buf = new StringBuilder("["); Diff_PathNode node = this; while (node != null) { buf.append("("); buf.append(Integer.toString(node.i)); buf.append(","); buf.append(Integer.toString(node.j)); buf.append(")"); node = node.prev; } buf.append("]"); return buf.toString(); } } class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public Diff_Patch() { this(10); } public Diff_Patch(int estimatedPatchSize) { deltas = new ArrayList<>(estimatedPatchSize); } public List<T> applyTo(List<T> target) throws Exception { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.applyTo(result); } return result; } public List<T> restore(List<T> target) { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.restore(result); } return result; } public void addDelta(Diff_AbstractDelta<T> delta) { deltas.add(delta); } public List<Diff_AbstractDelta<T>> getDeltas() { Collections.sort(deltas, java.util.Comparator.comparing(d -> d.getSource().getPosition())); return deltas; } public String toString() { return "Patch{" + "deltas=" + deltas + '}'; } public static <T> Diff_Patch<T> generate(List<T> original, List<T> revised) throws Exception { Diff_MyersDiff m=new Diff_MyersDiff<>(); List<Diff_Change> changes=m.computeDiff(original, revised); 
 /* class Diff  */ Diff_Patch<T> patch = new Diff_Patch<>(changes.size()); for (Diff_Change change : changes) { Diff_Chunk<T> orgChunk = new Diff_Chunk<>(change.startOriginal, new ArrayList<>(original.subList(change.startOriginal, change.endOriginal))); Diff_Chunk<T> revChunk = new Diff_Chunk<>(change.startRevised, new ArrayList<>(revised.subList(change.startRevised, change.endRevised))); switch (change.deltaType) { case Diff_DiffRow.TAG_DELETE: patch.addDelta(new Diff_DeleteDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_INSERT: patch.addDelta(new Diff_InsertDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_CHANGE: patch.addDelta(new Diff_ChangeDelta<>(orgChunk, revChunk)); break; } } return patch; } } 
-
 
 
 
@@ -23022,6 +23280,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "  [y sftp]\n"
 /* class by manual */                + "  [y [serverRouter|sr]]\n"
 /* class by manual */                + "  [y [httpServer|hs]]\n"
+/* class by manual */                + "  [y [httpProxy|hp]]\n"
 /* class by manual */                + "  [y wget]\n"
 /* class by manual */                + "  [y pwd]\n"
 /* class by manual */                + "  [y find]\n"
@@ -23272,6 +23531,7 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "      security-filter-dns.cleanbrowsing.org\n"
 /* class by manual */                + "      resolver1.telesp.net.br # usado pela vivo\n"
 /* class by manual */                + "      resolver2.telesp.net.br # usado pela vivo\n"
+/* class by manual */                + "    obs: O adguard responde 0.0.0.0 para o nomes que pretende bloquear, comando para teste: y dns googleadservices.com dns.adguard.com\n"
 /* class by manual */                + "[y lower]\n"
 /* class by manual */                + "    y echo AA | y lower\n"
 /* class by manual */                + "[y upper]\n"
@@ -23573,6 +23833,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */                + "    obs2: key iniciada com 'secret-' nao e exibida nem com o comando configurado [ALL]\n"
 /* class by manual */                + "    obs3: -mode webdav so suporta os parametros -host, -port e -pass. No preenchimento de -pass e separado por virgula a cadeia user,senha,user,senha...\n"
 /* class by manual */                + "    obs4: o parametro -pass so esta implementado para o -mode webdav\n"
+/* class by manual */                + "[y [httpProxy|hp]]\n"
+/* class by manual */                + "    y httpProxy -ip localhost -port 8080 -verbose\n"
 /* class by manual */                + "[y wget]\n"
 /* class by manual */                + "    y wget -h\n"
 /* class by manual */                + "[y pwd]\n"
@@ -23953,6 +24215,8 @@ class ConnGui extends javax.swing.JFrame {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

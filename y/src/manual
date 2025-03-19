@@ -80,6 +80,7 @@ usage:
   [y sftp]
   [y [serverRouter|sr]]
   [y [httpServer|hs]]
+  [y [httpProxy|hp]]
   [y wget]
   [y pwd]
   [y find]
@@ -330,6 +331,7 @@ Exemplos...
       security-filter-dns.cleanbrowsing.org
       resolver1.telesp.net.br # usado pela vivo
       resolver2.telesp.net.br # usado pela vivo
+    obs: O adguard responde 0.0.0.0 para o nomes que pretende bloquear, comando para teste: y dns googleadservices.com dns.adguard.com
 [y lower]
     y echo AA | y lower
 [y upper]
@@ -631,6 +633,8 @@ Exemplos...
     obs2: key iniciada com 'secret-' não é exibida nem com o comando configurado [ALL]
     obs3: -mode webdav só suporta os parametros -host, -port e -pass. No preenchimento de -pass é separado por virgula a cadeia user,senha,user,senha...
     obs4: o parametro -pass só esta implementado para o -mode webdav
+[y [httpProxy|hp]]
+    y httpProxy -ip localhost -port 8080 -verbose
 [y wget]
     y wget -h
 [y pwd]
