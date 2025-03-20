@@ -15457,17 +15457,6 @@ class WebDAVServer extends Util{
                     .append("  </D:response>\n");
         }
 
-        private String escapeXml(String input) {
-            if (input == null) {
-                return "";
-            }
-            return input.replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;")
-                        .replace("\"", "&quot;")
-                        .replace("'", "&apos;");                   
-        }
-
         private void handleOptions(OutputStream out) throws IOException {
             // Lista de métodos suportados
             String allowedMethods = "OPTIONS, GET, PUT, MKCOL, DELETE, PROPFIND";
