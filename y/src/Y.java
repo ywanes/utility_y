@@ -15000,7 +15000,9 @@ class WebDAVServer extends Util{
                 // Extrair método e caminho
                 String[] requestParts = requestLine.split(" ");
                 String method = requestParts[0];
-                String path = requestParts[1];
+                String path = "";
+                if ( requestParts.length > 1 )
+                    path=requestParts[1];
 
                 String decodedPath = decodeUrl(path);
 
