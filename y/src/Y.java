@@ -3158,13 +3158,8 @@ cat buffer.log
             }
         }
         if ( server ){
-            if ( ip == null ){
-                String [] ipv4_ipv6=ips(true, 15, false, false); // "10.0.2.15";
-                if ( ip == null )
-                    ip = ipv4_ipv6[1];
-                if ( ip == null )
-                    ip = ipv4_ipv6[0];
-            }
+            if ( ip == null )
+                ip=get_ip();
             if ( pass == null ){
                 pass = random(0, 9999) + "";
             }
@@ -10302,13 +10297,8 @@ cat buffer.log
             }
             break;
         }
-        if ( ip == null ){
-            String [] ipv4_ipv6=ips(true, 15, false, false);
-            if ( ip == null )
-                ip = ipv4_ipv6[1];
-            if ( ip == null )
-                ip = ipv4_ipv6[0];        
-        }
+        if ( ip == null )
+            ip=get_ip();        
         if ( ip == null )
             erroFatal("Não foi possível encontrar o ip!");
         if ( fps != 30 && fps != 60 )
@@ -10729,13 +10719,8 @@ cat buffer.log
             }
             erroFatal("Erro de parametros");
         }
-        if ( ip == null ){
-            String [] ipv4_ipv6=ips(true, 15, false, false); // "10.0.2.15";
-            if ( ip == null )
-                ip = "["+ipv4_ipv6[1]+"]";
-            if ( ip == null )
-                ip = ipv4_ipv6[0];
-        }        
+        if ( ip == null )
+            ip=get_ip();
         return new Object []{ip, port, sw};
     }
             
@@ -10985,7 +10970,7 @@ cat buffer.log
         
         return new Object []{sleep, nicks};
     }
-    
+        
     // usado para speed e call
     private Object [] get_parm_ip_port_server_send(String [] args){
         String ip=null;
@@ -11076,7 +11061,7 @@ cat buffer.log
            
     private Object [] get_parm_httpserver(String [] args){
         String mode=null;
-        String host="127.0.0.1";
+        String host=get_ip();        
         Integer port=8888;
         String pass="";
         String tituloUrl="";
@@ -12148,18 +12133,6 @@ cat buffer.log
     private String cronometro_format(long a, long b){
         return miliseconds_to_string(a) + " - " + miliseconds_to_string(b) + " total";
     }
-
-    private String ping(String a, int timeout){
-        try{
-            InetAddress address = InetAddress.getByName(a);
-            if ( address.isReachable(timeout) ){
-                return "OK";
-            }
-        } catch (Exception e){
-            //System.out.println("Error: " + e.toString());
-        }        
-        return "NOK";
-    }
     
     private void ping_list(int timeout){
         String line;
@@ -12295,71 +12268,8 @@ cat buffer.log
             //System.out.println(e.toString() + " " + s);
         }
         return -1;
-    }
-        
-    private String [] ips(boolean ping, int timeout, boolean list, boolean printOn){
-        String ipv4=null;
-        String ipv6=null;
-        String ipv6_nat=null;
-        String ipv6_my=null;
-        String ipv6_other=null;
-        
-        int count=0;
-        String ips_string=ipsString();
-        String [] tuplas = ips_string.split(";;;");            
-        for ( String tupla : tuplas ){
-            String [] tupla_partes=tupla.split(";;");
-            String iface=tupla_partes[0];
-            String [] ips=tupla_partes[1].split(";");
-            boolean first=true;
-            for ( String ip : ips ){
-                if ( list && ++count == 1 )
-                    if ( printOn )
-                        System.out.println("a=$(\ncat << 'EOF'");
-                if ( first ){
-                    first=false;
-                    if ( printOn )
-                        System.out.println(iface+":");
-                }
-                if ( ip.contains(".") ){ // ipv4
-                    if ( ipv4 == null )
-                        ipv4=ip;
-                }else{ 
-                    if ( ip.contains(":") ){ // ipv6
-                        if ( ip.startsWith("fe") || ip.startsWith("fd") ){
-                            if ( ipv6_nat == null )
-                                ipv6_nat=ip;
-                        }else{
-                            if ( ip.contains("::") ){
-                                if ( ipv6_other == null )
-                                    ipv6_my=ip;
-                            }else{
-                                ipv6_other=ip;
-                            }
-                        }
-                    }else{
-                        // desconhecido
-                    }
-                }
-                String ping_=null;
-                if ( ping )
-                    ping_=ping(ip, timeout);
-                if ( printOn )
-                    format_show_ip(ip, ping_);
-            }
-        }
-        if( list && count > 0 )
-            if ( printOn )
-                System.out.println("EOF\n)\necho \"$a\" | y ping list");
+    }        
 
-        ipv6=ipv6_my;
-        if ( ipv6 == null )
-            ipv6=ipv6_other;        
-        if ( ipv6 == null )
-            ipv6=ipv6_nat;
-        return new String[]{ipv4, ipv6};
-    }   
-    
     private void mouse(String [] args){
         try{
             if ( args.length == 1 ){
@@ -12883,15 +12793,8 @@ while True:
             //boolean send=(Boolean)objs[3];
             String print_after="";
 
-            if ( server ){
-                if ( ip == null ){
-                    String [] ipv4_ipv6=ips(true, 15, false, false);
-                    if ( ip == null )
-                        ip = ipv4_ipv6[1];
-                    if ( ip == null )
-                        ip = ipv4_ipv6[0];
-                }
-            }
+            if ( server && ip == null )
+                ip=get_ip();
             if ( ip == null ){
                 System.err.println("Nenhum ip foi encontrado!");
                 System.exit(1);
@@ -12987,17 +12890,6 @@ while True:
                 return;
             System.err.println("Error " + e.toString());
         }            
-    }
-    
-    private void format_show_ip(String a, String b){
-        if ( b != null ){
-            String s1="                                                                ".substring(0, 40-a.length());
-            String s2=" ";
-            if(b.equals("NOK"))
-                s2="";
-            System.out.println("   "+ a + s1 + " -> ping " + s2 + b);
-        }else
-            System.out.println("   "+ a );
     }
     
     private void clear_cls(){
@@ -13204,15 +13096,8 @@ while True:
         boolean send=(Boolean)objs[3];
         String print_after=null;
         
-        if ( server ){
-            if ( ip == null ){
-                String [] ipv4_ipv6=ips(true, 15, false, false); // "10.0.2.15";
-                if ( ip == null )
-                    ip = ipv4_ipv6[1];
-                if ( ip == null )
-                    ip = ipv4_ipv6[0];
-            }
-        }
+        if ( server )
+            ip=get_ip();        
         if ( ip == null ){
             System.err.println("Nenhum ip foi encontrado!");
             System.exit(1);
@@ -15643,6 +15528,100 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public void format_show_ip(String a, String b){
+        if ( b != null ){
+            String s1="                                                                ".substring(0, 40-a.length());
+            String s2=" ";
+            if(b.equals("NOK"))
+                s2="";
+            System.out.println("   "+ a + s1 + " -> ping " + s2 + b);
+        }else
+            System.out.println("   "+ a );
+    }
+    
+    public String ping(String a, int timeout){
+        try{
+            InetAddress address = InetAddress.getByName(a);
+            if ( address.isReachable(timeout) ){
+                return "OK";
+            }
+        } catch (Exception e){
+            //System.out.println("Error: " + e.toString());
+        }        
+        return "NOK";
+    }
+    
+    public String [] ips(boolean ping, int timeout, boolean list, boolean printOn){
+        String ipv4=null;
+        String ipv6=null;
+        String ipv6_nat=null;
+        String ipv6_my=null;
+        String ipv6_other=null;
+        
+        int count=0;
+        String ips_string=ipsString();
+        String [] tuplas = ips_string.split(";;;");            
+        for ( String tupla : tuplas ){
+            String [] tupla_partes=tupla.split(";;");
+            String iface=tupla_partes[0];
+            String [] ips=tupla_partes[1].split(";");
+            boolean first=true;
+            for ( String ip : ips ){
+                if ( list && ++count == 1 )
+                    if ( printOn )
+                        System.out.println("a=$(\ncat << 'EOF'");
+                if ( first ){
+                    first=false;
+                    if ( printOn )
+                        System.out.println(iface+":");
+                }
+                if ( ip.contains(".") ){ // ipv4
+                    if ( ipv4 == null )
+                        ipv4=ip;
+                }else{ 
+                    if ( ip.contains(":") ){ // ipv6
+                        if ( ip.startsWith("fe") || ip.startsWith("fd") ){
+                            if ( ipv6_nat == null )
+                                ipv6_nat=ip;
+                        }else{
+                            if ( ip.contains("::") ){
+                                if ( ipv6_other == null )
+                                    ipv6_my=ip;
+                            }else{
+                                ipv6_other=ip;
+                            }
+                        }
+                    }else{
+                        // desconhecido
+                    }
+                }
+                String ping_=null;
+                if ( ping )
+                    ping_=ping(ip, timeout);
+                if ( printOn )
+                    format_show_ip(ip, ping_);
+            }
+        }
+        if( list && count > 0 )
+            if ( printOn )
+                System.out.println("EOF\n)\necho \"$a\" | y ping list");
+
+        ipv6=ipv6_my;
+        if ( ipv6 == null )
+            ipv6=ipv6_other;        
+        if ( ipv6 == null )
+            ipv6=ipv6_nat;
+        return new String[]{ipv4, ipv6};
+    }   
+        
+    public String get_ip(){
+        String ip=null;
+        String [] ipv4_ipv6=ips(true, 15, false, false);
+        if ( ipv4_ipv6[1] != null )
+            return ipv4_ipv6[1];
+        return ipv4_ipv6[0];
+    }
     
     public static ArrayList<String> getListaIPs()
     {     
@@ -23877,7 +23856,7 @@ class ProxyServer {
 /* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlist\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-log_ips\" \"d:/ProgramFiles/log_ips/log_8888.txt\" \"-noLogLocal\" && y var\n"
 /* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlistmovie\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-log_ips\" \"d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
 /* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlistserver\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-cfg\" \"d:/ProgramFiles/playlistserver.cfg\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"webdav\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-pass\" \"admin,admin123,user,user123\" && y var\n"
+/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"webdav\" \"-port\" \"8888\" \"-pass\" \"admin,admin123,user,user123\" && y var\n"
 /* class by manual */                + "    windows:\n"
 /* class by manual */                + "    set var=\"httpServer\" \"-host\" \"127.0.0.1\" \"-port\" \"8888\" \"-titulo_url_token\" \"\" \"-titulo\" \"titulo\" \"-dir\" \".\" \"-endsWith\" \"\" \"-ips_banidos\" \"\" \"-log_ips\" \"\" && y var\n"
 /* class by manual */                + "    linux:\n"

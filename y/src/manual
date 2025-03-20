@@ -606,7 +606,7 @@ Exemplos...
     set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" "-noLogLocal" && y var
     set var="httpServer" "-mode" "playlistmovie" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" && y var
     set var="httpServer" "-mode" "playlistserver" "-host" "192.168.0.100" "-port" "8888" "-cfg" "d:/ProgramFiles/playlistserver.cfg" && y var
-    set var="httpServer" "-mode" "webdav" "-host" "192.168.0.100" "-port" "8888" "-pass" "admin,admin123,user,user123" && y var
+    set var="httpServer" "-mode" "webdav" "-port" "8888" "-pass" "admin,admin123,user,user123" && y var
     windows:
     set var="httpServer" "-host" "127.0.0.1" "-port" "8888" "-titulo_url_token" "" "-titulo" "titulo" "-dir" "." "-endsWith" "" "-ips_banidos" "" "-log_ips" "" && y var
     linux:
