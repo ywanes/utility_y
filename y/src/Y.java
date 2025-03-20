@@ -15002,8 +15002,7 @@ class WebDAVServer extends Util{
                 String method = requestParts[0];
                 String path = requestParts[1];
 
-                // Decodificar o caminho da URL
-                String decodedPath = URLDecoder.decode(path, "UTF-8");
+                String decodedPath = decodeUrl(path);
 
                 // Extrair cabeçalhos
                 Map<String, String> headers = new HashMap<>();
@@ -15266,12 +15265,13 @@ class WebDAVServer extends Util{
             try {
                 destinationUri = new URI(destinationHeader);
             } catch (URISyntaxException e) {
-                sendResponse(out, "HTTP/1.1 400 Bad Request", "Invalid Destination header");
+                sendResponse(out, "HTTP/1.1 400 Bad Request ? " + e.toString(), "Invalid Destination header");
                 return;
             }
 
             String destinationPath = destinationUri.getPath();
-            String decodedDestinationPath = URLDecoder.decode(destinationPath, "UTF-8");
+            //String decodedDestinationPath = URLDecoder.decode(destinationPath, "UTF-8");
+            String decodedDestinationPath = destinationPath;
 
             // Verificar se o destino está dentro do diretório raiz do servidor
             File sourceFile = new File("." + sourcePath);
@@ -15290,7 +15290,7 @@ class WebDAVServer extends Util{
 
             // Verificar se o recurso de origem existe
             if (!sourceFile.exists()) {
-                sendResponse(out, "HTTP/1.1 404 Not Found", "Source resource not found");
+                sendResponse(out, "HTTP/1.1 404 Not Found ? " + sourceFile.getAbsolutePath(), "Source resource not found");
                 return;
             }
 
@@ -15399,7 +15399,7 @@ class WebDAVServer extends Util{
         private void handlePropfind(InputStream in, OutputStream out, String path, Map<String, String> headers) throws IOException {
             File file = new File("." + path);
             if (!file.exists()) {
-                sendResponse(out, "HTTP/1.1 404 Not Found", "Resource not found");
+                sendResponse(out, "HTTP/1.1 404 Not Found - " + file.getAbsolutePath(), "Resource not found");
                 return;
             }
 
@@ -15436,12 +15436,11 @@ class WebDAVServer extends Util{
         }
 
         private void appendResourceProperties(StringBuilder xmlResponse, File file, String path) {
-            // Escapar caracteres especiais no nome do arquivo/diretório
-            String escapedPath = escapeXml(path);
-            String escapedName = escapeXml(file.getName());
-            
-            //escapedPath=encodeUrl(path);
-            //escapedName=encodeUrl(file.getName());
+            // espaço %20
+            // +      %2B
+            // nao sei explicar porque funciona + mudar para %20 sendo que %20 é espaço e nao +
+            // esse é um caso de endecodeURIComponent ?
+            String escapedPath=encodeUrl(path).replaceAll("\\+", "%20").replaceAll("%2F", "/");
 
             xmlResponse.append("  <D:response>\n")
                     .append("    <D:href>").append(escapedPath).append("</D:href>\n")
@@ -16593,7 +16592,8 @@ class Util{
     }
     
     public String decodeUrl(String a){
-        try{    
+        try{   
+            a=a.replaceAll("\\+", "%2B");
             return java.net.URLDecoder.decode( a, "UTF-8");
         }catch(Exception e){
             return "Erro_no_decode_url";
