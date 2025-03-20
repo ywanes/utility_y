@@ -15091,7 +15091,7 @@ class WebDAVServer extends Util{
 
             // Verificar se o arquivo/diretório existe
             if (!file.exists()) {
-                sendResponse(out, "HTTP/1.1 404 Not Found", "Resource not found");
+                sendResponse(out, "HTTP/1.1 404 Not Found - " + new File("." + path).getAbsolutePath(), "Resource not found");
                 return;
             }
 
@@ -15126,7 +15126,7 @@ class WebDAVServer extends Util{
 
                 // Construir a lista de arquivos e diretórios
                 StringBuilder directoryListing = new StringBuilder();
-                directoryListing.append("<html><body><h1>Directory Listing: ").append(path).append("</h1><ul>");
+                directoryListing.append("<html><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"><body><h1>Directory Listing: ").append(path).append("</h1><ul>");
 
                 // Adicionar link para o diretório pai (..)
                 if (!path.equals("/")) {
@@ -15141,7 +15141,7 @@ class WebDAVServer extends Util{
                 for (File f : files) {
                     String name = f.getName();
                     String type = f.isDirectory() ? "DIR" : "FILE";
-                    directoryListing.append("<li>[").append(type).append("] <a href=\"").append(path.endsWith("/") ? "" : "/").append(name).append("\">").append(name).append("</a></li>");
+                    directoryListing.append("<li>[").append(type).append("] <a href=\"").append(path.endsWith("/") ? path : path+"/").append(name).append("\">").append(name).append("</a></li>");
                 }
 
                 directoryListing.append("</ul></body></html>");
@@ -15439,6 +15439,9 @@ class WebDAVServer extends Util{
             // Escapar caracteres especiais no nome do arquivo/diretório
             String escapedPath = escapeXml(path);
             String escapedName = escapeXml(file.getName());
+            
+            //escapedPath=encodeUrl(path);
+            //escapedName=encodeUrl(file.getName());
 
             xmlResponse.append("  <D:response>\n")
                     .append("    <D:href>").append(escapedPath).append("</D:href>\n")
@@ -15463,7 +15466,7 @@ class WebDAVServer extends Util{
                         .replace("<", "&lt;")
                         .replace(">", "&gt;")
                         .replace("\"", "&quot;")
-                        .replace("'", "&apos;");
+                        .replace("'", "&apos;");                   
         }
 
         private void handleOptions(OutputStream out) throws IOException {
