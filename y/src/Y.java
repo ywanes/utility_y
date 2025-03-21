@@ -863,6 +863,15 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args[0].equals("dnsDoHServer") && args.length == 4 ){
+            // y dnsDoHServer 192.168.0.100 8080 https://dns.adguard.com/dns-query
+            // https://192.168.0.100:8080/dns-query
+            // falta implementar o https.. http nao funciona
+            // o Google Chrome (e a maioria dos navegadores modernos) não aceita DNS sobre HTTPS (DoH) sem um certificado HTTPS válido
+            // Não é possível usar dnsDoHServer sem certificado na máquina!
+            dnsDoHServer(args[1], Integer.parseInt(args[2]), args[3]);
+            return;
+        }        
         if ( args[0].equals("audio") ){
             audio(args);
             return;
@@ -5588,6 +5597,21 @@ cat buffer.log
             }
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
+        }
+    }
+    public void dnsDoHServer(String host, int port, String dns){
+        try{
+            ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName(host));
+            String host_display="http://" + host + ":" + port;
+            if (host.contains(":"))
+                host_display="http://[" + host + "]:" + port;
+            System.out.println("Service opened: " + host_display);
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                new Thread(new DoHServerRunnable(clientSocket, dns)).start();
+            }
+        }catch(Exception e){
+            erroFatal(e);
         }
     }
     public void audio(String [] args){
@@ -23175,6 +23199,314 @@ class ProxyServer {
         }
     }
 }
+
+class DnsDoHClient extends Util{
+    /* modelo de uso
+    DnsDoHClient doh=new DnsDoHClient();
+
+    // config
+    String domain="google.com";
+    String dns="https://dns.adguard.com/dns-query";
+    boolean flag_ipv6=false;
+
+    // comunicação completa
+    byte [] request=doh.encodeRequest("google.com", flag_ipv6);
+    byte [] response=doh.send(dns, request);
+    doh.decodeResponse(response);
+    String ip=doh.decodeResponse_ip;
+    System.out.println(ip);
+
+    // decodeRequest
+    doh.decodeRequest(request);
+    System.out.println(doh.decodeRequest_domain);
+
+    // encodeResponse
+    String ip_="142.251.134.142"; // "2800:03f0:4004:0801:0000:0000:0000:200e"; // ips do google
+    byte [] response_=doh.encodeResponse(domain, ip_);
+    // valida encodeResponse
+    doh.decodeResponse(response_);
+    System.out.println(doh.decodeResponse_ip);      
+    */
+    public String get(String domain, boolean flag_ipv6, String dohUrl){
+        String retorno=null;
+        try {
+            byte[] dnsQuery = encodeRequest(domain, flag_ipv6);
+            byte[] dnsResponse = send(dohUrl, dnsQuery);
+            decodeResponse(dnsResponse);
+            retorno=decodeResponse_ip;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return retorno;
+    }
+
+    public byte[] encodeResponse(String domain, String ip) throws Exception{
+        boolean flag_ipv6=ip.contains(":");
+        int clazz=1;
+        if ( flag_ipv6 ){
+            int [] partes=ipv6ToIntArray(ip);
+            byte [] partes2=new byte[partes.length];
+            for ( int i=0;i<partes.length;i++ )
+                partes2[i]=(byte)partes[i];
+            return encodeResponse(domain, flag_ipv6, clazz, partes2);
+        }
+        String [] partes=ip.split("\\.");
+        byte [] partes2=new byte[partes.length];
+        for ( int i=0;i<partes.length;i++ )
+            partes2[i]=(byte)Integer.parseInt(partes[i]);
+        return encodeResponse(domain, flag_ipv6, clazz, partes2);
+    }
+    
+    public int get_type_by_flag(boolean flag_ipv6){
+        return flag_ipv6?28:1;
+    }
+    public byte[] encodeRequest(String domain, boolean flag_ipv6) throws Exception{
+        int type=get_type_by_flag(flag_ipv6);
+        java.io.ByteArrayOutputStream byteArrayOutputStream = new java.io.ByteArrayOutputStream();
+        byte[] header = new byte[]{
+                0x00, 0x00, // ID (16 bits) - Pode ser qualquer valor
+                0x01, 0x00, // Flags (16 bits) - Consulta padrão
+                0x00, 0x01, // Número de perguntas (16 bits) - 1 pergunta
+                0x00, 0x00, // Número de respostas (16 bits) - 0 respostas
+                0x00, 0x00, // Número de registros de autoridade (16 bits) - 0
+                0x00, 0x00  // Número de registros adicionais (16 bits) - 0
+        };
+        byteArrayOutputStream.write(header);
+        String[] labels = domain.split("\\.");
+        for (String label : labels) {
+            byteArrayOutputStream.write(label.length()); // Tamanho do rótulo
+            byteArrayOutputStream.write(label.getBytes()); // Rótulo
+        }
+        byteArrayOutputStream.write(0x00);
+        byteArrayOutputStream.write(new byte[]{0x00, (byte)type}); // Tipo A
+        byteArrayOutputStream.write(new byte[]{0x00, 0x01}); // Classe IN
+
+        return byteArrayOutputStream.toByteArray();
+    }
+
+    public String decodeRequest_domain=null;
+    public Integer decodeRequest_type=null;
+    public Integer decodeRequest_clazz=null;
+    public void decodeRequest(byte[] dnsQuery) {
+        java.io.ByteArrayInputStream inputStream = new java.io.ByteArrayInputStream(dnsQuery);
+        try {
+            inputStream.read(new byte[12]);
+            StringBuilder domain = new StringBuilder();
+            int labelLength;
+            while ((labelLength = inputStream.read()) != 0) {
+                if (domain.length() > 0)
+                    domain.append(".");
+                byte[] labelBytes = new byte[labelLength];
+                inputStream.read(labelBytes);
+                domain.append(new String(labelBytes));
+            }
+            decodeRequest_domain=domain.toString();
+            byte[] typeBytes = new byte[2];
+            inputStream.read(typeBytes);
+            decodeRequest_type=((typeBytes[0] & 0xFF) << 8) | (typeBytes[1] & 0xFF);
+            byte[] classBytes = new byte[2];
+            inputStream.read(classBytes);
+            decodeRequest_clazz=((classBytes[0] & 0xFF) << 8) | (classBytes[1] & 0xFF);
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    public byte[] send(String dohUrl, byte[] dnsQuery) throws Exception {
+        URL url = new URL(dohUrl);
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+        // Configura a requisição HTTP
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Content-Type", "application/dns-message");
+        connection.setDoOutput(true);
+
+        // Envia a consulta DNS
+        try (OutputStream outputStream = connection.getOutputStream()) {
+            outputStream.write(dnsQuery);
+        }
+
+        // Lê a resposta DNS
+        try (InputStream inputStream = connection.getInputStream()) {
+            java.io.ByteArrayOutputStream responseBuffer = new java.io.ByteArrayOutputStream();
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                responseBuffer.write(buffer, 0, bytesRead);
+            }
+            return responseBuffer.toByteArray();
+        }
+    }
+
+    public byte[] encodeResponse(String domain, boolean flag_ipv6, int clazz, byte[] responseData) throws Exception{
+        int type=get_type_by_flag(flag_ipv6);
+        java.io.ByteArrayOutputStream byteArrayOutputStream = new java.io.ByteArrayOutputStream();
+
+        // Header DNS (12 bytes)
+        byte[] header = new byte[]{
+                0x00, 0x00, // ID (16 bits) - Pode ser qualquer valor
+                (byte)0x81, (byte)0x80, // Flags (16 bits) - Resposta padrão
+                0x00, 0x01, // Número de perguntas (16 bits) - 1 pergunta
+                0x00, 0x01, // Número de respostas (16 bits) - 1 resposta
+                0x00, 0x00, // Número de registros de autoridade (16 bits) - 0
+                0x00, 0x00  // Número de registros adicionais (16 bits) - 0
+        };
+        byteArrayOutputStream.write(header);
+
+        // Domínio (formato DNS)
+        String[] labels = domain.split("\\.");
+        for (String label : labels) {
+            byteArrayOutputStream.write(label.length()); // Tamanho do rótulo
+            byteArrayOutputStream.write(label.getBytes()); // Rótulo
+        }
+        byteArrayOutputStream.write(0x00); // Fim do domínio
+
+        // Tipo e classe da pergunta (A - IPv4, IN - Internet)
+        byteArrayOutputStream.write(ByteBuffer.allocate(2).putShort((short) type).array()); // Tipo
+        byteArrayOutputStream.write(ByteBuffer.allocate(2).putShort((short) clazz).array()); // Classe
+
+        // Resposta
+        byteArrayOutputStream.write(new byte[]{(byte) 0xC0, 0x0C}); // Ponteiro para o nome (comprimido)
+        byteArrayOutputStream.write(ByteBuffer.allocate(2).putShort((short) type).array()); // Tipo
+        byteArrayOutputStream.write(ByteBuffer.allocate(2).putShort((short) clazz).array()); // Classe
+        byteArrayOutputStream.write(ByteBuffer.allocate(4).putInt(300).array()); // TTL (300 segundos)
+        byteArrayOutputStream.write(ByteBuffer.allocate(2).putShort((short) responseData.length).array()); // Tamanho dos dados
+        byteArrayOutputStream.write(responseData); // Dados da resposta
+
+        return byteArrayOutputStream.toByteArray();
+    }
+    
+    String decodeResponse_ip=null;
+    public void decodeResponse(byte[] dnsResponse) {
+        ByteBuffer buffer = ByteBuffer.wrap(dnsResponse);
+        buffer.position(12);
+        while (buffer.get() != 0) {} // Domínio
+        buffer.getShort(); // Tipo
+        buffer.getShort(); // Classe
+        while (buffer.hasRemaining()) {
+            if ((buffer.get() & 0xC0) == 0xC0)
+                buffer.get(); // Pula o ponteiro comprimido
+            else
+                while (buffer.get() != 0) {} // Domínio
+            int type = buffer.getShort() & 0xFFFF;
+            int clazz = buffer.getShort() & 0xFFFF;
+            long ttl = buffer.getInt() & 0xFFFFFFFFL;
+            int length = buffer.getShort() & 0xFFFF;
+
+            // Verifica o tipo de resposta
+            if (clazz == 1) { // Classe IN (Internet)
+                if (type == 1 && length == 4) { // Tipo A (IPv4)
+                    byte[] ipBytes = new byte[4];
+                    buffer.get(ipBytes);
+                    decodeResponse_ip=
+                            (ipBytes[0] & 0xFF) + "." +
+                            (ipBytes[1] & 0xFF) + "." +
+                            (ipBytes[2] & 0xFF) + "." +
+                            (ipBytes[3] & 0xFF);
+                } else if (type == 28 && length == 16) { // Tipo AAAA (IPv6)
+                    byte[] ipBytes = new byte[16];
+                    buffer.get(ipBytes);
+                    StringBuilder ipv6 = new StringBuilder();
+                    for (int i = 0; i < 16; i += 2) {
+                        if (i > 0)
+                            ipv6.append(":");
+                        ipv6.append(String.format("%02x%02x", ipBytes[i] & 0xFF, ipBytes[i + 1] & 0xFF));
+                    }
+                    decodeResponse_ip=ipv6.toString();
+                }else{
+                    buffer.position(buffer.position() + length);
+                }
+            }else{
+                buffer.position(buffer.position() + length);
+            }
+        }
+    }
+    
+    public void printHex(byte[] bytes) {
+        for (byte b : bytes) {
+            System.out.printf("%02x ", b);
+        }
+        System.out.println();
+    }    
+
+    public int[] ipv6ToIntArray(String ipv6) {
+        String normalizedIPv6 = normalizeIPv6(ipv6);
+        String[] hexGroups = normalizedIPv6.split(":");
+        int[] intArray = new int[16]; // IPv6 tem 16 bytes
+        int index = 0;
+        for (String group : hexGroups) {
+            // Divide o grupo em 2 partes de 2 caracteres hexadecimais cada
+            String hexByte1 = group.substring(0, 2);
+            String hexByte2 = group.substring(2, 4);
+
+            // Converte cada parte em um inteiro
+            intArray[index++] = hexToInt(hexByte1);
+            intArray[index++] = hexToInt(hexByte2);
+        }
+
+        return intArray;
+    }    
+
+    public int hexToInt(String hex) {
+        return Integer.parseInt(hex, 16); // Base 16 para hexadecimal
+    }
+    
+    public String normalizeIPv6(String ipv6) {
+        String[] groups = ipv6.split(":");
+        StringBuilder normalized = new StringBuilder();
+        for (String group : groups) {
+            while (group.length() < 4)
+                group = "0" + group; // Preenche com zeros à esquerda
+            normalized.append(group).append(":");
+        }
+        return normalized.substring(0, normalized.length() - 1);
+    }
+}
+
+class DoHServerRunnable implements Runnable {
+    private final Socket clientSocket;
+    private final String dns_;
+    public DoHServerRunnable(Socket clientSocket, String dns) {
+        this.clientSocket = clientSocket;
+        this.dns_=dns;
+    }
+
+    @Override
+    public void run() {
+        try (InputStream in = clientSocket.getInputStream();
+            OutputStream out = clientSocket.getOutputStream()) {
+            final String dns=dns_;
+            
+            int len=0;
+            byte [] buf=new byte[1024];
+            ByteArrayOutputStream baos=new ByteArrayOutputStream();
+            while( (len=in.read(buf, 0, buf.length)) != -1 )
+                baos.write(buf, 0, len);
+            
+            DnsDoHClient doh=new DnsDoHClient();
+            byte [] request=baos.toByteArray();
+            doh.decodeRequest(request);
+            String name=doh.decodeRequest_domain;
+            
+            byte [] response=doh.send(dns, request);
+            doh.decodeResponse(response);
+            String ip=doh.decodeResponse_ip;
+            System.out.println(name + " " + ip);
+            out.write(response);
+             
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                clientSocket.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+}
+
+
 
 /* class Wget */ // download do Wget muito instavel, melhor refatorar para curl
 /* class Wget */ //String [] args2 = {"-h"};               
