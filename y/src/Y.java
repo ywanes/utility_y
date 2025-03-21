@@ -869,6 +869,7 @@ cat buffer.log
             // falta implementar o https.. http nao funciona
             // o Google Chrome (e a maioria dos navegadores modernos) não aceita DNS sobre HTTPS (DoH) sem um certificado HTTPS válido
             // Não é possível usar dnsDoHServer sem certificado na máquina!
+            // dando erro de certificado
             dnsDoHServer(args[1], Integer.parseInt(args[2]), args[3]);
             return;
         }        
@@ -5600,6 +5601,121 @@ cat buffer.log
         }
     }
     public void dnsDoHServer(String host, int port, String dns){
+        /*
+        // quase
+        // modelo com certificado, ainda dando problema
+        // https://localhost:8443/dns-query
+        // certificado.cer MIIDhTCCAm2gAwIBAgIEFJaHCTANBgkqhkiG9w0BAQsFADBzMQswCQYDVQQGEwJCUjEQMA4GA1UECBMHTXlTdGF0ZTEPMA0GA1UEBxMGTXlDaXR5MRcwFQYDVQQKEw5NeU9yZ2FuaXphdGlvbjEUMBIGA1UECxMLRGV2ZWxvcG1lbnQxEjAQBgNVBAMTCWxvY2FsaG9zdDAeFw0yNTAzMjExOTQ2MjlaFw0yNjAzMjExOTQ2MjlaMHMxCzAJBgNVBAYTAkJSMRAwDgYDVQQIEwdNeVN0YXRlMQ8wDQYDVQQHEwZNeUNpdHkxFzAVBgNVBAoTDk15T3JnYW5pemF0aW9uMRQwEgYDVQQLEwtEZXZlbG9wbWVudDESMBAGA1UEAxMJbG9jYWxob3N0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAgfSb236uEDMYI5hfp+UFwR8WPzOMiYDsdjo9KZmUiqztCfBIv42YvcREYbG2EqPh+XPCV6QWsTQqVA8Vih4mfigEa3I14KJ/iYON/jbzUhzQtf1/y0TWJNXgwpg2M6aLR6uCDS6JNbMFvzEBgiYVD86dRo0n/H8wbPf6qBsNdhCNRTpLBGKeQqnNXNVYR9rDDgwhAFlz/SlvtEKWO5L2/mLSpvdg3XXjOSpW13MX5A0wISr9v3ApNClNXesnQz8TlAw4qeRk02O/bw7OaRWK/ssaggDnm0ksTV23QtbvvtqIWl7vePbFdAl6GJRzGVUDGqibuEC73rEu/CGKx64XawIDAQABoyEwHzAdBgNVHQ4EFgQUETILYovPidK9QxJt04IQCufcyX8wDQYJKoZIhvcNAQELBQADggEBAGjgsthlDJ4K6YUS/8JaMy8Voj6MYLc4d1kQERX8DHmngQoG24Epnek8b6if9eY4i+6Q8ohsc9f/XhooOzHRATj7iBxROH2EPMb7PGXaQUt9Xxely5MC7R5B4jIKf8c/QVR0rIxkL/79sIX6gOyOBGuGx9JuHJ3DWIWHM8UoOZCS4g8/tsiSAk5QU/iNIpmRGz77Rdh8s9ygd2l/zNTg9eDbKELWx+BHlqlDVifDsVJIsOI5CU/epaCVlAM3OcZJVt5JOahUxF6IbVU8rYZJXte/48mZr3pCxthRVtF6ZIN/1Eul508fkaXxd5hVebKBZ5+rJKmbD3eyQj14Hh+2bAk=
+        // password pass2word
+        // keytool -genkeypair -alias dohserver -keyalg RSA -keysize 2048 -validity 365 -keystore dohserver.keystore -storepass pass2word -keypass pass2word -dname "CN=localhost, OU=Development, O=MyOrganization, L=MyCity, ST=MyState, C=BR"
+
+        import javax.net.ssl.*;
+        import java.io.*;
+        import java.net.*;
+        import java.security.KeyStore;
+        import java.nio.charset.StandardCharsets;
+
+        public class DoHServer {
+            public DoHServer() throws Exception {
+                // Configura o SSLContext com o keystore
+                char[] password = "pass2word".toCharArray(); // Senha do keystore
+                KeyStore keyStore = KeyStore.getInstance("JKS");
+                try (InputStream keyStoreStream = new FileInputStream("C:\\tmp\\tmp\\dohserver.keystore")) {
+                    keyStore.load(keyStoreStream, password);
+                }
+
+                KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance("SunX509");
+                keyManagerFactory.init(keyStore, password);
+
+                SSLContext sslContext = SSLContext.getInstance("TLS");
+                sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+
+                // Cria o SSLServerSocket
+                SSLServerSocketFactory socketFactory = sslContext.getServerSocketFactory();
+                try (SSLServerSocket serverSocket = (SSLServerSocket) socketFactory.createServerSocket(8443)) {
+                    System.out.println("Servidor DoH rodando em https://localhost:8443/dns-query");
+
+                    while (true) {
+                        try (SSLSocket clientSocket = (SSLSocket) serverSocket.accept()) {
+                            handleClient(clientSocket);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+
+            private static void handleClient(SSLSocket clientSocket) throws IOException {
+                // Usa InputStream para ler bytes da solicitação HTTP
+                InputStream in = clientSocket.getInputStream();
+                OutputStream out = clientSocket.getOutputStream();
+
+                // Lê a primeira linha da solicitação HTTP
+                BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+                String requestLine = reader.readLine();
+                if (requestLine != null && requestLine.startsWith("POST /dns-query")) {
+                    // Lê os cabeçalhos HTTP
+                    int contentLength = 0;
+                    String header;
+                    while ((header = reader.readLine()) != null && !header.isEmpty()) {
+                        if (header.startsWith("Content-Length:")) {
+                            contentLength = Integer.parseInt(header.substring("Content-Length:".length()).trim());
+                        }
+                    }
+
+                    // Lê o corpo da solicitação (consulta DNS)
+                    byte[] dnsQuery = new byte[contentLength];
+                    int bytesRead = 0;
+                    while (bytesRead < contentLength) {
+                        bytesRead += in.read(dnsQuery, bytesRead, contentLength - bytesRead);
+                    }
+
+                    // Processa a consulta DNS
+                    byte[] dnsResponse = sendDnsQuery(dnsQuery);
+
+                    // Envia a resposta HTTP
+                    String httpResponse = "HTTP/1.1 200 OK\r\n" +
+                            "Content-Type: application/dns-message\r\n" +
+                            "Content-Length: " + dnsResponse.length + "\r\n" +
+                            "Connection: close\r\n\r\n";
+                    out.write(httpResponse.getBytes(StandardCharsets.UTF_8));
+                    out.write(dnsResponse);
+                } else {
+                    // Retorna erro para métodos não suportados
+                    String httpResponse = "HTTP/1.1 405 Method Not Allowed - " + requestLine + "\r\n" +
+                            "Connection: close\r\n\r\n";
+                    out.write(httpResponse.getBytes(StandardCharsets.UTF_8));
+                }
+
+                out.flush();
+            }
+
+            // Método para enviar uma consulta DNS via UDP
+            private static byte[] sendDnsQuery(byte[] dnsQuery) throws IOException {
+                try (DatagramSocket socket = new DatagramSocket()) {
+                    socket.setSoTimeout(5000); // Timeout de 5 segundos
+
+                    // Endereço do resolvedor DNS (Google DNS)
+                    InetAddress dnsServer = InetAddress.getByName("8.8.8.8");
+                    int dnsPort = 53;
+
+                    // Envia a consulta DNS
+                    DatagramPacket queryPacket = new DatagramPacket(dnsQuery, dnsQuery.length, dnsServer, dnsPort);
+                    socket.send(queryPacket);
+
+                    // Recebe a resposta DNS
+                    byte[] buffer = new byte[1024];
+                    DatagramPacket responsePacket = new DatagramPacket(buffer, buffer.length);
+                    socket.receive(responsePacket);
+
+                    // Retorna a resposta DNS
+                    byte[] responseData = new byte[responsePacket.getLength()];
+                    System.arraycopy(responsePacket.getData(), 0, responseData, 0, responsePacket.getLength());
+                    return responseData;
+                }
+            }
+        }        
+        */
         try{
             ServerSocket serverSocket = new ServerSocket(port, 1,InetAddress.getByName(host));
             String host_display="http://" + host + ":" + port;
