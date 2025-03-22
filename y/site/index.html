@@ -470,7 +470,7 @@ function load_movie(parm, table_click){
         if (controlsTimeout) {
           clearTimeout(controlsTimeout);
         }
-        controlsTimeout = setTimeout(() => {
+        controlsTimeout = setTimeout(() => { // sumindo painel de controle
           if ( document.querySelector('.video-container .controls-container') != null ){
             document.querySelector('.video-container .controls-container').style.opacity = '0';
             document.querySelector('.video-container .controls-container0').style.opacity = '0';
@@ -502,7 +502,7 @@ function load_movie(parm, table_click){
     function clickingVideo(n){	  
       if ( n == 1 ){
         mili_click=Date.now();
-        setTimeout(
+        setTimeout(// sistema dclick
           function (){
             if ( mili_dclick < (mili_click - 250) )
               clickVideo();
@@ -520,8 +520,15 @@ function load_movie(parm, table_click){
 				return;
             if ( document.getElementsByClassName('time-remaining')[0].innerHTML.indexOf(error_NaN_load) >= 0 ){
 				_resume = get_resume();
-				if ( _resume != null )
-					eval(_resume['onclick']);
+				if ( _resume != null ){
+					let _resume_tmp=_resume['onclick'];
+					setTimeout(// retry video of NaN
+						function (){
+							if ( document.getElementsByClassName('time-remaining')[0].innerHTML.indexOf(error_NaN_load) >= 0 )
+								eval(_resume_tmp);
+					    },
+					250);										
+				}
 				return;		
             }
             console.log('tagName clicked: ' + e.target.tagName);
