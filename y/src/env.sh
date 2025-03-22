@@ -57,7 +57,8 @@ alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4
 rm -f /opt/.u_flag
 alias u='/opt/.u'
 alias uu='/opt/.u_c'
-if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep "not upgraded" | grep -v "and 0 not upgraded" | wc -l` -eq 1 ]
+# old #if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep "not upgraded" | grep -v "and 0 not upgraded" | wc -l` -eq 1 ]
+if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep "Not Upgrading:" | wc -l` -eq 1 ]
 then  
   echo "" > /opt/.u_c
   apt list --upgradable -a 2>/dev/null | while read linha 
