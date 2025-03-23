@@ -6805,7 +6805,7 @@ cat buffer.log
                 return;
             }
             if ( partes.length > 0 )
-                titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "");
+                titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "").replace(".Dublado.", ".");
             else{
                 overflix_error+="Erro, titulo não encontrado na url: " + url+"\n";
                 return;
