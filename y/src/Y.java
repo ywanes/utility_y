@@ -6746,10 +6746,12 @@ cat buffer.log
             overflix_verbose(verbose, tags, "TAG:5->"+String.join(",", partes));
             String prefix=url.substring(0, url.indexOf("/", 9));
             for ( int i=0;i<partes.length;i++ ){
-                if ( !partes[i].startsWith("/em") && !partes[i].startsWith("https://mixdrop.ps") )
+                if ( !partes[i].startsWith("/em") && !partes[i].startsWith("https://mixdrop.") ){
+                    overflix_verbose(verbose, tags, "TAG:6 - " + partes[i]);
                     continue;                
+                }
                 overflix_verbose(verbose, tags, "TAG:6");
-                if ( partes[i].startsWith("https://mixdrop.ps") ){
+                if ( partes[i].startsWith("https://mixdrop.") ){
                     overflix_verbose(verbose, tags, "TAG:601");
                     overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
                 }else{
@@ -6768,7 +6770,7 @@ cat buffer.log
         // nivel 3 filme e serie
         String mix=null;
         String suffix="?download";
-        if ( url.startsWith("https://mixdrop.ps") && !url.endsWith("?download") ){
+        if ( url.startsWith("https://mixdrop.") && !url.endsWith("?download") ){
             mix=url+suffix;
         }else{
             partes=regex_matcher("window.location.href=\"", "\"", html, true); 
