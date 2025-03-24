@@ -11971,15 +11971,24 @@ cat buffer.log
             System.out.println("Warning: O Elemento de origem " + fonte + " nao foi encontrado, mesmo assim o linked deve ser criado!");
         }
             
+        /*
         String command="";
         if ( System.getProperty("user.dir").contains("/") )
             command = "ln -s '" + fonte + "' '" + new_ + "'";
         else
             command = "cmd /c mklink /j \"" + new_ + "\" \"" + fonte + "\"";
+        */
+        
+        String [] partes=null;        
+        if ( System.getProperty("user.dir").contains("/") )
+            partes = new String[]{"ln", "-s", fonte, new_};
+        else
+            partes = new String[]{"cmd", "/c", "mklink", "/j", new_, fonte};
         
         try{
-            System.out.println("running command " + command);
-            Runtime.getRuntime().exec(command);
+            //System.out.println("running command " + command);
+            runtimeExec(null, partes, null, null, null);
+            //Runtime.getRuntime().exec(command);
             System.out.println("finish!");
         }catch(Exception e){
             System.out.println("Error...");
