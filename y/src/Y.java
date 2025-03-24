@@ -11556,8 +11556,9 @@ cat buffer.log
         if (superficial || hist.equals("") || hist.equals("/") || (hist.contains(":") && hist.length() <= 3) ){
             // faz nada
         }else{
-            if ( format_du == null )
+            if ( format_du == null ){
                 showfind(f, hist, mtime, type, pre, pos, format_lss, format_du, 0, out);
+            }
             hist+=sep;
         }
         try{
@@ -11592,17 +11593,18 @@ cat buffer.log
                         len_du_aux = 0;
                         if ( format_du != null )
                             len_du_aux=files[i].length();
-                        else
+                        else{
                             showfind(files[i], files[i].getName(), mtime, type, pre, pos, format_lss, format_du, len_du_aux, out);
-                    }else{
-                        
+                        }
+                    }else
                         len_du += find_nav(files[i], sep, hist+files[i].getName(), superficial, mtime, acceptSymbolicLink, type, pre, pos, format_lss, format_du, out);
-                    }
                 }
+                out.flush();
             }
             len_du += f.length();
-            if ( format_du != null )
+            if ( format_du != null ){
                 showfind(f, hist_bkp, mtime, type, pre, pos, format_lss, format_du, len_du, out);
+            }
         }catch(Exception e){}        
         return len_du;
     }
@@ -11682,9 +11684,10 @@ cat buffer.log
                             name="\"" + name + "\"";
                         else
                             name="'" + name + "'";
-                    out.write((format_lss_ + name + format_lss_B + "\n").getBytes());
+                    out.write((format_lss_ + name + format_lss_B + "\n").getBytes());                    
                 }
             }
+            out.flush();
         }catch(Exception e){
             erroFatal(e);
         }
@@ -17562,6 +17565,11 @@ class Util{
                 return osGetTypeTrueCache;
             if ( !getType && osGetTypeFalseCache != null )
                 return osGetTypeFalseCache;        
+            // processamento rapido getType
+            if ( getType ){
+                osGetTypeTrueCache=System.getProperty("user.dir").contains("/")?"Linux":"Windows";
+                return osGetTypeTrueCache;                     
+            }
             boolean show=false;
             String [] commands = new String[]{
                 // BootDevice,RegisteredUser, removido!
