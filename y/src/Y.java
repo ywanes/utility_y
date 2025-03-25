@@ -7743,6 +7743,13 @@ cat buffer.log
             boolean flag_continue=false;
             for ( int j=0;j<status_codes.length;j++ ){
                 if ( curl_response_status == status_codes[j] ){
+                    if( curl_response_status == 502 && i == 0 )
+                        System.out.print("502 ..");
+                    if( curl_response_status == 502 && i == 1 ){
+                        // infinito.. aguardando sistema voltar!
+                        System.out.print(".");
+                        i--;
+                    }
                     flag_continue=true;
                     break;                    
                 }
