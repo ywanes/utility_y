@@ -193,6 +193,7 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.JButton;
 import java.awt.event.MouseAdapter;
+import java.text.DecimalFormat;
 
 
 public class Y extends Util{    
@@ -865,6 +866,10 @@ cat buffer.log
         }
         if ( args[0].equals("cat") ){
             cat(args);
+            return;
+        }
+        if ( args[0].equals("emprestimo") ){
+            emprestimo(args);
             return;
         }
         if ( args[0].equals("terminal") ){
@@ -5607,6 +5612,25 @@ cat buffer.log
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
         }
+    }
+    public void emprestimo(String [] args){
+        Object [] objs=get_parms_modelo_valor_jurosAM_jurosAA_parcelas(args);
+        if ( objs == null )
+            erroFatal("Erro de parametros!");
+        String modelo=(String)objs[0];
+        Double valor=(Double)objs[1];
+        Double jurosAM=(Double)objs[2];
+        Double jurosAA=(Double)objs[3];
+        Integer parcelas=(Integer)objs[4];
+        if ( modelo.equals("price") ){
+            new TabelaPrice(valor, jurosAM, jurosAA, parcelas);
+            return;
+        }
+        if ( modelo.equals("sac") ){
+            new TabelaSAC(valor, jurosAM, jurosAA, parcelas);
+            return;
+        }
+        erroFatal("sistema de emprestimo não reconhecido: " + modelo);
     }
     public void dnsDoHServer(String host, int port, String dns){
         /*
@@ -10668,7 +10692,7 @@ cat buffer.log
         return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath};
     }        
            
-    private Object [] get_parms_vol_mute_setvol_setmute_program_mutingWhileProgramInPrincipalMonitor(String [] args){
+    public Object [] get_parms_vol_mute_setvol_setmute_program_mutingWhileProgramInPrincipalMonitor(String [] args){
         Boolean vol=false;
         Boolean mute=false;
         String setvol=null;
@@ -10726,7 +10750,64 @@ cat buffer.log
             return null;
         return new Object []{vol, mute, setvol, setmute, program, mutingWhileProgramInPrincipalMonitor};
     }        
-               
+
+    public Object [] get_parms_modelo_valor_jurosAM_jurosAA_parcelas(String [] args){
+        String modelo=null;
+        Double valor=null;
+        Double jurosAM=null;
+        Double jurosAA=null;
+        Integer parcelas=null;
+        
+        args=sliceParm(1, args);
+        while(args.length > 0){
+            if ( args.length > 1 && args[0].equals("valor") ){                
+                args=sliceParm(1, args);
+                valor=Double.parseDouble(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 2 && args[0].equals("juros") ){
+                if ( jurosAM != null || jurosAA != null )
+                    return null;
+                args=sliceParm(1, args);
+                jurosAM=Double.parseDouble(args[0])/100;
+                jurosAM=arredondamentoDouble(jurosAM, 5);
+                args=sliceParm(1, args);
+                String tipo=args[0];
+                args=sliceParm(1, args);
+                if ( tipo.equals("a.m") ){
+                    jurosAA=Math.pow(1 + jurosAM, 12) - 1;
+                    jurosAA=arredondamentoDouble(jurosAA, 5);
+                }else{
+                    if ( tipo.equals("a.a") ){
+                        jurosAA=jurosAM;
+                        jurosAM=Math.pow(1 + jurosAA, 1.0/12) - 1;
+                        jurosAM=arredondamentoDouble(jurosAM, 5);
+                    }else{
+                        erroFatal("tipo de juros desconhecido => " + tipo);
+                    }
+                }
+                continue;
+            }
+            if ( args.length > 1 && args[1].equals("parcelas") ){                
+                parcelas=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && modelo == null ){
+                modelo=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            break;
+        }      
+        if ( modelo == null )
+            modelo="price";
+        if ( valor == null || jurosAM == null || parcelas == null )
+            return null;
+        return new Object []{modelo,valor,jurosAM,jurosAA,parcelas};
+    }        
+       
     private Object [] get_parms_f_mixer_line_wav_mp3_volume(String [] args){
         String f=null;        
         String mixer=null;
@@ -15684,6 +15765,100 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+
+    // faz arredondamento e tira notação cientifica    
+    // de   5.8000000000000003E-2
+    // para 0.058
+    // de 0.99409999999999998
+    // para 0.9941
+    public String arredondamentoNumber(String txt) {        
+        
+        boolean analise=false;
+        if ( txt.equals("6.7100000000000007E-2") ) // 0.060
+            analise=true;
+        
+        
+        int flutuacao=0;
+        String tmp="";
+        String a="";
+        String b="";
+        boolean achou=false;
+        
+        if ( txt.contains("E") ){
+            tmp=txt.split("E")[1];
+            txt=txt.split("E")[0];
+            flutuacao=Integer.parseInt(tmp);
+        }
+        
+        a=txt.split("\\.")[0];
+        b=txt.split("\\.")[1];
+        
+        if ( b.length() >= 15 ){
+            // arredondamento ...999X
+            // de 0.99409999999999998
+            // para 0.9941
+            if ( 
+                b.substring(b.length()-2,b.length()-1).equals("9") 
+                && b.substring(b.length()-3,b.length()-2).equals("9") 
+                && b.substring(b.length()-4,b.length()-3).equals("9") 
+            ){
+                for( int i=b.length()-5;i>=0;i-- ){
+                    if ( ! b.substring(i,i+1).equals("9") ){
+                        b=b.substring(0,i)+(Integer.parseInt(b.substring(i,i+1))+1);
+                        achou=true;
+                        break;
+                    }
+                }
+                if ( ! achou ){
+                    b="0";
+                    a=(Integer.parseInt(a)+1)+"";
+                }
+            }else{
+                // convert 058000000000000003 em 058
+                if ( 
+                    b.substring(b.length()-2,b.length()-1).equals("0") 
+                    && b.substring(b.length()-3,b.length()-2).equals("0") 
+                    && b.substring(b.length()-4,b.length()-3).equals("0") 
+                ){
+                    for( int i=b.length()-5;i>=0;i-- ){
+                        if ( ! b.substring(i,i+1).equals("0") ){
+                            b=b.substring(0,i)+b.substring(i,i+1);
+                            achou=true;
+                            break;
+                        }
+                    }
+                }
+                if ( ! achou ){
+                    b="0";
+                }
+            }
+        }
+                
+        while(flutuacao>0){
+            if ( b.length() == 0 ){
+                a+="0";
+            }else{
+                a+=b.substring(0,1);
+                b=b.substring(1);
+            }
+            flutuacao--;
+        }
+        while(flutuacao<0){
+            b=a+b;
+            a="0";
+            flutuacao++;
+        }    
+        if ( b.equals("0") )
+            return a;
+        return a+"."+b;
+    }
+    
+    public Double arredondamentoDouble(Double valor, int n_arredondamento) {
+        BigDecimal bd = new BigDecimal(Double.toString(valor));
+        bd = bd.setScale(n_arredondamento, java.math.RoundingMode.HALF_UP);
+        return bd.doubleValue();
+    }
+    
     public void format_show_ip(String a, String b){
         if ( b != null ){
             String s1="                                                                ".substring(0, 40-a.length());
@@ -19585,93 +19760,6 @@ class XML extends Util{
         if ( ! achou )
             controleTags_tags.add(tag);
     }
-
-    // faz arredondamento e tira notação cientifica    
-    // de   5.8000000000000003E-2
-    // para 0.058
-    // de 0.99409999999999998
-    // para 0.9941
-    private static String arredondamentoNumber(String txt) {        
-        
-        boolean analise=false;
-        if ( txt.equals("6.7100000000000007E-2") ) // 0.060
-            analise=true;
-        
-        
-        int flutuacao=0;
-        String tmp="";
-        String a="";
-        String b="";
-        boolean achou=false;
-        
-        if ( txt.contains("E") ){
-            tmp=txt.split("E")[1];
-            txt=txt.split("E")[0];
-            flutuacao=Integer.parseInt(tmp);
-        }
-        
-        a=txt.split("\\.")[0];
-        b=txt.split("\\.")[1];
-        
-        if ( b.length() >= 15 ){
-            // arredondamento ...999X
-            // de 0.99409999999999998
-            // para 0.9941
-            if ( 
-                b.substring(b.length()-2,b.length()-1).equals("9") 
-                && b.substring(b.length()-3,b.length()-2).equals("9") 
-                && b.substring(b.length()-4,b.length()-3).equals("9") 
-            ){
-                for( int i=b.length()-5;i>=0;i-- ){
-                    if ( ! b.substring(i,i+1).equals("9") ){
-                        b=b.substring(0,i)+(Integer.parseInt(b.substring(i,i+1))+1);
-                        achou=true;
-                        break;
-                    }
-                }
-                if ( ! achou ){
-                    b="0";
-                    a=(Integer.parseInt(a)+1)+"";
-                }
-            }else{
-                // convert 058000000000000003 em 058
-                if ( 
-                    b.substring(b.length()-2,b.length()-1).equals("0") 
-                    && b.substring(b.length()-3,b.length()-2).equals("0") 
-                    && b.substring(b.length()-4,b.length()-3).equals("0") 
-                ){
-                    for( int i=b.length()-5;i>=0;i-- ){
-                        if ( ! b.substring(i,i+1).equals("0") ){
-                            b=b.substring(0,i)+b.substring(i,i+1);
-                            achou=true;
-                            break;
-                        }
-                    }
-                }
-                if ( ! achou ){
-                    b="0";
-                }
-            }
-        }
-                
-        while(flutuacao>0){
-            if ( b.length() == 0 ){
-                a+="0";
-            }else{
-                a+=b.substring(0,1);
-                b=b.substring(1);
-            }
-            flutuacao--;
-        }
-        while(flutuacao<0){
-            b=a+b;
-            a="0";
-            flutuacao++;
-        }    
-        if ( b.equals("0") )
-            return a;
-        return a+"."+b;
-    }
     
     private HashMap atributos=new HashMap();
     private String value=null;
@@ -19835,7 +19923,7 @@ class XML extends Util{
         listaNivel=new ArrayList<Integer>();
     }
     
-    private static void addLista(String txt, int nivel, boolean mostraEstrutura, boolean exportSheetCSV,OutputStream out, boolean suprimeHeader) throws Exception{
+    private void addLista(String txt, int nivel, boolean mostraEstrutura, boolean exportSheetCSV,OutputStream out, boolean suprimeHeader) throws Exception{
         if ( mostraEstrutura ){
             if ( ! txt.trim().equals("") ){
                 for (int j=0;j<nivel-1;j++ )
@@ -23815,7 +23903,89 @@ class DoHServerRunnable implements Runnable {
     }
 }
 
+class TabelaPrice {
+    public TabelaPrice(Double valor, Double jurosAM, Double jurosAA, Integer parcelas){
+        DecimalFormat df = new DecimalFormat("#,##0.00");
+        if (parcelas < 1) {
+            System.out.println("Número de parcelas inválido. Deve ser maior que zero.");
+            return;
+        }
+        if (valor <= 0) {
+            System.out.println("Montante inválido. Deve ser maior que zero.");
+            return;
+        }
+        if (jurosAM < 0) {
+            System.out.println("Taxa de juros inválida. Deve ser positiva.");
+            return;
+        }
+        double valorParcela = calcularParcela(valor, jurosAM, parcelas);
+        double totalPago = valorParcela * parcelas;
+        double totalJuros = totalPago - valor;
+        System.out.println("\n=== Tabela de Pagamento ===");
+        System.out.println("Montante financiado: R$ " + df.format(valor));
+        System.out.println("Taxa de juros mensal: " + (jurosAM * 100) + "%");
+        System.out.println("Taxa de juros anual: " + (jurosAA * 100) + "%");
+        System.out.println("Número de parcelas: " + parcelas);
+        System.out.println("Valor da parcela: R$ " + df.format(valorParcela));
+        System.out.println("Total a ser pago: R$ " + df.format(totalPago));
+        System.out.println("Total de juros: R$ " + df.format(totalJuros));
+        System.out.println("\nDetalhamento das Parcelas:");
+        System.out.println("Parcela | Valor Parcela | Saldo Devedor");
+        System.out.println("--------|---------------|--------------");
+        double saldoDevedor = valor;
+        for (int i = 1; i <= parcelas; i++) {
+            double jurosParcela = saldoDevedor * jurosAM;
+            double amortizacao = valorParcela - jurosParcela;
+            saldoDevedor -= amortizacao;
+            if (i == parcelas)
+                saldoDevedor = 0;
+            System.out.printf("%7d | R$ %9s | R$ %9s%n", i, df.format(valorParcela), df.format(saldoDevedor));
+        }
+    }
+    private static double calcularParcela(double valor, double jurosAM, int parcelas) {
+        if (jurosAM == 0)
+            return valor / parcelas;
+        double fator = Math.pow(1 + jurosAM, parcelas);
+        return valor * jurosAM * fator / (fator - 1);
+    }
+}
 
+class TabelaSAC {
+    public TabelaSAC(Double valor, Double jurosAM, Double jurosAA, Integer parcelas){
+        DecimalFormat df = new DecimalFormat("#,##0.00");
+        if (valor <= 0 || jurosAM <= 0 || parcelas <= 0) {
+            System.out.println("Todos os valores devem ser positivos!");
+            return;
+        }
+        double amortizacaoConstante = valor / parcelas;
+        double saldoDevedor = valor;
+        double totalJuros = 0;
+        System.out.println("\n=== TABELA DE AMORTIZAÇÃO SAC ===");
+        System.out.println("Valor do empréstimo: R$ " + df.format(valor));
+        System.out.println("Taxa de juros mensal: " + (jurosAM * 100) + "%");
+        System.out.println("Taxa de juros anual: " + (jurosAA * 100) + "%");        
+        System.out.println("Número de parcelas: " + parcelas);
+        System.out.println("Amortização constante: R$ " + df.format(amortizacaoConstante));
+        System.out.println("\nParcela | Saldo Devedor | Amortização | Juros | Prestação");
+        System.out.println("--------|---------------|-------------|-------|----------");
+        for (int i = 1; i <= parcelas; i++) {
+            double jurosParcela = saldoDevedor * jurosAM;
+            double prestacao = amortizacaoConstante + jurosParcela;
+            if (i == parcelas){
+                amortizacaoConstante = saldoDevedor;
+                prestacao = amortizacaoConstante + jurosParcela;
+            }
+            System.out.printf("%6d  | R$ %10s | R$ %8s | R$ %5s | R$ %8s%n",i, 
+                            df.format(saldoDevedor), df.format(amortizacaoConstante),
+                            df.format(jurosParcela), df.format(prestacao));
+            totalJuros += jurosParcela;
+            saldoDevedor -= amortizacaoConstante;
+        }
+        System.out.println("\n=== RESUMO FINANCEIRO ===");
+        System.out.println("Total de juros pagos: R$ " + df.format(totalJuros));
+        System.out.println("Total pago (empréstimo + juros): R$ " + df.format(valor + totalJuros));
+    }
+}
 
 /* class Wget */ // download do Wget muito instavel, melhor refatorar para curl
 /* class Wget */ //String [] args2 = {"-h"};               
@@ -23885,6 +24055,7 @@ class DoHServerRunnable implements Runnable {
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -23917,6 +24088,8 @@ class DoHServerRunnable implements Runnable {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y emprestimo]\n"
+/* class by manual */                + "  [y terminal]\n"
 /* class by manual */                + "  [y dotaMutandoAll]\n"
 /* class by manual */                + "  [y audio]\n"
 /* class by manual */                + "  [y isWindowsAdm]\n"
@@ -24179,6 +24352,12 @@ class DoHServerRunnable implements Runnable {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y emprestimo]\n"
+/* class by manual */                + "    y emprestimo price valor 15000 juros 1.0 a.m 10 parcelas\n"
+/* class by manual */                + "    y emprestimo sac valor 15000 juros 1.0 a.m 10 parcelas\n"
+/* class by manual */                + "    referencia: https://calculojuridico.com.br/calculadora-price-sac/\n"
+/* class by manual */                + "[y terminal]\n"
+/* class by manual */                + "    y terminal\n"
 /* class by manual */                + "[y dotaMutandoAll]\n"
 /* class by manual */                + "    y dotaMutandoAll -sleep 3 -nicks \"ynet,Analista de Sistema,neBullet\"\n"
 /* class by manual */                + "[y audio]\n"
@@ -24906,6 +25085,8 @@ class DoHServerRunnable implements Runnable {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

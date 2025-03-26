@@ -26,6 +26,7 @@ usage:
   [y progressBar]
   [y xargs]
   [y cat]
+  [y emprestimo]
   [y terminal]
   [y dotaMutandoAll]
   [y audio]
@@ -289,6 +290,10 @@ Exemplos...
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
+[y emprestimo]
+    y emprestimo price valor 15000 juros 1.0 a.m 10 parcelas
+    y emprestimo sac valor 15000 juros 1.0 a.m 10 parcelas
+    referencia: https://calculojuridico.com.br/calculadora-price-sac/
 [y terminal]
     y terminal
 [y dotaMutandoAll]
