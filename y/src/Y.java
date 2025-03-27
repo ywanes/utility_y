@@ -2105,6 +2105,21 @@ cat buffer.log
             encodeUrl_stream();
             return;
         }
+        if ( args[0].equals("tests") ){
+            //C:\y\yTests.cmd
+            /*
+            echo preparando..
+            c:
+            cd C:\y
+            del Tests.java
+            copy D:\DADOSSSSS\Desktopsss\desktop\utility_y\utility_y\y\src\Tests.java Tests.java
+            #curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
+            javac Tests.java
+            echo rodando..
+            y cls
+            java Tests            
+            */
+        }
         if ( args[0].equals("test") ){ // "teste"
             try{
                 test("");
