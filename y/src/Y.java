@@ -1924,6 +1924,10 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("kill") && args.length >= 2 ){
+            if ( args.length == 2 && !isNumeric(args[1]) && new File(args[1]).exists() ){
+                kill_by_path(args[1]);
+                return;
+            }
             if ( args.length > 2 && args[1].equals("text") ){
                 for ( int i=2;i<args.length;i++ )
                     kill_by_text(args[i]);
@@ -1944,7 +1948,7 @@ cat buffer.log
                 }
                 i++;
             }
-            kill(args2, System.out, type);
+            kill_by_pids(args2, System.out, type);
             return;
         }
         if ( args[0].equals("win") ){
@@ -2112,7 +2116,8 @@ cat buffer.log
             c:
             cd C:\y
             del Tests.java
-            copy D:\DADOSSSSS\Desktopsss\desktop\utility_y\utility_y\y\src\Tests.java Tests.java
+            # desfazer o \\ abaixo
+            copy D:\\DADOSSSSS\\Desktopsss\\desktop\\utility_y\\utility_y\\y\\src\\Tests.java Tests.java
             #curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
             javac Tests.java
             echo rodando..
@@ -16589,6 +16594,27 @@ class Util{
         return arrayList_to_array(lista);        
     }
     
+    public void kill_by_path(String path){
+        String s=runtimeExec(null, new String[]{"handle64", "-accepteula", path}, null, null, null);        
+        if ( s == null || s.equals("") ){
+            if ( runtimeExecError != null && !runtimeExecError.equals("") ){
+                if ( runtimeExecError.contains("handle64") )
+                    erroFatal("Erro, não foi encontrado o programa handle64(e coloque na pasta programfiles), baixe ele aqui: https://github.com/ywanes/utility_y/tree/master/y/utils_exe");
+                erroFatal("Erro, comando invalido...\n\n"+runtimeExecError);
+            }
+        }
+        String [] pids=new String[]{};
+        String [] lines=s.split("\n");
+        for ( int i=0;i<lines.length;i++ ){
+            String [] campos=lines[i].split(" ");
+            int p=findParm(campos, "pid:", true);
+            if ( p > -1 && p+1 < campos.length)
+                pids=addParm(campos[p+1], pids);
+        }
+        if ( pids.length > 0 )
+            kill_by_pids(pids);            
+    }
+    
     public boolean kill_by_text(String a){ 
         return kill_by_text(a, null, null, false);
     }
@@ -16596,17 +16622,17 @@ class Util{
     public boolean kill_by_text(String a, String b, String c, boolean include_current_pid){ // a->like b->notLike c->notLike
         String [] pids=pids_search(a, b, c, include_current_pid);
         if ( pids.length > 0 ){
-            kill(pids);
+            kill_by_pids(pids);
             return true;
         }
         return false;
     }
     
-    public void kill(String [] parms_){
-        kill(parms_, null, "-9");
+    public void kill_by_pids(String [] parms_){
+        kill_by_pids(parms_, null, "-9");
     }
     
-    public void kill(String [] parms_, OutputStream out, String type){
+    public void kill_by_pids(String [] parms_, OutputStream out, String type){
         try{
             String [] parms=new String[0];
             String [] parms_steps_type2=new String[0];
@@ -24071,6 +24097,11 @@ class TabelaSAC {
 
 
 
+
+
+
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -24910,6 +24941,9 @@ class TabelaSAC {
 /* class by manual */                + "    y kill -9 3434 3435\n"
 /* class by manual */                + "    y kill -2 3434 3435\n"
 /* class by manual */                + "    y kill text -Dnetbeans netbeans\n"
+/* class by manual */                + "    y kill \"D:\\ProgramFiles\\site\\musicas\\cry\"\n"
+/* class by manual */                + "    y kill \"D:\\ProgramFiles\\site\\musicas\\cry\\Thomas Bergersen - Cry (Sun).mkv\"\n"
+/* class by manual */                + "    obs: o kill de path so foi implementado para o windows\n"
 /* class by manual */                + "[y win]\n"
 /* class by manual */                + "    y win\n"
 /* class by manual */                + "    obs: mostra se o windows e office estao ativado\n"

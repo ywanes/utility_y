@@ -833,6 +833,9 @@ Exemplos...
     y kill -9 3434 3435
     y kill -2 3434 3435
     y kill text -Dnetbeans netbeans
+    y kill "D:\ProgramFiles\site\musicas\cry"
+    y kill "D:\ProgramFiles\site\musicas\cry\Thomas Bergersen - Cry (Sun).mkv"
+    obs: o kill de path só foi implementado para o windows
 [y win]
     y win
     obs: mostra se o windows e office estão ativado
