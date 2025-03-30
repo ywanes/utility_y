@@ -24028,7 +24028,7 @@ class TabelaSAC {
     }
 }
 
-/* class Wget */ // download do Wget muito instavel, melhor refatorar para curl
+/* class Wget */ // download do Wget muito instavel, melhor refatorar baseado no curl
 /* class Wget */ //String [] args2 = {"-h"};               
 /* class Wget */ //String [] args2 = {"-ban","%d0","-only_before","-list_mp3","-list_diretories","http://195.122.253.112/public/mp3/"};        
 /* class Wget */ //String [] args2 = {"-list_files_and_diretories","http://www.dcbasso.rsn86.com/arquivos/Musicas/"};    
