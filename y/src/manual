@@ -125,6 +125,7 @@ usage:
   [y decodeUrl]
   [y encodeUrl]
   [y test]
+  [y tests]
   [y controlc]
   [y random]
   [y talk]
@@ -892,6 +893,8 @@ Exemplos...
     obs: o espaço esta sendo representado como +, o que é uma tradução obsoleta.
 [y test]
     y test
+[y tests]
+    y tests
 [y controlc]
     y controlc
 [y random]

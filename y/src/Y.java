@@ -58,14 +58,16 @@ nssm restart yd
 y pss | y grep -server | y grep Y | y grep -v grep
 depois de um tempo o comando de cima some?
 
-    créditos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
-    créditos https://github.com/is/jsch/tree/master/examples
+créditos "ssh/scp/sftp/sshExec" https://ufpr.dl.sourceforge.net/project/jsch/jsch.jar/0.1.55/jsch-0.1.55.jar 
+créditos https://github.com/is/jsch/tree/master/examples
 
 Graalvm
-alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
-curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java | y awk -v start REMOVED_GRAAL_START end REMOVED_GRAAL_END > Y.java
-javac Y.java
-native-image Y
+#alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4-3.0.jar:/opt/y/mysql-connector-java-8.0.26.jar:/opt/y/jsch-0.1.55.jar:. Y'
+#curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java | y awk -v start REMOVED_GRAAL_START end REMOVED_GRAAL_END > Y.java
+y cat D:/DADOSSSSS/Desktopsss/desktop/utility_y/utility_y/y/src/Y.java | y awk -v start REMOVED_GRAAL_START end REMOVED_GRAAL_END > Y.java
+javac -encoding UTF-8 Y.java
+native-image -Dfile.encoding=UTF-8 --no-fallback Y
+y mv y.exe y2.exe
 */
 
 //REMOVED_GRAAL_START
@@ -2116,8 +2118,7 @@ cat buffer.log
             c:
             cd C:\y
             del Tests.java
-            # desfazer o \\ abaixo
-            copy D:\\DADOSSSSS\\Desktopsss\\desktop\\utility_y\\utility_y\\y\\src\\Tests.java Tests.java
+            copy D:/DADOSSSSS/Desktopsss/desktop/utility_y/utility_y/y/src/Tests.java Tests.java
             #curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
             javac Tests.java
             echo rodando..
@@ -2125,20 +2126,21 @@ cat buffer.log
             java Tests            
             */
         }
-        if ( args[0].equals("test") ){ // "teste"
+        if ( args[0].equals("tests") || args[0].equals("test") ){
             try{
-                test("");
+                new Tests(args, args[0].equals("test"));
             }catch(Exception e){
                 System.err.println(".. "+ e.toString());
                 System.exit(1);
-            }                
-            //test(args);
+            }
             return;
         }
+        //REMOVED_GRAAL_START        
         if ( args[0].equals("controlc") ){
             controlc();
             return;
         }
+        //REMOVED_GRAAL_END        
         if ( args[0].equals("random") && args.length == 3 ){
             System.out.println(random(Integer.parseInt(args[1]), Integer.parseInt(args[2])));
             return;
@@ -2237,7 +2239,7 @@ cat buffer.log
         }            
     }
 
-	//REMOVED_GRAAL_START
+    //REMOVED_GRAAL_START
     private void daemon(String [] args){
         if(args.length > 1){
             if ( args[1].equals("-server") ){
@@ -2388,7 +2390,7 @@ cat buffer.log
             erro_amigavel_exception(e);
         }
     }
-	//REMOVED_GRAAL_END
+    //REMOVED_GRAAL_END
     //REMOVED_GRAAL_START
     private void daemon_command_loop_tail(String command){
         try{
@@ -3043,11 +3045,6 @@ cat buffer.log
         }
     }
     
-    public void chmod_777(String path){
-        try{
-            Runtime.getRuntime().exec(new String[]{"chmod", "777", path});        
-        }catch(Exception e){}
-    }
     private boolean error_back_path(String a){
         if ( a.startsWith("/") || a.endsWith("/") || a.contains("\\") )
             return true;
@@ -5056,18 +5053,7 @@ cat buffer.log
     public String RTRIM(String txt){
         return txt.replaceAll("\\s+$","");
     }
-
-    public char[] encodeHex(byte[] data) {
-        char[] toDigits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
-        int l = data.length;
-        char[] out = new char[l << 1];
-        for (int i = 0, j = 0; i < l; i++) {
-            out[j++] = toDigits[(0xF0 & data[i]) >>> 4];
-            out[j++] = toDigits[0x0F & data[i]];
-        }
-        return out;
-    }
-
+    
     public Connection getcon(String stringcon){
         if ( stringcon.startsWith("jdbc:sqlserver") ){
             //SQLServer            
@@ -7008,88 +6994,7 @@ cat buffer.log
         }catch(Exception e){}
         return "";
     }
-    
-    
-    public void xor(int parm){
-        while(parm < 0)
-            parm+=256;
-        while(parm >= 256)
-            parm-=256;        
-        try{
-            InputStream inputStream_pipe=System.in;
-            byte[] buf = new byte[BUFFER_SIZE];
-            int len=0;
-            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
-                for( int i=0;i<len;i++ ){
-                    int z=buf[i];
-                    if ( z < 0 )
-                        z+=256;
-                    buf[i]=(byte)(z^parm);
-                }
-                System.out.write(buf, 0, len);
-            }
-            System.out.flush();
-            System.out.close();
-        }catch(Exception e){
-            System.err.println("Erro, "+e.toString());
-        }
-    }
-    
-    public void xor_ofuscation(int a, String b){
-        try{
-            String [] tags=b.split(",");
-            int c=tags.length;
-            InputStream inputStream_pipe=System.in;
-            byte[] buf = new byte[BUFFER_SIZE];
-            int len=0;
-            int t=0;
-            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
-                for( int i=0;i<len;i++ ){
-                    int z=buf[i];
-                    if ( z < 0 )
-                        z+=256;
-                    buf[i]=(byte)( z^Integer.parseInt(tags[(i+a+t)%c]) );
-                }
-                System.out.write(buf, 0, len);
-                t+=len;
-            }
-            
-            System.out.flush();
-            System.out.close();
-        }catch(Exception e){
-            System.err.println("Erro, "+e.toString());
-        }
-    }
-    
-    public String digest(String tipo, String caminho_opcional){        
-        try {
-            if ( caminho_opcional != null )
-                readBytes(new File(caminho_opcional));
-            MessageDigest digest=MessageDigest.getInstance(tipo);            
-            byte[] buf = new byte[BUFFER_SIZE];            
-            int len;
-            while( (len=readBytes(buf)) > -1 )
-                digest.update(buf, 0, len);
-            closeBytes();
-            return new String(encodeHex(digest.digest()));            
-        } catch (Exception ex) {
-            System.err.println("Erro: "+ex.toString());
-            System.exit(1);
-        }
-        return null;
-    }
 
-    public String digest_text(String txt,String tipo){
-        try {
-            byte[] bytesOfMessage = txt.getBytes("UTF-8");
-            MessageDigest md = MessageDigest.getInstance(tipo);            
-            return new String(encodeHex(md.digest(bytesOfMessage)));                
-        } catch (Exception e) {
-            System.out.println(e.toString());
-        }
-        return null;
-    }
-    
     public int tryConvertNumberPositiveByString(int n_lines_buffer,String value){
         try{
             int tmp=Integer.parseInt(value);
@@ -14165,7 +14070,100 @@ while True:
         while ( (line=readLine()) != null )
             System.out.println(encodeUrl(line));
     }
+
+    //REMOVED_GRAAL_START
+    private void controlc(){
+        try{
+            System.out.println("Control C iniciado...");
+            String [] controlC_parms = new String []{"\n", "0"};
+            // DisableControlC
+            new Util().loadDisableControlC(controlC_parms);
+            InputStream inputStream_pipe=System.in;      
+            byte [] buff = new byte[BUFFER_SIZE];
+            while(true){
+                if ( controlC_parms[1].equals("1") )
+                    break;
+                if ( inputStream_pipe.available() <= 0 )
+                    continue;
+                inputStream_pipe.read(buff,0,BUFFER_SIZE);
+            }   
+            System.out.println("3...");
+            sleepSeconds(1);
+            System.out.println("2...");
+            sleepSeconds(1);
+            System.out.println("1...");
+            sleepSeconds(1);
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+    //REMOVED_GRAAL_END    
     
+    private void update(){        
+        try{
+            boolean error=false;
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            Process proc = null;
+            if ( new File("c:\\y\\compila2.cmd").exists() )
+                proc = Runtime.getRuntime().exec("cmd /c compila2.cmd", null, new File("c:\\y"));
+            else{
+                if ( new File("/opt/y/compila2").exists() )
+                    proc = Runtime.getRuntime().exec("compila2", null, new File("/opt/y"));
+                else{
+                    System.out.print("compila2 não encontrado!");
+                    System.exit(1);
+                }
+            }
+            int len=0;
+            byte[] b=new byte[1024];
+            String s="";
+            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){}
+            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
+                baos.write(b, 0, len);
+                error=true;
+            }       
+            baos.flush();
+            s=baos.toString("UTF-8").trim();
+            if ( 
+                (
+                    s.split("\n").length == 2 
+                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
+                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
+                ) || (
+                    s.split("\n").length > 2 
+                    && s.contains("‘Y.java’ saved")
+                    && ! s.contains("error")                    
+                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
+                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
+                ) || (
+                    s.split("\n").length > 2 
+                    && s.startsWith("% Total")
+                    && s.contains("\r100 ")
+                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
+                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
+                )
+            )
+                System.out.println("ok");
+            else{
+                System.err.println(s);
+                System.out.println("ERROR!!");
+                System.exit(1);
+            }
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }        
+    }
+}
+
+class Tests extends Util{
+    public Tests(String [] args, boolean flag_test) throws Exception{
+        if ( flag_test ){
+            teste_unico();
+            return;
+        }
+        return;
+    }
     
     private String [] tests_name=null;
     private String [] tests_commands=null;
@@ -14173,7 +14171,7 @@ while True:
     private String [] tests_hash_err=null;
     private String dir_tests="/tmp/tests_y";
     private String file_command_test=null;
-    private void test(String args) throws Exception{                            
+    private void teste_unico() throws Exception{                            
         try{
             //init
             if ( isWindows() ){
@@ -14236,89 +14234,7 @@ while True:
             erro_amigavel_exception(e);
             System.exit(1);
         }
-    }
-    
-    private void controlc(){
-        try{
-            System.out.println("Control C iniciado...");
-            String [] controlC_parms = new String []{"\n", "0"};
-            // DisableControlC
-            new Util().loadDisableControlC(controlC_parms);
-            InputStream inputStream_pipe=System.in;      
-            byte [] buff = new byte[BUFFER_SIZE];
-            while(true){
-                if ( controlC_parms[1].equals("1") )
-                    break;
-                if ( inputStream_pipe.available() <= 0 )
-                    continue;
-                inputStream_pipe.read(buff,0,BUFFER_SIZE);
-            }   
-            System.out.println("3...");
-            sleepSeconds(1);
-            System.out.println("2...");
-            sleepSeconds(1);
-            System.out.println("1...");
-            sleepSeconds(1);
-        }catch(Exception e){
-            erroFatal(e);
-        }
-    }
-    
-    private void update(){        
-        try{
-            boolean error=false;
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            Process proc = null;
-            if ( new File("c:\\y\\compila2.cmd").exists() )
-                proc = Runtime.getRuntime().exec("cmd /c compila2.cmd", null, new File("c:\\y"));
-            else{
-                if ( new File("/opt/y/compila2").exists() )
-                    proc = Runtime.getRuntime().exec("compila2", null, new File("/opt/y"));
-                else{
-                    System.out.print("compila2 não encontrado!");
-                    System.exit(1);
-                }
-            }
-            int len=0;
-            byte[] b=new byte[1024];
-            String s="";
-            while ( (len=proc.getInputStream().read(b, 0, b.length)) != -1 ){}
-            while ( (len=proc.getErrorStream().read(b, 0, b.length)) != -1 ){
-                baos.write(b, 0, len);
-                error=true;
-            }       
-            baos.flush();
-            s=baos.toString("UTF-8").trim();
-            if ( 
-                (
-                    s.split("\n").length == 2 
-                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
-                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
-                ) || (
-                    s.split("\n").length > 2 
-                    && s.contains("‘Y.java’ saved")
-                    && ! s.contains("error")                    
-                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
-                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
-                ) || (
-                    s.split("\n").length > 2 
-                    && s.startsWith("% Total")
-                    && s.contains("\r100 ")
-                    && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
-                    && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
-                )
-            )
-                System.out.println("ok");
-            else{
-                System.err.println(s);
-                System.out.println("ERROR!!");
-                System.exit(1);
-            }
-        }catch(Exception e){
-            System.err.println(e.toString());
-            System.exit(1);
-        }        
-    }
+    }    
 }
 
 class multiCurl extends Util{
@@ -15785,6 +15701,102 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+    public char[] encodeHex(byte[] data) {
+        char[] toDigits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+        int l = data.length;
+        char[] out = new char[l << 1];
+        for (int i = 0, j = 0; i < l; i++) {
+            out[j++] = toDigits[(0xF0 & data[i]) >>> 4];
+            out[j++] = toDigits[0x0F & data[i]];
+        }
+        return out;
+    }
+    
+    public void xor(int parm){
+        while(parm < 0)
+            parm+=256;
+        while(parm >= 256)
+            parm-=256;        
+        try{
+            InputStream inputStream_pipe=System.in;
+            byte[] buf = new byte[BUFFER_SIZE];
+            int len=0;
+            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                for( int i=0;i<len;i++ ){
+                    int z=buf[i];
+                    if ( z < 0 )
+                        z+=256;
+                    buf[i]=(byte)(z^parm);
+                }
+                System.out.write(buf, 0, len);
+            }
+            System.out.flush();
+            System.out.close();
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+        }
+    }
+    
+    public void xor_ofuscation(int a, String b){
+        try{
+            String [] tags=b.split(",");
+            int c=tags.length;
+            InputStream inputStream_pipe=System.in;
+            byte[] buf = new byte[BUFFER_SIZE];
+            int len=0;
+            int t=0;
+            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                for( int i=0;i<len;i++ ){
+                    int z=buf[i];
+                    if ( z < 0 )
+                        z+=256;
+                    buf[i]=(byte)( z^Integer.parseInt(tags[(i+a+t)%c]) );
+                }
+                System.out.write(buf, 0, len);
+                t+=len;
+            }
+            
+            System.out.flush();
+            System.out.close();
+        }catch(Exception e){
+            System.err.println("Erro, "+e.toString());
+        }
+    }
+    
+    public String digest(String tipo, String caminho_opcional){        
+        try {
+            if ( caminho_opcional != null )
+                readBytes(new File(caminho_opcional));
+            MessageDigest digest=MessageDigest.getInstance(tipo);            
+            byte[] buf = new byte[BUFFER_SIZE];            
+            int len;
+            while( (len=readBytes(buf)) > -1 )
+                digest.update(buf, 0, len);
+            closeBytes();
+            return new String(encodeHex(digest.digest()));            
+        } catch (Exception ex) {
+            System.err.println("Erro: "+ex.toString());
+            System.exit(1);
+        }
+        return null;
+    }
+
+    public String digest_text(String txt,String tipo){
+        try {
+            byte[] bytesOfMessage = txt.getBytes("UTF-8");
+            MessageDigest md = MessageDigest.getInstance(tipo);            
+            return new String(encodeHex(md.digest(bytesOfMessage)));                
+        } catch (Exception e) {
+            System.out.println(e.toString());
+        }
+        return null;
+    }
+        
+    public void chmod_777(String path){
+        try{
+            Runtime.getRuntime().exec(new String[]{"chmod", "777", path});        
+        }catch(Exception e){}
+    }
 
     // faz arredondamento e tira notação cientifica    
     // de   5.8000000000000003E-2
@@ -18346,9 +18358,8 @@ class Util{
             System.exit(1);
         } 
     }
-	//REMOVED_GRAAL_END
-    
-	//REMOVED_GRAAL_START
+    //REMOVED_GRAAL_END    
+    //REMOVED_GRAAL_START
     public void loadDisableControlC(String [] args){
         //https://rosettacode.org/wiki/Handle_a_signal#Java
         /*
@@ -24233,6 +24244,7 @@ class TabelaSAC {
 /* class by manual */                + "  [y decodeUrl]\n"
 /* class by manual */                + "  [y encodeUrl]\n"
 /* class by manual */                + "  [y test]\n"
+/* class by manual */                + "  [y tests]\n"
 /* class by manual */                + "  [y controlc]\n"
 /* class by manual */                + "  [y random]\n"
 /* class by manual */                + "  [y talk]\n"
@@ -25000,6 +25012,8 @@ class TabelaSAC {
 /* class by manual */                + "    obs: o espaco esta sendo representado como +, o que e uma traducao obsoleta.\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
+/* class by manual */                + "[y tests]\n"
+/* class by manual */                + "    y tests\n"
 /* class by manual */                + "[y controlc]\n"
 /* class by manual */                + "    y controlc\n"
 /* class by manual */                + "[y random]\n"
@@ -25134,6 +25148,8 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
