@@ -124,6 +124,7 @@ alias gcloud='$HOME/google-cloud-sdk/bin/gcloud'
 alias gsutil='$HOME/google-cloud-sdk/bin/gsutil'
 alias bq='$HOME/google-cloud-sdk/bin/bq'
 export CLOUDSDK_CONFIG="$HOME/.cf"
+export REQUESTS_CA_BUNDLE=""
 #export CLOUDSDK_PYTHON="/usr/bin/python3.11" #apt install python3.11.2 #fix error No module named 'imp' in python3.12
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missio@mb.com.br/adc.json"
 alias gopen='gcloud cloud-shell ssh'
