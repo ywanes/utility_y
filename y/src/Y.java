@@ -10413,6 +10413,7 @@ cat buffer.log
             ip="["+ip+"]";
         return new Object []{ip, port, fps};
     }
+    
     private Object [] get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor_noLogLocal(String [] args){        
         String host0=null;
         int port0=-1;
@@ -15914,6 +15915,48 @@ class Util{
         return "NOK";
     }
     
+    public String ipsString(){
+        // return fake test:
+        //if ( 1 == 1 ) return "Realtek PCIe GbE Family Controller;;192.168.15.11;2804:1b2:1002:3473:921:b978:fa99:9cd;2804:1b2:1002:3473:2119:9128:824e:f2d5;fe80::2ff8:c289:c063:8686";
+        
+        String result="";
+        try{
+            int count_interface=0;
+            int count_address_in_interface=0;
+            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
+            while (interfaces.hasMoreElements()) {
+                java.net.NetworkInterface iface = interfaces.nextElement();
+                if (iface.isLoopback() || !iface.isUp())
+                    continue;
+                if (count_interface > 0)
+                    result+=";;;";
+                result+=iface.getDisplayName()+";;";
+                count_interface++;
+                count_address_in_interface=0;
+                String [] filter=new String[]{".", ":"};
+                for(int i=0;i<filter.length;i++){
+                    java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();                    
+                    while(addresses.hasMoreElements()){
+                        java.net.InetAddress addr = addresses.nextElement();
+                        String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
+                        for ( int j=0;j<10;j++ )
+                            ip=ip.replace(":0:","::").replace(":::","::");
+                        if (!ip.contains(filter[i]))
+                            continue;
+                        if ( count_address_in_interface > 0 )
+                            result+=";";
+                        result+=ip;
+                        count_address_in_interface++;
+                    }
+                }            
+            }
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+        }
+        result=add_principais(result);
+        return result;
+    }
+    
     public String [] ips(boolean ping, int timeout, boolean list, boolean printOn){
         String ipv4=null;
         String ipv6=null;
@@ -15926,6 +15969,8 @@ class Util{
         String [] tuplas = ips_string.split(";;;");            
         for ( String tupla : tuplas ){
             String [] tupla_partes=tupla.split(";;");
+            if ( tupla_partes.length < 2 ) // anti pani
+                continue;            
             String iface=tupla_partes[0];
             String [] ips=tupla_partes[1].split(";");
             boolean first=true;
@@ -16488,6 +16533,22 @@ class Util{
         return retorno;
     }    
     
+    public long[] addParm(long a, long[] args) {
+        return addParm(a, args.length, args);
+    }
+    
+    public long[] addParm(long a, int pos, long[] args){        
+        long [] retorno=new long[args.length+1];
+        retorno[pos]=a;
+        int delta=0;
+        for ( int i=0;i<args.length;i++ ){
+            if ( i == pos )
+                delta=1;
+            retorno[i+delta]=args[i];
+        }
+        return retorno;
+    }    
+    
     String flag_off=    "  ####   ######  ######\n" +
                         " #    #  #       #\n" +
                         " #    #  #####   #####\n" +
@@ -16545,22 +16606,7 @@ class Util{
                     "                  #################################################           ######                                   ########\n" +
                     "                  #################################################           ######                                    #######\n" +
                     "                  #################################################           ######                                     ######\n";
-    public long[] addParm(long a, long[] args) {
-        return addParm(a, args.length, args);
-    }
     
-    public long[] addParm(long a, int pos, long[] args){        
-        long [] retorno=new long[args.length+1];
-        retorno[pos]=a;
-        int delta=0;
-        for ( int i=0;i<args.length;i++ ){
-            if ( i == pos )
-                delta=1;
-            retorno[i+delta]=args[i];
-        }
-        return retorno;
-    }    
-        
     public void pss(String [] filter){
         if ( os(true).endsWith("Windows") ){
             load_pss_windows();
@@ -16959,49 +17005,8 @@ class Util{
         }catch(Exception e){
             return "Erro_no_decode_url";
         }
-    }
-    
-    public String ipsString(){
-        // return fake test:
-        //if ( 1 == 1 ) return "Realtek PCIe GbE Family Controller;;192.168.15.11;2804:1b2:1002:3473:921:b978:fa99:9cd;2804:1b2:1002:3473:2119:9128:824e:f2d5;fe80::2ff8:c289:c063:8686";
-        
-        String result="";
-        try{
-            int count_interface=0;
-            int count_address_in_interface=0;
-            java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
-            while (interfaces.hasMoreElements()) {
-                java.net.NetworkInterface iface = interfaces.nextElement();
-                if (iface.isLoopback() || !iface.isUp())
-                    continue;
-                if (count_interface > 0)
-                    result+=";;;";
-                result+=iface.getDisplayName()+";;";
-                count_interface++;
-                count_address_in_interface=0;
-                String [] filter=new String[]{".", ":"};
-                for(int i=0;i<filter.length;i++){
-                    java.util.Enumeration<java.net.InetAddress> addresses = iface.getInetAddresses();                    
-                    while(addresses.hasMoreElements()){
-                        java.net.InetAddress addr = addresses.nextElement();
-                        String ip=addr.getHostAddress().contains("%")?addr.getHostAddress().split("%")[0]:addr.getHostAddress();
-                        for ( int j=0;j<10;j++ )
-                            ip=ip.replace(":0:","::").replace(":::","::");
-                        if (!ip.contains(filter[i]))
-                            continue;
-                        if ( count_address_in_interface > 0 )
-                            result+=";";
-                        result+=ip;
-                        count_address_in_interface++;
-                    }
-                }            
-            }
-        }catch(Exception e){
-            erro_amigavel_exception(e);
-        }
-        result=add_principais(result);
-        return result;
-    }
+    }    
+
     public String add_principais(String a){
         if ( a.split(";;;").length > 1 ){
             String primeira_interface=a.split(";;;")[0];
@@ -18327,6 +18332,7 @@ class Util{
         System.err.println(a);
         System.exit(1);
     }    
+    
     public static void erroFatal(Exception e){
         System.err.println(e.toString());
         System.exit(1);
