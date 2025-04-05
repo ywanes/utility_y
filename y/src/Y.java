@@ -1212,7 +1212,7 @@ cat buffer.log
                 } 
             }
         }       
-        if ( args[0].equals("touch") && (args.length == 2 || args.length == 3) ){
+        if ( args[0].equals("touch") && args.length > 1 ){
             touch(args);
             return;
         }
@@ -8357,27 +8357,26 @@ cat buffer.log
             System.out.println(e.toString());
         }        
     }
-    
     public void touch(String [] args){
         long dif_segundos=0;
         long current_milisegundos=System.currentTimeMillis();
         SimpleDateFormat format=new SimpleDateFormat("yyyyMMddHHmmss");  
         Date dataCurrent=null;
         try {
-            if ( args.length == 2 ){
-                touch(new File(args[1]),current_milisegundos,0);
-                return;
-            }
-            if ( args.length == 3 ){
-                if ( args[2].length() == 14 ){ //data 20210128235959
-                    dataCurrent=format.parse(args[2]);  
+            args=sliceParm(1, args);
+            if ( args.length == 2 && isNumeric(args[1]) ){ // fileA 60
+                if ( args[1].length() == 14 ){ //data 20210128235959
+                    dataCurrent=format.parse(args[1]);  
                     current_milisegundos=dataCurrent.getTime();
                 }else{
-                    dif_segundos=Long.parseLong(args[2]); // 3600
+                    dif_segundos=Long.parseLong(args[1]); // 3600
                 }
-                touch(new File(args[1]),current_milisegundos,dif_segundos);                                    
+                touch(new File(args[0]),current_milisegundos,dif_segundos);                                    
                 return;
             }
+            for ( int i=0;i<args.length;i++ )
+                touch(new File(args[i]),current_milisegundos,0);
+            return;
         } catch (Exception ex) {
             System.out.println(ex.toString());
             System.exit(1);
@@ -8463,8 +8462,18 @@ cat buffer.log
                 return;
             }
             if ( !f1.isDirectory() && f2.exists() && f2.isDirectory() ){
-                System.out.println("Error, incompatibilidade.. [" + f1.getAbsolutePath() + "] não é um diretório e [" + f2.getAbsolutePath() + "] é um diretório.");
-                errorCpPrinted = true;
+                String s=f2.getAbsolutePath().replaceAll("\\\\", "/");
+                String name=f1.getName();
+                if ( !s.endsWith("/") )
+                    s+="/";
+                s+=name;
+                f2=new File(s);
+                if ( f2.exists() && f2.isDirectory() ){
+                    System.out.println("Error, incompatibilidade.. [" + f1.getAbsolutePath() + "] não é um diretório e [" + f2.getAbsolutePath() + "] é um diretório.");
+                    errorCpPrinted = true;
+                    return;                    
+                }
+                cp(f1, f2, recursiveMode, false);
                 return;
             }
             if ( isFirst ){
@@ -24617,6 +24626,7 @@ class TabelaSAC {
 /* class by manual */                + "    y touch fileA -3600\n"
 /* class by manual */                + "    y touch fileA 60\n"
 /* class by manual */                + "    y touch fileA 20210128235959\n"
+/* class by manual */                + "    y touch fileA fileB fileC\n"
 /* class by manual */                + "    obs: 60(60 segundos a frente)\n"
 /* class by manual */                + "    obs2: -3600(3600 segundos atras)\n"
 /* class by manual */                + "    obs3: 20210128235959(setando em 28/01/2021 23:59:59)\n"
@@ -25154,6 +25164,8 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

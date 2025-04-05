@@ -492,6 +492,7 @@ Exemplos...
     y touch fileA -3600
     y touch fileA 60
     y touch fileA 20210128235959
+    y touch fileA fileB fileC
     obs: 60(60 segundos a frente)
     obs2: -3600(3600 segundos atrás)
     obs3: 20210128235959(setando em 28/01/2021 23:59:59)
