@@ -18785,6 +18785,37 @@ class Util{
         return result;
     }        
     
+    public byte[] robotGetImgScreenBytesByPowerShell(){        
+    /*
+Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+$targetMonitor = 1  # 0 = Primário, 1 = Segundo monitor
+$allScreens = [System.Windows.Forms.Screen]::AllScreens
+if ($targetMonitor -ge $allScreens.Count) {
+    Write-Host "Erro: Monitor não encontrado!" -ForegroundColor Red
+    exit
+}
+$screen = $allScreens[$targetMonitor].Bounds
+$width = $screen.Width
+$height = $screen.Height
+while ($true) {
+    # Cria bitmap e captura a tela
+    $bitmap = New-Object System.Drawing.Bitmap $width, $height
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    $graphics.CopyFromScreen($screen.X, $screen.Y, 0, 0, $bitmap.Size)
+    $memoryStream = New-Object System.IO.MemoryStream
+    $bitmap.Save($memoryStream, [System.Drawing.Imaging.ImageFormat]::Jpeg)
+    $base64 = [Convert]::ToBase64String($memoryStream.ToArray())
+    $memoryStream.Dispose()
+	[Console]::WriteLine($base64)
+	[Console]::Out.Flush()
+    $graphics.Dispose()
+    $bitmap.Dispose()
+}
+    */
+        return null;
+    }
+    
     public void preparatePath(String caminho, boolean contemFile, int nivel){
         // examples
         // contemFile true  => d:\\aa\\b.mp3
