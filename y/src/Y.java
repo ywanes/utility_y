@@ -12441,8 +12441,10 @@ cat buffer.log
         return -1;
     }        
 
-    private void mouse(String [] args){
+    private void mouse(String [] args){        
         try{
+            int dont_move_x=-1;
+            int dont_move_y=-1;
             if ( args.length == 1 ){
                 while(true){
                     robotMouseSleep(0.1F);                
@@ -12455,8 +12457,25 @@ cat buffer.log
                 }
                 args = args[1].split(" ");
                 int p=0;
+                if ( args[0].equals("dontMove") ){
+                    args=sliceParm(1, args);
+                    if ( args.length == 0 )
+                        erroFatal("dontMove usado de forma incorreta!");
+                    Integer [] s=robotMouseGetXYAndRGB();
+                    dont_move_x=s[0];
+                    dont_move_y=s[1];
+                    if ( dont_move_x == -1 )
+                        erroFatal("erro interno mouse!");
+                }
                 while(true){
-                    robotMouseVerifyExit();                
+                    robotMouseVerifyExit();
+                    if ( dont_move_x != -1 ){
+                        Integer [] s=robotMouseGetXYAndRGB();
+                        if ( s[0] != dont_move_x || s[1] != dont_move_y ){
+                            System.out.println("dontMove finalizado!");
+                            break;
+                        }
+                    }
                     if ( p < args.length && ( args[p].equals("move") || args[p].equals("m") ) && p+3 <= args.length ){
                         System.out.println(args[p] + " " + args[p+1] + " " + args[p+2]);
                         robotMouseMove(Integer.parseInt(args[p+1]),Integer.parseInt(args[p+2]));
@@ -24957,6 +24976,7 @@ class TabelaSAC {
 /* class by manual */                + "    y mouse # mostra as coordenadas do mouse\n"
 /* class by manual */                + "    y mouse \"m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base baixa - Os Iluminados\n"
 /* class by manual */                + "    y mouse \"m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base alta - Os Temidos\n"
+/* class by manual */                + "    y mouse \"dontMove c s 0.01\"\n"
 /* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
 /* class by manual */                + "    mais opcoes:\n"
 /* class by manual */                + "    key w\n"
@@ -25195,6 +25215,7 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
