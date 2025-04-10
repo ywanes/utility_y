@@ -1576,7 +1576,8 @@ function load_station_nick1(){
 }
 
 function getEpochMili(){
-	return (new Date).valueOf();
+	// this.epoch_delta criado no global
+	return (new Date).valueOf()+this.epoch_delta;
 }
 
 function verify_buttom_reload(){

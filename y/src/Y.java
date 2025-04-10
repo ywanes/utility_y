@@ -22993,7 +22993,13 @@ class ClientThread extends Util{
                     String tmp=lendo_arquivo(nav);
                     // if [GLOBAL]
                     if ( tmp.contains("[GLOBAL]") ){
-                        tmp=tmp.replace("[GLOBAL]",getListaCompleta(new File(dir), 0));
+                        //String inject_global=getListaCompleta(new File(dir), 0);
+                        String inject_global=getListaCompleta(new File(dir), 0)
+                                + "`;\nthis.epoch_load=" + epochmili(null)
+                                + ";\nthis.epoch_delta=this.epoch_load-(new Date).valueOf()"
+                                + ";\nthis.fim_inject=`";
+                        
+                        tmp=tmp.replace("[GLOBAL]",inject_global);
                         sb = new StringBuilder();
                         for (String line: new String[] {
                                 "HTTP/1.1 200 OK\r\n",
