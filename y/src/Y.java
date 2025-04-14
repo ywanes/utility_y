@@ -24995,6 +24995,8 @@ class TabelaSAC {
 /* class by manual */                + "    y mixer\n"
 /* class by manual */                + "    y mixer \" TV \"\n"
 /* class by manual */                + "    obs: lista os mixers\n"
+/* class by manual */                + "    obs2: comandos parecidos:\n"
+/* class by manual */                + "    gravador, play, call, injectMicLine\n"
 /* class by manual */                + "[y gravador]\n"
 /* class by manual */                + "    y gravador file.wav\n"
 /* class by manual */                + "    y gravador > file.wav\n"
@@ -25013,6 +25015,7 @@ class TabelaSAC {
 /* class by manual */                + "    obs3: -volume varia entra 0 e 1 mas de acordo com o volume ja setado, ou seja, se ja tiver em 10% e o comando colocar 0.5 entao seria equivalente a 5%\n"
 /* class by manual */                + "[y call]\n"
 /* class by manual */                + "    y call\n"
+/* class by manual */                + "    obs: ligacao entra pessoas\n"
 /* class by manual */                + "[y remote]\n"
 /* class by manual */                + "    y remote\n"
 /* class by manual */                + "    y remote -ip localhost\n"
@@ -25020,6 +25023,7 @@ class TabelaSAC {
 /* class by manual */                + "    obs: fps pode conter 30 e 60. 30 e o padrao\n"
 /* class by manual */                + "[y injectMicLine]\n"
 /* class by manual */                + "    y cat file.line | y injectMicLine\n"
+/* class by manual */                + "    obs: not work\n"
 /* class by manual */                + "[y kill]\n"
 /* class by manual */                + "    y kill 3434\n"
 /* class by manual */                + "    y kill 3434 3435\n"
@@ -25221,6 +25225,7 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
