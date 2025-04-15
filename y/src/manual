@@ -813,8 +813,8 @@ Exemplos...
     y gravador -mixer "-" -f file.wav
     y gravador -mixer "-" -line > fileLine
     y gravador -mixer "-" -line | y play -line    
-    obs: formatos: -line, -wave e -mp3
-    obs2: -mp3 ainda não implementado
+    obs: formatos: -line, -wav e -mp3
+    obs2: por padrão ele tentar ler wav
 [y play]
     y play file.wav -volume 0.5
     y play -f file.wav

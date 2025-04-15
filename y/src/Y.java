@@ -12904,7 +12904,19 @@ while True:
                     }
                 }else{
                     if ( isMp3 ){
-                        erroFatal("mp3 nao implementado!");
+                        byte [] bytes=null;
+                        if ( caminho == null )
+                            bytes=readAllBytes();
+                        else
+                            bytes=readAllBytes(caminho);
+                        runtimeExec(null, new String []{"ffmpeg", "-f", "mp3", "-i", "pipe:", "-f", "au", "pipe:"}, null, bytes, false);
+                        if ( runtimeExecError.contains("Cannot run") )
+                            erroFatal("Nao foi possivel encontrar o ffmpeg!");
+                        ByteArrayInputStream bais=new ByteArrayInputStream(runtimeExecOutBytes);                        
+                        javax.sound.sampled.AudioInputStream audioStream=javax.sound.sampled.AudioSystem.getAudioInputStream(bais);
+                        format=audioStream.getFormat();
+                        is=(InputStream)audioStream;                                
+                        line=getLineWriter(mixer, format, volume);                                            
                     }else{
                         erroFatal("Erro interno, formato invalido!");
                     }
@@ -17100,7 +17112,8 @@ class Util{
     }
     
     public String runtimeExecError = "";
-    public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in, Boolean charset_windows){
+    public byte [] runtimeExecOutBytes = null;
+    public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in, Boolean flag_charset_windows){
         try{
             if ( commands == null )
                 commands=line_commands.split(" ");
@@ -17159,8 +17172,9 @@ class Util{
             ok.join();
             nok.join();
             String charset="UTF-8";
-            if ( charset_windows != null && charset_windows )
+            if ( flag_charset_windows != null && flag_charset_windows )
                 charset="ISO-8859-1";
+            runtimeExecOutBytes=baos.toByteArray();
             String s=baos.toString(charset).replace("\r\n","\n");
             String [] linhas=s.split("\n");
             if ( commands.length >= 3 && commands[0].equals("cmd") && commands[1].equals("/c") && linhas[0].endsWith(": 65001")){
@@ -25003,8 +25017,8 @@ class TabelaSAC {
 /* class by manual */                + "    y gravador -mixer \"-\" -f file.wav\n"
 /* class by manual */                + "    y gravador -mixer \"-\" -line > fileLine\n"
 /* class by manual */                + "    y gravador -mixer \"-\" -line | y play -line    \n"
-/* class by manual */                + "    obs: formatos: -line, -wave e -mp3\n"
-/* class by manual */                + "    obs2: -mp3 ainda nao implementado\n"
+/* class by manual */                + "    obs: formatos: -line, -wav e -mp3\n"
+/* class by manual */                + "    obs2: por padrao ele tentar ler wav\n"
 /* class by manual */                + "[y play]\n"
 /* class by manual */                + "    y play file.wav -volume 0.5\n"
 /* class by manual */                + "    y play -f file.wav\n"
@@ -25225,6 +25239,7 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
