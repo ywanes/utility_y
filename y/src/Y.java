@@ -1108,7 +1108,7 @@ cat buffer.log
                 Long limitRate=(Long)objs[5];
 
                 if ( host != null ){
-                    curl(System.out, header, method, verbose, raw, host, null, limitRate, null, null, null);
+                    curl(System.out, header, method, verbose, raw, host, null, limitRate, null, null, null, null);
                     return;
                 }
             }
@@ -1143,7 +1143,7 @@ cat buffer.log
                                 pipedInputStream.connect(pipedOutputStream);
                                 Thread pipeWriter=new Thread(new Runnable() {
                                     public void run() {
-                                        curl(pipedOutputStream, header, method, verbose, raw, host, null, limitRate, null, null, null);
+                                        curl(pipedOutputStream, header, method, verbose, raw, host, null, limitRate, null, null, null, null);
                                     }
                                 });
                                 Thread pipeReader=new Thread(new Runnable() {
@@ -7321,14 +7321,14 @@ cat buffer.log
                 String url_="https://ttsmp3.com/makemp3_new.php";
                 String data_="msg="+msg_+"&lang="+lang_+"&source=ttsmp3";
                 ByteArrayOutputStream baos=new ByteArrayOutputStream();
-                curl(baos, "", "POST", false, false, url_, new ByteArrayInputStream(data_.getBytes()), null, null, null, null);
+                curl(baos, "", "POST", false, false, url_, new ByteArrayInputStream(data_.getBytes()), null, null, null, null, null);
                 String s=baos.toString();
                 if ( !s.contains("\"Error\":") )
                     erroFatal("Resposta inesperada do servidor: " + s);
                 if ( !s.contains("\"Error\":0") )
                     erroFatal("Erro na resposta do servidor: " + s);
                 s=s.substring(s.length()-38, s.length()-38+32);
-                curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null, null, null, null, null);
+                curl(new FileOutputStream(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".mp3"), "", "GET", false, false, "https://ttsmp3.com/created_mp3/" + s + ".mp3", null, null, null, null, null, null);
             }
             if ( !new File(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav").exists() ){
                 runtimeExec(null, new String[]{"ffmpeg","-i",sha1+".mp3",sha1+".wav"}, new File(dir+"/talk/"+lang+"/"+pre), null, null); 
@@ -7682,7 +7682,7 @@ cat buffer.log
     }
 
     public void curl_path(String url, String path) throws Exception{
-        curl(new FileOutputStream(path), "", "GET", false, false, url, null, null, null, null, null);
+        curl(new FileOutputStream(path), "", "GET", false, false, url, null, null, null, null, null, null);
     }
     
     public String curl_string_retry(String url, int vezes, int wait, int [] status_codes){
@@ -7722,7 +7722,7 @@ cat buffer.log
     
     public ByteArrayOutputStream curl_baos(String url){
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
-        curl(baos, "", "GET", false, false, url, null, null, null, null, null);        
+        curl(baos, "", "GET", false, false, url, null, null, null, null, null, null);
         return baos;
     }
     
@@ -7731,9 +7731,10 @@ cat buffer.log
     int curl_response_status=0;
     long curl_response_len=0;
     String curl_error=null;
-    static String global_header="";
+    String global_header="";
+    String curl_hash="";
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
-                Long [] progress_finished_len, Long [] progress_len, Integer progress_number){
+                Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
         try{                        
             String protocol="HTTP";
             int len=0;
@@ -7767,7 +7768,10 @@ cat buffer.log
             OutputStream os=socket.getOutputStream(); 
             StringBuilder sb = new StringBuilder();
             String http_version="HTTP/1.1";
-            boolean chunked=false;
+            boolean chunked=false;            
+            MessageDigest digest=null;
+            if ( tipo_hash != null )
+                digest=MessageDigest.getInstance(tipo_hash);
             
             // not implemented            
             //if ( protocol.equals("HTTPS"))
@@ -7816,6 +7820,7 @@ cat buffer.log
                 curl_response_location="";
                 curl_response_status=0;
                 curl_response_len=0;
+                curl_hash="";
                 byte[] ending_head = new byte[4]; // \r\n\r\n 13 10 13 10
                 while( is.available() >= 0 && (len=is.read(buffer)) > -1 ){
                     if ( heading ){
@@ -7855,6 +7860,8 @@ cat buffer.log
                                         }
                                     }else{
                                         os_print.write(buffer, i, len-i); 
+                                        if ( tipo_hash != null )
+                                            digest.update(buffer, i, len-1);
                                     }
                                     break;
                                 }
@@ -7869,6 +7876,8 @@ cat buffer.log
                             if ( limitRate != null )
                                 sleepLimitRate(len, limitRate);
                             os_print.write(buffer, 0, len);
+                            if ( tipo_hash != null )
+                                digest.update(buffer, 0, len);
                             if ( progress_len != null ){
                                 progress_finished_len[progress_number]+=len;
                             }
@@ -7877,6 +7886,8 @@ cat buffer.log
                 }
                 os_print.flush();
                 curl_error=null;
+                if ( tipo_hash != null )
+                    curl_hash=new String(encodeHex(digest.digest()));
             }catch(Exception e){
                 curl_error="\nError "+e.toString();
                 os_print.write((curl_error).getBytes());                
@@ -14297,7 +14308,7 @@ class multiCurl extends Util{
                     sleepMillis(random(1, 2000));    
                     Y y=new Y();
                     y.preparatePath(caminho, true, 0);
-                    y.curl(new FileOutputStream(caminho), "", "GET", false, false, url, null, 200000000L, progress_finished_len, progress_len, progress_number);
+                    y.curl(new FileOutputStream(caminho), "", "GET", false, false, url, null, 200000000L, progress_finished_len, progress_len, progress_number, null);
                     if ( y.curl_response_status != 200 && progress_finished_len[progress_number].equals(0L) )
                         progress_finished_len[progress_number]=-1L;
                     // arredondando para finish
@@ -15813,7 +15824,7 @@ class Util{
             int len;
             while( (len=readBytes(buf)) > -1 )
                 digest.update(buf, 0, len);
-            closeBytes();
+            closeBytes();            
             return new String(encodeHex(digest.digest()));            
         } catch (Exception ex) {
             System.err.println("Erro: "+ex.toString());
