@@ -1,0 +1,13 @@
+cria iso bootavel
+
+extrair:
+abrir winrar, navegar e abrir iso windows e extrair para a pasta target
+
+criar iso:
+oscdimg -lWIN11 -m -o -u2 -udfver102 -bootdata:2#p0,e,betfsboot.com#pEF,e,befisys.bin target novo_win11.iso
+
+fonte binarios "oscdimg-amd64":
+https://github.com/hydrz/oscdimg?tab=readme-ov-file
+https://github.com/ywanes/utility_y/tree/master/y/utils_exe
+
+obs: arquivos necessários para criar iso: etfsboot.com e efisys.bin
