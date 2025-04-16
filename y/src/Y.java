@@ -22871,6 +22871,8 @@ class ClientThread extends Util{
                 output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
                 return;                    
             }
+            if ( header_redis_key != null && header_redis_key.length() >= 255 )
+                header_redis_key=header_redis_key.substring(0, 255);
             if ( header_redis_key != null && !header_redis_key.equals("") && !header_redis_key.contains(" ") && header_redis_key.equals(fixNameFile(header_redis_key)) ){
                 // getAll
                 if ( header_redis_key.equals(redis.redisAll) ){                    

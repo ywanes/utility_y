@@ -1612,7 +1612,6 @@ function get_resume(){
   return null;
 }
 
-this.epoch_load=getEpochMili();
 function f_load(){  
   document.getElementById('resume').style="display: none";
   document.getElementById('body_copy').setAttribute('style_copy', document.getElementById('body').getAttribute('style'));
@@ -1823,7 +1822,7 @@ function redis(a){
     xmlHttp.send();
     return xmlHttp.responseText;
   }catch(err){
-    console.log('xmlHttp erro: '+err);
+    console.log('redis offline!!!!\nredis offline!!!!\nredis offline!!!!\nredis offline!!!!\nredis offline!!!!\nredis offline!!!!\nredis offline!!!!\n -> xmlHttp erro: '+err);
   }
   return null;
 }
