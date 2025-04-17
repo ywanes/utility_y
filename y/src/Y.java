@@ -6791,6 +6791,7 @@ cat buffer.log
                 overflix_verbose(verbose, tags, "TAG:6");
                 if ( partes[i].startsWith("https://mixdrop.") ){
                     overflix_verbose(verbose, tags, "TAG:601");
+                    partes[i]=partes[i].replaceAll("https://mixdrop.sb/", "https://mixdrop.ps/");
                     overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
                 }else{
                     overflix_verbose(verbose, tags, "TAG:602");
@@ -7731,11 +7732,11 @@ cat buffer.log
     int curl_response_status=0;
     long curl_response_len=0;
     String curl_error=null;
-    String global_header="";
+    String global_header="";// nao tirar o static
     String curl_hash="";
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
                 Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
-        try{                        
+        try{   
             String protocol="HTTP";
             int len=0;
             int port = 80;  
@@ -25252,7 +25253,6 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
 
 
 
