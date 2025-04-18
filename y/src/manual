@@ -295,6 +295,7 @@ Exemplos...
 [y iso]
     y iso win11.iso source
     y iso source win11.iso
+    obs: criar iso do tipo linux pode dar ruim
 [y emprestimo]
     y emprestimo price valor 15000 juros 1.0 a.m 10 parcelas
     y emprestimo sac valor 15000 juros 1.0 a.m 10 parcelas

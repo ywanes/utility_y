@@ -5662,8 +5662,16 @@ cat buffer.log
                 String dir="D:/ProgramFiles/iso";
                 if ( !new File(dir).exists() )
                     dir="C:/ProgramFiles/iso";
+                String etfsboot=dir+"/etfsboot.com";
+                String etfsboot_try=new File(source).getCanonicalPath()+"\\boot\\etfsboot.com";
+                String efisys=dir+"/efisys.bin";
+                String efisys_try=new File(source).getCanonicalPath()+"\\efi\\microsoft\\boot\\efisys.bin";
+                if ( new File(efisys_try).exists() )
+                    efisys=efisys_try;                
+                if ( new File(etfsboot_try).exists() )
+                    etfsboot=etfsboot_try;                
                 runtimeExec(null, new String[]{dir+"/oscdimg", "-lISO", "-m", "-o", "-u2", 
-                    "-udfver102", "-bootdata:2#p0,e,b"+dir+"/etfsboot.com#pEF,e,b"+dir+"/efisys.bin", source, iso}, null, null, false);
+                    "-udfver102", "-bootdata:2#p0,e,b"+etfsboot+"#pEF,e,b"+efisys, source, iso}, null, null, false);
                 System.out.println("fim");
             }else{
                 if ( !new File(iso).exists() )
