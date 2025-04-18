@@ -870,6 +870,28 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args[0].equals("iso") ){
+            iso(args);
+            return;
+        }
+        if ( args[0].equals("check_util") ){
+            String [] verifys=check_util_list;
+            if ( args.length > 1 )
+                verifys=new String[]{args[1]};
+            System.out.println("verificando...");
+            System.out.flush();
+            for ( int i=0;i<verifys.length;i++ ){
+                String path=verifys[i].split(",")[0];
+                System.out.print(path + " -> ");
+                if ( check_util(path) )
+                    System.out.println("OK!");
+                else{
+                    System.out.println("\nERRO - não foi possível verificar!");
+                    return;
+                }
+            }
+            return;
+        }            
         if ( args[0].equals("emprestimo") ){
             emprestimo(args);
             return;
@@ -5619,6 +5641,34 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
+    public void iso(String [] args){
+        try{
+            Object [] objs=get_parms_iso_source_flagMake(args);
+            if ( objs == null )
+                erroFatal("Erro de parametros!");
+            String iso=(String)objs[0];
+            String source=(String)objs[1];
+            Boolean flagMake=(Boolean)objs[2];
+            if ( flagMake ){
+
+            }else{
+                if ( !new File(iso).exists() )
+                    erroFatal("Arquivo não encontrado: " + iso);
+                if ( new File(source).exists() ){
+                    if ( !new File(source).isDirectory() )
+                        erroFatal("Esse caminho precisa ser uma pasta: " + source);
+                }else{
+                    if ( !new File(source).mkdir() )
+                        erroFatal("Não foi possível criar a pasta: " + source);
+                }                
+                runtimeExec(null, new String[]{"powershell", "Expand-Archive", "-Path", iso, "-DestinationPath", source}, null, null, false);
+                if ( runtimeExecError != null && !runtimeExecError.equals("") )
+                    System.err.println(runtimeExecError);
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }    
     public void emprestimo(String [] args){
         Object [] objs=get_parms_modelo_valor_jurosAM_jurosAA_parcelas(args);
         if ( objs == null )
@@ -6486,7 +6536,7 @@ cat buffer.log
             superflixapi_not_if(1, resolucao);
         }
         if ( !resolucao.equals("") ){
-            preparatePath(filme, true, 0);
+            preparaPath(filme, true, 0);
             superflixapi(id, resolucao, audio, titulo, filme); 
         }
     }
@@ -10698,6 +10748,31 @@ cat buffer.log
         return new Object []{vol, mute, setvol, setmute, program, mutingWhileProgramInPrincipalMonitor};
     }        
 
+    public Object [] get_parms_iso_source_flagMake(String [] args){
+        String iso=null;
+        String source=null;
+        Boolean flagMake=null;
+        
+        args=sliceParm(1, args);
+        while(args.length > 0){
+            if ( args.length > 0 && iso == null && ( args[0].endsWith(".iso") || args[0].endsWith(".ISO") ) ){                
+                iso=args[0];
+                args=sliceParm(1, args);
+                flagMake=source!=null;
+                continue;
+            }
+            if ( args.length > 0 && source == null ){                
+                source=args[0];
+                args=sliceParm(1, args);                
+                continue;
+            }
+            return null;
+        }
+        if ( iso == null || source == null || flagMake == null )
+            return null;
+        return new Object[]{iso, source, flagMake};
+    }
+    
     public Object [] get_parms_modelo_valor_jurosAM_jurosAA_parcelas(String [] args){
         String modelo=null;
         Double valor=null;
@@ -14308,7 +14383,7 @@ class multiCurl extends Util{
                 try{
                     sleepMillis(random(1, 2000));    
                     Y y=new Y();
-                    y.preparatePath(caminho, true, 0);
+                    y.preparaPath(caminho, true, 0);
                     y.curl(new FileOutputStream(caminho), "", "GET", false, false, url, null, 200000000L, progress_finished_len, progress_len, progress_number, null);
                     if ( y.curl_response_status != 200 && progress_finished_len[progress_number].equals(0L) )
                         progress_finished_len[progress_number]=-1L;
@@ -15753,6 +15828,54 @@ class Util{
     int V_0b1111111100=1020; // 0b1111111100 (1020)
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
+    
+    public String [] check_util_list=new String[]{
+        "D:/ProgramFiles/ultis_cria_iso/manual.txt,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/ultis_cria_iso/manual.txt,e7574cf7b22bf7ffa180921f0706a43e",
+        "D:/ProgramFiles/ultis_cria_iso/efisys.bin,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/ultis_cria_iso/efisys.bin,65602bb5e3c7c39a88a973c73e896765",
+        "D:/ProgramFiles/ultis_cria_iso/etfsboot.com,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/ultis_cria_iso/etfsboot.com,d4befebf3cef129ac087422b9e912788",
+        "D:/ProgramFiles/ultis_cria_iso/oscdimg.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/ultis_cria_iso/oscdimg.exe,5107d2b7f13da005e5ea6d5b805be7fe",
+    };
+    public boolean check_util(String a){
+        try{
+            if ( a.trim().length() == 0 )
+                erroFatal("Erro interno 3242");
+            for ( int i=0;i<check_util_list.length;i++ ){
+                String [] partes=check_util_list[i].split(",");
+                if ( partes.length != 3 )
+                    erroFatal("Erro interno 3243");
+                String path=partes[0];
+                String host=partes[1].replace("https://github.com/", "https://raw.githubusercontent.com/").replace("/blob/", "/refs/heads/");
+                String hash=partes[2];
+                if ( !new File("D:/ProgramFiles").exists() )
+                    path=path.replace("D:/ProgramFiles", "C:/ProgramFiles");
+                if ( !path.equals(a) )
+                    continue;
+                Y y=new Y();
+                if ( new File(path).exists() ){
+                    if ( new File(path).isDirectory() )
+                        erroFatal("Erro fatal, esse caminho não pode ser diretorio => " + path);
+                    else{
+                        String _hash=digest("MD5", path);
+                        if ( _hash.equals(hash) )
+                            return true;
+                        else
+                            erroFatal("Arquivo corrompiado: " + path + " hash encontrado: " + _hash + ", hash esperado: " + hash);
+                    }
+                }
+                if ( !y.preparaPath(path, true, 0) )
+                    erroFatal("Não foi possível criar as pastas de preparação do arquivo a seguir: " + path);
+                y.curl(new FileOutputStream(path), "", "GET", false, false, host, null, null, null, null, null, "MD5");
+                if ( !new File(path).exists() )
+                    erroFatal("Não foi possível gravar o arquivo " + path);
+                if ( !y.curl_hash.equals(hash) )
+                    erroFatal("Arquivo baixado corrompiado: " + path + " hash baixado: " + y.curl_hash + ", hash esperado: " + hash + ", host: " + host);
+                return true;
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }        
+        return false;
+    }
     
     public char[] encodeHex(byte[] data) {
         char[] toDigits = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
@@ -18861,7 +18984,7 @@ while ($true) {
         return null;
     }
     
-    public void preparatePath(String caminho, boolean contemFile, int nivel){
+    public boolean preparaPath(String caminho, boolean contemFile, int nivel){
         // examples
         // contemFile true  => d:\\aa\\b.mp3
         // contemFile false => d:\\aa
@@ -18874,13 +18997,14 @@ while ($true) {
             caminho_up=caminho.substring(0, caminho.lastIndexOf(sep));
         if ( nivel == 0 && contemFile ){
             if ( caminho_up != null )
-                preparatePath(caminho_up, contemFile, nivel+1);
-            return;
+                return preparaPath(caminho_up, contemFile, nivel+1);
+            return true;
         }
         if ( !new File(caminho).exists() ){
-            preparatePath(caminho_up, contemFile, nivel+1);
-            new File(caminho).mkdir();
-        }        
+            preparaPath(caminho_up, contemFile, nivel+1);
+            return new File(caminho).mkdir();
+        }  
+        return true;
     }
 }
 
