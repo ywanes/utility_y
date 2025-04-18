@@ -5650,7 +5650,21 @@ cat buffer.log
             String source=(String)objs[1];
             Boolean flagMake=(Boolean)objs[2];
             if ( flagMake ){
-
+                if ( !new File(source).exists() )
+                    erroFatal("Pasta não encontrada:" + source);
+                if ( !new File(source).isDirectory() )
+                    erroFatal("Esse caminho não é uma pasta:" + source);
+                if (    !check_util("D:/ProgramFiles/iso/efisys.bin") 
+                     || !check_util("D:/ProgramFiles/iso/etfsboot.com") 
+                     || !check_util("D:/ProgramFiles/iso/oscdimg.exe") 
+                )
+                    erroFatal("Erro no carregamento!");        
+                String dir="D:/ProgramFiles/iso";
+                if ( !new File(dir).exists() )
+                    dir="C:/ProgramFiles/iso";
+                runtimeExec(null, new String[]{dir+"/oscdimg", "-lISO", "-m", "-o", "-u2", 
+                    "-udfver102", "-bootdata:2#p0,e,b"+dir+"/etfsboot.com#pEF,e,b"+dir+"/efisys.bin", source, iso}, null, null, false);
+                System.out.println("fim");
             }else{
                 if ( !new File(iso).exists() )
                     erroFatal("Arquivo não encontrado: " + iso);
@@ -5660,10 +5674,17 @@ cat buffer.log
                 }else{
                     if ( !new File(source).mkdir() )
                         erroFatal("Não foi possível criar a pasta: " + source);
-                }                
-                runtimeExec(null, new String[]{"powershell", "Expand-Archive", "-Path", iso, "-DestinationPath", source}, null, null, false);
+                }            
+                if ( !check_util("D:/ProgramFiles/7z/7z.exe") || !check_util("D:/ProgramFiles/7z/7z.dll") )
+                    erroFatal("Erro no carregamento!");
+                String dir="D:/ProgramFiles/7z";
+                if ( !new File(dir).exists() )
+                    dir="C:/ProgramFiles/7z";
+                runtimeExec(null, new String[]{"cmd", "/c", dir+"/7z", "x", "-y", "-o"+source, iso}, null, null, false);
                 if ( runtimeExecError != null && !runtimeExecError.equals("") )
                     System.err.println(runtimeExecError);
+                else
+                    System.out.println("fim");
             }
         }catch(Exception e){
             erroFatal(e);
@@ -15830,10 +15851,12 @@ class Util{
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
     public String [] check_util_list=new String[]{
-        "D:/ProgramFiles/ultis_cria_iso/manual.txt,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/ultis_cria_iso/manual.txt,e7574cf7b22bf7ffa180921f0706a43e",
-        "D:/ProgramFiles/ultis_cria_iso/efisys.bin,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/ultis_cria_iso/efisys.bin,65602bb5e3c7c39a88a973c73e896765",
-        "D:/ProgramFiles/ultis_cria_iso/etfsboot.com,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/ultis_cria_iso/etfsboot.com,d4befebf3cef129ac087422b9e912788",
-        "D:/ProgramFiles/ultis_cria_iso/oscdimg.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/ultis_cria_iso/oscdimg.exe,5107d2b7f13da005e5ea6d5b805be7fe",
+        "D:/ProgramFiles/iso/manual.txt,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/manual.txt,e7574cf7b22bf7ffa180921f0706a43e",
+        "D:/ProgramFiles/iso/efisys.bin,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/efisys.bin,65602bb5e3c7c39a88a973c73e896765",
+        "D:/ProgramFiles/iso/etfsboot.com,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/etfsboot.com,d4befebf3cef129ac087422b9e912788",
+        "D:/ProgramFiles/iso/oscdimg.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/oscdimg.exe,5107d2b7f13da005e5ea6d5b805be7fe",
+        "D:/ProgramFiles/7z/7z.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.exe,b6d5860f368b28caa9dd14a51666a5cd",
+        "D:/ProgramFiles/7z/7z.dll,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.dll,c4aabd70dc28c9516809b775a30fdd3f",
     };
     public boolean check_util(String a){
         try{
@@ -24368,6 +24391,7 @@ class TabelaSAC {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y iso]\n"
 /* class by manual */                + "  [y emprestimo]\n"
 /* class by manual */                + "  [y terminal]\n"
 /* class by manual */                + "  [y dotaMutandoAll]\n"
@@ -24633,6 +24657,9 @@ class TabelaSAC {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y iso]\n"
+/* class by manual */                + "    y iso win11.iso source\n"
+/* class by manual */                + "    y iso source win11.iso\n"
 /* class by manual */                + "[y emprestimo]\n"
 /* class by manual */                + "    y emprestimo price valor 15000 juros 1.0 a.m 10 parcelas\n"
 /* class by manual */                + "    y emprestimo sac valor 15000 juros 1.0 a.m 10 parcelas\n"
@@ -25377,6 +25404,8 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
