@@ -12561,6 +12561,7 @@ cat buffer.log
         try{
             int dont_move_x=-1;
             int dont_move_y=-1;
+            mouse_print_enable=true;
             if ( args.length == 1 ){
                 while(true){
                     robotMouseSleep(0.1F);                
@@ -12582,6 +12583,7 @@ cat buffer.log
                     dont_move_y=s[1];
                     if ( dont_move_x == -1 )
                         erroFatal("erro interno mouse!");
+                    mouse_print_enable=false;
                 }
                 while(true){
                     robotMouseVerifyExit();
@@ -12593,44 +12595,44 @@ cat buffer.log
                         }
                     }
                     if ( p < args.length && ( args[p].equals("move") || args[p].equals("m") ) && p+3 <= args.length ){
-                        System.out.println(args[p] + " " + args[p+1] + " " + args[p+2]);
+                        mouse_print(args[p] + " " + args[p+1] + " " + args[p+2]);
                         robotMouseMove(Integer.parseInt(args[p+1]),Integer.parseInt(args[p+2]));
                         robotDelay(20);
                         p+=3;
                         continue;
                     }
                     if ( p < args.length && ( args[p].equals("sleep") || args[p].equals("s") ) && p+2 <= args.length ){
-                        System.out.println(args[p] + " " + args[p+1]);
+                        mouse_print(args[p] + " " + args[p+1]);
                         robotMouseSleep(Float.parseFloat(args[p+1]));
                         p+=2;
                         continue;
                     }
                     if ( p < args.length && ( args[p].equals("key") || args[p].equals("k") ) && p+2 <= args.length ){
-                        System.out.println(args[p] + " " + args[p+1]);
+                        mouse_print(args[p] + " " + args[p+1]);
                         robotKey(args[p+1].toCharArray()[0]);
                         p+=2;
                         continue;
                     }
                     if ( p < args.length && ( args[p].equals("keypress") || args[p].equals("kp") ) && p+2 <= args.length ){
-                        System.out.println(args[p] + " " + args[p+1]);
+                        mouse_print(args[p] + " " + args[p+1]);
                         robotKeyPress(args[p+1].toCharArray()[0]);
                         p+=2;
                         continue;
                     }
                     if ( p < args.length && ( args[p].equals("keyrelease") || args[p].equals("kr") ) && p+2 <= args.length ){
-                        System.out.println(args[p] + " " + args[p+1]);
+                        mouse_print(args[p] + " " + args[p+1]);
                         robotKeyRelease(args[p+1].toCharArray()[0]);
                         p+=2;
                         continue;
                     }
                     if ( p < args.length && ( args[p].equals("click") || args[p].equals("c") ) ){
-                        System.out.println(args[p]);
+                        mouse_print(args[p]);
                         robotMouseClickEsq();
                         p++;
                         continue;
                     }
                     if ( p < args.length && ( args[p].equals("clickDireito") || args[p].equals("cD") ) ){
-                        System.out.println(args[p]);
+                        mouse_print(args[p]);
                         robotMouseClickDir();
                         p++;
                         continue;
@@ -12647,6 +12649,12 @@ cat buffer.log
         }
     }
 
+    boolean mouse_print_enable=true;
+    public void mouse_print(String a){
+        if ( mouse_print_enable )
+            System.out.println(a);
+    }
+    
     public void injectMicLine(InputStream is){ // not work - nao sei como funciona o Port
         try {
             javax.sound.sampled.Port.Info info = new javax.sound.sampled.Port.Info(javax.sound.sampled.Port.class,"MICROPHONE", true);
