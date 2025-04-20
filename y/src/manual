@@ -26,6 +26,7 @@ usage:
   [y progressBar]
   [y xargs]
   [y cat]
+  [y sort]
   [y iso]
   [y emprestimo]
   [y terminal]
@@ -292,6 +293,8 @@ Exemplos...
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
+[y sort]
+    y cat file | y sort > file_ordenado
 [y iso]
     y iso win11.iso source
     y iso source win11.iso

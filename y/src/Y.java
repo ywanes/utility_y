@@ -870,6 +870,14 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args[0].equals("sort") ){
+            try{
+                new ExternalSort(System.in, System.out);
+            }catch(Exception e ){
+                erroFatal(e);
+            }
+            return;
+        }
         if ( args[0].equals("iso") ){
             iso(args);
             return;
@@ -5641,6 +5649,7 @@ cat buffer.log
             System.err.println("Erro, "+e.toString());
         }
     }
+    
     public void iso(String [] args){
         try{
             Object [] objs=get_parms_iso_source_flagMake(args);
@@ -21105,6 +21114,131 @@ class yTerminal extends JFrame {
 }
 
 
+class ExternalSort extends Util{
+    private int MAX_TEMP_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+
+    public ExternalSort(InputStream is, OutputStream os) throws Exception {
+        // Fase 1: Dividir o arquivo grande em partes menores e ordená-las
+        java.util.List<java.io.File> sortedTempFiles = splitAndSort(is);
+        
+        // Fase 2: Fazer merge dos arquivos temporários ordenados
+        mergeSortedFiles(sortedTempFiles, os);
+        
+        // Limpeza: Apagar arquivos temporários
+        for (java.io.File file : sortedTempFiles) {
+            file.delete();
+        }
+    }
+
+    private java.util.List<java.io.File> splitAndSort(InputStream is) throws Exception {
+        java.util.List<java.io.File> tempFiles = new java.util.ArrayList<>();
+        java.io.BufferedReader reader = new java.io.BufferedReader(
+            new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8));
+
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        String line;
+        int currentSize = 0;
+
+        while ((line = reader.readLine()) != null) {
+            lines.add(line);
+            currentSize += line.length() * 2 + 40; // Estimativa aproximada do tamanho em memória
+
+            // Se atingiu o tamanho máximo, ordena e escreve em arquivo temporário
+            if (currentSize >= MAX_TEMP_FILE_SIZE) {
+                java.util.Collections.sort(lines);
+                java.io.File tempFile = writeTempFile(lines);
+                tempFiles.add(tempFile);
+                lines.clear();
+                currentSize = 0;
+            }
+        }
+
+        // Ordena e escreve quaisquer linhas restantes
+        if (!lines.isEmpty()) {
+            java.util.Collections.sort(lines);
+            java.io.File tempFile = writeTempFile(lines);
+            tempFiles.add(tempFile);
+        }
+
+        reader.close();
+        return tempFiles;
+    }
+
+    private java.io.File writeTempFile(java.util.List<String> lines) throws Exception {
+        java.io.File tempFile = java.io.File.createTempFile("externalSort", ".tmp");
+        tempFile.deleteOnExit();
+
+        java.io.BufferedWriter writer = new java.io.BufferedWriter(
+            new java.io.OutputStreamWriter(new java.io.FileOutputStream(tempFile), java.nio.charset.StandardCharsets.UTF_8));
+
+        for (String line : lines) {
+            writer.write(line);
+            writer.newLine();
+        }
+        writer.close();
+        return tempFile;
+    }
+
+    private void mergeSortedFiles(java.util.List<java.io.File> files, OutputStream os) throws Exception {
+        // Lista de readers para cada arquivo
+        java.util.List<java.io.BufferedReader> readers = new java.util.ArrayList<>();
+        // Fila de prioridade para o merge
+        java.util.PriorityQueue<FileLine> queue = new java.util.PriorityQueue<>();
+
+        // Abre todos os arquivos e inicializa a fila de prioridade
+        for (java.io.File file : files) {
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(new java.io.FileInputStream(file), java.nio.charset.StandardCharsets.UTF_8));
+            readers.add(reader);
+            String line = reader.readLine();
+            if (line != null) {
+                queue.add(new FileLine(line, readers.size() - 1));
+            }
+        }
+
+        // Abre o arquivo de saída
+        java.io.BufferedWriter writer = new java.io.BufferedWriter(
+            new java.io.OutputStreamWriter(os, java.nio.charset.StandardCharsets.UTF_8));
+
+        // Faz o merge
+        while (!queue.isEmpty()) {
+            FileLine fileLine = queue.poll();
+            writer.write(fileLine.line);
+            writer.newLine();
+
+            // Lê a próxima linha do mesmo arquivo
+            java.io.BufferedReader reader = readers.get(fileLine.fileIndex);
+            String nextLine = reader.readLine();
+            if (nextLine != null) {
+                queue.add(new FileLine(nextLine, fileLine.fileIndex));
+            }
+        }
+
+        // Fecha todos os readers
+        for (java.io.BufferedReader reader : readers) {
+            reader.close();
+        }
+        writer.close();
+    }
+
+    // Classe auxiliar para armazenar a linha e o índice do arquivo
+    private class FileLine implements Comparable<FileLine> {
+        String line;
+        int fileIndex;
+
+        FileLine(String line, int fileIndex) {
+            this.line = line;
+            this.fileIndex = fileIndex;
+        }
+
+        @Override
+        public int compareTo(FileLine other) {
+            return this.line.compareTo(other.line);
+        }
+    }
+
+}
+
 class Texto_longo extends Util{
     public String get_html_and_header_remote(String format_web){
         String result="HTTP/1.1 200 OK\n" +
@@ -24407,6 +24541,7 @@ class TabelaSAC {
 /* class by manual */                + "  [y progressBar]\n"
 /* class by manual */                + "  [y xargs]\n"
 /* class by manual */                + "  [y cat]\n"
+/* class by manual */                + "  [y sort]\n"
 /* class by manual */                + "  [y iso]\n"
 /* class by manual */                + "  [y emprestimo]\n"
 /* class by manual */                + "  [y terminal]\n"
@@ -24673,9 +24808,12 @@ class TabelaSAC {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "[y sort]\n"
+/* class by manual */                + "    y cat file | y sort > file_ordenado\n"
 /* class by manual */                + "[y iso]\n"
 /* class by manual */                + "    y iso win11.iso source\n"
 /* class by manual */                + "    y iso source win11.iso\n"
+/* class by manual */                + "    obs: criar iso do tipo linux pode dar ruim\n"
 /* class by manual */                + "[y emprestimo]\n"
 /* class by manual */                + "    y emprestimo price valor 15000 juros 1.0 a.m 10 parcelas\n"
 /* class by manual */                + "    y emprestimo sac valor 15000 juros 1.0 a.m 10 parcelas\n"
@@ -25420,6 +25558,8 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
