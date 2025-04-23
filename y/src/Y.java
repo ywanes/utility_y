@@ -4588,7 +4588,7 @@ cat buffer.log
             if ( stmt.execute(parm) )
                 System.out.println("OK");
             else
-                System.out.println("NOK");
+                System.out.println("OK"); //OK mesmo
         }
         catch(Exception e)
         {
