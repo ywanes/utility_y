@@ -7822,6 +7822,7 @@ cat buffer.log
     String curl_error=null;
     String global_header="";// nao tirar o static
     String curl_hash="";
+    Integer curl_timeout=null;
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
                 Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
         try{   
@@ -7846,11 +7847,15 @@ cat buffer.log
             
             Socket socket=null;
             if ( protocol.equals("HTTP") ){
-                socket=new Socket(host, port);
+                socket=new Socket();
             }else{
                 javax.net.ssl.SSLSocketFactory sf = (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault();
-                socket = sf.createSocket(host, port);                
+                socket = sf.createSocket();                
             }
+            if ( curl_timeout != null )
+                socket.connect(new InetSocketAddress(host, port), curl_timeout);
+            else
+                socket.connect(new InetSocketAddress(host, port));
             
             byte[] buffer = new byte[2048];
             InputStream is=socket.getInputStream();
@@ -23346,19 +23351,17 @@ class ClientThread extends Util{
                 }
             }
         }
-        // onplaytv.net
-        if ( uri.startsWith("/onplaytv.net/") ){
+        // stream tv
+        if ( uri.startsWith("/onplaytv.net/") 
+             || uri.startsWith("/chaturbate.com/") 
+             || uri.startsWith("/embedcanaistv.com/") 
+        ){
+            String header="";
+            if ( uri.startsWith("/onplaytv.net/") )
+                header="referer: https://embedcanaistv.com/\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
-            y.curl(baos, "referer: https://embedcanaistv.com/\n", "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
-            byte [] bytes=baos.toByteArray();
-            output.write(y.curl_response_header.getBytes());
-            output.write(bytes);
-            return;
-        }
-        // chaturbate.com
-        if ( uri.startsWith("/chaturbate.com/") ){
-            ByteArrayOutputStream baos=new ByteArrayOutputStream();
-            y.curl(baos, "", "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
+            y.curl_timeout=650;
+            y.curl(baos, header, "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
             byte [] bytes=baos.toByteArray();
             output.write(y.curl_response_header.getBytes());
             output.write(bytes);
