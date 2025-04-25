@@ -23012,6 +23012,7 @@ class ClientThread extends Util{
     Reader reader = null;
     BufferedInputStream bis = null;
     String host_display=null;
+    Y y=new Y();
     public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg) {
         this.titulo_url = titulo_url;
         this.titulo = titulo;
@@ -23344,6 +23345,24 @@ class ClientThread extends Util{
                     break;
                 }
             }
+        }
+        // onplaytv.net
+        if ( uri.startsWith("/onplaytv.net/") ){
+            ByteArrayOutputStream baos=new ByteArrayOutputStream();
+            y.curl(baos, "referer: https://embedcanaistv.com/\n", "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
+            byte [] bytes=baos.toByteArray();
+            output.write(y.curl_response_header.getBytes());
+            output.write(bytes);
+            return;
+        }
+        // chaturbate.com
+        if ( uri.startsWith("/chaturbate.com/") ){
+            ByteArrayOutputStream baos=new ByteArrayOutputStream();
+            y.curl(baos, "", "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
+            byte [] bytes=baos.toByteArray();
+            output.write(y.curl_response_header.getBytes());
+            output.write(bytes);
+            return;
         }
         // favicon
         if ( ! uri.equals("/favicon.ico"))
