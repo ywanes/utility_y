@@ -6963,7 +6963,8 @@ cat buffer.log
                     overflix_error+="url vazia!\n";
                     return;
                 }
-                s=getTokenIE(vToken, url);
+                //s=getTokenIE(vToken, url);
+                s=getTokenTESTCAFE(vToken, url);                
             }
             if ( s != null && s.trim().length() > 0 )
                 s=s.trim();
@@ -7010,7 +7011,86 @@ cat buffer.log
             System.out.println(a);
     }
     
-    public String getTokenIE(Boolean vToken, String url){
+    public String getTokenTESTCAFE(Boolean enable_visible, String url) throws Exception{
+        String script="import { Selector, ClientFunction } from 'testcafe';\n" +
+        "\n" +
+        "fixture('Executar Script reCAPTCHA')\n" +
+        "    .page('"+url+"'); // Substitua pela URL do seu site\n" +
+        "\n" +
+        "test('Obter token reCAPTCHA e enviar requisição', async t => {\n" +
+        "    // 1. Carregar a API do reCAPTCHA se não estiver presente\n" +
+        "    await t.eval(() => {\n" +
+        "        if (typeof grecaptcha === 'undefined') {\n" +
+        "            const script = document.createElement('script');\n" +
+        "            script.src = 'https://www.google.com/recaptcha/api.js?render=6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd';\n" +
+        "            document.head.appendChild(script);\n" +
+        "        }\n" +
+        "    });\n" +
+        "\n" +
+        "    // 2. Executar o script principal\n" +
+        "    const result = await ClientFunction(() => {\n" +
+        "        return new Promise((resolve) => {\n" +
+        "            // Verifica se o reCAPTCHA está carregado\n" +
+        "            const checkRecaptcha = () => {\n" +
+        "                if (typeof grecaptcha !== 'undefined' && \n" +
+        "                    typeof grecaptcha.ready !== 'undefined' &&\n" +
+        "                    typeof grecaptcha.execute !== 'undefined') {\n" +
+        "                    \n" +
+        "                    grecaptcha.ready(function() {\n" +
+        "                        grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"})\n" +
+        "                            .then(function(token) {\n" +
+        "                                const csrf = document.querySelector('meta[name=\"csrf\"]').content;\n" +
+        "                                \n" +
+        "                                // Usando fetch ao invés de jQuery\n" +
+        "                                fetch(window.location.href, {\n" +
+        "                                    method: 'POST',\n" +
+        "                                    headers: {\n" +
+        "                                        'Content-Type': 'application/x-www-form-urlencoded',\n" +
+        "                                    },\n" +
+        "                                    body: `csrf=${csrf}&token=${token}&a=genticket`\n" +
+        "                                })\n" +
+        "                                .then(response => response.json())\n" +
+        "                                .then(data => resolve(data.url));\n" +
+        "                            });\n" +
+        "                    });\n" +
+        "                } else {\n" +
+        "                    setTimeout(checkRecaptcha, 100);\n" +
+        "                }\n" +
+        "            };\n" +
+        "            \n" +
+        "            checkRecaptcha();\n" +
+        "        });\n" +
+        "    })();\n" +
+        "\n" +
+        "    // 3. Exibir o resultado\n" +
+        "    await t.expect(result).ok('O token foi gerado e a requisição foi enviada com sucesso');\n" +
+        "    console.log('URL obtida:', result);\n" +
+        "});";
+        
+        File f = File.createTempFile("meu-arquivo-temporario", ".js");
+        String path=f.getAbsolutePath();
+        FileWriter fw=new FileWriter(f);
+        fw.write(script);
+        fw.flush();
+        fw.close();
+        String [] commands=null;
+        String s="";
+        
+        if ( enable_visible )
+            commands=new String[]{"cmd", "/c", "testcafe", "chrome", path};
+        else
+            commands=new String[]{"cmd", "/c", "testcafe", "chrome:headless", path};
+        s=runtimeExec(null, commands, null, null, null);
+        if ( runtimeExecError != null && !runtimeExecError.equals("") )
+            throw new Exception("erro: programa testcafe não encontrado!\ninstale ele:npm install -g testcafe\n" + runtimeExecError);
+        String [] partes=s.split("\n");
+        int p=findParm(partes, "URL obtida: ", false);
+        if ( p > -1 )
+            return partes[p].substring("URL obtida: ".length());
+        return "";
+    }
+    
+    public String getTokenIE(Boolean enable_visible, String url){
         try{
             String [] result=new String[]{""};
             Thread t=new Thread(new Runnable() {
@@ -7019,7 +7099,7 @@ cat buffer.log
                         String s="Token";
                         String _visible="$false";
                         String _quit="$ie.Parent.Quit();";
-                        if ( vToken ){
+                        if ( enable_visible ){
                             _visible="$true";
                             _quit="";
                         }
