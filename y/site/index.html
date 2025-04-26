@@ -427,7 +427,7 @@ function load_stream(a, b){
 
 function ainda_estao_listando(){
 	try{
-		let divs=document.getElementById('principal').children[0].children;
+		let divs=document.getElementById('principal').children[0].children[0].children;
 		for ( let i=0;i<divs.length;i++ ){
 			if ( divs[i].children[1].innerHTML != '<div></div>' )
 				return true;			
@@ -590,7 +590,7 @@ function getcanais(){
 `
 ;
 	let filtro=',Combate,ESPN 2,ESPN 3,ESPN 6,Max,Nosso Futebol,Paramount +,Premiere 2,Premiere 3,Premiere 6,Premiere 7,Sportv,Sportv 2,Sportv 3,TNT Sports 2,Band SP,Globo DF,Globo RJ,Globo SP,A&E,Darkflix,HBO 2,HBO Mundi,HBO Plus,HBO Pop,HBO Signature,Megapix,Spark Tv Luz e Amor,Star Channel,Studio Universal,Telecine Fun,Telecine Pipoca,TNT,TNT Séries,Universal Tv,Warner Tv,Discovey ID,Food Network,History 2,Multishow,Band News,CNN Brasil,Globo News,Cartoonito,Disney Channel,Gloobinho,';
-	filtro=',Combate,Max,Band SP,Globo SP,A&E,Darkflix,HBO Mundi,HBO Plus,HBO Pop,HBO Signature,Megapix,Star Channel,Studio Universal,Telecine Fun,Telecine Pipoca,TNT,TNT Séries,Universal Tv,Warner Tv,Discovey ID,Food Network,Multishow,Band News,CNN Brasil,Globo News,Cartoonito,Disney Channel,Gloobinho,';
+	filtro=',Combate,History,Globo SP,Band SP,Max,A&E,Darkflix,HBO Mundi,HBO Plus,HBO Pop,HBO Signature,Megapix,Star Channel,Studio Universal,Telecine Fun,Telecine Pipoca,TNT,TNT Séries,Universal Tv,Warner Tv,Discovey ID,Food Network,Multishow,Band News,CNN Brasil,Globo News,Cartoonito,Disney Channel,Gloobinho,';
 	//filtro=',Combate,Globo SP,Darkflix,HBO Signature,Studio Universal,Telecine Pipoca,TNT,TNT Séries,Warner Tv,Discovey ID,Food Network,Multishow,CNN Brasil,Disney Channel,';
 	while(true){
 		p1=a.indexOf('<a href="https://embedcanaistv.com/', p1);
@@ -660,15 +660,16 @@ function carrega_canais(){
 	let canais=getcanais();
 	let s='';
 	for ( let i=0;i<canais.length;i+=4 ){
-		s+="<div>" +
-		   "<div>=> "+canais[i]+"</div><div>pingando................................PINGANDO CANAL - AGUARDE !!!....................</div>" +
-		   "<div><img src='"+canais[i+3]+"' onclick=\""+canais[i+1]+"\" style='width: 200px;' ping='"+canais[i+2]+"'>\n\n</div>" +
+		s+="<div class='responsive-item'>" +
+		   "<div></div><div>.....................loading.........</div>" +
+		   "<div><img src='"+canais[i+3]+"' onclick=\""+canais[i+1]+"\" style='width: 200px; cursor: pointer; margin-top: 20px;' ping='"+canais[i+2]+"'>\n\n</div>" +		   
 		"</div>";
 	}
+	s="<div class='responsive-container'>"+s+"</div>";
 	prepara_principal();
 	document.getElementById('nav').innerHTML='<h1 style="color: #007BFF; font-size: 34px; font-family: Franklin Gothic Medium;">&nbsp;canais:</h1>';
 	document.getElementById('principal').innerHTML='<a style="width: 1570px; display: inline-block; color: white; font-size: 19px; font-family: Courier New;">'+s.replaceAll('\n','<br>')+'</a>';
-	let divs=document.getElementById('principal').children[0].children;
+	let divs=document.getElementById('principal').children[0].children[0].children;
 	for ( let i=0;i<divs.length;i++ ){
 		//this.z=divs[i];	
 		setTimeout(
@@ -2337,6 +2338,30 @@ function keypress_nick_name(e) {
 
 
 <style>
+
+.responsive-container {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	grid-auto-rows: minmax(160px, auto);
+	gap: 15px;
+	padding: 15px;
+	max-width: 1200px;
+	margin: 0 auto;
+}
+
+.responsive-item {
+	background-color: #666;
+	border-radius: 8px;
+	overflow: hidden;
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 24px;
+	color: white;
+	box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
 .btn_resume{
      background: -webkit-linear-gradient(bottom, #E0E0E0, #F9F9F9 70%);
      background: -moz-linear-gradient(bottom, #E0E0E0, #F9F9F9 70%);
