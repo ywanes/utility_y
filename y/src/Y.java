@@ -23440,6 +23440,8 @@ class ClientThread extends Util{
             String header="";
             if ( uri.startsWith("/onplaytv.net/") || uri.startsWith("/embtv.site/") )
                 header="referer: https://embedcanaistv.com/\n";
+            if ( uri.startsWith("/embedcanaistv.com/") )
+                header="accept: text/html\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
             y.curl_timeout=650;
             y.curl(baos, header, "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
