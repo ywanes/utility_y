@@ -23433,11 +23433,12 @@ class ClientThread extends Util{
         }
         // stream tv
         if ( uri.startsWith("/onplaytv.net/") 
+             || uri.startsWith("/embtv.site/")
              || uri.startsWith("/chaturbate.com/") 
-             || uri.startsWith("/embedcanaistv.com/") 
+             || uri.startsWith("/embedcanaistv.com/")              
         ){
             String header="";
-            if ( uri.startsWith("/onplaytv.net/") )
+            if ( uri.startsWith("/onplaytv.net/") || uri.startsWith("/embtv.site/") )
                 header="referer: https://embedcanaistv.com/\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
             y.curl_timeout=650;
