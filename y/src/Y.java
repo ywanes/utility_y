@@ -1119,6 +1119,7 @@ cat buffer.log
         }  
         if ( args[0].equals("yt") ){
             System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(title)s.%(ext)s\" http...");
+            System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(album)s.%(title)s.%(ext)s\" http...");
             System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist)s.%(playlist_index)03d.%(title)s.%(ext)s\" http...");
             System.out.println("cd \"D:\\ProgramFiles\\site\\series\\Raphael Ghanem\" && python3 D:/ProgramFiles/yt-dlp/yt_dlp/__main__.py -o \"%(playlist)s.%(upload_date)s.%(title)s.%(ext)s\" https://www.youtube.com/@raphaelghanem");
             
