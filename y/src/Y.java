@@ -23436,13 +23436,17 @@ class ClientThread extends Util{
         if ( uri.startsWith("/onplaytv.net/") 
              || uri.startsWith("/embtv.site/")
              || uri.startsWith("/chaturbate.com/") 
-             || uri.startsWith("/embedcanaistv.com/")              
+             || uri.startsWith("/embedcanaistv.com/")     
+             || uri.startsWith("/embedtv.digital/")                     
+             || uri.startsWith("/s2.100mundial.icu/")                     
         ){
             String header="";
             if ( uri.startsWith("/onplaytv.net/") || uri.startsWith("/embtv.site/") )
                 header="referer: https://embedcanaistv.com/\n";
             if ( uri.startsWith("/embedcanaistv.com/") )
                 header="accept: text/html\n";
+            if ( uri.startsWith("/embedtv.digital/") || uri.startsWith("/s2.100mundial.icu/") )
+                header="origin: https://embedtv-0.icu\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
             y.curl_timeout=650;
             y.curl(baos, header, "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
