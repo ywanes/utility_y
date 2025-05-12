@@ -976,7 +976,7 @@ cat buffer.log
             System.out.print(dns(name, source_dns));
             return;
         }
-        if ( args[0].equals("overflix") && args.length > 1 ){
+        if ( ( args[0].equals("overflix") || args[0].equals("of") ) && args.length > 1 ){
             if ( ! isWindows() )
                 erroFatal("overflix implementado somente para o windows");            
             try{
@@ -2081,7 +2081,7 @@ cat buffer.log
             }
             return;
         }        
-        if ( args[0].equals("thumbnail") ){
+        if ( args[0].equals("thumbnail") || args[0].equals("tn") ){
             String tail="";
             while(true){
                 String s=thumbnail(new File("."), 0, tail);
@@ -24747,7 +24747,7 @@ class TabelaSAC {
 /* class by manual */                + "  [y ocr]\n"
 /* class by manual */                + "  [y paste]\n"
 /* class by manual */                + "  [y mkv]\n"
-/* class by manual */                + "  [y thumbnail]\n"
+/* class by manual */                + "  [y [thumbnail|tn]]\n"
 /* class by manual */                + "  [y insta]\n"
 /* class by manual */                + "  [y bmp]\n"
 /* class by manual */                + "  [y decodeUrl]\n"
@@ -24758,7 +24758,7 @@ class TabelaSAC {
 /* class by manual */                + "  [y random]\n"
 /* class by manual */                + "  [y talk]\n"
 /* class by manual */                + "  [y sign]\n"
-/* class by manual */                + "  [y overflix]\n"
+/* class by manual */                + "  [y [overflix|of]]\n"
 /* class by manual */                + "  [y connGui]\n"
 /* class by manual */                + "  [y var]\n"
 /* class by manual */                + "  [y cotacao]\n"
@@ -25517,7 +25517,7 @@ class TabelaSAC {
 /* class by manual */                + "    aviso: \"Audio: ac3 (ac-3 \" de mp4 nao funciona na web\n"
 /* class by manual */                + "    checando:\n"
 /* class by manual */                + "    cd d:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep \"Input #0\" \"(por): Audio: ac3\"\n"
-/* class by manual */                + "[y thumbnail]\n"
+/* class by manual */                + "[y [thumbnail|tn]]\n"
 /* class by manual */                + "    y thumbnail\n"
 /* class by manual */                + "[y insta]\n"
 /* class by manual */                + "    y insta [url]\n"
@@ -25555,7 +25555,7 @@ class TabelaSAC {
 /* class by manual */                + "    obs: retornando true, significa assinatura ok\n"
 /* class by manual */                + "    obs2: Informacoes tecnicas => SPEC \"secp256r1\" ALGO = \"SHA256withECDSA\"\n"
 /* class by manual */                + "    obs3: Nao confundir com secp256k1 do bitcoin\n"
-/* class by manual */                + "[y overflix]\n"
+/* class by manual */                + "[y [overflix|of]]\n"
 /* class by manual */                + "    y overflix \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
 /* class by manual */                + "    y overflix -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
 /* class by manual */                + "    y overflix -onlyPreLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"    \n"
@@ -25669,6 +25669,7 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

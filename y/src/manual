@@ -121,7 +121,7 @@ usage:
   [y ocr]
   [y paste]
   [y mkv]
-  [y thumbnail]
+  [y [thumbnail|tn]]
   [y insta]
   [y bmp]
   [y decodeUrl]
@@ -132,7 +132,7 @@ usage:
   [y random]
   [y talk]
   [y sign]
-  [y overflix]
+  [y [overflix|of]]
   [y connGui]
   [y var]
   [y cotacao]
@@ -891,7 +891,7 @@ Exemplos...
     aviso: "Audio: ac3 (ac-3 " de mp4 não funciona na web
     checando:
     cd d:\ProgramFiles\site\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep "Input #0" "(por): Audio: ac3"
-[y thumbnail]
+[y [thumbnail|tn]]
     y thumbnail
 [y insta]
     y insta [url]
@@ -929,7 +929,7 @@ Exemplos...
     obs: retornando true, significa assinatura ok
     obs2: Informações técnicas => SPEC "secp256r1" ALGO = "SHA256withECDSA"
     obs3: Não confundir com secp256k1 do bitcoin
-[y overflix]
+[y [overflix|of]]
     y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
     y overflix -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
     y overflix -onlyPreLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"    
