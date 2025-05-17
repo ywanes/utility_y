@@ -164,6 +164,16 @@ function pontoDentroDoTriangulo(Ax, Ay, Bx, By, Cx, Cy, Px, Py){
 function mais1(){
 	shape_clickado('shape0');
 }
+function bonus(){
+	let nid=get_maior_id().substr(5);
+	let s=0;
+	for ( let i=1;i<nid;i++ ){
+		let value=get_value_shape('shape'+i);
+		if ( value > 20 )
+			s+=value*i;
+	}
+	return s;
+}
 function get_maior_id(){
 	let _shapes=document.getElementById('canvas').children;
 	let tail_id='shape0';
@@ -199,7 +209,7 @@ function set_value_shape(a, b){
 }
 function add_value_shape(a, b){
 	if ( b == null )
-		b=1+parseInt(get_maior_id().substr(5))*2
+		b=1+parseInt(get_maior_id().substr(5))*2+bonus();
 	let value=get_value_shape(a);
 	value+=b;
 	set_value_shape(a, value);
