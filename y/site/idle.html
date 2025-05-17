@@ -36,16 +36,28 @@
     </style>
 </head>
 <body>
-    <div id="canvas"></div>
+    <div id="canvas">
+		<div class="shape-container" id="btn" onclick="mais1()" style="left: 07.5px; top: 545px;margin-left: 30px;">
+			<svg height="130px" viewBox="0 0 450 450">
+				<polygon points="10,0 500,0 500,500 10,500" fill="#456" stroke="none"></polygon>
+			</svg>
+		</div>	
+		<div class="shape-container" id="btn" onclick="mais_grupo()" style="left: 07.5px; top: 545px;margin-left: 210px;">
+			<svg height="130px" viewBox="0 0 450 450">
+				<polygon points="10,0 500,0 500,500 10,500" fill="#789" stroke="none"></polygon>
+			</svg>
+		</div>	
+	</div>
 </body>
 </html>
 
 <script>
 this.z=null;
-const canvas = document.getElementById('canvas');                                                
+const canvas = document.getElementById('canvas');
 canvas.addEventListener('click', function(e){
 	clickado(e);
-}, false);    
+}, false); 
+let canvas_tag='canvas20250517d';   
 const config = {
 	scale: 1,
 	offsetX: 0,
@@ -111,7 +123,7 @@ function createTriangleSVG(shape) {
 	svg.appendChild(polygon);
 	return svg;
 }
-let tmp_canvas=localStorage.getItem('canvas');
+let tmp_canvas=localStorage.getItem(canvas_tag);
 if ( tmp_canvas != null && tmp_canvas != '' ){
 	document.getElementById('canvas').innerHTML=tmp_canvas;
 }else{
@@ -120,7 +132,7 @@ if ( tmp_canvas != null && tmp_canvas != '' ){
 		add_shape(shape);
 	}
 }
-console.log("zera level==>\nthis.level=0;\napaga historico==>\nlocalStorage.setItem('canvas', '')");
+console.log("zera level==>\nthis.level=0;\napaga historico==>\njavascript:z('')");
 function pontoDentro(Ax, Ay, Px, Py, flag_up){
 	if ( flag_up ) 
 		return pontoDentroDoTriangulo(Ax, Ay+y_img, Ax+x_img/2, Ay, Ax+x_img, Ay+y_img, Px, Py);
@@ -149,10 +161,29 @@ function pontoDentroDoTriangulo(Ax, Ay, Bx, By, Cx, Cy, Px, Py){
 
     return !(hasNeg && hasPos);
 }
+function mais1(){
+	shape_clickado('shape0');
+}
+function get_maior_id(){
+	let _shapes=document.getElementById('canvas').children;
+	let tail_id='shape0';
+	for ( let i=0;i<_shapes.length;i++ ){
+		let shape=_shapes[i];
+		if ( shape.getAttribute('id') == 'btn' )
+			continue;
+		tail_id=shape.getAttribute('id');
+	}
+	return tail_id;	
+}
+function mais_grupo(){	
+	shape_clickado(get_maior_id());
+}
 function get_id_shape_clickado(e){
 	let _shapes=document.getElementById('canvas').children;
-	for ( let i=0;i<_shapes.length;i++ ){	
+	for ( let i=0;i<_shapes.length;i++ ){			
 		let shape=_shapes[i];
+		if ( shape.getAttribute('id') == 'btn' )
+			continue;
 		let dentro=pontoDentro(parseInt(shape.getAttribute('x')), parseInt(shape.getAttribute('y')), e.x, e.y, shape.getAttribute('flag_up')=='true');
 		debug('dentro? dentro:'+dentro+' shape:'+shape.getAttribute('id')+' pontoDentro('+parseInt(shape.getAttribute('x'))+', '+parseInt(shape.getAttribute('y'))+', '+e.x+', '+e.y+', '+shape.getAttribute('flag_up')=='true'+')');
 		if ( dentro )
@@ -167,6 +198,8 @@ function set_value_shape(a, b){
 	document.getElementById(a).children[1].innerHTML=b+'';
 }
 function add_value_shape(a, b){
+	if ( b == null )
+		b=1+parseInt(get_maior_id().substr(5))*2
 	let value=get_value_shape(a);
 	value+=b;
 	set_value_shape(a, value);
@@ -283,27 +316,34 @@ function tenta_promover(nid){
 		add_value_shape('shape'+nid, 1);
 		return true;
 	}
-	add_value_shape('shape'+nid, 1);
+	add_value_shape('shape'+nid);
 	return true;
+}
+function shape_clickado(id_shape_clickado){
+	debug('id_shape_clickado:' + id_shape_clickado);
+	let nid=parseInt(id_shape_clickado.substr(5));
+	for ( let i=nid;i>=0;i-- ){
+		if ( tenta_promover(i) ) 
+			break;
+	}
+	let nid_posterior=nid+1;
+	let shape_posterior=document.getElementById('shape'+nid_posterior);
+	let value=get_value_shape(id_shape_clickado);
+	if ( value >= level && shape_posterior == null ){
+		add_next_shape(id_shape_clickado);
+		set_stroke_shape(id_shape_clickado, false);
+	}
+	localStorage.setItem(canvas_tag, document.getElementById('canvas').innerHTML);
+}
+z=function(){
+	//javascript:z('')
+	localStorage.setItem(canvas_tag, '');
+	location.reload();
 }
 function clickado(e){
 	debug('clicked x:'+e.x+' y: '+e.y);
 	id_shape_clickado=get_id_shape_clickado(e);
-	if ( id_shape_clickado != null ){
-		debug('id_shape_clickado:' + id_shape_clickado);
-		let nid=parseInt(id_shape_clickado.substr(5));
-		for ( let i=nid;i>=0;i-- ){
-			if ( tenta_promover(i) ) 
-				break;
-		}
-		let nid_posterior=nid+1;
-		let shape_posterior=document.getElementById('shape'+nid_posterior);
-		let value=get_value_shape(id_shape_clickado);
-		if ( value >= level && shape_posterior == null ){
-			add_next_shape(id_shape_clickado);
-			set_stroke_shape(id_shape_clickado, false);
-		}
-		localStorage.setItem('canvas', document.getElementById('canvas').innerHTML);
-	}
+	if ( id_shape_clickado != null )
+		shape_clickado(id_shape_clickado);
 }
 </script>
