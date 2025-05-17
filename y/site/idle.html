@@ -28,7 +28,7 @@
             position: absolute;
             color: white;
             font-weight: bold;
-            font-size: 12px;
+            font-size: 24px;
             text-shadow: 0 0 3px black;
             pointer-events: none;
             user-select: none;
@@ -51,7 +51,20 @@ const config = {
 	offsetX: 0,
 	offsetY: 0
 };
+let start_x=170;
+let start_y=300;
 const shapes = [
+	{
+		flag_up: true,
+		x: start_x,
+		y: start_y,
+		value: 0,
+		style: 'bordered',
+		id: 'shape0'
+	},
+];
+
+const shapes2 = [
 	{
 		orientation: 'up',
 		x: 4,
@@ -84,16 +97,33 @@ const shapes = [
 		id: 'shape3'
 	}
 ];
-let x_img=50;
-let y_img=43.3;
+let x_img=50*2;
+let y_img=43.3*2;
 let x_img2=x_img+x_img;
 let y_img2=y_img+y_img;
+function add_shape(shape){
+	const container = document.createElement('div');
+	container.className = 'shape-container';
+	container.style.left = shape.x * config.scale + config.offsetX + 'px';
+	container.style.top = shape.y * config.scale + config.offsetY + 'px';
+	container.setAttribute('id', shape.id);
+	container.setAttribute('x', shape.x);
+	container.setAttribute('y', shape.y);
+	container.setAttribute('flag_up', shape.flag_up);
+	let po=createTriangleSVG(shape);
+	container.appendChild(po);
+	const div_value = document.createElement('div');
+	div_value.className = 'shape-value';
+	div_value.textContent = shape.value;
+	container.appendChild(div_value);
+	canvas.appendChild(container);
+}
 function createTriangleSVG(shape) {                
 	const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
 	svg.setAttribute('width', x_img+'px');
 	svg.setAttribute('height', y_img+'px');
 	svg.setAttribute('viewBox', '0 0 '+x_img2+' '+y_img2);                
-	const points = shape.orientation === 'up' ? x_img+",0 0,"+y_img2+" "+x_img2+","+y_img2 : "0,0 "+x_img2+",0 "+x_img+","+y_img2;
+	const points = shape.flag_up ? x_img+",0 0,"+y_img2+" "+x_img2+","+y_img2 : "0,0 "+x_img2+",0 "+x_img+","+y_img2;
 	const polygon = document.createElementNS('http://www.w3.org/2000/svg', "polygon");
 	polygon.setAttribute('points', points);                
 	if ( shape.style === 'bordered' ){
@@ -109,26 +139,12 @@ function createTriangleSVG(shape) {
 }
 for ( let i=0;i<shapes.length;i++ ){
 	let shape=shapes[i];
-	const container = document.createElement('div');
-	container.className = 'shape-container';
-	container.style.left = shape.x * config.scale + config.offsetX + 'px';
-	container.style.top = shape.y * config.scale + config.offsetY + 'px';
-	container.setAttribute('id', shape.id);
-	container.setAttribute('x', shape.x);
-	container.setAttribute('y', shape.y);
-	container.setAttribute('orientation', shape.orientation);
-	let po=createTriangleSVG(shape);
-	container.appendChild(po);
-	const div_value = document.createElement('div');
-	div_value.className = 'shape-value';
-	div_value.textContent = shape.value;
-	container.appendChild(div_value);
-	canvas.appendChild(container);
+	add_shape(shape);
 }
-function pontoDentro(Ax, Ay, Px, Py, orientation){
-	if ( orientation == 'down' ) 
-		return pontoDentroDoTriangulo(Ax, Ay, Ax+x_img, Ay, Ax+x_img/2, Ay+y_img, Px, Py);
-	return pontoDentroDoTriangulo(Ax, Ay+y_img, Ax+x_img/2, Ay, Ax+x_img, Ay+y_img, Px, Py);
+function pontoDentro(Ax, Ay, Px, Py, flag_up){
+	if ( flag_up ) 
+		return pontoDentroDoTriangulo(Ax, Ay+y_img, Ax+x_img/2, Ay, Ax+x_img, Ay+y_img, Px, Py);
+	return pontoDentroDoTriangulo(Ax, Ay, Ax+x_img, Ay, Ax+x_img/2, Ay+y_img, Px, Py);
 }
 function pontoDentroDoTriangulo(Ax, Ay, Bx, By, Cx, Cy, Px, Py){
     // Função para calcular o produto vetorial
@@ -157,24 +173,100 @@ function get_id_shape_clickado(e){
 	let _shapes=document.getElementById('canvas').children;
 	for ( let i=0;i<_shapes.length;i++ ){	
 		let shape=_shapes[i];
-		if ( pontoDentro(parseInt(shape.getAttribute('x')), parseInt(shape.getAttribute('y')), e.x, e.y, shape.getAttribute('orientation')) ){
+		if ( pontoDentro(parseInt(shape.getAttribute('x')), parseInt(shape.getAttribute('y')), e.x, e.y, shape.getAttribute('flag_up')) ){
 			return shape.getAttribute('id');
 		}
 	}
 	return null;
 }
-function add_value_shape(a){
-	let t=document.getElementById(a).children[1];
-	let id=t.innerHTML;
-	id=parseInt(id);
-	id+=1;
-	t.innerHTML=id+'';
+function get_value_shape(a){
+	return parseInt(document.getElementById(a).children[1].innerHTML);
 }
+function set_value_shape(a, b){
+	document.getElementById(a).children[1].innerHTML=b+'';
+}
+function add_value_shape(a, b){
+	let value=get_value_shape(a);
+	value+=b;
+	set_value_shape(a, value);
+}
+function add_next_shape(id){
+	let nid=parseInt(id.substr(5));
+	let shape=document.getElementById(id);
+	if ( nid == 0 ){
+		add_shape({
+			flag_up: !shape.getAttribute('flag_up'),
+			x: parseInt(shape.getAttribute('x'))+x_img/2+3,
+			y: parseInt(shape.getAttribute('y'))-3,
+			value: 0,
+			style: 'bordered',
+			id: 'shape'+(nid+1)
+		});
+	}
+	if ( nid == 1 ){
+		add_shape({
+			flag_up: !(shape.getAttribute('flag_up')=='true'),
+			x: parseInt(shape.getAttribute('x')),
+			y: parseInt(shape.getAttribute('y'))-y_img-3,
+			value: 0,
+			style: 'bordered',
+			id: 'shape'+(nid+1)
+		});
+	}
+	if ( nid == 2 ){
+		add_shape({
+			flag_up: !(shape.getAttribute('flag_up')=='true'),
+			x: parseInt(shape.getAttribute('x'))-x_img/2-3,
+			y: parseInt(shape.getAttribute('y'))-3,
+			value: 0,
+			style: 'bordered',
+			id: 'shape'+(nid+1)
+		});
+	}
+	if ( nid == 3 ){
+		add_shape({
+			flag_up: !(shape.getAttribute('flag_up')=='true'),
+			x: parseInt(shape.getAttribute('x'))-x_img/2-3,
+			y: parseInt(shape.getAttribute('y'))+3,
+			value: 0,
+			style: 'bordered',
+			id: 'shape'+(nid+1)
+		});
+	}
+	if ( nid == 4 ){
+		add_shape({
+			flag_up: !(shape.getAttribute('flag_up')=='true'),
+			x: parseInt(shape.getAttribute('x')),
+			y: parseInt(shape.getAttribute('y'))+y_img+3,
+			value: 0,
+			style: 'bordered',
+			id: 'shape'+(nid+1)
+		});
+	}
+}
+function set_stroke_shape(id, flag_bordered){
+	let t=document.getElementById(id).children[0].children[0];
+	if ( flag_bordered ){
+		t.setAttribute('fill', 'transparent');
+		t.setAttribute('stroke', '#FFFFFF');
+		t.setAttribute('stroke-width', '2');
+	}else{
+		t.setAttribute('fill', '#FFAAAA');
+		t.setAttribute('stroke', 'none');
+		t.removeAttribute('stroke-width');
+	}
+}
+
 function clickado(e){
 	id_shape_clickado=get_id_shape_clickado(e);
 	if ( id_shape_clickado != null ){
 		//console.log(id_shape_clickado);
-		add_value_shape(id_shape_clickado);
+		let value=get_value_shape(id_shape_clickado);
+		add_value_shape(id_shape_clickado, 1);
+		if ( value == 0 ){
+			add_next_shape(id_shape_clickado);
+			set_stroke_shape(id_shape_clickado, false);
+		}
 	}
 	
 }
