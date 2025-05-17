@@ -23439,6 +23439,8 @@ class ClientThread extends Util{
              || uri.startsWith("/embedcanaistv.com/")     
              || uri.startsWith("/embedtv.digital/")                     
              || uri.startsWith("/s2.100mundial.icu/")                     
+             || uri.startsWith("/fazoeli.fun/")                     
+             || uri.startsWith("/cdn.fazoeli.fun/")                     
              || uri.startsWith("/s2.fazoeli.fun/")                     
         ){
             String header="";
@@ -23446,7 +23448,12 @@ class ClientThread extends Util{
                 header="referer: https://embedcanaistv.com/\n";
             if ( uri.startsWith("/embedcanaistv.com/") )
                 header="accept: text/html\n";
-            if ( uri.startsWith("/embedtv.digital/") || uri.startsWith("/s2.100mundial.icu/") || uri.startsWith("/s2.fazoeli.fun/") )
+            if ( uri.startsWith("/embedtv.digital/") 
+                 || uri.startsWith("/s2.100mundial.icu/") 
+                 || uri.startsWith("/fazoeli.fun/") 
+                 || uri.startsWith("/cdn.fazoeli.fun/") 
+                 || uri.startsWith("/s2.fazoeli.fun/") 
+            )
                 header="origin: https://embedtv-0.icu\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
             y.curl_timeout=650;

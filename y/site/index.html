@@ -427,12 +427,12 @@ function load_stream(a, b){
     if ( b.indexOf('https://onplaytv.net/') == 0 )
 	  b=b.substring(7);
     b=convert_chaturbate(b);
-	if ( b.indexOf('https://s2.fazoeli.fun/') == 0 ){
+	if ( b.indexOf('/fazoeli.fun/') == 0 ){	
 		a=b.split('/embedtv/')[1].split('.')[0];
-		b=b.substring(7);
+		b=b.substring(1);
 		b=getUrlRedirect(b);
 		b=b.split('/token/')[1];
-		b='/s2.fazoeli.fun/token/'+b;
+		b='/fazoeli.fun/token/'+b;
 	}
     let nick_name=get_nick_name();
     if ( nick_name == null ){
@@ -692,9 +692,9 @@ function getcanais_embedtv(flag_all_channel){
 				// Amazon Prime Video
 				canais.push(name);
 				// load_stream_listing('amazonprimevideo', 'https://onplaytv.net/amazonprimevideo/video.m3u8')
-				canais.push("load_stream_listing('"+name_format+"', 'https://s2.fazoeli.fun/fontes/embedtv/"+name+".m3u8')");
+				canais.push("load_stream_listing('"+name_format+"', '/fazoeli.fun/fontes/embedtv/"+name+".m3u8')");
 				// /onplaytv.net/amazonprimevideo/video.m3u8
-				canais.push("/s2.fazoeli.fun/fontes/embedtv/"+name+".m3u8')");
+				canais.push("/fazoeli.fun/fontes/embedtv/"+name+".m3u8')");
 				// /embedcanaistv.com/wp-content/uploads/2024/09/amazonprime.webp
 				canais.push(_img);
 			}
@@ -760,7 +760,7 @@ function pinga_canal(e, flag_pinga){
 function carrega_canais(flag_all_channel, flag_pinga){
 	/*
 	if ( 1 == 1 ){
-		load_stream_listing('history', 'https://s2.fazoeli.fun/token/0304e63618437492bdefc14c09aba8bc/embedtv.m3u8')
+		load_stream_listing('history', 'https://fazoeli.fun/token/0304e63618437492bdefc14c09aba8bc/embedtv.m3u8')
 		return;
 	}
 	*/
