@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #222;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        #canvas {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: #333;
+        }
+        .shape-container {
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;            
+            transition: transform 0.2s, filter 0.2s;
+        }
+        .shape-value{
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+            text-shadow: 0 0 3px black;
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas"></div>
+</body>
+</html>
+
+<script>
+this.z=null;
+const canvas = document.getElementById('canvas');                                                
+canvas.addEventListener('click', function(e){
+	clickado(e);
+}, false);    
+const config = {
+	scale: 1,
+	offsetX: 0,
+	offsetY: 0
+};
+const shapes = [
+	{
+		orientation: 'up',
+		x: 4,
+		y: 133,
+		value: 1,
+		style: 'filled',
+		id: 'shape0'
+	},
+	{
+		orientation: 'down',
+		x: 1,
+		y: 4,
+		value: 2,
+		style: 'filled',
+		id: 'shape1'
+	},
+	{
+		orientation: 'up',
+		x: 28,
+		y: 6,
+		value: 3,
+		id: 'shape2'
+	},
+	{
+		orientation: 'up',
+		x: 60,
+		y: 70,
+		value: 4,
+		style: 'bordered',
+		id: 'shape3'
+	}
+];
+let x_img=50;
+let y_img=43.3;
+let x_img2=x_img+x_img;
+let y_img2=y_img+y_img;
+function createTriangleSVG(shape) {                
+	const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+	svg.setAttribute('width', x_img+'px');
+	svg.setAttribute('height', y_img+'px');
+	svg.setAttribute('viewBox', '0 0 '+x_img2+' '+y_img2);                
+	const points = shape.orientation === 'up' ? x_img+",0 0,"+y_img2+" "+x_img2+","+y_img2 : "0,0 "+x_img2+",0 "+x_img+","+y_img2;
+	const polygon = document.createElementNS('http://www.w3.org/2000/svg', "polygon");
+	polygon.setAttribute('points', points);                
+	if ( shape.style === 'bordered' ){
+		polygon.setAttribute('fill', 'transparent');
+		polygon.setAttribute('stroke', '#FFFFFF');
+		polygon.setAttribute('stroke-width', '2');
+	}else{
+		polygon.setAttribute('fill', '#FFAAAA');
+		polygon.setAttribute('stroke', 'none');
+	}
+	svg.appendChild(polygon);
+	return svg;
+}
+for ( let i=0;i<shapes.length;i++ ){
+	let shape=shapes[i];
+	const container = document.createElement('div');
+	container.className = 'shape-container';
+	container.style.left = shape.x * config.scale + config.offsetX + 'px';
+	container.style.top = shape.y * config.scale + config.offsetY + 'px';
+	container.setAttribute('id', shape.id);
+	container.setAttribute('x', shape.x);
+	container.setAttribute('y', shape.y);
+	container.setAttribute('orientation', shape.orientation);
+	let po=createTriangleSVG(shape);
+	container.appendChild(po);
+	const div_value = document.createElement('div');
+	div_value.className = 'shape-value';
+	div_value.textContent = shape.value;
+	container.appendChild(div_value);
+	canvas.appendChild(container);
+}
+function pontoDentro(Ax, Ay, Px, Py, orientation){
+	if ( orientation == 'down' ) 
+		return pontoDentroDoTriangulo(Ax, Ay, Ax+x_img, Ay, Ax+x_img/2, Ay+y_img, Px, Py);
+	return pontoDentroDoTriangulo(Ax, Ay+y_img, Ax+x_img/2, Ay, Ax+x_img, Ay+y_img, Px, Py);
+}
+function pontoDentroDoTriangulo(Ax, Ay, Bx, By, Cx, Cy, Px, Py){
+    // Função para calcular o produto vetorial
+    function crossProduct(a, b, c) {
+        return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+    }
+
+    // Convertendo pontos para objetos com propriedades x e y
+    const A = {x: Ax, y: Ay};
+    const B = {x: Bx, y: By};
+    const C = {x: Cx, y: Cy};
+    const P = {x: Px, y: Py};
+
+    // Calculando os produtos vetoriais
+    const d1 = crossProduct(P, A, B);
+    const d2 = crossProduct(P, B, C);
+    const d3 = crossProduct(P, C, A);
+
+    // Verificando se todos têm o mesmo sinal
+    const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
+    const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
+
+    return !(hasNeg && hasPos);
+}
+function get_id_shape_clickado(e){
+	let _shapes=document.getElementById('canvas').children;
+	for ( let i=0;i<_shapes.length;i++ ){	
+		let shape=_shapes[i];
+		if ( pontoDentro(parseInt(shape.getAttribute('x')), parseInt(shape.getAttribute('y')), e.x, e.y, shape.getAttribute('orientation')) ){
+			return shape.getAttribute('id');
+		}
+	}
+	return null;
+}
+function add_value_shape(a){
+	let t=document.getElementById(a).children[1];
+	let id=t.innerHTML;
+	id=parseInt(id);
+	id+=1;
+	t.innerHTML=id+'';
+}
+function clickado(e){
+	id_shape_clickado=get_id_shape_clickado(e);
+	if ( id_shape_clickado != null ){
+		//console.log(id_shape_clickado);
+		add_value_shape(id_shape_clickado);
+	}
+	
+}
+</script>
