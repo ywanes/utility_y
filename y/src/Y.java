@@ -6759,7 +6759,7 @@ cat buffer.log
     
     multiCurl overflix_multi=null;
     public void overflix(String [] args) throws Exception{             
-        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath(args);
+        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(args);
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
@@ -6768,6 +6768,7 @@ cat buffer.log
         String o_force_out=(String)objs[5];
         Boolean tags=(Boolean)objs[6];
         String outPath=(String)objs[7];
+        getScriptRenameBySkip_in=(String)objs[8];
         
         if ( url.startsWith("https://superflixapi.dev/filme/") ){
             superflixapi(url);
@@ -6784,12 +6785,32 @@ cat buffer.log
             System.out.println(overflix_error);
         if ( skiping_hide_count > 0  )
             System.out.println("skips ocultados:"+skiping_hide_count);
+        if ( getScriptRenameBySkip_in != null ){
+            String [] partes=getScriptRenameBySkip_out.split("\n");
+            String [] partes_grupo_serie=getScriptRenameBySkip_in.split(",");
+            int [] partes_grupo_serie_int=new int[partes_grupo_serie.length];
+            for ( int i=0;i<partes_grupo_serie.length;i++ )
+                partes_grupo_serie_int[i]=Integer.parseInt(partes_grupo_serie[i]);
+            int n_episodios=0;
+            for ( int i=0;i<partes_grupo_serie_int.length;i++ )
+                n_episodios+=partes_grupo_serie_int[i];
+            if ( partes.length != n_episodios ){
+                System.err.println("Numero de episodios skip está diferente de numero de episodios informados por parametros. " + partes.length + "/" + n_episodios );
+                System.exit(0);
+            }
+            String [] partes_novos=new String[partes.length];
+            getScriptRenameBySkip_populaPartesNovos(partes, partes_novos, partes_grupo_serie_int);
+            for ( int i=0;i<partes.length;i++ )
+                System.out.println("y mv \""+partes[i]+"\" \""+partes_novos[i]+"\"");
+        }
         System.exit(0);
     }
     
     public String overflix_error="";
     public boolean skiping_show=true;
     public int skiping_hide_count=0;
+    public String getScriptRenameBySkip_in=null;
+    public String getScriptRenameBySkip_out="";
     public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, 
                              String titulo_serie, Boolean cam, String o_force_out, Boolean tags, String outPath) throws Exception{
         // teste
@@ -6989,9 +7010,11 @@ cat buffer.log
                     overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(2);
                     skiping_show=false;
                 }else{
-                    if ( skiping_show )
+                    if ( skiping_show ){
                         System.out.println("skip " + out);
-                    else
+                        if ( getScriptRenameBySkip_in != null )
+                            getScriptRenameBySkip_out+=out+"\n";
+                    }else
                         skiping_hide_count++;
                 }
             }            
@@ -7165,6 +7188,33 @@ cat buffer.log
         return "";
     }
 
+    public void getScriptRenameBySkip_populaPartesNovos(String [] partes, String [] partes_novos, int [] partes_grupo_serie_int){
+        int serie=1;
+        int episodio=1;
+        int count=0;
+        while ( partes_grupo_serie_int.length > 0 ){
+            if ( partes_grupo_serie_int[0] == 0 )
+                erroFatal("Erro inesperado 34252");
+            partes_grupo_serie_int[0]--;
+            partes_novos[count++]="S"+serie+"E"+(episodio++);
+            if ( partes_grupo_serie_int[0] == 0 ){
+                partes_grupo_serie_int=sliceParm(1, partes_grupo_serie_int);
+                serie++;
+                episodio=1;
+            }
+        }
+        for ( int i=0;i<partes.length;i++ ){
+            // pega serie name
+            String [] estrutura=partes[i].split("\\\\");
+            if ( estrutura.length <= 1 )
+                erroFatal("Caminho incorreto: " + partes[i]);
+            String serie_name=estrutura[estrutura.length-2];
+            String extensao=estrutura[estrutura.length-1].split("\\.")[1];
+            estrutura[estrutura.length-1]=serie_name+" "+partes_novos[i]+"."+extensao;
+            partes_novos[i]=String.join("\\", estrutura);
+        }
+    }
+    
     public int tryConvertNumberPositiveByString(int n_lines_buffer,String value){
         try{
             int tmp=Integer.parseInt(value);
@@ -10728,7 +10778,7 @@ cat buffer.log
         return new Object []{msg, lang, list, copy};
     }        
         
-    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath(String [] args){
+    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(String [] args){
         String url=null;
         Boolean verbose=false;
         Boolean onlyLink=false;
@@ -10737,6 +10787,7 @@ cat buffer.log
         String o=null;
         Boolean tags=false;
         String outPath=null;
+        String getScriptRenameBySkipIn=null;
         
         Boolean aux_p=false;
         String [] extras=new String[0];
@@ -10787,6 +10838,11 @@ cat buffer.log
                 verbose=true;
                 continue;
             }
+            if ( args.length > 0 && getScriptRenameBySkipIn == null && args[0].startsWith("getScriptRenameBySkip,") ){
+                getScriptRenameBySkipIn=args[0].substring("getScriptRenameBySkip,".length());
+                args=sliceParm(1, args);
+                continue;
+            }            
             if ( args.length > 0 && url == null ){
                 url=args[0];
                 args=sliceParm(1, args);
@@ -10810,7 +10866,7 @@ cat buffer.log
             return null;
         if ( onlyLink && onlyPreLink )
             return null;
-        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath};
+        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath, getScriptRenameBySkipIn};
     }        
            
     public Object [] get_parms_vol_mute_setvol_setmute_program_mutingWhileProgramInPrincipalMonitor(String [] args){
@@ -25568,6 +25624,7 @@ class TabelaSAC {
 /* class by manual */                + "    y overflix -onlyPreLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"    \n"
 /* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
 /* class by manual */                + "    y overflix \"https://encontre.tv/assistir-ruptura-2x4-dublado-online-46643/\" -outPath \"D:\\ProgramFiles\\site\\series\\Ruptura\"\n"
+/* class by manual */                + "    y overflix \"https://encontre.tv/assistir-anne-com-um-e-dublado-online-49039/\" \"getScriptRenameBySkip,7,10,10\"\n"
 /* class by manual */                + "    obs: -vToken => mostra iexplorer.exe e nao fecha.\n"
 /* class by manual */                + "         -o => force out path\n"
 /* class by manual */                + "         -tags => verbose profundo\n"
@@ -25676,6 +25733,7 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
