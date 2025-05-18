@@ -14474,11 +14474,36 @@ while True:
 
 class Tests extends Util{
     public Tests(String [] args, boolean flag_test) throws Exception{
+        // comando abaixo para rodar
+        //y test
         if ( flag_test ){
-            teste_unico();
+            teste_unico0();
             return;
         }
         return;
+    }
+    
+    public void teste_unico0() throws Exception{
+        /*
+        // teste de sequencia de texto
+        in:
+            y test
+            a b c d e
+            z1z2z3
+            z1z2z3
+        out:
+            y test
+            a b c d e
+            'z1z2z3' não é reconhecido como um comando interno
+            'z1z2z3' não é reconhecido como um comando interno
+        */
+        InputStream inputStream_pipe=System.in;
+        int BUFFER_SIZE=1024;
+        byte[] buf = new byte[BUFFER_SIZE];
+        int len=0;
+        inputStream_pipe.read(buf,0,1);
+        inputStream_pipe.read(buf,0,1);
+        inputStream_pipe.read(buf,0,1);
     }
     
     private String [] tests_name=null;
