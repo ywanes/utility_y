@@ -60,12 +60,17 @@ function flag_mobile() {
   return check;
 };
 if ( flag_mobile() ){
-	canvas.addEventListener('touchstart', function(e){
+	canvas.addEventListener('touchstart', function(e){		
 		for ( let i=0;i<e.touches.length;i++ ){
 			e.x=e.touches[i].clientX;
 			e.y=e.touches[i].clientY;
 			clickado(e);
 		}
+	}, false); 
+	canvas.addEventListener('touchmove', function(e){		
+		e.x=e.touches[0].clientX;
+		e.y=e.touches[0].clientY;
+		clickado(e);
 	}, false); 
 }else{
 	canvas.addEventListener('click', function(e){
