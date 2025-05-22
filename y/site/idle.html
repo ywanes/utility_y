@@ -53,6 +53,8 @@
 
 <script>
 this.z=null;
+this.continuaX=null;
+this.continuaY=null;
 const canvas = document.getElementById('canvas');
 function flag_mobile() {
   let check = false;
@@ -67,9 +69,17 @@ if ( flag_mobile() ){
 			clickado(e);
 		}
 	}, false); 
+	canvas.addEventListener('touchend', function(e){		
+		this.continuaX=null;
+		this.continuaY=null;
+	}, false); 
 	canvas.addEventListener('touchmove', function(e){		
-		e.x=e.touches[0].clientX;
-		e.y=e.touches[0].clientY;
+		if ( this.continuaX == null ){
+			this.continuaX=e.touches[0].clientX;
+			this.continuaY=e.touches[0].clientY;
+		}
+		e.x=this.continuaX;
+		e.y=this.continuaY;
 		clickado(e);
 	}, false); 
 }else{
