@@ -13915,7 +13915,8 @@ while True:
                     continue;
                 if ( n_eu_mesmo<5 != i<5 )
                     continue;
-                _y=113+(57*i)+(i>=5?34:0);
+                //_y=113+(57*i)+(i>=5?34:0);
+                _y=121+(70*i)+(i>=5?31:0);
                 if ( findParm(new String[]{players[i]}, naoBloquearEssesNomes, false) >= 0 )
                     System.out.println("o jogador [" + i + "] - " + players[i] + " não pode ter a ajuda removida!");
                 else{                                        
@@ -13926,6 +13927,7 @@ while True:
                     System.out.println("removendo ajuda do jogador [" + i + "] - " + players[i]);
                 }
             }
+            
             // fechando painel de ajuda
             robotMouseMove(998+400, 480); 
             sleepMillis(50);
