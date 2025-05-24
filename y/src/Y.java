@@ -986,6 +986,8 @@ cat buffer.log
                 document.cookie='ips4_device_key=66ef5686d84b5bced223d789462e4ded';
                 document.cookie='ips4_member_id=82450';
                 document.cookie='ips4_login_key=addd863af56dcdeb48ef159ceda239ba';                
+                curl 
+                -H "cookie: ips4_device_key=66ef5686d84b5bced223d789462e4ded; ips4_member_id=82450; ips4_login_key=addd863af56dcdeb48ef159ceda239ba;"
                 */
                 overflix(args);                
             }catch(Exception e){
