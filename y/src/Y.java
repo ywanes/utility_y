@@ -25006,7 +25006,6 @@ class TabelaSAC {
 /* class by manual */                + "    y printf [COR] => lista as cores disponiveis ja colorindo\n"
 /* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
 /* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
-/* class by manual */                + "    obs3: no windows usar y printf [COR]\n"
 /* class by manual */                + "[y sdiff]\n"
 /* class by manual */                + "    y sdiff file1.txt file2.txt\n"
 /* class by manual */                + "[y progressBar]\n"

@@ -279,7 +279,6 @@ Exemplos...
     y printf [COR] => lista as cores disponiveis ja colorindo
     obs: diferente do echo, o printf nao gera \n no final
     obs2: echo -n AA gera o mesmo efeito que, printf AA
-    obs3: no windows usar y printf [COR]
 [y sdiff]
     y sdiff file1.txt file2.txt
 [y progressBar]
