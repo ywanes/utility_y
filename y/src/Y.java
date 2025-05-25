@@ -7219,7 +7219,7 @@ cat buffer.log
             if ( estrutura.length <= 1 )
                 erroFatal("Caminho incorreto: " + partes[i]);
             String serie_name=estrutura[estrutura.length-2];
-            String extensao=estrutura[estrutura.length-1].split("\\.")[1];
+            String extensao=estrutura[estrutura.length-1].split("\\.")[estrutura[estrutura.length-1].split("\\.").length-1];
             estrutura[estrutura.length-1]=serie_name+" "+partes_novos[i]+"."+extensao;
             partes_novos[i]=String.join("\\", estrutura);
         }
