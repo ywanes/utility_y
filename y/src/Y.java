@@ -5455,11 +5455,19 @@ cat buffer.log
     public static String [] printf_cor_bg_name=   new String[]{"CINZA", "BRANCO"};
     public static int    [] printf_cor_bg_name_id=new int   []{100,     107};
     public void printf(String [] args, OutputStream os) throws Exception{
+        // correção bug windows
+        if ( args.length == 2 && ( args[1].startsWith("[COR") || args[1].startsWith("\"[COR") ) ){
+            if ( args[1].contains(" ") )
+                args=new String []{"printf", args[1].split(" ")[0].replaceAll("\"", ""), args[1].split(" ")[1]};
+            else
+                args[1]=args[1].replaceAll("\"", "");
+        }
+        
         if ( args.length == 2 && args[1].equals("[COR]") ){
             printf_list_cor(os);
             return;
         }
-        if ( args.length > 2 && (
+        if ( args.length > 2 && (                
             args[1].equals("[COR]")
             || ( args[1].startsWith("[COR/") && args[1].endsWith("]") && args[1].substring(1, args[1].length()-1).split("/").length <= 3 ) 
         )){
@@ -5496,7 +5504,7 @@ cat buffer.log
     public void printf_list_cor(OutputStream os) throws Exception{
         printf_cor("[m", os);
         for ( int i=0;i<printf_cor_name.length;i++ ){
-            printf_cor("[" + printf_cor_name_id[i] + "my printf \"[COR/" + printf_cor_name[i] + "]\" \"oi\"", os);
+            printf_cor("[" + printf_cor_name_id[i] + "my printf [COR/" + printf_cor_name[i] + "] oi", os);
             printf_cor("[m", os);
             os.write("\n".getBytes());
         }
@@ -5504,12 +5512,12 @@ cat buffer.log
             for ( int j=0;j<printf_cor_bg_name.length;j++ ){
                 if ( printf_cor_name[i].equals(printf_cor_bg_name[j]) )
                     continue;
-                printf_cor("[" + printf_cor_bg_name_id[j] + ";" + printf_cor_name_id[i] + "my printf \"[COR/" + printf_cor_name[i] + "/" + printf_cor_bg_name[j] + "]\" \"oi\"", os);
+                printf_cor("[" + printf_cor_bg_name_id[j] + ";" + printf_cor_name_id[i] + "my printf [COR/" + printf_cor_name[i] + "/" + printf_cor_bg_name[j] + "] oi", os);
                 printf_cor("[m", os);
                 os.write("\n".getBytes());
             }
         }
-        printf_cor("[my printf \"[COR]\" \"\"", os);
+        printf_cor("[my printf [COR] \" \"", os);
         os.write("\n".getBytes());
     }
     public void printf_cor(String cor, OutputStream os) throws Exception{
@@ -24982,20 +24990,20 @@ class TabelaSAC {
 /* class by manual */                + "    echo \"a*\"\n"
 /* class by manual */                + "[y printf]\n"
 /* class by manual */                + "    y printf a b c\n"
-/* class by manual */                + "    y printf \"a b c\"\n"
-/* class by manual */                + "    y printf \"[COR/VERDE]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/VERMELHO]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/AZUL]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/BRANCO]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/VERDE/CINZA]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/VERDE/BRANCO]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/VERMELHO/CINZA]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/VERMELHO/BRANCO]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/AZUL/CINZA]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/AZUL/BRANCO]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR/BRANCO/CINZA]\" \"oi\"\n"
-/* class by manual */                + "    y printf \"[COR]\" \"\"\n"
-/* class by manual */                + "    y printf \"[COR]\" => lista as cores disponiveis ja colorindo\n"
+/* class by manual */                + "    y printf a b c\"\n"
+/* class by manual */                + "    y printf [COR/VERDE] oi\n"
+/* class by manual */                + "    y printf [COR/VERMELHO] oi\n"
+/* class by manual */                + "    y printf [COR/AZUL] oi\n"
+/* class by manual */                + "    y printf [COR/BRANCO] oi\n"
+/* class by manual */                + "    y printf [COR/VERDE/CINZA] oi\n"
+/* class by manual */                + "    y printf [COR/VERDE/BRANCO] oi\n"
+/* class by manual */                + "    y printf [COR/VERMELHO/CINZA] oi\n"
+/* class by manual */                + "    y printf [COR/VERMELHO/BRANCO] oi\n"
+/* class by manual */                + "    y printf [COR/AZUL/CINZA] oi\n"
+/* class by manual */                + "    y printf [COR/AZUL/BRANCO] oi\n"
+/* class by manual */                + "    y printf [COR/BRANCO/CINZA] oi\n"
+/* class by manual */                + "    y printf [COR] \"\"\n"
+/* class by manual */                + "    y printf [COR] => lista as cores disponiveis ja colorindo\n"
 /* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
 /* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
 /* class by manual */                + "    obs3: no windows usar y printf [COR]\n"
@@ -25762,6 +25770,9 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
 
 
 
