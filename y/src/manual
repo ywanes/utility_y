@@ -715,6 +715,9 @@ Exemplos...
     y date "+%s%N" from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%N_%z"
     y date "+%s%N" from "20240625_102251_345_UTC" mask "+%Y%m%d_%H%M%S_%N_%z"
     y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+    y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-05" mask "+%Y%m%d_%H%M%S_%z" # ET(Eastern Time) - America/New_York    - UTC−5/UTC−4 DST(Daylight Saving Time - algumas usam)
+    y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-08" mask "+%Y%m%d_%H%M%S_%z" # PT(Pacific Time) - America/Los_Angeles - UTC−8/UTC−7 DST(Daylight Saving Time - algumas usam)
+    y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-06" mask "+%Y%m%d_%H%M%S_%z" # CT(Central Time) - America/Mexico_City - UTC−6/UTC−5 DST(Daylight Saving Time - algumas usam)
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N" fromNTP time.google.com
     y date fromNTP _ && y date
     fromNTP's:

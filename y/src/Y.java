@@ -24990,7 +24990,7 @@ class TabelaSAC {
 /* class by manual */                + "    echo \"a*\"\n"
 /* class by manual */                + "[y printf]\n"
 /* class by manual */                + "    y printf a b c\n"
-/* class by manual */                + "    y printf a b c\"\n"
+/* class by manual */                + "    y printf a b c\n"
 /* class by manual */                + "    y printf [COR/VERDE] oi\n"
 /* class by manual */                + "    y printf [COR/VERMELHO] oi\n"
 /* class by manual */                + "    y printf [COR/AZUL] oi\n"
@@ -25002,7 +25002,6 @@ class TabelaSAC {
 /* class by manual */                + "    y printf [COR/AZUL/CINZA] oi\n"
 /* class by manual */                + "    y printf [COR/AZUL/BRANCO] oi\n"
 /* class by manual */                + "    y printf [COR/BRANCO/CINZA] oi\n"
-/* class by manual */                + "    y printf [COR] \"\"\n"
 /* class by manual */                + "    y printf [COR] => lista as cores disponiveis ja colorindo\n"
 /* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
 /* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
@@ -25442,6 +25441,9 @@ class TabelaSAC {
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_America/Sao_Paulo\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_UTC\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_-03\" mask \"+%Y%m%d_%H%M%S_%N_%Z\"\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-05\" mask \"+%Y%m%d_%H%M%S_%z\" # ET(Eastern Time) - America/New_York    - UTC5/UTC4 DST(Daylight Saving Time - algumas usam)\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-08\" mask \"+%Y%m%d_%H%M%S_%z\" # PT(Pacific Time) - America/Los_Angeles - UTC8/UTC7 DST(Daylight Saving Time - algumas usam)\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-06\" mask \"+%Y%m%d_%H%M%S_%z\" # CT(Central Time) - America/Mexico_City - UTC6/UTC5 DST(Daylight Saving Time - algumas usam)\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\" fromNTP time.google.com\n"
 /* class by manual */                + "    y date fromNTP _ && y date\n"
 /* class by manual */                + "    fromNTP's:\n"
@@ -25769,6 +25771,10 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
+
+
 
 
 
