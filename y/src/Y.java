@@ -6972,11 +6972,9 @@ cat buffer.log
             
             String dir="D:\\ProgramFiles\\site\\filmes\\";
             if ( cam != null && cam )
-                dir="D:\\ProgramFiles\\site\\filmes-cam\\";
-            else{
-                if ( titulo_serie != null )
-                    dir="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
-            }                            
+                titulo="cam-"+titulo;
+            if ( titulo_serie != null )
+                dir="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
             String out=dir+titulo;
             if ( outPath != null )
                 out=outPath+"\\"+titulo;
