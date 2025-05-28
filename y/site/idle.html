@@ -24,7 +24,7 @@
             align-items: center;            
             transition: transform 0.2s, filter 0.2s;
         }
-        .shape-value{
+        .shape-value-down{
             position: absolute;
             color: white;
             font-weight: bold;
@@ -32,21 +32,35 @@
             text-shadow: 0 0 3px black;
             pointer-events: none;
             user-select: none;
+			margin-top: -18px;
+        }
+        .shape-value-up{
+            position: absolute;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+            text-shadow: 0 0 3px black;
+            pointer-events: none;
+            user-select: none;
+			margin-top: 18px;
         }
     </style>
 </head>
 <body>
     <div id="canvas">
-		<div class="shape-container" id="btn" onclick="mais1()" style="left: 07.5px; top: 545px;margin-left: 30px;">
-			<svg height="130px" viewBox="0 0 450 450">
-				<polygon points="10,0 500,0 500,500 10,500" fill="#456" stroke="none"></polygon>
+		<div class="shape-container" id="extra" onclick="btn1()" style="left: 07.5px; top: 545px;margin-left: 30px;">
+			<svg id="svg1" style="width: 50px;height: 50px;">
+				<polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
 			</svg>
 		</div>	
-		<div class="shape-container" id="btn" onclick="mais_grupo()" style="left: 07.5px; top: 545px;margin-left: 210px;">
-			<svg height="130px" viewBox="0 0 450 450">
-				<polygon points="10,0 500,0 500,500 10,500" fill="#789" stroke="none"></polygon>
+		<div class="shape-container" id="extra" onclick="btn2()" style="left: 07.5px; top: 545px;margin-left: 210px;">
+			<svg id="svg2" style="width: 50px;height: 50px;">
+				<polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
 			</svg>
 		</div>	
+		<div id="extra" style="left: 07.5px; top: -400px;margin-left: 10px;">			
+			<div id="lbl1" class="shape-value-up">0</div>		
+		</div>		
 	</div>
 </body>
 </html>
@@ -113,7 +127,7 @@ if ( flag_mobile() ){
 		clickado(e);
 	}, false); 
 }
-let canvas_tag='canvas20250517d';   
+let canvas_tag='canvas20250528f';
 const config = {
 	scale: 1,
 	offsetX: 0,
@@ -150,13 +164,13 @@ function add_shape(shape){
 	let po=createTriangleSVG(shape);
 	container.appendChild(po);
 	const div_value = document.createElement('div');
-	div_value.className = 'shape-value';
+	if ( shape.flag_up )
+		div_value.className = 'shape-value-up';
+	else
+		div_value.className = 'shape-value-down';
 	div_value.textContent = shape.value;
 	container.appendChild(div_value);
-	if ( shape.flag_up )
-		container.children[1].setAttribute('style', 'margin-top: '+margin_value+'px;')
-	else
-		container.children[1].setAttribute('style', 'margin-top: -'+margin_value+'px;')
+	container.children[1].setAttribute('style', '')
 	canvas.appendChild(container);
 }
 function createTriangleSVG(shape) {                
@@ -216,8 +230,19 @@ function pontoDentroDoTriangulo(Ax, Ay, Bx, By, Cx, Cy, Px, Py){
 
     return !(hasNeg && hasPos);
 }
-function mais1(){
-	shape_clickado('shape0');
+function btn1(){	
+	document.getElementById('svg2').children[0].setAttribute('fill', '#456')
+	if ( document.getElementById('svg1').children[0].getAttribute('fill') == '#a22' )
+		document.getElementById('svg1').children[0].setAttribute('fill', '#456');
+	else
+		document.getElementById('svg1').children[0].setAttribute('fill', '#a22')
+}
+function btn2(){	
+	if ( document.getElementById('svg2').children[0].getAttribute('fill') == '#a22' )
+		document.getElementById('svg2').children[0].setAttribute('fill', '#456');
+	else
+		document.getElementById('svg2').children[0].setAttribute('fill', '#a22')
+	document.getElementById('svg1').children[0].setAttribute('fill', '#456')
 }
 function bonus(){
 	let nid=get_maior_id().substr(5);
@@ -234,20 +259,17 @@ function get_maior_id(){
 	let tail_id='shape0';
 	for ( let i=0;i<_shapes.length;i++ ){
 		let shape=_shapes[i];
-		if ( shape.getAttribute('id') == 'btn' )
+		if ( shape.getAttribute('id') == 'extra' )
 			continue;
 		tail_id=shape.getAttribute('id');
 	}
 	return tail_id;	
 }
-function mais_grupo(){	
-	shape_clickado(get_maior_id());
-}
 function get_id_shape_clickado(e){
 	let _shapes=document.getElementById('canvas').children;
 	for ( let i=0;i<_shapes.length;i++ ){			
 		let shape=_shapes[i];
-		if ( shape.getAttribute('id') == 'btn' )
+		if ( shape.getAttribute('id') == 'extra' )
 			continue;
 		let dentro=pontoDentro(parseInt(shape.getAttribute('x')), parseInt(shape.getAttribute('y')), e.x, e.y, shape.getAttribute('flag_up')=='true');
 		debug('dentro? dentro:'+dentro+' shape:'+shape.getAttribute('id')+' pontoDentro('+parseInt(shape.getAttribute('x'))+', '+parseInt(shape.getAttribute('y'))+', '+e.x+', '+e.y+', '+shape.getAttribute('flag_up')=='true'+')');
@@ -416,7 +438,21 @@ z=function(){
 function clickado(e){
 	debug('clicked x:'+e.x+' y: '+e.y);
 	id_shape_clickado=get_id_shape_clickado(e);
-	if ( id_shape_clickado != null )
+	if ( id_shape_clickado != null ){
+		if ( document.getElementById('svg1').children[0].getAttribute('fill') == '#a22' ){
+			document.getElementById(id_shape_clickado).children[1].setAttribute('style', '');
+			document.getElementById('svg1').children[0].setAttribute('fill', '#456');
+			document.getElementById('svg2').children[0].setAttribute('fill', '#456');
+			return;
+		}
+		if ( document.getElementById('svg2').children[0].getAttribute('fill') == '#a22' ){
+			document.getElementById(id_shape_clickado).children[1].setAttribute('style', 'display: none');
+			document.getElementById('svg1').children[0].setAttribute('fill', '#456');
+			document.getElementById('svg2').children[0].setAttribute('fill', '#456');
+			return;
+		}
 		shape_clickado(id_shape_clickado);
+		document.getElementById('lbl1').innerHTML=get_value_shape(id_shape_clickado);
+	}
 }
 </script>
