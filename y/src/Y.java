@@ -10981,18 +10981,18 @@ cat buffer.log
                     return null;
                 args=sliceParm(1, args);
                 jurosAM=Double.parseDouble(args[0])/100;
-                jurosAM=arredondamentoDouble(jurosAM, 5);
+                jurosAM=arredondamentoDouble(jurosAM, 5, false);
                 args=sliceParm(1, args);
                 String tipo=args[0];
                 args=sliceParm(1, args);
                 if ( tipo.equals("a.m") ){
                     jurosAA=Math.pow(1 + jurosAM, 12) - 1;
-                    jurosAA=arredondamentoDouble(jurosAA, 5);
+                    jurosAA=arredondamentoDouble(jurosAA, 5, false);
                 }else{
                     if ( tipo.equals("a.a") ){
                         jurosAA=jurosAM;
                         jurosAM=Math.pow(1 + jurosAA, 1.0/12) - 1;
-                        jurosAM=arredondamentoDouble(jurosAM, 5);
+                        jurosAM=arredondamentoDouble(jurosAM, 5, false);
                     }else{
                         erroFatal("tipo de juros desconhecido => " + tipo);
                     }
@@ -16286,9 +16286,12 @@ class Util{
         return a+"."+b;
     }
     
-    public Double arredondamentoDouble(Double valor, int n_arredondamento) {
+    public Double arredondamentoDouble(Double valor, int n_arredondamento, boolean trunca) {
+        java.math.RoundingMode roundingMode=java.math.RoundingMode.HALF_UP;
+        if ( trunca )
+            roundingMode=java.math.RoundingMode.DOWN;
         BigDecimal bd = new BigDecimal(Double.toString(valor));
-        bd = bd.setScale(n_arredondamento, java.math.RoundingMode.HALF_UP);
+        bd = bd.setScale(n_arredondamento, roundingMode);
         return bd.doubleValue();
     }
     
@@ -17888,62 +17891,26 @@ class Util{
         }                
     }
     
-    public static String bits_to_text(long a){
+    public String bits_to_text(long a){
         return valor_to_text(a*8)+"b";
     }
     
-    public static String bytes_to_text(long a){
+    public String bytes_to_text(long a){
         return valor_to_text(a)+"B";
     }
     
-    public static String valor_to_text(long unit){
-        long giga=0;
-        long mega=0;
-        long kilo=0;
-        int tmp=0;
-        tmp=(int)(unit/(1024*1024*1024));
-        if ( tmp > 0 ){
-            unit-=tmp*1024*1024*1024;
-            giga+=tmp;
-        }
-        tmp=(int)(unit/(1024*1024));
-        if ( tmp > 0 ){
-            unit-=tmp*1024*1024;
-            mega+=tmp;
-        }
-        tmp=(int)(unit/1024);
-        if ( tmp > 0 ){
-            unit-=tmp*1024;
-            kilo+=tmp;
-        }
-        if ( giga == 0 && mega == 0 && kilo == 0 )
-            return unit+" ";
-        String tmp1="";
-        String tmp2="";
-        String tmp3="";
-        if ( giga > 0 ){
-            tmp1=giga+"";
-            tmp2=mega+"";
-            tmp3=" G";
-        }else{
-            if ( mega > 0 ){
-                tmp1=mega+"";
-                tmp2=kilo+"";
-                tmp3=" M";
-            }else{
-                tmp1=kilo+"";
-                tmp2=unit+"";
-                tmp3=" K";
-            }
-        }
-        if ( tmp2.length() == 1 )
-            tmp2="00"+tmp2;
-        else{
-            if ( tmp2.length() == 2 )
-                tmp2="0"+tmp2;
-        }
-        return tmp1+"."+tmp2.substring(0,2)+tmp3;
+    public String valor_to_text(long unit){
+        int fator=1024;
+        String s="";
+        if ( unit/(fator*fator*fator) >= 1 )
+            return arredondamentoDouble(((double)unit/(fator*fator*fator)) ,2, false)+" G";
+        if ( unit/(fator*fator) >= 1 )
+            return arredondamentoDouble(((double)unit/(fator*fator)) ,2, false)+" M";
+        if ( unit/(fator) >= 1 )
+            return arredondamentoDouble(((double)unit/(fator)) ,2, false)+" K";
+        return unit+" B";
     }
+    
     static void testOn() {
         try{
             inputStream_pipe=new FileInputStream("c:/tmp/file.json");
@@ -18215,7 +18182,7 @@ class Util{
             boolean show=false;
             String [] commands = new String[]{
                 // BootDevice,RegisteredUser, removido!
-                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize && wmic path Win32_VideoController get Caption",
+                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize,name && wmic path Win32_VideoController get Caption,adapterram",
                 "system_profiler SPSoftwareDataType",
                 "oslevel",
                 "lsb_release -a",
@@ -18242,6 +18209,7 @@ class Util{
                 s=tryGetKernellInLinuxByOs(s, types[i]);
                 s=tryGetFirewallInWindowsByOs(s, types[i]);
                 s=tryGetDefaultAudioInWindowsByOs(s, types[i]);
+                s=tryGetRamGPUInWindowsByOs(s, types[i]);
                 osGetTypeFalseCache=s;
                 return osGetTypeFalseCache;                     
             }
@@ -18251,6 +18219,18 @@ class Util{
         return null;
     }
 
+    public String tryGetRamGPUInWindowsByOs(String s, String type){
+        if ( ! type.equals("Windows") )
+            return s;
+
+        String command="$qwMemorySize = (Get-ItemProperty -Path \"HKLM:\\SYSTEM\\ControlSet001\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*\" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue).\"HardwareInformation.qwMemorySize\"\n" +
+                        "[math]::round($qwMemorySize/1GB)";
+        String retorno=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, command.getBytes(), null);
+        if ( retorno == null || retorno.equals("") )
+            return s;
+        return s+"GPU_Memory: " + retorno.trim() + " GB";
+    }
+        
     public String tryPivotWindowsAndAjustsValues(String s, String type){
         String retorno="";
         if ( ! type.equals("Windows") )
@@ -18265,45 +18245,55 @@ class Util{
         }
         for ( int i=0;i<elementos.size();i++ ){
             String tmp=elementos.get(i);            
-            if ( tmp.startsWith("L3CacheSize: ") ){
+            if ( tmp.startsWith("L3CacheSize: ") && !retorno.contains("CACHE_L3: ")){
                 String value=tmp.substring("L3CacheSize: ".length());
-                tmp="L3CacheSize: "+bytes_to_text(Long.parseLong(value)*1024);
+                tmp="CACHE_L3: "+bytes_to_text(Long.parseLong(value)*1024);
                 retorno+=tmp+"\r\n";
                 continue;
             }
-            if ( tmp.startsWith("TotalPhysicalMemory: ") ){
+            if ( tmp.startsWith("TotalPhysicalMemory: ") && !retorno.contains("CPU_Memory: ")){
                 String value=tmp.substring("TotalPhysicalMemory: ".length());
-                tmp="TotalPhysicalMemory: "+bytes_to_text(Long.parseLong(value));
+                tmp="CPU_Memory: "+bytes_to_text(Long.parseLong(value));
                 retorno+=tmp+"\r\n";
                 continue;
             }
+            // bugado só mostra até 4giga
+            /*
             if ( tmp.startsWith("AdapterRAM: ") ){ // bugado só mostra até 4giga
                 String value=tmp.substring("AdapterRAM: ".length());
                 tmp="TotalPhysicalMemoryGPU: "+bytes_to_text(Long.parseLong(value));
                 retorno+=tmp+"\r\n";
                 continue;
-            }
-            if ( tmp.startsWith("Caption: ") && !retorno.contains("CaptionOS: ")){
+            } 
+            */
+            if ( tmp.startsWith("Caption: ") && !retorno.contains("OS: ")){
                 String value=tmp.substring("Caption: ".length());
-                tmp="CaptionOS: " +value;
+                tmp="OS: " +value;
                 retorno+=tmp+"\r\n";
                 continue;
             }
             if ( tmp.startsWith("Caption: ") && !tmp.equals("Caption: Microsoft Remote Display Adapter") ){
                 String value=tmp.substring("Caption: ".length());
-                tmp="CaptionGPU: " +value;
+                tmp="GPU: " +value;
                 retorno+=tmp+"\r\n";
                 continue;
             }
-            if ( tmp.startsWith("LoadPercentage: ") && !retorno.contains("CPU: ")){
+            if ( tmp.startsWith("LoadPercentage: ") && !retorno.contains("CPU_Usage: ")){
                 String value=tmp.substring("LoadPercentage: ".length());
+                tmp="CPU_Usage: " +value+"%";
+                retorno+=tmp+"\r\n";
+                continue;
+            }
+            if ( tmp.startsWith("Name: ") && !retorno.contains("CPU: ")){
+                String value=tmp.substring("Name: ".length());
+                value=value.replaceAll("Intel\\(R\\) Core\\(TM\\) ", "Intel ").replaceAll(" CPU @ ", " ");
                 tmp="CPU: " +value;
                 retorno+=tmp+"\r\n";
                 continue;
             }
-            if ( tmp.startsWith("ThreadCount: ") && !retorno.contains("CPUThreads: ")){
+            if ( tmp.startsWith("ThreadCount: ") && !retorno.contains("CPU_Threads: ")){
                 String value=tmp.substring("ThreadCount: ".length());
-                tmp="CPUThreads: " +value;
+                tmp="CPU_Threads: " +value;
                 retorno+=tmp+"\r\n";
                 continue;
             }
