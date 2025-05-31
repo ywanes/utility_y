@@ -435,6 +435,9 @@ z=function(){
 	localStorage.setItem(canvas_tag, '');
 	location.reload();
 }
+function set_lbl1_by_shape(a){
+	document.getElementById('lbl1').innerHTML=get_value_shape(a);
+}
 function clickado(e){
 	debug('clicked x:'+e.x+' y: '+e.y);
 	id_shape_clickado=get_id_shape_clickado(e);
@@ -443,16 +446,18 @@ function clickado(e){
 			document.getElementById(id_shape_clickado).children[1].setAttribute('style', '');
 			document.getElementById('svg1').children[0].setAttribute('fill', '#456');
 			document.getElementById('svg2').children[0].setAttribute('fill', '#456');
+			set_lbl1_by_shape(id_shape_clickado);
 			return;
 		}
 		if ( document.getElementById('svg2').children[0].getAttribute('fill') == '#a22' ){
 			document.getElementById(id_shape_clickado).children[1].setAttribute('style', 'display: none');
 			document.getElementById('svg1').children[0].setAttribute('fill', '#456');
 			document.getElementById('svg2').children[0].setAttribute('fill', '#456');
+			set_lbl1_by_shape(id_shape_clickado);
 			return;
 		}
 		shape_clickado(id_shape_clickado);
-		document.getElementById('lbl1').innerHTML=get_value_shape(id_shape_clickado);
+		set_lbl1_by_shape(id_shape_clickado);		
 	}
 }
 </script>
