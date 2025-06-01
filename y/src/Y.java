@@ -7465,7 +7465,7 @@ cat buffer.log
         // https://ttsmp3.com/
         // https://speechma.com/
         try{
-            Object [] objs = get_parms_msg_lang_list_copy(args);
+            Object [] objs = get_parms_msg_lang_list_copy_tts_stt(args);
             if ( objs == null ){
                 comando_invalido(args);
                 System.exit(0);
@@ -7474,6 +7474,8 @@ cat buffer.log
             String lang=(String)objs[1];
             Boolean list=(Boolean)objs[2];
             String copy=(String)objs[3];
+            Boolean tts=(Boolean)objs[4];
+            Boolean stt=(Boolean)objs[5];
 
             if ( list ){                        
                 java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("<option[\\s\\S]*?</option>").matcher(curl_string("https://ttsmp3.com/"));
@@ -7487,28 +7489,55 @@ cat buffer.log
                 }              
                 return;
             }
-            if ( lang == null )
-                lang="Brazilian_Portuguese_Ricardo";
-            if ( msg == null ){
-                msg=String.join(" ", readAllLines());
-                msg=msg.trim();
-                talk_msg(msg, lang, copy);
-            }else{
-                if ( msg.equals("cat") ){
-                    InputStream inputStream_pipe=System.in;
-                    byte[] buf = new byte[BUFFER_SIZE];
-                    int len=0;
-                    while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
-                        ByteArrayOutputStream baos=new ByteArrayOutputStream();
-                        baos.write(buf, 0, len);
-                        msg=baos.toString().trim();
-                        talk_msg(msg, lang, copy);
-                    }
-                    System.exit(1);
-                }else{
+            if ( tts ){ // textToSpeech
+                if ( lang == null )
+                    lang="Brazilian_Portuguese_Ricardo";
+                if ( msg == null ){
+                    msg=String.join(" ", readAllLines());
                     msg=msg.trim();
                     talk_msg(msg, lang, copy);
+                }else{
+                    if ( msg.equals("cat") ){
+                        InputStream inputStream_pipe=System.in;
+                        byte[] buf = new byte[BUFFER_SIZE];
+                        int len=0;
+                        while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                            ByteArrayOutputStream baos=new ByteArrayOutputStream();
+                            baos.write(buf, 0, len);
+                            msg=baos.toString().trim();
+                            talk_msg(msg, lang, copy);
+                        }
+                        System.exit(1);
+                    }else{
+                        msg=msg.trim();
+                        talk_msg(msg, lang, copy);
+                    }
                 }
+            }else{
+                if ( stt ){ // speechToText
+                    ///////
+                    String command="from vosk import Model, KaldiRecognizer\n" +
+                        "import pyaudio\n" +
+                        "# https://alphacephei.com/vosk/models\n" +
+                        "# BR -> vosk-model-small-pt-0.3\n" +
+                        "model = Model(\"D:/ProgramFiles/IA-vosk-model/pt\")\n" +
+                        "recognizer = KaldiRecognizer(model, 16000)\n" +
+                        "\n" +
+                        "mic = pyaudio.PyAudio()\n" +
+                        "stream = mic.open(rate=16000, channels=1, format=pyaudio.paInt16, input=True, frames_per_buffer=8192*2)\n" +
+                        "stream.start_stream()\n" +
+                        "\n" +
+                        "while True:\n" +
+                        "    data = stream.read(4096)\n" +
+                        "    if recognizer.AcceptWaveform(data):\n" +
+                        "        print(recognizer.Result())";
+                    String retorno=runtimeExec(null, new String[]{"python3"}, null, command.getBytes(), null);
+                    if ( retorno == null || retorno.equals("") )
+                        System.out.println("Erro: " + runtimeExecError);
+                    System.out.println("Erro: " + retorno);
+
+                }else
+                    erroFatal("Erro interno 34322334123");
             }
         }catch(Exception e){
             erroFatal(e);
@@ -10744,11 +10773,13 @@ cat buffer.log
         return new Object []{host0, port0, host1, port1, typeShow, log, ipsBanidos, decodes, xor, noLogLocal};
     }        
     
-    private Object [] get_parms_msg_lang_list_copy(String [] args){        
+    private Object [] get_parms_msg_lang_list_copy_tts_stt(String [] args){        
         String msg=null;
         String lang=null;
         Boolean list=false;
         String copy=null;
+        Boolean tts=false;
+        Boolean stt=false;
         
         args=sliceParm(1, args);
         
@@ -10776,6 +10807,16 @@ cat buffer.log
                 args=sliceParm(1, args);
                 continue;
             }
+            if ( args.length > 0 && !tts && args[0].equals("-tts") ){
+                tts=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && !stt && args[0].equals("-stt") ){
+                stt=true;
+                args=sliceParm(1, args);
+                continue;
+            }
             if ( msg == null ){
                 msg=args[0];
                 args=sliceParm(1, args);
@@ -10783,7 +10824,11 @@ cat buffer.log
             }
             return null;
         }        
-        return new Object []{msg, lang, list, copy};
+        if ( !tts && !stt )
+            tts=true;
+        if ( tts == stt )
+            return null;
+        return new Object []{msg, lang, list, copy, tts, stt};
     }        
         
     private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(String [] args){
@@ -17507,10 +17552,17 @@ class Util{
                     try{
                         int len=0;
                         while ( (len=proc.getInputStream().read(b1, 0, b1.length)) != -1 ){
+//
+//System.out.write(b1, 0, len);
+//System.out.flush();
                             baos.write(b1, 0, len);
                             baos.flush();
                         }                    
+//System.out.println(">stdout>"+len+"<");
+//System.out.flush();
                     }catch(Exception e1){
+//System.out.println("bbb");
+//System.out.flush();
                         runtimeExecError="Erro interno 211";
                     }
                 }
@@ -17521,11 +17573,17 @@ class Util{
                     try{
                         int len=0;
                         while ( (len=proc.getErrorStream().read(b2, 0, b2.length)) != -1 ){
+//System.out.write(b2, 0, len);
+//System.out.flush();                            
                             baos_err.write(b2, 0, len);
                             baos_err.flush();
                             runtimeExecError=baos_err.toString("UTF-8");                
                         }  
+//System.out.println(">stderr>"+len+"<");
+//System.out.flush();
                     }catch(Exception e2){
+//System.out.println("aaa");
+//System.out.flush();
                         runtimeExecError="Erro interno 212";
                     }
                 }
