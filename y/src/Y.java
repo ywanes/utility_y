@@ -16010,12 +16010,11 @@ class WebDAVServer extends Util{
         }
 
         private void sendResponse(OutputStream out, String status, String body, String additionalHeader) throws IOException {
-            ////////////
             String response = status + "\r\n" +
                 (additionalHeader == null || !additionalHeader.contains("Content-Type: ") ? "Content-Type: text/plain\r\n" : "") +
-                "Content-Length: " + body.length() + "\r\n" +
-                //"Access-Control-Allow-Origin: *\r\n" +
-                //"X-Frame-Options: SAMEORIGIN\r\n" +                    
+                "Content-Length: " + body.getBytes().length + "\r\n" +
+                "Access-Control-Allow-Origin: *\r\n" +
+                "X-Frame-Options: SAMEORIGIN\r\n" +                    
                 (additionalHeader != null ? additionalHeader + "\r\n" : "") +
                 "\r\n" +
                 body;
@@ -21547,13 +21546,13 @@ class ExternalSort extends Util{
 
 class Texto_longo extends Util{
     public String get_html_and_header_remote(String format_web){
-        String result="HTTP/1.1 200 OK\n" +
+        String result1="HTTP/1.1 200 OK\n" +
         "Content-Type: text/html; charset=UTF-8\n" +
         "Access-Control-Allow-Origin: *\n" +
         "X-Frame-Options: SAMEORIGIN\n" +
         "Content-Length: ?\n" +
-        "\n" +
-        "<script type=\"text/javascript\">\n" +
+        "\n";
+        String result2="<script type=\"text/javascript\">\n" +
         "window.onload = function(){        \n" +
         "    var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';\n" +
         "    var finish_msg='<html><h1>Conexao encerrada!</h1></html>';\n" +
@@ -21633,62 +21632,9 @@ class Texto_longo extends Util{
         "    });\n" +
         "};\n" + 
         "</script>";
-        result=result.replace("[FORMATWEB]", format_web);
-        int len=result.split("Content-Length: \\?\n\n")[1].length();
-        return result.replace("Content-Length: ?","Content-Length: "+len)+"// 123";
-
-        /*
-        HTTP/1.1 200 OK
-        Content-Type: text/html; charset=UTF-8
-        Access-Control-Allow-Origin: *
-        X-Frame-Options: SAMEORIGIN
-        Content-Length: ?
-
-        <script type="text/javascript">
-        window.onload = function(){        
-            var error_msg='<html><h1>Nao foi possivel se conectar!</h1></html>';
-            var finish_msg='<html><h1>Conexao encerrada!</h1></html>';
-            document.children[0].innerHTML='<html><body style="background-color: rgb(68, 87, 96);margin-left: 0px;margin-bottom: 0px;margin-right: 0px;margin-top: 0px;"><img id="imgId" style="height: 100%;"></img></body></html>';
-            var socket = null;
-            var count_fps=0;
-            try{
-              socket = new WebSocket("ws://"+window.location.href.split('://')[1].replace('/',''));
-              socket.binaryType = "blob";
-              socket.addEventListener("open", (event) => {
-                socket.send("1");
-              });
-              socket.addEventListener("message", (event) => {
-                try{
-                  if ( event.data instanceof Blob ){
-                    var s = event.data;
-                    s = s.slice(0, s.size, "image/[FORMATWEB]");
-                    var link = window.URL.createObjectURL(s);
-                    document.getElementById("imgId").src = link;    
-                    socket.send('3');
-                    count_fps++;
-                  }
-                  if ( event.data == '2' )
-                    socket.send('3');
-                }catch(error){console.log('.');}
-              });
-              socket.addEventListener("error", (event) => {
-                document.children[0].innerHTML=error_msg;
-              });
-            }catch(error){
-              document.children[0].innerHTML=error_msg;                          
-            }
-            setInterval(function(){
-              if ( socket != null && socket.readyState == WebSocket.CLOSED )
-                document.children[0].innerHTML=finish_msg;
-              else{
-                console.log('fps: '+count_fps);
-                count_fps=0;
-              }
-
-            }, 1000);
-        };      
-        </script>
-        */        
+        // s = s.slice(0, s.size, "image/[FORMATWEB]");
+        result2=result2.replace("[FORMATWEB]", format_web);        
+        return result1.replace("Content-Length: ?","Content-Length: "+result2.getBytes().length)+result2; 
     }
     public String get_html_virtual_playlist(String host_display){
         String faixas="";
