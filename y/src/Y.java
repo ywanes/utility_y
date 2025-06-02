@@ -16010,12 +16010,15 @@ class WebDAVServer extends Util{
         }
 
         private void sendResponse(OutputStream out, String status, String body, String additionalHeader) throws IOException {
+            ////////////
             String response = status + "\r\n" +
-                    "Content-Type: text/plain\r\n" +
-                    "Content-Length: " + body.length() + "\r\n" +
-                    (additionalHeader != null ? additionalHeader + "\r\n" : "") +
-                    "\r\n" +
-                    body;
+                (additionalHeader == null || !additionalHeader.contains("Content-Type: ") ? "Content-Type: text/plain\r\n" : "") +
+                "Content-Length: " + body.length() + "\r\n" +
+                //"Access-Control-Allow-Origin: *\r\n" +
+                //"X-Frame-Options: SAMEORIGIN\r\n" +                    
+                (additionalHeader != null ? additionalHeader + "\r\n" : "") +
+                "\r\n" +
+                body;
             out.write(response.getBytes());
         }
     }
@@ -19956,7 +19959,7 @@ class Ponte extends Util{
                             if ( decode_A[i][j] != buffer[j] )
                                 break;
                             if ( j == len-1 ){
-                                os.write(OutputStreamCustom.IDA,decode_B[i],0,decode_B[i].length,ponteID);
+                                os.write(OutputStreamCustom.IDA, decode_B[i], 0, decode_B[i].length, ponteID);
                                 return;                                
                             }
                         }
@@ -20141,34 +20144,38 @@ class Ponte extends Util{
             //  if (sentido_ == IDA)     |   | ->|
             //  if (sentido_ == VOLTA)   |<- |   |
             os.write(buffer, off, len);
-            mostra_(sentido_,buffer,len,ponteID);
+            mostra_(sentido_, buffer, len, ponteID);
         }
 
         private void mostra_(int sentido_, byte[] buffer, int len, String ponteID){
             if (sentido_ == IDA){
                 if (displayIda)
-                    mostra("->",buffer,len,ponteID);
-                if (displaySimple)
-                    System.out.println("1 "+ponteID+" "+cleanTextContent(new String(buffer,0,len)));
+                    mostra("->", buffer, len, ponteID, !displaySimple);
+                //if (displaySimple)
+                //    System.out.println("1 "+ponteID+" "+cleanTextContent(new String(buffer,0,len)));
             }
             if (sentido_ == VOLTA){
                 if (displayVolta)
-                    mostra("<-",buffer,len,ponteID);
-                if (displaySimple)
-                    System.out.println("2 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
+                    mostra("<-", buffer, len, ponteID, !displaySimple);
+                //if (displaySimple)
+                //    System.out.println("2 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
             }
         }
 
-        private void mostra(String direcao, byte[] buffer, int len, String ponteID) {
+        private void mostra(String direcao, byte[] buffer, int len, String ponteID, boolean flag_show_int) {
             // INT
-            System.out.println(
-                direcao+"(id "+ponteID+" int):"
-                +getInts(buffer,len)
-            );
-
-            // STR
-            for (String parte : new String(buffer,0,len).split("\n") )                
-                System.out.println(direcao+"(id "+ponteID+" str):"+parte);            
+            if ( flag_show_int ){
+                System.out.println(
+                    direcao+"(id "+ponteID+" int):"
+                    +getInts(buffer,len)
+                );
+                // STR
+                for (String parte : new String(buffer,0,len).split("\n") )                
+                    System.out.println(direcao+"(id "+ponteID+" str):"+parte);            
+            }else{
+                for (String parte : new String(buffer,0,len).split("\n") )                
+                    System.out.println(direcao+parte);            
+            }
         }
 
         private String cleanTextContent(String text) 
