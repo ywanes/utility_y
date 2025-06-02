@@ -7476,20 +7476,32 @@ cat buffer.log
             String copy=(String)objs[3];
             Boolean tts=(Boolean)objs[4];
             Boolean stt=(Boolean)objs[5];
-
-            if ( list ){                        
-                java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("<option[\\s\\S]*?</option>").matcher(curl_string("https://ttsmp3.com/"));
-                String p1="";
-                String p2="";
-                while ( matcher.find() ){
-                    String [] p=matcher.group().replaceAll("<", "|").replaceAll(">", "|").split("\\|");            
-                    p1=p[2].split("/")[0].trim();
-                    p2=p[1].split("'")[1];
-                    System.out.println(p1.replaceAll(" ", "_") + "_" + p2);
-                }              
-                return;
-            }
+            String [] modelos_stt=new String[]{
+                "English/en",
+                "Chinese/cn",
+                "Russian/ru",
+                "French/fr",
+                "German/de",
+                "Spanish/es",
+                "Portugues/pt",
+                "Italian/it",
+                "Japanses/ja",
+                "Korean/ko"
+            };
+            String dir_modelo="D:/ProgramFiles/IA-vosk-model/";
             if ( tts ){ // textToSpeech
+                if ( list ){                        
+                    java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("<option[\\s\\S]*?</option>").matcher(curl_string("https://ttsmp3.com/"));
+                    String p1="";
+                    String p2="";
+                    while ( matcher.find() ){
+                        String [] p=matcher.group().replaceAll("<", "|").replaceAll(">", "|").split("\\|");            
+                        p1=p[2].split("/")[0].trim();
+                        p2=p[1].split("'")[1];
+                        System.out.println(p1.replaceAll(" ", "_") + "_" + p2);
+                    }              
+                    return;
+                }
                 if ( lang == null )
                     lang="Brazilian_Portuguese_Ricardo";
                 if ( msg == null ){
@@ -7513,32 +7525,98 @@ cat buffer.log
                         talk_msg(msg, lang, copy);
                     }
                 }
-            }else{
-                if ( stt ){ // speechToText
-                    ///////
-                    String command="from vosk import Model, KaldiRecognizer\n" +
-                        "import pyaudio\n" +
-                        "# https://alphacephei.com/vosk/models\n" +
-                        "# BR -> vosk-model-small-pt-0.3\n" +
-                        "model = Model(\"D:/ProgramFiles/IA-vosk-model/pt\")\n" +
-                        "recognizer = KaldiRecognizer(model, 16000)\n" +
-                        "\n" +
-                        "mic = pyaudio.PyAudio()\n" +
-                        "stream = mic.open(rate=16000, channels=1, format=pyaudio.paInt16, input=True, frames_per_buffer=8192*2)\n" +
-                        "stream.start_stream()\n" +
-                        "\n" +
-                        "while True:\n" +
-                        "    data = stream.read(4096)\n" +
-                        "    if recognizer.AcceptWaveform(data):\n" +
-                        "        print(recognizer.Result())";
-                    String retorno=runtimeExec(null, new String[]{"python3"}, null, command.getBytes(), null);
-                    if ( retorno == null || retorno.equals("") )
-                        System.out.println("Erro: " + runtimeExecError);
-                    System.out.println("Erro: " + retorno);
-
-                }else
-                    erroFatal("Erro interno 34322334123");
+                return;
             }
+            if ( stt ){ // speechToText
+                if ( list ){                        
+                    String [] pastas=new String []{};
+                    File f=new File(dir_modelo);
+                    if ( f.exists() )
+                        pastas=f.list();
+                    for ( int i=0;i<modelos_stt.length;i++ ){
+                        String tmp=modelos_stt[i];
+                        String nome=tmp.split("/")[0];
+                        String sigla=tmp.split("/")[1];
+                        String aux="";
+                        if ( findParm(pastas, sigla, true) == -1 )
+                            aux=" #nao instalado!";
+                        System.out.println(nome+aux);
+                    }
+                    return;
+                }
+                String sigla="?";
+                if ( lang == null ){
+                    lang="Portugues";                
+                    sigla="pt";
+                }
+                if ( lang != null ){
+                    boolean achou=false;
+                    String [] pastas=new String []{};
+                    File f=new File(dir_modelo);
+                    if ( f.exists() )
+                        pastas=f.list();
+                    for ( int i=0;i<modelos_stt.length;i++ ){
+                        String tmp=modelos_stt[i];
+                        String _nome=tmp.split("/")[0];
+                        String _sigla=tmp.split("/")[1];
+                        if ( lang.equals(_nome) ){
+                            sigla=_sigla;
+                            File _f=new File(dir_modelo+_sigla);
+                            if ( !_f.exists() )
+                                erroFatal("O Modelo "+_nome+" pasta "+_sigla+" não está instalado!\nVeja abaixo as instruções para baixar, o modelo abaixo é para Portuguese\nsite: https://alphacephei.com/vosk/models\nmodelo small: vosk-model-small-pt-0.3\ndestino no pc em formato de pasta: "+dir_modelo+"pt\nObs: recomendado baixar o modelo do tipo small!!");
+                            if ( !_f.isDirectory() )
+                                erroFatal("Erro, esse caminho não é uma pasta:\n"+dir_modelo+_sigla);
+                            achou=true;
+                            break;
+                        }
+                    }
+                    if ( !achou )
+                        erroFatal("Modelo inválido: " + lang);
+                }                    
+                    
+                String command="from vosk import Model, KaldiRecognizer\n" +
+                    "from vosk import Model, KaldiRecognizer\n" +
+                    "import pyaudio\n" +
+                    "import json\n" +
+                    "import sys\n" +
+                    "\n" +
+                    "# https://alphacephei.com/vosk/models\n" +
+                    "# BR -> vosk-model-small-pt-0.3\n" +
+                    "model = Model(\""+dir_modelo+sigla+"\")\n" +
+                    "recognizer = KaldiRecognizer(model, 16000)\n" +
+                    "\n" +
+                    "mic = pyaudio.PyAudio()\n" +
+                    "stream = mic.open(rate=16000, channels=1, format=pyaudio.paInt16, input=True, frames_per_buffer=8192*2)\n" +
+                    "stream.start_stream()\n" +
+                    "\n" +
+                    "while True:\n" +
+                    "    data = stream.read(4096)\n" +
+                    "    if recognizer.AcceptWaveform(data):\n" +
+                    "        text=json.loads(recognizer.Result()).get(\"text\", \"\")\n" +
+                    "        if text != '' and text != parcial:\n" +
+                    "            parcial=text\n" +
+                    "        if parcial != '':\n" +
+                    "            print(parcial)\n" +
+                    "            sys.stdout.flush()\n" +
+                    "    else:\n" +
+                    "        parcial=json.loads(recognizer.PartialResult()).get(\"parcial\", \"\")\n" +
+                    "\n" +
+                    "\n" + 
+                    "\n";
+
+                flag_real_time_output=true;
+
+                String retorno=runtimeExec(null, new String[]{"python3"}, null, command.getBytes(), true);
+                if ( retorno == null || retorno.equals("") ){
+                    if ( runtimeExecError.contains("from vosk import Model") )
+                        erroFatal("é preciso instalar o vosk primeiro!\npip install vosk");
+                    if ( runtimeExecError.contains("does not contain model files") )
+                        erroFatal("Esse modelo não está instalado!\nsite: https://alphacephei.com/vosk/models\nmodelo small: vosk-model-small-pt-0.3\ndestino no pc em formato de pasta: "+dir_modelo+"pt\n"+runtimeExecError);
+                    System.out.println("Erro: " + runtimeExecError);
+                }
+                return;
+            }
+            erroFatal("Erro interno 34322334123");
         }catch(Exception e){
             erroFatal(e);
         }
@@ -17521,8 +17599,11 @@ class Util{
     
     public String runtimeExecError = "";
     public byte [] runtimeExecOutBytes = null;
+    public boolean flag_real_time_output = false;
     public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in, Boolean flag_charset_windows){
         try{
+            final String charset=(flag_charset_windows != null && flag_charset_windows)?"ISO-8859-1":"UTF-8";
+            
             if ( commands == null )
                 commands=line_commands.split(" ");
             runtimeExecError="";
@@ -17542,27 +17623,28 @@ class Util{
                     }
                 }
             };
-            ok0.start();
-            byte[] b1=new byte[1024];
-            byte[] b2=new byte[1024];
+            ok0.start();                        
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ByteArrayOutputStream baos_err = new ByteArrayOutputStream();
             Thread ok=new Thread(){
                 public void run(){
-                    try{
+                    try{                        
                         int len=0;
+                        byte[] b1=new byte[1024];
+                        ByteArrayOutputStream baos2=new ByteArrayOutputStream();
                         while ( (len=proc.getInputStream().read(b1, 0, b1.length)) != -1 ){
-//
-//System.out.write(b1, 0, len);
-//System.out.flush();
-                            baos.write(b1, 0, len);
-                            baos.flush();
+                            if ( flag_real_time_output ){
+                                baos2.write(b1, 0, len);
+                                baos2.flush();
+                                System.out.print(baos2.toString(charset));                                
+                                System.out.flush();                                
+                                baos2=new ByteArrayOutputStream();
+                            }else{
+                                baos.write(b1, 0, len);
+                                baos.flush();
+                            }
                         }                    
-//System.out.println(">stdout>"+len+"<");
-//System.out.flush();
                     }catch(Exception e1){
-//System.out.println("bbb");
-//System.out.flush();
                         runtimeExecError="Erro interno 211";
                     }
                 }
@@ -17572,18 +17654,13 @@ class Util{
                 public void run(){
                     try{
                         int len=0;
+                        byte[] b2=new byte[1024];
                         while ( (len=proc.getErrorStream().read(b2, 0, b2.length)) != -1 ){
-//System.out.write(b2, 0, len);
-//System.out.flush();                            
                             baos_err.write(b2, 0, len);
                             baos_err.flush();
                             runtimeExecError=baos_err.toString("UTF-8");                
                         }  
-//System.out.println(">stderr>"+len+"<");
-//System.out.flush();
                     }catch(Exception e2){
-//System.out.println("aaa");
-//System.out.flush();
                         runtimeExecError="Erro interno 212";
                     }
                 }
@@ -17592,9 +17669,6 @@ class Util{
             ok0.join();
             ok.join();
             nok.join();
-            String charset="UTF-8";
-            if ( flag_charset_windows != null && flag_charset_windows )
-                charset="ISO-8859-1";
             runtimeExecOutBytes=baos.toByteArray();
             String s=baos.toString(charset).replace("\r\n","\n");
             String [] linhas=s.split("\n");
