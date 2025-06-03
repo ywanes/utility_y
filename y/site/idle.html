@@ -397,14 +397,14 @@ function tenta_promover(nid){
 	let shape_anterior=document.getElementById('shape'+nid_anterior);		
 	if ( shape_anterior != null ){
 		let value_anterior=get_value_shape('shape'+nid_anterior);
-		for ( let i=level_multiplicado;i>=1;i-- ){				
-			if ( value_anterior >= (this.level*level_multiplicado) ){
-				set_value_shape('shape'+nid_anterior, (value_anterior-(this.level*level_multiplicado)) );
-				add_value_shape('shape'+nid, 1*level_multiplicado );
-				return true;
-			}
-		}		
-		return false;
+		let level_multiplicado_candidato=parseInt(value_anterior/this.level);		
+		if ( level_multiplicado_candidato == 0 )
+			return false;
+		if ( level_multiplicado_candidato > level_multiplicado )
+			level_multiplicado_candidato=level_multiplicado;
+		set_value_shape('shape'+nid_anterior, value_anterior-(this.level*level_multiplicado_candidato) );
+		add_value_shape('shape'+nid, level_multiplicado_candidato );
+		return true;
 	}
 	// se chegou aqui significa que ja passou por todos os shape e agora esta executando o shape0 com add dinamico.
 	add_value_shape('shape'+nid);
