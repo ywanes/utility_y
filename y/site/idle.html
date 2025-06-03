@@ -436,8 +436,29 @@ z=function(){
 	localStorage.setItem(canvas_tag, '');
 	location.reload();
 }
+function formatarNumero(numero) {
+    const str = numero.toString().replace(/_/g, '');
+    const grupos = [];
+    let restante = str.length;
+    while (restante > 0) {
+        const inicio = Math.max(0, restante - 9);
+        grupos.unshift(str.slice(inicio, restante)); // Adiciona no início do array
+        restante -= 9;
+    }
+    if (grupos.length > 0) {
+        const primeiroGrupo = grupos[0];
+        let formatado = '';
+        for (let i = primeiroGrupo.length; i > 0; i -= 3) {
+            const inicio = Math.max(0, i - 3);
+            const bloco = primeiroGrupo.slice(inicio, i);
+            formatado = bloco + (formatado ? '_' + formatado : '');
+        }
+        grupos[0] = formatado;
+    }
+    return grupos.join('_');
+}
 function set_lbl1_by_shape(a){
-	document.getElementById('lbl1').innerHTML=get_value_shape(a);
+	document.getElementById('lbl1').innerHTML=formatarNumero(get_value_shape(a));
 }
 function clickado(e){
 	debug('clicked x:'+e.x+' y: '+e.y);
