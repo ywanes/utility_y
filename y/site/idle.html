@@ -112,7 +112,7 @@ if ( flag_mobile() ){
 		this.continuaY=null;
 		level_multiplicado=1;
 	}, false); 
-	canvas.addEventListener('touchmove', function(e){		
+	canvas.addEventListener('touchmove', function(e){
 		if ( this.continuaX == null ){
 			this.continuaX=e.touches[0].clientX;
 			this.continuaY=e.touches[0].clientY;
@@ -399,7 +399,7 @@ function tenta_promover(nid){
 		let value_anterior=get_value_shape('shape'+nid_anterior);
 		for ( let i=level_multiplicado;i>=1;i-- ){				
 			if ( value_anterior >= (this.level*level_multiplicado) ){
-				set_value_shape('shape'+nid_anterior, value_anterior-(this.level*level_multiplicado) );
+				set_value_shape('shape'+nid_anterior, (value_anterior-(this.level*level_multiplicado)) );
 				add_value_shape('shape'+nid, 1*level_multiplicado );
 				return true;
 			}
@@ -420,6 +420,7 @@ function shape_clickado(id_shape_clickado){
 	debug('id_shape_clickado:' + id_shape_clickado);
 	let nid=parseInt(id_shape_clickado.substr(5));
 	tenta_promover_lista(nid);
+	
 	// tenta mudar stroke do shape
 	let nid_posterior=nid+1;
 	let shape_posterior=document.getElementById('shape'+nid_posterior);
