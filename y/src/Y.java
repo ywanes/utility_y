@@ -25736,7 +25736,8 @@ class TabelaSAC {
 /* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
 /* class by manual */                + "    y overflix \"https://encontre.tv/assistir-ruptura-2x4-dublado-online-46643/\" -outPath \"D:\\ProgramFiles\\site\\series\\Ruptura\"\n"
 /* class by manual */                + "    y overflix \"https://encontre.tv/assistir-anne-com-um-e-dublado-online-49039/\" \"getScriptRenameBySkip,7,10,10\"\n"
-/* class by manual */                + "    obs: -vToken => mostra iexplorer.exe e nao fecha.\n"
+/* class by manual */                + "    obs: getScriptRenameBySkip so interpreta comandos skip, caso contrario baixa\n"
+/* class by manual */                + "    obs2: -vToken => mostra iexplorer.exe e nao fecha.\n"
 /* class by manual */                + "         -o => force out path\n"
 /* class by manual */                + "         -tags => verbose profundo\n"
 /* class by manual */                + "[y connGui]\n"
@@ -25844,6 +25845,8 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 
