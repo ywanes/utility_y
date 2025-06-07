@@ -53,13 +53,30 @@
 				<polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
 			</svg>
 		</div>	
-		<div class="shape-container" id="extra" onclick="btn2()" style="left: 07.5px; top: 545px;margin-left: 210px;">
+		<div class="shape-container" id="extra" onclick="btn2()" style="left: 07.5px; top: 545px;margin-left: 130px;">
 			<svg id="svg2" style="width: 50px;height: 50px;">
 				<polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
 			</svg>
 		</div>	
-		<div id="extra" style="left: 07.5px; top: -400px;margin-left: 10px;">			
+		<div class="shape-container" id="extra" onclick="btn3()" style="left: 07.5px; top: 545px;margin-left: 230px;">
+			<svg id="svg3" style="width: 50px;height: 50px;">
+				<polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
+			</svg>
+		</div>	
+		<div id="extra" style="left: 07.5px; margin-left: 10px;">			
 			<div id="lbl1" class="shape-value-up">0</div>		
+		</div>		
+		<div id="extra" style="left: 07.5px; margin-left: 10px;">			
+			<div id="lbl2" class="shape-value-up" style="margin-top: 40px;"></div>		
+		</div>		
+		<div id="extra" style="left: 07.5px; margin-left: 10px;">			
+			<div id="lbl3" class="shape-value-up" style="margin-top: 60px;"></div>		
+		</div>		
+		<div id="extra" style="left: 07.5px; margin-left: 10px;">			
+			<div id="lbl4" class="shape-value-up" style="margin-top: 80px;"></div>		
+		</div>		
+		<div id="extra" style="left: 07.5px; margin-left: 10px;">			
+			<div id="lbl5" class="shape-value-up" style="margin-top: 100px;"></div>		
 		</div>		
 	</div>
 </body>
@@ -67,6 +84,7 @@
 
 <script>
 this.z=null;
+let canvas_tag='canvas20250607c';
 this.continuaX=null;
 this.continuaY=null;
 this.level=9;
@@ -127,7 +145,6 @@ if ( flag_mobile() ){
 		clickado(e);
 	}, false); 
 }
-let canvas_tag='canvas20250528f';
 const config = {
 	scale: 1,
 	offsetX: 0,
@@ -232,17 +249,27 @@ function pontoDentroDoTriangulo(Ax, Ay, Bx, By, Cx, Cy, Px, Py){
 }
 function btn1(){	
 	document.getElementById('svg2').children[0].setAttribute('fill', '#456')
+	document.getElementById('svg3').children[0].setAttribute('fill', '#456')
 	if ( document.getElementById('svg1').children[0].getAttribute('fill') == '#a22' )
 		document.getElementById('svg1').children[0].setAttribute('fill', '#456');
 	else
 		document.getElementById('svg1').children[0].setAttribute('fill', '#a22')
 }
 function btn2(){	
+	document.getElementById('svg1').children[0].setAttribute('fill', '#456')
+	document.getElementById('svg3').children[0].setAttribute('fill', '#456')
 	if ( document.getElementById('svg2').children[0].getAttribute('fill') == '#a22' )
 		document.getElementById('svg2').children[0].setAttribute('fill', '#456');
 	else
 		document.getElementById('svg2').children[0].setAttribute('fill', '#a22')
+}
+function btn3(){	
 	document.getElementById('svg1').children[0].setAttribute('fill', '#456')
+	document.getElementById('svg2').children[0].setAttribute('fill', '#456')
+	if ( document.getElementById('svg3').children[0].getAttribute('fill') == '#a22' )
+		document.getElementById('svg3').children[0].setAttribute('fill', '#456');
+	else
+		document.getElementById('svg3').children[0].setAttribute('fill', '#a22')
 }
 function bonus(){
 	let nid=get_maior_id().substr(5);
@@ -280,6 +307,37 @@ function get_id_shape_clickado(e){
 }
 function get_value_shape(a){
 	return parseInt(document.getElementById(a).children[1].innerHTML);
+}
+function reset_value_shape(a){
+	let value=get_value_shape(a);
+	if ( value > 1 ){
+		let nid=parseInt(a.substr(5));
+		let nid_anterior=nid-1;
+		let shape_anterior=document.getElementById('shape'+nid_anterior);		
+		if ( shape_anterior != null ){		
+			add_value_shape('shape'+nid_anterior, (value-1)*this.level);
+			set_value_shape(a, 1);
+		}
+	}
+}
+function calc_pendente(a){
+	let nid=parseInt(a.substr(5));
+	if ( nid <= 1 )
+		return '';
+	let nid_posterior=nid+1;
+	let nid_posterior2=nid+2;
+	if ( document.getElementById('shape'+nid_posterior) != null && document.getElementById('shape'+nid_posterior2) != null ){
+		let value=get_value_shape(a);
+		let value1=get_value_shape('shape'+nid_posterior);
+		let value2=get_value_shape('shape'+nid_posterior2);
+		if ( value1 <= value2 || value2 == 0 ){
+			return '';
+		}
+		let alvo=value1+(value1-value2);
+		return alvo-value;
+	}
+	
+	return '';
 }
 function set_value_shape(a, b){
 	document.getElementById(a).children[1].innerHTML=b+'';
@@ -436,7 +494,12 @@ z=function(){
 	localStorage.setItem(canvas_tag, '');
 	location.reload();
 }
-function formatarNumero(numero) {
+function formatarNumero(numero){
+	let negativo=false;
+	if ( numero < 0 ){
+		negativo=true;
+		numero*=-1;
+	}
     const str = numero.toString().replace(/_/g, '');
     const grupos = [];
     let restante = str.length;
@@ -455,10 +518,15 @@ function formatarNumero(numero) {
         }
         grupos[0] = formatado;
     }
+	if ( negativo )
+		return '-' + grupos.join('_');
     return grupos.join('_');
 }
 function set_lbl1_by_shape(a){
 	document.getElementById('lbl1').innerHTML=formatarNumero(get_value_shape(a));
+}
+function set_lbl2(a){
+	document.getElementById('lbl2').innerHTML=formatarNumero(a);
 }
 function clickado(e){
 	debug('clicked x:'+e.x+' y: '+e.y);
@@ -468,18 +536,31 @@ function clickado(e){
 			document.getElementById(id_shape_clickado).children[1].setAttribute('style', '');
 			document.getElementById('svg1').children[0].setAttribute('fill', '#456');
 			document.getElementById('svg2').children[0].setAttribute('fill', '#456');
+			document.getElementById('svg3').children[0].setAttribute('fill', '#456');
 			set_lbl1_by_shape(id_shape_clickado);
+			set_lbl2(calc_pendente(id_shape_clickado));
 			return;
 		}
 		if ( document.getElementById('svg2').children[0].getAttribute('fill') == '#a22' ){
 			document.getElementById(id_shape_clickado).children[1].setAttribute('style', 'display: none');
 			document.getElementById('svg1').children[0].setAttribute('fill', '#456');
 			document.getElementById('svg2').children[0].setAttribute('fill', '#456');
+			document.getElementById('svg3').children[0].setAttribute('fill', '#456');
+			set_lbl1_by_shape(id_shape_clickado);
+			set_lbl2(calc_pendente(id_shape_clickado));
+			return;
+		}
+		if ( document.getElementById('svg3').children[0].getAttribute('fill') == '#a22' ){
+			reset_value_shape(id_shape_clickado);
+			document.getElementById('svg1').children[0].setAttribute('fill', '#456');
+			document.getElementById('svg2').children[0].setAttribute('fill', '#456');
+			document.getElementById('svg3').children[0].setAttribute('fill', '#456');
 			set_lbl1_by_shape(id_shape_clickado);
 			return;
 		}
 		shape_clickado(id_shape_clickado);
 		set_lbl1_by_shape(id_shape_clickado);		
+		set_lbl2(calc_pendente(id_shape_clickado));
 	}
 }
 </script>
