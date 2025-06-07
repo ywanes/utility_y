@@ -5629,7 +5629,10 @@ cat buffer.log
     public void cat(String [] caminhos)
     {
         try{
-            if ( caminhos.length > 1 ){
+            // y cat "<<EOF>" file1.txt // considerar tb <<EOF>> e outras tags
+            // y cat ">" file1.txt // usar gravação no final controlc ou na interação acima de 1 segundo
+
+            if ( caminhos.length > 1 ){ // FILE
                 for ( int i=1;i<caminhos.length;i++ )
                 {
                     if ( ! new File(caminhos[i]).exists() ){
@@ -5646,7 +5649,7 @@ cat buffer.log
                         System.out.write(buf, 0, len);            
                     fis.close();
                 }
-            }else{
+            }else{ // stdin/stdout
                 InputStream inputStream_pipe=System.in;
                 byte[] buf = new byte[BUFFER_SIZE];
                 int len=0;
