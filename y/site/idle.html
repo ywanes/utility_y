@@ -128,12 +128,17 @@ if ( flag_mobile() ){
 	canvas.addEventListener('touchend', function(e){		
 		this.continuaX=null;
 		this.continuaY=null;
+		let tmp_level_multiplicado=get_level_multiplicado();
+		if ( tmp_level_multiplicado > 1 )
+			set_lbl3(tmp_level_multiplicado); 
+		else
+			set_lbl3(''); 
 		level_multiplicado=1;
 	}, false); 
 	canvas.addEventListener('touchmove', function(e){
 		if ( this.continuaX == null ){
 			this.continuaX=e.touches[0].clientX;
-			this.continuaY=e.touches[0].clientY;
+			this.continuaY=e.touches[0].clientY;			
 			level_multiplicado=get_level_multiplicado();			
 		}
 		e.x=this.continuaX;
@@ -527,6 +532,9 @@ function set_lbl1_by_shape(a){
 }
 function set_lbl2(a){
 	document.getElementById('lbl2').innerHTML=formatarNumero(a);
+}
+function set_lbl3(a){
+	document.getElementById('lbl3').innerHTML=formatarNumero(a);
 }
 function clickado(e){
 	debug('clicked x:'+e.x+' y: '+e.y);
