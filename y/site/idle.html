@@ -556,6 +556,7 @@ function clickado(e){
 			document.getElementById('svg2').children[0].setAttribute('fill', '#456');
 			document.getElementById('svg3').children[0].setAttribute('fill', '#456');
 			set_lbl1_by_shape(id_shape_clickado);
+			set_lbl2(calc_pendente(id_shape_clickado));
 			return;
 		}
 		shape_clickado(id_shape_clickado);
