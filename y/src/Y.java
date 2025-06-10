@@ -5626,42 +5626,70 @@ cat buffer.log
         }
     }    
     
-    public void cat(String [] caminhos)
+    public void cat(String [] args)
     {
         try{
             // y cat "<<EOF>" file1.txt // considerar tb <<EOF>> e outras tags
             // y cat ">" file1.txt // usar gravação no final controlc ou na interação acima de 1 segundo
 
-            if ( caminhos.length > 1 ){ // FILE
-                for ( int i=1;i<caminhos.length;i++ )
+            String catEof_tag_flagAppend=null;
+            
+            // cat EOF
+            if ( args.length == 3 && (catEof_tag_flagAppend=getCatEof_tag_flagAppend(args[1])) != null ){
+                String tag=catEof_tag_flagAppend.split(",")[0];
+                boolean append=catEof_tag_flagAppend.split(",")[1].equals("true");
+                //System.out.println("tag: " + tag + " append: " + append);
+                return;
+            }
+            
+            // FILE
+            if ( args.length > 1 ){
+                for ( int i=1;i<args.length;i++ )
                 {
-                    if ( ! new File(caminhos[i]).exists() ){
-                        System.err.println("Erro, este arquivo não existe: "+caminhos[i]);
+                    if ( ! new File(args[i]).exists() ){
+                        System.err.println("Erro, este arquivo não existe: "+args[i]);
                         return;
                     }
                 }
-                for ( int i=1;i<caminhos.length;i++ )
+                for ( int i=1;i<args.length;i++ )
                 {                
                     byte[] buf = new byte[BUFFER_SIZE];            
-                    FileInputStream fis = new FileInputStream(caminhos[i]);
+                    FileInputStream fis = new FileInputStream(args[i]);
                     int len;
                     while ((len = fis.read(buf)) > -1)
                         System.out.write(buf, 0, len);            
                     fis.close();
                 }
-            }else{ // stdin/stdout
-                InputStream inputStream_pipe=System.in;
-                byte[] buf = new byte[BUFFER_SIZE];
-                int len=0;
-                while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
-                    System.out.write(buf, 0, len);
-                }
-                System.out.flush();
-                System.out.close();
+                return;
             }
+            
+            // stdin/stdout
+            InputStream inputStream_pipe=System.in;
+            byte[] buf = new byte[BUFFER_SIZE];
+            int len=0;
+            while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
+                System.out.write(buf, 0, len);
+            }
+            System.out.flush();
+            System.out.close();
+            
         }catch(Exception e){
             System.err.println("Erro, "+e.toString());
         }
+    }
+    
+    public String getCatEof_tag_flagAppend(String a){
+        //"<<EOF>" -> EOF,false
+        //"<<EEOOFF>>" -> EEOOFF,true
+        if ( a.contains(",") || a.contains(" ") || a.contains("/") || a.contains("\\") )
+            return null;
+        if ( !a.startsWith("<<") || a.substring(2).contains("<") )
+            return null;
+        if ( a.endsWith(">>") && a.replaceAll(">", "").length() == a.length()-2 )
+            return a.replaceAll("<", "").replaceAll(">", "")+",true";
+        if ( a.endsWith(">") && a.replaceAll(">", "").length() == a.length()-1 )
+            return a.replaceAll("<", "").replaceAll(">", "")+",false";
+        return null;
     }
     
     public void iso(String [] args){
@@ -13979,7 +14007,7 @@ while True:
             // get players by OCR
             String [] players=ocr_getNamesDota();
             // skynet
-            String [] naoBloquearEssesNomes="ynet,Analista de Sistema,eBullet,iusky".split(",");
+            String [] naoBloquearEssesNomes="ynet,Analista de Sistema,eBullet,iusky,frist,Madald".split(",");
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
