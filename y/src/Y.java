@@ -5624,21 +5624,65 @@ cat buffer.log
                 command[j]=args[j].replace("{}", lista_in.get(i));
             new Y().go(command);
         }
-    }    
+    }        
     
     public void cat(String [] args)
     {
         try{
-            // y cat "<<EOF>" file1.txt // considerar tb <<EOF>> e outras tags
-            // y cat ">" file1.txt // usar gravação no final controlc ou na interação acima de 1 segundo
-
             String catEof_tag_flagAppend=null;
-            
+
             // cat EOF
             if ( args.length == 3 && (catEof_tag_flagAppend=getCatEof_tag_flagAppend(args[1])) != null ){
+                if ( !isWindows() )
+                    erroFatal("Esse comando só esta liberado para windows!");
                 String tag=catEof_tag_flagAppend.split(",")[0];
                 boolean append=catEof_tag_flagAppend.split(",")[1].equals("true");
-                //System.out.println("tag: " + tag + " append: " + append);
+                File outputFile = new File(args[2]);
+                PushbackInputStream pbis = new PushbackInputStream(System.in, tag.length());
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] tagBytes = tag.getBytes();
+                int matchPos = 0;
+                int b;
+                while ((b = pbis.read()) != -1) {
+                    baos.write(b);
+                    if (b == tagBytes[matchPos]) {
+                        matchPos++;
+                        if (matchPos == tagBytes.length) {
+                            byte[] data = baos.toByteArray();
+                            byte[] finalData = new byte[data.length - tagBytes.length];
+                            System.arraycopy(data, 0, finalData, 0, finalData.length);
+                            try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
+                                fos.write(finalData);
+                            }
+                            break;
+                        }
+                    } else {
+                        matchPos = 0;
+                    }
+                }                
+                return;
+            }
+            
+            // cat > ou >> file1.txt
+            if ( args.length == 3 || (args[1].equals(">") || args[1].equals(">>")) ){
+                boolean append=args[1].equals(">>");
+                File outputFile = new File(args[2]);                
+                String [] controlC_parms = new String []{"\n", "0"};
+                new Util().loadDisableControlC(controlC_parms);
+                InputStream inputStream_pipe=System.in;      
+                ByteArrayOutputStream baos=new ByteArrayOutputStream();
+                int len=0;
+                byte [] buff = new byte[BUFFER_SIZE];
+                while(true){
+                    if ( controlC_parms[1].equals("1") ){
+                        salvando_file(baos.toByteArray(), outputFile, append);
+                        break;
+                    }
+                    if ( inputStream_pipe.available() <= 0 )
+                        continue;
+                    len=inputStream_pipe.read(buff,0,BUFFER_SIZE);
+                    baos.write(buff, 0, len);
+                }                   
                 return;
             }
             
@@ -16742,9 +16786,33 @@ class Util{
     }
     
     public void mostra_array(String [] a){
-        for ( int i=0;i<a.length;i++ )
+        mostra_array(a, a.length);
+    }
+    
+    public void mostra_array(String [] a, int len){
+        for ( int i=0;i<(len<a.length?len:a.length);i++ )
             System.out.println(i + " -> >>" + a[i] + "<<");        
     }
+    
+    public void mostra_array(byte [] a){
+        mostra_array(a, a.length);
+    }
+    
+    public void mostra_array(byte [] a, int len){
+        for ( int i=0;i<(len<a.length?len:a.length);i++ )
+            System.out.println(i + " -> >>" + (int)a[i] + "<<");        
+    }
+    
+    public boolean ends_array(byte [] a, int len, byte [] b){                
+        if ( len > a.length || len < b.length || b.length < 1 )
+            return false;
+        int start=len-b.length;
+        for ( int i=start;i<b.length;i++ )
+            if ( a[i] != b[i] )
+                return false;
+        return true;
+    }
+    
     public String [] array_copy(String [] a){
         String [] a2 = new String[a.length];            
         System.arraycopy(a, 0, a2, 0, a.length);
@@ -16942,9 +17010,9 @@ class Util{
     }
     
     public boolean salvando_file(String texto, File arquivo, boolean append) {
-        try{
+        try{                    
             BufferedWriter out = new BufferedWriter(new FileWriter(arquivo, append));
-            out.write(texto);
+            out.write(texto);            
             out.flush();
             out.close();
             return true;
@@ -16953,6 +17021,20 @@ class Util{
         }        
         return false; 
     }    
+
+    public boolean salvando_file(byte [] a, File arquivo, boolean append) {
+        try{                    
+            FileOutputStream fos = new FileOutputStream(arquivo, append);
+            fos.write(a);            
+            fos.flush();
+            fos.close();
+            return true;
+        }catch(Exception e){
+            System.err.println(e.toString());
+        }        
+        return false; 
+    }    
+        
     public String[] sliceParm(int qty, String[] args){ // remove uma quantidade, sempre as iniciais
         if ( qty == 0 )
             erroFatal("erro interno sliceParm");
@@ -25121,6 +25203,13 @@ class TabelaSAC {
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
+/* class by manual */                + "    y cat \"<<EOF>\" file1.txt\n"
+/* class by manual */                + "    y cat \"<<EOF>>\" file1.txt\n"
+/* class by manual */                + "    y cat \">\" file1.txt\n"
+/* class by manual */                + "    y cat \">>\" file1.txt\n"
+/* class by manual */                + "    y cat\n"
+/* class by manual */                + "    obs: pode ser outra tag, nao precisa ser EOF\n"
+/* class by manual */                + "    obs2: até o momento o codigo \"<<EOF>\" só esta liberado para windows!\n"        
 /* class by manual */                + "[y sort]\n"
 /* class by manual */                + "    y cat file | y sort > file_ordenado\n"
 /* class by manual */                + "[y iso]\n"
@@ -25876,6 +25965,7 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

@@ -291,6 +291,13 @@ Exemplos...
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
+    y cat "<<EOF>" file1.txt
+    y cat "<<EOF>>" file1.txt
+    y cat ">" file1.txt
+    y cat ">>" file1.txt
+    y cat
+    obs: pode ser outra tag, não precisa ser EOF
+    obs2: até o momento o codigo "<<EOF>" só esta liberado para windows!
 [y sort]
     y cat file | y sort > file_ordenado
 [y iso]
