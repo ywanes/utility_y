@@ -370,7 +370,7 @@ function reset_value_shape(a){
 
 function calc_pendente(a){
     let nid=parseInt(a.substr(5));
-    if ( nid <= 1 )
+    if ( nid == 0 )
         return '';
     let nid_posterior=nid+1;
     let nid_posterior2=nid+2;
