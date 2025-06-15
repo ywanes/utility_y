@@ -5630,15 +5630,22 @@ cat buffer.log
     {
         try{
             String catEof_tag_flagAppend=null;
-
             // cat EOF
             if ( args.length == 3 && (catEof_tag_flagAppend=getCatEof_tag_flagAppend(args[1])) != null ){
                 if ( !isWindows() )
                     erroFatal("Esse comando só esta liberado para windows!");
+                /*
+                o linux não consegue interpretar corretamente o comando abaixo de exemplo basico
+                y cat
+                a
+                b
+                c
+                */
                 String tag=catEof_tag_flagAppend.split(",")[0];
                 boolean append=catEof_tag_flagAppend.split(",")[1].equals("true");
                 File outputFile = new File(args[2]);
                 PushbackInputStream pbis = new PushbackInputStream(System.in, tag.length());
+                //BufferedReader pbis = new BufferedReader(new InputStreamReader(System.in));
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 byte[] tagBytes = tag.getBytes();
                 int matchPos = 0;
@@ -5659,12 +5666,12 @@ cat buffer.log
                     } else {
                         matchPos = 0;
                     }
-                }                
+                } 
                 return;
             }
             
             // cat > ou >> file1.txt
-            if ( args.length == 3 || (args[1].equals(">") || args[1].equals(">>")) ){
+            if ( args.length == 3 && (args[1].equals(">") || args[1].equals(">>")) ){
                 boolean append=args[1].equals(">>");
                 File outputFile = new File(args[2]);                
                 String [] controlC_parms = new String []{"\n", "0"};
