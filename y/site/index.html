@@ -421,9 +421,9 @@ function convert_chaturbate(b){
 }
 
 function load_stream(a, b){
-    a=b.split('/')[3];
-    if ( b.indexOf('') > -1 && b.replaceAll(':', '/').replaceAll('-', '/').split('/').length > 8 )
-      a=b.replaceAll(':', '/').replaceAll('-', '/').split('/')[8];
+    //a=b.split('/')[3];
+    //if ( b.indexOf('') > -1 && b.replaceAll(':', '/').replaceAll('-', '/').split('/').length > 8 )
+    //  a=b.replaceAll(':', '/').replaceAll('-', '/').split('/')[8];
     if ( b.indexOf('https://onplaytv.net/') == 0 )
 	  b=b.substring(7);
     b=convert_chaturbate(b);
@@ -686,15 +686,17 @@ function getcanais_embedtv(flag_all_channel){
 		if ( s.indexOf('Assistir') > -1 ){
 			let name=s.split('data-channel="')[1].split('"')[0];
 			let name_format=s.split('data-name="')[1].split('"')[0];
+			//let url_dynamic="/fazoeli.fun/fontes/embedtv/"+name+".m3u8";
+			let url_dynamic='https://aipapai.shop/_temp/'+name+'.m3u8';
 			let _img=s.split('data-src="')[1].split('"')[0];			
 			if ( filtro == null || filtro.indexOf(','+name+',') > -1 ){
 				tmp_filtro.push(name);
 				// Amazon Prime Video
 				canais.push(name);
 				// load_stream_listing('amazonprimevideo', 'https://onplaytv.net/amazonprimevideo/video.m3u8')
-				canais.push("load_stream_listing('"+name_format+"', '/fazoeli.fun/fontes/embedtv/"+name+".m3u8')");
+				canais.push("load_stream_listing('"+name_format+"', '"+url_dynamic+"')");
 				// /onplaytv.net/amazonprimevideo/video.m3u8
-				canais.push("/fazoeli.fun/fontes/embedtv/"+name+".m3u8')");
+				canais.push(url_dynamic);
 				// /embedcanaistv.com/wp-content/uploads/2024/09/amazonprime.webp
 				canais.push(_img);
 			}
