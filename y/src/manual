@@ -923,14 +923,27 @@ Exemplos...
     y random 1 2
 [y talk]
     y talk list
+    y talk -tts list
+    y talk -textToSpeech list
+    y talk -stt list
+    y talk -speechToText list
     y talk oi
     y talk -lang Brazilian_Portuguese_Ricardo -msg oi
     y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "d:/ProgramFiles/musicas_ia/talk.wav"
     y echo oi | y talk
     y talk cat
+    y talk -stt
+    y talk -stt -lang English
     oi 1
     oi 2
     oi 3
+    y echo "一 二 三 四 五 六 七 八 九 十" | y talk -tts -lang Chinese_Mandarin_Zhiyu
+    y talk -stt -lang Chinese
+    obs: funções -tts => -textToSpeech #padrao #função acessa internet e faz cache na maquina por texto e voz
+                 -stt => -speechToText
+         -lang padrões:
+                 Brazilian_Portuguese_Ricardo para -tts
+                 Portugues para -stt
 [y sign]
     y sign -msg "Hello" -pass "My passphrase"
     y sign -verify -msg "Hello" -publicKey "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==" -signature "MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA=="

@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.InputStream;
@@ -9,12 +8,13 @@ import java.util.List;
 
 
 public class GeraTextoClasseArquivos {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception{
         new GeraTextoClasseArquivos().go();
     }
 
     // metodo feito para gerar texto de manual para colocar no final de Y.java
-    public void go(){
+    public void go() throws Exception{
+        System.setOut(new java.io.PrintStream(System.out, true, "UTF-8"));
         String prefixo="/* class by manual */    ";
         System.out.println(prefixo+"class Arquivos{");
         System.out.println(prefixo+"    public String lendo_arquivo_pacote(String caminho){");
@@ -31,7 +31,6 @@ public class GeraTextoClasseArquivos {
                 else
                     System.out.println(prefixo+"            + \""+removerAcentos(linhas[i].replace("\\","\\\\").replace("\"","\\\""))+"\\n\"");
         }
-        
         System.out.println(prefixo+"        return \"\";");
         System.out.println(prefixo+"    }");
         System.out.println(prefixo+"}");
@@ -85,7 +84,9 @@ public class GeraTextoClasseArquivos {
     }
     
     public static String removerAcentos(String str){
-        return Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
+        //nao precisa tirar acento porque a saida ja esta sendo forçada por UTF-8
+        //str=Normalizer.normalize(str, Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");        
+        return str;
     }
     
 }

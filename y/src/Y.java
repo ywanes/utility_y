@@ -2194,6 +2194,7 @@ cat buffer.log
             String retorno=null;
             if ( args.length == 2 )
                 retorno=helplikecase(args[1], false);
+            //////////////////
             if ( retorno == null )
                 System.out.println(
                     "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
@@ -7661,7 +7662,10 @@ cat buffer.log
                     "import pyaudio\n" +
                     "import json\n" +
                     "import sys\n" +
+                    "import io\n" +
                     "\n" +
+                    "sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')\n" +
+                    "sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')\n" +
                     "# https://alphacephei.com/vosk/models\n" +
                     "# BR -> vosk-model-small-pt-0.3\n" +
                     "model = Model(\""+dir_modelo+sigla+"\")\n" +
@@ -7688,7 +7692,7 @@ cat buffer.log
 
                 flag_real_time_output=true;
 
-                String retorno=runtimeExec(null, new String[]{"python3"}, null, command.getBytes(), true);
+                String retorno=runtimeExec(null, new String[]{"python3"}, null, command.getBytes(), false);
                 if ( retorno == null || retorno.equals("") ){
                     if ( runtimeExecError.contains("from vosk import Model") )
                         erroFatal("é preciso instalar o vosk primeiro!\npip install vosk");
@@ -10098,8 +10102,8 @@ cat buffer.log
         // System.out.println(
         //   lendo_arquivo_pacote("/y/manual")
         // );
-        String result="";
-        try{
+        try{      
+            String result="";
             readLine(getClass().getResourceAsStream(caminho));
             String strLine;
             while ((strLine = readLine()) != null)
@@ -10967,12 +10971,12 @@ cat buffer.log
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 0 && !tts && args[0].equals("-tts") ){
+            if ( args.length > 0 && !tts && ( args[0].equals("-tts") || args[0].equals("-textToSpeech") ) ){
                 tts=true;
                 args=sliceParm(1, args);
                 continue;
             }
-            if ( args.length > 0 && !stt && args[0].equals("-stt") ){
+            if ( args.length > 0 && !stt && ( args[0].equals("-stt") || args[0].equals("-speechToText") ) ){
                 stt=true;
                 args=sliceParm(1, args);
                 continue;
@@ -10987,6 +10991,8 @@ cat buffer.log
         if ( !tts && !stt )
             tts=true;
         if ( tts == stt )
+            return null;
+        if ( msg!= null && (stt || list))
             return null;
         return new Object []{msg, lang, list, copy, tts, stt};
     }        
@@ -24913,6 +24919,8 @@ class TabelaSAC {
 
 
 
+
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -25071,7 +25079,7 @@ class TabelaSAC {
 /* class by manual */                + "    y take\n"
 /* class by manual */                + "    y take file1 pasta2\n"
 /* class by manual */                + "    Obs: envia o conteudo desta para para outro computador ou pasta\n"
-/* class by manual */                + "    Obs2: apos digitar y take, ele ira mostrar o comando que sera utilizado na outra ponta\n"
+/* class by manual */                + "    Obs2: após digitar y take, ele irá mostrar o comando que será utilizado na outra ponta\n"
 /* class by manual */                + "[y banco fromCSV -outTable tabelaA selectInsert]\n"
 /* class by manual */                + "    cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert\n"
 /* class by manual */                + "[y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
@@ -25115,7 +25123,7 @@ class TabelaSAC {
 /* class by manual */                + "    y selectCSV -csv file.csv \"select * from this\"\n"
 /* class by manual */                + "    y selectCSV -csv file.csv -sql consulta.sql\n"
 /* class by manual */                + "    obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean\n"
-/* class by manual */                + "    obs2: se usar rownum com where ele podera mostrar o numero errado! esse bug sera corrigido depois\n"
+/* class by manual */                + "    obs2: se usar rownum com where ele poderá mostrar o numero errado! esse bug será corrigido depois\n"
 /* class by manual */                + "[y xlsxToCSV]\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx mostraEstrutura\n"
 /* class by manual */                + "    xlsxToCSV arquivo.xlsx listaAbas\n"
@@ -25130,7 +25138,7 @@ class TabelaSAC {
 /* class by manual */                + "[y token]\n"
 /* class by manual */                + "    y token value\n"
 /* class by manual */                + "    obs: y token value -> retorna o hash\n"
-/* class by manual */                + "    obs2: e preciso ja ter o TOKEN_Y definido\n"
+/* class by manual */                + "    obs2: é preciso ja ter o TOKEN_Y definido\n"
 /* class by manual */                + "[y gettoken]\n"
 /* class by manual */                + "    y gettoken hash\n"
 /* class by manual */                + "[y json]\n"
@@ -25162,7 +25170,7 @@ class TabelaSAC {
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
 /* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
 /* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
-/* class by manual */                + "    obs: se add pasta e a descricao de pasta tem \"/\" ou \"\\\\\" entao o pacote tera o conteudo da pasta, caso contrario tera a pasta citada+conteudo.\n"
+/* class by manual */                + "    obs: se add pasta e a descricao de pasta tem \"/\" ou \"\\\\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.\n"
 /* class by manual */                + "[y gzip]\n"
 /* class by manual */                + "    cat arquivo | y gzip > arquivo.gz\n"
 /* class by manual */                + "[y gunzip]\n"
@@ -25215,8 +25223,8 @@ class TabelaSAC {
 /* class by manual */                + "    y cat \">\" file1.txt\n"
 /* class by manual */                + "    y cat \">>\" file1.txt\n"
 /* class by manual */                + "    y cat\n"
-/* class by manual */                + "    obs: pode ser outra tag, nao precisa ser EOF\n"
-/* class by manual */                + "    obs2: até o momento o codigo \"<<EOF>\" só esta liberado para windows!\n"        
+/* class by manual */                + "    obs: pode ser outra tag, não precisa ser EOF\n"
+/* class by manual */                + "    obs2: até o momento o codigo \"<<EOF>\" só esta liberado para windows!\n"
 /* class by manual */                + "[y sort]\n"
 /* class by manual */                + "    y cat file | y sort > file_ordenado\n"
 /* class by manual */                + "[y iso]\n"
@@ -25261,7 +25269,7 @@ class TabelaSAC {
 /* class by manual */                + "    y host examplo.com\n"
 /* class by manual */                + "    y dns example.com\n"
 /* class by manual */                + "    y dns example.com 8.8.8.8\n"
-/* class by manual */                + "    obs: em desenvolvimento, a resposta ainda nao e muito legivel!\n"
+/* class by manual */                + "    obs: em desenvolvimento, a resposta ainda não é muito legível!\n"
 /* class by manual */                + "    alguns dns's:\n"
 /* class by manual */                + "      dns.adguard.com\n"
 /* class by manual */                + "      dns.sse.cisco.com\n"
@@ -25301,8 +25309,8 @@ class TabelaSAC {
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA256 | y base64\n"
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA-256 | y base64\n"
 /* class by manual */                + "    cat arquivo | y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA | y base64\n"
-/* class by manual */                + "    obs: O comando \"y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA\" equivale a \"openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA\"\n"
-/* class by manual */                + "    obs2: O valor de salt(-S) devera conter 16 hexas maiusculos, ex: AAAAAAAAAAAAAAAA\n"
+/* class by manual */                + "    obs: O comando \"y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA\" equivale à \"openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA\"\n"
+/* class by manual */                + "    obs2: O valor de salt(-S) deverá contér 16 hexas maiúsculos, ex: AAAAAAAAAAAAAAAA\n"
 /* class by manual */                + "    obs3: Se utilizar o salt na encriptacao, entao devera utilizar o mesmo salt na decriptacao\n"
 /* class by manual */                + "[y base64]\n"
 /* class by manual */                + "    cat arquivo | y base64\n"
@@ -25340,7 +25348,7 @@ class TabelaSAC {
 /* class by manual */                + "    cat arquivo | y cut -c5-10,15-17\n"
 /* class by manual */                + "[y yt]\n"
 /* class by manual */                + "    y yt\n"
-/* class by manual */                + "    obs: ira exibir a msg:\n"
+/* class by manual */                + "    obs: irá exibir a msg:\n"
 /* class by manual */                + "    cd D:\\\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py http...\n"
 /* class by manual */                + "[y curl]\n"
 /* class by manual */                + "    echo '{\"id\":1}' | y curl \\\n"
@@ -25353,7 +25361,7 @@ class TabelaSAC {
 /* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
 /* class by manual */                + "    curl http://localhost:8080/v1/movies --limit-rate 20M\n"
 /* class by manual */                + "    obs: -v => verbose\n"
-/* class by manual */                + "    obs2: --header e o mesmo que -H\n"
+/* class by manual */                + "    obs2: --header é o mesmo que -H\n"
 /* class by manual */                + "[y cors]\n"
 /* class by manual */                + "    y cors\n"
 /* class by manual */                + "    y cors -port 4000\n"
@@ -25361,10 +25369,10 @@ class TabelaSAC {
 /* class by manual */                + "    y cors -sw \"https://super\" -sw \"https://teste\"\n"
 /* class by manual */                + "    obs: -sw significa startWith\n"
 /* class by manual */                + "    obs2: cors serve como bypass de \"blocked by CORS policy\"\n"
-/* class by manual */                + "    obs3: -sw e opcional, mas uma vez utilizado, so permitira os valores informados pelos -sw\n"
-/* class by manual */                + "    obs4: o cors nao usa stream, ou seja, captura 100% da resposta para depois transmitir.\n"
-/* class by manual */                + "    obs5: local host de ip classe C nao funciona no browser\n"
-/* class by manual */                + "    exemplo de requisicao js:\n"
+/* class by manual */                + "    obs3: -sw é opcional, mas uma vez utilizado, só permitirá os valores informados pelos -sw\n"
+/* class by manual */                + "    obs4: o cors não usa stream, ou seja, captura 100% da resposta para depois transmitir.\n"
+/* class by manual */                + "    obs5: local host de ip classe C não funciona no browser\n"
+/* class by manual */                + "    exemplo de requisição js:\n"
 /* class by manual */                + "    var b_status=0;\n"
 /* class by manual */                + "    function b(url){\n"
 /* class by manual */                + "      if(location.href.indexOf('http://')!= 0){alert('cors nao pode ser executado nessa aba! somente em http://');return;}\n"
@@ -25388,7 +25396,7 @@ class TabelaSAC {
 /* class by manual */                + "[y [sed|tr]]\n"
 /* class by manual */                + "    cat arquivo | y sed A B\n"
 /* class by manual */                + "    cat arquivo | y sed A B E F\n"
-/* class by manual */                + "    obs: sed com dois parametros e performatico e aceita por exemplo \\n como quebra\n"
+/* class by manual */                + "    obs: sed com dois parametros é performatico e aceita por exemplo \\n como quebra\n"
 /* class by manual */                + "[y n]\n"
 /* class by manual */                + "    cat arquivo | y n\n"
 /* class by manual */                + "    obs: modifica arquivo \\r\\n para \\n(se ja tiver \\n nao tem problema)\n"
@@ -25426,18 +25434,18 @@ class TabelaSAC {
 /* class by manual */                + "    y touch fileA 20210128235959\n"
 /* class by manual */                + "    y touch fileA fileB fileC\n"
 /* class by manual */                + "    obs: 60(60 segundos a frente)\n"
-/* class by manual */                + "    obs2: -3600(3600 segundos atras)\n"
+/* class by manual */                + "    obs2: -3600(3600 segundos atrás)\n"
 /* class by manual */                + "    obs3: 20210128235959(setando em 28/01/2021 23:59:59)\n"
 /* class by manual */                + "[y rm]\n"
 /* class by manual */                + "    y rm file1 file2\n"
 /* class by manual */                + "    y rm -R pasta\n"
 /* class by manual */                + "    y rm -R pasta1 file1\n"
-/* class by manual */                + "    obs: por questao de seguranca, link simbolico nao pode ser apagado recursivamente com \"-R\", essa etapa e ignorada\n"
-/* class by manual */                + "    obs2: item simbolico pode ser apagado de modo comum, sem recursao. ex: y rm elemento\n"
+/* class by manual */                + "    obs: por questão de segurança, link simbolico não pode ser apagado recursivamente com \"-R\", essa etapa é ignorada\n"
+/* class by manual */                + "    obs2: item simbolico pode ser apagado de modo comum, sem recursão. ex: y rm elemento\n"
 /* class by manual */                + "[y cp]\n"
 /* class by manual */                + "    y cp file1 file2\n"
 /* class by manual */                + "    y cp -R pasta1 pasta2\n"
-/* class by manual */                + "    obs: se a pasta2 nao existir entao e criado a copia com o nome pasta2, se existir e copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
+/* class by manual */                + "    obs: se a pasta2 nao existir entao é criado a cópia com o nome pasta2, se existir é copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
 /* class by manual */                + "[y mv]\n"
 /* class by manual */                + "    y mv file1 file2\n"
 /* class by manual */                + "    y mv pasta1 pasta2\n"
@@ -25471,7 +25479,7 @@ class TabelaSAC {
 /* class by manual */                + "    y seq 19/11/2022 19/09/2022\n"
 /* class by manual */                + "[y tr]\n"
 /* class by manual */                + "    echo a a | y tr \"a\" \"bb\"\n"
-/* class by manual */                + "    Obs: no windows, usar \"\"\"\" ao inves de \"\\\"\"\n"
+/* class by manual */                + "    Obs: no windows, usar \"\"\"\" ao invés de \"\\\"\"\n"
 /* class by manual */                + "[y add]\n"
 /* class by manual */                + "    y add 2022-09-19\n"
 /* class by manual */                + "    y add 19/09/2022\n"
@@ -25484,7 +25492,7 @@ class TabelaSAC {
 /* class by manual */                + "    cat arquivo | y awk -v start AAA end BBB    \n"
 /* class by manual */                + "    cat arquivo | y awk -v start AAA\n"
 /* class by manual */                + "    cat arquivo | y awk -v end BBB    \n"
-/* class by manual */                + "    obs: \"-v\" e a negativa\n"
+/* class by manual */                + "    obs: \"-v\" é a negativa\n"
 /* class by manual */                + "    obs2: start e end pode ocorrer varias vezes no texto\n"
 /* class by manual */                + "    obs3: -1 significa o ultimo\n"
 /* class by manual */                + "[y dev_null]\n"
@@ -25570,11 +25578,11 @@ class TabelaSAC {
 /* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-DEL: A\"\n"
 /* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # retorna 200 ou 203\n"
 /* class by manual */                + "    obs, como funciona o SIGN(add key value concorrente):\n"
-/* class by manual */                + "      Em caso de =>                   -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # ele retorna 200. \"Redis-SIGN: Y\" forca o valor \"C\" para SIGN\n"
-/* class by manual */                + "      Em caso de um sign diferente => -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C2\"                   # ele retorna 203 negando a gravacao, pois KEY A esta com SIGN C e nao C2.\n"
-/* class by manual */                + "    obs2: key iniciada com 'secret-' nao e exibida nem com o comando configurado [ALL]\n"
-/* class by manual */                + "    obs3: -mode webdav so suporta os parametros -host, -port e -pass. No preenchimento de -pass e separado por virgula a cadeia user,senha,user,senha...\n"
-/* class by manual */                + "    obs4: o parametro -pass so esta implementado para o -mode webdav\n"
+/* class by manual */                + "      Em caso de =>                   -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # ele retorna 200. \"Redis-SIGN: Y\" força o valor \"C\" para SIGN\n"
+/* class by manual */                + "      Em caso de um sign diferente => -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C2\"                   # ele retorna 203 negando a gravação, pois KEY A está com SIGN C e não C2.\n"
+/* class by manual */                + "    obs2: key iniciada com 'secret-' não é exibida nem com o comando configurado [ALL]\n"
+/* class by manual */                + "    obs3: -mode webdav só suporta os parametros -host, -port e -pass. No preenchimento de -pass é separado por virgula a cadeia user,senha,user,senha...\n"
+/* class by manual */                + "    obs4: o parametro -pass só esta implementado para o -mode webdav\n"
 /* class by manual */                + "[y [httpProxy|hp]]\n"
 /* class by manual */                + "    y httpProxy -ip localhost -port 8080 -verbose\n"
 /* class by manual */                + "[y wget]\n"
@@ -25629,7 +25637,7 @@ class TabelaSAC {
 /* class by manual */                + "    y pss \"buscando\" \"nao buscando\" \"nao buscando\"\n"
 /* class by manual */                + "[y pid]\n"
 /* class by manual */                + "    y pid 222\n"
-/* class by manual */                + "    Obs: onde 222 e o processId encontrado em y pss\n"
+/* class by manual */                + "    Obs: onde 222 é o processId encontrado em y pss\n"
 /* class by manual */                + "[y date]\n"
 /* class by manual */                + "    y date\n"
 /* class by manual */                + "    y date \"+%s\" # epoch\n"
@@ -25641,9 +25649,9 @@ class TabelaSAC {
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_America/Sao_Paulo\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_UTC\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
 /* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_-03\" mask \"+%Y%m%d_%H%M%S_%N_%Z\"\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-05\" mask \"+%Y%m%d_%H%M%S_%z\" # ET(Eastern Time) - America/New_York    - UTC5/UTC4 DST(Daylight Saving Time - algumas usam)\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-08\" mask \"+%Y%m%d_%H%M%S_%z\" # PT(Pacific Time) - America/Los_Angeles - UTC8/UTC7 DST(Daylight Saving Time - algumas usam)\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-06\" mask \"+%Y%m%d_%H%M%S_%z\" # CT(Central Time) - America/Mexico_City - UTC6/UTC5 DST(Daylight Saving Time - algumas usam)\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-05\" mask \"+%Y%m%d_%H%M%S_%z\" # ET(Eastern Time) - America/New_York    - UTC−5/UTC−4 DST(Daylight Saving Time - algumas usam)\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-08\" mask \"+%Y%m%d_%H%M%S_%z\" # PT(Pacific Time) - America/Los_Angeles - UTC−8/UTC−7 DST(Daylight Saving Time - algumas usam)\n"
+/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-06\" mask \"+%Y%m%d_%H%M%S_%z\" # CT(Central Time) - America/Mexico_City - UTC−6/UTC−5 DST(Daylight Saving Time - algumas usam)\n"
 /* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\" fromNTP time.google.com\n"
 /* class by manual */                + "    y date fromNTP _ && y date\n"
 /* class by manual */                + "    fromNTP's:\n"
@@ -25653,29 +25661,29 @@ class TabelaSAC {
 /* class by manual */                + "        y date fromNTP time.apple.com\n"
 /* class by manual */                + "        y date fromNTP ntp.ubuntu.com\n"
 /* class by manual */                + "        y date fromNTP time.nist.gov\n"
-/* class by manual */                + "        y date fromNTP ntp.br # NTP mantido pelo NIC.br (Nucleo de Informacao e Coordenacao do Ponto BR), ideal para usuarios no Brasil.\n"
+/* class by manual */                + "        y date fromNTP ntp.br # NTP mantido pelo NIC.br (Núcleo de Informação e Coordenação do Ponto BR), ideal para usuários no Brasil.\n"
 /* class by manual */                + "        y date fromNTP ntp.pt\n"
 /* class by manual */                + "        y date fromNTP ntp.org\n"
-/* class by manual */                + "        y date fromNTP 0.africa.pool.ntp.org #(Africa)\n"
-/* class by manual */                + "        y date fromNTP 0.asia.pool.ntp.org #(Asia)\n"
+/* class by manual */                + "        y date fromNTP 0.africa.pool.ntp.org #(África)\n"
+/* class by manual */                + "        y date fromNTP 0.asia.pool.ntp.org #(Ásia)\n"
 /* class by manual */                + "        y date fromNTP 0.europe.pool.ntp.org #(Europa)\n"
-/* class by manual */                + "        y date fromNTP 0.north-america.pool.ntp.org #(America do Norte)\n"
+/* class by manual */                + "        y date fromNTP 0.north-america.pool.ntp.org #(América do Norte)\n"
 /* class by manual */                + "        y date fromNTP 0.oceania.pool.ntp.org #(Oceania)\n"
-/* class by manual */                + "        y date fromNTP 0.south-america.pool.ntp.org #(America do Sul)\n"
+/* class by manual */                + "        y date fromNTP 0.south-america.pool.ntp.org #(América do Sul)\n"
 /* class by manual */                + "        y date fromNTP 0.br.pool.ntp.org #(Brasil)\n"
 /* class by manual */                + "        y date fromNTP 0.us.pool.ntp.org #(Estados Unidos)\n"
 /* class by manual */                + "        y date fromNTP 0.de.pool.ntp.org #(Alemanha)\n"
-/* class by manual */                + "        y date fromNTP 0.fr.pool.ntp.org #(Franca)\n"
+/* class by manual */                + "        y date fromNTP 0.fr.pool.ntp.org #(França)\n"
 /* class by manual */                + "        y date fromNTP 0.uk.pool.ntp.org #(Reino Unido)\n"
-/* class by manual */                + "        y date fromNTP 0.jp.pool.ntp.org #(Japao)\n"
-/* class by manual */                + "        y date fromNTP 0.au.pool.ntp.org #(Australia)\n"
-/* class by manual */                + "        y date fromNTP 0.ca.pool.ntp.org #(Canada)\n"
+/* class by manual */                + "        y date fromNTP 0.jp.pool.ntp.org #(Japão)\n"
+/* class by manual */                + "        y date fromNTP 0.au.pool.ntp.org #(Austrália)\n"
+/* class by manual */                + "        y date fromNTP 0.ca.pool.ntp.org #(Canadá)\n"
 /* class by manual */                + "        y date fromNTP 0.pt.pool.ntp.org #(Portugal)\n"
 /* class by manual */                + "        y date fromNTP 0.es.pool.ntp.org #(Espanha)\n"
-/* class by manual */                + "        y date fromNTP 0.it.pool.ntp.org #(Italia)\n"
-/* class by manual */                + "        y date fromNTP 0.ru.pool.ntp.org #(Russia)\n"
+/* class by manual */                + "        y date fromNTP 0.it.pool.ntp.org #(Itália)\n"
+/* class by manual */                + "        y date fromNTP 0.ru.pool.ntp.org #(Rússia)\n"
 /* class by manual */                + "        y date fromNTP 0.cn.pool.ntp.org #(China)\n"
-/* class by manual */                + "        y date fromNTP 0.in.pool.ntp.org #(India)\n"
+/* class by manual */                + "        y date fromNTP 0.in.pool.ntp.org #(Índia)\n"
 /* class by manual */                + "[y uptime]\n"
 /* class by manual */                + "    y uptime\n"
 /* class by manual */                + "    y uptime -ms\n"
@@ -25717,7 +25725,7 @@ class TabelaSAC {
 /* class by manual */                + "    obs: autostart tray:\n"
 /* class by manual */                + "        criar atalho javaw em %appdata%\\..\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\n"
 /* class by manual */                + "        e colocar no atalho -Dfile.encoding=UTF-8 -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\sqljdbc4-3.0.jar;c:\\\\y\\\\mysql-connector-java-8.0.26.jar;c:\\\\y\\\\jsch-0.1.55.jar Y pingMine your_site -tray\n"
-/* class by manual */                + "    obs2: o tray nao mostra numeros acima de 9\n"
+/* class by manual */                + "    obs2: o tray não mostra numeros acima de 9\n"
 /* class by manual */                + "[y ips]\n"
 /* class by manual */                + "    y ips\n"
 /* class by manual */                + "    y ips list\n"
@@ -25749,23 +25757,23 @@ class TabelaSAC {
 /* class by manual */                + "    y gravador -mixer \"-\" -line > fileLine\n"
 /* class by manual */                + "    y gravador -mixer \"-\" -line | y play -line    \n"
 /* class by manual */                + "    obs: formatos: -line, -wav e -mp3\n"
-/* class by manual */                + "    obs2: por padrao ele tentar ler wav\n"
+/* class by manual */                + "    obs2: por padrão ele tentar ler wav\n"
 /* class by manual */                + "[y play]\n"
 /* class by manual */                + "    y play file.wav -volume 0.5\n"
 /* class by manual */                + "    y play -f file.wav\n"
 /* class by manual */                + "    y cat file.wav | y play\n"
 /* class by manual */                + "    y cat fileLine | y play -mixer \"-\" -line\n"
 /* class by manual */                + "    obs: formatos: -line, -wave e -mp3\n"
-/* class by manual */                + "    obs2: -mp3 ainda nao implementado\n"
-/* class by manual */                + "    obs3: -volume varia entra 0 e 1 mas de acordo com o volume ja setado, ou seja, se ja tiver em 10% e o comando colocar 0.5 entao seria equivalente a 5%\n"
+/* class by manual */                + "    obs2: -mp3 ainda não implementado\n"
+/* class by manual */                + "    obs3: -volume varia entra 0 e 1 mas de acordo com o volume ja setado, ou seja, se ja tiver em 10% e o comando colocar 0.5 então seria equivalente a 5%\n"
 /* class by manual */                + "[y call]\n"
 /* class by manual */                + "    y call\n"
-/* class by manual */                + "    obs: ligacao entra pessoas\n"
+/* class by manual */                + "    obs: ligação entra pessoas\n"
 /* class by manual */                + "[y remote]\n"
 /* class by manual */                + "    y remote\n"
 /* class by manual */                + "    y remote -ip localhost\n"
 /* class by manual */                + "    y remote -ip localhost -port 7777 -fps 30\n"
-/* class by manual */                + "    obs: fps pode conter 30 e 60. 30 e o padrao\n"
+/* class by manual */                + "    obs: fps pode conter 30 e 60. 30 é o padrão\n"
 /* class by manual */                + "[y injectMicLine]\n"
 /* class by manual */                + "    y cat file.line | y injectMicLine\n"
 /* class by manual */                + "    obs: not work\n"
@@ -25777,10 +25785,10 @@ class TabelaSAC {
 /* class by manual */                + "    y kill text -Dnetbeans netbeans\n"
 /* class by manual */                + "    y kill \"D:\\ProgramFiles\\site\\musicas\\cry\"\n"
 /* class by manual */                + "    y kill \"D:\\ProgramFiles\\site\\musicas\\cry\\Thomas Bergersen - Cry (Sun).mkv\"\n"
-/* class by manual */                + "    obs: o kill de path so foi implementado para o windows\n"
+/* class by manual */                + "    obs: o kill de path só foi implementado para o windows\n"
 /* class by manual */                + "[y win]\n"
 /* class by manual */                + "    y win\n"
-/* class by manual */                + "    obs: mostra se o windows e office estao ativado\n"
+/* class by manual */                + "    obs: mostra se o windows e office estão ativado\n"
 /* class by manual */                + "    obs2: outra forma de verificar pelo cmd -> slmgr -dli\n"
 /* class by manual */                + "[y speed]\n"
 /* class by manual */                + "    y speed\n"
@@ -25798,11 +25806,11 @@ class TabelaSAC {
 /* class by manual */                + "[y printScreen]\n"
 /* class by manual */                + "    y printScreen\n"
 /* class by manual */                + "    y printScreen 2\n"
-/* class by manual */                + "    obs: pasta padrao: d:/ProgramFiles/screens\n"
+/* class by manual */                + "    obs: pasta padrão: d:/ProgramFiles/screens\n"
 /* class by manual */                + "[y ocr]\n"
 /* class by manual */                + "    y ocr D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp\n"
 /* class by manual */                + "    y cat D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp | y ocr\n"
-/* class by manual */                + "    obs: e preciso instalar o programa tesseract\n"
+/* class by manual */                + "    obs: é preciso instalar o programa tesseract\n"
 /* class by manual */                + "    download: https://github.com/tesseract-ocr/tesseract/releases/\n"
 /* class by manual */                + "    pasta instalado: \"D:\\ProgramFiles\\Tesseract-OCR\"\n"
 /* class by manual */                + "[y paste]\n"
@@ -25813,9 +25821,9 @@ class TabelaSAC {
 /* class by manual */                + "    y mkv -force\n"
 /* class by manual */                + "    y mkv -lento\n"
 /* class by manual */                + "    obs: ffmpeg -i \"A.mkv\" -qscale 0 -max_muxing_queue_size 1024 \"A.mp4\"\n"
-/* class by manual */                + "    obs: -lento tem outro algotirmo de conversao, as vezes e necessario e tudo tiver bugando\n"
+/* class by manual */                + "    obs: -lento tem outro algotirmo de conversão, as vezes é necessario e tudo tiver bugando\n"
 /* class by manual */                + "    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo \"y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z\" | y tr \"rmvb\\\"Z\" \"mp4\\\"\"\n"
-/* class by manual */                + "    aviso: \"Audio: ac3 (ac-3 \" de mp4 nao funciona na web\n"
+/* class by manual */                + "    aviso: \"Audio: ac3 (ac-3 \" de mp4 não funciona na web\n"
 /* class by manual */                + "    checando:\n"
 /* class by manual */                + "    cd d:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep \"Input #0\" \"(por): Audio: ac3\"\n"
 /* class by manual */                + "[y [thumbnail|tn]]\n"
@@ -25825,13 +25833,13 @@ class TabelaSAC {
 /* class by manual */                + "[y bmp]\n"
 /* class by manual */                + "    y cat img.bmp | y bmp\n"
 /* class by manual */                + "    y bmp -file a.bmp -len 64\n"
-/* class by manual */                + "    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparacao entre imagens\n"
+/* class by manual */                + "    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparação entre imagens\n"
 /* class by manual */                + "    # primeira linha x, segunda y, demais r g b\n"
 /* class by manual */                + "[y decodeUrl]\n"
 /* class by manual */                + "    echo T%C3%B3quio | y decodeUrl\n"
 /* class by manual */                + "[y encodeUrl]\n"
-/* class by manual */                + "    echo Toquio | y encodeUrl\n"
-/* class by manual */                + "    obs: o espaco esta sendo representado como +, o que e uma traducao obsoleta.\n"
+/* class by manual */                + "    echo Tóquio | y encodeUrl\n"
+/* class by manual */                + "    obs: o espaço esta sendo representado como +, o que é uma tradução obsoleta.\n"
 /* class by manual */                + "[y test]\n"
 /* class by manual */                + "    y test\n"
 /* class by manual */                + "[y tests]\n"
@@ -25842,20 +25850,33 @@ class TabelaSAC {
 /* class by manual */                + "    y random 1 2\n"
 /* class by manual */                + "[y talk]\n"
 /* class by manual */                + "    y talk list\n"
+/* class by manual */                + "    y talk -tts list\n"
+/* class by manual */                + "    y talk -textToSpeech list\n"
+/* class by manual */                + "    y talk -stt list\n"
+/* class by manual */                + "    y talk -speechToText list\n"
 /* class by manual */                + "    y talk oi\n"
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Ricardo -msg oi\n"
 /* class by manual */                + "    y talk -lang Brazilian_Portuguese_Vitoria -msg \"desliga esse computador, agora!\" -o \"d:/ProgramFiles/musicas_ia/talk.wav\"\n"
 /* class by manual */                + "    y echo oi | y talk\n"
 /* class by manual */                + "    y talk cat\n"
+/* class by manual */                + "    y talk -stt\n"
+/* class by manual */                + "    y talk -stt -lang English\n"
 /* class by manual */                + "    oi 1\n"
 /* class by manual */                + "    oi 2\n"
 /* class by manual */                + "    oi 3\n"
+/* class by manual */                + "    y echo \"一 二 三 四 五 六 七 八 九 十\" | y talk -tts -lang Chinese_Mandarin_Zhiyu\n"
+/* class by manual */                + "    y talk -stt -lang Chinese\n"
+/* class by manual */                + "    obs: funções -tts => -textToSpeech #padrao #função acessa internet e faz cache na maquina por texto e voz\n"
+/* class by manual */                + "                 -stt => -speechToText\n"
+/* class by manual */                + "         -lang padrões:\n"
+/* class by manual */                + "                 Brazilian_Portuguese_Ricardo para -tts\n"
+/* class by manual */                + "                 Portugues para -stt\n"
 /* class by manual */                + "[y sign]\n"
 /* class by manual */                + "    y sign -msg \"Hello\" -pass \"My passphrase\"\n"
 /* class by manual */                + "    y sign -verify -msg \"Hello\" -publicKey \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==\" -signature \"MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA==\"\n"
 /* class by manual */                + "    obs: retornando true, significa assinatura ok\n"
-/* class by manual */                + "    obs2: Informacoes tecnicas => SPEC \"secp256r1\" ALGO = \"SHA256withECDSA\"\n"
-/* class by manual */                + "    obs3: Nao confundir com secp256k1 do bitcoin\n"
+/* class by manual */                + "    obs2: Informações técnicas => SPEC \"secp256r1\" ALGO = \"SHA256withECDSA\"\n"
+/* class by manual */                + "    obs3: Não confundir com secp256k1 do bitcoin\n"
 /* class by manual */                + "[y [overflix|of]]\n"
 /* class by manual */                + "    y overflix \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
 /* class by manual */                + "    y overflix -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
@@ -25863,8 +25884,8 @@ class TabelaSAC {
 /* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
 /* class by manual */                + "    y overflix \"https://encontre.tv/assistir-ruptura-2x4-dublado-online-46643/\" -outPath \"D:\\ProgramFiles\\site\\series\\Ruptura\"\n"
 /* class by manual */                + "    y overflix \"https://encontre.tv/assistir-anne-com-um-e-dublado-online-49039/\" \"getScriptRenameBySkip,7,10,10\"\n"
-/* class by manual */                + "    obs: getScriptRenameBySkip so interpreta comandos skip, caso contrario baixa\n"
-/* class by manual */                + "    obs2: -vToken => mostra iexplorer.exe e nao fecha.\n"
+/* class by manual */                + "    obs: getScriptRenameBySkip só interpreta comandos skip, caso contrario baixa\n"
+/* class by manual */                + "    obs2: -vToken => mostra iexplorer.exe e não fecha.\n"
 /* class by manual */                + "         -o => force out path\n"
 /* class by manual */                + "         -tags => verbose profundo\n"
 /* class by manual */                + "[y connGui]\n"
@@ -25872,7 +25893,7 @@ class TabelaSAC {
 /* class by manual */                + "    obs: teste de conexao(server e client)\n"
 /* class by manual */                + "[y var]\n"
 /* class by manual */                + "    y var\n"
-/* class by manual */                + "    Obs: execucao por parametro de variavel\n"
+/* class by manual */                + "    Obs: execução por parametro de variavel\n"
 /* class by manual */                + "    windows:\n"
 /* class by manual */                + "    set var=\"cat\" \"a\" && y var\n"
 /* class by manual */                + "    linux:\n"
@@ -25891,15 +25912,15 @@ class TabelaSAC {
 /* class by manual */                + "    y banco -conn \"jdbc:mysql://localhost:3306|login|senha\" select \"select 1\"\n"
 /* class by manual */                + "    y banco -conn \"jdbc:postgresql://localhost:5432/|login|senha\" select \"select 1\"\n"
 /* class by manual */                + "\n"
-/* class by manual */                + "Observacoes:\n"
+/* class by manual */                + "Observações:\n"
 /* class by manual */                + "entrada de dados pode ser feito por |\n"
-/* class by manual */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmacao de fim de processamento de selectCSV\n"
+/* class by manual */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmação de fim de processamento de selectCSV\n"
 /* class by manual */                + "export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV\n"
-/* class by manual */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravacao\n"
-/* class by manual */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravacao de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
+/* class by manual */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravação\n"
+/* class by manual */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravação de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"TZ\" deixando a data 10/10/2010T10:10:10Z\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"UTC\" deixando a data 10/10/2010 10:10:10 UTC\n"
-/* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data sera na data do natal ex 25/12/2010 10:10:15\n"
+/* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data será na data do natal ex 25/12/2010 10:10:15\n"
 /* class by manual */                + "export FORMAT_DATA_Y=\"YYYY-MM-DD\" 2010-07-07 12:12:12\n"
 /* class by manual */                + "export COM_SEPARADOR_FINAL_CSV_Y=\"S\" ex: \"a\";\"a\"; o padrao seria \"a\";\"a\"\n"
 /* class by manual */                + "export SEM_HEADER_CSV_Y=\"S\"\n"
@@ -25972,39 +25993,6 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
