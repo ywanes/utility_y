@@ -900,8 +900,8 @@ cat buffer.log
             }
             return;
         }            
-        if ( args[0].equals("emprestimo") ){
-            emprestimo(args);
+        if ( args[0].equals("juros") || args[0].equals("emprestimo") ){
+            juros(args);
             return;
         }
         if ( args[0].equals("terminal") ){
@@ -5801,7 +5801,7 @@ cat buffer.log
             erroFatal(e);
         }
     }    
-    public void emprestimo(String [] args){
+    public void juros(String [] args){
         Object [] objs=get_parms_modelo_valor_jurosAM_jurosAA_parcelas(args);
         if ( objs == null )
             erroFatal("Erro de parametros!");
@@ -24956,7 +24956,7 @@ class TabelaSAC {
 /* class by manual */                + "  [y redis]\n"
 /* class by manual */                + "  [y sort]\n"
 /* class by manual */                + "  [y iso]\n"
-/* class by manual */                + "  [y emprestimo]\n"
+/* class by manual */                + "  [y [juros|emprestimo]]\n"
 /* class by manual */                + "  [y terminal]\n"
 /* class by manual */                + "  [y dotaMutandoAll]\n"
 /* class by manual */                + "  [y audio]\n"
@@ -25235,9 +25235,9 @@ class TabelaSAC {
 /* class by manual */                + "    y iso win11.iso source\n"
 /* class by manual */                + "    y iso source win11.iso\n"
 /* class by manual */                + "    obs: criar iso do tipo linux pode dar ruim\n"
-/* class by manual */                + "[y emprestimo]\n"
-/* class by manual */                + "    y emprestimo price valor 15000 juros 1.0 a.m 10 parcelas\n"
-/* class by manual */                + "    y emprestimo sac valor 15000 juros 1.0 a.m 10 parcelas\n"
+/* class by manual */                + "[y [juros|emprestimo]]\n"
+/* class by manual */                + "    y juros price valor 15000 juros 1.0 a.m 10 parcelas\n"
+/* class by manual */                + "    y juros sac valor 15000 juros 1.0 a.m 10 parcelas\n"
 /* class by manual */                + "    referencia: https://calculojuridico.com.br/calculadora-price-sac/\n"
 /* class by manual */                + "[y terminal]\n"
 /* class by manual */                + "    y terminal\n"
