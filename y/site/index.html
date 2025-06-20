@@ -961,7 +961,7 @@ function load_movie(parm, table_click, streamURL){
                 </button>
                 <button id="volume"></button>
                 <p class="title">                
-                  <span id="aovivo"></span>				  
+                  <span id="aovivo" style="color: red; font-family: Franklin Gothic Medium; cursor: pointer;" title="ao vivo" onclick="aovivo()" flag_aovivo="true">● </span>
                   <span class="titulo">`+format_name(parm[parm.length-1])+`</span>
                 </p>
                 <a onclick="go_home()" style="display: inline-block; cursor: pointer;">            
@@ -1388,6 +1388,7 @@ function load_movie(parm, table_click, streamURL){
           }else
             document.getElementsByClassName('controls-container1')[0].children[0].innerHTML='';
 		}catch(err){}
+		update_aovivo();
       }, 1000);
       setInterval(function ajus(){
         let tmp=getVideo();
@@ -1432,11 +1433,34 @@ function load_movie(parm, table_click, streamURL){
 		document.getElementById('video').play();
 		document.getElementsByClassName('progress-controls')[0].style='display: none;';
 		document.getElementById('video').setAttribute('src2', streamURL);
+		document.getElementById('video').setAttribute('titulo', format_name(parm[parm.length-1]) );
 		if ( document.getElementsByClassName('btn_resume').length > 0 )
 			document.getElementsByClassName('btn_resume')[0].style='display: none;';		
 		document.getElementsByClassName('back')[0].style='display: none;';		
 		document.getElementsByClassName('next')[0].style='display: none;';		
 	}
+}
+
+function aovivo(){
+    // getVideo().currentTime=getVideo().duration-7;
+    load_stream(getVideo().getAttribute('titulo'), getVideo().getAttribute('src2'));
+}
+
+function update_aovivo(){
+    let video=getVideo();
+	let _aovivo=document.getElementById('aovivo');
+	if ( video == null 
+	     || video.getAttribute('src2') == null
+		 || _aovivo.getAttribute('flag_aovivo') == null
+    )
+		return;
+    if ( (video.duration-video.currentTime) > 30 ){
+		_aovivo.setAttribute('title', parseInt(video.duration-video.currentTime) + ' segundos atrasados');
+		_aovivo.setAttribute('flag_aovivo', 'false');
+		_aovivo.setAttribute('style', 'color: white; font-family: Franklin Gothic Medium; cursor: pointer;');
+		_aovivo.innerHTML='○ ';
+	}else
+		_aovivo.setAttribute('title', 'aovivo -> ' + parseInt(video.duration-video.currentTime) + ' segundos atrasados');
 }
 
 function f_timer(minutes){
