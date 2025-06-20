@@ -6,7 +6,7 @@ ref https://embedcanaistv.com/
 ref https://embedtv.digital/
 ref https://tv.garden/
 curl https://embedcanaistv.com/ -s | y tr """" "\n" | y grep "^https://embedcanaistv.com/" | y grep -v https://embedcanaistv.com/wp- | y awk start https://embedcanaistv.com/contato/ | y grep -v https://embedcanaistv.com/contato/ | y tr "\n" "/video.m3u8\n" | y tr "//" "/" | y tr "https:/embedcanaistv.com" "http://203.cloudns.cl:8000/?https://onplaytv.net"
-https://embedtv.digital/ funcionando mas complicado!
+https://embedtv.digital/
 
 canais:
 http://203.cloudns.cl:8000/?https://onplaytv.net/amazonprimevideo/video.m3u8
@@ -687,7 +687,8 @@ function getcanais_embedtv(flag_all_channel){
 			let name=s.split('data-channel="')[1].split('"')[0];
 			let name_format=s.split('data-name="')[1].split('"')[0];
 			//let url_dynamic="/fazoeli.fun/fontes/embedtv/"+name+".m3u8";
-			let url_dynamic='https://aipapai.shop/_temp/'+name+'.m3u8';
+			//let url_dynamic='https://aipapai.shop/_temp/'+name+'.m3u8';
+			let url_dynamic='https://fazoeli.shop/_temp/'+name+'.m3u8';
 			let _img=s.split('data-src="')[1].split('"')[0];			
 			if ( filtro == null || filtro.indexOf(','+name+',') > -1 ){
 				tmp_filtro.push(name);
