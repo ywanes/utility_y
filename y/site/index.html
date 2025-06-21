@@ -162,6 +162,7 @@ this.playlistmovie_v_nick_name='playlistmovie-v-20241101-nick_name';
 this.playlist_v='playlist-v-20231018-';
 let error_NaN_load='ERROR TIMEOUT LOAD';
 let hls=null;
+let hist_seconds_aovivo=[0, 0];
 
 function toggleFullScreen(event, op){    
     o_que_ta=document.fullscreenElement;
@@ -1449,18 +1450,44 @@ function aovivo(){
 function update_aovivo(){
     let video=getVideo();
 	let _aovivo=document.getElementById('aovivo');
-	if ( video == null 
-	     || video.getAttribute('src2') == null
-		 || _aovivo.getAttribute('flag_aovivo') == null
+	let duration=video.duration;
+	let currentTime=video.currentTime;
+
+	// secure skip
+	if ( 
+		video == null 
+	    || video.getAttribute('src2') == null
+		|| _aovivo.getAttribute('flag_aovivo') == null
     )
 		return;
-    if ( (video.duration-video.currentTime) > 30 ){
-		_aovivo.setAttribute('title', parseInt(video.duration-video.currentTime) + ' segundos atrasados');
+	
+	// reload in crash playing
+	if ( 
+	    hist_seconds_aovivo[0] > 0 
+		&& hist_seconds_aovivo[1] > 0 
+		&& hist_seconds_aovivo[0] == hist_seconds_aovivo[1] 
+		&& hist_seconds_aovivo[1] == currentTime
+		&& !video.paused
+	){
+		hist_seconds_aovivo=[0, 0];
+		aovivo();
+		return;
+	}		
+	hist_seconds_aovivo[0]=hist_seconds_aovivo[1];
+	hist_seconds_aovivo[1]=currentTime;	
+	
+	// update status
+    if ( (duration-currentTime) > 40 ){
+		_aovivo.setAttribute('title', parseInt(duration-currentTime) + ' segundos atrasados');
 		_aovivo.setAttribute('flag_aovivo', 'false');
 		_aovivo.setAttribute('style', 'color: white; font-family: Franklin Gothic Medium; cursor: pointer;');
 		_aovivo.innerHTML='○ ';
-	}else
-		_aovivo.setAttribute('title', 'aovivo -> ' + parseInt(video.duration-video.currentTime) + ' segundos atrasados');
+	}else{
+		_aovivo.setAttribute('title', 'aovivo -> ' + parseInt(duration-currentTime) + ' segundos atrasados');
+		_aovivo.setAttribute('flag_aovivo', 'true');
+		_aovivo.setAttribute('style', 'color: red; font-family: Franklin Gothic Medium; cursor: pointer;');
+		_aovivo.innerHTML='● ';
+	}
 }
 
 function f_timer(minutes){
