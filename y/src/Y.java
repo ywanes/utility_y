@@ -8154,7 +8154,7 @@ cat buffer.log
     String curl_error=null;
     String global_header="";// nao tirar o static
     String curl_hash="";
-    Integer curl_timeout=null;
+    Integer curl_timeout=null; // miliseconds
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
                 Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
         try{   
@@ -8184,10 +8184,12 @@ cat buffer.log
                 javax.net.ssl.SSLSocketFactory sf = (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault();
                 socket = sf.createSocket();                
             }
-            if ( curl_timeout != null )
+            if ( curl_timeout != null ){
                 socket.connect(new InetSocketAddress(host, port), curl_timeout);
-            else
+                socket.setSoTimeout(curl_timeout);
+            }else{
                 socket.connect(new InetSocketAddress(host, port));
+            }
             
             byte[] buffer = new byte[2048];
             InputStream is=socket.getInputStream();
@@ -23749,7 +23751,7 @@ class ClientThread extends Util{
             )
                 header="origin: https://embedtv-0.icu\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
-            y.curl_timeout=650;
+            y.curl_timeout=3000;
             y.curl(baos, header, "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
             byte [] bytes=baos.toByteArray();
             output.write(y.curl_response_header.getBytes());
