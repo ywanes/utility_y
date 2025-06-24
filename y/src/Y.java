@@ -23734,6 +23734,7 @@ class ClientThread extends Util{
              || uri.startsWith("/fazoeli.fun/")                     
              || uri.startsWith("/cdn.fazoeli.fun/")                     
              || uri.startsWith("/s2.fazoeli.fun/")                     
+             || uri.contains("embedtv")
         ){
             String header="";
             if ( uri.startsWith("/onplaytv.net/") || uri.startsWith("/embtv.site/") )

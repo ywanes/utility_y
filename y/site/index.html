@@ -428,13 +428,21 @@ function load_stream(a, b){
     if ( b.indexOf('https://onplaytv.net/') == 0 )
 	  b=b.substring(7);
     b=convert_chaturbate(b);
+	////////////////
 	if ( b.indexOf('/fazoeli.fun/fontes/') == 0 ){	
 		a=b.split('/embedtv/')[1].split('.')[0];
 		b=b.substring(1);
 		b=getUrlRedirect(b);
 		b=b.split('/token/')[1];
 		b='/fazoeli.fun/token/'+b;
+	}	
+	if ( b == 'replace_in_load_stream' ){		
+		let tmp_name=getBinary('/embedtv-2.icu/' + a.replaceAll(' ','') );
+		// pegando https://01-mcteteu.shop/secret_key/effa3e35a52d0f7c7f8ff7087bc4acde.m3u8 de ==> stream: "https://01-mcteteu.shop/secret_key/effa3e35a52d0f7c7f8ff7087bc4acde.m3u8"
+		b=tmp_name.substr(tmp_name.indexOf('"', tmp_name.indexOf('stream: "'))+1, tmp_name.indexOf('"', tmp_name.indexOf('stream: "')+12)-tmp_name.indexOf('"', tmp_name.indexOf('stream: "'))-1)
+		console.log('track stream: '+b);
 	}
+	
     let nick_name=get_nick_name();
     if ( nick_name == null ){
         alert('Você precisa estar logado!');
@@ -685,11 +693,13 @@ function getcanais_embedtv(flag_all_channel){
 			break;
 		s=a.substring(p1, p2);
 		if ( s.indexOf('Assistir') > -1 ){
+			////////////////////
 			let name=s.split('data-channel="')[1].split('"')[0];
 			let name_format=s.split('data-name="')[1].split('"')[0];
 			//let url_dynamic="/fazoeli.fun/fontes/embedtv/"+name+".m3u8";
 			//let url_dynamic='https://aipapai.shop/_temp/'+name+'.m3u8';
-			let url_dynamic='https://fazoeli.shop/_temp/'+name+'.m3u8';
+			//let url_dynamic='https://fazoeli.shop/_temp/'+name+'.m3u8';
+			let url_dynamic='replace_in_load_stream';			
 			let _img=s.split('data-src="')[1].split('"')[0];			
 			if ( filtro == null || filtro.indexOf(','+name+',') > -1 ){
 				tmp_filtro.push(name);
