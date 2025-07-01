@@ -5435,6 +5435,7 @@ cat buffer.log
     public void echo(String [] args) throws Exception{
         args = bind_asterisk(args);        
         printf(args, System.out);
+        System.out.write("\n".getBytes());
     }
 
     public void trataPrintf() throws Exception{
@@ -25242,6 +25243,7 @@ class TabelaSAC {
 /* class by manual */                + "    y echo a | y xargs echo\n"
 /* class by manual */                + "    y echo a | y xargs echo \"{}\" \"{}\"\n"
 /* class by manual */                + "    y cls && y find | y grep \".\" | y tr \"\"\"\" \"\" | y xargs echo \"y printf \\\"\\\" | ffmpeg -i \\\"{}\\\"  -max_muxing_queue_size 1024 \\\"{}.mp4\\\" && y rm \\\"{}\\\"\" | y tr \"rmvb.mp4\" \"mp4\" | y tr \"mpg.mp4\" \"mp4\"\n"
+/* class by manual */                + "    y find | y tr \"\"\"\" \"\" | y xargs echo \"\\\"{}\\\"\" | y xargs echo \"y mv {} {}\" | y tr \"-dublado-www.encontrei.tv.mp4\\\"\\n\" \".mp4\\\"\\n\"\n"
 /* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
 /* class by manual */                + "[y cat]\n"
 /* class by manual */                + "    y cat arquivo\n"
@@ -26025,6 +26027,8 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

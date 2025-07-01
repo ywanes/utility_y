@@ -289,6 +289,7 @@ Exemplos...
     y echo a | y xargs echo
     y echo a | y xargs echo "{}" "{}"
     y cls && y find | y grep "." | y tr """" "" | y xargs echo "y printf \"\" | ffmpeg -i \"{}\"  -max_muxing_queue_size 1024 \"{}.mp4\" && y rm \"{}\"" | y tr "rmvb.mp4" "mp4" | y tr "mpg.mp4" "mp4"
+    y find | y tr """" "" | y xargs echo "\"{}\"" | y xargs echo "y mv {} {}" | y tr "-dublado-www.encontrei.tv.mp4\"\n" ".mp4\"\n"
     obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
 [y cat]
     y cat arquivo
