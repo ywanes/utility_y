@@ -8155,6 +8155,7 @@ cat buffer.log
     String global_header="";// nao tirar o static
     String curl_hash="";
     Integer curl_timeout=null; // miliseconds
+    boolean flag_skip_ssl_error=true;
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
                 Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
         try{   
@@ -8176,14 +8177,9 @@ cat buffer.log
                 path = "/";
             if ( url.getQuery() != null )
                 path += "?" + url.getQuery();
-            
-            Socket socket=null;
-            if ( protocol.equals("HTTP") ){
-                socket=new Socket();
-            }else{
-                javax.net.ssl.SSLSocketFactory sf = (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault();
-                socket = sf.createSocket();                
-            }
+
+            Socket socket=new CustomSocket().getSocket(protocol.equals("HTTP"), flag_skip_ssl_error);
+                        
             if ( curl_timeout != null ){
                 socket.connect(new InetSocketAddress(host, port), curl_timeout);
                 socket.setSoTimeout(curl_timeout);
@@ -14066,7 +14062,7 @@ while True:
             // get players by OCR
             String [] players=ocr_getNamesDota();
             // skynet
-            String [] naoBloquearEssesNomes="ynet,Analista de Sistema,eBullet,iusky,frist,Madald".split(",");
+            String [] naoBloquearEssesNomes="ynet,Analista de Sistema,eBullet,iusky,frist,Madald,arhart".split(",");
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
@@ -19482,6 +19478,33 @@ while ($true) {
             return new File(caminho).mkdir();
         }  
         return true;
+    }    
+
+    javax.net.ssl.TrustManager[] trustAllCerts = new javax.net.ssl.TrustManager[] {
+        new javax.net.ssl.X509TrustManager() {
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                return null;
+            }
+            public void checkClientTrusted(java.security.cert.X509Certificate [] certs, String authType) {
+            }
+            public void checkServerTrusted(java.security.cert.X509Certificate [] certs, String authType) {
+            }
+        }
+    };
+            
+    class CustomSocket{
+        public Socket getSocket(boolean flag_http, boolean flag_skip_ssl_error) throws Exception{
+            if (!flag_http){
+                if ( flag_skip_ssl_error ){
+                    SSLContext sslContext = SSLContext.getInstance("TLS");
+                    sslContext.init(null, flag_skip_ssl_error?trustAllCerts:null, new SecureRandom());
+                    return sslContext.getSocketFactory().createSocket();
+                }
+                javax.net.ssl.SSLSocketFactory sf = (javax.net.ssl.SSLSocketFactory) javax.net.ssl.SSLSocketFactory.getDefault();
+                return sf.createSocket();                
+            }
+            return new Socket();
+        }
     }
 }
 
