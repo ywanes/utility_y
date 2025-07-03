@@ -970,7 +970,7 @@ function load_movie(parm, table_click, streamURL){
                   </svg>
                 </button>
                 <button id="volume"></button>
-				<input id="volume2" type="range" min="0" max="1" step="0.01" value="1" orient="vertical">
+				<input id="volume2" type="range" min="0" max="1" step="0.01" value="1" orient="vertical" style="background: linear-gradient(to right, #3ea6ff 0%, #3ea6ff 79%, #535353 79%, #535353 100%); border-radius: 15px;">
                 <p class="title">                
                   <span id="aovivo" style="display: none; color: red; font-family: Franklin Gothic Medium; cursor: pointer;" title="ao vivo" onclick="aovivo()" flag_aovivo="true">● </span>
                   <span class="titulo">`+format_name(parm[parm.length-1])+`</span>
@@ -1259,6 +1259,9 @@ function load_movie(parm, table_click, streamURL){
       e.innerHTML=state1;
       getVideo().volume=volume1;
     }
+	document.getElementById('volume2').addEventListener('input', (e) => {
+	  document.getElementById('volume2').setAttribute('style', 'background: linear-gradient(to right, #3ea6ff 0%, #3ea6ff '+ e.target.value*100 + '%, #535353 '+e.target.value*100+'%, #535353 100%); border-radius: 15px;');
+	});	
     getVideo().addEventListener('timeupdate', function(){
       if ( getVideo() != null ){
         watchedBar.style.width = ((getVideo().currentTime / getVideo().duration) * 100) + '%';        
@@ -2796,10 +2799,34 @@ function keypress_nick_name(e) {
 }
 
 
+#volume2 {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  outline: none;
+  width: 120px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
 
+#volume2::-webkit-slider-runnable-track {
+  height: 30px;
+  border-radius: 15px;
+  border: 1px solid #303030;
+}
 
-
-
+#volume2::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 32px;
+  height: 32px;
+  background: #ffffff;
+  border-radius: 50%;
+  margin-top: -3px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  cursor: grab;
+}
 
 </style>
 
