@@ -970,7 +970,7 @@ function load_movie(parm, table_click, streamURL){
                   </svg>
                 </button>
                 <button id="volume"></button>
-				<input id="volume2" type="range" min="0" max="1" step="0.01" value="1" orient="vertical" style="background: linear-gradient(to right, #3ea6ff 0%, #3ea6ff 79%, #535353 79%, #535353 100%); border-radius: 15px;">
+				<input id="volume2" type="range" min="0" max="1" step="0.01" value="1" orient="vertical" style="background: linear-gradient(to right, #13f 0%, #13f 79%, #535353 79%, #535353 100%); border-radius: 15px;">
                 <p class="title">                
                   <span id="aovivo" style="display: none; color: red; font-family: Franklin Gothic Medium; cursor: pointer;" title="ao vivo" onclick="aovivo()" flag_aovivo="true">● </span>
                   <span class="titulo">`+format_name(parm[parm.length-1])+`</span>
@@ -1260,7 +1260,7 @@ function load_movie(parm, table_click, streamURL){
       getVideo().volume=volume1;
     }
 	document.getElementById('volume2').addEventListener('input', (e) => {
-	  document.getElementById('volume2').setAttribute('style', 'background: linear-gradient(to right, #3ea6ff 0%, #3ea6ff '+ e.target.value*100 + '%, #535353 '+e.target.value*100+'%, #535353 100%); border-radius: 15px;');
+	  document.getElementById('volume2').setAttribute('style', 'background: linear-gradient(to right, #13f 0%, #13f '+ e.target.value*100 + '%, #535353 '+e.target.value*100+'%, #535353 100%); border-radius: 15px;');
 	});	
     getVideo().addEventListener('timeupdate', function(){
       if ( getVideo() != null ){
