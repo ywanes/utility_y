@@ -969,8 +969,8 @@ function load_movie(parm, table_click, streamURL){
                       d="M10,12V22H8V14H6V12H10M18,14V20C18,21.11 17.11,22 16,22H14A2,2 0 0,1 12,20V14A2,2 0 0,1 14,12H16C17.11,12 18,12.9 18,14M14,14V20H16V14H14M11.5,3C14.15,3 16.55,4 18.4,5.6L21,3V10H14L16.62,7.38C15.23,6.22 13.46,5.5 11.5,5.5C7.96,5.5 4.95,7.81 3.9,11L1.53,10.22C2.92,6.03 6.85,3 11.5,3Z" />
                   </svg>
                 </button>
-                <button id="volume"></button>
-				<input id="volume2" type="range" min="0" max="1" step="0.01" value="1" orient="vertical" style="background: linear-gradient(to right, #13f 0%, #13f 79%, #535353 79%, #535353 100%); border-radius: 15px;">
+                <button id="mute"></button>
+				<input id="volume" type="range" min="0" max="1" step="0.01" value="1" orient="vertical" style="background: linear-gradient(to right, #13f 0%, #13f 79%, #535353 79%, #535353 100%); border-radius: 15px;">
                 <p class="title">                
                   <span id="aovivo" style="display: none; color: red; font-family: Franklin Gothic Medium; cursor: pointer;" title="ao vivo" onclick="aovivo()" flag_aovivo="true">● </span>
                   <span class="titulo">`+format_name(parm[parm.length-1])+`</span>
@@ -1166,7 +1166,7 @@ function load_movie(parm, table_click, streamURL){
             playPause(); 
           }
           if (event.code === 'KeyM') {
-            volumeclick();
+            muteclick();
           }
           if (event.code === 'KeyF') {
             toggleFullScreen(null, null);
@@ -1240,28 +1240,7 @@ function load_movie(parm, table_click, streamURL){
       }
       return hour+':'+minute+':'+second;
     }
-    function volumeclick(){
-      let e=document.getElementById('volume');
-      let state1='\n          <svg data-s="1" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>\n          </svg>';
-      let state2='\n          <svg data-s="2" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            </svg>';
-      let state3='\n          <svg data-s="3" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            </svg>';
-      let state4='\n          <svg data-s="4" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            </svg>';
-      let state5='\n          <svg data-s="5" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            <line x1="23" y1="9" x2="17" y2="15"></line>\n            <line x1="17" y1="9" x2="23" y2="15"></line>\n          </svg>\n        ';
-      let volume1=1;
-      let volume2=0.6;
-      let volume3=0.4;
-      let volume4=0.2;
-      let volume5=0;  
-      if ( e.innerHTML == state1 ){ e.innerHTML=state2;getVideo().volume=volume2;return; }
-      if ( e.innerHTML == state2 ){ e.innerHTML=state3;getVideo().volume=volume3;return; }
-      if ( e.innerHTML == state3 ){ e.innerHTML=state4;getVideo().volume=volume4;return; }
-      if ( e.innerHTML == state4 ){ e.innerHTML=state5;getVideo().volume=volume5;return; }
-      e.innerHTML=state1;
-      getVideo().volume=volume1;
-    }
-	document.getElementById('volume2').addEventListener('input', (e) => {
-	  document.getElementById('volume2').setAttribute('style', 'background: linear-gradient(to right, #13f 0%, #13f '+ e.target.value*100 + '%, #535353 '+e.target.value*100+'%, #535353 100%); border-radius: 15px;');
-	});	
+
     getVideo().addEventListener('timeupdate', function(){
       if ( getVideo() != null ){
         watchedBar.style.width = ((getVideo().currentTime / getVideo().duration) * 100) + '%';        
@@ -1292,7 +1271,7 @@ function load_movie(parm, table_click, streamURL){
     });
 
     fullScreenButton.addEventListener('click', toggleFullScreen);
-    document.getElementById('volume').addEventListener('click', volumeclick);
+    document.getElementById('mute').addEventListener('click', muteclick);
     function getDigest1(){
 	  let a=getVideo().src.replace(ref_, '');
 	  if ( a != null && a.indexOf('blob:') == 0 )
@@ -1348,32 +1327,70 @@ function load_movie(parm, table_click, streamURL){
         if ( a != null ){
           let b = JSON.parse(a);
           let volume = b['volume'];
-          setvolume(volume);
-        }
+          setVolume(volume, volume);
+        }else
+		  setVolume(1, 1);
       }
     }
-    function setvolume(volume){
-      let e=document.getElementById('volume');
-      let state1='\n          <svg data-s="1" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>\n          </svg>';
-      let state2='\n          <svg data-s="2" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            </svg>';
-      let state3='\n          <svg data-s="3" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            </svg>';
-      let state4='\n          <svg data-s="4" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            </svg>';
-      let state5='\n          <svg data-s="5" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            <line x1="23" y1="9" x2="17" y2="15"></line>\n            <line x1="17" y1="9" x2="23" y2="15"></line>\n          </svg>\n        ';
-      let volume1=1;
-      let volume2=0.6;
-      let volume3=0.4;
-      let volume4=0.2;
-      let volume5=0;  
-      if ( volume == volume2 ){ e.innerHTML=state2;getVideo().volume=volume2;return; }
-      if ( volume == volume3 ){ e.innerHTML=state3;getVideo().volume=volume3;return; }
-      if ( volume == volume4 ){ e.innerHTML=state4;getVideo().volume=volume4;return; }
-      if ( volume == volume5 ){ e.innerHTML=state5;getVideo().volume=volume5;return; }
-      e.innerHTML=state1;
-      getVideo().volume=volume1;
-    }
+	function setMuteLabel(volume){
+      let stateBaixo='\n          <svg data-s="5" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            <line x1="23" y1="9" x2="17" y2="15"></line>\n            <line x1="17" y1="9" x2="23" y2="15"></line>\n          </svg>\n        ';
+      let stateMedio='\n          <svg data-s="3" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            </svg>';
+      let stateAlto='\n          <svg data-s="1" viewBox="0 0 24 24">\n            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>\n            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>\n          </svg>';
+      if ( volume == 0 ){
+		document.getElementById('mute').innerHTML=stateBaixo;	  
+		return;
+	  }
+      if ( volume < 1 ){
+		document.getElementById('mute').innerHTML=stateMedio;	  
+		return;
+	  }
+	  document.getElementById('mute').innerHTML=stateAlto;	  
+	}
+	
+	function setVolumeLabel(a, ball){
+	  document.getElementById('volume').setAttribute('style', 'background: linear-gradient(to right, #13f 0%, #13f '+ a*100 + '%, #535353 '+a*100+'%, #535353 100%); border-radius: 15px;');
+	  if ( ball != null )
+	    document.getElementById('volume').value=ball;
+	}
+	
+	function muteclick(){
+	  let video=getVideo();
+	  if ( video == null )
+	    return;
+	  let volume=video.volume;
+	  let premute='';
+	  if ( video.getAttribute('premute') != null && video.getAttribute('premute') != '' )
+	    premute=parseFloat(video.getAttribute('premute'));
+      if ( volume > 0 ){	    
+	    setVolume(0, 0);	
+        video.setAttribute('premute', volume);		
+	  }else{
+	    let newVolume=1;
+		if ( premute != '' && premute > 0 )
+		  newVolume=premute;
+		setVolume(newVolume, newVolume);
+	  }
+	}
+	
+    function setVolume(volume, ball){	  
+	  setVolumeLabel(volume, ball);
+	  if (volume==0)
+	    setMuteLabel(0);
+	  else
+	    setMuteLabel(1);
+      let video=getVideo();
+	  if ( video == null )
+	    return;
+	  video.volume=volume;
+	  video.setAttribute('premute', '');
+	}
+	
+	document.getElementById('volume').addEventListener('input', (e) => {
+	  setVolume(e.target.value);
+	});		
     
     function f_onload(){
-      volumeclick();
+      muteclick();
       sign_first=true;
       load_station1();
       playPause();      
@@ -1623,30 +1640,6 @@ function load_music(parm, elements){
                     return;
                   }
                   click_faixa(e);
-                }
-                getDigest2_OLD=function(){
-                  let digest = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
-                  let p_digest = 0;
-                  function updateDigest(a){
-                    for ( var i=0;i<a.length;i++ ){
-                      digest[p_digest]=(digest[p_digest]+a.charCodeAt(i))%52;
-                      p_digest++;
-                      if ( p_digest >= digest.length )
-                        p_digest=0;
-                    }
-                  }
-                  let a = document.getElementById('tablebase').children[0];
-                  for ( var i=0;i<a.children.length;i++ )
-                    updateDigest(a.children[i].children[0].innerText);
-                  a='';
-                  for ( var i=0;i<digest.length;i++ ){
-                    if ( digest[i] >= 26 )
-                      a+=String.fromCharCode(digest[i]-26+97);
-                    else
-                      a+=String.fromCharCode(digest[i]+65);
-                  }
-                  cache_digest = a;
-                  return cache_digest;
                 }
                 getDigest2=function(){                  
                   return parm.join('/');
@@ -2799,7 +2792,7 @@ function keypress_nick_name(e) {
 }
 
 
-#volume2 {
+#volume {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
@@ -2811,13 +2804,13 @@ function keypress_nick_name(e) {
   background: transparent;
 }
 
-#volume2::-webkit-slider-runnable-track {
+#volume::-webkit-slider-runnable-track {
   height: 30px;
   border-radius: 15px;
   border: 1px solid #303030;
 }
 
-#volume2::-webkit-slider-thumb {
+#volume::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 32px;
   height: 32px;
