@@ -970,6 +970,7 @@ function load_movie(parm, table_click, streamURL){
                   </svg>
                 </button>
                 <button id="volume"></button>
+				<input id="volume2" type="range" min="0" max="1" step="0.01" value="1" orient="vertical">
                 <p class="title">                
                   <span id="aovivo" style="display: none; color: red; font-family: Franklin Gothic Medium; cursor: pointer;" title="ao vivo" onclick="aovivo()" flag_aovivo="true">● </span>
                   <span class="titulo">`+format_name(parm[parm.length-1])+`</span>
@@ -2793,6 +2794,12 @@ function keypress_nick_name(e) {
 .search-input::placeholder {
   color: #bbb; /* Cor do placeholder mais clara */
 }
+
+
+
+
+
+
 
 </style>
 
