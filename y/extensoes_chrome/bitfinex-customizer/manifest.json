@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Orderbook - Bitfinex Customizer",
+  "version": "1.0",
+  "description": "Remove alguns elementos e deixa o book",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["*://trading.bitfinex.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["*://trading.bitfinex.com/t/BTC:USD*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
