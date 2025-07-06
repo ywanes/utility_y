@@ -14692,17 +14692,147 @@ while True:
     }
 }
 
+class YDB{
+    // a estrutura é formada por blocos
+    // [bloco] -> [tipo] [len] [subbloco]
+    //            1byte  4byte  len-bytes
+    //
+    // [tipo]
+    //        0 - table
+    //        1 - campos
+    //        2 - registro
+    //        3 - tipocampo(opcional)
+    // 
+    // [subbloco] -> [key] [value] (loop? [key] [value]) 
+    //               
+    // [key] -> [len] [data]
+    //          1byte  len-bytes
+    // [value] -> [len] [data]
+    //          1bytes len-bytes
+    //
+    // obs: Se o data precisar ter o len maior que 256(2^8) é só repetir o mesmo nome de key na sequencia ex: key1 AA key1 AA key2 BB
+    
+    ByteArrayOutputStream baos=null;
+    ByteArrayOutputStream baos_subbloco=null;
+    
+    public YDB(){
+        baos=new ByteArrayOutputStream();
+        baos_subbloco=new ByteArrayOutputStream();
+    }
+    
+    public void writeTable(String a) throws Exception{
+        resetSubBloco();
+        writeSubBloco("_".getBytes(), a.getBytes());
+        writeBloco(new byte[]{0});
+    }
+    
+    public void resetSubBloco(){
+        baos_subbloco=new ByteArrayOutputStream();
+    }
+    
+    public void writeSubBloco(byte [] key, byte [] value) throws Exception{
+        if ( key.length > 255 )
+            throw new Exception("tamanho de key invalida(acima de 255): " + key.length);
+        if ( value.length > 255 )
+            throw new Exception("tamanho de value invalida(acima de 255): " + value.length);
+        baos_subbloco.write((byte)key.length);
+        baos_subbloco.write(key);
+        baos_subbloco.write((byte)value.length);
+        baos_subbloco.write(value);
+    }    
+    
+    public void writeBloco(byte [] tipo) throws Exception{
+        baos.write(tipo);        
+        byte [] subbloco=baos_subbloco.toByteArray();
+        if ( subbloco.length > 256L*256*256*256 )
+            throw new Exception("subbloco muito grande! " + subbloco.length);
+        byte[] len = new byte[4];
+        len[0] = (byte) subbloco.length;
+        len[1] = (byte) (subbloco.length >> 8);
+        len[2] = (byte) (subbloco.length >> 16);
+        len[3] = (byte) (subbloco.length >> 24);
+        baos.write(len);
+        baos.write(subbloco);        
+        resetSubBloco();
+    }
+    
+    byte [] subbloco=null;
+    int tipo=0;
+    int pos_readBloco=0;
+    boolean tem_bloco=true;
+    public void readBloco() throws Exception{        
+        byte [] full=baos.toByteArray();
+        if ( full.length == 0 )
+            throw new Exception("nao existe blocos para serem lidos!");
+        tipo=full[pos_readBloco++] & 0xff;
+        int len = (full[pos_readBloco++] & 0xff) | 
+                   ((full[pos_readBloco++] & 0xff) << 8) | 
+                   ((full[pos_readBloco++] & 0xff) << 16) | 
+                   ((full[pos_readBloco++] & 0xff) << 24);        
+        subbloco=new byte [len];
+        System.arraycopy(full, pos_readBloco, subbloco, 0, len);
+        pos_readBloco+=len;
+        if ( pos_readBloco == full.length )
+            tem_bloco=false;
+        pos_readSubBloco=0;
+        tem_subBloco=true;
+    }
+    
+    int pos_readSubBloco=0;
+    boolean tem_subBloco=true;
+    String key=null;
+    String value=null;
+    public void readSubBloco_parcial() throws Exception{
+        int len=subbloco[pos_readSubBloco++] & 0xff;
+        byte [] a=new byte[len];
+        System.arraycopy(subbloco, pos_readSubBloco, a, 0, len);
+        key=new String(a, java.nio.charset.StandardCharsets.UTF_8);
+        pos_readSubBloco+=len;
+        len=subbloco[pos_readSubBloco++] & 0xff;
+        a=new byte[len];
+        System.arraycopy(subbloco, pos_readSubBloco, a, 0, len);
+        value=new String(a, java.nio.charset.StandardCharsets.UTF_8);
+        pos_readSubBloco+=len;  
+        if ( pos_readSubBloco == subbloco.length )
+            tem_subBloco=false;
+    }
+    
+    public void display() throws Exception{
+        while(tem_bloco){
+            readBloco();
+            System.out.println("");
+            System.out.println("tipo: " + tipo);
+            readSubBloco_parcial();
+            System.out.println("key: " + key);
+            System.out.println("value: " + value);
+            while(tem_subBloco){
+                readSubBloco_parcial();
+                System.out.println("key: " + key);
+                System.out.println("value: " + value);            
+            }
+        }
+    }
+}
+
+
+
 class Tests extends Util{
     public Tests(String [] args, boolean flag_test) throws Exception{
         // comando abaixo para rodar
         //y test
         if ( flag_test ){
-            teste_unico0();
+            teste_unico1();
             return;
         }
         return;
     }
     
+    public void teste_unico1() throws Exception{
+        YDB ydb=new YDB();
+        ydb.writeTable("AA");
+        ydb.writeTable("cc");
+        ydb.display();
+    }
     public void teste_unico0() throws Exception{
         /*
         // teste de sequencia de texto
