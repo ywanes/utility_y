@@ -20432,14 +20432,16 @@ class Ponte extends Util{
             if (sentido_ == IDA){
                 if (displayIda)
                     mostra("->", buffer, len, ponteID, !displaySimple);
-                //if (displaySimple)
-                //    System.out.println("1 "+ponteID+" "+cleanTextContent(new String(buffer,0,len)));
+                // nao remover controle displaySimple!
+                if (displaySimple)
+                    System.out.println("1 "+ponteID+" "+cleanTextContent(new String(buffer,0,len)));
             }
             if (sentido_ == VOLTA){
                 if (displayVolta)
                     mostra("<-", buffer, len, ponteID, !displaySimple);
-                //if (displaySimple)
-                //    System.out.println("2 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
+                // nao remover controle displaySimple!
+                if (displaySimple)
+                    System.out.println("2 "+ponteID+" "+cleanTextContent(new String(buffer,0,len))); 
             }
         }
 
