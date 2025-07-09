@@ -14693,24 +14693,34 @@ while True:
 }
 
 class YDB{
-    // a estrutura é formada por blocos
-    // [bloco] -> [tipo] [len] [subbloco]
-    //            1byte  4byte  len-bytes
-    //
-    // [tipo]
-    //        0 - table
-    //        1 - campos
-    //        2 - registro
-    //        3 - tipocampo(opcional)
-    // 
-    // [subbloco] -> [key] [value] (loop? [key] [value]) 
-    //               
-    // [key] -> [len] [data]
-    //          1byte  len-bytes
-    // [value] -> [len] [data]
-    //          1bytes len-bytes
-    //
-    // obs: Se o data precisar ter o len maior que 256(2^8) é só repetir o mesmo nome de key na sequencia ex: key1 AA key1 AA key2 BB
+    /*
+    
+    a estrutura é formada por blocos
+    [bloco] -> [tipo] [len] [subbloco]
+               1byte  4byte  len-bytes
+    
+    [tipo]
+           0 - table
+           1 - campos
+           2 - record
+           3 - tipocampo(opcional)
+     
+    [subbloco] -> [key] [value] (loop? [key] [value]) 
+                   
+    [key] -> [len] [data]
+             1byte  len-bytes
+    [value] -> [len] [data]
+             1bytes len-bytes
+    
+    obs: Se o data precisar ter o len maior que 256(2^8) é só repetir o mesmo nome de key na sequencia ex: key1 AA key1 AA key2 BB
+    
+    Exemplo de uso
+    YDB ydb=new YDB();
+    ydb.writeTable("AA");
+    ydb.writeTable("cc");
+    ydb.display();
+    
+    */
     
     ByteArrayOutputStream baos=null;
     ByteArrayOutputStream baos_subbloco=null;
@@ -14725,6 +14735,15 @@ class YDB{
         writeSubBloco("_".getBytes(), a.getBytes());
         writeBloco(new byte[]{0});
     }
+
+    public void writeRecord(String a) throws Exception{
+        resetSubBloco();
+        String [] partes=a.split(",");
+        for ( int i=0;i<partes.length;i++ )
+            writeSubBloco(("f"+i+"_").getBytes(), partes[i].getBytes());
+        writeBloco(new byte[]{2});
+    }
+
     
     public void resetSubBloco(){
         baos_subbloco=new ByteArrayOutputStream();
@@ -14800,15 +14819,11 @@ class YDB{
     public void display() throws Exception{
         while(tem_bloco){
             readBloco();
-            System.out.println("");
-            System.out.println("tipo: " + tipo);
-            readSubBloco_parcial();
-            System.out.println("key: " + key);
-            System.out.println("value: " + value);
+            if ( tipo == 0 ) System.out.println("\nTable");
+            if ( tipo == 2 ) System.out.println("\nRecord");
             while(tem_subBloco){
                 readSubBloco_parcial();
-                System.out.println("key: " + key);
-                System.out.println("value: " + value);            
+                System.out.println(key+": "+value);
             }
         }
     }
@@ -14830,6 +14845,7 @@ class Tests extends Util{
     public void teste_unico1() throws Exception{
         YDB ydb=new YDB();
         ydb.writeTable("AA");
+        ydb.writeRecord("a1,a2");
         ydb.writeTable("cc");
         ydb.display();
     }
