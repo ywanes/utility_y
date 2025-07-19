@@ -7045,6 +7045,8 @@ cat buffer.log
             partes=regex_matcher("<b title=\"", "\"", html, true); 
             if ( html.contains("<h2>WE ARE SORRY</h2>") ){
                 overflix_error+="Arquivo não mais disponível no mixdrop, url: " + url+"\n";
+                if ( getScriptRenameBySkip_in != null )
+                    getScriptRenameBySkip_out+="?"+url+"?\n";                
                 return;
             }
             if ( partes.length > 0 )
@@ -7298,6 +7300,10 @@ cat buffer.log
         for ( int i=0;i<partes.length;i++ ){
             // pega serie name
             String [] estrutura=partes[i].split("\\\\");
+            if ( partes[i].startsWith("?") ){ // bypass "<h2>WE ARE SORRY</h2>"
+                partes_novos[i]="?";
+                continue;
+            }
             if ( estrutura.length <= 1 )
                 erroFatal("Caminho incorreto: " + partes[i]);
             String serie_name=estrutura[estrutura.length-2];
