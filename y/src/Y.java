@@ -11197,18 +11197,18 @@ cat buffer.log
                     return null;
                 args=sliceParm(1, args);
                 jurosAM=Double.parseDouble(args[0])/100;
-                jurosAM=arredondamentoDouble(jurosAM, 5, false);
+                jurosAM=arredondamentoDouble_Double(jurosAM, 5, false);
                 args=sliceParm(1, args);
                 String tipo=args[0];
                 args=sliceParm(1, args);
                 if ( tipo.equals("a.m") ){
                     jurosAA=Math.pow(1 + jurosAM, 12) - 1;
-                    jurosAA=arredondamentoDouble(jurosAA, 5, false);
+                    jurosAA=arredondamentoDouble_Double(jurosAA, 5, false);
                 }else{
                     if ( tipo.equals("a.a") ){
                         jurosAA=jurosAM;
                         jurosAM=Math.pow(1 + jurosAA, 1.0/12) - 1;
-                        jurosAM=arredondamentoDouble(jurosAM, 5, false);
+                        jurosAM=arredondamentoDouble_Double(jurosAM, 5, false);
                     }else{
                         erroFatal("tipo de juros desconhecido => " + tipo);
                     }
@@ -15016,14 +15016,14 @@ class multiCurl extends Util{
                                     if ( progress_finished_len_memory[i].equals(progress_len[i]) ){                                    
                                         pipedOutputStream.write(
                                             (
-                                                (i+1)+" downloaded! "+bytes_to_text(progress_len[i]).replace(" ","")+" "+ caminhos.get(i)+"\n"
+                                                (i+1)+" downloaded! "+bytes_to_text(progress_len[i], false)+" "+ caminhos.get(i)+"\n"
                                             ).getBytes()
                                         );
                                     }else{
                                         pipedOutputStream.write(
                                             (
                                                 // [=>        ] ?
-                                                (i+1)+" downloading... "+bytes_to_text(progress_finished_len_memory[i]).replace(" ","")+"/"+bytes_to_text(progress_len[i]).replace(" ","")+" "+ caminhos.get(i)+"\n"
+                                                (i+1)+" downloading... "+bytes_to_text(progress_finished_len_memory[i], false)+"/"+bytes_to_text(progress_len[i], false)+" "+ caminhos.get(i)+"\n"
                                             ).getBytes()
                                         );
                                     }
@@ -16650,13 +16650,26 @@ class Util{
         return a+"."+b;
     }
     
-    public Double arredondamentoDouble(Double valor, int n_arredondamento, boolean trunca) {
+    public Double arredondamentoDouble_Double(Double valor, int n_arredondamento, boolean trunca) {
         java.math.RoundingMode roundingMode=java.math.RoundingMode.HALF_UP;
         if ( trunca )
             roundingMode=java.math.RoundingMode.DOWN;
         BigDecimal bd = new BigDecimal(Double.toString(valor));
         bd = bd.setScale(n_arredondamento, roundingMode);
         return bd.doubleValue();
+    }
+
+    public String arredondamentoDouble(Double valor, int n_arredondamento, boolean trunca) {
+        java.math.RoundingMode roundingMode = java.math.RoundingMode.HALF_UP;
+        if (trunca)
+            roundingMode = java.math.RoundingMode.DOWN;
+        java.math.BigDecimal bd = new java.math.BigDecimal(Double.toString(valor));
+        bd = bd.setScale(n_arredondamento, roundingMode);
+        return String.format(
+            java.util.Locale.US, 
+            "%." + n_arredondamento + "f", 
+            bd.doubleValue()
+        );
     }
     
     public void format_show_ip(String a, String b){
@@ -18303,23 +18316,30 @@ class Util{
     }
     
     public String bits_to_text(long a){
-        return valor_to_text(a*8)+"b";
+        return valor_to_text(a*8, true)+"b";
+    }
+    public String bits_to_text(long a, boolean com_espaco){
+        return valor_to_text(a*8, com_espaco)+"b";
     }
     
     public String bytes_to_text(long a){
-        return valor_to_text(a)+"B";
+        return valor_to_text(a, true)+"B";
+    }
+    public String bytes_to_text(long a, boolean com_espaco){
+        return valor_to_text(a, com_espaco)+"B";
     }
     
-    public String valor_to_text(long unit){
+    public String valor_to_text(long unit, boolean com_espaco){
         int fator=1024;
         String s="";
+        String _espaco=com_espaco?" ":"";
         if ( unit/(fator*fator*fator) >= 1 )
-            return arredondamentoDouble(((double)unit/(fator*fator*fator)) ,2, false)+" G";
+            return arredondamentoDouble(((double)unit/(fator*fator*fator)) ,2, false)+_espaco+"G";
         if ( unit/(fator*fator) >= 1 )
-            return arredondamentoDouble(((double)unit/(fator*fator)) ,2, false)+" M";
+            return arredondamentoDouble(((double)unit/(fator*fator)) ,2, false)+_espaco+"M";
         if ( unit/(fator) >= 1 )
-            return arredondamentoDouble(((double)unit/(fator)) ,2, false)+" K";
-        return unit+" B";
+            return arredondamentoDouble(((double)unit/(fator)) ,2, false)+_espaco+"K";
+        return unit+_espaco+"B";
     }
     
     static void testOn() {
