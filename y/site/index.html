@@ -445,7 +445,7 @@ function load_stream(a, b){
 		// pegando https://01-mcteteu.shop/secret_key/effa3e35a52d0f7c7f8ff7087bc4acde.m3u8 de ==> stream: "https://01-mcteteu.shop/secret_key/effa3e35a52d0f7c7f8ff7087bc4acde.m3u8"
 		b=tmp_name.substr(tmp_name.indexOf('"', tmp_name.indexOf('stream: "'))+1, tmp_name.indexOf('"', tmp_name.indexOf('stream: "')+12)-tmp_name.indexOf('"', tmp_name.indexOf('stream: "'))-1);
 		// usando local por conta do timeout que buga no js
-		b=b.replaceAll('https://', '/');
+		b=b.replaceAll('https://', '/redirect_stream_tv/');
 		console.log('track stream: '+b);
 	}
 	

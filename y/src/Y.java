@@ -23935,7 +23935,7 @@ class ClientThread extends Util{
              || uri.startsWith("/cdn.fazoeli.fun/") // fazueli
              || uri.startsWith("/s2.fazoeli.fun/")                     
              || uri.contains("embedtv")
-             || uri.contains("/secret_key/")
+             || uri.contains("/redirect_stream_tv/") // definitivo
         ){
             String header="";
             if ( uri.startsWith("/onplaytv.net/") || uri.startsWith("/embtv.site/") )
@@ -23947,12 +23947,12 @@ class ClientThread extends Util{
                  || uri.startsWith("/fazoeli.fun/") 
                  || uri.startsWith("/cdn.fazoeli.fun/") 
                  || uri.startsWith("/s2.fazoeli.fun/") 
-             || uri.contains("/secret_key/")
+             || uri.contains("/redirect_stream_tv/") // definitivo
             )
                 header="origin: https://embedtv-0.icu\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
             y.curl_timeout=3000;
-            y.curl(baos, header, "GET", false, false, "https:/"+uri, null, null, null, null, null, null);
+            y.curl(baos, header, "GET", false, false, "https:/"+uri.replaceAll("/redirect_stream_tv/", "/"), null, null, null, null, null, null);
             byte [] bytes=baos.toByteArray();
             output.write(y.curl_response_header.getBytes());
             output.write(bytes);
