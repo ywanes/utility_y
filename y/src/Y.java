@@ -23932,9 +23932,10 @@ class ClientThread extends Util{
              || uri.startsWith("/embedtv.digital/")                     
              || uri.startsWith("/s2.100mundial.icu/")                     
              || uri.startsWith("/fazoeli.fun/")                     
-             || uri.startsWith("/cdn.fazoeli.fun/")                     
+             || uri.startsWith("/cdn.fazoeli.fun/") // fazueli
              || uri.startsWith("/s2.fazoeli.fun/")                     
              || uri.contains("embedtv")
+             || uri.contains("/secret_key/")
         ){
             String header="";
             if ( uri.startsWith("/onplaytv.net/") || uri.startsWith("/embtv.site/") )
@@ -23946,6 +23947,7 @@ class ClientThread extends Util{
                  || uri.startsWith("/fazoeli.fun/") 
                  || uri.startsWith("/cdn.fazoeli.fun/") 
                  || uri.startsWith("/s2.fazoeli.fun/") 
+             || uri.contains("/secret_key/")
             )
                 header="origin: https://embedtv-0.icu\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
