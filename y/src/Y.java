@@ -1131,7 +1131,7 @@ cat buffer.log
             String [] args2 = new String[args.length];            
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
-            Object [] objs = get_parms_curl_header_method_verbose_raw_host_limitRate(args2);
+            Object [] objs = get_parms_curl_header_method_verbose_raw_host_limitRate_location(args2);
             if ( objs != null ){
                 String header=(String)objs[0];
                 String method=(String)objs[1];
@@ -1139,6 +1139,7 @@ cat buffer.log
                 boolean raw=(Boolean)objs[3];
                 String host=(String)objs[4];
                 Long limitRate=(Long)objs[5];
+                curl_flag_location=(Boolean)objs[6];
 
                 if ( host != null ){
                     curl(System.out, header, method, verbose, raw, host, null, limitRate, null, null, null, null);
@@ -1150,7 +1151,7 @@ cat buffer.log
             String [] args2 = new String[args.length];            
             System.arraycopy(args, 0, args2, 0, args.length);
             args2=sliceParm(1,args2);
-            Object [] objsCurl = get_parms_curl_header_method_verbose_raw_host_limitRate(args2);
+            Object [] objsCurl = get_parms_curl_header_method_verbose_raw_host_limitRate_location(args2);
             if ( objsCurl != null ){
                 String header=(String)objsCurl[0];
                 String method=(String)objsCurl[1];
@@ -1158,6 +1159,7 @@ cat buffer.log
                 boolean raw=(Boolean)objsCurl[3];
                 String host=(String)objsCurl[4];  
                 Long limitRate=(Long)objsCurl[5];
+                curl_flag_location=(Boolean)objsCurl[6];
 
                 Object [] objs = get_parms_json_listOn_noHeader_parm(args2);
                 if ( objs != null ){
@@ -6916,10 +6918,12 @@ cat buffer.log
         overflix_verbose(verbose, tags, url);
             
         String html=overflix_custom_curl(url);
+        /*
         if ( curl_response_status == 301 ){
             url=curl_response_location;
             html=overflix_custom_curl(url);
         }
+        */        
         if ( curl_response_status != 200 ){
             overflix_error+="Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html+"\n";
             return;            
@@ -8114,6 +8118,7 @@ cat buffer.log
     }
     
     public String curl_string_retry(String url, int vezes, int wait, int [] status_codes){
+        curl_flag_location=true; // set -L no curl
         String s="";
         for ( int i=0;i<vezes;i++ ){
             s=curl_baos(url).toString();
@@ -8156,6 +8161,7 @@ cat buffer.log
     
     String curl_response_header="";
     String curl_response_location="";
+    boolean curl_flag_location=false;
     int curl_response_status=0;
     long curl_response_len=0;
     String curl_error=null;
@@ -8260,6 +8266,7 @@ cat buffer.log
                                 os_print.write(buffer, i, 1);                        
                                 os_print.flush();
                             }
+
                             curl_response_header+=(char)buffer[i];
                             ending_head[0] = ending_head[1];
                             ending_head[1] = ending_head[2];
@@ -8270,7 +8277,7 @@ cat buffer.log
                                 String [] partes_ = curl_response_header.split("\r\n");
                                 curl_response_status=Integer.parseInt(partes_[0].split(" ")[1]);
                                 for ( int j=0; j<partes_.length;j++ ){
-                                    if ( partes_[j].startsWith("location: ") ){
+                                    if ( partes_[j].startsWith("location: ") || partes_[j].startsWith("Location: ") ){
                                         curl_response_location=partes_[j].split(" ")[1];                                        
                                     }      
                                     if ( partes_[j].startsWith("Content-Length: ") ){
@@ -8330,6 +8337,10 @@ cat buffer.log
             curl_error="Error: " + e.toString();
             System.err.println(curl_error);
         }        
+        if ( curl_flag_location && !curl_response_location.equals("") ){
+            curl(os_print, header, method, verbose, raw, curl_response_location, is_, limitRate, progress_finished_len, progress_len, progress_number, tipo_hash);
+            return;
+        }
         if ( os_print != null ){
             try{
                 os_print.close();
@@ -11388,13 +11399,14 @@ cat buffer.log
         return new Object []{ip, port, sw};
     }
             
-    private Object [] get_parms_curl_header_method_verbose_raw_host_limitRate(String [] args){
+    private Object [] get_parms_curl_header_method_verbose_raw_host_limitRate_location(String [] args){
         String header="";
         String method="GET";
         boolean verbose=false;
         boolean raw=false;
         String host = "";
         Long limitRate=null;
+        Boolean location=false;
 
         while(true){
             if ( args.length > 1 && (args[0].equals("-H") || args[0].equals("--header")) ){
@@ -11420,6 +11432,11 @@ cat buffer.log
                 args=sliceParm(1, args);
                 continue;
             }
+            if ( args.length > 0 && args[0].equals("-L") ){
+                location=true;
+                args=sliceParm(1, args);
+                continue;
+            }
             if ( args.length > 0 && args[0].equals("--raw") ){
                 raw=true;
                 args=sliceParm(1, args);
@@ -11433,7 +11450,7 @@ cat buffer.log
             break;
         }
         header+="\r\n";
-        return new Object []{header, method, verbose, raw, host, limitRate};
+        return new Object []{header, method, verbose, raw, host, limitRate, location};
     }
     
     private Long getLimitRateByText(String a){
@@ -25570,6 +25587,7 @@ class TabelaSAC {
 /* class by manual */                + "    curl http://localhost:8080/v1/movies --limit-rate 20M\n"
 /* class by manual */                + "    obs: -v => verbose\n"
 /* class by manual */                + "    obs2: --header é o mesmo que -H\n"
+/* class by manual */                + "    obs3: -L segue location\n"
 /* class by manual */                + "[y cors]\n"
 /* class by manual */                + "    y cors\n"
 /* class by manual */                + "    y cors -port 4000\n"
@@ -26203,6 +26221,7 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 

@@ -440,6 +440,7 @@ Exemplos...
     curl http://localhost:8080/v1/movies --limit-rate 20M
     obs: -v => verbose
     obs2: --header é o mesmo que -H
+    obs3: -L segue location
 [y cors]
     y cors
     y cors -port 4000
