@@ -257,8 +257,9 @@ let count_title=0;
 
 function html_n_transfers(){
 	let s='';
+	let sz=9;
 	for ( let i=0;i<n_transfer;i++ )
-		s+='<a onclick="transfer_up_down(this)" style="color: #ddd; font-size: 15px;cursor:pointer;">#'+i+'- </a>';
+		s+='<a onclick="transfer_up_down(this)" style="color: #ddd; font-size: ' + sz + 'px;cursor:pointer;">#'+i+'- </a>';
 	return '<td colspan="7" ref="' + count_title + '">' + s + '</td>';
 }
 
@@ -283,15 +284,16 @@ function trajeto_skip_piso(n){
 }
 
 function html_piso(n){
+	let sz=26;
 	if ( n != null ){
 		let n_from=n;
 		let n_to=trajeto_natural_piso(n);
 		let n_to2=trajeto_skip_piso(n);
 		if ( n_to2 == '' ) 
-			return '<td><a style="font-size: 40px;" id="piso_' + n_from + '" to="' + n_to + '" to2="' + n_to2 + '" title="' + n_from + '->' + n_to + '">⬛</a></td>';
-		return '<td><a style="font-size: 40px;" id="piso_' + n_from + '" to="' + n_to + '" to2="' + n_to2 + '" title="' + n_from + '->' + n_to + '|' + n_to2 + '">⬛</a></td>';
+			return '<td><a style="font-size: ' + sz + 'px;" id="piso_' + n_from + '" to="' + n_to + '" to2="' + n_to2 + '" title="' + n_from + '->' + n_to + '">⬛</a></td>';
+		return '<td><a style="font-size: ' + sz + 'px;" id="piso_' + n_from + '" to="' + n_to + '" to2="' + n_to2 + '" title="' + n_from + '->' + n_to + '|' + n_to2 + '">⬛</a></td>';
 	}
-	return '<td><a style="font-size: 40px;">⬛</a></td>';
+	return '<td><a style="font-size: ' + sz + 'px;">⬛</a></td>';
 }
 
 function html_5_pisos(){
@@ -309,9 +311,10 @@ function getHtmlByLvl(n){
 	return '<tr>' + getHtmlByLvl_inTR(n) + '</tr>';
 }
 function html_transfer(){
+	let sz=16;
 	return '' + 
 		`<td><input onclick="change_transfer(this)" type="button" value=" "></td>
-        <td><a style="font-size: 26px;">#1</a></td>
+        <td><a style="font-size: ` + sz + `px;">#1</a></td>
         <td><input onclick="change_transfer(this)" type="button" value=">"></td>`;
 }
 
@@ -365,18 +368,17 @@ function get_num_transfer_up_down_by_text(e){
 	return e;
 }
 
-this.z=null;
 function transfer_up_down(e){
-	this.z=e;
+	let sz=9;
 	let num=get_num_transfer_up_down_by_text(e.innerText);
 	let sinal=get_sinal_transfer_up_down_by_text(e.innerText);
 	if ( ++sinal >= sinais.length )
 		sinal=0;
 	e.innerText = '#'+num+sinais[sinal]+' ';
 	if ( sinal == 0 )
-		e.setAttribute('style', 'color: #ddd; font-size: 15px;cursor:pointer;');
+		e.setAttribute('style', 'color: #ddd; font-size: ' + sz + 'px;cursor:pointer;');
 	else
-		e.setAttribute('style', 'font-size: 15px;cursor:pointer;');
+		e.setAttribute('style', 'font-size: ' + sz + 'px;cursor:pointer;');
 }
 
 function click_lvl(){
