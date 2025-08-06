@@ -253,14 +253,15 @@ transfer 84
 <script type="text/javascript">
 
 let n_transfer=13; // 0 -> 12
-let count_title=0;
+let count_title_piso=0;
+let count_id_transfer=0;
 let sz_transfer_up_down=13;
 
 function html_n_transfers(){
 	let s='';
 	for ( let i=1;i<n_transfer;i++ )
 		s+='<a onclick="transfer_up_down(this)" style="color: #ddd; font-size: ' + sz_transfer_up_down + 'px;cursor:pointer;">#'+i+'- </a>';
-	return '<td colspan="7" ref="' + count_title + '">' + s + '</td>';
+	return '<td colspan="7" ref="' + count_title_piso + '">' + s + '</td>';
 }
 
 function trajeto_natural_piso(n){
@@ -312,16 +313,44 @@ function html_td3(){
 function getHtmlByLvl(n){
 	return '<tr>' + getHtmlByLvl_inTR(n) + '</tr>';
 }
-function html_transfer(){
+function html_transfer(n){
 	let sz=16;
 	return '' + 
 		`<td><input onclick="change_transfer(this)" type="button" value=" "></td>
-        <td><a style="font-size: ` + sz + `px;">#1</a></td>
+        <td><a style="font-size: ` + sz + `px;" id="transfer_`+n+`">#1</a></td>
         <td><input onclick="change_transfer(this)" type="button" value=">"></td>`;
 }
 
-function get_title(){
-	return count_title++;
+function set_transfer(n, txt){
+	// 0 -
+	// 0 #6<-
+	let e=document.getElementById('transfer_'+n);	
+	if ( txt == '-' ){
+		e.parentElement.previousElementSibling.children[0].value=' ';
+		e.parentElement.nextElementSibling.children[0].value=' ';
+		e.innerText='';
+	}else{
+		if ( txt.indexOf('<-') > -1 ){
+			e.parentElement.previousElementSibling.children[0].value='<-';
+			e.parentElement.nextElementSibling.children[0].value=' ';
+			e.innerText=txt.replace('<-', '');		
+		}else{
+			if ( txt.indexOf('->') > -1 ){
+				e.parentElement.previousElementSibling.children[0].value=' ';
+				e.parentElement.nextElementSibling.children[0].value='->';
+				e.innerText=txt.replace('->', '');		
+			}else{
+				console.log('valores nao reconhecidos para o metodo set_transfer: ' + n + ' ' + txt);
+			}
+		}
+	}	
+}
+
+function get_title_piso(){
+	return count_title_piso++;
+}
+function get_id_transfer(){
+	return count_id_transfer++;
 }
 
 function getHtmlByLvl_inTR(n){
@@ -335,15 +364,17 @@ function getHtmlByLvl_inTR(n){
 		html_td3()+
 		html_piso();   
 	if ( resto == 7 || resto == 6 || resto == 2 || resto == 1 ){
-		let title2=get_title(); // tem que ser nessa ordem 2 1 0
-		let title1=get_title();
-		let title0=get_title();
+		let title_piso2=get_title_piso(); // tem que ser nessa ordem 2 1 0
+		let title_piso1=get_title_piso();
+		let title_piso0=get_title_piso();
+		let id_transfer1=get_id_transfer();
+		let id_transfer0=get_id_transfer();
 		return '' +
-		html_piso(title0)+
-		html_transfer()+
-		html_piso(title1)+
-		html_transfer()+
-		html_piso(title2);    
+		html_piso(title_piso0)+
+		html_transfer(id_transfer0)+
+		html_piso(title_piso1)+
+		html_transfer(id_transfer1)+
+		html_piso(title_piso2);    
 	}
 	if ( resto == 5 || resto == 3 ) return '' +
 		html_piso()+
@@ -383,7 +414,8 @@ function transfer_up_down(e){
 }
 
 function click_lvl(){
-	count_title=0;
+	count_title_piso=0;
+	count_id_transfer=0;
 	let lvl=parseInt(document.getElementById('text_lvl').value);
 	let s='';
 	for ( let i=0;i<lvl;i++ )
