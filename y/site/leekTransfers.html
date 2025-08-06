@@ -255,13 +255,14 @@ transfer 84
 let n_transfer=13; // 0 -> 12
 let count_title_piso=0;
 let count_id_transfer=0;
+let count_id_transfers=0;
 let sz_transfer_up_down=13;
 
-function html_n_transfers(){
+function html_transfers(n){
 	let s='';
 	for ( let i=1;i<n_transfer;i++ )
 		s+='<a onclick="transfer_up_down(this)" style="color: #ddd; font-size: ' + sz_transfer_up_down + 'px;cursor:pointer;">#'+i+'- </a>';
-	return '<td colspan="7" ref="' + count_title_piso + '">' + s + '</td>';
+	return '<td colspan="7" id="transfers_' + n + '">' + s + '</td>';
 }
 
 function trajeto_natural_piso(n){
@@ -352,12 +353,15 @@ function get_title_piso(){
 function get_id_transfer(){
 	return count_id_transfer++;
 }
+function get_id_transfers(){
+	return count_id_transfers++;
+}
 
 function getHtmlByLvl_inTR(n){
 	let resto=n%10;
 	if ( resto == 9 ) return '' +
 		html_td0()+
-		html_n_transfers()+
+		html_transfers(get_id_transfers())+
 		html_piso();	    
 	if ( resto == 8 || resto == 0 ) return '' +
 		html_5_pisos()+
@@ -382,7 +386,7 @@ function getHtmlByLvl_inTR(n){
 		html_5_pisos();   
 	if ( resto == 4 ) return '' +
 		html_piso()+	    
-		html_n_transfers()+
+		html_transfers(get_id_transfers())+
 		html_td0();  
 }
 
@@ -416,6 +420,7 @@ function transfer_up_down(e){
 function click_lvl(){
 	count_title_piso=0;
 	count_id_transfer=0;
+	count_id_transfers=0;
 	let lvl=parseInt(document.getElementById('text_lvl').value);
 	let s='';
 	for ( let i=0;i<lvl;i++ )
