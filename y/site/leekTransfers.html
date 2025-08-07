@@ -228,13 +228,13 @@ transfer 84
 
 
 <div style="display: flex; justify-content: center;">
-<input onclick="click_plan()" title="carregar plano de jogo" type="button" value="//6 - muito bom
-[#4 up]
-#2->  #4->[Refined]
-#4->  -
-[#2 down #4 down #6 down]
-#3->  #1<-
-#6<-  -
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//6 - muito bom
+[#4↑]
+#2-> #4->[Refined]
+#4-> -
+[#2↓ #4↓ #6↓]
+#3-> #1<-
+#6<- -
 " style="text-align: left;">
 </div>
 
@@ -258,12 +258,35 @@ let count_id_transfer=0;
 let count_id_transfers=0;
 let sz_transfer_up_down=13;
 
-function html_transfers(n){
-	let s='';
-	for ( let i=1;i<n_transfer;i++ )
-		s+='<a onclick="transfer_up_down(this)" style="color: #ddd; font-size: ' + sz_transfer_up_down + 'px;cursor:pointer;">#'+i+'- </a>';
-	return '<td colspan="7" id="transfers_' + n + '">' + s + '</td>';
+function html_transfers_outer(n, text){
+	return '<td colspan="7" id="transfers_' + n + '">' + html_transfers_inner(text) + '</td>';
 }
+
+function html_transfers_inner(text){
+	let s='';
+	if ( text == null )
+		text='[]';
+	let texts=text.replace('[', '').replace(']', '').split(' ');
+	for ( let i=1;i<n_transfer;i++ ){
+		let e='#'+i+'- ';
+		let cor='color: #ddd; ';
+		for ( let j=0;j<texts.length;j++ ){
+			if ( texts[j] == ('#' + i + '↑') ){
+				e='#' + i + '↑ ';
+				cor='';
+				break;
+			}
+			if ( texts[j] == ('#' + i + '↓') ){
+				e='#' + i + '↓ ';
+				cor='';
+				break;
+			}
+		}
+		s+='<a onclick="transfer_up_down(this)" style="' + cor + 'font-size: ' + sz_transfer_up_down + 'px;cursor:pointer;">' + e + '</a>';
+	}
+	return s;
+}
+
 
 function trajeto_natural_piso(n){
 	if ( n%12 == 0 || n%12 == 2 || n%12 == 5 || n%12 == 6 || n%12 == 8 || n%12 == 9 )
@@ -361,7 +384,7 @@ function getHtmlByLvl_inTR(n){
 	let resto=n%10;
 	if ( resto == 9 ) return '' +
 		html_td0()+
-		html_transfers(get_id_transfers())+
+		html_transfers_outer(get_id_transfers())+
 		html_piso();	    
 	if ( resto == 8 || resto == 0 ) return '' +
 		html_5_pisos()+
@@ -386,7 +409,7 @@ function getHtmlByLvl_inTR(n){
 		html_5_pisos();   
 	if ( resto == 4 ) return '' +
 		html_piso()+	    
-		html_transfers(get_id_transfers())+
+		html_transfers_outer(get_id_transfers())+
 		html_td0();  
 }
 
@@ -415,6 +438,46 @@ function transfer_up_down(e){
 		e.setAttribute('style', 'color: #ddd; font-size: ' + sz_transfer_up_down + 'px;cursor:pointer;');
 	else
 		e.setAttribute('style', 'font-size: ' + sz_transfer_up_down + 'px;cursor:pointer;');
+}
+
+function load_plan(text){
+	count_title_piso=0;
+	count_id_transfer=0;
+	count_id_transfers=0;
+	texts=text.split('\n');
+	if ( texts.length > 0 && texts[0].indexOf('//') == 0 )
+		texts=texts.slice(1);
+	let lvl=0;
+	let s='';
+	let count_item=0;
+	let count_transfer=0;
+	let count_transfers=0;
+	if ( texts.length > 0 )
+		document.getElementById('tablebase').innerHTML='';
+	while(texts.length > 0){
+		let tail=texts.pop(texts.length-1);
+		let resto=count_item%3;
+		if ( resto == 0 || resto == 1 ){
+			document.getElementById('tablebase').innerHTML=getHtmlByLvl(lvl++)+document.getElementById('tablebase').innerHTML;
+			document.getElementById('tablebase').innerHTML=getHtmlByLvl(lvl++)+document.getElementById('tablebase').innerHTML;
+			let tails=tail.split(' ');
+			if ( tails[0].indexOf('[Refined]') > -1 )
+				tails[0]='-';
+			if ( tails[1].indexOf('[Refined]') > -1 )
+				tails[1]='-';
+			set_transfer(count_transfer++, tails[1]);
+			set_transfer(count_transfer++, tails[0]);
+		}else{
+			document.getElementById('tablebase').innerHTML=getHtmlByLvl(lvl++)+document.getElementById('tablebase').innerHTML;
+			document.getElementById('transfers_'+count_transfers++).innerHTML=html_transfers_inner(tail);			
+		}
+		count_item++;
+	}
+}
+
+this.z=null;
+function click_plan(e){	
+	load_plan(e.value.trim());
 }
 
 function click_lvl(){
