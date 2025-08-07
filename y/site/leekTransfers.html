@@ -221,11 +221,13 @@ transfer 84
 <br>
 
 <div style="display: flex; justify-content: center;">
-<input type="text" id="text_lvl" value="11" title="quantidade de linhas no editor"><input onclick="click_lvl()" type="button" value="reload" title="quantidade de linhas no editor">
+<input type="text" id="text_lvl" value="11" title="quantidade de linhas no editor">
+&nbsp;<input onclick="click_lvl()" type="button" value="reset" title="reseta e gera editor com n linhas">
+&nbsp;<input onclick="empilha(getHtmlByLvl(document.getElementById('tablebase').children.length))" type="button" value="+" title="adiciona uma linha sem resetar editor">
+&nbsp;<input onclick="document.getElementById('tablebase').children[0].remove()" type="button" value="-" title="remove uma linha sem resetar editor">
 </div>
 
 <br>
-
 
 <div style="display: flex; justify-content: center;">
 <input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//6 - muito bom
@@ -440,6 +442,14 @@ function transfer_up_down(e){
 		e.setAttribute('style', 'font-size: ' + sz_transfer_up_down + 'px;cursor:pointer;');
 }
 
+function reset_pilha(){
+	document.getElementById('tablebase').innerHTML='';
+}
+
+function empilha(txt){
+	document.getElementById('tablebase').innerHTML=txt+document.getElementById('tablebase').innerHTML;
+}
+
 function load_plan(text){
 	count_title_piso=0;
 	count_id_transfer=0;
@@ -453,13 +463,13 @@ function load_plan(text){
 	let count_transfer=0;
 	let count_transfers=0;
 	if ( texts.length > 0 )
-		document.getElementById('tablebase').innerHTML='';
+		reset_pilha();
 	while(texts.length > 0){
 		let tail=texts.pop(texts.length-1);
 		let resto=count_item%3;
 		if ( resto == 0 || resto == 1 ){
-			document.getElementById('tablebase').innerHTML=getHtmlByLvl(lvl++)+document.getElementById('tablebase').innerHTML;
-			document.getElementById('tablebase').innerHTML=getHtmlByLvl(lvl++)+document.getElementById('tablebase').innerHTML;
+			empilha(getHtmlByLvl(lvl++));
+			empilha(getHtmlByLvl(lvl++));
 			let tails=tail.split(' ');
 			if ( tails[0].indexOf('[Refined]') > -1 )
 				tails[0]='-';
@@ -468,7 +478,7 @@ function load_plan(text){
 			set_transfer(count_transfer++, tails[1]);
 			set_transfer(count_transfer++, tails[0]);
 		}else{
-			document.getElementById('tablebase').innerHTML=getHtmlByLvl(lvl++)+document.getElementById('tablebase').innerHTML;
+			empilha(getHtmlByLvl(lvl++));
 			document.getElementById('transfers_'+count_transfers++).innerHTML=html_transfers_inner(tail);			
 		}
 		count_item++;
@@ -485,10 +495,9 @@ function click_lvl(){
 	count_id_transfer=0;
 	count_id_transfers=0;
 	let lvl=parseInt(document.getElementById('text_lvl').value);
-	let s='';
+	reset_pilha();
 	for ( let i=0;i<lvl;i++ )
-		s=getHtmlByLvl(i)+s;
-	document.getElementById('tablebase').innerHTML=s;
+		empilha(getHtmlByLvl(i));
 }
 
 function change_transfer(e){
