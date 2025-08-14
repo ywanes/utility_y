@@ -8172,6 +8172,17 @@ cat buffer.log
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
                 Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
         try{   
+            if ( host.startsWith("https://embedtv-2.icu/") ){
+                String s="HTTP/1.1 200 OK\n\n" + runtimeExec(new String[]{"curl", host});
+                os_print.write(s.getBytes());
+                os_print.flush();
+                try{
+                    os_print.close();
+                }catch(Exception e){}                
+                return;
+            }else{
+                System.out.println(host);
+            }
             String protocol="HTTP";
             int len=0;
             int port = 80;  
@@ -17904,6 +17915,10 @@ class Util{
         commands=addParm(cp, 5, commands);
         commands=addParm("Y", 6, commands);
         return runtimeExec(null, commands, path_y, std_in, null);
+    }
+    
+    public String runtimeExec(String [] commands) throws Exception{
+        return runtimeExec(null, commands, null, null, false);
     }
     
     public String runtimeExecError = "";
