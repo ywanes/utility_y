@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 25px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+        
+        .calendars {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            justify-content: center;
+        }
+        
+        .calendar {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            width: 100%;
+            max-width: 450px;
+            transition: transform 0.3s ease;
+        }
+        
+        .calendar:hover {
+            transform: translateY(-5px);
+        }
+        
+        .calendar-header {
+            text-align: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            color: #2c3e50;
+        }
+        
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #7f8c8d;
+        }
+        
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+        }
+        
+        .day {
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .day:hover {
+            background-color: #f1f3f5;
+            transform: scale(1.05);
+        }
+        
+        .other-month {
+            color: #ccc;
+            opacity: 0.7;
+        }
+        
+        .highlighted {
+            font-weight: bold;
+            background-color: #7FFF00;
+            border: 2px solid #7FFF00;
+        }
+        
+        .today {
+            background-color: #2196f3;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 0 8px rgba(33, 150, 243, 0.6);
+        }
+        
+        .day-number {
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+        }
+        
+        .info-box {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .calendars {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .calendar {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>faxina Cida</h1>
+            <p class="description"></p>
+        </header>
+        
+        <div class="calendars">
+            <div class="calendar" id="current-month">
+                <div class="calendar-header">
+                    <h2 id="current-month-name"></h2>
+                </div>
+                <div class="weekdays">
+                    <div>Dom</div>
+                    <div>Seg</div>
+                    <div>Ter</div>
+                    <div>Qua</div>
+                    <div>Qui</div>
+                    <div>Sex</div>
+                    <div>Sáb</div>
+                </div>
+                <div class="days" id="current-days"></div>
+            </div>
+            
+            <div class="calendar" id="next-month">
+                <div class="calendar-header">
+                    <h2 id="next-month-name"></h2>
+                </div>
+                <div class="weekdays">
+                    <div>Dom</div>
+                    <div>Seg</div>
+                    <div>Ter</div>
+                    <div>Qua</div>
+                    <div>Qui</div>
+                    <div>Sex</div>
+                    <div>Sáb</div>
+                </div>
+                <div class="days" id="next-days"></div>
+            </div>
+        </div>
+        
+        <div class="legend" style="display: none">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #2196f3;"></div>
+                <span>Hoje</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #ffebee; border: 1px solid #f44336;"></div>
+                <span>Destaque (semana ímpar)</span>
+            </div>
+        </div>
+        
+        <div class="test-info" style="display: none">
+            <h3>Informações de Configuração</h3>
+            <p id="config-info"></p>
+            <p id="current-week-info"></p>
+        </div>
+        
+        <div class="info-box" style="display: none">
+            <h3>Como funciona a alternância por semana Unix</h3>
+            <p>A semana Unix é calculada a partir de 1º de Janeiro de 1970. Cada semana tem aproximadamente 604.800.000 milissegundos.</p>
+            <p>O sistema verifica se o número da semana é ímpar para determinar se o dia selecionado deve ser destacado em vermelho.</p>
+        </div>
+    </div>
+
+    <script>
+        const TARGET_WEEKDAY=3; 
+        const TEST_DATE=null; // new Date(2025, 8, 23);
+		const sync_0_1=0;
+		
+        let currentDate = TEST_DATE || new Date();
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos do DOM
+            const configInfo = document.getElementById('config-info');
+            const currentWeekInfo = document.getElementById('current-week-info');
+            
+            // Mostrar informações de configuração
+            const weekdays = ["Domingo", "Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado"];
+            configInfo.textContent = `Configuração: Destacando ${weekdays[TARGET_WEEKDAY]}s em semanas ímpares. Data simulada: ${formatDate(currentDate)}`;
+            
+            // Inicializar os calendários
+            updateCalendars();
+            
+            function updateCalendars() {
+                const currentMonth = currentDate.getMonth();
+                const currentYear = currentDate.getFullYear();
+                
+                // Calcular a semana Unix atual
+                const currentWeek = getWeekNumber(currentDate);
+                currentWeekInfo.textContent = `A data atual (${formatDate(currentDate)}) está na semana Unix número ${currentWeek} (${currentWeek % 2 === 0 ? 'par' : 'ímpar'}).`;
+                
+                // Criar datas para o mês atual e próximo
+                const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
+                const nextMonth = nextMonthDate.getMonth();
+                const nextMonthYear = nextMonthDate.getFullYear();
+                
+                // Nomes dos meses em português
+                const monthNames = [
+                    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+                ];
+                
+                // Atualizar os nomes dos meses
+                document.getElementById('current-month-name').textContent = `${monthNames[currentMonth]} ${currentYear}`;
+                document.getElementById('next-month-name').textContent = `${monthNames[nextMonth]} ${nextMonthYear}`;
+                
+                // Gerar calendários
+                renderCalendar(currentMonth, currentYear, 'current-days');
+                renderCalendar(nextMonth, nextMonthYear, 'next-days');
+            }
+            
+            function renderCalendar(month, year, elementId) {
+                const daysContainer = document.getElementById(elementId);
+                daysContainer.innerHTML = '';
+                
+                // Primeiro dia do mês
+                const firstDay = new Date(year, month, 1);
+                // Último dia do mês
+                const lastDay = new Date(year, month + 1, 0);
+                
+                // Dias do mês anterior para preencher a primeira semana
+                const prevMonthLastDay = new Date(year, month, 0).getDate();
+                const startingDayOfWeek = firstDay.getDay(); // 0 = Domingo, 1 = Segunda, etc.
+                
+                // Adicionar dias do mês anterior
+                for (let i = 0; i < startingDayOfWeek; i++) {
+                    const dayElement = createDayElement(prevMonthLastDay - startingDayOfWeek + i + 1, true);
+                    daysContainer.appendChild(dayElement);
+                }
+                
+                // Adicionar dias do mês atual
+                for (let i = 1; i <= lastDay.getDate(); i++) {
+                    const currentDateInLoop = new Date(year, month, i);
+                    const dayOfWeek = currentDateInLoop.getDay();
+                    const isTargetDay = dayOfWeek === TARGET_WEEKDAY;
+                    const isToday = currentDate.getDate() === i && 
+                                    currentDate.getMonth() === month && 
+                                    currentDate.getFullYear() === year;
+                    
+                    let shouldHighlight = false;
+                    
+                    if (isTargetDay) {
+                        // Obter o número da semana Unix
+                        const weekNumber = getWeekNumber(currentDateInLoop);
+                        // Destacar apenas se a semana for ímpar
+                        shouldHighlight = weekNumber % 2 === sync_0_1;
+                    }
+                    
+                    const dayElement = createDayElement(i, false, isToday, shouldHighlight);
+                    daysContainer.appendChild(dayElement);
+                }
+                
+                // Adicionar dias do próximo mês
+                const totalCells = 42; // 6 semanas de 7 dias
+                const daysRemaining = totalCells - (startingDayOfWeek + lastDay.getDate());
+                for (let i = 1; i <= daysRemaining; i++) {
+                    const dayElement = createDayElement(i, true);
+                    daysContainer.appendChild(dayElement);
+                }
+            }
+            
+            function createDayElement(day, isOtherMonth, isToday = false, shouldHighlight = false) {
+                const dayElement = document.createElement('div');
+                dayElement.classList.add('day');
+                
+                if (isOtherMonth) {
+                    dayElement.classList.add('other-month');
+                }
+                
+                if (isToday) {
+                    dayElement.classList.add('today');
+                }
+                
+                if (shouldHighlight) {
+                    dayElement.classList.add('highlighted');
+                }
+                
+                const dayNumber = document.createElement('span');
+                dayNumber.classList.add('day-number');
+                dayNumber.textContent = day;
+                
+                dayElement.appendChild(dayNumber);
+                
+                return dayElement;
+            }
+            
+            function getWeekNumber(date) {
+                // 1º de Janeiro de 1970 foi uma quinta-feira (número do dia da semana 4)
+                const epoch = new Date(1970, 0, 1);
+                
+                // Calcular a diferença em milissegundos
+                const diffMs = date - epoch;
+                
+                // Calcular o número de semanas (arredondado para baixo)
+                const weeksSinceEpoch = Math.floor(diffMs / (1000 * 60 * 60 * 24 * 7));
+                
+                return weeksSinceEpoch;
+            }
+            
+            function formatDate(date) {
+                const day = date.getDate().toString().padStart(2, '0');
+                const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                const year = date.getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+        });
+    </script>
+</body>
+</html>
