@@ -8180,8 +8180,6 @@ cat buffer.log
                     os_print.close();
                 }catch(Exception e){}                
                 return;
-            }else{
-                System.out.println(host);
             }
             String protocol="HTTP";
             int len=0;
