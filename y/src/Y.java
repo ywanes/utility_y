@@ -7189,6 +7189,116 @@ cat buffer.log
         "    console.log('URL obtida:', result);\n" +
         "});";
         
+        script="import { Selector, ClientFunction } from 'testcafe';\n" +
+        "\n" +
+        "fixture('Executar Script reCAPTCHA')\n" +
+        "    .page('"+url+"'); // Substitua pela URL do seu site\n" +
+        "\n" +
+        "test('Obter token reCAPTCHA e enviar requisição', async t => {\n" +
+        "    // 1. Carregar a API do reCAPTCHA se não estiver presente\n" +
+        "    await t.eval(() => {\n" +
+        "        if (typeof grecaptcha === 'undefined') {\n" +
+        "            const script = document.createElement('script');\n" +
+        "            script.src = 'https://www.google.com/recaptcha/api.js?render=6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd';\n" +
+        "            document.head.appendChild(script);\n" +
+        "        }\n" +
+        "    });\n" +
+        "\n" +
+        "    // 2. Executar o script principal com 4 tentativas\n" +
+        "    let result = null;\n" +
+        "    let attempts = 0;\n" +
+        "    const maxAttempts = 4;\n" +
+        "\n" +
+        "    while (attempts < maxAttempts && !result) {\n" +
+        "        attempts++;\n" +
+        "        console.log(`Tentativa ${attempts} de ${maxAttempts} para resolver o captcha...`);\n" +
+        "\n" +
+        "        try {\n" +
+        "            result = await ClientFunction(() => {\n" +
+        "                return new Promise((resolve, reject) => {\n" +
+        "                    // Verifica se o reCAPTCHA está carregado\n" +
+        "                    const checkRecaptcha = () => {\n" +
+        "                        if (typeof grecaptcha !== 'undefined' && \n" +
+        "                            typeof grecaptcha.ready !== 'undefined' &&\n" +
+        "                            typeof grecaptcha.execute !== 'undefined') {\n" +
+        "                            \n" +
+        "                            grecaptcha.ready(function() {\n" +
+        "                                grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"})\n" +
+        "                                    .then(function(token) {\n" +
+        "                                        const csrfMeta = document.querySelector('meta[name=\"csrf\"]');\n" +
+        "                                        if (!csrfMeta) {\n" +
+        "                                            reject('Meta tag CSRF não encontrada');\n" +
+        "                                            return;\n" +
+        "                                        }\n" +
+        "                                        \n" +
+        "                                        const csrf = csrfMeta.content;\n" +
+        "                                        \n" +
+        "                                        // Usando fetch ao invés de jQuery\n" +
+        "                                        fetch(window.location.href, {\n" +
+        "                                            method: 'POST',\n" +
+        "                                            headers: {\n" +
+        "                                                'Content-Type': 'application/x-www-form-urlencoded',\n" +
+        "                                            },\n" +
+        "                                            body: `csrf=${csrf}&token=${token}&a=genticket`\n" +
+        "                                        })\n" +
+        "                                        .then(response => {\n" +
+        "                                            if (!response.ok) {\n" +
+        "                                                throw new Error(`HTTP error! status: ${response.status}`);\n" +
+        "                                            }\n" +
+        "                                            return response.json();\n" +
+        "                                        })\n" +
+        "                                        .then(data => {\n" +
+        "                                            if (data && data.url) {\n" +
+        "                                                resolve(data.url);\n" +
+        "                                            } else {\n" +
+        "                                                reject('Resposta não contém URL');\n" +
+        "                                            }\n" +
+        "                                        })\n" +
+        "                                        .catch(error => reject(`Erro na requisição: ${error.message}`));\n" +
+        "                                    })\n" +
+        "                                    .catch(error => reject(`Erro ao executar reCAPTCHA: ${error.message}`));\n" +
+        "                            });\n" +
+        "                        } else {\n" +
+        "                            setTimeout(checkRecaptcha, 500); // Aumentado para 500ms\n" +
+        "                        }\n" +
+        "                    };\n" +
+        "                    \n" +
+        "                    // Timeout para evitar loop infinito\n" +
+        "                    setTimeout(() => reject('Timeout ao carregar reCAPTCHA'), 10000);\n" +
+        "                    checkRecaptcha();\n" +
+        "                });\n" +
+        "            })();\n" +
+        "\n" +
+        "            console.log(`Captcha resolvido na tentativa ${attempts}`);\n" +
+        "            break; // Sai do loop se bem-sucedido\n" +
+        "\n" +
+        "        } catch (error) {\n" +
+        "            console.log(`Tentativa ${attempts} falhou:`, error.message || error);\n" +
+        "            \n" +
+        "            // Aguarda um tempo antes da próxima tentativa (backoff exponencial)\n" +
+        "            const waitTime = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s, etc.\n" +
+        "            console.log(`Aguardando ${waitTime/1000} segundos antes da próxima tentativa...`);\n" +
+        "            await t.wait(waitTime);\n" +
+        "            \n" +
+        "            // Tenta recarregar a página na última tentativa se ainda falhar\n" +
+        "            if (attempts === maxAttempts - 1) {\n" +
+        "                console.log('Recarregando página para última tentativa...');\n" +
+        "                await t.eval(() => location.reload());\n" +
+        "                await t.wait(3000); // Aguarda a página carregar\n" +
+        "            }\n" +
+        "        }\n" +
+        "    }\n" +
+        "\n" +
+        "    // 3. Verifica se obteve resultado\n" +
+        "    if (result) {\n" +
+        "        await t.expect(result).ok('O token foi gerado e a requisição foi enviada com sucesso');\n" +
+        "        console.log('URL obtida:', result);\n" +
+        "    } else {\n" +
+        "        throw new Error(`Falha ao resolver captcha após ${maxAttempts} tentativas`);\n" +
+        "    }\n" +
+        "});";
+
+        
         File f = File.createTempFile("meu-arquivo-temporario", ".js");
         String path=f.getAbsolutePath();
         FileWriter fw=new FileWriter(f);
@@ -23977,9 +24087,9 @@ class ClientThread extends Util{
                  || uri.startsWith("/fazoeli.fun/") 
                  || uri.startsWith("/cdn.fazoeli.fun/") 
                  || uri.startsWith("/s2.fazoeli.fun/") 
-             || uri.contains("/redirect_stream_tv/") // definitivo
+                 || uri.contains("/redirect_stream_tv/") // definitivo
             )
-                header="origin: https://embedtv-0.icu\n";
+                header="origin: https://embedtv-3.icu\nreferer: https://embedtv-3.icu/\n";
             ByteArrayOutputStream baos=new ByteArrayOutputStream();
             y.curl_timeout=3000;
             y.curl(baos, header, "GET", false, false, "https:/"+uri.replaceAll("/redirect_stream_tv/", "/"), null, null, null, null, null, null);

@@ -164,6 +164,37 @@ let error_NaN_load='ERROR TIMEOUT LOAD';
 let hls=null;
 let hist_seconds_aovivo=[0, 0];
 
+/*
+// Interceptação - fetch e XMLHttpRequest
+(function() {        
+    function modifyUrl(url) {
+		if ( url.indexOf('/rola/') > -1 )
+			return '/redirect_stream_tv' + url.substr(7);
+        return url;        
+    }
+    
+    // Intercepta Fetch
+    const originalFetch = window.fetch;
+    window.fetch = function(input, init) {
+        let url = typeof input === 'string' ? input : input.url;
+        const modifiedUrl = modifyUrl(url);
+        
+        const modifiedInput = typeof input === 'string' 
+            ? modifiedUrl 
+            : { ...input, url: modifiedUrl };
+        
+        return originalFetch.call(this, modifiedInput, init);
+    };
+    
+    // Intercepta XMLHttpRequest
+    const originalOpen = XMLHttpRequest.prototype.open;
+    XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
+        const modifiedUrl = modifyUrl(url);
+        return originalOpen.call(this, method, modifiedUrl, async, user, password);
+    };
+})();
+*/
+
 function toggleFullScreen(event, op){    
     o_que_ta=document.fullscreenElement;
     if ( o_que_ta == null )
