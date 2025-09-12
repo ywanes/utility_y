@@ -317,6 +317,7 @@ Exemplos...
     y terminal
 [y dotaMutandoAll]
     y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,neBullet"
+    y dotaMutandoAll -sleep 3 -nicks "no_ocr"
 [y audio]
     y audio vol
     y audio mute

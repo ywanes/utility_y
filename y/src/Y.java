@@ -14206,20 +14206,25 @@ while True:
             robotMouseMove(998, 480); 
             sleepMillis(50);
             
-            // get players by OCR
-            String [] players=ocr_getNamesDota();
             // skynet
             String [] naoBloquearEssesNomes="ynet,Analista de Sistema,eBullet,iusky,frist,Madald,arhart,aerte".split(",");
             if ( nicks != null )
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
             mostra_array(naoBloquearEssesNomes);
-            if ( players == null ){
-                System.out.println("warning.. names não detectados!" );
-                players=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
-            }else{
-                System.out.println("jogadores reconhecidos:");
-                mostra_array(players);
+            // get players by OCR
+            String [] players=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
+            if ( naoBloquearEssesNomes.length == 1 && naoBloquearEssesNomes[0].equals("no_ocr") ){
+                //pass
+                System.out.println("skip no_ocr!" );                
+            }else{         
+                players=ocr_getNamesDota();
+                if ( players == null ){
+                    System.out.println("warning.. names não detectados!" );                
+                }else{
+                    System.out.println("jogadores reconhecidos:");
+                    mostra_array(players);
+                }
             }
             
             // mutando os jogadores
@@ -25268,6 +25273,7 @@ class TabelaSAC {
 
 
 
+
 /* class by manual */    class Arquivos{
 /* class by manual */        public String lendo_arquivo_pacote(String caminho){
 /* class by manual */            if ( caminho.equals("/y/manual") )
@@ -25591,6 +25597,7 @@ class TabelaSAC {
 /* class by manual */                + "    y terminal\n"
 /* class by manual */                + "[y dotaMutandoAll]\n"
 /* class by manual */                + "    y dotaMutandoAll -sleep 3 -nicks \"ynet,Analista de Sistema,neBullet\"\n"
+/* class by manual */                + "    y dotaMutandoAll -sleep 3 -nicks \"no_ocr\"\n"
 /* class by manual */                + "[y audio]\n"
 /* class by manual */                + "    y audio vol\n"
 /* class by manual */                + "    y audio mute\n"
@@ -26348,6 +26355,7 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
 
 
 
