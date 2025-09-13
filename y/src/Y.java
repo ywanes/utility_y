@@ -25588,6 +25588,8 @@ class TabelaSAC {
 /* class by manual */                + "[y iso]\n"
 /* class by manual */                + "    y iso win11.iso source\n"
 /* class by manual */                + "    y iso source win11.iso\n"
+/* class by manual */                + "    obs: detalhes build na pasta sources, cmd admin:\n"
+/* class by manual */                + "    dism /Get-WimInfo /WimFile:\"install.wim\"\n"
 /* class by manual */                + "    obs: criar iso do tipo linux pode dar ruim\n"
 /* class by manual */                + "[y [juros|emprestimo]]\n"
 /* class by manual */                + "    y juros price valor 15000 juros 1.0 a.m 10 parcelas\n"
@@ -26355,6 +26357,8 @@ class TabelaSAC {
 /* class by manual */            return "";
 /* class by manual */        }
 /* class by manual */    }
+
+
 
 
 

@@ -308,6 +308,8 @@ Exemplos...
 [y iso]
     y iso win11.iso source
     y iso source win11.iso
+    obs: detalhes build na pasta sources, cmd admin:
+    dism /Get-WimInfo /WimFile:"install.wim"
     obs: criar iso do tipo linux pode dar ruim
 [y [juros|emprestimo]]
     y juros price valor 15000 juros 1.0 a.m 10 parcelas
