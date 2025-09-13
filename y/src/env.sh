@@ -91,11 +91,12 @@ then
       echo Alerta LTS, roda o comando abaixo!!:
       echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
     fi
-    if [ $((`apt-mark showhold | grep ^libegl-mesa0$ | wc -l`)) == 0 ] && [ $((`dmidecode  | grep -i product | grep VMware | wc -l`)) -ge 1 ]
-    then
-      echo o comando abaixo foi disparado automaticamente por questao de segurança
-      apt-mark hold libegl-mesa0
-    fi
+    # desfazendo apt-mark unhold libegl-mesa0
+    #if [ $((`apt-mark showhold | grep ^libegl-mesa0$ | wc -l`)) == 0 ] && [ $((`dmidecode  | grep -i product | grep VMware | wc -l`)) -ge 1 ]
+    #then
+    #  echo o comando abaixo foi disparado automaticamente por questao de segurança
+    #  apt-mark hold libegl-mesa0
+    #fi
     ip6m=2002:2002:2002:2002
     ip6b=::100
     ipn=renato
