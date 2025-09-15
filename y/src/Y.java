@@ -18786,10 +18786,13 @@ class Util{
                     return osGetTypeTrueCache;                     
                 }
                 s=tryPivotWindowsAndAjustsValues(s, types[i]);
+                // extras
+                s=tryGetCurrentBuildNumberWindowsByOs(s, types[i]);
                 s=tryGetKernellInLinuxByOs(s, types[i]);
                 s=tryGetFirewallInWindowsByOs(s, types[i]);
                 s=tryGetDefaultAudioInWindowsByOs(s, types[i]);
                 s=tryGetRamGPUInWindowsByOs(s, types[i]);
+                s=s.replace("\r\n\r\n", "\r\n").replace("\n\n", "\n");
                 osGetTypeFalseCache=s;
                 return osGetTypeFalseCache;                     
             }
@@ -18811,6 +18814,18 @@ class Util{
         return s+"GPU_Memory: " + retorno.trim() + " GB";
     }
         
+    public String tryGetCurrentBuildNumberWindowsByOs(String s, String type){
+        if ( ! type.equals("Windows") )
+            return s;
+
+        String retorno=runtimeExec(null, new String[]{"Reg", "Query", "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "/v", "CurrentBuildNumber"}, null, null, null);
+        if ( retorno == null || retorno.equals("") )
+            return s;
+        if ( retorno.split(" ").length <= 13 )
+            return s;
+        return s+"Build_OS: " + retorno.split(" ")[13];
+    }
+    
     public String tryPivotWindowsAndAjustsValues(String s, String type){
         String retorno="";
         if ( ! type.equals("Windows") )
@@ -18911,7 +18926,7 @@ class Util{
             return s+"Firewall: ?";
         if ( p1.equals("Ligado") || p1.equals("ON") || p2.equals("Ligado") || p2.equals("ON") )
             return s+"Firewall: On";
-        return s.replace("\r\n\r\n", "\r\n")+"Firewall: Off";
+        return s+"Firewall: Off";
     }
 
     public String tryGetDefaultAudioInWindowsByOs(String s, String type){
