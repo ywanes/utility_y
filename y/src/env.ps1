@@ -36,12 +36,11 @@ Invoke-WebRequest -uri "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay
 
 
 # https://www.openlogic.com/openjdk-downloads
-Invoke-WebRequest -uri "https://builds.openlogic.com/downloadJDK/openlogic-openjdk/8u412-b08/openlogic-openjdk-8u412-b08-windows-x64.zip" -Method "GET"  -Outfile java.zip
-# teste.. Invoke-WebRequest -uri "https://arch.iit.edu/files/zip/22344/150-dpi.zip" -Method "GET"  -Outfile java.zip
+Invoke-WebRequest -uri "https://builds.openlogic.com/downloadJDK/openlogic-openjdk/21.0.8+9/openlogic-openjdk-21.0.8+9-windows-x64.zip" -Method "GET"  -Outfile java.zip
 Expand-Archive -LiteralPath 'java.zip'
-[Environment]::SetEnvironmentVariable("JAVA_HOME", "c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64", "Machine")
+[Environment]::SetEnvironmentVariable("JAVA_HOME", "c:\programFiles\java\openlogic-openjdk-21.0.8+9-windows-x64", "Machine")
 
-$NewPATH = ("%JAVA_HOME%\bin;c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64\bin;c:\programFiles;" + [Environment]::GetEnvironmentVariable("PATH"))
+$NewPATH = ("%JAVA_HOME%\bin;c:\programFiles\java\openlogic-openjdk-21.0.8+9-windows-x64\bin;c:\programFiles;" + [Environment]::GetEnvironmentVariable("PATH"))
 [Environment]::SetEnvironmentVariable("PATH", $NewPath, [EnvironmentVariableTarget]::Machine)   
 
 

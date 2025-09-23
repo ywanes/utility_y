@@ -14828,7 +14828,13 @@ while True:
                     && s.contains("\r100 ")
                     && s.split("\n")[s.split("\n").length-2].startsWith("Note: ") 
                     && s.split("\n")[s.split("\n").length-1].startsWith("Note: ")
-                )
+                ) ||
+                    s.replaceAll("\r\n", "\n").trim().equals("""
+Note: Y.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: Y.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+""".trim()) 
             )
                 System.out.println("ok");
             else{
@@ -14986,6 +14992,8 @@ class Tests extends Util{
     public Tests(String [] args, boolean flag_test) throws Exception{
         // comando abaixo para rodar
         //y test
+        String force_java_21="""
+        """;
         if ( flag_test ){
             teste_unico1();
             return;
@@ -16845,18 +16853,17 @@ class Util{
         //if ( 1 == 1 ) return "Realtek PCIe GbE Family Controller;;192.168.15.11;2804:1b2:1002:3473:921:b978:fa99:9cd;2804:1b2:1002:3473:2119:9128:824e:f2d5;fe80::2ff8:c289:c063:8686";
         
         String result="";
+        String result2="";
+        boolean has_items=false;
         try{
-            int count_interface=0;
             int count_address_in_interface=0;
             java.util.Enumeration<java.net.NetworkInterface> interfaces = java.net.NetworkInterface.getNetworkInterfaces();
             while (interfaces.hasMoreElements()) {
                 java.net.NetworkInterface iface = interfaces.nextElement();
                 if (iface.isLoopback() || !iface.isUp())
-                    continue;
-                if (count_interface > 0)
-                    result+=";;;";
-                result+=iface.getDisplayName()+";;";
-                count_interface++;
+                    continue;    
+                has_items=false;
+                result2=iface.getDisplayName()+";;";
                 count_address_in_interface=0;
                 String [] filter=new String[]{".", ":"};
                 for(int i=0;i<filter.length;i++){
@@ -16869,11 +16876,17 @@ class Util{
                         if (!ip.contains(filter[i]))
                             continue;
                         if ( count_address_in_interface > 0 )
-                            result+=";";
-                        result+=ip;
+                            result2+=";";
+                        result2+=ip;
+                        has_items=true;
                         count_address_in_interface++;
                     }
-                }            
+                } 
+                if ( has_items ){
+                    if ( !result.equals("") )
+                        result+=";;;";
+                    result+=result2;
+                }
             }
         }catch(Exception e){
             erro_amigavel_exception(e);
