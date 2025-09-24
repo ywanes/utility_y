@@ -25302,1097 +25302,1097 @@ class TabelaSAC {
 
 
 
-/* class by manual */    class Arquivos{
-/* class by manual */        public String lendo_arquivo_pacote(String caminho){
-/* class by manual */            if ( caminho.equals("/y/manual") )
-/* class by manual */                return ""
-/* class by manual */                + "usage:\n"
-/* class by manual */                + "  [y daemon]\n"
-/* class by manual */                + "  [y take]\n"
-/* class by manual */                + "  [y banco fromCSV -outTable tabelaA selectInsert]\n"
-/* class by manual */                + "  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
-/* class by manual */                + "  [y banco conn,hash executeInsert]\n"
-/* class by manual */                + "  [y banco conn,hash execute [|execute..]]\n"
-/* class by manual */                + "  [y banco conn,hash createjobexecute]\n"
-/* class by manual */                + "  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
-/* class by manual */                + "  [y banco executejob]\n"
-/* class by manual */                + "  [y banco buffer [|-n_lines 4000] [|-log buffer.log]]\n"
-/* class by manual */                + "  [y selectCSV]\n"
-/* class by manual */                + "  [y xlsxToCSV]\n"
-/* class by manual */                + "  [y token]\n"
-/* class by manual */                + "  [y gettoken]\n"
-/* class by manual */                + "  [y json]\n"
-/* class by manual */                + "  [y zip]\n"
-/* class by manual */                + "  [y gzip]\n"
-/* class by manual */                + "  [y gunzip]\n"
-/* class by manual */                + "  [y tar]\n"
-/* class by manual */                + "  [y untar]\n"
-/* class by manual */                + "  [y tarlist]\n"
-/* class by manual */                + "  [y echo]\n"
-/* class by manual */                + "  [y printf]\n"
-/* class by manual */                + "  [y sdiff]\n"
-/* class by manual */                + "  [y progressBar]\n"
-/* class by manual */                + "  [y xargs]\n"
-/* class by manual */                + "  [y cat]\n"
-/* class by manual */                + "  [y redis]\n"
-/* class by manual */                + "  [y sort]\n"
-/* class by manual */                + "  [y iso]\n"
-/* class by manual */                + "  [y [juros|emprestimo]]\n"
-/* class by manual */                + "  [y terminal]\n"
-/* class by manual */                + "  [y dotaMutandoAll]\n"
-/* class by manual */                + "  [y audio]\n"
-/* class by manual */                + "  [y isWindowsAdm]\n"
-/* class by manual */                + "  [y devices]\n"
-/* class by manual */                + "  [y cep]\n"
-/* class by manual */                + "  [y users]\n"
-/* class by manual */                + "  [y disconnect]\n"
-/* class by manual */                + "  [y dns|host]\n"
-/* class by manual */                + "  [y lower]\n"
-/* class by manual */                + "  [y upper]\n"
-/* class by manual */                + "  [y removeAcentos]\n"
-/* class by manual */                + "  [y xor]\n"
-/* class by manual */                + "  [y md5]\n"
-/* class by manual */                + "  [y sha1]\n"
-/* class by manual */                + "  [y sha256]\n"
-/* class by manual */                + "  [y aes]\n"
-/* class by manual */                + "  [y base64]\n"
-/* class by manual */                + "  [y grep]\n"
-/* class by manual */                + "  [y wc]\n"
-/* class by manual */                + "  [y len]\n"
-/* class by manual */                + "  [y head]\n"
-/* class by manual */                + "  [y tail]\n"
-/* class by manual */                + "  [y cut]\n"
-/* class by manual */                + "  [y yt]\n"
-/* class by manual */                + "  [y curl]\n"
-/* class by manual */                + "  [y cors]\n"
-/* class by manual */                + "  [y [sed|tr]]\n"
-/* class by manual */                + "  [y n]\n"
-/* class by manual */                + "  [y rn]\n"
-/* class by manual */                + "  [y [bytesToInts|bi]]\n"
-/* class by manual */                + "  [y [intsToBytes|ib]]\n"
-/* class by manual */                + "  [y od]\n"
-/* class by manual */                + "  [y touch]\n"
-/* class by manual */                + "  [y rm]\n"
-/* class by manual */                + "  [y cp]\n"
-/* class by manual */                + "  [y mv]\n"
-/* class by manual */                + "  [y cd]\n"
-/* class by manual */                + "  [y iconv]\n"
-/* class by manual */                + "  [y tee]\n"
-/* class by manual */                + "  [y uniq]\n"
-/* class by manual */                + "  [y quebra]\n"
-/* class by manual */                + "  [y seq]\n"
-/* class by manual */                + "  [y tr]\n"
-/* class by manual */                + "  [y add]\n"
-/* class by manual */                + "  [y awk print]\n"
-/* class by manual */                + "  [y dev_null]\n"
-/* class by manual */                + "  [y dev_in]\n"
-/* class by manual */                + "  [y scp]\n"
-/* class by manual */                + "  [y execSsh]\n"
-/* class by manual */                + "  [y ssh]\n"
-/* class by manual */                + "  [y sshinfo]\n"
-/* class by manual */                + "  [y sftp]\n"
-/* class by manual */                + "  [y [serverRouter|sr]]\n"
-/* class by manual */                + "  [y [httpServer|hs]]\n"
-/* class by manual */                + "  [y [httpProxy|hp]]\n"
-/* class by manual */                + "  [y wget]\n"
-/* class by manual */                + "  [y pwd]\n"
-/* class by manual */                + "  [y find]\n"
-/* class by manual */                + "  [y ls]\n"
-/* class by manual */                + "  [y lss]\n"
-/* class by manual */                + "  [y du]\n"
-/* class by manual */                + "  [y split]\n"
-/* class by manual */                + "  [y regua]\n"
-/* class by manual */                + "  [y link]\n"
-/* class by manual */                + "  [y os]\n"
-/* class by manual */                + "  [y pss]\n"
-/* class by manual */                + "  [y pid]\n"
-/* class by manual */                + "  [y date]\n"
-/* class by manual */                + "  [y cronometro]\n"
-/* class by manual */                + "  [y steam]\n"
-/* class by manual */                + "  [y [cls|clear|clean]]\n"
-/* class by manual */                + "  [y ping]\n"
-/* class by manual */                + "  [y pings]\n"
-/* class by manual */                + "  [y pingMine]\n"
-/* class by manual */                + "  [y ips]\n"
-/* class by manual */                + "  [y mouse]  \n"
-/* class by manual */                + "  [y mixer]\n"
-/* class by manual */                + "  [y gravador]\n"
-/* class by manual */                + "  [y play]\n"
-/* class by manual */                + "  [y call]\n"
-/* class by manual */                + "  [y remote]\n"
-/* class by manual */                + "  [y injectMicLine]\n"
-/* class by manual */                + "  [y kill]\n"
-/* class by manual */                + "  [y win]\n"
-/* class by manual */                + "  [y speed]\n"
-/* class by manual */                + "  [y lock]\n"
-/* class by manual */                + "  [y monitor]\n"
-/* class by manual */                + "  [y printScreen]\n"
-/* class by manual */                + "  [y ocr]\n"
-/* class by manual */                + "  [y paste]\n"
-/* class by manual */                + "  [y mkv]\n"
-/* class by manual */                + "  [y [thumbnail|tn]]\n"
-/* class by manual */                + "  [y insta]\n"
-/* class by manual */                + "  [y bmp]\n"
-/* class by manual */                + "  [y decodeUrl]\n"
-/* class by manual */                + "  [y encodeUrl]\n"
-/* class by manual */                + "  [y test]\n"
-/* class by manual */                + "  [y tests]\n"
-/* class by manual */                + "  [y controlc]\n"
-/* class by manual */                + "  [y random]\n"
-/* class by manual */                + "  [y talk]\n"
-/* class by manual */                + "  [y sign]\n"
-/* class by manual */                + "  [y [overflix|of]]\n"
-/* class by manual */                + "  [y connGui]\n"
-/* class by manual */                + "  [y var]\n"
-/* class by manual */                + "  [y cotacao]\n"
-/* class by manual */                + "  [y [update|u]]\n"
-/* class by manual */                + "  [y help]\n"
-/* class by manual */                + "\n"
-/* class by manual */                + "Exemplos...\n"
-/* class by manual */                + "\n"
-/* class by manual */                + "[y daemon]\n"
-/* class by manual */                + "    y daemon\n"
-/* class by manual */                + "    y daemon -server\n"
-/* class by manual */                + "    y d r a\n"
-/* class by manual */                + "    y d list\n"
-/* class by manual */                + "    y d tail AA\n"
-/* class by manual */                + "    y d restart AA\n"
-/* class by manual */                + "[y take]\n"
-/* class by manual */                + "    y take\n"
-/* class by manual */                + "    y take file1 pasta2\n"
-/* class by manual */                + "    Obs: envia o conteudo desta para para outro computador ou pasta\n"
-/* class by manual */                + "    Obs2: após digitar y take, ele irá mostrar o comando que será utilizado na outra ponta\n"
-/* class by manual */                + "[y banco fromCSV -outTable tabelaA selectInsert]\n"
-/* class by manual */                + "    cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert\n"
-/* class by manual */                + "[y banco conn,hash [select|selectInsert|selectCSV] [|select..]]\n"
-/* class by manual */                + "    echo \"select 1 from dual\" | y banco conn,hash select\n"
-/* class by manual */                + "    y banco conn,hash select \"select 1 from dual\"\n"
-/* class by manual */                + "    echo \"select * from tabela1\" | y banco conn,hash selectInsert\n"
-/* class by manual */                + "    cat select.sql | y banco conn,hash selectCSV\n"
-/* class by manual */                + "    y banco -conn conn.. selectInsert\n"
-/* class by manual */                + "[y banco conn,hash executeInsert]\n"
-/* class by manual */                + "    cat listaDeInsert.sql | y banco conn,hash executeInsert\n"
-/* class by manual */                + "    echo \"insert into tabela1 values(1,2,3)\" | y banco conn,hash executeInsert\n"
-/* class by manual */                + "    echo \"insert into tabela1 values(1,2,3);\" | y banco conn,hash executeInsert\n"
-/* class by manual */                + "    obs: bug?. Use execute\n"
-/* class by manual */                + "[y banco conn,hash execute [|execute..]]\n"
-/* class by manual */                + "    echo \"truncate table tabela1\" | y banco conn,hash execute\n"
-/* class by manual */                + "    y banco conn,hash execute \"drop table tabela1\"\n"
-/* class by manual */                + "    cat blocoAnonimo | y banco conn,hash execute\n"
-/* class by manual */                + "[y banco conn,hash createjobexecute]\n"
-/* class by manual */                + "    echo \"truncate table tabela1\" | y banco conn,hash createjobexecute\n"
-/* class by manual */                + "[y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]\n"
-/* class by manual */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB carga\n"
-/* class by manual */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc carga\n"
-/* class by manual */                + "    echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createTable carga\n"
-/* class by manual */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC carga\n"
-/* class by manual */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC trunc carga\n"
-/* class by manual */                + "    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC createTable carga\n"
-/* class by manual */                + "[y banco executejob]\n"
-/* class by manual */                + "    (\n"
-/* class by manual */                + "        echo \"select * from TABELA_AAA\" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc createjobcarga\n"
-/* class by manual */                + "        echo \"select * from TABELA_CCC\" | y banco connIn,hash connOut,hash -outTable TABELA_CCC trunc createjobcarga\n"
-/* class by manual */                + "    ) | y banco executejob\n"
-/* class by manual */                + "[y banco buffer [|-n_lines 4000] [|-log buffer.log]]    \n"
-/* class by manual */                + "    echo \"select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert\n"
-/* class by manual */                + "[y selectCSV]\n"
-/* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this\"\n"
-/* class by manual */                + "    y cat file.csv | y selectCSV \"select rownum seq,* from this\"\n"
-/* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this where a = '3'\"\n"
-/* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this limit 10\"\n"
-/* class by manual */                + "    y cat file.csv | y selectCSV \"select * from this limit 10\" -outJson\n"
-/* class by manual */                + "    echo '[{\"a\":\"3\" },{\"a\": \"4\"}]' | y json \"[elem for elem in data]\" | y selectCSV \"select * from this where a = '3'\"\n"
-/* class by manual */                + "    y selectCSV -csv file.csv \"select * from this\"\n"
-/* class by manual */                + "    y selectCSV -csv file.csv -sql consulta.sql\n"
-/* class by manual */                + "    obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean\n"
-/* class by manual */                + "    obs2: se usar rownum com where ele poderá mostrar o numero errado! esse bug será corrigido depois\n"
-/* class by manual */                + "[y xlsxToCSV]\n"
-/* class by manual */                + "    xlsxToCSV arquivo.xlsx mostraEstrutura\n"
-/* class by manual */                + "    xlsxToCSV arquivo.xlsx listaAbas\n"
-/* class by manual */                + "    xlsxToCSV arquivo.xlsx numeroAba 1\n"
-/* class by manual */                + "    xlsxToCSV arquivo.xlsx nomeAba Planilha1\n"
-/* class by manual */                + "    xlsxToCSV arquivo.xlsx exportAll\n"
-/* class by manual */                + "    obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1\n"
-/* class by manual */                + "[y xml]\n"
-/* class by manual */                + "    cat arquivo.xml | y xml mostraEstrutura\n"
-/* class by manual */                + "    xml arquivo.xml mostraEstrutura\n"
-/* class by manual */                + "    cat arquivo.xml | y xml mostraTags\n"
-/* class by manual */                + "[y token]\n"
-/* class by manual */                + "    y token value\n"
-/* class by manual */                + "    obs: y token value -> retorna o hash\n"
-/* class by manual */                + "    obs2: é preciso ja ter o TOKEN_Y definido\n"
-/* class by manual */                + "[y gettoken]\n"
-/* class by manual */                + "    y gettoken hash\n"
-/* class by manual */                + "[y json]\n"
-/* class by manual */                + "   y cat file.json | y json mostraEstrutura\n"
-/* class by manual */                + "   y cat file.json | y json mostraTabela\n"
-/* class by manual */                + "   y cat file.json | y json \"[elem for elem in data['items']]\"\n"
-/* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data['items']]\"\n"
-/* class by manual */                + "   y cat file.json | y json \"[elem['id'] for elem in data]\"\n"
-/* class by manual */                + "   obs: parametro de apoio => mostraEstruturaDebug\n"
-/* class by manual */                + "   obs2: exemplo com lista, representada por '_':\n"
-/* class by manual */                + "         y echo '{\"folders\": [{\"id\": 1, \"lists\":[{\"id\": 11},{\"id\": 12}] },{\"id\": 2, \"lists\":[{\"id\": 21},{\"id\": 22}] }] }' | y json \"[elem for elem in data['folders']['_']['lists']]\"\n"
-/* class by manual */                + "   obs3: selecionando alguns campos:\n"
-/* class by manual */                + "         y echo '{\"folders\": {\"id1\":11, \"id2\": 22, \"id3\": 33} }' | y json \"[[elem['id1'],elem['id3']] for elem in data['folders']]\"\n"
-/* class by manual */                + "   obs4: parametro noHeader => tira o header\n"
-/* class by manual */                + "   obs5: parametro list => resultado em forma de lista sem o header\n"
-/* class by manual */                + "[y zip]\n"
-/* class by manual */                + "    y zip add File1.txt > saida.zip\n"
-/* class by manual */                + "    cat File1.txt | y zip add -name File1.txt > saida.zip\n"
-/* class by manual */                + "    y zip add /pasta1/pasta2 > saida.zip\n"
-/* class by manual */                + "    y zip add pasta2 -lvlStore > saida.zip\n"
-/* class by manual */                + "    y zip add pasta1 pasta2 file3 -lvlStore > saida.zip\n"
-/* class by manual */                + "    y zip list arquivo.zip\n"
-/* class by manual */                + "    cat arquivo.zip | y zip list\n"
-/* class by manual */                + "    y zip extract entrada.zip\n"
-/* class by manual */                + "    cat entrada.zip | y zip extract\n"
-/* class by manual */                + "    y zip extract entrada.zip -out /destino\n"
-/* class by manual */                + "    cat entrada.zip | y zip extract -out /destino\n"
-/* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
-/* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino\n"
-/* class by manual */                + "    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
-/* class by manual */                + "    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt\n"
-/* class by manual */                + "    obs: se add pasta e a descricao de pasta tem \"/\" ou \"\\\\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.\n"
-/* class by manual */                + "[y gzip]\n"
-/* class by manual */                + "    cat arquivo | y gzip > arquivo.gz\n"
-/* class by manual */                + "[y gunzip]\n"
-/* class by manual */                + "    cat arquivo.gz | y gunzip > arquivo\n"
-/* class by manual */                + "[y tar]\n"
-/* class by manual */                + "    y tar in > test.tar\n"
-/* class by manual */                + "    y tar test.tar in\n"
-/* class by manual */                + "    obs: suporta arquivo com ateh 8 gigas\n"
-/* class by manual */                + "[y untar]\n"
-/* class by manual */                + "    y cat test.tar | y untar\n"
-/* class by manual */                + "    y untar test.tar\n"
-/* class by manual */                + "    y untar test.tar in/in2/only\n"
-/* class by manual */                + "[y tarlist]\n"
-/* class by manual */                + "    y tarlist test.tar\n"
-/* class by manual */                + "[y echo]\n"
-/* class by manual */                + "    echo a b c\n"
-/* class by manual */                + "    echo \"a b c\"\n"
-/* class by manual */                + "    echo \"a*\"\n"
-/* class by manual */                + "[y printf]\n"
-/* class by manual */                + "    y printf a b c\n"
-/* class by manual */                + "    y printf a b c\n"
-/* class by manual */                + "    y printf [COR/VERDE] oi\n"
-/* class by manual */                + "    y printf [COR/VERMELHO] oi\n"
-/* class by manual */                + "    y printf [COR/AZUL] oi\n"
-/* class by manual */                + "    y printf [COR/BRANCO] oi\n"
-/* class by manual */                + "    y printf [COR/VERDE/CINZA] oi\n"
-/* class by manual */                + "    y printf [COR/VERDE/BRANCO] oi\n"
-/* class by manual */                + "    y printf [COR/VERMELHO/CINZA] oi\n"
-/* class by manual */                + "    y printf [COR/VERMELHO/BRANCO] oi\n"
-/* class by manual */                + "    y printf [COR/AZUL/CINZA] oi\n"
-/* class by manual */                + "    y printf [COR/AZUL/BRANCO] oi\n"
-/* class by manual */                + "    y printf [COR/BRANCO/CINZA] oi\n"
-/* class by manual */                + "    y printf [COR] => lista as cores disponiveis ja colorindo\n"
-/* class by manual */                + "    obs: diferente do echo, o printf nao gera \\n no final\n"
-/* class by manual */                + "    obs2: echo -n AA gera o mesmo efeito que, printf AA\n"
-/* class by manual */                + "[y sdiff]\n"
-/* class by manual */                + "    y sdiff file1.txt file2.txt\n"
-/* class by manual */                + "[y progressBar]\n"
-/* class by manual */                + "    ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar\n"
-/* class by manual */                + "    ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar -uniqLine\n"
-/* class by manual */                + "[y xargs]\n"
-/* class by manual */                + "    y echo a | y xargs echo\n"
-/* class by manual */                + "    y echo a | y xargs echo \"{}\" \"{}\"\n"
-/* class by manual */                + "    y cls && y find | y grep \".\" | y tr \"\"\"\" \"\" | y xargs echo \"y printf \\\"\\\" | ffmpeg -i \\\"{}\\\"  -max_muxing_queue_size 1024 \\\"{}.mp4\\\" && y rm \\\"{}\\\"\" | y tr \"rmvb.mp4\" \"mp4\" | y tr \"mpg.mp4\" \"mp4\"\n"
-/* class by manual */                + "    y find | y tr \"\"\"\" \"\" | y xargs echo \"\\\"{}\\\"\" | y xargs echo \"y mv {} {}\" | y tr \"-dublado-www.encontrei.tv.mp4\\\"\\n\" \".mp4\\\"\\n\"\n"
-/* class by manual */                + "    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf \"\" | ffmpeg...\n"
-/* class by manual */                + "[y cat]\n"
-/* class by manual */                + "    y cat arquivo\n"
-/* class by manual */                + "    y cat \"<<EOF>\" file1.txt\n"
-/* class by manual */                + "    y cat \"<<EOF>>\" file1.txt\n"
-/* class by manual */                + "    y cat \">\" file1.txt\n"
-/* class by manual */                + "    y cat \">>\" file1.txt\n"
-/* class by manual */                + "    y cat\n"
-/* class by manual */                + "    obs: pode ser outra tag, não precisa ser EOF\n"
-/* class by manual */                + "    obs2: até o momento o codigo \"<<EOF>\" só esta liberado para windows!\n"
-/* class by manual */                + "[y redis]\n"
-/* class by manual */                + "    procure por y help httpServer\n"
-/* class by manual */                + "    na parte -redisDir\n"
-/* class by manual */                + "[y sort]\n"
-/* class by manual */                + "    y cat file | y sort > file_ordenado\n"
-/* class by manual */                + "[y iso]\n"
-/* class by manual */                + "    y iso win11.iso source\n"
-/* class by manual */                + "    y iso source win11.iso\n"
-/* class by manual */                + "    obs: detalhes build na pasta sources, cmd admin:\n"
-/* class by manual */                + "    dism /Get-WimInfo /WimFile:\"install.wim\"\n"
-/* class by manual */                + "    obs: criar iso do tipo linux pode dar ruim\n"
-/* class by manual */                + "[y [juros|emprestimo]]\n"
-/* class by manual */                + "    y juros price valor 15000 juros 1.0 a.m 10 parcelas\n"
-/* class by manual */                + "    y juros sac valor 15000 juros 1.0 a.m 10 parcelas\n"
-/* class by manual */                + "    referencia: https://calculojuridico.com.br/calculadora-price-sac/\n"
-/* class by manual */                + "[y terminal]\n"
-/* class by manual */                + "    y terminal\n"
-/* class by manual */                + "[y dotaMutandoAll]\n"
-/* class by manual */                + "    y dotaMutandoAll -sleep 3 -nicks \"ynet,Analista de Sistema,neBullet\"\n"
-/* class by manual */                + "    y dotaMutandoAll -sleep 3 -nicks \"no_ocr\"\n"
-/* class by manual */                + "[y audio]\n"
-/* class by manual */                + "    y audio vol\n"
-/* class by manual */                + "    y audio mute\n"
-/* class by manual */                + "    y audio setvol 0.75\n"
-/* class by manual */                + "    y audio setmute true\n"
-/* class by manual */                + "    y audio mutingWhileProgramInPrincipalMonitor WorldOfTanks.exe\n"
-/* class by manual */                + "    obs: setvol e setmute precisa ser adm\n"
-/* class by manual */                + "    obs2: verificando se esta adm: y isWindowsAdm\n"
-/* class by manual */                + "[y isWindowsAdm]\n"
-/* class by manual */                + "    y isWindowsAdm\n"
-/* class by manual */                + "[y devices]\n"
-/* class by manual */                + "    y devices\n"
-/* class by manual */                + "    y devices \"-classe\" \"AudioEndpoint\" \"-classe\" \"Net\"\n"
-/* class by manual */                + "    obs: pnputil /disable-device [id]\n"
-/* class by manual */                + "         pnputil /disable-device \"USB\\VID_045E&PID_00DB\\6&870CE29&0&1\"\n"
-/* class by manual */                + "         pnputil /enable-device \"USB\\VID_045E&PID_00DB\\6&870CE29&0&1\"\n"
-/* class by manual */                + "    obs2: comando para windows\n"
-/* class by manual */                + "[y cep]\n"
-/* class by manual */                + "    y cep /sp/campinas/almeida prado\n"
-/* class by manual */                + "    y cep 13083-750\n"
-/* class by manual */                + "    y cep 13083750\n"
-/* class by manual */                + "[y users]\n"
-/* class by manual */                + "    y users\n"
-/* class by manual */                + "[y disconnect]\n"
-/* class by manual */                + "    y disconnect\n"
-/* class by manual */                + "    y disconnect seAtivoDesconectaLoop1Segundo\n"
-/* class by manual */                + "[y dns|host]\n"
-/* class by manual */                + "    y host examplo.com\n"
-/* class by manual */                + "    y dns example.com\n"
-/* class by manual */                + "    y dns example.com 8.8.8.8\n"
-/* class by manual */                + "    obs: em desenvolvimento, a resposta ainda não é muito legível!\n"
-/* class by manual */                + "    alguns dns's:\n"
-/* class by manual */                + "      dns.adguard.com\n"
-/* class by manual */                + "      dns.sse.cisco.com\n"
-/* class by manual */                + "      dns.google # google\n"
-/* class by manual */                + "      one.one.one.one # Cloudflare\n"
-/* class by manual */                + "      dns.opendns.com # usado pela claro\n"
-/* class by manual */                + "      dns9.quad9.net\n"
-/* class by manual */                + "      security-filter-dns.cleanbrowsing.org\n"
-/* class by manual */                + "      resolver1.telesp.net.br # usado pela vivo\n"
-/* class by manual */                + "      resolver2.telesp.net.br # usado pela vivo\n"
-/* class by manual */                + "    obs: O adguard responde 0.0.0.0 para o nomes que pretende bloquear, comando para teste: y dns googleadservices.com dns.adguard.com\n"
-/* class by manual */                + "[y lower]\n"
-/* class by manual */                + "    y echo AA | y lower\n"
-/* class by manual */                + "[y upper]\n"
-/* class by manual */                + "    y echo aa | y upper\n"
-/* class by manual */                + "[y removeAcentos]\n"
-/* class by manual */                + "    y cat file | y removeAcentos\n"
-/* class by manual */                + "[y xor]\n"
-/* class by manual */                + "    y cat file | y xor 100\n"
-/* class by manual */                + "    y cat beltmatic_002.sav | y xor 104948 \"7,215,169,11,62,56,139,40,128,196,29,36,86,12,244,116,175,83,57,142,3,255,249,75,208,143,44,62,165,92,216,64,24,1,125,20,82,107,43,11,123,121,31,99,250,252,15,214,90,234,96,112,163\" > source.zip\n"
-/* class by manual */                + "    obs: 104948 sendo o length do file beltmatic_002.sav\n"
-/* class by manual */                + "    logica interna:\n"
-/* class by manual */                + "    for (let i = 0; i < bytes.length; i++)\n"
-/* class by manual */                + "      bytes[i] ^= key[(i + bytes.length) % 53];\n"
-/* class by manual */                + "    obs2: valor entre 0 e 255. Por padrao 100\n"
-/* class by manual */                + "[y md5]\n"
-/* class by manual */                + "    cat arquivo | y md5\n"
-/* class by manual */                + "[y sha1]\n"
-/* class by manual */                + "    cat arquivo | y sha1\n"
-/* class by manual */                + "[y sha256]\n"
-/* class by manual */                + "    cat arquivo | y sha256\n"
-/* class by manual */                + "[y aes]\n"
-/* class by manual */                + "    cat arquivo | y aes SENHA | y base64\n"
-/* class by manual */                + "    cat arquivo | y aes -e SENHA | y base64\n"
-/* class by manual */                + "    cat arquivo | y aes -d SENHA | y base64\n"
-/* class by manual */                + "    cat arquivo | y aes -e SENHA -md MD5 | y base64\n"
-/* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA256 | y base64\n"
-/* class by manual */                + "    cat arquivo | y aes -e SENHA -md SHA-256 | y base64\n"
-/* class by manual */                + "    cat arquivo | y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA | y base64\n"
-/* class by manual */                + "    obs: O comando \"y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA\" equivale à \"openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA\"\n"
-/* class by manual */                + "    obs2: O valor de salt(-S) deverá contér 16 hexas maiúsculos, ex: AAAAAAAAAAAAAAAA\n"
-/* class by manual */                + "    obs3: Se utilizar o salt na encriptacao, entao devera utilizar o mesmo salt na decriptacao\n"
-/* class by manual */                + "[y base64]\n"
-/* class by manual */                + "    cat arquivo | y base64\n"
-/* class by manual */                + "    cat arquivo | y base64 -d\n"
-/* class by manual */                + "    y base64 -e \"texto\"\n"
-/* class by manual */                + "    y base64 -d \"YQ==\"\n"
-/* class by manual */                + "    y printf \"texto\" | base64 -e \n"
-/* class by manual */                + "    obs: -e para encode e -d para decode\n"
-/* class by manual */                + "[y grep]\n"
-/* class by manual */                + "    cat arquivo | y grep ^Texto$\n"
-/* class by manual */                + "    cat arquivo | y grep AB\n"
-/* class by manual */                + "    cat arquivo | y grep -i -v aa bb cc\n"
-/* class by manual */                + "[y wc]\n"
-/* class by manual */                + "    cat arquivo | y wc -l\n"
-/* class by manual */                + "    cat arquivo | y wc -w\n"
-/* class by manual */                + "    cat arquivo | y wc -c\n"
-/* class by manual */                + "    obs: conta. \n"
-/* class by manual */                + "         l -> lines, w -> words, c -> chars\n"
-/* class by manual */                + "[y len]\n"
-/* class by manual */                + "    cat arquivo | y len\n"
-/* class by manual */                + "    obs: echo aabaa | tr b \"\\n\" | y len\n"
-/* class by manual */                + "    result: 2\n"
-/* class by manual */                + "            2\n"
-/* class by manual */                + "[y head]\n"
-/* class by manual */                + "    cat arquivo | y head\n"
-/* class by manual */                + "    cat arquivo | y head -30\n"
-/* class by manual */                + "[y tail]\n"
-/* class by manual */                + "    cat arquivo | y tail\n"
-/* class by manual */                + "    cat arquivo | y tail -30\n"
-/* class by manual */                + "[y cut]\n"
-/* class by manual */                + "    cat arquivo | y cut -c-10\n"
-/* class by manual */                + "    cat arquivo | y cut -c5-10\n"
-/* class by manual */                + "    cat arquivo | y cut -c5-\n"
-/* class by manual */                + "    cat arquivo | y cut -c5\n"
-/* class by manual */                + "    cat arquivo | y cut -c5-10,15-17\n"
-/* class by manual */                + "[y yt]\n"
-/* class by manual */                + "    y yt\n"
-/* class by manual */                + "    obs: irá exibir a msg:\n"
-/* class by manual */                + "    cd D:\\\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py http...\n"
-/* class by manual */                + "[y curl]\n"
-/* class by manual */                + "    echo '{\"id\":1}' | y curl \\\n"
-/* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
-/* class by manual */                + "        -H \"other: other\" \\\n"
-/* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
-/* class by manual */                + "    cat file | y curl \\\n"
-/* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
-/* class by manual */                + "        -X POST http://localhost:8080/v1/movies\n"
-/* class by manual */                + "    curl http://localhost:8080/v1/movies\n"
-/* class by manual */                + "    curl http://localhost:8080/v1/movies --limit-rate 20M\n"
-/* class by manual */                + "    obs: -v => verbose\n"
-/* class by manual */                + "    obs2: --header é o mesmo que -H\n"
-/* class by manual */                + "    obs3: -L segue location\n"
-/* class by manual */                + "[y cors]\n"
-/* class by manual */                + "    y cors\n"
-/* class by manual */                + "    y cors -port 4000\n"
-/* class by manual */                + "    y cors -ip 200.200.200.200 -port 4000\n"
-/* class by manual */                + "    y cors -sw \"https://super\" -sw \"https://teste\"\n"
-/* class by manual */                + "    obs: -sw significa startWith\n"
-/* class by manual */                + "    obs2: cors serve como bypass de \"blocked by CORS policy\"\n"
-/* class by manual */                + "    obs3: -sw é opcional, mas uma vez utilizado, só permitirá os valores informados pelos -sw\n"
-/* class by manual */                + "    obs4: o cors não usa stream, ou seja, captura 100% da resposta para depois transmitir.\n"
-/* class by manual */                + "    obs5: local host de ip classe C não funciona no browser\n"
-/* class by manual */                + "    exemplo de requisição js:\n"
-/* class by manual */                + "    var b_status=0;\n"
-/* class by manual */                + "    function b(url){\n"
-/* class by manual */                + "      if(location.href.indexOf('http://')!= 0){alert('cors nao pode ser executado nessa aba! somente em http://');return;}\n"
-/* class by manual */                + "      if(url.indexOf('?')>-1) url=url.split('?')[0]+'?base64?'+btoa(url);\n"
-/* class by manual */                + "      var xhr = new XMLHttpRequest();\n"
-/* class by manual */                + "      xhr.withCredentials = false;\n"
-/* class by manual */                + "      xhr.open(\"GET\", url, false);\n"
-/* class by manual */                + "      xhr.overrideMimeType(\"text/plain; charset=x-user-defined\");\n"
-/* class by manual */                + "      xhr.send(null);\n"
-/* class by manual */                + "      b_status=xhr.status;\n"
-/* class by manual */                + "      return xhr.responseText;\n"
-/* class by manual */                + "    }\n"
-/* class by manual */                + "    b('http://200.200.200.200:4000?https://site.com');\n"
-/* class by manual */                + "[y curlJson]\n"
-/* class by manual */                + "    y curlJson \\\n"
-/* class by manual */                + "        -H \"Content-Type: application/json\" \\\n"
-/* class by manual */                + "        -H \"other: other\" \\\n"
-/* class by manual */                + "        http://localhost:8080/v1/movies \\\n"
-/* class by manual */                + "        \"[elem['id'] for elem in data]\"\n"
-/* class by manual */                + "    obs: mistura de curl com json\n"
-/* class by manual */                + "[y [sed|tr]]\n"
-/* class by manual */                + "    cat arquivo | y sed A B\n"
-/* class by manual */                + "    cat arquivo | y sed A B E F\n"
-/* class by manual */                + "    obs: sed com dois parametros é performatico e aceita por exemplo \\n como quebra\n"
-/* class by manual */                + "[y n]\n"
-/* class by manual */                + "    cat arquivo | y n\n"
-/* class by manual */                + "    obs: modifica arquivo \\r\\n para \\n(se ja tiver \\n nao tem problema)\n"
-/* class by manual */                + "[y rn]\n"
-/* class by manual */                + "    cat arquivo | y rn\n"
-/* class by manual */                + "    obs: modifica arquivo \\n para \\r\\n(se ja tiver \\r\\n nao tem problema)\n"
-/* class by manual */                + "[y [bytesToInts|bi]]\n"
-/* class by manual */                + "    cat arquivo | y bytesToInts\n"
-/* class by manual */                + "    cat arquivo | y bi\n"
-/* class by manual */                + "    cat arquivo | y bi -128\n"
-/* class by manual */                + "    obs entrada: arquivo binario\n"
-/* class by manual */                + "    obs saida: lista de numeros bytes(0..255)\n"
-/* class by manual */                + "    obs2 bi == bytesToInts\n"
-/* class by manual */                + "[y [intsToBytes|ib]]\n"
-/* class by manual */                + "    echo 55 | y intsToBytes\n"
-/* class by manual */                + "    cat arquivo | y intsToBytes\n"
-/* class by manual */                + "    cat arquivo | y ib\n"
-/* class by manual */                + "    y intsToBytes 20 20\n"
-/* class by manual */                + "    y ib 20 20\n"
-/* class by manual */                + "    obs entrada: lista de numeros bytes(0..255)\n"
-/* class by manual */                + "    obs saida: arquivo binario\n"
-/* class by manual */                + "    obs2 por conceito, os bytes variam entre -128..127, mas aqui usaremos 0..255\n"
-/* class by manual */                + "    obs3 ib == intsToBytes\n"
-/* class by manual */                + "[y od]\n"
-/* class by manual */                + "    cat arquivo | od\n"
-/* class by manual */                + "    cat arquivo | od -bc\n"
-/* class by manual */                + "    cat arquivo | od -bcr\n"
-/* class by manual */                + "    obs: -r mostra numero bytes\n"
-/* class by manual */                + "         -b octal bytes\n"
-/* class by manual */                + "         -c character\n"
-/* class by manual */                + "[y touch]\n"
-/* class by manual */                + "    y touch fileA\n"
-/* class by manual */                + "    y touch fileA -3600\n"
-/* class by manual */                + "    y touch fileA 60\n"
-/* class by manual */                + "    y touch fileA 20210128235959\n"
-/* class by manual */                + "    y touch fileA fileB fileC\n"
-/* class by manual */                + "    obs: 60(60 segundos a frente)\n"
-/* class by manual */                + "    obs2: -3600(3600 segundos atrás)\n"
-/* class by manual */                + "    obs3: 20210128235959(setando em 28/01/2021 23:59:59)\n"
-/* class by manual */                + "[y rm]\n"
-/* class by manual */                + "    y rm file1 file2\n"
-/* class by manual */                + "    y rm -R pasta\n"
-/* class by manual */                + "    y rm -R pasta1 file1\n"
-/* class by manual */                + "    obs: por questão de segurança, link simbolico não pode ser apagado recursivamente com \"-R\", essa etapa é ignorada\n"
-/* class by manual */                + "    obs2: item simbolico pode ser apagado de modo comum, sem recursão. ex: y rm elemento\n"
-/* class by manual */                + "[y cp]\n"
-/* class by manual */                + "    y cp file1 file2\n"
-/* class by manual */                + "    y cp -R pasta1 pasta2\n"
-/* class by manual */                + "    obs: se a pasta2 nao existir entao é criado a cópia com o nome pasta2, se existir é copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)\n"
-/* class by manual */                + "[y mv]\n"
-/* class by manual */                + "    y mv file1 file2\n"
-/* class by manual */                + "    y mv pasta1 pasta2\n"
-/* class by manual */                + "[y cd]\n"
-/* class by manual */                + "    y cd\n"
-/* class by manual */                + "    obs: equivalente a cd $HOME no linux e cd %userprofile% no windows\n"
-/* class by manual */                + "[y mkdir]\n"
-/* class by manual */                + "    y mkdir pasta1\n"
-/* class by manual */                + "[y iconv]\n"
-/* class by manual */                + "    y iconv -f UTF-8 -t ISO-8859-1 file\n"
-/* class by manual */                + "    cat file | y iconv -f UTF-8 -t ISO-8859-1 \n"
-/* class by manual */                + "    cat file | y i1\n"
-/* class by manual */                + "    cat file | y iconv -f ISO-8859-1 -t UTF-8\n"
-/* class by manual */                + "    cat file | y i2\n"
-/* class by manual */                + "    obs: tipos suportados: \"ISO-8859-1\",\"UTF-8\",\"UTF-8BOM\",\"UCS-2LE\",\"UCS-2LEBOM\"\n"
-/* class by manual */                + "    obs2: convert UTF-8 para ISO-8859-1(padrao windows, equivalente ao ANSI do notepad e equivalente ao windows-1252)\n"
-/* class by manual */                + "    obs3: BOM do UTF-8 em numerico => 239 187 191\n"
-/* class by manual */                + "    obs4: BOM do UCS-2LE em numerico => 255 254\n"
-/* class by manual */                + "[y tee]\n"
-/* class by manual */                + "    cat arquivo | y tee saida.txt\n"
-/* class by manual */                + "[y uniq]\n"
-/* class by manual */                + "    cat arquivo | y uniq\n"
-/* class by manual */                + "[y quebra]\n"
-/* class by manual */                + "    cat arquivo | y quebra\n"
-/* class by manual */                + "    cat arquivo | y quebra -len 5\n"
-/* class by manual */                + "[y seq]\n"
-/* class by manual */                + "    y seq 1 10 2\n"
-/* class by manual */                + "    y seq 5 7\n"
-/* class by manual */                + "    y seq 9 -10\n"
-/* class by manual */                + "    y seq 2022-09-19 2022-11-19\n"
-/* class by manual */                + "    y seq 19/11/2022 19/09/2022\n"
-/* class by manual */                + "[y tr]\n"
-/* class by manual */                + "    echo a a | y tr \"a\" \"bb\"\n"
-/* class by manual */                + "    Obs: no windows, usar \"\"\"\" ao invés de \"\\\"\"\n"
-/* class by manual */                + "[y add]\n"
-/* class by manual */                + "    y add 2022-09-19\n"
-/* class by manual */                + "    y add 19/09/2022\n"
-/* class by manual */                + "[y awk]\n"
-/* class by manual */                + "    cat arquivo | y awk print 1 3 \"5,6\"\n"
-/* class by manual */                + "    cat arquivo | y awk print -1\n"
-/* class by manual */                + "    cat arquivo | y awk start AAA end BBB    \n"
-/* class by manual */                + "    cat arquivo | y awk start AAA\n"
-/* class by manual */                + "    cat arquivo | y awk end BBB    \n"
-/* class by manual */                + "    cat arquivo | y awk -v start AAA end BBB    \n"
-/* class by manual */                + "    cat arquivo | y awk -v start AAA\n"
-/* class by manual */                + "    cat arquivo | y awk -v end BBB    \n"
-/* class by manual */                + "    obs: \"-v\" é a negativa\n"
-/* class by manual */                + "    obs2: start e end pode ocorrer varias vezes no texto\n"
-/* class by manual */                + "    obs3: -1 significa o ultimo\n"
-/* class by manual */                + "[y dev_null]\n"
-/* class by manual */                + "    cat arquivo | y banco buffer -n_lines 4000 -log buffer.log | y dev_null\n"
-/* class by manual */                + "    cat arquivo | y banco buffer -n_lines 4000 -log buffer.log > /dev/null\n"
-/* class by manual */                + "[y dev_in]\n"
-/* class by manual */                + "    y dev_in | y banco buffer -n_lines 4000 -log buffer.log | y dev_null\n"
-/* class by manual */                + "    y dev_in | y banco buffer -n_lines 4000 -log buffer.log > /dev/null\n"
-/* class by manual */                + "    obs: ref. a dd if e dd of\n"
-/* class by manual */                + "[y scp]\n"
-/* class by manual */                + "    y scp file1 user,pass@servidor:file2\n"
-/* class by manual */                + "    y scp file1 user,pass@servidor:file2 22\n"
-/* class by manual */                + "    y scp user,pass@servidor:file1 file2\n"
-/* class by manual */                + "    y scp user,pass@servidor:file1 file2 22\n"
-/* class by manual */                + "    comando windows:\n"
-/* class by manual */                + "    y scp user,pass@servidor:c:/tmp file2 22\n"
-/* class by manual */                + "    obs: user,pass ou user\n"
-/* class by manual */                + "[y execSsh]\n"
-/* class by manual */                + "    y execSsh user,pass@servidor command\n"
-/* class by manual */                + "    y execSsh user,pass@servidor command 22\n"
-/* class by manual */                + "    obs: user,pass ou user\n"
-/* class by manual */                + "[y ssh]\n"
-/* class by manual */                + "    y ssh user,pass@servidor\n"
-/* class by manual */                + "    y ssh user,pass@servidor 22\n"
-/* class by manual */                + "    obs: user,pass ou user(dependendo da origem e destino windows buga)\n"
-/* class by manual */                + "[y sshinfo]\n"
-/* class by manual */                + "    y sshinfo\n"
-/* class by manual */                + "    y sshinfo 192.168.0.100\n"
-/* class by manual */                + "    y sshinfo 192.168.0.100 22\n"
-/* class by manual */                + "[y sftp]\n"
-/* class by manual */                + "    y sftp user,pass@servidor\n"
-/* class by manual */                + "    y sftp user,pass@servidor 22\n"
-/* class by manual */                + "    obs: user,pass ou user\n"
-/* class by manual */                + "[y [serverRouter|sr]]\n"
-/* class by manual */                + "    y serverRouter [ipA] 8080 [ipB] 9090\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 show\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlySend\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlyReceive\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showSimple\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt\n"
-/* class by manual */                + "    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt -noLogLocal\n"
-/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090\n"
-/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 show\n"
-/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlySend\n"
-/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlyReceive\n"
-/* class by manual */                + "    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showSimple\n"
-/* class by manual */                + "    obs:\n"
-/* class by manual */                + "        [ipA] -> Router -> [ipB]\n"
-/* class by manual */                + "        [ipA] conecta no router que conecta no [ipB]\n"
-/* class by manual */                + "   obs2, mais atributos opcionais:\n"
-/* class by manual */                + "        \"-decodeSend\" \"12 0 26 6 0 0 0 0 0 0 0 0 0\" \"15 0 3 12 119 119 32 103 105 118 101 32 116 97 105 108\"\n"
-/* class by manual */                + "        \"-decodeReceive\" \"3 0 0 0 ...\" \"4 0 0 0\"\n"
-/* class by manual */                + "        \"-suprimeSend\" \"5 0 0 0\"\n"
-/* class by manual */                + "        \"-suprimeReceive\" \"5 0 0 0\"\n"
-/* class by manual */                + "        -ips_banidos 2804:14d:ac80:8889::\n"
-/* class by manual */                + "        -xor 100\n"
-/* class by manual */                + "[y [httpServer|hs]]\n"
-/* class by manual */                + "    y httpServer\n"
-/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlist\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-log_ips\" \"d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlist\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-log_ips\" \"d:/ProgramFiles/log_ips/log_8888.txt\" \"-noLogLocal\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlistmovie\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-log_ips\" \"d:/ProgramFiles/log_ips/log_8888.txt\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"playlistserver\" \"-host\" \"192.168.0.100\" \"-port\" \"8888\" \"-cfg\" \"d:/ProgramFiles/playlistserver.cfg\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer\" \"-mode\" \"webdav\" \"-port\" \"8888\" \"-pass\" \"admin,admin123,user,user123\" && y var\n"
-/* class by manual */                + "    set var=\"httpServer\" \"-host\" \"192.168.0.100\" \"-port\" \"8100\" \"-redisDir\" \"D:\\ProgramFiles\\redis\" \"-redisSeconds\" \"60\" \"-redisAll\" \"[ALL]\" && y var\n"
-/* class by manual */                + "    windows:\n"
-/* class by manual */                + "    set var=\"httpServer\" \"-host\" \"127.0.0.1\" \"-port\" \"8888\" \"-titulo_url_token\" \"\" \"-titulo\" \"titulo\" \"-dir\" \".\" \"-endsWith\" \"\" \"-ips_banidos\" \"\" \"-log_ips\" \"\" && y var\n"
-/* class by manual */                + "    linux:\n"
-/* class by manual */                + "    export var='\"httpServer\" \"-host\" \"127.0.0.1\" \"-port\" \"8888\" \"-titulo_url_token\" \"\" \"-titulo\" \"titulo\" \"-dir\" \".\" \"-endsWith\" \"\" \"-ips_banidos\" \"\" \"-log_ips\" \"\"' && y var\n"
-/* class by manual */                + "    Obs, valores padroes:\n"
-/* class by manual */                + "    host: 127.0.0.1\n"
-/* class by manual */                + "    port: 8888\n"
-/* class by manual */                + "    titulo_url_token: \"\"\n"
-/* class by manual */                + "    titulo: titulo\n"
-/* class by manual */                + "    Exemplo de endsWith: \"jar,zip\"\n"
-/* class by manual */                + "    Exemplo de ips_banidos: \"8.8.8.8,4.4.4.4\"\n"
-/* class by manual */                + "    Exemplo de log_ips: \"c:\\tmp\\ips.log\"\n"
-/* class by manual */                + "    -redisDir \"\"\n"
-/* class by manual */                + "    -redisDir \"c:\\tmp\\tmp\" -redisSeconds \"600\" -redisAll \"[ALL]\" -redisLike \"-playlistmovie-\"\n"
-/* class by manual */                + "    -redisLike significa que consultas deverao ter esse prefixo, senao serao negados.    \n"
-/* class by manual */                + "    curl redis:\n"
-/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: [ALL]\"\n"
-/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: user-playlistmovie-z2-*\"\n"
-/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\"\n"
-/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-DEL: A\"\n"
-/* class by manual */                + "    y curl \"http://site:1000/\" -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # retorna 200 ou 203\n"
-/* class by manual */                + "    obs, como funciona o SIGN(add key value concorrente):\n"
-/* class by manual */                + "      Em caso de =>                   -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C\" -H \"Redis-SIGN: Y\" # ele retorna 200. \"Redis-SIGN: Y\" força o valor \"C\" para SIGN\n"
-/* class by manual */                + "      Em caso de um sign diferente => -H \"Redis-KEY: A\" -H \"Redis-VALUE: B\" -H \"Redis-ID: C2\"                   # ele retorna 203 negando a gravação, pois KEY A está com SIGN C e não C2.\n"
-/* class by manual */                + "    obs2: key iniciada com 'secret-' não é exibida nem com o comando configurado [ALL]\n"
-/* class by manual */                + "    obs3: -mode webdav só suporta os parametros -host, -port e -pass. No preenchimento de -pass é separado por virgula a cadeia user,senha,user,senha...\n"
-/* class by manual */                + "    obs4: o parametro -pass só esta implementado para o -mode webdav\n"
-/* class by manual */                + "[y [httpProxy|hp]]\n"
-/* class by manual */                + "    y httpProxy -ip localhost -port 8080 -verbose\n"
-/* class by manual */                + "[y wget]\n"
-/* class by manual */                + "    y wget -h\n"
-/* class by manual */                + "[y pwd]\n"
-/* class by manual */                + "    y pwd\n"
-/* class by manual */                + "[y find]\n"
-/* class by manual */                + "    y find\n"
-/* class by manual */                + "    y find .\n"
-/* class by manual */                + "    y find /\n"
-/* class by manual */                + "    y find . -mtime -1  # arquivos recentes de 1 dia para menos\n"
-/* class by manual */                + "    y find . -mtime 0.5 # arquivos recentes a mais de 12 horas\n"
-/* class by manual */                + "    y find . -type f # somente Files    \n"
-/* class by manual */                + "    y find -type f -pre \"y cat\" -pos \"| y grep 'PESQUISA AQUI'\" \n"
-/* class by manual */                + "    obs: -L para navegar dentro do SymbolicLink, ex: y find / -L\n"
-/* class by manual */                + "    obs2: -type contem as opcoes f e d\n"
-/* class by manual */                + "[y ls]\n"
-/* class by manual */                + "    y ls\n"
-/* class by manual */                + "    y ls pasta1\n"
-/* class by manual */                + "    y ls \"pas*\"\n"
-/* class by manual */                + "[y lss]\n"
-/* class by manual */                + "    y lss\n"
-/* class by manual */                + "    y lss parta1\n"
-/* class by manual */                + "[y du]\n"
-/* class by manual */                + "    y du\n"
-/* class by manual */                + "    y du . -g\n"
-/* class by manual */                + "    ex: guia para limpeza de disco: D:\\>y du -g | y tr \".\\\\\" \"\" | y grep -v \"\\\\\"\n"
-/* class by manual */                + "[y sleep]\n"
-/* class by manual */                + "    y sleep\n"
-/* class by manual */                + "    y sleep 0.22 # 0.22 seconds\n"
-/* class by manual */                + "    y sleep infinity\n"
-/* class by manual */                + "[y split]\n"
-/* class by manual */                + "    y cat fileA | y split -b 22\n"
-/* class by manual */                + "    y cat fileA | y split -l 22\n"
-/* class by manual */                + "    y cat fileA | y split --lines=22\n"
-/* class by manual */                + "    y cat fileA | y split --bytes=22\n"
-/* class by manual */                + "    y split --lines=22 --prefix=AA fileA # AAxxa\n"
-/* class by manual */                + "[y regua]\n"
-/* class by manual */                + "    y regua\n"
-/* class by manual */                + "    y regua 90\n"
-/* class by manual */                + "[y link]\n"
-/* class by manual */                + "    y link \"source\" \"new_\"\n"
-/* class by manual */                + "    y link \"c:\\\\tmp\\\\source\" \"new_\"\n"
-/* class by manual */                + "    comando windows: mklink /j \"new_\" \"c:\\\\tmp\\\\source\"\n"
-/* class by manual */                + "    comando nao windows: ln -s '/opt/source' 'new_'\n"
-/* class by manual */                + "[y os]\n"
-/* class by manual */                + "    y os\n"
-/* class by manual */                + "    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]\n"
-/* class by manual */                + "[y pss]\n"
-/* class by manual */                + "    y pss\n"
-/* class by manual */                + "    y pss \" y lock \"\n"
-/* class by manual */                + "    y pss \"buscando\" \"nao buscando\" \"nao buscando\"\n"
-/* class by manual */                + "[y pid]\n"
-/* class by manual */                + "    y pid 222\n"
-/* class by manual */                + "    Obs: onde 222 é o processId encontrado em y pss\n"
-/* class by manual */                + "[y date]\n"
-/* class by manual */                + "    y date\n"
-/* class by manual */                + "    y date \"+%s\" # epoch\n"
-/* class by manual */                + "    y date \"+%s%N\" # epochmili\n"
-/* class by manual */                + "    y date \"+%Y%m%d_%H%M%S\"\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s\"\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\"    \n"
-/* class by manual */                + "    y date from \"20240625_102251_345_America/Sao_Paulo\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
-/* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_America/Sao_Paulo\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
-/* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_UTC\" mask \"+%Y%m%d_%H%M%S_%N_%z\"\n"
-/* class by manual */                + "    y date \"+%s%N\" from \"20240625_102251_345_-03\" mask \"+%Y%m%d_%H%M%S_%N_%Z\"\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-05\" mask \"+%Y%m%d_%H%M%S_%z\" # ET(Eastern Time) - America/New_York    - UTC−5/UTC−4 DST(Daylight Saving Time - algumas usam)\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-08\" mask \"+%Y%m%d_%H%M%S_%z\" # PT(Pacific Time) - America/Los_Angeles - UTC−8/UTC−7 DST(Daylight Saving Time - algumas usam)\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S\" from \"20250525_230000_-06\" mask \"+%Y%m%d_%H%M%S_%z\" # CT(Central Time) - America/Mexico_City - UTC−6/UTC−5 DST(Daylight Saving Time - algumas usam)\n"
-/* class by manual */                + "    y date \"+%d/%m/%Y %H:%M:%S:%N %Z %s%N\" fromNTP time.google.com\n"
-/* class by manual */                + "    y date fromNTP _ && y date\n"
-/* class by manual */                + "    fromNTP's:\n"
-/* class by manual */                + "        y date fromNTP pool.ntp.org\n"
-/* class by manual */                + "        y date fromNTP time.google.com\n"
-/* class by manual */                + "        y date fromNTP time.windows.com\n"
-/* class by manual */                + "        y date fromNTP time.apple.com\n"
-/* class by manual */                + "        y date fromNTP ntp.ubuntu.com\n"
-/* class by manual */                + "        y date fromNTP time.nist.gov\n"
-/* class by manual */                + "        y date fromNTP ntp.br # NTP mantido pelo NIC.br (Núcleo de Informação e Coordenação do Ponto BR), ideal para usuários no Brasil.\n"
-/* class by manual */                + "        y date fromNTP ntp.pt\n"
-/* class by manual */                + "        y date fromNTP ntp.org\n"
-/* class by manual */                + "        y date fromNTP 0.africa.pool.ntp.org #(África)\n"
-/* class by manual */                + "        y date fromNTP 0.asia.pool.ntp.org #(Ásia)\n"
-/* class by manual */                + "        y date fromNTP 0.europe.pool.ntp.org #(Europa)\n"
-/* class by manual */                + "        y date fromNTP 0.north-america.pool.ntp.org #(América do Norte)\n"
-/* class by manual */                + "        y date fromNTP 0.oceania.pool.ntp.org #(Oceania)\n"
-/* class by manual */                + "        y date fromNTP 0.south-america.pool.ntp.org #(América do Sul)\n"
-/* class by manual */                + "        y date fromNTP 0.br.pool.ntp.org #(Brasil)\n"
-/* class by manual */                + "        y date fromNTP 0.us.pool.ntp.org #(Estados Unidos)\n"
-/* class by manual */                + "        y date fromNTP 0.de.pool.ntp.org #(Alemanha)\n"
-/* class by manual */                + "        y date fromNTP 0.fr.pool.ntp.org #(França)\n"
-/* class by manual */                + "        y date fromNTP 0.uk.pool.ntp.org #(Reino Unido)\n"
-/* class by manual */                + "        y date fromNTP 0.jp.pool.ntp.org #(Japão)\n"
-/* class by manual */                + "        y date fromNTP 0.au.pool.ntp.org #(Austrália)\n"
-/* class by manual */                + "        y date fromNTP 0.ca.pool.ntp.org #(Canadá)\n"
-/* class by manual */                + "        y date fromNTP 0.pt.pool.ntp.org #(Portugal)\n"
-/* class by manual */                + "        y date fromNTP 0.es.pool.ntp.org #(Espanha)\n"
-/* class by manual */                + "        y date fromNTP 0.it.pool.ntp.org #(Itália)\n"
-/* class by manual */                + "        y date fromNTP 0.ru.pool.ntp.org #(Rússia)\n"
-/* class by manual */                + "        y date fromNTP 0.cn.pool.ntp.org #(China)\n"
-/* class by manual */                + "        y date fromNTP 0.in.pool.ntp.org #(Índia)\n"
-/* class by manual */                + "[y uptime]\n"
-/* class by manual */                + "    y uptime\n"
-/* class by manual */                + "    y uptime -ms\n"
-/* class by manual */                + "[y cronometro]\n"
-/* class by manual */                + "    y cronometro\n"
-/* class by manual */                + "    y cronometro start\n"
-/* class by manual */                + "    y cronometro flag\n"
-/* class by manual */                + "    y cronometro end\n"
-/* class by manual */                + "    obs: \"y cronometro\" dispara o comando equivalente a flag a cada enter pressionado.\n"
-/* class by manual */                + "[y steam]\n"
-/* class by manual */                + "    y steam friends\n"
-/* class by manual */                + "    y steam friends status\n"
-/* class by manual */                + "    y steam friends clan status\n"
-/* class by manual */                + "    y steam status 232323\n"
-/* class by manual */                + "    y steam flag 76561198010207122 40\n"
-/* class by manual */                + "    y steam flag 76561198010207122 40 D:\\daemon\\scripts_geral\\steam_flag_1.bat\n"
-/* class by manual */                + "    obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323\n"
-/* class by manual */                + "    obs2: cria sua STEAM_API_KEY aqui -> https://steamcommunity.com/dev/apikey -> 123\n"
-/* class by manual */                + "    obs3: pegue seu STEAM_ID no profile, exemplo -> https://steamcommunity.com/profiles/232323/ -> 232323\n"
-/* class by manual */                + "[y clear]\n"
-/* class by manual */                + "    y clear\n"
-/* class by manual */                + "    obs: alternativa y cls\n"
-/* class by manual */                + "[y cls]\n"
-/* class by manual */                + "    y cls\n"
-/* class by manual */                + "    obs: alternativa y clear\n"
-/* class by manual */                + "[y ping]\n"
-/* class by manual */                + "    y ping 192.168.0.100\n"
-/* class by manual */                + "    y ping 192.168.0.100 -t 15\n"
-/* class by manual */                + "    obs: -t 15 => timeout 15 segundos\n"
-/* class by manual */                + "[y pings]\n"
-/* class by manual */                + "    y pings\n"
-/* class by manual */                + "    y pings -t 15\n"
-/* class by manual */                + "    obs: lista os ips ja fazendo ping\n"
-/* class by manual */                + "    obs2: -t 15 => timeout 15 segundos\n"
-/* class by manual */                + "[y pingMine]\n"
-/* class by manual */                + "    y pingMine mc.gladmc.com\n"
-/* class by manual */                + "    y pingMine mc.gladmc.com 25565\n"
-/* class by manual */                + "    y pingMine your_site -tray\n"
-/* class by manual */                + "    obs: autostart tray:\n"
-/* class by manual */                + "        criar atalho javaw em %appdata%\\..\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\n"
-/* class by manual */                + "        e colocar no atalho -Dfile.encoding=UTF-8 -cp c:\\\\y;c:\\\\y\\\\ojdbc6.jar;c:\\\\y\\\\sqljdbc4-3.0.jar;c:\\\\y\\\\mysql-connector-java-8.0.26.jar;c:\\\\y\\\\jsch-0.1.55.jar Y pingMine your_site -tray\n"
-/* class by manual */                + "    obs2: o tray não mostra numeros acima de 9\n"
-/* class by manual */                + "[y ips]\n"
-/* class by manual */                + "    y ips\n"
-/* class by manual */                + "    y ips list\n"
-/* class by manual */                + "    obs: mostra ips da maquina\n"
-/* class by manual */                + "    obs2: list -> monta uma shell de verificacao de ips para outra maquina\n"
-/* class by manual */                + "[y mouse]\n"
-/* class by manual */                + "    y mouse # mostra as coordenadas do mouse\n"
-/* class by manual */                + "    y mouse \"m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base baixa - Os Iluminados\n"
-/* class by manual */                + "    y mouse \"m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9\" # away dota base alta - Os Temidos\n"
-/* class by manual */                + "    y mouse \"dontMove c s 0.01\"\n"
-/* class by manual */                + "    obs: bloquear a tela faz o programa sair imediatamente\n"
-/* class by manual */                + "    mais opcoes:\n"
-/* class by manual */                + "    key w\n"
-/* class by manual */                + "    k w\n"
-/* class by manual */                + "    keypress w\n"
-/* class by manual */                + "    kp w\n"
-/* class by manual */                + "    keyrelease w\n"
-/* class by manual */                + "    kr w\n"
-/* class by manual */                + "[y mixer]\n"
-/* class by manual */                + "    y mixer\n"
-/* class by manual */                + "    y mixer \" TV \"\n"
-/* class by manual */                + "    obs: lista os mixers\n"
-/* class by manual */                + "    obs2: comandos parecidos:\n"
-/* class by manual */                + "    gravador, play, call, injectMicLine\n"
-/* class by manual */                + "[y gravador]\n"
-/* class by manual */                + "    y gravador file.wav\n"
-/* class by manual */                + "    y gravador > file.wav\n"
-/* class by manual */                + "    y gravador -mixer \"-\" -f file.wav\n"
-/* class by manual */                + "    y gravador -mixer \"-\" -line > fileLine\n"
-/* class by manual */                + "    y gravador -mixer \"-\" -line | y play -line    \n"
-/* class by manual */                + "    obs: formatos: -line, -wav e -mp3\n"
-/* class by manual */                + "    obs2: por padrão ele tentar ler wav\n"
-/* class by manual */                + "[y play]\n"
-/* class by manual */                + "    y play file.wav -volume 0.5\n"
-/* class by manual */                + "    y play -f file.wav\n"
-/* class by manual */                + "    y cat file.wav | y play\n"
-/* class by manual */                + "    y cat fileLine | y play -mixer \"-\" -line\n"
-/* class by manual */                + "    obs: formatos: -line, -wave e -mp3\n"
-/* class by manual */                + "    obs2: -mp3 ainda não implementado\n"
-/* class by manual */                + "    obs3: -volume varia entra 0 e 1 mas de acordo com o volume ja setado, ou seja, se ja tiver em 10% e o comando colocar 0.5 então seria equivalente a 5%\n"
-/* class by manual */                + "[y call]\n"
-/* class by manual */                + "    y call\n"
-/* class by manual */                + "    obs: ligação entra pessoas\n"
-/* class by manual */                + "[y remote]\n"
-/* class by manual */                + "    y remote\n"
-/* class by manual */                + "    y remote -ip localhost\n"
-/* class by manual */                + "    y remote -ip localhost -port 7777 -fps 30\n"
-/* class by manual */                + "    obs: fps pode conter 30 e 60. 30 é o padrão\n"
-/* class by manual */                + "[y injectMicLine]\n"
-/* class by manual */                + "    y cat file.line | y injectMicLine\n"
-/* class by manual */                + "    obs: not work\n"
-/* class by manual */                + "[y kill]\n"
-/* class by manual */                + "    y kill 3434\n"
-/* class by manual */                + "    y kill 3434 3435\n"
-/* class by manual */                + "    y kill -9 3434 3435\n"
-/* class by manual */                + "    y kill -2 3434 3435\n"
-/* class by manual */                + "    y kill text -Dnetbeans netbeans\n"
-/* class by manual */                + "    y kill \"D:\\ProgramFiles\\site\\musicas\\cry\"\n"
-/* class by manual */                + "    y kill \"D:\\ProgramFiles\\site\\musicas\\cry\\Thomas Bergersen - Cry (Sun).mkv\"\n"
-/* class by manual */                + "    obs: o kill de path só foi implementado para o windows\n"
-/* class by manual */                + "[y win]\n"
-/* class by manual */                + "    y win\n"
-/* class by manual */                + "    obs: mostra se o windows e office estão ativado\n"
-/* class by manual */                + "    obs2: outra forma de verificar pelo cmd -> slmgr -dli\n"
-/* class by manual */                + "[y speed]\n"
-/* class by manual */                + "    y speed\n"
-/* class by manual */                + "    y speed -ip 192.168.0.100\n"
-/* class by manual */                + "    Obs: -ip -port -server -client -send -receive|-r\n"
-/* class by manual */                + "[y lock]\n"
-/* class by manual */                + "    y lock\n"
-/* class by manual */                + "    y lock w\n"
-/* class by manual */                + "    y lock 0 -> desliga lock\n"
-/* class by manual */                + "    obs: gera black screen\n"
-/* class by manual */                + "    obs2: y lock w -> white screen\n"
-/* class by manual */                + "[y monitor]\n"
-/* class by manual */                + "    y monitor cpu\n"
-/* class by manual */                + "    y monitor cpu oneLine\n"
-/* class by manual */                + "[y printScreen]\n"
-/* class by manual */                + "    y printScreen\n"
-/* class by manual */                + "    y printScreen 2\n"
-/* class by manual */                + "    obs: pasta padrão: d:/ProgramFiles/screens\n"
-/* class by manual */                + "[y ocr]\n"
-/* class by manual */                + "    y ocr D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp\n"
-/* class by manual */                + "    y cat D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp | y ocr\n"
-/* class by manual */                + "    obs: é preciso instalar o programa tesseract\n"
-/* class by manual */                + "    download: https://github.com/tesseract-ocr/tesseract/releases/\n"
-/* class by manual */                + "    pasta instalado: \"D:\\ProgramFiles\\Tesseract-OCR\"\n"
-/* class by manual */                + "[y paste]\n"
-/* class by manual */                + "    y paste file1 file2\n"
-/* class by manual */                + "[y mkv]\n"
-/* class by manual */                + "    y mkv\n"
-/* class by manual */                + "    y mkv -v\n"
-/* class by manual */                + "    y mkv -force\n"
-/* class by manual */                + "    y mkv -lento\n"
-/* class by manual */                + "    obs: ffmpeg -i \"A.mkv\" -qscale 0 -max_muxing_queue_size 1024 \"A.mp4\"\n"
-/* class by manual */                + "    obs: -lento tem outro algotirmo de conversão, as vezes é necessario e tudo tiver bugando\n"
-/* class by manual */                + "    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo \"y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z\" | y tr \"rmvb\\\"Z\" \"mp4\\\"\"\n"
-/* class by manual */                + "    aviso: \"Audio: ac3 (ac-3 \" de mp4 não funciona na web\n"
-/* class by manual */                + "    checando:\n"
-/* class by manual */                + "    cd d:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep \"Input #0\" \"(por): Audio: ac3\"\n"
-/* class by manual */                + "[y [thumbnail|tn]]\n"
-/* class by manual */                + "    y thumbnail\n"
-/* class by manual */                + "[y insta]\n"
-/* class by manual */                + "    y insta [url]\n"
-/* class by manual */                + "[y bmp]\n"
-/* class by manual */                + "    y cat img.bmp | y bmp\n"
-/* class by manual */                + "    y bmp -file a.bmp -len 64\n"
-/* class by manual */                + "    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparação entre imagens\n"
-/* class by manual */                + "    # primeira linha x, segunda y, demais r g b\n"
-/* class by manual */                + "[y decodeUrl]\n"
-/* class by manual */                + "    echo T%C3%B3quio | y decodeUrl\n"
-/* class by manual */                + "[y encodeUrl]\n"
-/* class by manual */                + "    echo Tóquio | y encodeUrl\n"
-/* class by manual */                + "    obs: o espaço esta sendo representado como +, o que é uma tradução obsoleta.\n"
-/* class by manual */                + "[y test]\n"
-/* class by manual */                + "    y test\n"
-/* class by manual */                + "[y tests]\n"
-/* class by manual */                + "    y tests\n"
-/* class by manual */                + "[y controlc]\n"
-/* class by manual */                + "    y controlc\n"
-/* class by manual */                + "[y random]\n"
-/* class by manual */                + "    y random 1 2\n"
-/* class by manual */                + "[y talk]\n"
-/* class by manual */                + "    y talk list\n"
-/* class by manual */                + "    y talk -tts list\n"
-/* class by manual */                + "    y talk -textToSpeech list\n"
-/* class by manual */                + "    y talk -stt list\n"
-/* class by manual */                + "    y talk -speechToText list\n"
-/* class by manual */                + "    y talk oi\n"
-/* class by manual */                + "    y talk -lang Brazilian_Portuguese_Ricardo -msg oi\n"
-/* class by manual */                + "    y talk -lang Brazilian_Portuguese_Vitoria -msg \"desliga esse computador, agora!\" -o \"d:/ProgramFiles/musicas_ia/talk.wav\"\n"
-/* class by manual */                + "    y echo oi | y talk\n"
-/* class by manual */                + "    y talk cat\n"
-/* class by manual */                + "    y talk -stt\n"
-/* class by manual */                + "    y talk -stt -lang English\n"
-/* class by manual */                + "    oi 1\n"
-/* class by manual */                + "    oi 2\n"
-/* class by manual */                + "    oi 3\n"
-/* class by manual */                + "    y echo \"一 二 三 四 五 六 七 八 九 十\" | y talk -tts -lang Chinese_Mandarin_Zhiyu\n"
-/* class by manual */                + "    y talk -stt -lang Chinese\n"
-/* class by manual */                + "    obs: funções -tts => -textToSpeech #padrao #função acessa internet e faz cache na maquina por texto e voz\n"
-/* class by manual */                + "                 -stt => -speechToText\n"
-/* class by manual */                + "         -lang padrões:\n"
-/* class by manual */                + "                 Brazilian_Portuguese_Ricardo para -tts\n"
-/* class by manual */                + "                 Portugues para -stt\n"
-/* class by manual */                + "[y sign]\n"
-/* class by manual */                + "    y sign -msg \"Hello\" -pass \"My passphrase\"\n"
-/* class by manual */                + "    y sign -verify -msg \"Hello\" -publicKey \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==\" -signature \"MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA==\"\n"
-/* class by manual */                + "    obs: retornando true, significa assinatura ok\n"
-/* class by manual */                + "    obs2: Informações técnicas => SPEC \"secp256r1\" ALGO = \"SHA256withECDSA\"\n"
-/* class by manual */                + "    obs3: Não confundir com secp256k1 do bitcoin\n"
-/* class by manual */                + "[y [overflix|of]]\n"
-/* class by manual */                + "    y overflix \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
-/* class by manual */                + "    y overflix -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"\n"
-/* class by manual */                + "    y overflix -onlyPreLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/\"    \n"
-/* class by manual */                + "    y overflix -v -onlyLink \"https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2\"\n"
-/* class by manual */                + "    y overflix \"https://encontrei.la/assistir-ruptura-2x4-dublado-online-46643/\" -outPath \"D:\\ProgramFiles\\site\\series\\Ruptura\"\n"
-/* class by manual */                + "    y overflix \"https://encontrei.la/assistir-anne-com-um-e-dublado-online-49039/\" \"getScriptRenameBySkip,7,10,10\"\n"
-/* class by manual */                + "    obs: getScriptRenameBySkip só interpreta comandos skip, caso contrario baixa\n"
-/* class by manual */                + "    obs2: -vToken => mostra iexplorer.exe e não fecha.\n"
-/* class by manual */                + "         -o => force out path\n"
-/* class by manual */                + "         -tags => verbose profundo\n"
-/* class by manual */                + "[y connGui]\n"
-/* class by manual */                + "    connGui\n"
-/* class by manual */                + "    obs: teste de conexao(server e client)\n"
-/* class by manual */                + "[y var]\n"
-/* class by manual */                + "    y var\n"
-/* class by manual */                + "    Obs: execução por parametro de variavel\n"
-/* class by manual */                + "    windows:\n"
-/* class by manual */                + "    set var=\"cat\" \"a\" && y var\n"
-/* class by manual */                + "    linux:\n"
-/* class by manual */                + "    export var='\"cat\" \"a\"' && y var\n"
-/* class by manual */                + "    export var='\"cat\" \"a\"' && y var -ignore FLAG_HERE\n"
-/* class by manual */                + "[y cotacao]\n"
-/* class by manual */                + "    y cotacao\n"
-/* class by manual */                + "[y help]\n"
-/* class by manual */                + "    y help <command>\n"
-/* class by manual */                + "    y help router\n"
-/* class by manual */                + "\n"
-/* class by manual */                + "Exemplos de conn: \n"
-/* class by manual */                + "    y banco -conn \"jdbc:oracle:thin:@//host_name:1521/service_name|login|senha\" select \"select 1\"\n"
-/* class by manual */                + "    y banco -conn \"jdbc:oracle:thin:@host_name:1566:sid_name|login|senha\" select \"select 1\"\n"
-/* class by manual */                + "    y banco -conn \"jdbc:sqlserver://localhost:1433;databaseName=MyDatabase;user=myUsername;password=myPassword;\" select \"select 1\"\n"
-/* class by manual */                + "    y banco -conn \"jdbc:mysql://localhost:3306|login|senha\" select \"select 1\"\n"
-/* class by manual */                + "    y banco -conn \"jdbc:postgresql://localhost:5432/|login|senha\" select \"select 1\"\n"
-/* class by manual */                + "\n"
-/* class by manual */                + "Observações:\n"
-/* class by manual */                + "entrada de dados pode ser feito por |\n"
-/* class by manual */                + "export STATUS_FIM_Y=path/fim.log para receber a confirmação de fim de processamento de selectCSV\n"
-/* class by manual */                + "export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV\n"
-/* class by manual */                + "export CSV_SEP_Y=\"|\" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravação\n"
-/* class by manual */                + "export CSV_ONLYCHAR_Y=\"S\" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravação de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso\n"
-/* class by manual */                + "export FORMAT_DATA_Y=\"TZ\" deixando a data 10/10/2010T10:10:10Z\n"
-/* class by manual */                + "export FORMAT_DATA_Y=\"UTC\" deixando a data 10/10/2010 10:10:10 UTC\n"
-/* class by manual */                + "export FORMAT_DATA_Y=\"NATAL\" toda data será na data do natal ex 25/12/2010 10:10:15\n"
-/* class by manual */                + "export FORMAT_DATA_Y=\"YYYY-MM-DD\" 2010-07-07 12:12:12\n"
-/* class by manual */                + "export COM_SEPARADOR_FINAL_CSV_Y=\"S\" ex: \"a\";\"a\"; o padrao seria \"a\";\"a\"\n"
-/* class by manual */                + "export SEM_HEADER_CSV_Y=\"S\"\n"
-/* class by manual */                + "todos os comandos acima podem ser usados como parametro, ex: -CSV_SEP_Y \",\"\n"
-/* class by manual */                + "\n"
-/* class by manual */                + "Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;\n"
-/* class by manual */                + "Dica2: vendo os tokens: grep \":\" $TOKEN_Y/*\n"
-/* class by manual */                + "Dica3: vendo warnnings ORA: cat $ORAs_Y";
-/* class by manual */            if ( caminho.equals("/y/ORAs") )
-/* class by manual */                return ""
-/* class by manual */                + "ORA-00911\n"
-/* class by manual */                + "ORA-00913\n"
-/* class by manual */                + "ORA-00917\n"
-/* class by manual */                + "ORA-00928\n"
-/* class by manual */                + "ORA-00933\n"
-/* class by manual */                + "ORA-00936\n"
-/* class by manual */                + "ORA-00947\n"
-/* class by manual */                + "ORA-00972\n"
-/* class by manual */                + "ORA-01756\n"
-/* class by manual */                + "ORA-01742\n"
-/* class by manual */                + "ORA-01747\n"
-/* class by manual */                + "ORA-01438";
-/* class by manual */            if ( caminho.equals("/y/sql_get_ddl_createtable") )
-/* class by manual */                return ""
-/* class by manual */                + " with\n"
-/* class by manual */                + " FUNCTION func_fix_create_table(p_campo CLOB) RETURN CLOB AS \n"
-/* class by manual */                + "   vCampo     CLOB;\n"
-/* class by manual */                + "   vResultado CLOB;\n"
-/* class by manual */                + "   vC         VARCHAR2(2);\n"
-/* class by manual */                + "   vStart     VARCHAR2(1);\n"
-/* class by manual */                + "   vContador  number;\n"
-/* class by manual */                + "   \n"
-/* class by manual */                + " BEGIN\n"
-/* class by manual */                + "   vCampo := p_campo;\n"
-/* class by manual */                + "   vStart := 'N';\n"
-/* class by manual */                + "   vResultado := '';\n"
-/* class by manual */                + "   vContador := 0;\n"
-/* class by manual */                + " \n"
-/* class by manual */                + "   FOR i IN 1..LENGTH(vCampo)\n"
-/* class by manual */                + "   LOOP    \n"
-/* class by manual */                + "     vC := substr(vCampo,i,1);\n"
-/* class by manual */                + "     \n"
-/* class by manual */                + "     IF ( vC = '(' OR vC = 'C' OR vC = 'c' ) THEN\n"
-/* class by manual */                + "       vStart := 'S';\n"
-/* class by manual */                + "     END IF;\n"
-/* class by manual */                + "     \n"
-/* class by manual */                + "     IF ( vC = '(' ) THEN\n"
-/* class by manual */                + "       vContador := vContador + 1;\n"
-/* class by manual */                + "     END IF;\n"
-/* class by manual */                + "     \n"
-/* class by manual */                + "     IF ( vStart = 'S' ) THEN\n"
-/* class by manual */                + "       vResultado := vResultado || vC;\n"
-/* class by manual */                + "     END IF;\n"
-/* class by manual */                + "     \n"
-/* class by manual */                + "     IF ( vC = ')' ) THEN\n"
-/* class by manual */                + "       vContador := vContador - 1;\n"
-/* class by manual */                + "       IF ( vContador = 0 ) THEN          \n"
-/* class by manual */                + "         EXIT;\n"
-/* class by manual */                + "       END IF;\n"
-/* class by manual */                + "     END IF;\n"
-/* class by manual */                + "   END LOOP;\n"
-/* class by manual */                + "   \n"
-/* class by manual */                + "   return vResultado || ';';\n"
-/* class by manual */                + "   \n"
-/* class by manual */                + " END func_fix_create_table;\n"
-/* class by manual */                + " select func_fix_create_table(dbms_metadata.get_ddl('TABLE',UPPER('[TABELA]'),UPPER('[SCHEMA]'))) TXT from dual";
-/* class by manual */            if ( caminho.equals("/y/versao") )
-/* class by manual */                return ""
-/* class by manual */                + "0.1.0";
-/* class by manual */            return "";
-/* class by manual */        }
-/* class by manual */    }
+class Arquivos{
+    public String lendo_arquivo_pacote(String caminho){
+        if ( caminho.equals("/y/manual") )
+return """
+usage:
+  [y daemon]
+  [y take]
+  [y banco fromCSV -outTable tabelaA selectInsert]
+  [y banco conn,hash [select|selectInsert|selectCSV] [|select..]]
+  [y banco conn,hash executeInsert]
+  [y banco conn,hash execute [|execute..]]
+  [y banco conn,hash createjobexecute]
+  [y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]
+  [y banco executejob]
+  [y banco buffer [|-n_lines 4000] [|-log buffer.log]]
+  [y selectCSV]
+  [y xlsxToCSV]
+  [y token]
+  [y gettoken]
+  [y json]
+  [y zip]
+  [y gzip]
+  [y gunzip]
+  [y tar]
+  [y untar]
+  [y tarlist]
+  [y echo]
+  [y printf]
+  [y sdiff]
+  [y progressBar]
+  [y xargs]
+  [y cat]
+  [y redis]
+  [y sort]
+  [y iso]
+  [y [juros|emprestimo]]
+  [y terminal]
+  [y dotaMutandoAll]
+  [y audio]
+  [y isWindowsAdm]
+  [y devices]
+  [y cep]
+  [y users]
+  [y disconnect]
+  [y dns|host]
+  [y lower]
+  [y upper]
+  [y removeAcentos]
+  [y xor]
+  [y md5]
+  [y sha1]
+  [y sha256]
+  [y aes]
+  [y base64]
+  [y grep]
+  [y wc]
+  [y len]
+  [y head]
+  [y tail]
+  [y cut]
+  [y yt]
+  [y curl]
+  [y cors]
+  [y [sed|tr]]
+  [y n]
+  [y rn]
+  [y [bytesToInts|bi]]
+  [y [intsToBytes|ib]]
+  [y od]
+  [y touch]
+  [y rm]
+  [y cp]
+  [y mv]
+  [y cd]
+  [y iconv]
+  [y tee]
+  [y uniq]
+  [y quebra]
+  [y seq]
+  [y tr]
+  [y add]
+  [y awk print]
+  [y dev_null]
+  [y dev_in]
+  [y scp]
+  [y execSsh]
+  [y ssh]
+  [y sshinfo]
+  [y sftp]
+  [y [serverRouter|sr]]
+  [y [httpServer|hs]]
+  [y [httpProxy|hp]]
+  [y wget]
+  [y pwd]
+  [y find]
+  [y ls]
+  [y lss]
+  [y du]
+  [y split]
+  [y regua]
+  [y link]
+  [y os]
+  [y pss]
+  [y pid]
+  [y date]
+  [y cronometro]
+  [y steam]
+  [y [cls|clear|clean]]
+  [y ping]
+  [y pings]
+  [y pingMine]
+  [y ips]
+  [y mouse]  
+  [y mixer]
+  [y gravador]
+  [y play]
+  [y call]
+  [y remote]
+  [y injectMicLine]
+  [y kill]
+  [y win]
+  [y speed]
+  [y lock]
+  [y monitor]
+  [y printScreen]
+  [y ocr]
+  [y paste]
+  [y mkv]
+  [y [thumbnail|tn]]
+  [y insta]
+  [y bmp]
+  [y decodeUrl]
+  [y encodeUrl]
+  [y test]
+  [y tests]
+  [y controlc]
+  [y random]
+  [y talk]
+  [y sign]
+  [y [overflix|of]]
+  [y connGui]
+  [y var]
+  [y cotacao]
+  [y [update|u]]
+  [y help]
 
+Exemplos...
 
+[y daemon]
+    y daemon
+    y daemon -server
+    y d r a
+    y d list
+    y d tail AA
+    y d restart AA
+[y take]
+    y take
+    y take file1 pasta2
+    Obs: envia o conteudo desta para para outro computador ou pasta
+    Obs2: após digitar y take, ele irá mostrar o comando que será utilizado na outra ponta
+[y banco fromCSV -outTable tabelaA selectInsert]
+    cat arquivo.csv | y banco fromCSV -outTable tabelaA selectInsert
+[y banco conn,hash [select|selectInsert|selectCSV] [|select..]]
+    echo "select 1 from dual" | y banco conn,hash select
+    y banco conn,hash select "select 1 from dual"
+    echo "select * from tabela1" | y banco conn,hash selectInsert
+    cat select.sql | y banco conn,hash selectCSV
+    y banco -conn conn.. selectInsert
+[y banco conn,hash executeInsert]
+    cat listaDeInsert.sql | y banco conn,hash executeInsert
+    echo "insert into tabela1 values(1,2,3)" | y banco conn,hash executeInsert
+    echo "insert into tabela1 values(1,2,3);" | y banco conn,hash executeInsert
+    obs: bug?. Use execute
+[y banco conn,hash execute [|execute..]]
+    echo "truncate table tabela1" | y banco conn,hash execute
+    y banco conn,hash execute "drop table tabela1"
+    cat blocoAnonimo | y banco conn,hash execute
+[y banco conn,hash createjobexecute]
+    echo "truncate table tabela1" | y banco conn,hash createjobexecute
+[y banco [connIn,hash|fileCSV,file] connOut,hash -outTable tabelaA [|trunc|createTable] [carga|createjobcarga]]
+    echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB carga
+    echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc carga
+    echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB createTable carga
+    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC carga
+    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC trunc carga
+    y banco -fileCSV arquivo.csv connOut,hash -outTable TABELA_CCC createTable carga
+[y banco executejob]
+    (
+        echo "select * from TABELA_AAA" | y banco connIn,hash connOut,hash -outTable TABELA_BBB trunc createjobcarga
+        echo "select * from TABELA_CCC" | y banco connIn,hash connOut,hash -outTable TABELA_CCC trunc createjobcarga
+    ) | y banco executejob
+[y banco buffer [|-n_lines 4000] [|-log buffer.log]]    
+    echo "select * from TABELA1 | y banco conn,hash selectInsert | y banco buffer -n_lines 4000 -log buffer.log | y banco conn,hash executeInsert
+[y selectCSV]
+    y cat file.csv | y selectCSV "select * from this"
+    y cat file.csv | y selectCSV "select rownum seq,* from this"
+    y cat file.csv | y selectCSV "select * from this where a = '3'"
+    y cat file.csv | y selectCSV "select * from this limit 10"
+    y cat file.csv | y selectCSV "select * from this limit 10" -outJson
+    echo '[{"a":"3" },{"a": "4"}]' | y json "[elem for elem in data]" | y selectCSV "select * from this where a = '3'"
+    y selectCSV -csv file.csv "select * from this"
+    y selectCSV -csv file.csv -sql consulta.sql
+    obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean
+    obs2: se usar rownum com where ele poderá mostrar o numero errado! esse bug será corrigido depois
+[y xlsxToCSV]
+    xlsxToCSV arquivo.xlsx mostraEstrutura
+    xlsxToCSV arquivo.xlsx listaAbas
+    xlsxToCSV arquivo.xlsx numeroAba 1
+    xlsxToCSV arquivo.xlsx nomeAba Planilha1
+    xlsxToCSV arquivo.xlsx exportAll
+    obs: pegando a primeira aba => xlsxToCSV arquivo.xlsx numeroAba 1
+[y xml]
+    cat arquivo.xml | y xml mostraEstrutura
+    xml arquivo.xml mostraEstrutura
+    cat arquivo.xml | y xml mostraTags
+[y token]
+    y token value
+    obs: y token value -> retorna o hash
+    obs2: é preciso ja ter o TOKEN_Y definido
+[y gettoken]
+    y gettoken hash
+[y json]
+   y cat file.json | y json mostraEstrutura
+   y cat file.json | y json mostraTabela
+   y cat file.json | y json "[elem for elem in data['items']]"
+   y cat file.json | y json "[elem['id'] for elem in data['items']]"
+   y cat file.json | y json "[elem['id'] for elem in data]"
+   obs: parametro de apoio => mostraEstruturaDebug
+   obs2: exemplo com lista, representada por '_':
+         y echo '{"folders": [{"id": 1, "lists":[{"id": 11},{"id": 12}] },{"id": 2, "lists":[{"id": 21},{"id": 22}] }] }' | y json "[elem for elem in data['folders']['_']['lists']]"
+   obs3: selecionando alguns campos:
+         y echo '{"folders": {"id1":11, "id2": 22, "id3": 33} }' | y json "[[elem['id1'],elem['id3']] for elem in data['folders']]"
+   obs4: parametro noHeader => tira o header
+   obs5: parametro list => resultado em forma de lista sem o header
+[y zip]
+    y zip add File1.txt > saida.zip
+    cat File1.txt | y zip add -name File1.txt > saida.zip
+    y zip add /pasta1/pasta2 > saida.zip
+    y zip add pasta2 -lvlStore > saida.zip
+    y zip add pasta1 pasta2 file3 -lvlStore > saida.zip
+    y zip list arquivo.zip
+    cat arquivo.zip | y zip list
+    y zip extract entrada.zip
+    cat entrada.zip | y zip extract
+    y zip extract entrada.zip -out /destino
+    cat entrada.zip | y zip extract -out /destino
+    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt -out /destino
+    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
+    y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
+    cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
+    obs: se add pasta e a descricao de pasta tem "/" ou "\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.
+[y gzip]
+    cat arquivo | y gzip > arquivo.gz
+[y gunzip]
+    cat arquivo.gz | y gunzip > arquivo
+[y tar]
+    y tar in > test.tar
+    y tar test.tar in
+    obs: suporta arquivo com ateh 8 gigas
+[y untar]
+    y cat test.tar | y untar
+    y untar test.tar
+    y untar test.tar in/in2/only
+[y tarlist]
+    y tarlist test.tar
+[y echo]
+    echo a b c
+    echo "a b c"
+    echo "a*"
+[y printf]
+    y printf a b c
+    y printf a b c
+    y printf [COR/VERDE] oi
+    y printf [COR/VERMELHO] oi
+    y printf [COR/AZUL] oi
+    y printf [COR/BRANCO] oi
+    y printf [COR/VERDE/CINZA] oi
+    y printf [COR/VERDE/BRANCO] oi
+    y printf [COR/VERMELHO/CINZA] oi
+    y printf [COR/VERMELHO/BRANCO] oi
+    y printf [COR/AZUL/CINZA] oi
+    y printf [COR/AZUL/BRANCO] oi
+    y printf [COR/BRANCO/CINZA] oi
+    y printf [COR] => lista as cores disponiveis ja colorindo
+    obs: diferente do echo, o printf nao gera \n no final
+    obs2: echo -n AA gera o mesmo efeito que, printf AA
+[y sdiff]
+    y sdiff file1.txt file2.txt
+[y progressBar]
+    ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar
+    ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar -uniqLine
+[y xargs]
+    y echo a | y xargs echo
+    y echo a | y xargs echo "{}" "{}"
+""" +                
+"    y cls && y find | y grep \".\" | y tr \\\"\"\"\" \"\" | y xargs echo \"y printf \\\"\\\" | ffmpeg -i \\\"{}\\\"  -max_muxing_queue_size 1024 \\\"{}.mp4\\\" && y rm \\\"{}\\\"\" | y tr \"rmvb.mp4\" \"mp4\" | y tr \"mpg.mp4\" \"mp4\"\n" +
+"    y find | y tr \\\"\"\"\" \"\" | y xargs echo \"\\\"{}\\\"\" | y xargs echo \"y mv {} {}\" | y tr \"-dublado-www.encontrei.tv.mp4\\\"\\n\" \".mp4\\\"\\n\"\n" +
+"""  
+    obs: ffmpeg precisa de stdin para nao bugar em lista cmd, porisso usar y printf "" | ffmpeg...
+[y cat]
+    y cat arquivo
+    y cat "<<EOF>" file1.txt
+    y cat "<<EOF>>" file1.txt
+    y cat ">" file1.txt
+    y cat ">>" file1.txt
+    y cat
+    obs: pode ser outra tag, não precisa ser EOF
+    obs2: até o momento o codigo "<<EOF>" só esta liberado para windows!
+[y redis]
+    procure por y help httpServer
+    na parte -redisDir
+[y sort]
+    y cat file | y sort > file_ordenado
+[y iso]
+    y iso win11.iso source
+    y iso source win11.iso
+    obs: detalhes build na pasta sources, cmd admin:
+    dism /Get-WimInfo /WimFile:"install.wim"
+    obs: criar iso do tipo linux pode dar ruim
+[y [juros|emprestimo]]
+    y juros price valor 15000 juros 1.0 a.m 10 parcelas
+    y juros sac valor 15000 juros 1.0 a.m 10 parcelas
+    referencia: https://calculojuridico.com.br/calculadora-price-sac/
+[y terminal]
+    y terminal
+[y dotaMutandoAll]
+    y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,neBullet"
+    y dotaMutandoAll -sleep 3 -nicks "no_ocr"
+[y audio]
+    y audio vol
+    y audio mute
+    y audio setvol 0.75
+    y audio setmute true
+    y audio mutingWhileProgramInPrincipalMonitor WorldOfTanks.exe
+    obs: setvol e setmute precisa ser adm
+    obs2: verificando se esta adm: y isWindowsAdm
+[y isWindowsAdm]
+    y isWindowsAdm
+[y devices]
+    y devices
+    y devices "-classe" "AudioEndpoint" "-classe" "Net"
+    obs: pnputil /disable-device [id]
+         pnputil /disable-device "USB\\VID_045E&PID_00DB\6&870CE29&0&1"
+         pnputil /enable-device "USB\\VID_045E&PID_00DB\6&870CE29&0&1"
+    obs2: comando para windows
+[y cep]
+    y cep /sp/campinas/almeida prado
+    y cep 13083-750
+    y cep 13083750
+[y users]
+    y users
+[y disconnect]
+    y disconnect
+    y disconnect seAtivoDesconectaLoop1Segundo
+[y dns|host]
+    y host examplo.com
+    y dns example.com
+    y dns example.com 8.8.8.8
+    obs: em desenvolvimento, a resposta ainda não é muito legível!
+    alguns dns's:
+      dns.adguard.com
+      dns.sse.cisco.com
+      dns.google # google
+      one.one.one.one # Cloudflare
+      dns.opendns.com # usado pela claro
+      dns9.quad9.net
+      security-filter-dns.cleanbrowsing.org
+      resolver1.telesp.net.br # usado pela vivo
+      resolver2.telesp.net.br # usado pela vivo
+    obs: O adguard responde 0.0.0.0 para o nomes que pretende bloquear, comando para teste: y dns googleadservices.com dns.adguard.com
+[y lower]
+    y echo AA | y lower
+[y upper]
+    y echo aa | y upper
+[y removeAcentos]
+    y cat file | y removeAcentos
+[y xor]
+    y cat file | y xor 100
+    y cat beltmatic_002.sav | y xor 104948 "7,215,169,11,62,56,139,40,128,196,29,36,86,12,244,116,175,83,57,142,3,255,249,75,208,143,44,62,165,92,216,64,24,1,125,20,82,107,43,11,123,121,31,99,250,252,15,214,90,234,96,112,163" > source.zip
+    obs: 104948 sendo o length do file beltmatic_002.sav
+    logica interna:
+    for (let i = 0; i < bytes.length; i++)
+      bytes[i] ^= key[(i + bytes.length) % 53];
+    obs2: valor entre 0 e 255. Por padrao 100
+[y md5]
+    cat arquivo | y md5
+[y sha1]
+    cat arquivo | y sha1
+[y sha256]
+    cat arquivo | y sha256
+[y aes]
+    cat arquivo | y aes SENHA | y base64
+    cat arquivo | y aes -e SENHA | y base64
+    cat arquivo | y aes -d SENHA | y base64
+    cat arquivo | y aes -e SENHA -md MD5 | y base64
+    cat arquivo | y aes -e SENHA -md SHA256 | y base64
+    cat arquivo | y aes -e SENHA -md SHA-256 | y base64
+    cat arquivo | y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA | y base64
+    obs: O comando "y aes -e SENHA -md MD5 -S AAAAAAAAAAAAAAAA" equivale à "openssl aes-256-cbc -e -k SENHA -md MD5 -S AAAAAAAAAAAAAAAA"
+    obs2: O valor de salt(-S) deverá contér 16 hexas maiúsculos, ex: AAAAAAAAAAAAAAAA
+    obs3: Se utilizar o salt na encriptacao, entao devera utilizar o mesmo salt na decriptacao
+[y base64]
+    cat arquivo | y base64
+    cat arquivo | y base64 -d
+    y base64 -e "texto"
+    y base64 -d "YQ=="
+    y printf "texto" | base64 -e 
+    obs: -e para encode e -d para decode
+[y grep]
+    cat arquivo | y grep ^Texto$
+    cat arquivo | y grep AB
+    cat arquivo | y grep -i -v aa bb cc
+[y wc]
+    cat arquivo | y wc -l
+    cat arquivo | y wc -w
+    cat arquivo | y wc -c
+    obs: conta. 
+         l -> lines, w -> words, c -> chars
+[y len]
+    cat arquivo | y len
+    obs: echo aabaa | tr b "\n" | y len
+    result: 2
+            2
+[y head]
+    cat arquivo | y head
+    cat arquivo | y head -30
+[y tail]
+    cat arquivo | y tail
+    cat arquivo | y tail -30
+[y cut]
+    cat arquivo | y cut -c-10
+    cat arquivo | y cut -c5-10
+    cat arquivo | y cut -c5-
+    cat arquivo | y cut -c5
+    cat arquivo | y cut -c5-10,15-17
+[y yt]
+    y yt
+    obs: irá exibir a msg:
+    cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py http...
+[y curl]
+    echo '{"id":1}' | y curl \
+        -H "Content-Type: application/json" \
+        -H "other: other" \
+        -X POST http://localhost:8080/v1/movies
+    cat file | y curl \
+        -H "Content-Type: application/json" \
+        -X POST http://localhost:8080/v1/movies
+    curl http://localhost:8080/v1/movies
+    curl http://localhost:8080/v1/movies --limit-rate 20M
+    obs: -v => verbose
+    obs2: --header é o mesmo que -H
+    obs3: -L segue location
+[y cors]
+    y cors
+    y cors -port 4000
+    y cors -ip 200.200.200.200 -port 4000
+    y cors -sw "https://super" -sw "https://teste"
+    obs: -sw significa startWith
+    obs2: cors serve como bypass de "blocked by CORS policy"
+    obs3: -sw é opcional, mas uma vez utilizado, só permitirá os valores informados pelos -sw
+    obs4: o cors não usa stream, ou seja, captura 100% da resposta para depois transmitir.
+    obs5: local host de ip classe C não funciona no browser
+    exemplo de requisição js:
+    var b_status=0;
+    function b(url){
+      if(location.href.indexOf('http://')!= 0){alert('cors nao pode ser executado nessa aba! somente em http://');return;}
+      if(url.indexOf('?')>-1) url=url.split('?')[0]+'?base64?'+btoa(url);
+      var xhr = new XMLHttpRequest();
+      xhr.withCredentials = false;
+      xhr.open("GET", url, false);
+      xhr.overrideMimeType("text/plain; charset=x-user-defined");
+      xhr.send(null);
+      b_status=xhr.status;
+      return xhr.responseText;
+    }
+    b('http://200.200.200.200:4000?https://site.com');
+[y curlJson]
+    y curlJson \
+        -H "Content-Type: application/json" \
+        -H "other: other" \
+        http://localhost:8080/v1/movies \
+        "[elem['id'] for elem in data]"
+    obs: mistura de curl com json
+[y [sed|tr]]
+    cat arquivo | y sed A B
+    cat arquivo | y sed A B E F
+    obs: sed com dois parametros é performatico e aceita por exemplo \n como quebra
+[y n]
+    cat arquivo | y n
+    obs: modifica arquivo \r\n para \n(se ja tiver \n nao tem problema)
+[y rn]
+    cat arquivo | y rn
+    obs: modifica arquivo \n para \r\n(se ja tiver \r\n nao tem problema)
+[y [bytesToInts|bi]]
+    cat arquivo | y bytesToInts
+    cat arquivo | y bi
+    cat arquivo | y bi -128
+    obs entrada: arquivo binario
+    obs saida: lista de numeros bytes(0..255)
+    obs2 bi == bytesToInts
+[y [intsToBytes|ib]]
+    echo 55 | y intsToBytes
+    cat arquivo | y intsToBytes
+    cat arquivo | y ib
+    y intsToBytes 20 20
+    y ib 20 20
+    obs entrada: lista de numeros bytes(0..255)
+    obs saida: arquivo binario
+    obs2 por conceito, os bytes variam entre -128..127, mas aqui usaremos 0..255
+    obs3 ib == intsToBytes
+[y od]
+    cat arquivo | od
+    cat arquivo | od -bc
+    cat arquivo | od -bcr
+    obs: -r mostra numero bytes
+         -b octal bytes
+         -c character
+[y touch]
+    y touch fileA
+    y touch fileA -3600
+    y touch fileA 60
+    y touch fileA 20210128235959
+    y touch fileA fileB fileC
+    obs: 60(60 segundos a frente)
+    obs2: -3600(3600 segundos atrás)
+    obs3: 20210128235959(setando em 28/01/2021 23:59:59)
+[y rm]
+    y rm file1 file2
+    y rm -R pasta
+    y rm -R pasta1 file1
+    obs: por questão de segurança, link simbolico não pode ser apagado recursivamente com "-R", essa etapa é ignorada
+    obs2: item simbolico pode ser apagado de modo comum, sem recursão. ex: y rm elemento
+[y cp]
+    y cp file1 file2
+    y cp -R pasta1 pasta2
+    obs: se a pasta2 nao existir entao é criado a cópia com o nome pasta2, se existir é copiado dentro da pasta(se dentro da pasta existir ai eh feito overwrite)
+[y mv]
+    y mv file1 file2
+    y mv pasta1 pasta2
+[y cd]
+    y cd
+    obs: equivalente a cd $HOME no linux e cd %userprofile% no windows
+[y mkdir]
+    y mkdir pasta1
+[y iconv]
+    y iconv -f UTF-8 -t ISO-8859-1 file
+    cat file | y iconv -f UTF-8 -t ISO-8859-1 
+    cat file | y i1
+    cat file | y iconv -f ISO-8859-1 -t UTF-8
+    cat file | y i2
+    obs: tipos suportados: "ISO-8859-1","UTF-8","UTF-8BOM","UCS-2LE","UCS-2LEBOM"
+    obs2: convert UTF-8 para ISO-8859-1(padrao windows, equivalente ao ANSI do notepad e equivalente ao windows-1252)
+    obs3: BOM do UTF-8 em numerico => 239 187 191
+    obs4: BOM do UCS-2LE em numerico => 255 254
+[y tee]
+    cat arquivo | y tee saida.txt
+[y uniq]
+    cat arquivo | y uniq
+[y quebra]
+    cat arquivo | y quebra
+    cat arquivo | y quebra -len 5
+[y seq]
+    y seq 1 10 2
+    y seq 5 7
+    y seq 9 -10
+    y seq 2022-09-19 2022-11-19
+    y seq 19/11/2022 19/09/2022
+[y tr]
+    echo a a | y tr "a" "bb"
+""" +
+"Obs: no windows, usar \\\"\"\"\" ao invés de \"\\\"\"" +
+"""
+[y add]
+    y add 2022-09-19
+    y add 19/09/2022
+[y awk]
+    cat arquivo | y awk print 1 3 "5,6"
+    cat arquivo | y awk print -1
+    cat arquivo | y awk start AAA end BBB    
+    cat arquivo | y awk start AAA
+    cat arquivo | y awk end BBB    
+    cat arquivo | y awk -v start AAA end BBB    
+    cat arquivo | y awk -v start AAA
+    cat arquivo | y awk -v end BBB    
+    obs: "-v" é a negativa
+    obs2: start e end pode ocorrer varias vezes no texto
+    obs3: -1 significa o ultimo
+[y dev_null]
+    cat arquivo | y banco buffer -n_lines 4000 -log buffer.log | y dev_null
+    cat arquivo | y banco buffer -n_lines 4000 -log buffer.log > /dev/null
+[y dev_in]
+    y dev_in | y banco buffer -n_lines 4000 -log buffer.log | y dev_null
+    y dev_in | y banco buffer -n_lines 4000 -log buffer.log > /dev/null
+    obs: ref. a dd if e dd of
+[y scp]
+    y scp file1 user,pass@servidor:file2
+    y scp file1 user,pass@servidor:file2 22
+    y scp user,pass@servidor:file1 file2
+    y scp user,pass@servidor:file1 file2 22
+    comando windows:
+    y scp user,pass@servidor:c:/tmp file2 22
+    obs: user,pass ou user
+[y execSsh]
+    y execSsh user,pass@servidor command
+    y execSsh user,pass@servidor command 22
+    obs: user,pass ou user
+[y ssh]
+    y ssh user,pass@servidor
+    y ssh user,pass@servidor 22
+    obs: user,pass ou user(dependendo da origem e destino windows buga)
+[y sshinfo]
+    y sshinfo
+    y sshinfo 192.168.0.100
+    y sshinfo 192.168.0.100 22
+[y sftp]
+    y sftp user,pass@servidor
+    y sftp user,pass@servidor 22
+    obs: user,pass ou user
+[y [serverRouter|sr]]
+    y serverRouter [ipA] 8080 [ipB] 9090
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 show
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlySend
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlyReceive
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showSimple
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt -noLogLocal
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 show
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlySend
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlyReceive
+    y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showSimple
+    obs:
+        [ipA] -> Router -> [ipB]
+        [ipA] conecta no router que conecta no [ipB]
+   obs2, mais atributos opcionais:
+        "-decodeSend" "12 0 26 6 0 0 0 0 0 0 0 0 0" "15 0 3 12 119 119 32 103 105 118 101 32 116 97 105 108"
+        "-decodeReceive" "3 0 0 0 ..." "4 0 0 0"
+        "-suprimeSend" "5 0 0 0"
+        "-suprimeReceive" "5 0 0 0"
+        -ips_banidos 2804:14d:ac80:8889::
+        -xor 100
+[y [httpServer|hs]]
+    y httpServer
+    set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" && y var
+    set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" "-noLogLocal" && y var
+    set var="httpServer" "-mode" "playlistmovie" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" && y var
+    set var="httpServer" "-mode" "playlistserver" "-host" "192.168.0.100" "-port" "8888" "-cfg" "d:/ProgramFiles/playlistserver.cfg" && y var
+    set var="httpServer" "-mode" "webdav" "-port" "8888" "-pass" "admin,admin123,user,user123" && y var
+    set var="httpServer" "-host" "192.168.0.100" "-port" "8100" "-redisDir" "D:\\ProgramFiles\redis" "-redisSeconds" "60" "-redisAll" "[ALL]" && y var
+    windows:
+    set var="httpServer" "-host" "127.0.0.1" "-port" "8888" "-titulo_url_token" "" "-titulo" "titulo" "-dir" "." "-endsWith" "" "-ips_banidos" "" "-log_ips" "" && y var
+    linux:
+    export var='"httpServer" "-host" "127.0.0.1" "-port" "8888" "-titulo_url_token" "" "-titulo" "titulo" "-dir" "." "-endsWith" "" "-ips_banidos" "" "-log_ips" ""' && y var
+    Obs, valores padroes:
+    host: 127.0.0.1
+    port: 8888
+    titulo_url_token: ""
+    titulo: titulo
+    Exemplo de endsWith: "jar,zip"
+    Exemplo de ips_banidos: "8.8.8.8,4.4.4.4"
+    Exemplo de log_ips: "c:\tmp\\ips.log"
+    -redisDir ""
+    -redisDir "c:\tmp\tmp" -redisSeconds "600" -redisAll "[ALL]" -redisLike "-playlistmovie-"
+    -redisLike significa que consultas deverao ter esse prefixo, senao serao negados.    
+    curl redis:
+    y curl "http://site:1000/" -H "Redis-KEY: [ALL]"
+    y curl "http://site:1000/" -H "Redis-KEY: user-playlistmovie-z2-*"
+    y curl "http://site:1000/" -H "Redis-KEY: A" -H "Redis-VALUE: B"
+    y curl "http://site:1000/" -H "Redis-DEL: A"
+    y curl "http://site:1000/" -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C" -H "Redis-SIGN: Y" # retorna 200 ou 203
+    obs, como funciona o SIGN(add key value concorrente):
+      Em caso de =>                   -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C" -H "Redis-SIGN: Y" # ele retorna 200. "Redis-SIGN: Y" força o valor "C" para SIGN
+      Em caso de um sign diferente => -H "Redis-KEY: A" -H "Redis-VALUE: B" -H "Redis-ID: C2"                   # ele retorna 203 negando a gravação, pois KEY A está com SIGN C e não C2.
+    obs2: key iniciada com 'secret-' não é exibida nem com o comando configurado [ALL]
+    obs3: -mode webdav só suporta os parametros -host, -port e -pass. No preenchimento de -pass é separado por virgula a cadeia user,senha,user,senha...
+    obs4: o parametro -pass só esta implementado para o -mode webdav
+[y [httpProxy|hp]]
+    y httpProxy -ip localhost -port 8080 -verbose
+[y wget]
+    y wget -h
+[y pwd]
+    y pwd
+[y find]
+    y find
+    y find .
+    y find /
+    y find . -mtime -1  # arquivos recentes de 1 dia para menos
+    y find . -mtime 0.5 # arquivos recentes a mais de 12 horas
+    y find . -type f # somente Files    
+    y find -type f -pre "y cat" -pos "| y grep 'PESQUISA AQUI'" 
+    obs: -L para navegar dentro do SymbolicLink, ex: y find / -L
+    obs2: -type contem as opcoes f e d
+[y ls]
+    y ls
+    y ls pasta1
+    y ls "pas*"
+[y lss]
+    y lss
+    y lss parta1
+[y du]
+    y du
+    y du . -g
+    ex: guia para limpeza de disco: D:\\>y du -g | y tr ".\\" "" | y grep -v "\\"
+[y sleep]
+    y sleep
+    y sleep 0.22 # 0.22 seconds
+    y sleep infinity
+[y split]
+    y cat fileA | y split -b 22
+    y cat fileA | y split -l 22
+    y cat fileA | y split --lines=22
+    y cat fileA | y split --bytes=22
+    y split --lines=22 --prefix=AA fileA # AAxxa
+[y regua]
+    y regua
+    y regua 90
+[y link]
+    y link "source" "new_"
+    y link "c:\\tmp\\source" "new_"
+    comando windows: mklink /j "new_" "c:\\tmp\\source"
+    comando nao windows: ln -s '/opt/source' 'new_'
+[y os]
+    y os
+    obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
+[y pss]
+    y pss
+    y pss " y lock "
+    y pss "buscando" "nao buscando" "nao buscando"
+[y pid]
+    y pid 222
+    Obs: onde 222 é o processId encontrado em y pss
+[y date]
+    y date
+    y date "+%s" # epoch
+    y date "+%s%N" # epochmili
+    y date "+%Y%m%d_%H%M%S"
+    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
+    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N"    
+    y date from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%N_%z"
+    y date "+%s%N" from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%N_%z"
+    y date "+%s%N" from "20240625_102251_345_UTC" mask "+%Y%m%d_%H%M%S_%N_%z"
+    y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+    y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-05" mask "+%Y%m%d_%H%M%S_%z" # ET(Eastern Time) - America/New_York    - UTC−5/UTC−4 DST(Daylight Saving Time - algumas usam)
+    y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-08" mask "+%Y%m%d_%H%M%S_%z" # PT(Pacific Time) - America/Los_Angeles - UTC−8/UTC−7 DST(Daylight Saving Time - algumas usam)
+    y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-06" mask "+%Y%m%d_%H%M%S_%z" # CT(Central Time) - America/Mexico_City - UTC−6/UTC−5 DST(Daylight Saving Time - algumas usam)
+    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N" fromNTP time.google.com
+    y date fromNTP _ && y date
+    fromNTP's:
+        y date fromNTP pool.ntp.org
+        y date fromNTP time.google.com
+        y date fromNTP time.windows.com
+        y date fromNTP time.apple.com
+        y date fromNTP ntp.ubuntu.com
+        y date fromNTP time.nist.gov
+        y date fromNTP ntp.br # NTP mantido pelo NIC.br (Núcleo de Informação e Coordenação do Ponto BR), ideal para usuários no Brasil.
+        y date fromNTP ntp.pt
+        y date fromNTP ntp.org
+        y date fromNTP 0.africa.pool.ntp.org #(África)
+        y date fromNTP 0.asia.pool.ntp.org #(Ásia)
+        y date fromNTP 0.europe.pool.ntp.org #(Europa)
+        y date fromNTP 0.north-america.pool.ntp.org #(América do Norte)
+        y date fromNTP 0.oceania.pool.ntp.org #(Oceania)
+        y date fromNTP 0.south-america.pool.ntp.org #(América do Sul)
+        y date fromNTP 0.br.pool.ntp.org #(Brasil)
+        y date fromNTP 0.us.pool.ntp.org #(Estados Unidos)
+        y date fromNTP 0.de.pool.ntp.org #(Alemanha)
+        y date fromNTP 0.fr.pool.ntp.org #(França)
+        y date fromNTP 0.uk.pool.ntp.org #(Reino Unido)
+        y date fromNTP 0.jp.pool.ntp.org #(Japão)
+        y date fromNTP 0.au.pool.ntp.org #(Austrália)
+        y date fromNTP 0.ca.pool.ntp.org #(Canadá)
+        y date fromNTP 0.pt.pool.ntp.org #(Portugal)
+        y date fromNTP 0.es.pool.ntp.org #(Espanha)
+        y date fromNTP 0.it.pool.ntp.org #(Itália)
+        y date fromNTP 0.ru.pool.ntp.org #(Rússia)
+        y date fromNTP 0.cn.pool.ntp.org #(China)
+        y date fromNTP 0.in.pool.ntp.org #(Índia)
+[y uptime]
+    y uptime
+    y uptime -ms
+[y cronometro]
+    y cronometro
+    y cronometro start
+    y cronometro flag
+    y cronometro end
+    obs: "y cronometro" dispara o comando equivalente a flag a cada enter pressionado.
+[y steam]
+    y steam friends
+    y steam friends status
+    y steam friends clan status
+    y steam status 232323
+    y steam flag 76561198010207122 40
+    y steam flag 76561198010207122 40 D:\\daemon\scripts_geral\steam_flag_1.bat
+    obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323
+    obs2: cria sua STEAM_API_KEY aqui -> https://steamcommunity.com/dev/apikey -> 123
+    obs3: pegue seu STEAM_ID no profile, exemplo -> https://steamcommunity.com/profiles/232323/ -> 232323
+[y clear]
+    y clear
+    obs: alternativa y cls
+[y cls]
+    y cls
+    obs: alternativa y clear
+[y ping]
+    y ping 192.168.0.100
+    y ping 192.168.0.100 -t 15
+    obs: -t 15 => timeout 15 segundos
+[y pings]
+    y pings
+    y pings -t 15
+    obs: lista os ips ja fazendo ping
+    obs2: -t 15 => timeout 15 segundos
+[y pingMine]
+    y pingMine mc.gladmc.com
+    y pingMine mc.gladmc.com 25565
+    y pingMine your_site -tray
+    obs: autostart tray:
+        criar atalho javaw em %appdata%\\..\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup
+        e colocar no atalho -Dfile.encoding=UTF-8 -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\jsch-0.1.55.jar Y pingMine your_site -tray
+    obs2: o tray não mostra numeros acima de 9
+[y ips]
+    y ips
+    y ips list
+    obs: mostra ips da maquina
+    obs2: list -> monta uma shell de verificacao de ips para outra maquina
+[y mouse]
+    y mouse # mostra as coordenadas do mouse
+    y mouse "m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base baixa - Os Iluminados
+    y mouse "m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base alta - Os Temidos
+    y mouse "dontMove c s 0.01"
+    obs: bloquear a tela faz o programa sair imediatamente
+    mais opcoes:
+    key w
+    k w
+    keypress w
+    kp w
+    keyrelease w
+    kr w
+[y mixer]
+    y mixer
+    y mixer " TV "
+    obs: lista os mixers
+    obs2: comandos parecidos:
+    gravador, play, call, injectMicLine
+[y gravador]
+    y gravador file.wav
+    y gravador > file.wav
+    y gravador -mixer "-" -f file.wav
+    y gravador -mixer "-" -line > fileLine
+    y gravador -mixer "-" -line | y play -line    
+    obs: formatos: -line, -wav e -mp3
+    obs2: por padrão ele tentar ler wav
+[y play]
+    y play file.wav -volume 0.5
+    y play -f file.wav
+    y cat file.wav | y play
+    y cat fileLine | y play -mixer "-" -line
+    obs: formatos: -line, -wave e -mp3
+    obs2: -mp3 ainda não implementado
+    obs3: -volume varia entra 0 e 1 mas de acordo com o volume ja setado, ou seja, se ja tiver em 10% e o comando colocar 0.5 então seria equivalente a 5%
+[y call]
+    y call
+    obs: ligação entra pessoas
+[y remote]
+    y remote
+    y remote -ip localhost
+    y remote -ip localhost -port 7777 -fps 30
+    obs: fps pode conter 30 e 60. 30 é o padrão
+[y injectMicLine]
+    y cat file.line | y injectMicLine
+    obs: not work
+[y kill]
+    y kill 3434
+    y kill 3434 3435
+    y kill -9 3434 3435
+    y kill -2 3434 3435
+    y kill text -Dnetbeans netbeans
+    y kill "D:\\ProgramFiles\\site\\musicas\\cry"
+    y kill "D:\\ProgramFiles\\site\\musicas\\cry\\Thomas Bergersen - Cry (Sun).mkv"
+    obs: o kill de path só foi implementado para o windows
+[y win]
+    y win
+    obs: mostra se o windows e office estão ativado
+    obs2: outra forma de verificar pelo cmd -> slmgr -dli
+[y speed]
+    y speed
+    y speed -ip 192.168.0.100
+    Obs: -ip -port -server -client -send -receive|-r
+[y lock]
+    y lock
+    y lock w
+    y lock 0 -> desliga lock
+    obs: gera black screen
+    obs2: y lock w -> white screen
+[y monitor]
+    y monitor cpu
+    y monitor cpu oneLine
+[y printScreen]
+    y printScreen
+    y printScreen 2
+    obs: pasta padrão: d:/ProgramFiles/screens
+[y ocr]
+    y ocr D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp
+    y cat D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp | y ocr
+    obs: é preciso instalar o programa tesseract
+    download: https://github.com/tesseract-ocr/tesseract/releases/
+    pasta instalado: "D:\\ProgramFiles\\Tesseract-OCR"
+[y paste]
+    y paste file1 file2
+[y mkv]
+    y mkv
+    y mkv -v
+    y mkv -force
+    y mkv -lento
+    obs: ffmpeg -i "A.mkv" -qscale 0 -max_muxing_queue_size 1024 "A.mp4"
+    obs: -lento tem outro algotirmo de conversão, as vezes é necessario e tudo tiver bugando
+    dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo "y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z" | y tr "rmvb\"Z" "mp4\""
+    aviso: "Audio: ac3 (ac-3 " de mp4 não funciona na web
+    checando:
+    cd d:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep "Input #0" "(por): Audio: ac3"
+[y [thumbnail|tn]]
+    y thumbnail
+[y insta]
+    y insta [url]
+[y bmp]
+    y cat img.bmp | y bmp
+    y bmp -file a.bmp -len 64
+    y cat img.bmp | y bmp -len 64 # modo assinatura de 64 ponto de largura, uso para comparação entre imagens
+    # primeira linha x, segunda y, demais r g b
+[y decodeUrl]
+    echo T%C3%B3quio | y decodeUrl
+[y encodeUrl]
+    echo Tóquio | y encodeUrl
+    obs: o espaço esta sendo representado como +, o que é uma tradução obsoleta.
+[y test]
+    y test
+[y tests]
+    y tests
+[y controlc]
+    y controlc
+[y random]
+    y random 1 2
+[y talk]
+    y talk list
+    y talk -tts list
+    y talk -textToSpeech list
+    y talk -stt list
+    y talk -speechToText list
+    y talk oi
+    y talk -lang Brazilian_Portuguese_Ricardo -msg oi
+    y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "d:/ProgramFiles/musicas_ia/talk.wav"
+    y echo oi | y talk
+    y talk cat
+    y talk -stt
+    y talk -stt -lang English
+    oi 1
+    oi 2
+    oi 3
+    y echo "一 二 三 四 五 六 七 八 九 十" | y talk -tts -lang Chinese_Mandarin_Zhiyu
+    y talk -stt -lang Chinese
+    obs: funções -tts => -textToSpeech #padrao #função acessa internet e faz cache na maquina por texto e voz
+                 -stt => -speechToText
+         -lang padrões:
+                 Brazilian_Portuguese_Ricardo para -tts
+                 Portugues para -stt
+[y sign]
+    y sign -msg "Hello" -pass "My passphrase"
+    y sign -verify -msg "Hello" -publicKey "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==" -signature "MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA=="
+    obs: retornando true, significa assinatura ok
+    obs2: Informações técnicas => SPEC "secp256r1" ALGO = "SHA256withECDSA"
+    obs3: Não confundir com secp256k1 do bitcoin
+[y [overflix|of]]
+    y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
+    y overflix -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
+    y overflix -onlyPreLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"    
+    y overflix -v -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
+    y overflix "https://encontrei.la/assistir-ruptura-2x4-dublado-online-46643/" -outPath "D:\\ProgramFiles\\site\\series\\Ruptura"
+    y overflix "https://encontrei.la/assistir-anne-com-um-e-dublado-online-49039/" "getScriptRenameBySkip,7,10,10"
+    obs: getScriptRenameBySkip só interpreta comandos skip, caso contrario baixa
+    obs2: -vToken => mostra iexplorer.exe e não fecha.
+         -o => force out path
+         -tags => verbose profundo
+[y connGui]
+    connGui
+    obs: teste de conexao(server e client)
+[y var]
+    y var
+    Obs: execução por parametro de variavel
+    windows:
+    set var="cat" "a" && y var
+    linux:
+    export var='"cat" "a"' && y var
+    export var='"cat" "a"' && y var -ignore FLAG_HERE
+[y cotacao]
+    y cotacao
+[y help]
+    y help <command>
+    y help router
 
+Exemplos de conn: 
+    y banco -conn "jdbc:oracle:thin:@//host_name:1521/service_name|login|senha" select "select 1"
+    y banco -conn "jdbc:oracle:thin:@host_name:1566:sid_name|login|senha" select "select 1"
+    y banco -conn "jdbc:sqlserver://localhost:1433;databaseName=MyDatabase;user=myUsername;password=myPassword;" select "select 1"
+    y banco -conn "jdbc:mysql://localhost:3306|login|senha" select "select 1"
+    y banco -conn "jdbc:postgresql://localhost:5432/|login|senha" select "select 1"
 
+Observações:
+entrada de dados pode ser feito por |
+export STATUS_FIM_Y=path/fim.log para receber a confirmação de fim de processamento de selectCSV
+export COUNT_Y=path/count.log para receber a quantidade de linhas geradas no CSV(sem o header) do comando selectCSV
+export CSV_SEP_Y="|" para utilizar um separador diferente, pode ser usado tanto em leitura de csv quanto gravação
+export CSV_ONLYCHAR_Y="S" usado para nao imprimir aspas duplas em numericos, pode ser usado na gravação de csv, quanto a leitura de csv nao precisa, a leitura ja interpreta automaticamente isso
+export FORMAT_DATA_Y="TZ" deixando a data 10/10/2010T10:10:10Z
+export FORMAT_DATA_Y="UTC" deixando a data 10/10/2010 10:10:10 UTC
+export FORMAT_DATA_Y="NATAL" toda data será na data do natal ex 25/12/2010 10:10:15
+export FORMAT_DATA_Y="YYYY-MM-DD" 2010-07-07 12:12:12
+export COM_SEPARADOR_FINAL_CSV_Y="S" ex: "a";"a"; o padrao seria "a";"a"
+export SEM_HEADER_CSV_Y="S"
+todos os comandos acima podem ser usados como parametro, ex: -CSV_SEP_Y ","
 
+Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492c4405f98972ba17c0a3dc072d servidor;
+Dica2: vendo os tokens: grep ":" $TOKEN_Y/*
+Dica3: vendo warnnings ORA: cat $ORAs_Y
+""";
+        
+        if ( caminho.equals("/y/ORAs") )
+            return """
+ORA-00911
+ORA-00913
+ORA-00917
+ORA-00928
+ORA-00933
+ORA-00936
+ORA-00947
+ORA-00972
+ORA-01756
+ORA-01742
+ORA-01747
+ORA-01438
+""";
 
+        if ( caminho.equals("/y/sql_get_ddl_createtable") )
+            return """
+ with
+        FUNCTION func_fix_create_table(p_campo CLOB) RETURN CLOB AS 
+          vCampo     CLOB;
+          vResultado CLOB;
+          vC         VARCHAR2(2);
+          vStart     VARCHAR2(1);
+          vContador  number;
+          
+        BEGIN
+          vCampo := p_campo;
+          vStart := 'N';
+          vResultado := '';
+          vContador := 0;
+        
+          FOR i IN 1..LENGTH(vCampo)
+          LOOP    
+            vC := substr(vCampo,i,1);
+            
+            IF ( vC = '(' OR vC = 'C' OR vC = 'c' ) THEN
+              vStart := 'S';
+            END IF;
+            
+            IF ( vC = '(' ) THEN
+              vContador := vContador + 1;
+            END IF;
+            
+            IF ( vStart = 'S' ) THEN
+              vResultado := vResultado || vC;
+            END IF;
+            
+            IF ( vC = ')' ) THEN
+              vContador := vContador - 1;
+              IF ( vContador = 0 ) THEN          
+                EXIT;
+              END IF;
+            END IF;
+          END LOOP;
+          
+          return vResultado || ';';
+          
+        END func_fix_create_table;
+        select func_fix_create_table(dbms_metadata.get_ddl('TABLE',UPPER('[TABELA]'),UPPER('[SCHEMA]'))) TXT from dual
+""";
 
-
-
+        if ( caminho.equals("/y/versao") )
+            return "0.2.0";
+        return "";
+    }
+}
 
 
