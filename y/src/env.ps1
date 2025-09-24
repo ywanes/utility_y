@@ -53,7 +53,7 @@ Invoke-WebRequest -uri "https://adams.cms.waikato.ac.nz/nexus/repository/public/
 Invoke-WebRequest -uri "https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar" -Method "GET"  -Outfile postgresql-42.7.5.jar
 Invoke-WebRequest -uri "https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar" -Method "GET"  -Outfile jsch-0.1.55.jar
 Invoke-WebRequest -uri "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java" -Method "GET"  -Outfile Y.java
-c:\programFiles\java\openlogic-openjdk-8u412-b08-windows-64\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;." Y.java
+c:\programFiles\java\openlogic-openjdk-21.0.8+9-windows-x64\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;." Y.java
 
 Set-Content c:/windows/y.bat '@echo off
 (set \n=^^^
