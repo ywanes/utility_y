@@ -14838,7 +14838,7 @@ Note: Recompile with -Xlint:deprecation for details.
 Note: Y.java uses unchecked or unsafe operations.
 Note: Recompile with -Xlint:unchecked for details.
 """.trim()) ||
-                    s.equals("")
+                    s.trim().equals("")
             )
                 System.out.println("ok");
             else{
@@ -18286,13 +18286,16 @@ class Util{
     public String get_erro_amigavel_exception(Exception e){
         if ( e.toString().equals("java.net.BindException: Address already in use (Bind failed)") )
             return "Erro, esse servico ja esta aberto";
-        if ( e.toString().equals("java.net.ConnectException: Connection refused: connect") )
+        if ( 
+            e.toString().equals("java.net.ConnectException: Connection refused: connect") 
+            || e.toString().equals("java.net.ConnectException: Connection refused") 
+            || e.toString().equals("java.net.ConnectException: Connection refused (Connection refused)")
+        )
             return "Erro, offline";
-        if ( e.toString().equals("java.net.ConnectException: Connection refused (Connection refused)") )
-            return "Erro, offline";
-        if ( e.toString().equals("java.net.SocketException: Connection reset by peer: socket write error") )
-            return "Desconectou-se!";
-        if ( e.toString().equals("java.net.SocketException: Connection reset") )
+        if ( 
+            e.toString().equals("java.net.SocketException: Connection reset by peer: socket write error")
+            || e.toString().equals("java.net.SocketException: Connection reset") 
+        )
             return "Desconectou-se!";
         return e.toString();        
     }

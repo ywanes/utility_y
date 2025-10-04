@@ -2300,6 +2300,25 @@ function reload(){
 	location.reload();
 }
 
+function tryRedirectTikTok(a){ // http://203.cloudns.cl:8000/?https://vm.tiktok.com/ZMAmGMPjm/
+	if ( a.indexOf('.tiktok.com') > -1 ){
+		const xhr = new XMLHttpRequest();
+		xhr.open("POST", "https://www.tikwm.com/api/", true); // URL de destino
+		xhr.setRequestHeader("Content-Type", "application/json");
+		xhr.onreadystatechange = () => {
+		  if (xhr.readyState === 4) { // requisição completa
+			if (xhr.status >= 200 && xhr.status < 300) {
+			  window.location.href=JSON.parse(xhr.responseText)['data']['play'];
+			} else {
+			  console.error("Erro HTTP:", xhr.status);
+			  alert('nao foi possivel decodificar a url!');
+			}
+		  }
+		};
+		xhr.send(JSON.stringify({ "url": a }));
+	}
+}
+
 function get_resume(){
   let uri=decodeURI(window.location.href);
   if ( uri.indexOf('?') > 0 ){
@@ -2311,6 +2330,7 @@ function get_resume(){
         type='music';
     let uri2=uri.split('?')[1];
     let _onclick="load_playlist(" + "['" + uri2.split('/').join("','") + "']" + ", true, '" + type + "', 'resume')";
+	tryRedirectTikTok(uri2);
     uri2=convert_chaturbate(uri2);	
 	if ( uri2.indexOf('.m3u8') > -1 )
       _onclick="load_stream('_', '" + uri2 + "')";
