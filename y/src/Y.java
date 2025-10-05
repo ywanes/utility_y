@@ -16887,6 +16887,10 @@ class Util{
                             ip=ip.replace(":0:","::").replace(":::","::");
                         if (!ip.contains(filter[i]))
                             continue;
+                        if ( ip.startsWith("fd") )
+                                continue;
+                        if ( ip.startsWith("fe") )
+                                continue;                        
                         if ( count_address_in_interface > 0 )
                             result2+=";";
                         result2+=ip;
