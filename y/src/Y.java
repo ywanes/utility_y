@@ -7301,11 +7301,13 @@ cat buffer.log
                       main();                      
         """;
         
-        ////////////
-        String s=runtimeExec(null, new String[]{"cmd", "/c", "node", "-", url}, null, script.getBytes(), null);
+        String alert_puppeteer="puppeteer nao encontrado!, instale ele com npm install puppeteer na pasta C:/npm_puppeteer";
+        if ( !new File("C:/npm_puppeteer").exists() )
+            throw new Exception(alert_puppeteer);
+        String s=runtimeExec(null, new String[]{"cmd", "/c", "node", "-", url},new File("C:/npm_puppeteer"), script.getBytes(), null);
         if ( runtimeExecError != null && !runtimeExecError.equals("") ){
             if ( runtimeExecError.contains("Cannot find module 'puppeteer") )
-                throw new Exception("puppeteer nao encontrado!, instale ele com npm install puppeteer");
+                throw new Exception(alert_puppeteer);
             throw new Exception("erro: \n" + runtimeExecError);
         }
         return s.trim();
