@@ -7091,7 +7091,8 @@ cat buffer.log
                     return;
                 }
                 //s=getTokenIE(vToken, url);
-                s=getTokenTESTCAFE(vToken, url);                
+                //s=getTokenTESTCAFE(vToken, url);                
+                s=getTokenPuppeteer(url);
             }
             if ( s != null && s.trim().length() > 0 )
                 s=s.trim();
@@ -7138,6 +7139,176 @@ cat buffer.log
             return;
         if ( verbose )
             System.out.println(a);
+    }
+    
+    public String getTokenPuppeteer(String url) throws Exception{
+        String script="""
+                      const puppeteer = require('puppeteer');
+                      
+                      // Função de delay compatível
+                      function delay(ms) {
+                          return new Promise(resolve => setTimeout(resolve, ms));
+                      }
+                      
+                      /**
+                       * Executa o processo completo
+                       */
+                      async function getVideoUrl(myUrl) {
+                          let browser = null;
+                          
+                          try {
+                              // Configuração do Puppeteer
+                              browser = await puppeteer.launch({
+                                  headless: true,
+                                  args: [
+                                      '--no-sandbox',
+                                      '--disable-setuid-sandbox',
+                                      '--disable-web-security',
+                                      '--disable-blink-features=AutomationControlled'
+                                  ]
+                              });
+                      
+                              const page = await browser.newPage();
+                              
+                              // Configurações stealth
+                              await page.evaluateOnNewDocument(() => {
+                                  Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                              });
+                      
+                              await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                              await page.setViewport({ width: 1920, height: 1080 });
+                      
+                              // Navega para a URL fornecida (vai seguir redirects automaticamente)
+                              await page.goto(myUrl, { 
+                                  waitUntil: 'networkidle2',
+                                  timeout: 60000 
+                              });
+                      
+                              await delay(3000);
+                      
+                              // Pega o CSRF token da própria página (já após o redirect)
+                              const csrfToken = await page.evaluate(() => {
+                                  const meta = document.querySelector('meta[name="csrf"]');
+                                  return meta ? meta.getAttribute('content') : null;
+                              });
+                      
+                              if (!csrfToken) {
+                                  throw new Error('CSRF token não encontrado');
+                              }
+                      
+                              // Verifica se jQuery está disponível, se não, injeta
+                              const hasJquery = await page.evaluate(() => typeof $ !== 'undefined');
+                              if (!hasJquery) {
+                                  await page.addScriptTag({url: 'https://code.jquery.com/jquery-3.6.0.min.js'});
+                                  await delay(1000);
+                              }
+                      
+                              // Executa o processo reCAPTCHA usando a URL atual (após redirect)
+                              const videoUrl = await page.evaluate(async (csrfToken) => {
+                                  return new Promise((resolve, reject) => {
+                                      // Função loadRecaptcha
+                                      function loadRecaptcha() {
+                                          return new Promise((resolve, reject) => {
+                                              if (window.grecaptcha) {
+                                                  resolve();
+                                                  return;
+                                              }
+                                              
+                                              const script = document.createElement('script');
+                                              script.src = 'https://www.google.com/recaptcha/api.js?render=6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd';
+                                              script.async = true;
+                                              script.defer = true;
+                                              
+                                              script.onload = () => {
+                                                  const checkLoad = setInterval(() => {
+                                                      if (window.grecaptcha) {
+                                                          clearInterval(checkLoad);
+                                                          resolve();
+                                                      }
+                                                  }, 100);
+                                              };
+                                              
+                                              script.onerror = reject;
+                                              document.head.appendChild(script);
+                                          });
+                                      }
+                      
+                                      loadRecaptcha().then(() => {
+                                          grecaptcha.ready(function() {
+                                              grecaptcha.execute("6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd", {action: "download"})
+                                              .then(function(token) {
+                                                  if (!token) {
+                                                      reject('Token reCAPTCHA vazio');
+                                                      return;
+                                                  }
+                                                  
+                                                  // Usa a URL atual da página (após redirect)
+                                                  $.post(window.location.href, {
+                                                      csrf: csrfToken,
+                                                      token: token, 
+                                                      a: "genticket"
+                                                  })
+                                                  .done(function(response) {
+                                                      if (response && response.url) {
+                                                          resolve(response.url);
+                                                      } else {
+                                                          reject('Resposta sem URL');
+                                                      }
+                                                  })
+                                                  .fail(reject);
+                                              })
+                                              .catch(reject);
+                                          });
+                                      }).catch(reject);
+                                  });
+                              }, csrfToken);
+                      
+                              return videoUrl;
+                      
+                          } catch (error) {
+                              throw error;
+                          } finally {
+                              if (browser) {
+                                  await browser.close();
+                              }
+                          }
+                      }
+                      
+                      /**
+                       * Função principal
+                       */
+                      async function main() {
+                          // Verifica se a URL foi fornecida
+                          if (process.argv.length < 3) {
+                              process.exit(1);
+                          }
+                      
+                          const myUrl = process.argv[2];
+                      
+                          try {
+                              // Executa o processo completo
+                              const videoUrl = await getVideoUrl(myUrl);
+                              
+                              // Mostra APENAS a URL no output
+                              console.log(videoUrl);
+                              
+                          } catch (error) {
+                              process.exit(1);
+                          }
+                      }
+                      
+                      // Executa o script
+                      main();                      
+        """;
+        
+        ////////////
+        String s=runtimeExec(null, new String[]{"cmd", "/c", "node", "-", url}, null, script.getBytes(), null);
+        if ( runtimeExecError != null && !runtimeExecError.equals("") ){
+            if ( runtimeExecError.contains("Cannot find module 'puppeteer") )
+                throw new Exception("puppeteer nao encontrado!, instale ele com npm install puppeteer");
+            throw new Exception("erro: \n" + runtimeExecError);
+        }
+        return s.trim();
     }
     
     public String getTokenTESTCAFE(Boolean enable_visible, String url) throws Exception{
@@ -7199,7 +7370,7 @@ cat buffer.log
         script="import { Selector, ClientFunction } from 'testcafe';\n" +
         "\n" +
         "fixture('Executar Script reCAPTCHA')\n" +
-        "    .page('"+url+"'); // Substitua pela URL do seu site\n" +
+        "    .page('"+url+"');\n" +
         "\n" +
         "test('Obter token reCAPTCHA e enviar requisição', async t => {\n" +
         "    // 1. Carregar a API do reCAPTCHA se não estiver presente\n" +
@@ -7305,7 +7476,6 @@ cat buffer.log
         "    }\n" +
         "});";
 
-        
         File f = File.createTempFile("meu-arquivo-temporario", ".js");
         String path=f.getAbsolutePath();
         FileWriter fw=new FileWriter(f);
@@ -7315,10 +7485,16 @@ cat buffer.log
         String [] commands=null;
         String s="";
         
+        String navegador_testcafe="chrome";
+        navegador_testcafe="firefox";
+        
+        ////////test
+        //enable_visible=true;
+        
         if ( enable_visible )
-            commands=new String[]{"cmd", "/c", "testcafe", "chrome", path};
+            commands=new String[]{"cmd", "/c", "testcafe", navegador_testcafe, path};
         else
-            commands=new String[]{"cmd", "/c", "testcafe", "chrome:headless", path};
+            commands=new String[]{"cmd", "/c", "testcafe", navegador_testcafe+":headless", path};
         s=runtimeExec(null, commands, null, null, null);
         if ( runtimeExecError != null && !runtimeExecError.equals("") )
             throw new Exception("erro: programa testcafe não encontrado!\ninstale ele:npm install -g testcafe\n" + runtimeExecError);
