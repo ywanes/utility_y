@@ -13254,6 +13254,10 @@ cat buffer.log
     }        
 
     private void mouse(String [] args){        
+        if ( args.length == 2 && args[1].equals("f5") ){
+            mouse_f5();
+            return;
+        }
         try{
             int dont_move_x=-1;
             int dont_move_y=-1;
@@ -13345,6 +13349,113 @@ cat buffer.log
         }
     }
 
+    private void mouse_f5(){
+        String script="""
+import threading
+import time
+import pyautogui
+import keyboard
+from pynput import mouse
+import sys
+
+class AutoClicker:
+    def __init__(self):
+        self.running = False
+        self.click_thread = None
+        self.initial_position = None
+        self.click_interval = 0.01  # 10ms
+        
+    def start_auto_click(self):
+        if self.running:
+            return
+            
+        self.running = True
+        self.initial_position = pyautogui.position()
+        
+        def click_loop():
+            while self.running:
+                current_position = pyautogui.position()
+                
+                if current_position != self.initial_position:
+                    print("Mouse movido! Parando auto-click.")
+                    self.stop_auto_click()
+                    break
+                
+                pyautogui.click(button='left')
+                
+                # Aguarda 0.01 segundos
+                time.sleep(self.click_interval)
+        
+        self.click_thread = threading.Thread(target=click_loop, daemon=True)
+        self.click_thread.start()
+    
+    def stop_auto_click(self):
+        if self.running:
+            self.running = False
+            print("Auto-click parado.")
+    
+    def is_running(self):
+        return self.running
+
+class MouseMonitor:
+    def __init__(self, auto_clicker):
+        self.auto_clicker = auto_clicker
+        
+    def on_move(self, x, y):
+        if self.auto_clicker.is_running():
+            current_pos = (x, y)
+            if hasattr(self.auto_clicker, 'initial_position') and self.auto_clicker.initial_position:
+                if current_pos != self.auto_clicker.initial_position:
+                    self.auto_clicker.stop_auto_click()
+
+def main():
+    auto_clicker = AutoClicker()
+    mouse_monitor = MouseMonitor(auto_clicker)
+    
+    mouse_listener = mouse.Listener(on_move=mouse_monitor.on_move)
+    mouse_listener.daemon = True
+    mouse_listener.start()
+    
+    # Função para toggle com F5
+    def toggle_auto_click():
+        if auto_clicker.is_running():
+            auto_clicker.stop_auto_click()
+        else:
+            auto_clicker.start_auto_click()
+    
+    keyboard.add_hotkey('f5', toggle_auto_click)
+    #keyboard.add_hotkey('esc', lambda: exit_program(auto_clicker))
+    
+    try:
+        keyboard.wait()
+    except KeyboardInterrupt:
+        exit_program(auto_clicker)
+
+def exit_program(auto_clicker):
+    auto_clicker.stop_auto_click()
+    keyboard.unhook_all()
+    sys.exit(0)
+
+if __name__ == "__main__":
+    main()
+""";
+        System.out.println("""
+programa em execução!
+F5 liga clicka rapida de 0.01 segundos
+mover o mouse desliga
+aperta F5 novamente para repetir
+""");            
+        
+        String retorno=runtimeExec(null, new String[]{"python3"}, null, script.getBytes(), false);
+        if ( retorno == null || retorno.equals("") ){
+            if ( runtimeExecError.contains("No module named 'keyboard'") )
+                erroFatal("\n\nERRO!, é preciso instalar o keyboard, use pip install keyboard");
+            System.out.println("Erro: " + runtimeExecError);
+        }
+        return;
+        
+    }
+    
     boolean mouse_print_enable=true;
     public void mouse_print(String a){
         if ( mouse_print_enable )
@@ -18355,6 +18466,12 @@ class Util{
             }
             Process proc = pb.start();
 
+            // finalizando filhos
+            ProcessHandle processHandle = proc.toHandle();
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                destroyProcessTree(processHandle);
+            }));
+            
             Thread ok0 = new Thread() {
                 public void run() {
                     try {
@@ -18440,6 +18557,26 @@ class Util{
         return null;
     }
 
+    private void destroyProcessTree(ProcessHandle root) {
+        root.descendants().forEach(descendant -> {
+            descendant.destroy();
+            try {
+                descendant.onExit().get(2, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                descendant.destroyForcibly();
+            }
+        });
+        
+        if (root.isAlive()) {
+            root.destroy();
+            try {
+                root.onExit().get(3, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                root.destroyForcibly();
+            }
+        }
+    }
+    
     public String [] regex_matcher(String start, String end, String text, Boolean trunc_lens){
         ArrayList<String> lista=new ArrayList<String>();
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(start+"[\\s\\S]*?"+end).matcher(text);        
@@ -26617,6 +26754,7 @@ Exemplos...
     y mouse "m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base baixa - Os Iluminados
     y mouse "m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base alta - Os Temidos
     y mouse "dontMove c s 0.01"
+    y mouse f5 # click em alta velocidade 0.01 s
     obs: bloquear a tela faz o programa sair imediatamente
     mais opcoes:
     key w
