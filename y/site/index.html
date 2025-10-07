@@ -2537,6 +2537,7 @@ lpad=function(n, width, z) { // lpad('text..', 20, ' ');
   return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
 }
 
+this.redis_offline_informado=false;
 function redis(a){
   if ( !Array.isArray(a) ){
     console.log("use:\nredis_get('" + a + "')");
@@ -2557,6 +2558,10 @@ function redis(a){
     return xmlHttp.responseText;
   }catch(err){
     console.log('redis offline!!!!\nredis offline!!!!\nredis offline!!!!\nredis offline!!!!\nredis offline!!!!\nredis offline!!!!\nredis offline!!!!\n -> xmlHttp erro: '+err);
+	if ( !this.redis_offline_informado ){
+		this.redis_offline_informado=true;
+		alert('comunicador offline!');
+	}	
   }
   return null;
 }
