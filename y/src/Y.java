@@ -13361,29 +13361,35 @@ import sys
 class AutoClicker:
     def __init__(self):
         self.running = False
+        self.running6 = False
         self.click_thread = None
         self.initial_position = None
         self.click_interval = 0.01  # 10ms
-        
+
+    def start_auto_click6(self):
+        if self.running:
+            return
+        self.running6 = True        
+        self.start_auto_click()              
+
+    def not_current(self, pos):
+        return pos != self.initial_position and not self.running6
+
     def start_auto_click(self):
         if self.running:
             return
-            
+        
         self.running = True
         self.initial_position = pyautogui.position()
         
         def click_loop():
             while self.running:
-                current_position = pyautogui.position()
-                
-                if current_position != self.initial_position:
-                    print("Mouse movido! Parando auto-click.")
+                if self.not_current(pyautogui.position()):
                     self.stop_auto_click()
                     break
                 
                 pyautogui.click(button='left')
                 
-                # Aguarda 0.01 segundos
                 time.sleep(self.click_interval)
         
         self.click_thread = threading.Thread(target=click_loop, daemon=True)
@@ -13391,22 +13397,23 @@ class AutoClicker:
     
     def stop_auto_click(self):
         if self.running:
+            self.running6 = False
             self.running = False
             print("Auto-click parado.")
     
     def is_running(self):
         return self.running
+                      
+    def is_running6(self):
+        return self.running6
 
 class MouseMonitor:
     def __init__(self, auto_clicker):
         self.auto_clicker = auto_clicker
         
     def on_move(self, x, y):
-        if self.auto_clicker.is_running():
-            current_pos = (x, y)
-            if hasattr(self.auto_clicker, 'initial_position') and self.auto_clicker.initial_position:
-                if current_pos != self.auto_clicker.initial_position:
-                    self.auto_clicker.stop_auto_click()
+        if self.auto_clicker.is_running() and hasattr(self.auto_clicker, 'initial_position') and self.auto_clicker.initial_position and self.not_current( (x, y) ):
+            self.auto_clicker.stop_auto_click()
 
 def main():
     auto_clicker = AutoClicker()
@@ -13416,15 +13423,20 @@ def main():
     mouse_listener.daemon = True
     mouse_listener.start()
     
-    # Função para toggle com F5
     def toggle_auto_click():
         if auto_clicker.is_running():
             auto_clicker.stop_auto_click()
         else:
             auto_clicker.start_auto_click()
-    
+
+    def toggle_auto_click6():
+        if auto_clicker.is_running():
+            auto_clicker.stop_auto_click()
+        else:
+            auto_clicker.start_auto_click6()
+
     keyboard.add_hotkey('f5', toggle_auto_click)
-    #keyboard.add_hotkey('esc', lambda: exit_program(auto_clicker))
+    keyboard.add_hotkey('f6', toggle_auto_click6)
     
     try:
         keyboard.wait()
@@ -13441,9 +13453,9 @@ if __name__ == "__main__":
 """;
         System.out.println("""
 programa em execução!
-F5 liga clicka rapida de 0.01 segundos
-mover o mouse desliga
-aperta F5 novamente para repetir
+clicker rapida de 0.01 segundos
+F5 liga/desliga podendo ser desligado ao mover o mouse
+F6 liga/desliga 
 """);            
         
         String retorno=runtimeExec(null, new String[]{"python3"}, null, script.getBytes(), false);
