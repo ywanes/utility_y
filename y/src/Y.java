@@ -12816,7 +12816,18 @@ cat buffer.log
             partes = new String[]{"cmd", "/c", "mklink", "/j", new_, fonte};
         
         try{
-            runtimeExec(null, partes, null, null, null);
+            String s=runtimeExec(null, partes, null, null, null);
+            if ( 
+                runtimeExecError != null 
+                && runtimeExecError.contains("Os volumes locais s") // quando o disco não é local, exemplo drive mapeado
+                && !System.getProperty("user.dir").contains("/") ){
+                partes = new String[]{"cmd", "/c", "mklink", "/D", new_, fonte};
+                try{
+                    runtimeExec(null, partes, null, null, null);
+                    System.out.println("finish!");
+                    return;
+                }catch(Exception e){}
+            }
             System.out.println("finish!");
         }catch(Exception e){}
     }
@@ -24670,8 +24681,7 @@ class ClientThread extends Util{
                     String tmp=lendo_arquivo(nav);
                     // if [GLOBAL]
                     if ( tmp.contains("[GLOBAL]") ){
-                        //String inject_global=getListaCompleta(new File(dir), 0);
-                        String inject_global=getListaCompleta(new File(dir), 0)
+                        String inject_global=getListaCompleta(new File(dir), 0)                        
                                 + "`;\nthis.epoch_load=" + epochmili(null)
                                 + ";\nthis.epoch_delta=this.epoch_load-(new Date).valueOf()"
                                 + ";\nthis.fim_inject=`";
@@ -26658,6 +26668,7 @@ Exemplos...
     y link "c:\\tmp\\source" "new_"
     comando windows: mklink /j "new_" "c:\\tmp\\source"
     comando nao windows: ln -s '/opt/source' 'new_'
+    obs: se o volume nao for local, exemplo drive mapeado então deverá ser usado /D ao invés de /j do windows
 [y os]
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
