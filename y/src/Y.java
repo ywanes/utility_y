@@ -18955,9 +18955,11 @@ class Util{
     }
     
     public String valor_to_text(long unit, boolean com_espaco){
-        int fator=1024;
+        long fator=1024;
         String s="";
         String _espaco=com_espaco?" ":"";
+        if ( unit/(fator*fator*fator*fator) >= 1 )
+            return arredondamentoDouble(((double)unit/(fator*fator*fator*fator)) ,2, false)+_espaco+"T";
         if ( unit/(fator*fator*fator) >= 1 )
             return arredondamentoDouble(((double)unit/(fator*fator*fator)) ,2, false)+_espaco+"G";
         if ( unit/(fator*fator) >= 1 )
@@ -18965,6 +18967,13 @@ class Util{
         if ( unit/(fator) >= 1 )
             return arredondamentoDouble(((double)unit/(fator)) ,2, false)+_espaco+"K";
         return unit+_espaco+"B";
+    }
+    
+    public String porcentagem(long a, long b){
+        String s=arredondamentoDouble((double)a*100/b, 2, false)+"%";
+        if ( s.length() < 6 )
+            return " "+s;
+        return s;
     }
     
     static void testOn() {
@@ -19238,7 +19247,7 @@ class Util{
             boolean show=false;
             String [] commands = new String[]{
                 // BootDevice,RegisteredUser, removido!
-                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize,name && wmic path Win32_VideoController get Caption,adapterram",
+                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize,name && wmic path Win32_VideoController get Caption,adapterram && wmic logicaldisk get deviceid,size,freespace",
                 "system_profiler SPSoftwareDataType",
                 "oslevel",
                 "lsb_release -a",
@@ -19268,6 +19277,7 @@ class Util{
                 s=tryGetFirewallInWindowsByOs(s, types[i]);
                 s=tryGetDefaultAudioInWindowsByOs(s, types[i]);
                 s=tryGetRamGPUInWindowsByOs(s, types[i]);
+                s=tryGetGPUMemory(s, types[i]);
                 s=s.replace("\r\n\r\n", "\r\n").replace("\n\n", "\n");
                 osGetTypeFalseCache=s;
                 return osGetTypeFalseCache;                     
@@ -19290,6 +19300,17 @@ class Util{
         return s+"GPU_Memory: " + retorno.trim() + " GB";
     }
         
+    public String tryGetGPUMemory(String s, String type){
+        if ( ! type.equals("Windows") )
+            return s;        
+        String command="$qwMemorySize = (Get-ItemProperty -Path \"HKLM:\\SYSTEM\\ControlSet001\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*\" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue).\"HardwareInformation.qwMemorySize\"\n" +
+                        "[math]::round($qwMemorySize/1GB)";
+        String retorno=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, command.getBytes(), null);
+        if ( retorno == null || retorno.equals("") )
+            return s;
+        return s+"GPU_Memory: " + retorno.trim() + " GB";
+    }
+    
     public String tryGetCurrentBuildNumberWindowsByOs(String s, String type){
         if ( ! type.equals("Windows") )
             return s;
@@ -19304,6 +19325,7 @@ class Util{
     
     public String tryPivotWindowsAndAjustsValues(String s, String type){
         String retorno="";
+        String DeviceID_FreeSpace_Size="";
         if ( ! type.equals("Windows") )
             return s;
         String [] partes=s.split("\r\n\r\n");
@@ -19316,6 +19338,28 @@ class Util{
         }
         for ( int i=0;i<elementos.size();i++ ){
             String tmp=elementos.get(i);            
+            if ( tmp.startsWith("DeviceID: ") ){
+                String value=tmp.substring("DeviceID: ".length()).replace(":", "").trim();                
+                DeviceID_FreeSpace_Size="Drive "+value;
+                //retorno+=tmp+"\r\n";
+                continue;
+            }
+            if ( tmp.startsWith("FreeSpace: ") ){
+                String value=tmp.substring("FreeSpace: ".length());
+                tmp="FreeSpace: "+value;
+                //retorno+=tmp+"\r\n";
+                DeviceID_FreeSpace_Size+=" "+value;
+                continue;
+            }
+            if ( tmp.startsWith("Size: ") ){
+                String value=tmp.substring("Size: ".length());
+                tmp="Size: "+value;
+                DeviceID_FreeSpace_Size+=" "+value;
+                ///////////////
+                String [] FDS_partes=DeviceID_FreeSpace_Size.split(" ");                                        
+                retorno+=FDS_partes[0]+" "+FDS_partes[1]+" "+porcentagem(Long.parseLong(FDS_partes[2]), Long.parseLong(FDS_partes[3]))+" "+valor_to_text(Long.parseLong(FDS_partes[2]), false)+"/"+valor_to_text(Long.parseLong(FDS_partes[3]), false)+"\r\n";
+                continue;
+            }
             if ( tmp.startsWith("L3CacheSize: ") && !retorno.contains("CACHE_L3: ")){
                 String value=tmp.substring("L3CacheSize: ".length());
                 tmp="CACHE_L3: "+bytes_to_text(Long.parseLong(value)*1024);
