@@ -26447,6 +26447,7 @@ Exemplos...
     obs: -v => verbose
     obs2: --header é o mesmo que -H
     obs3: -L segue location
+    obs4: curl -s para silent. no y curl ele já é silencioso por padrao
 [y cors]
     y cors
     y cors -port 4000
