@@ -19355,9 +19355,14 @@ class Util{
                 String value=tmp.substring("Size: ".length());
                 tmp="Size: "+value;
                 DeviceID_FreeSpace_Size+=" "+value;
-                ///////////////
                 String [] FDS_partes=DeviceID_FreeSpace_Size.split(" ");                                        
-                retorno+=FDS_partes[0]+" "+FDS_partes[1]+" "+porcentagem(Long.parseLong(FDS_partes[2]), Long.parseLong(FDS_partes[3]))+" "+valor_to_text(Long.parseLong(FDS_partes[2]), false)+"/"+valor_to_text(Long.parseLong(FDS_partes[3]), false)+"\r\n";
+                retorno+=FDS_partes[0]
+                        +" "+FDS_partes[1]
+                        +" "+porcentagem(Long.parseLong(FDS_partes[3])-Long.parseLong(FDS_partes[2]), Long.parseLong(FDS_partes[3]))
+                        +" "+valor_to_text(Long.parseLong(FDS_partes[3])-Long.parseLong(FDS_partes[2]), false)
+                        +"/"
+                        +valor_to_text(Long.parseLong(FDS_partes[3]), false)
+                        +"\r\n";
                 continue;
             }
             if ( tmp.startsWith("L3CacheSize: ") && !retorno.contains("CACHE_L3: ")){
