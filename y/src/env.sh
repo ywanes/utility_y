@@ -150,7 +150,7 @@ chmod 777 /opt/y/compila
 cat <<'EOF'> /opt/y/compila2
 rm -f Y.java >/dev/null
 #wget http://203.cloudns.cl:8000/z_outros/src/Y.java
-curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
+curl -s https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:postgresql-42.7.5.jar:jsch-0.1.55.jar:. Y.java
 EOF
 chmod 777 /opt/y/compila2
