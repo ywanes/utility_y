@@ -312,8 +312,8 @@ function reset_home(){
 function go_home(){
 	reset_home();
     load_history_nick();	
-	if ( !verify_buttom_reload() ){
-		update_url('/');
+	update_url('/');
+	if ( !verify_buttom_reload() ){		
 		load_adm_script();
 		set_click_direito_combate();
 	}

@@ -26790,10 +26790,16 @@ Exemplos...
     y steam friends clan status
     y steam status 232323
     y steam flag 76561198010207122 40
-    y steam flag 76561198010207122 40 D:\\daemon\scripts_geral\steam_flag_1.bat
+    y steam flag 76561198010207122 40 D:\\daemon\\scripts_geral\\steam_flag_1.bat
     obs: exige estar com o path TOKEN_Y configurado e o arquivo de nome steam contendo STEAM_API_KEY:STEAM_ID exemplo 123:232323
     obs2: cria sua STEAM_API_KEY aqui -> https://steamcommunity.com/dev/apikey -> 123
     obs3: pegue seu STEAM_ID no profile, exemplo -> https://steamcommunity.com/profiles/232323/ -> 232323
+    modelo steam_flag_1.bat:
+      d:
+      cd D:\\daemon\\scripts_geral
+      set tmp=audio.wav
+      y mixer " TV " | y xargs echo "cmd /c \\"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe\\" --mmdevice-audio-device={} --start-time=0 --gain=0.50 -Incurse --play-and-exit --no-video D:\\ProgramFiles\\musicas_soundPad_custom\\%tmp%" > steam_flag_2.bat
+      call steam_flag_2.bat
 [y clear]
     y clear
     obs: alternativa y cls
