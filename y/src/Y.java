@@ -26353,7 +26353,7 @@ Exemplos...
     y host examplo.com
     y dns example.com
     y dns example.com 8.8.8.8
-    obs: em desenvolvimento, a resposta ainda não é muito legível!
+    nslookup exemple.com # ipconfig /flushdns
     alguns dns's:
       dns.adguard.com
       dns.sse.cisco.com
