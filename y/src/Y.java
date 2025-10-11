@@ -26357,8 +26357,8 @@ Exemplos...
     alguns dns's:
       dns.adguard.com
       dns.sse.cisco.com
-      dns.google # google
-      one.one.one.one # Cloudflare
+      dns.google # google 8.8.8.8 8.8.4.4 2001:4860:4860::8888 2001:4860:4860::8844
+      one.one.one.one # Cloudflare, muito lento # 1.1.1.1 1.0.0.1 2606:4700:4700::1001 2606:4700:4700::1111
       dns.opendns.com # usado pela claro
       dns9.quad9.net
       security-filter-dns.cleanbrowsing.org
