@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "Redirect TikTok URLs",
+  "version": "1.0",
+  "description": "Redireciona URLs do TikTok para seu site",
+  "permissions": [
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "https://vm.tiktok.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
