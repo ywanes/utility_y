@@ -19247,7 +19247,7 @@ class Util{
             boolean show=false;
             String [] commands = new String[]{
                 // BootDevice,RegisteredUser, removido!
-                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize,name && wmic path Win32_VideoController get Caption,adapterram && wmic logicaldisk get deviceid,size,freespace",
+                "cmd /c wmic os get BuildNumber,Caption,OSArchitecture,Version && wmic ComputerSystem get UserName,TotalPhysicalMemory && wmic cpu get loadpercentage,ThreadCount,L3CacheSize,name && wmic path Win32_VideoController get Caption,adapterram && wmic logicaldisk get deviceid,size,freespace",
                 "system_profiler SPSoftwareDataType",
                 "oslevel",
                 "lsb_release -a",
@@ -19363,6 +19363,12 @@ class Util{
                         +"/"
                         +valor_to_text(Long.parseLong(FDS_partes[3]), false)
                         +"\r\n";
+                continue;
+            }
+            if ( tmp.startsWith("UserName: ") && !retorno.contains("UserName: ")){
+                String value=tmp.substring("UserName: ".length());
+                tmp="UserName: "+value;
+                retorno+=tmp+"\r\n";
                 continue;
             }
             if ( tmp.startsWith("L3CacheSize: ") && !retorno.contains("CACHE_L3: ")){
