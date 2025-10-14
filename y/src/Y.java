@@ -5652,6 +5652,7 @@ cat buffer.log
         // o runtimeexec tem que dar output em tempo real, usar esse comando antes de chamar: flag_real_time_output=true;
         // obs; (22...23) => 2^2 até 2^3
         // obs2: a formula do premio em bitcoin é numero do puzzle dividido por 10 + 0.1
+        // obs3: em 2^4..2^5 inicia-se 2^4 até 2^5-1
         String mapa="""
 Start key 0000000000000000000000000000000000000000000000000000000000000001
 Stop key 0000000000000000000000000000000000000000000000000000000000000001
