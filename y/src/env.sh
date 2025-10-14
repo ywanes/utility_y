@@ -72,7 +72,7 @@ then
   do
     echo "apt-get install --only-upgrade $linha" > /opt/.u_c
 	chmod 777 /opt/.u_c
-	echo digite uu
+	echo digite uu # esse script só carrega quando entrar em root, se precisar entre em root varias vezes
   done
 fi
 if [ "1" == "1" ] # verify new ubuntu and LTS
