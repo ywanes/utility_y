@@ -5431,7 +5431,7 @@ cat buffer.log
         }
     }
     
-    public void trataEcho() throws Exception{
+    public void trataEcho() throws Exception{ // pode bugar o UTF-8, ex usando caracter chines 一
         String [] args = bind_asterisk(new String[]{"echo", readString().substring(5).trim()});
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
         printf(args, baos);
@@ -5514,7 +5514,7 @@ cat buffer.log
             result=args[1];
         for ( int i=2;i<args.length;i++ )
             result+=" "+args[i];        
-        os.write(result.getBytes());        
+        os.write(result.getBytes());
     }
     public void printf_list_cor(OutputStream os) throws Exception{
         printf_cor("[m", os);
@@ -7897,6 +7897,7 @@ cat buffer.log
             String copy=(String)objs[3];
             Boolean tts=(Boolean)objs[4];
             Boolean stt=(Boolean)objs[5];
+            Boolean modeB=(Boolean)objs[6];
             String [] modelos_stt=new String[]{
                 "English/en",
                 "Chinese/cn",
@@ -7926,9 +7927,25 @@ cat buffer.log
                 if ( lang == null )
                     lang="Brazilian_Portuguese_Ricardo";
                 if ( msg == null ){
+                    /*
                     msg=String.join(" ", readAllLines());
-                    msg=msg.trim();
+                    msg=msg.trim();                    
                     talk_msg(msg, lang, copy);
+                    */
+                    while( (msg=readLine()) != null ){
+                        if ( modeB ){
+                            if ( msg.lastIndexOf("-") > -1 )
+                                msg=msg.substring(msg.lastIndexOf("-")+2);
+                            String[] numbers = msg.split(" ");
+                            byte[] bytes = new byte[numbers.length];
+                            for (int i = 0; i < numbers.length; i++)
+                                bytes[i] = (byte) Integer.parseInt(numbers[i]);
+                            msg = new String(bytes, StandardCharsets.UTF_8);                           
+                            System.out.println(msg);                        
+                        }
+                        talk_msg(msg, lang, copy);
+                    }
+                    
                 }else{
                     if ( msg.equals("cat") ){
                         InputStream inputStream_pipe=System.in;
@@ -7994,7 +8011,12 @@ cat buffer.log
                     if ( !achou )
                         erroFatal("Modelo inválido: " + lang);
                 }                    
-                    
+                
+                String text_modeB="            print(parcial)\n";
+                if ( modeB )
+                    text_modeB="            bytes_utf8 = parcial.encode('utf-8')\n" +
+                    "            bytes_str = ' '.join(str(b) for b in bytes_utf8)\n" +
+                    "            print(f\"{parcial} - {bytes_str}\")\n";
                 String command="from vosk import Model, KaldiRecognizer\n" +
                     "from vosk import Model, KaldiRecognizer\n" +
                     "import pyaudio\n" +
@@ -8019,8 +8041,8 @@ cat buffer.log
                     "        text=json.loads(recognizer.Result()).get(\"text\", \"\")\n" +
                     "        if text != '' and text != parcial:\n" +
                     "            parcial=text\n" +
-                    "        if parcial != '':\n" +
-                    "            print(parcial)\n" +
+                    "        if parcial != '':\n" +    
+                                 text_modeB +
                     "            sys.stdout.flush()\n" +
                     "    else:\n" +
                     "        parcial=json.loads(recognizer.PartialResult()).get(\"parcial\", \"\")\n" +
@@ -8030,6 +8052,7 @@ cat buffer.log
 
                 flag_real_time_output=true;
 
+                //////////////
                 String retorno=runtimeExec(null, new String[]{"python3"}, null, command.getBytes(), false);
                 if ( retorno == null || retorno.equals("") ){
                     if ( runtimeExecError.contains("from vosk import Model") )
@@ -11296,6 +11319,7 @@ cat buffer.log
         String copy=null;
         Boolean tts=false;
         Boolean stt=false;
+        Boolean modeB=false;
         
         args=sliceParm(1, args);
         
@@ -11315,6 +11339,11 @@ cat buffer.log
                 args=sliceParm(1, args);
                 lang=args[0];
                 args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && !modeB && args[0].equals("-b") ){
+                args=sliceParm(1, args);
+                modeB=true;
                 continue;
             }
             if ( args.length > 1 && copy == null && args[0].equals("-o") ){
@@ -11346,7 +11375,7 @@ cat buffer.log
             return null;
         if ( msg!= null && (stt || list))
             return null;
-        return new Object []{msg, lang, list, copy, tts, stt};
+        return new Object []{msg, lang, list, copy, tts, stt, modeB};
     }        
         
     private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(String [] args){
@@ -19055,7 +19084,7 @@ class Util{
             if ( scanner_pipe == null ){
                 readLine(System.in);                
             }
-            if ( scanner_pipe.hasNext() )
+            if ( scanner_pipe.hasNext() )                
                 return scanner_pipe.next().replace("\r","");
             else
                 return null;            
@@ -19066,7 +19095,7 @@ class Util{
         }
         return null;
     }
-
+    
     public String read1String(){
         while(true){
             try{            
@@ -27004,13 +27033,16 @@ Exemplos...
     oi 1
     oi 2
     oi 3
-    y echo "一 二 三 四 五 六 七 八 九 十" | y talk -tts -lang Chinese_Mandarin_Zhiyu
+    echo "一 二 三 四 五 六 七 八 九 十" | y talk -tts -lang Chinese_Mandarin_Zhiyu
+    y talk -stt -lang Chinese -b | y talk -tts -lang Chinese_Mandarin_Zhiyu -b
     y talk -stt -lang Chinese
     obs: funções -tts => -textToSpeech #padrao #função acessa internet e faz cache na maquina por texto e voz
                  -stt => -speechToText
          -lang padrões:
                  Brazilian_Portuguese_Ricardo para -tts
                  Portugues para -stt
+         -b:
+                 mostra int-bytes no final da frase
 [y sign]
     y sign -msg "Hello" -pass "My passphrase"
     y sign -verify -msg "Hello" -publicKey "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAECA0o3fwUI5SpIb7sJjAeZsNzME2PsstRLerQyqRKKDKakcZYIWY+BOAhlakJROiKQoZn3JOO5UljNkFY2VwrWg==" -signature "MEQCIGfX7zpNdjcy5mtO53YZ43Ff2v5j9s8i2VykEVnyV1tCAiBEONmNS3ATFRN4MZ7/4u52jnIcBxJYcD606KcKT3T4oA=="
