@@ -7927,11 +7927,6 @@ cat buffer.log
                 if ( lang == null )
                     lang="Brazilian_Portuguese_Ricardo";
                 if ( msg == null ){
-                    /*
-                    msg=String.join(" ", readAllLines());
-                    msg=msg.trim();                    
-                    talk_msg(msg, lang, copy);
-                    */
                     while( (msg=readLine()) != null ){
                         if ( modeB ){
                             if ( msg.lastIndexOf("-") > -1 )
@@ -7945,23 +7940,9 @@ cat buffer.log
                         }
                         talk_msg(msg, lang, copy);
                     }
-                    
                 }else{
-                    if ( msg.equals("cat") ){
-                        InputStream inputStream_pipe=System.in;
-                        byte[] buf = new byte[BUFFER_SIZE];
-                        int len=0;
-                        while( (len=inputStream_pipe.read(buf,0,BUFFER_SIZE)) > 0 ){
-                            ByteArrayOutputStream baos=new ByteArrayOutputStream();
-                            baos.write(buf, 0, len);
-                            msg=baos.toString().trim();
-                            talk_msg(msg, lang, copy);
-                        }
-                        System.exit(1);
-                    }else{
-                        msg=msg.trim();
-                        talk_msg(msg, lang, copy);
-                    }
+                    msg=msg.trim();
+                    talk_msg(msg, lang, copy);
                 }
                 return;
             }
@@ -8118,7 +8099,7 @@ cat buffer.log
                     erroFatal(runtimeExecError);
             }
             play(null, dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav", null, false, true, false, null);
-            if ( copy != null )
+            if ( copy != null ){
                 java.nio.file.Files.copy(
                         java.nio.file.Paths.get(dir+"/talk/"+lang+"/"+pre+"/"+sha1+".wav"), 
                         java.nio.file.Paths.get(copy), 
@@ -8129,6 +8110,7 @@ cat buffer.log
                         java.nio.file.Paths.get(copy+".txt"), 
                         java.nio.file.StandardCopyOption.REPLACE_EXISTING
                 );
+            }
         }catch(Exception e){
             erroFatal(e);
         }                    
