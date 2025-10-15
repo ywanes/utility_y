@@ -7926,6 +7926,10 @@ cat buffer.log
                 }
                 if ( lang == null )
                     lang="Brazilian_Portuguese_Ricardo";
+                else{
+                    if ( !lang.contains("_") )
+                        erroFatal("-lang inválida: " + lang + "\nVeja as langs validas pelo comando abaixo:\ny talk -tts list" );                    
+                }
                 if ( msg == null ){
                     while( (msg=readLine()) != null ){
                         if ( modeB ){
@@ -7967,6 +7971,9 @@ cat buffer.log
                 if ( lang == null ){
                     lang="Portugues";                
                     sigla="pt";
+                }else{
+                    if ( lang.contains("_") )
+                        erroFatal("-lang inválida: " + lang + "\nVeja as langs validas pelo comando abaixo:\ny talk -stt list" );                    
                 }
                 if ( lang != null ){
                     boolean achou=false;
@@ -27009,7 +27016,6 @@ Exemplos...
     y talk -lang Brazilian_Portuguese_Ricardo -msg oi
     y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "d:/ProgramFiles/musicas_ia/talk.wav"
     y echo oi | y talk
-    y talk cat
     y talk -stt
     y talk -stt -lang English
     oi 1
