@@ -366,7 +366,7 @@ cat buffer.log
             return;
         }
         if ( args.length > 0 && args[0].equals("cotacao") ){
-            cotacao();
+            cotacao(args);
             return;
         }
         if ( args.length > 0 && args[0].equals("var") )
@@ -3102,29 +3102,40 @@ cat buffer.log
         return false;
     }
 
-    private void cotacao(){
+    private void cotacao(String [] args){                
+        if ( args.length == 2 ){
+            while(true){
+                cotacao_load();
+                if ( !cotacao_load_assets.containsKey(args[1]) )
+                    erroFatal("asset " + args[1] + " não encontrada!");
+                System.out.println( format_ponto( (String)cotacao_load_assets.get(args[1]), 3) );
+                sleepSeconds(60);
+            }
+        }else{
+            cotacao_load();
+            System.out.println("USDT_BRL   " + lpad(format_ponto( ((String)cotacao_load_assets.get("USDT_BRL")), 3), 12," ") );
+            System.out.println("BTC_USDT   " + lpad(format_ponto( ((String)cotacao_load_assets.get("BTC_USDT")), 3), 12," ") );
+            System.out.println("BTC_BRL    " + lpad(format_ponto( ((String)cotacao_load_assets.get("BTC_BRL")), 3), 12," ") );
+            System.out.println("TRUMP_USDT " + lpad(format_ponto( ((String)cotacao_load_assets.get("TRUMP_USDT")), 3), 12," ") );
+            System.out.println("TRUMP_BRL  " + lpad(format_ponto( ((String)cotacao_load_assets.get("TRUMP_BRL")), 3), 12," ") );                    
+        }
+    }
+    
+    HashMap cotacao_load_assets=null;
+    private void cotacao_load(){
+        if ( cotacao_load_assets == null )
+            cotacao_load_assets=new HashMap();
         String aux="";
         aux=curl_string("https://api.bybit.com/v5/market/tickers?category=spot");
-        String USDT_BRL=cotacao_bybit(aux, "\"USDTBRL\"", "\"lastPrice\""); // 6.07
-        String BTC_USDT=cotacao_bybit(aux, "\"BTCUSDT\"", "\"lastPrice\"");
-        String BTC_BRL=cotacao_bybit(aux, "\"BTCBRL\"", "\"lastPrice\"");
+        String USDT_BRL=cotacao_bybit(aux, "\"USDTBRL\"", "\"lastPrice\"");
+        cotacao_load_assets.put("USDT_BRL", USDT_BRL);
+        cotacao_load_assets.put("BTC_USDT", cotacao_bybit(aux, "\"BTCUSDT\"", "\"lastPrice\""));
+        cotacao_load_assets.put("BTC_BRL", cotacao_bybit(aux, "\"BTCBRL\"", "\"lastPrice\""));
         
         aux=curl_string("https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=TRUMP-USDT");
         String TRUMP_USDT=cotacao_kucoin(aux);
-        String TRUMP_BRL=Float.parseFloat(TRUMP_USDT)*Float.parseFloat(USDT_BRL)+"";
-        
-        String f_USDT_BRL=lpad(format_virgula(USDT_BRL.replace(".", ","), 3), 12," ");
-        String f_BTC_USDT=lpad(format_virgula(BTC_USDT.replace(".", ","), 3), 12," ");
-        String f_BTC_BRL=lpad(format_virgula(BTC_BRL.replace(".", ","), 3), 12," ");
-        String f_TRUMP_USDT=lpad(format_virgula(TRUMP_USDT.replace(".", ","), 3), 12," ");
-        String f_TRUMP_BRL=lpad(format_virgula(TRUMP_BRL.replace(".", ","), 3), 12," ");
-        
-        System.out.println("Dolar        => {} R$".replace("{}", f_USDT_BRL));
-        System.out.println("BTC(Dolar)   => {} $ ".replace("{}", f_BTC_USDT));
-        System.out.println("BTC(Reais)   => {} R$".replace("{}", f_BTC_BRL));
-        System.out.println("TRUMP(Dolar) => {} $ ".replace("{}", f_TRUMP_USDT));
-        System.out.println("TRUMP(Reais) => {} R$".replace("{}", f_TRUMP_BRL));
-        
+        cotacao_load_assets.put("TRUMP_USDT", TRUMP_USDT);
+        cotacao_load_assets.put("TRUMP_BRL", Float.parseFloat(TRUMP_USDT)*Float.parseFloat(USDT_BRL)+"");
     }
     
     public String cotacao_bybit(String a, String b, String c){
@@ -4776,13 +4787,19 @@ cat buffer.log
         countLinhas[0]++;
     }
     
+    public String format_ponto(String a, int len){
+        return format_ponto_virgula(a, len, ".");
+    }
     public String format_virgula(String a, int len){
+        return format_ponto_virgula(a, len, ",");
+    }
+    public String format_ponto_virgula(String a, int len, String ponto_virgula){
         String b="";
         String c="";
-        if ( ! a.contains(",") ){
+        if ( ! a.contains(ponto_virgula) ){
             b=a;
         }else{
-            String [] partes=a.split(",");
+            String [] partes=a.split(ponto_virgula.equals(".")?"\\.":ponto_virgula);
             if ( partes.length > 2 || partes.length == 0 )
                 erroFatal("Erro interno!");
             if ( partes.length == 2 ){
@@ -4795,7 +4812,7 @@ cat buffer.log
         while(c.length()<len && limit-->0){
             c+="0";
         }
-        return b+","+c;
+        return b+ponto_virgula+c;
     }    
 
     public String gettoken(String hash){
@@ -27061,6 +27078,8 @@ Exemplos...
     export var='"cat" "a"' && y var -ignore FLAG_HERE
 [y cotacao]
     y cotacao
+    y cotacao BTC_BRL
+    obs: y cotacao BTC_BRL fica mostrando a cada 1 min
 [y help]
     y help <command>
     y help router
