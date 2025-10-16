@@ -8033,7 +8033,7 @@ cat buffer.log
                     "sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')\n" +
                     "# https://alphacephei.com/vosk/models\n" +
                     "# BR -> vosk-model-small-pt-0.3\n" +
-                    "model = Model(\""+dir_modelo+sigla+"\")\n" +
+                    "model = Model(\""+dir_modelo+sigla+"\")\n" +                        
                     "recognizer = KaldiRecognizer(model, 16000)\n" +
                     "\n" +
                     "mic = pyaudio.PyAudio()\n" +
@@ -8057,7 +8057,6 @@ cat buffer.log
 
                 flag_real_time_output=true;
 
-                //////////////
                 String retorno=runtimeExec(null, new String[]{"python3"}, null, command.getBytes(), false);
                 if ( retorno == null || retorno.equals("") ){
                     if ( runtimeExecError.contains("from vosk import Model") )
