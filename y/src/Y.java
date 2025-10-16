@@ -8111,7 +8111,7 @@ cat buffer.log
                 if ( lang.split("_").length == 3 )
                     lang_=lang.split("_")[2];
                 String msg_=encodeUrl(msg);
-                String url_="https://ttsmp3.com/makemp3_new.php";
+                String url_="https://ttsmp3.com/makemp3_new.php"; // Limit: ~375 words or 3,000 characters / day
                 String data_="msg="+msg_+"&lang="+lang_+"&source=ttsmp3";
                 ByteArrayOutputStream baos=new ByteArrayOutputStream();
                 curl(baos, "", "POST", false, false, url_, new ByteArrayInputStream(data_.getBytes()), null, null, null, null, null);
