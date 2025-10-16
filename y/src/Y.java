@@ -8024,44 +8024,49 @@ cat buffer.log
                         erroFatal("Modelo inválido: " + lang);
                 }                    
                 
-                String text_modeB="            print(parcial)\n";
-                if ( modeB )
-                    text_modeB="            bytes_utf8 = parcial.encode('utf-8')\n" +
-                    "            bytes_str = ' '.join(str(b) for b in bytes_utf8)\n" +
-                    "            print(f\"{parcial} - {bytes_str}\")\n";
-                String command="from vosk import Model, KaldiRecognizer\n" +
-                    "from vosk import Model, KaldiRecognizer\n" +
-                    "import pyaudio\n" +
-                    "import json\n" +
-                    "import sys\n" +
-                    "import io\n" +
-                    "\n" +
-                    "sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')\n" +
-                    "sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')\n" +
-                    "# https://alphacephei.com/vosk/models\n" +
-                    "# BR -> vosk-model-small-pt-0.3\n" +
-                    "model = Model(\""+dir_modelo+sigla+"\")\n" +                        
-                    "recognizer = KaldiRecognizer(model, 16000)\n" +
-                    "\n" +
-                    "mic = pyaudio.PyAudio()\n" +
-                    "stream = mic.open(rate=16000, channels=1, format=pyaudio.paInt16, input=True, frames_per_buffer=8192*2)\n" +
-                    "stream.start_stream()\n" +
-                    "\n" +
-                    "while True:\n" +
-                    "    data = stream.read(4096)\n" +
-                    "    if recognizer.AcceptWaveform(data):\n" +
-                    "        text=json.loads(recognizer.Result()).get(\"text\", \"\")\n" +
-                    "        if text != '' and text != parcial:\n" +
-                    "            parcial=text\n" +
-                    "        if parcial != '':\n" +    
-                                 text_modeB +
-                    "            sys.stdout.flush()\n" +
-                    "    else:\n" +
-                    "        parcial=json.loads(recognizer.PartialResult()).get(\"parcial\", \"\")\n" +
-                    "\n" +
-                    "\n" + 
-                    "\n";
+                String text_modeB="print(parcial)";
+                if ( modeB ){
+                    text_modeB="""
+bytes_utf8 = parcial.encode('utf-8')
+            bytes_str = ' '.join(str(b) for b in bytes_utf8)
+            print(f"{parcial} - {bytes_str}")""";
+                }
+                
+                String command="""
+from vosk import Model, KaldiRecognizer
+from vosk import Model, KaldiRecognizer
+import pyaudio
+import json
+import sys
+import io
 
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+# https://alphacephei.com/vosk/models
+# BR -> vosk-model-small-pt-0.3
+model = Model("d:/template")
+recognizer = KaldiRecognizer(model, 16000)
+
+mic = pyaudio.PyAudio()
+stream = mic.open(rate=16000, channels=1, format=pyaudio.paInt16, input=True, frames_per_buffer=8192*2)
+stream.start_stream()
+
+while True:
+    data = stream.read(4096, exception_on_overflow=False)
+    if recognizer.AcceptWaveform(data):
+        text=json.loads(recognizer.Result()).get("text", "")
+        if text != '' and text != parcial:
+            parcial=text
+        if parcial != '':
+            print(parcial)
+            sys.stdout.flush()
+    else:
+        parcial=json.loads(recognizer.PartialResult()).get("parcial", "")
+                        
+""".replace("d:/template", dir_modelo+sigla).replace("print(parcial)", text_modeB);
+                
+                if ( new File(dir_modelo+sigla+"/rescore").exists() ) // fix bug in Portugues e German
+                    mv(new File(dir_modelo+sigla+"/rescore"), new File(dir_modelo+sigla+"/rescore2"));
                 flag_real_time_output=true;
 
                 String retorno=runtimeExec(null, new String[]{"python3"}, null, command.getBytes(), false);
