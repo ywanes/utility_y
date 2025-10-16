@@ -7949,7 +7949,14 @@ cat buffer.log
                 }
                 if ( msg == null ){
                     while( (msg=readLine()) != null ){
-                        if ( modeB ){
+                        System.err.println(":.. " + msg);
+                        if ( 
+                            msg.contains("LOG (VoskAPI:") 
+                            || msg.contains(" Traceback (most recent call last)")
+                        ){
+                            continue;
+                        }
+                        if ( modeB ){                            
                             if ( msg.lastIndexOf("-") > -1 )
                                 msg=msg.substring(msg.lastIndexOf("-")+2);
                             String[] numbers = msg.split(" ");
@@ -7959,7 +7966,7 @@ cat buffer.log
                             msg = new String(bytes, StandardCharsets.UTF_8);                           
                             System.out.println(msg);                        
                         }
-                        talk_msg(msg, lang, copy);
+                        talk_msg(msg, lang, copy);                        
                     }
                 }else{
                     msg=msg.trim();
