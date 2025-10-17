@@ -6515,7 +6515,7 @@ cat buffer.log
     public String overflix_busca(String [] args){
         String s="";
         if ( args.length == 0 )
-            erroFatal("Erro de parametro!");
+            erroFatal("Erro de parametro no overflix_busca!");
         String url="https://encontrei.la/pesquisar/?p=" + String.join("+", args);
         String html=curl_string(url);        
         String [] partes=regex_matcher("<div class=\'videoboxGridview\'>", "</main>", html, true); 
@@ -6912,6 +6912,9 @@ cat buffer.log
     multiCurl overflix_multi=null;
     public void overflix(String [] args) throws Exception{             
         Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(args);
+        
+        if ( objs == null )
+            erroFatal("parametros invalidos!");
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
@@ -6926,8 +6929,7 @@ cat buffer.log
             superflixapi(url);
             return;
         }
-        
-        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out, tags, outPath);
+        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out, tags, outPath, null, null);
         
         if ( overflix_multi != null ){
             overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
@@ -6964,7 +6966,8 @@ cat buffer.log
     public String getScriptRenameBySkip_in=null;
     public String getScriptRenameBySkip_out="";
     public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, 
-                             String titulo_serie, Boolean cam, String o_force_out, Boolean tags, String outPath) throws Exception{
+                             String titulo_serie, Boolean cam, String o_force_out, Boolean tags, String outPath,
+                             Integer temporada_S, Integer temporada_E) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
@@ -6996,7 +6999,7 @@ cat buffer.log
             //    cam=true;
             for ( int i=0;i<partes.length;i++ ){
                 overflix_verbose(verbose, tags, "TAG:1");
-                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
             }
             return;
         }
@@ -7022,20 +7025,23 @@ cat buffer.log
                     return;
                 }
             }
+            int temporada=1;
+            if ( url.contains("?temporada=") )
+                temporada=Integer.parseInt(url.split("=")[1]);            
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ ){
                 overflix_verbose(verbose, tags, "TAG:3");
-                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada, i+1);
             }
             // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
                 // chama todas as temporadas
                 url+="?temporada=1";
-                int next_temporada=Integer.parseInt(url.split("=")[1])+1;
+                int next_temporada=temporada+1;
                 while ( html.contains("load("+next_temporada+")") ){
                     overflix_verbose(verbose, tags, "TAG:4");
                     url=url.split("=")[0]+"="+next_temporada;
-                    overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
+                    overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 }
             }
@@ -7056,10 +7062,10 @@ cat buffer.log
                 if ( partes[i].startsWith("https://mixdrop.") ){
                     overflix_verbose(verbose, tags, "TAG:601");
                     partes[i]=partes[i].replaceAll("https://mixdrop.sb/", "https://mixdrop.ps/");
-                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
+                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
                 }else{
                     overflix_verbose(verbose, tags, "TAG:602");
-                    overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
+                    overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
                 }
                 return;
             }
@@ -7093,7 +7099,7 @@ cat buffer.log
         // use mix
         if ( mix != null ){
             overflix_verbose(verbose, tags, "TAG:8");
-            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath);
+            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
             return;
         }
         
@@ -7109,18 +7115,21 @@ cat buffer.log
                     getScriptRenameBySkip_out+="?"+url+"?\n";                
                 return;
             }
-            if ( partes.length > 0 )
+            if ( partes.length > 0 ){
                 titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "").replace(".Dublado.", ".");
-            else{
+                if ( temporada_S != null && temporada_E != null )
+                    titulo=titulo_serie + " S" + lpad(temporada_S, 2, "0") + "E" + lpad(temporada_E, 2, "0") + titulo.substring(titulo.lastIndexOf("."));                
+            }else{
                 overflix_error+="Erro, titulo não encontrado na url: " + url+"\n";
                 return;
             }
-            
             String dir="D:\\ProgramFiles\\site\\filmes\\";
             if ( cam != null && cam )
                 titulo="cam-"+titulo;
-            if ( titulo_serie != null )
+            if ( titulo_serie != null ){
                 dir="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
+                detect_changed_struct_folder(dir, titulo);
+            }
             String out=dir+titulo;
             if ( outPath != null )
                 out=outPath+"\\"+titulo;
@@ -7147,7 +7156,7 @@ cat buffer.log
                 s=s.trim();
             else{
                 if ( runtimeExecError.trim().equals("") ){
-                    overflix_error+="não foi possível solucionar pelo token.. pegue o arquivo pela url: " + url + " file: " + out+"\n";
+                    overflix_error+="não foi possível solucionar pelo token.. pegue o arquivo pela url: " + url + " file: \"" + out+"\"\n";
                     return;
                 }else{
                     overflix_error+="Error script token: " + runtimeExecError+"\n";
@@ -7177,6 +7186,24 @@ cat buffer.log
         }
         overflix_error+="Não foi possível resolver a url "+ url;
         return;
+    }
+    
+    public void detect_changed_struct_folder(String path, String item){
+        File f=new File(path);
+        if ( f.exists() && f.isDirectory() ){
+            File [] lista=f.listFiles();
+            if ( lista.length > 0 ){
+                boolean achou=false;
+                for ( int i=0;i<lista.length;i++ ){
+                    if ( lista[i].getName().contains("S01E01") ){
+                        achou=true;
+                        break;
+                    }
+                }
+                if ( !achou )
+                    erroFatal("Trava de mudança de estrutura!\nA pasta \"" + f.getAbsolutePath() + "\" contém arquivo mas nenhum contém o S1E1!\nFormate a pasta!\nArquivo que estava sendo analisado no momento: \"" + item + "\"");
+            }
+        }
     }
     
     public String overflix_custom_curl(String url){
@@ -8703,14 +8730,14 @@ while True:
                 if ( tipo_hash != null )
                     curl_hash=new String(encodeHex(digest.digest()));
             }catch(Exception e){
-                curl_error="\nError "+e.toString();
+                curl_error="\nError "+e.toString() + " - host: " + host;
                 os_print.write((curl_error).getBytes());                
             }            
         }catch(UnknownHostException e){
             curl_error="Error UnknownHost: " + host + " " + e.toString();
             System.err.println(curl_error);
         }catch(Exception e){
-            curl_error="Error: " + e.toString();
+            curl_error="Error: " + e.toString() + " - host: " + host;
             System.err.println(curl_error);
         }        
         if ( curl_flag_location && !curl_response_location.equals("") ){
@@ -11422,9 +11449,9 @@ while True:
                 onlyLink=true;
                 continue;
             }
-            if ( args.length > 0 && args[0].equals("-onlyLink") ){
+            if ( args.length > 0 && args[0].equals("-onlyPreLink") ){
                 args=sliceParm(1, args);
-                onlyLink=true;
+                onlyPreLink=true;
                 continue;
             }
             if ( args.length > 0 && args[0].equals("-vToken") ){
@@ -11469,20 +11496,27 @@ while True:
             args=sliceParm(1, args);
         }      
         
-        if ( url == null )
-            return null;        
-        if ( aux_p || ( !url.toLowerCase().startsWith("http://") && !url.toLowerCase().startsWith("https://") ) ){
+        if ( url == null ){
+            System.out.println("erro: url null");
+            return null;   
+        }
+        if ( aux_p || ( !url.toLowerCase().startsWith("http://") && !url.toLowerCase().startsWith("https://") && !url.startsWith("-") ) ){
             extras=addParm(url, 0, extras);
             System.out.print(
-                overflix_busca(extras)+
-                superflixapi_busca(extras)
+                overflix_busca(extras)
+                // certificado com problema
+                 +superflixapi_busca(extras)
             );
             System.exit(0);
         }        
-        if ( extras.length > 0 )
+        if ( extras.length > 0 ){
+            System.out.println("erro: extras.length > 0: " + extras[0] + " - url: " + url);
             return null;
-        if ( onlyLink && onlyPreLink )
+        }
+        if ( onlyLink && onlyPreLink ){
+            System.out.println("erro: onlyLink && onlyPreLink");
             return null;
+        }
         return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath, getScriptRenameBySkipIn};
     }        
            
