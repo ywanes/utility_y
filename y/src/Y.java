@@ -9224,13 +9224,21 @@ while True:
             System.out.println(e.toString());
         }        
     }
+    
     public void touch(String [] args){
         long dif_segundos=0;
         long current_milisegundos=System.currentTimeMillis();
         SimpleDateFormat format=new SimpleDateFormat("yyyyMMddHHmmss");  
         Date dataCurrent=null;
+        boolean flag_isFile=true;
         try {
             args=sliceParm(1, args);
+            if ( args[0].equals("-p") ){
+                flag_isFile=false;
+                args=sliceParm(1, args);
+            }
+            if ( args.length == 0 )
+                erroFatal("parametros invalidos! -p");
             if ( args.length == 2 && isNumeric(args[1]) ){ // fileA 60
                 if ( args[1].length() == 14 ){ //data 20210128235959
                     dataCurrent=format.parse(args[1]);  
@@ -9238,17 +9246,42 @@ while True:
                 }else{
                     dif_segundos=Long.parseLong(args[1]); // 3600
                 }
-                touch(new File(args[0]),current_milisegundos,dif_segundos);                                    
+                touch(new File(args[0]),current_milisegundos,dif_segundos, flag_isFile, 0);                                    
                 return;
             }
             for ( int i=0;i<args.length;i++ )
-                touch(new File(args[i]),current_milisegundos,0);
+                touch(new File(args[i]),current_milisegundos,0, flag_isFile, 0);
             return;
         } catch (Exception ex) {
             System.out.println(ex.toString());
             System.exit(1);
         }
         return;
+    }    
+    
+    public void touch(File file, long current_milisegundos, long dif_segundos, boolean flag_isFile, int lvl_recursive) throws Exception{        
+        //trava
+        if ( lvl_recursive > 100 )
+            erroFatal("Erro anti loop infinito, foi identificado uma tentativa recursiva acima de 100");
+        boolean created=false;
+        file=file.getAbsoluteFile();        
+        // preparativos parent
+        if ( !file.exists() ){
+            File pai=file.getParentFile();
+            if ( pai != null && !pai.exists() )
+                touch(pai, current_milisegundos, dif_segundos, false, lvl_recursive+1);
+        }
+        if (!file.exists()){
+            if ( flag_isFile )
+                new FileOutputStream(file).close();
+            else{
+                if ( !file.mkdir() )
+                    erroFatal("nao foi possivel criar a pasta: \"" + file.getAbsolutePath() + "\"");
+            }
+            created=true;
+        }
+        if ( created || lvl_recursive == 0 )
+            file.setLastModified(current_milisegundos + (dif_segundos*1000) );
     }
     
     public void rm(String [] args){
@@ -9453,12 +9486,6 @@ while True:
         }    
     }
             
-    public void touch(File file, long current_milisegundos, long dif_segundos) throws Exception{        
-        if (!file.exists())
-           new FileOutputStream(file).close();
-        file.setLastModified(current_milisegundos + (dif_segundos*1000) );
-    }
-    
     private boolean isSuportIconv(String a) {
         for ( int i=0;i<suportIconv.length;i++ )
             if ( a.equals(suportIconv[i]))
@@ -26667,9 +26694,12 @@ Exemplos...
     y touch fileA 60
     y touch fileA 20210128235959
     y touch fileA fileB fileC
+    y -p a/b/c
     obs: 60(60 segundos a frente)
     obs2: -3600(3600 segundos atrás)
     obs3: 20210128235959(setando em 28/01/2021 23:59:59)
+    obs4: -p indica touch de pasta
+    obs5: caminho superior será criado se nao existir, exemplo: pasta final existe como /a/b e touch file pedido é /a/b/c/d/e, as pastas intermediarias serao criadas.
 [y rm]
     y rm file1 file2
     y rm -R pasta
