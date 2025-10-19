@@ -3104,11 +3104,15 @@ cat buffer.log
 
     private void cotacao(String [] args){                
         if ( args.length == 2 ){
+            String tail="-";
             while(true){
                 cotacao_load();
                 if ( !cotacao_load_assets.containsKey(args[1]) )
                     erroFatal("asset " + args[1] + " não encontrada!");
-                System.out.println( format_ponto( (String)cotacao_load_assets.get(args[1]), 3) );
+                String s=format_ponto( (String)cotacao_load_assets.get(args[1]), 3);
+                if ( !tail.equals(s) )
+                    System.out.println( s );
+                tail=s;
                 sleepSeconds(60);
             }
         }else{
@@ -3132,10 +3136,12 @@ cat buffer.log
         cotacao_load_assets.put("BTC_USDT", cotacao_bybit(aux, "\"BTCUSDT\"", "\"lastPrice\""));
         cotacao_load_assets.put("BTC_BRL", cotacao_bybit(aux, "\"BTCBRL\"", "\"lastPrice\""));
         
-        aux=curl_string("https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=TRUMP-USDT");
-        String TRUMP_USDT=cotacao_kucoin(aux);
-        cotacao_load_assets.put("TRUMP_USDT", TRUMP_USDT);
-        cotacao_load_assets.put("TRUMP_BRL", Float.parseFloat(TRUMP_USDT)*Float.parseFloat(USDT_BRL)+"");
+        try{
+            aux=curl_string("https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=TRUMP-USDT");
+            String TRUMP_USDT=cotacao_kucoin(aux);
+            cotacao_load_assets.put("TRUMP_USDT", TRUMP_USDT);
+            cotacao_load_assets.put("TRUMP_BRL", Float.parseFloat(TRUMP_USDT)*Float.parseFloat(USDT_BRL)+"");
+        }catch(Exception e){}
     }
     
     public String cotacao_bybit(String a, String b, String c){
@@ -9768,24 +9774,39 @@ while True:
         write1Byte(entrada);
     }
     
-    public void tee(String caminho)
+    public void tee(String parm)
     {
-        try{
-            FileOutputStream out=new FileOutputStream(caminho);                        
-            int len;
-            byte[] buf = new byte[BUFFER_SIZE];
-            while( (len=readBytes(buf)) > -1){
-                out.write(buf, 0, len);
-                out.flush();
-                System.out.write(buf, 0, len);
-                System.out.flush();
+        if ( parm.equals("2") ){
+            try{
+                int len;
+                byte[] buf = new byte[BUFFER_SIZE];
+                while( (len=readBytes(buf)) > -1){
+                    System.out.write(buf, 0, len);
+                    System.out.flush();
+                    System.err.write(buf, 0, len);
+                    System.err.flush();
+                }
+                closeBytes();
+            }catch(Exception e){
+                System.err.println("Erro, "+e.toString());
             }
-            out.flush();            
-            out.close();
-            System.out.flush();
-            closeBytes();
-        }catch(Exception e){
-            System.err.println("Erro, "+e.toString());
+        }else{
+            try{
+                FileOutputStream out=new FileOutputStream(parm);                        
+                int len;
+                byte[] buf = new byte[BUFFER_SIZE];
+                while( (len=readBytes(buf)) > -1){
+                    out.write(buf, 0, len);
+                    out.flush();
+                    System.out.write(buf, 0, len);
+                    System.out.flush();
+                }
+                out.flush();            
+                out.close();
+                closeBytes();
+            }catch(Exception e){
+                System.err.println("Erro, "+e.toString());
+            }
         }
     }
     
@@ -26674,6 +26695,7 @@ Exemplos...
     obs4: BOM do UCS-2LE em numerico => 255 254
 [y tee]
     cat arquivo | y tee saida.txt
+    programa.exe | y tee 2 # produz Stdout e Stderr
 [y uniq]
     cat arquivo | y uniq
 [y quebra]
