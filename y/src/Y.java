@@ -3105,6 +3105,7 @@ cat buffer.log
     private void cotacao(String [] args){                
         if ( args.length == 2 ){
             String tail="-";
+            curl_flag_suprimir_stderr=true;
             while(true){
                 cotacao_load();
                 if ( !cotacao_load_assets.containsKey(args[1]) )
@@ -8568,7 +8569,8 @@ while True:
     String global_header="";// nao tirar o static
     String curl_hash="";
     Integer curl_timeout=null; // miliseconds
-    boolean flag_skip_ssl_error=true;
+    boolean curl_flag_skip_ssl_error=true;
+    boolean curl_flag_suprimir_stderr=false;
     public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
                 Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
         try{   
@@ -8600,7 +8602,7 @@ while True:
             if ( url.getQuery() != null )
                 path += "?" + url.getQuery();
 
-            Socket socket=new CustomSocket().getSocket(protocol.equals("HTTP"), flag_skip_ssl_error);
+            Socket socket=new CustomSocket().getSocket(protocol.equals("HTTP"), curl_flag_skip_ssl_error);
                         
             if ( curl_timeout != null ){
                 socket.connect(new InetSocketAddress(host, port), curl_timeout);
@@ -8737,14 +8739,17 @@ while True:
                     curl_hash=new String(encodeHex(digest.digest()));
             }catch(Exception e){
                 curl_error="\nError "+e.toString() + " - host: " + host;
-                os_print.write((curl_error).getBytes());                
+                if ( !curl_flag_suprimir_stderr )
+                    os_print.write((curl_error).getBytes());                
             }            
         }catch(UnknownHostException e){
             curl_error="Error UnknownHost: " + host + " " + e.toString();
-            System.err.println(curl_error);
+            if ( !curl_flag_suprimir_stderr )
+                System.err.println(curl_error);
         }catch(Exception e){
             curl_error="Error: " + e.toString() + " - host: " + host;
-            System.err.println(curl_error);
+            if ( !curl_flag_suprimir_stderr )
+                System.err.println(curl_error);
         }        
         if ( curl_flag_location && !curl_response_location.equals("") ){
             curl(os_print, header, method, verbose, raw, curl_response_location, is_, limitRate, progress_finished_len, progress_len, progress_number, tipo_hash);
