@@ -10059,9 +10059,11 @@ while True:
                 if ( flag_date ){
                     s=s.replace(command_date, date_("+%Y%m%d_%H%M%S", null, null, null) );
                 }
-                s=s.replace("{}", line);
-                System.out.println(s);
-                System.out.flush();
+                s=s.replace("{}", line).trim();
+                if ( !s.equals("") ){
+                    System.out.println(s);
+                    System.out.flush();
+                }
             }
         }catch(Exception e){
             erroFatal(e);
