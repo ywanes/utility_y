@@ -1557,6 +1557,10 @@ cat buffer.log
                 awk_print(args);
                 return;
             }
+            if ( args.length == 2 && args[1].contains("{}") ){
+                awk_func(args);
+                return;
+            }
             awk_start_end(args);
             return;
         }
@@ -10004,6 +10008,66 @@ while True:
         }
     }
     
+    public void awk_func(String [] args){
+        args=removeParm(0, args);
+        if ( args.length != 1 )
+            erroFatal("Erro inesperado awk_func");                
+        String command_min_num="{min-num}";
+        String command_date_in_min_num="{date in min-num}";
+        String command_min_num_in_min_num="{min-num in min-num}";
+        boolean flag_min_num=args[0].contains(command_min_num) || args[0].contains(command_date_in_min_num) || args[0].contains(command_min_num_in_min_num);
+        Float min_num=null;        
+        String s_min_num=null;
+        String command_max_num="{max-num}";
+        String command_date_in_max_num="{date in max-num}";
+        String command_max_num_in_max_num="{max-num in max-num}";
+        boolean flag_max_num=args[0].contains(command_max_num) || args[0].contains(command_date_in_max_num) || args[0].contains(command_max_num_in_max_num);
+        Float max_num=null;
+        String s_max_num=null;
+        String command_date="{date}";
+        boolean flag_date=args[0].contains(command_date);
+        
+        try {
+            String line=null;
+            while ( (line=readLine()) != null ) {      
+                line=line.trim();
+                String s=args[0];
+                if ( flag_min_num ){
+                    if ( min_num == null || Float.parseFloat(line) < min_num ){
+                        min_num=Float.parseFloat(line);
+                        s_min_num=line;
+                        s=s.replace(command_min_num_in_min_num, s_min_num);                        
+                        s=s.replace(command_date_in_min_num, date_("+%Y%m%d_%H%M%S", null, null, null) );
+                    }else{
+                        s=s.replace(command_min_num_in_min_num, "");                        
+                        s=s.replace(command_date_in_min_num, "");
+                    }
+                    s=s.replace(command_min_num, s_min_num);
+                }
+                if ( flag_max_num ){
+                    if ( max_num == null || Float.parseFloat(line) > max_num ){
+                        max_num=Float.parseFloat(line);
+                        s_max_num=line;
+                        s=s.replace(command_max_num_in_max_num, s_max_num);                        
+                        s=s.replace(command_date_in_max_num, date_("+%Y%m%d_%H%M%S", null, null, null) );
+                    }else{
+                        s=s.replace(command_max_num_in_max_num, "");                        
+                        s=s.replace(command_date_in_max_num, "");
+                    }
+                    s=s.replace(command_max_num, s_max_num);
+                }
+                if ( flag_date ){
+                    s=s.replace(command_date, date_("+%Y%m%d_%H%M%S", null, null, null) );
+                }
+                s=s.replace("{}", line);
+                System.out.println(s);
+                System.out.flush();
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+            
     public void awk_start_end(String [] args)
     {
         String [] negativaStartEnd=getNegativaStartEnd(args);
@@ -17889,18 +17953,21 @@ class Util{
     }
     
     public String[] removeParm(int n, String[] args){ // deleta 1 item. n=posicao
+        if ( n >= args.length )
+            erroFatal("erro interno removeParm");
         String [] retorno=new String[args.length-1];
         for ( int i=0;i<args.length;i++ ){
-            if ( i >= n )
+            if ( i > n )
                 retorno[i-1]=args[i];
             else
                 retorno[i]=args[i];
         }
         return retorno;
     }
-    public int[] removeParm(int n, int[] args){ // deleta 1 item
-        if ( n == 0 )
-            erroFatal("erro interno sliceParm");
+    
+    public int[] removeParm(int n, int[] args){ // deleta 1 item. n=posicao
+        if ( n >= args.length )
+            erroFatal("erro interno removeParm");
         int [] retorno=new int[args.length-1];
         for ( int i=0;i<args.length;i++ ){
             if ( i > n )
@@ -17910,9 +17977,9 @@ class Util{
         }
         return retorno;
     }
-    public long[] removeParm(int n, long[] args){ // deleta 1 item
-        if ( n == 0 )
-            erroFatal("erro interno sliceParm");
+    public long[] removeParm(int n, long[] args){ // deleta 1 item. n=posicao
+        if ( n >= args.length )
+            erroFatal("erro interno removeParm");
         long [] retorno=new long[args.length-1];
         for ( int i=0;i<args.length;i++ ){
             if ( i > n )
@@ -19864,6 +19931,7 @@ class Util{
     // %z no linux significa -0300, aqui esta sendo usado para empregar o zoneid America/Sao_Paulo    
     // no java, print de zzzz com zondeId America/Sao_Paulo sai Fuso horário de Brasília
     // lista de zoneid => java.time.ZoneId.getAvailableZoneIds()
+    // modelo padrao date_("+%Y%m%d_%H%M%S", null, null, null)
     public String [] format_codes_date_in= new String []{"%z"  , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",  "%Z" };
     public String [] format_codes_date_out=new String []{"zzzz",  "dd", "MM", "yyyy", "HH", "mm", "ss", "SSS", "X"  };    
     public String format_america_sao_paulo_zoneid="America/Sao_Paulo";
@@ -26759,6 +26827,7 @@ Exemplos...
     cat arquivo | y awk -v start AAA end BBB    
     cat arquivo | y awk -v start AAA
     cat arquivo | y awk -v end BBB    
+    y cotacao BTC_BRL | y awk "{} {date} {max-num} {max-num in max-num}"
     obs: "-v" é a negativa
     obs2: start e end pode ocorrer varias vezes no texto
     obs3: -1 significa o ultimo
@@ -27181,6 +27250,7 @@ Exemplos...
 [y cotacao]
     y cotacao
     y cotacao BTC_BRL
+    y cotacao BTC_BRL | y awk "{} {date} {max-num} {max-num in max-num}"
     obs: y cotacao BTC_BRL fica mostrando a cada 1 min
 [y help]
     y help <command>
