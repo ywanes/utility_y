@@ -3110,11 +3110,20 @@ cat buffer.log
         if ( args.length == 2 ){
             String tail="-";
             curl_flag_suprimir_stderr=true;
+            int falhas=0;
             while(true){
                 cotacao_load();
                 if ( !cotacao_load_assets.containsKey(args[1]) )
                     erroFatal("asset " + args[1] + " não encontrada!");
                 String s=format_ponto( (String)cotacao_load_assets.get(args[1]), 3);
+                if ( s.trim().equals(".000") ){
+                    // falha
+                    if ( falhas++ > 3 )
+                        erroFatal("ocorreram varias falhas ao tentar ler origem!");
+                    sleepSeconds(60);
+                    continue;
+                }else
+                    falhas=0;
                 if ( !tail.equals(s) )
                     System.out.println( s );
                 tail=s;
