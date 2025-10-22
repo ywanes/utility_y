@@ -10057,7 +10057,8 @@ while True:
                         s_min_num=line;
                         s=s.replace(command_min_num_in_min_num, s_min_num);                        
                         s=s.replace(command_date_in_min_num, date_("+%Y%m%d_%H%M%S", null, null, null) );
-                        while( awk_func_matcherABC(s, matcher_text_in_min_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_min_num) ) )
+                        int limit=20;
+                        while( awk_func_matcherABC(s, matcher_text_in_min_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_min_num) ) && limit-->0 )
                             s=s.replace(awk_func_matcherABC(s, matcher_text_in_min_num), awk_func_matcherABC_text);
                     }else{
                         s=s.replace(command_min_num_in_min_num, "");                        
@@ -10071,7 +10072,8 @@ while True:
                         s_max_num=line;
                         s=s.replace(command_max_num_in_max_num, s_max_num);                        
                         s=s.replace(command_date_in_max_num, date_("+%Y%m%d_%H%M%S", null, null, null) );
-                        while( awk_func_matcherABC(s, matcher_text_in_max_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_max_num) ) )
+                        int limit=20;
+                        while( awk_func_matcherABC(s, matcher_text_in_max_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_max_num) ) && limit-->0 )
                             s=s.replace(awk_func_matcherABC(s, matcher_text_in_max_num), awk_func_matcherABC_text);
                     }else{
                         s=s.replace(command_max_num_in_max_num, "");                        
