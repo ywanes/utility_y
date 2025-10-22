@@ -10063,6 +10063,9 @@ while True:
                     }else{
                         s=s.replace(command_min_num_in_min_num, "");                        
                         s=s.replace(command_date_in_min_num, "");
+                        int limit=20;
+                        while( awk_func_matcherABC(s, matcher_text_in_min_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_min_num) ) && limit-->0 )
+                            s=s.replace(awk_func_matcherABC(s, matcher_text_in_min_num), "");
                     }
                     s=s.replace(command_min_num, s_min_num);
                 }
@@ -10078,6 +10081,9 @@ while True:
                     }else{
                         s=s.replace(command_max_num_in_max_num, "");                        
                         s=s.replace(command_date_in_max_num, "");
+                        int limit=20;
+                        while( awk_func_matcherABC(s, matcher_text_in_min_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_min_num) ) && limit-->0 )
+                            s=s.replace(awk_func_matcherABC(s, matcher_text_in_min_num), "");
                     }
                     s=s.replace(command_max_num, s_max_num);
                 }
