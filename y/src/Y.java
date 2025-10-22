@@ -10082,8 +10082,8 @@ while True:
                         s=s.replace(command_max_num_in_max_num, "");                        
                         s=s.replace(command_date_in_max_num, "");
                         int limit=20;
-                        while( awk_func_matcherABC(s, matcher_text_in_min_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_min_num) ) && limit-->0 )
-                            s=s.replace(awk_func_matcherABC(s, matcher_text_in_min_num), "");
+                        while( awk_func_matcherABC(s, matcher_text_in_max_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_max_num) ) && limit-->0 )
+                            s=s.replace(awk_func_matcherABC(s, matcher_text_in_max_num), "");
                     }
                     s=s.replace(command_max_num, s_max_num);
                 }
