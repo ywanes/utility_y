@@ -6949,7 +6949,7 @@ cat buffer.log
             superflixapi(url);
             return;
         }
-        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, o_force_out, tags, outPath, null, null);
+        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, null, o_force_out, tags, outPath, null, null);
         
         if ( overflix_multi != null ){
             overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);            
@@ -6986,7 +6986,7 @@ cat buffer.log
     public String getScriptRenameBySkip_in=null;
     public String getScriptRenameBySkip_out="";
     public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, 
-                             String titulo_serie, Boolean cam, String o_force_out, Boolean tags, String outPath,
+                             String titulo_serie, String titulo_filme, Boolean cam, String o_force_out, Boolean tags, String outPath,
                              Integer temporada_S, Integer temporada_E) throws Exception{
         // teste
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
@@ -7011,15 +7011,13 @@ cat buffer.log
         String [] partes=null;
 
         // nivel 1 filme
-        partes=regex_matcher("<div class=\"assistir\"><a href=\"", "\"><i", html, true);
+        partes=regex_matcher("<div class=\"assistir\"><a href=\"", "\"><i", html, true);        
         if ( partes.length > 0 ){
             if ( html.split("cWidgetContainer")[0].contains("\">CAM</span>") )
                 cam=true;
-            //if ( html.contains("\">CAM</span>") )
-            //    cam=true;
-            for ( int i=0;i<partes.length;i++ ){
+            for ( int i=0;i<partes.length;i++ ){ // sempre pega 1
                 overflix_verbose(verbose, tags, "TAG:1");
-                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
             }
             return;
         }
@@ -7051,7 +7049,7 @@ cat buffer.log
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ ){
                 overflix_verbose(verbose, tags, "TAG:3");
-                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada, i+1);
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada, i+1);
             }
             // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
@@ -7061,7 +7059,7 @@ cat buffer.log
                 while ( html.contains("load("+next_temporada+")") ){
                     overflix_verbose(verbose, tags, "TAG:4");
                     url=url.split("=")[0]+"="+next_temporada;
-                    overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
                     next_temporada=Integer.parseInt(url.split("=")[1])+1;
                 }
             }
@@ -7072,6 +7070,23 @@ cat buffer.log
         partes=regex_matcher("<a href=\"", "\"", html.replace("'","\""), true); 
         if ( partes.length > 0 && !url.contains("/f/") ){            
             overflix_verbose(verbose, tags, "TAG:5->"+String.join(",", partes));
+            
+            if ( titulo_filme == null ){
+                String [] tmp=null;
+                tmp=regex_matcher("<span class=\"titulo\">", "<", html, true);
+                if ( tmp.length > 0 )
+                    titulo_filme=fixNameFile(tmp[0].trim());
+                if ( titulo_filme == null ){
+                    tmp=regex_matcher("<small>", "</small>", html, true);
+                    if ( tmp.length > 0 )
+                        titulo_serie=fixNameFile(tmp[0]);
+                }
+                if ( titulo_filme.contains("\n") ){
+                    overflix_error+="nao foi possivel pegar o titulo filme de " + url + ":\n" + html+"\n";
+                    return;
+                }
+            }
+            
             String prefix=url.substring(0, url.indexOf("/", 9));
             for ( int i=0;i<partes.length;i++ ){
                 if ( !partes[i].startsWith("/em") && !partes[i].startsWith("https://mixdrop.") ){
@@ -7082,10 +7097,10 @@ cat buffer.log
                 if ( partes[i].startsWith("https://mixdrop.") ){
                     overflix_verbose(verbose, tags, "TAG:601");
                     partes[i]=partes[i].replaceAll("https://mixdrop.sb/", "https://mixdrop.ps/");
-                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
                 }else{
                     overflix_verbose(verbose, tags, "TAG:602");
-                    overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
                 }
                 return;
             }
@@ -7119,7 +7134,7 @@ cat buffer.log
         // use mix
         if ( mix != null ){
             overflix_verbose(verbose, tags, "TAG:8");
-            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
             return;
         }
         
@@ -7139,6 +7154,11 @@ cat buffer.log
                 titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "").replace(".Dublado.", ".");
                 if ( temporada_S != null && temporada_E != null )
                     titulo=titulo_serie + " S" + lpad(temporada_S, 2, "0") + "E" + lpad(temporada_E, 2, "0") + titulo.substring(titulo.lastIndexOf("."));                
+                else{
+                    int pos=titulo.lastIndexOf(".");
+                    if ( pos > -1 )
+                        titulo=titulo_filme+titulo.substring(pos);
+                }
             }else{
                 overflix_error+="Erro, titulo não encontrado na url: " + url+"\n";
                 return;
