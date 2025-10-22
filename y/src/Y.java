@@ -10024,13 +10024,23 @@ while True:
         String command_min_num="{min-num}";
         String command_date_in_min_num="{date in min-num}";
         String command_min_num_in_min_num="{min-num in min-num}";
-        boolean flag_min_num=args[0].contains(command_min_num) || args[0].contains(command_date_in_min_num) || args[0].contains(command_min_num_in_min_num);
+        String matcher_text_in_min_num="{text ABC in min-num}";
+        boolean flag_min_num=args[0].contains(command_min_num) 
+                || args[0].contains(command_date_in_min_num) 
+                || args[0].contains(command_min_num_in_min_num)
+                || awk_func_matcherABC(args[0], matcher_text_in_min_num) != null
+                ;
         Float min_num=null;        
         String s_min_num=null;
         String command_max_num="{max-num}";
         String command_date_in_max_num="{date in max-num}";
         String command_max_num_in_max_num="{max-num in max-num}";
-        boolean flag_max_num=args[0].contains(command_max_num) || args[0].contains(command_date_in_max_num) || args[0].contains(command_max_num_in_max_num);
+        String matcher_text_in_max_num="{text ABC in max-num}";
+        boolean flag_max_num=args[0].contains(command_max_num) 
+                || args[0].contains(command_date_in_max_num) 
+                || args[0].contains(command_max_num_in_max_num)
+                || awk_func_matcherABC(args[0], matcher_text_in_max_num) != null
+                ;
         Float max_num=null;
         String s_max_num=null;
         String command_date="{date}";
@@ -10047,6 +10057,8 @@ while True:
                         s_min_num=line;
                         s=s.replace(command_min_num_in_min_num, s_min_num);                        
                         s=s.replace(command_date_in_min_num, date_("+%Y%m%d_%H%M%S", null, null, null) );
+                        while( awk_func_matcherABC(s, matcher_text_in_min_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_min_num) ) )
+                            s=s.replace(awk_func_matcherABC(s, matcher_text_in_min_num), awk_func_matcherABC_text);
                     }else{
                         s=s.replace(command_min_num_in_min_num, "");                        
                         s=s.replace(command_date_in_min_num, "");
@@ -10059,6 +10071,8 @@ while True:
                         s_max_num=line;
                         s=s.replace(command_max_num_in_max_num, s_max_num);                        
                         s=s.replace(command_date_in_max_num, date_("+%Y%m%d_%H%M%S", null, null, null) );
+                        while( awk_func_matcherABC(s, matcher_text_in_max_num) != null && s.contains(awk_func_matcherABC(s, matcher_text_in_max_num) ) )
+                            s=s.replace(awk_func_matcherABC(s, matcher_text_in_max_num), awk_func_matcherABC_text);
                     }else{
                         s=s.replace(command_max_num_in_max_num, "");                        
                         s=s.replace(command_date_in_max_num, "");
@@ -10078,7 +10092,29 @@ while True:
             erroFatal(e);
         }
     }
-            
+       
+    // modelo awk_func_matcher("{} {} {text #MAX# in max-num} {}", "{text ABC in max-num}") retorna "{text #MAX# in max-num}"
+    // retorna o primeiro encontrado, ou null
+    String awk_func_matcherABC_text=null;
+    public String awk_func_matcherABC(String a, String text){ 
+        String [] partes=text.split("ABC");
+        if ( partes.length != 2 )
+            erroFatal("comando invalido " + a);
+        int p=0;
+        while(p<a.length()){
+            int delta=a.indexOf(partes[0], p);
+            if ( delta == -1 )
+                return null;
+            int delta2=a.indexOf(partes[1], p+1);
+            if ( delta2 == -1 )
+                return null;
+            String s=a.substring(delta, delta2+partes[1].length());
+            awk_func_matcherABC_text=s.substring(partes[0].length(), s.length()-partes[1].length());
+            return s;
+        }
+        return null;
+    }
+    
     public void awk_start_end(String [] args)
     {
         String [] negativaStartEnd=getNegativaStartEnd(args);
@@ -26838,7 +26874,7 @@ Exemplos...
     cat arquivo | y awk -v start AAA end BBB    
     cat arquivo | y awk -v start AAA
     cat arquivo | y awk -v end BBB    
-    y cotacao BTC_BRL | y awk "{} {date} {max-num} {max-num in max-num}"
+    y cotacao BTC_BRL | y awk "{} {date} {max-num} {text MAX in max-num} {max-num in max-num}"
     obs: "-v" é a negativa
     obs2: start e end pode ocorrer varias vezes no texto
     obs3: -1 significa o ultimo
