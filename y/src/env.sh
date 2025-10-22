@@ -63,7 +63,7 @@ then
   echo "" > /opt/.u_c
   apt list --upgradable -a 2>/dev/null | while read linha 
   do
-    if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
+    if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
     then
       p1=`echo $linha | awk ' { print $1 } '`
 	  echo $p1
