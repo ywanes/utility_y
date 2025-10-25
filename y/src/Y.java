@@ -7115,7 +7115,7 @@ cat buffer.log
             
             String prefix=url.substring(0, url.indexOf("/", 9));
             for ( int i=0;i<partes.length;i++ ){
-                if ( !partes[i].startsWith("/em") && !partes[i].startsWith("https://mixdrop.") ){
+                if ( !partes[i].startsWith("/em") && !partes[i].startsWith("https://mixdrop.") && !partes[i].contains("/f/") ){
                     overflix_verbose(verbose, tags, "TAG:6 - " + partes[i]);
                     continue;                
                 }
@@ -7125,22 +7125,30 @@ cat buffer.log
                     partes[i]=partes[i].replaceAll("https://mixdrop.sb/", "https://mixdrop.ps/");
                     overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
                 }else{
-                    overflix_verbose(verbose, tags, "TAG:602");
-                    overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    if ( partes[i].contains("/f/") ){
+                        overflix_verbose(verbose, tags, "TAG:602");
+                        overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    }else{
+                        overflix_verbose(verbose, tags, "TAG:603");
+                        overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    }
                 }
                 return;
             }
             if ( tags )
-                overflix_error+="Não foi possível resolver a url: " + url+"\nhtml:\n"+html+"\n";
+                overflix_error+="Não foi possível resolver a url:: " + url+"\nhtml:\n"+html+"\n";
             else
-                overflix_error+="Não foi possível resolver a url: " + url+"\n";
+                overflix_error+="Não foi possível resolver a url::: " + url+"\n";
             return;
         }
         
         // nivel 3 filme e serie
         String mix=null;
         String suffix="?download";
-        if ( url.startsWith("https://mixdrop.") && !url.endsWith("?download") ){
+        if ( 
+            ( url.startsWith("https://mixdrop.") || url.contains("/f/") )
+            && !url.endsWith("?download") 
+        ){
             mix=url+suffix;
         }else{
             partes=regex_matcher("window.location.href=\"", "\"", html, true); 
@@ -7151,7 +7159,7 @@ cat buffer.log
                     break;
                 }
                 if ( mix == null ){
-                    overflix_error+="Não foi possível resolver a url:: " + url+"\n";            
+                    overflix_error+="Não foi possível resolver a url:::: " + url+"\n";            
                     return;
                 }
             }
@@ -7181,9 +7189,11 @@ cat buffer.log
                 if ( temporada_S != null && temporada_E != null )
                     titulo=titulo_serie + " S" + lpad(temporada_S, 2, "0") + "E" + lpad(temporada_E, 2, "0") + titulo.substring(titulo.lastIndexOf("."));                
                 else{
-                    int pos=titulo.lastIndexOf(".");
-                    if ( pos > -1 )
-                        titulo=titulo_filme+titulo.substring(pos);
+                    if ( titulo_filme != null ){
+                        int pos=titulo.lastIndexOf(".");
+                        if ( pos > -1 )
+                            titulo=titulo_filme+titulo.substring(pos);
+                    }
                 }
             }else{
                 overflix_error+="Erro, titulo não encontrado na url: " + url+"\n";
@@ -7250,7 +7260,7 @@ cat buffer.log
             }            
             return;
         }
-        overflix_error+="Não foi possível resolver a url "+ url;
+        overflix_error+="Não foi possível resolver a url =>  "+ url;
         return;
     }
     
@@ -7267,7 +7277,7 @@ cat buffer.log
                     }
                 }
                 if ( !achou )
-                    erroFatal("Trava de mudança de estrutura!\nA pasta \"" + f.getAbsolutePath() + "\" contém arquivo mas nenhum contém o S1E1!\nFormate a pasta!\nArquivo que estava sendo analisado no momento: \"" + item + "\"");
+                    erroFatal("Trava de mudança de estrutura!\nA pasta \"" + f.getAbsolutePath() + "\" contém arquivo mas nenhum contém o S1E1!\nFormate a pasta!\nArquivo esperado: \"" + item + "\"");
             }
         }
     }
