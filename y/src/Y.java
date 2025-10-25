@@ -3144,12 +3144,23 @@ cat buffer.log
         if ( cotacao_load_assets == null )
             cotacao_load_assets=new HashMap();
         String aux="";
-        aux=curl_string("https://api.bybit.com/v5/market/tickers?category=spot");
-        String USDT_BRL=cotacao_bybit(aux, "\"USDTBRL\"", "\"lastPrice\"");
-        cotacao_load_assets.put("USDT_BRL", USDT_BRL);
-        cotacao_load_assets.put("BTC_USDT", cotacao_bybit(aux, "\"BTCUSDT\"", "\"lastPrice\""));
-        cotacao_load_assets.put("BTC_BRL", cotacao_bybit(aux, "\"BTCBRL\"", "\"lastPrice\""));
-        
+        String source="bybit";
+        source="binance";
+        String USDT_BRL=null;
+        if ( source.equals("bybit") ){
+            aux=curl_string("https://api.bybit.com/v5/market/tickers?category=spot");        
+            USDT_BRL=cotacao_bybit(aux, "\"USDTBRL\"", "\"lastPrice\"");
+            cotacao_load_assets.put("USDT_BRL", USDT_BRL);
+            cotacao_load_assets.put("BTC_USDT", cotacao_bybit(aux, "\"BTCUSDT\"", "\"lastPrice\""));
+            cotacao_load_assets.put("BTC_BRL", cotacao_bybit(aux, "\"BTCBRL\"", "\"lastPrice\""));
+        }
+        if ( source.equals("binance") ){
+            aux=curl_string("https://api.binance.com/api/v3/ticker/price");        
+            USDT_BRL=cotacao_binance(aux, "\"USDTBRL\"", "\"price\"");
+            cotacao_load_assets.put("USDT_BRL", USDT_BRL);
+            cotacao_load_assets.put("BTC_USDT", cotacao_binance(aux, "\"BTCUSDT\"", "\"price\""));
+            cotacao_load_assets.put("BTC_BRL", cotacao_binance(aux, "\"BTCBRL\"", "\"price\""));
+        }
         try{
             aux=curl_string("https://api.kucoin.com/api/v1/market/orderbook/level1?symbol=TRUMP-USDT");
             String TRUMP_USDT=cotacao_kucoin(aux);
@@ -3159,6 +3170,21 @@ cat buffer.log
     }
     
     public String cotacao_bybit(String a, String b, String c){
+        String s="";
+        int p1=a.indexOf(b);
+        String [] partes=null;
+        if ( p1 > 0 ){
+            p1=a.indexOf(c, p1+1);
+            if ( p1 > 0 ){
+                s=a.substring(p1, p1+30);
+                partes=s.split("\"");
+                return partes[3];
+            }
+        }        
+        return "";
+    }
+    
+    public String cotacao_binance(String a, String b, String c){
         String s="";
         int p1=a.indexOf(b);
         String [] partes=null;
@@ -27045,6 +27071,7 @@ Exemplos...
 [y os]
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
+    obs2: whoami funciona no windows e linux
 [y pss]
     y pss
     y pss " y lock "
