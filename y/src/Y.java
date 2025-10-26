@@ -19643,8 +19643,7 @@ class Util{
                 s=tryGetKernellInLinuxByOs(s, types[i]);
                 s=tryGetFirewallInWindowsByOs(s, types[i]);
                 s=tryGetDefaultAudioInWindowsByOs(s, types[i]);
-                s=tryGetRamGPUInWindowsByOs(s, types[i]);
-                s=tryGetGPUMemory(s, types[i]);
+                s=tryGetRamGPUInWindowsByOs(s, types[i]);                
                 s=s.replace("\r\n\r\n", "\r\n").replace("\n\n", "\n");
                 osGetTypeFalseCache=s;
                 return osGetTypeFalseCache;                     
@@ -19659,17 +19658,6 @@ class Util{
         if ( ! type.equals("Windows") )
             return s;
 
-        String command="$qwMemorySize = (Get-ItemProperty -Path \"HKLM:\\SYSTEM\\ControlSet001\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*\" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue).\"HardwareInformation.qwMemorySize\"\n" +
-                        "[math]::round($qwMemorySize/1GB)";
-        String retorno=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, command.getBytes(), null);
-        if ( retorno == null || retorno.equals("") )
-            return s;
-        return s+"GPU_Memory: " + retorno.trim() + " GB";
-    }
-        
-    public String tryGetGPUMemory(String s, String type){
-        if ( ! type.equals("Windows") )
-            return s;        
         String command="$qwMemorySize = (Get-ItemProperty -Path \"HKLM:\\SYSTEM\\ControlSet001\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*\" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue).\"HardwareInformation.qwMemorySize\"\n" +
                         "[math]::round($qwMemorySize/1GB)";
         String retorno=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, command.getBytes(), null);
