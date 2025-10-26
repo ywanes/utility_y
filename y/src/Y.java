@@ -7226,8 +7226,8 @@ cat buffer.log
                     overflix_error+="url vazia!\n";
                     return;
                 }
-                //s=getTokenIE(vToken, url);
-                //s=getTokenTESTCAFE(vToken, url);                
+                //s=getTokenIE_old(vToken, url);
+                //s=getTokenTESTCAFE_old(vToken, url);                
                 s=getTokenPuppeteer(url);
             }
             if ( s != null && s.trim().length() > 0 )
@@ -7467,7 +7467,7 @@ cat buffer.log
         return s.trim();
     }
     
-    public String getTokenTESTCAFE(Boolean enable_visible, String url) throws Exception{
+    public String getTokenTESTCAFE_old(Boolean enable_visible, String url) throws Exception{
         String script="import { Selector, ClientFunction } from 'testcafe';\n" +
         "\n" +
         "fixture('Executar Script reCAPTCHA')\n" +
@@ -7661,7 +7661,7 @@ cat buffer.log
         return "";
     }
     
-    public String getTokenIE(Boolean enable_visible, String url){
+    public String getTokenIE_old(Boolean enable_visible, String url){
         try{
             String [] result=new String[]{""};
             Thread t=new Thread(new Runnable() {
