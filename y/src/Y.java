@@ -1557,7 +1557,7 @@ cat buffer.log
                 awk_print(args);
                 return;
             }
-            if ( args.length == 2 && args[1].contains("{}") ){
+            if ( args.length == 2 && args[1].contains("{") ){
                 awk_func(args);
                 return;
             }
@@ -26967,6 +26967,8 @@ Exemplos...
         y cls && y cotacao BTC_BRL | y awk "{} {date} MAX {max-num} {date-max-num} {text ######################### in max-num}"
         y cls && y cotacao BTC_BRL | y awk "{} {date} MIN {min-num} {date-min-num} {text ######################### in min-num}"
         y cls && y cotacao BTC_BRL | y awk "{} MAX {date in max-num} {max-num}"
+        y cls && y cotacao BTC_BRL | y awk "{text MIN in min-num} {min-num in min-num} {date in min-num}"
+        y cls && y cotacao BTC_BRL | y awk "{text MAX in max-num} {max-num in max-num} {date in max-num}"
     obs: "-v" é a negativa
     obs2: start e end pode ocorrer varias vezes no texto
     obs3: -1 significa o ultimo
