@@ -10160,6 +10160,7 @@ while True:
                     s=s.replace(command_date, awk_func_get_date() );
                 }
                 s=s.replace("{}", line).trim();
+                System.out.print(line+"\r");                
                 if ( !s.equals("") ){
                     System.out.println(s);
                     System.out.flush();
