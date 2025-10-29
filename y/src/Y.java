@@ -3116,7 +3116,7 @@ cat buffer.log
                 if ( !cotacao_load_assets.containsKey(args[1]) )
                     erroFatal("asset " + args[1] + " não encontrada!");
                 String s=format_ponto( (String)cotacao_load_assets.get(args[1]), 3);                
-                if ( s.trim().equals(".00000000") ){
+                if ( s.trim().equals(".00000000") || s.trim().equals(".000") ){
                     // falha
                     if ( falhas++ > 3 )
                         erroFatal("ocorreram varias falhas ao tentar ler origem!");
@@ -6146,7 +6146,8 @@ cat buffer.log
                     Boolean in_out_tail=null;
                     while(true){
                         Integer[] xyrgb=robotMouseGetXYAndRGB();
-                        //System.out.println(xyrgb[0]+" "+xyrgb[1]);
+                        // altera volume geral do windows:
+                        // nircmd.exe setsysvolume 10000
                         in_out = xyrgb[0] >= 0 && xyrgb[0] <= 1920 && xyrgb[1] >= 0 && xyrgb[1] <= 1080;
                         if ( in_out_tail == null || in_out != in_out_tail ){
                             String lbl="";
