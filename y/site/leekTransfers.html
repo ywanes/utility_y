@@ -335,6 +335,7 @@ let count_title_piso=0;
 let count_id_transfer=0;
 let count_id_transfers=0;
 let sz_transfer_up_down=13;
+let pavi='🟡'; // 🟡⬛ https://emojipedia.org/large-yellow-circle
 
 function html_transfers_outer(n, text){
 	return '<td colspan="7" id="transfers_' + n + '">' + html_transfers_inner(text) + '</td>';
@@ -395,10 +396,10 @@ function html_piso(n){
 		let n_to=trajeto_natural_piso(n);
 		let n_to2=trajeto_skip_piso(n);
 		if ( n_to2 == '' ) 
-			return style_td + '<a ' + style_a + ' id="piso_' + n_from + '" to="' + n_to + '" to2="' + n_to2 + '" title="' + n_from + '->' + n_to + '">⬛</a></td>';
-		return style_td + '<a ' + style_a + ' id="piso_' + n_from + '" to="' + n_to + '" to2="' + n_to2 + '" title="' + n_from + '->' + n_to + '|' + n_to2 + '">⬛</a></td>';
+			return style_td + '<a ' + style_a + ' id="piso_' + n_from + '" to="' + n_to + '" to2="' + n_to2 + '" title="' + n_from + '->' + n_to + '">' + pavi + '</a></td>';
+		return style_td + '<a ' + style_a + ' id="piso_' + n_from + '" to="' + n_to + '" to2="' + n_to2 + '" title="' + n_from + '->' + n_to + '|' + n_to2 + '">' + pavi + '</a></td>';
 	}
-	return style_td + '<a ' + style_a + ' >⬛</a></td>';
+	return style_td + '<a ' + style_a + ' >' + pavi + '</a></td>';
 }
 
 function html_5_pisos(){
@@ -577,7 +578,7 @@ function click_lvl(){
 }
 
 function change_transfer(e){
-	if ( e.parentElement.nextElementSibling.children[0].innerHTML == '⬛' ){
+	if ( e.parentElement.nextElementSibling.children[0].innerHTML == pavi ){
 		let e1=e.parentElement.previousElementSibling.previousElementSibling.children[0];
 		let e2=e.parentElement.previousElementSibling.children[0];
 		let e3=e;
