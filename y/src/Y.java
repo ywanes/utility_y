@@ -18621,7 +18621,8 @@ class Util{
     }
     
     public String fixNameFile(String a){
-        return a.replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").trim();
+        // nao pode colocar .replaceAll("#", "") senão quebra tudo.
+        return a.replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").replaceAll("#039;", "").trim();
     }
     
     public ArrayList<String> getPivot(String a, String quebralinha){
@@ -26723,7 +26724,7 @@ Exemplos...
     y dns example.com 8.8.8.8
     nslookup exemple.com # ipconfig /flushdns
     alguns dns's:
-      dns.adguard.com
+      dns.adguard.com # 94.140.14.14 94.140.15.15 # complemento mumu player x com app dns changer
       dns.sse.cisco.com
       dns.google # google 8.8.8.8 8.8.4.4 2001:4860:4860::8888 2001:4860:4860::8844
       one.one.one.one # Cloudflare, muito lento # 1.1.1.1 1.0.0.1 2606:4700:4700::1001 2606:4700:4700::1111
@@ -27301,7 +27302,7 @@ Exemplos...
     obs: ffmpeg -i "A.mkv" -qscale 0 -max_muxing_queue_size 1024 "A.mp4"
     obs: -lento tem outro algotirmo de conversão, as vezes é necessario e tudo tiver bugando
     dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo "y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z" | y tr "rmvb\"Z" "mp4\""
-    aviso: "Audio: ac3 (ac-3 " de mp4 não funciona na web
+    aviso: "Audio: ac3 (ac-3" de mp4 não funciona na web
     checando:
     cd d:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep "Input #0" "(por): Audio: ac3"
 [y [thumbnail|tn]]
