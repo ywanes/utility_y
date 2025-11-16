@@ -27303,7 +27303,8 @@ Exemplos...
     y mkv -v
     y mkv -force
     y mkv -lento
-    obs: ffmpeg -i "A.mkv" -qscale 0 -max_muxing_queue_size 1024 "A.mp4"
+    exemplos: ffmpeg -i "A.mkv" -qscale 0 -max_muxing_queue_size 1024 "A.mp4"
+              ffmpeg -i "A.wav" -qscale 0 -max_muxing_queue_size 1024 -af "volume=20dB" "A.mp4"
     obs: -lento tem outro algotirmo de conversão, as vezes é necessario e tudo tiver bugando
     dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo "y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z" | y tr "rmvb\"Z" "mp4\""
     aviso: "Audio: ac3 (ac-3" de mp4 não funciona na web
