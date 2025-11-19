@@ -27391,6 +27391,7 @@ Exemplos...
     y cotacao BTC_BRL | y awk "{} {date} {max-num} {max-num in max-num}"
     obs: y cotacao BTC_BRL fica mostrando a cada 1 min
     obs2: veja também y help awk
+    fonte: BTCBRL https://api.binance.com/api/v3/ticker/price
 [y help]
     y help <command>
     y help router
