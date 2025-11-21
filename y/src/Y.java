@@ -989,14 +989,10 @@ cat buffer.log
                 global_header="cookie: ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727; ips4_member_id=178526; ips4_login_key=74e18a46894d354f5adfa7dc881de6d7;\r\n";                
                 /*
                 console browser
-                document.cookie='ips4_device_key=66ef5686d84b5bced223d789462e4ded';
-                document.cookie='ips4_member_id=82450';
-                document.cookie='ips4_login_key=addd863af56dcdeb48ef159ceda239ba';                
                 document.cookie='ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727';
                 document.cookie='ips4_member_id=178526';
                 document.cookie='ips4_login_key=74e18a46894d354f5adfa7dc881de6d7';                                
                 curl 
-                -H "cookie: ips4_device_key=66ef5686d84b5bced223d789462e4ded; ips4_member_id=82450; ips4_login_key=addd863af56dcdeb48ef159ceda239ba;"
                 -H "cookie: ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727; ips4_member_id=178526; ips4_login_key=74e18a46894d354f5adfa7dc881de6d7;"
                 */
                 overflix(args);                
