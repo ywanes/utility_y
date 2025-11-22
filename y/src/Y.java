@@ -15607,10 +15607,105 @@ class Tests extends Util{
         */
         ///////////////
         while( true ){
-            byte [] captura=robotGetImgScreenBytes("bmp");        
-            int [] cartas=bmp_findCardXY(captura);
-            boolean lendo_mesa=true;
-            
+            try{
+                byte [] captura=robotGetImgScreenBytes("bmp");        
+                int [] cartas_xy=bmp_findCardXY(captura);
+                boolean lendo_mesa=true; // mesa/mao
+                String mesa="";
+                String mao="";    
+                String out_path="c:\\tmp\\hj.bmp";
+                int x,y,x2,y2,x3,y3,n_find_parm;
+                String code_md5="";
+                String card="";
+                String naipe="";
+                String [] codes=new String[]{
+                    "5514661a969303faafad0ac5c0cd4570", "2",
+                    "07221e2510a9b660ea8562f036e5795b", "2",
+                    "87162053aa40b3ee506af3d5c7ba0540", "2",
+                    "3550571b28480fc33e063ced9e6829bc", "3",
+                    "2285000d0cbdd0e41e9228ecb4253b55", "3",
+                    "3e3dd921bf91bf83c7b683243b5c0c9c", "4",
+                    "1a8de96534c72f4ffffab8bf80ce6a5d", "5",
+                    "7238e345344a5a65f3da0c3af713e983", "5",
+                    "f5347ca47328dc30d32b56962f39ace4", "6",
+                    "6bb360bdf85da4ea6c09581284e3e1e9", "7",
+                    "00d58758b6f5ea7e3778621296a61394", "7",
+                    "46b918a92922ba94fcc860df0a83900e", "8",
+                    "a4719a65c20f002f3ca0bd891fad72ea", "9",
+                    "3cc4ca8e0f11393d146c28210bc6d59d", "T", // T = Ten
+                    "ad0f65639a75cd1281868a93c259d3bc", "J",
+                    "dc155179d3dd45bfcd834c8fe6208987", "Q",
+                    "c6a95146ee98ec70fe7be7a2331b5567", "Q",
+                    "e55bcbce64e561d9fb7d2b120f944289", "Q",
+                    "4face8bb12e46f96d110d83974c81243", "Q",
+                    "62be4eac78a86832bc398094186d3e13", "K",
+                    "a3a5884908eec5ae942c51104387c60f", "K",
+                    "5004c84bcbb5ba79531d6600bb261975", "A",
+                    "16615d99d49f2a618a5b55dc7ac72aa7", "A",
+                    "976bae705bb586fbcb9db8168b42203f", "C", // C = ♣ Paus (Clubs)
+                    "d90b876edb13b1a4783c798374741523", "D", // D = ♦ Ouros (Diamonds)
+                    "bfbacb5a34eef014d5c44af7ba1b7c6b", "D", // D = ♦ Ouros (Diamonds)
+                    "622ea99532017e6b09987928014a9d85", "H", // H = ♥ Copas (Hearts)
+                    "c060bd35eedbf9ed0272f4ef6a86e01a", "H", // H = ♥ Copas (Hearts)
+                    "30f46d64d05ccf664275375771754eff", "S"  // S = ♠ Espadas (Spades) 
+                };
+                if ( cartas_xy.length == 2 )
+                    lendo_mesa=false;
+                if ( cartas_xy.length == 0 ){
+                    System.out.print("\r                                                    \r");
+                    sleepSeconds(1);
+                    continue;
+                }else{
+                    for ( int i=0;i<cartas_xy.length;i+=2 ){
+                        if ( i > 0 && lendo_mesa && cartas_xy[i+1] != cartas_xy[i-1] )
+                            lendo_mesa=false;
+                        x=cartas_xy[i];
+                        y=cartas_xy[i+1];
+                        x2=-25; y2=-10; x3=-2; y3=22; // card
+                        code_md5=digest_text(bmp_dumpPixels(captura,x+x2,y+y2,x+x3,y+y3,true), "md5");
+                        n_find_parm=findParm(codes, code_md5, true);
+                        if ( n_find_parm == -1 ){
+                            bmp_salvarRecorte(captura,x+x2,y+y2,x+x3,y+y3,"c:\\tmp\\hj.bmp");
+                            erroFatal("Não foi possível decodificar o hash: " + code_md5 + "\nimg: " + out_path);
+                        }else
+                            card=codes[n_find_parm+1];
+                        x2=-25; y2=25; x3=-2; y3=45; // naipe
+                        code_md5=digest_text(bmp_dumpPixels(captura,x+x2,y+y2,x+x3,y+y3,true), "md5");
+                        n_find_parm=findParm(codes, code_md5, true);
+                        if ( n_find_parm == -1 ){
+                            bmp_salvarRecorte(captura,x+x2,y+y2,x+x3,y+y3,"c:\\tmp\\hj.bmp");
+                            erroFatal("Não foi possível decodificar o hash: " + code_md5 + "\nimg: " + out_path);
+                        }else
+                            naipe=codes[n_find_parm+1];
+                        if ( lendo_mesa )
+                            mesa += " " + card + naipe;
+                        else
+                            mao += " " + card + naipe;
+                    }
+                }
+                if ( mao.equals("") ){
+                    sleepSeconds(1);
+                    continue;
+                }
+                String [] mao_=mao.trim().split(" ");
+                String [] mesa_=mesa.trim().split(" ");
+                while(mesa_.length < 5)
+                    mesa_=addParm("", mesa_);
+                //System.out.println( new PokerCalculator().getProbabilidade(new String[]{"AH", "KD"}, new String[]{"", "", "", "", ""}) ); // Ás de Copas e Rei de Ouros
+                String prob=new PokerCalculator().getProbabilidade(mao_, mesa_)+"";
+                if ( prob.length() > 6 )
+                    prob=prob.substring(0, 6);
+                System.out.println(
+                    prob + " % " +
+                    "-> mesa:" + mesa +
+                    " mao:" + mao
+                );
+                /*
+0.0 % -> mesa: 5D 2D TS mao: 6S 6C               
+                */
+            }catch(Exception e){
+                System.out.println(e.toString());
+            }
             sleepSeconds(1);
         }
     }
@@ -17173,7 +17268,20 @@ class Redis extends Util{
         return retorno;
     }
 }
-
+/*
+    Formato:
+    A = Ace
+    K = King
+    Q = Queen
+    J = Jack
+    T = Ten
+    Naipes:
+    H = Copas (Hearts)
+    D = Ouros (Diamonds)
+    C = Paus (Clubs)
+    S = Espadas (Spades)    
+*/
+// System.out.println( new PokerCalculator().getProbabilidade(new String[]{"AH", "KD"}, new String[]{"", "", "", "", ""}) ); // Ás de Copas e Rei de Ouros
 class PokerCalculator{
     private final String[] RANKS = {"2","3","4","5","6","7","8","9","T","J","Q","K","A"}; // T = Ten // J = Jack // Q = Queen // K = King // A = Ace 
     private final String[] SUITS = {"C","D","H","S"}; // C = Paus (Clubs) // D = Ouros (Diamonds) // H = Copas (Hearts) // S = Espadas (Spades) 
@@ -17254,20 +17362,6 @@ class PokerCalculator{
 
         return wins / (double) iterations;
     }
-    /*
-        Formato:
-        A = Ace
-        K = King
-        Q = Queen
-        J = Jack
-        T = Ten
-        Naipes:
-        H = Copas (Hearts)
-        D = Ouros (Diamonds)
-        C = Paus (Clubs)
-        S = Espadas (Spades)    
-    */
-    // System.out.println( new PokerCalculator().getProbabilidade(new String[]{"AH", "KD"}, new String[]{"", "", "", "", ""}) ); // Ás de Copas e Rei de Ouros
     public double getProbabilidade(String[] yourCards, String[] community){
         return simulate(yourCards, community, 20000) * 100;
     }
@@ -20519,6 +20613,8 @@ class Util{
                 }
             }
         }
+        if ( resultados.size() == 0 )        
+            return new int[]{};
         return arrayList_to_array_int(resultados);
     }
 
