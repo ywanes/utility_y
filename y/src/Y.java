@@ -2141,7 +2141,7 @@ cat buffer.log
                         erroFatal("Caminho de -file nao é um arquivo");
                 }
                 try{
-                    bmp(path, len_block, System.out);
+                    bmp_assinatura(path, len_block, System.out);
                 }catch(Exception e){
                     erro_amigavel_exception(e);
                 }
@@ -15328,105 +15328,6 @@ while True:
         return count;
     }
     
-    public void bmp(File path, Integer len_block, OutputStream os) throws Exception{          
-        byte[] entrada_ = new byte[1];
-        int c=0;
-        int rgb=0;
-        int c18=1;
-        int c19=256;
-        int c20=256*256;
-        int c21=256*256*256;
-        int c22=1;
-        int c23=256;
-        int c24=256*256;
-        int c25=256*256*256;
-        int x=0; // posicao temporaria de x
-        int y=0; // posicao temporaria de y
-        int len_x=0; // len total em x
-        int len_y=0; // len total em y
-        int n_block_x=0; // numeros de blocos em x
-        int n_block_y=0; // numeros de blocos em y
-        int len_block_x=0; // len de trabalho em x
-        int len_block_y=0; // len de trabalho em y
-        int [][][] sums=null;   
-        int [][][] counts=null;
-        int count_pixels_block = 0;
-        if ( len_block != null )
-            count_pixels_block=len_block*len_block;;
-        boolean header=true;
-        try{
-            if ( path != null )
-                readBytes(path);
-        }catch(Exception e){
-            erro_amigavel_exception(e);
-        }        
-        while ( read1Byte(entrada_) ){
-            int n=entrada_[0];
-            if ( n < 0 ) n+=256;
-            if ( header ){
-                if ( c == 18 ) c18*=n;
-                if ( c == 19 ) c19*=n;
-                if ( c == 20 ) c20*=n;
-                if ( c == 21 ){
-                    c21*=n;
-                    len_x=c18+c19+c20+c21;
-                    os.write((len_x+"").getBytes());
-                    os.write("\n".getBytes());
-                }
-                if ( c == 22 ) c22*=n;
-                if ( c == 23 ) c23*=n;
-                if ( c == 24 ) c24*=n;
-                if ( c == 25 ){
-                    c25*=n;
-                    len_y=c22+c23+c24+c25;
-                    os.write((len_y+"").getBytes());
-                    os.write("\n".getBytes());
-                    if ( len_block != null ){
-                        if (len_x < len_block || len_y < len_block )
-                            erroFatal("Nao eh possivel a assinatura menor que a img!");
-                        n_block_x=(int)(len_x/len_block);
-                        n_block_y=(int)(len_y/len_block);
-                        len_block_x=n_block_x*len_block;
-                        len_block_y=n_block_y*len_block;
-                        sums = new int[n_block_x][n_block_y][3];
-                        counts = new int[n_block_x][n_block_y][3];
-                    }
-                    header=false;
-                    c=0;
-                    continue;
-                }  
-                c++;                
-                continue;
-            }else{
-                if ( len_block == null ){
-                    // sem assinatura
-                    os.write((n+"").getBytes());
-                    os.write("\n".getBytes());
-                    continue;
-                }else{
-                    // com assinatura                    
-                    if ( c%len_x < len_block_x && c < len_x*len_block_y ){ // dentro da area de trabalho
-                        x = (int)((c%len_x)/len_block);
-                        y = (int)((c/len_x)/len_block);
-                        sums[x][y][rgb]+=n;
-                        counts[x][y][rgb]+=1;
-                        if ( counts[x][y][rgb] == count_pixels_block ){
-                            os.write(((int)(sums[x][y][rgb]/counts[x][y][rgb])+"").getBytes());
-                            os.write("\n".getBytes());
-                        }
-                    }
-                    rgb++;
-                    if ( rgb >= 3 ){
-                        rgb=0;
-                        c++;
-                    }
-                    continue;
-                }
-            }
-        } 
-        os.flush();
-    }   
-    
     private void decodeUrl_stream(){
         String line=null;
         while ( (line=readLine()) != null )
@@ -15678,10 +15579,38 @@ class Tests extends Util{
         String force_java_21="""
         """;
         if ( flag_test ){
-            teste_unico1();
+            teste_unico2();
             return;
         }
         return;
+    }
+    
+    public void teste_unico2() throws Exception{        
+        /*
+        int x=741;
+        int y=362;
+        byte [] captura=robotGetImgScreenBytes("bmp");        
+        int [] pontos=bmp_findCardXY(captura);
+        x=pontos[0];
+        y=pontos[1];
+        //int x2=0; int y2=0; int x3=7; int y3=9; // findCard
+        //int x2=-25; int y2=-10; int x3=-2; int y3=22; // card
+        int x2=-25; int y2=25; int x3=-2; int y3=40; // naipe
+        bmp_salvarRecorte(captura,x+x2,y+y2,x+x3,y+y3,"c:\\tmp\\hj.bmp");
+        System.out.println( bmp_dumpPixels(captura,x+x2,y+y2,x+x3,y+y3,true) );System.out.println("\n\n");
+        mostra_array(bmp_findCardXY(captura));
+        System.out.println( new PokerCalculator().getProbabilidade(new String[]{"AH", "KD"}, new String[]{"", "", "", "", ""}) ); // Ás de Copas e Rei de Ouros
+        // {"2","3","4","5","6","7","8","9","T","J","Q","K","A"}; // T = Ten // J = Jack // Q = Queen // K = King // A = Ace 
+        // {"C","D","H","S"}; // C = Paus (Clubs) // D = Ouros (Diamonds) // H = Copas (Hearts) // S = Espadas (Spades) 
+        */
+        ///////////////
+        while( true ){
+            byte [] captura=robotGetImgScreenBytes("bmp");        
+            int [] cartas=bmp_findCardXY(captura);
+            boolean lendo_mesa=true;
+            
+            sleepSeconds(1);
+        }
     }
     
     public void teste_unico1() throws Exception{
@@ -17243,6 +17172,105 @@ class Redis extends Util{
     }
 }
 
+class PokerCalculator{
+    private final String[] RANKS = {"2","3","4","5","6","7","8","9","T","J","Q","K","A"}; // T = Ten // J = Jack // Q = Queen // K = King // A = Ace 
+    private final String[] SUITS = {"C","D","H","S"}; // C = Paus (Clubs) // D = Ouros (Diamonds) // H = Copas (Hearts) // S = Espadas (Spades) 
+
+    class Card {
+        String r, s;
+        Card(String r, String s) { this.r = r; this.s = s; }
+        public String toString() { return r + s; }
+    }
+
+    class Deck{
+        List<Card> cards = new ArrayList<>();
+        Deck() {
+            for (String r : RANKS)
+                for (String s : SUITS)
+                    cards.add(new Card(r, s));
+        }
+        void remove(Card c) {
+            cards.removeIf(x -> x.r.equals(c.r) && x.s.equals(c.s));
+        }
+        Card draw(Random rnd) {
+            return cards.remove(rnd.nextInt(cards.size()));
+        }
+    }
+
+    // Métodos de avaliar mão (simples —  usa ranking numérico)
+    private int evaluateHand(List<Card> hand) {
+        // Implementação reduzida — usa apenas ranking por maior carta
+        // Para cálculo real, substitua por um algoritmo completo (ex: Cactus Kev)
+        List<Integer> ranks = new ArrayList<>();
+        for (Card c : hand) ranks.add(Arrays.asList(RANKS).indexOf(c.r));
+        Collections.sort(ranks);
+        return ranks.get(ranks.size()-1); // maior carta
+    }
+
+    private double simulate(String[] yourCards, String[] communityCards, int iterations) {
+        Random rnd = new Random();
+        int wins = 0;
+
+        for (int i = 0; i < iterations; i++) {
+            Deck deck = new Deck();
+
+            // suas cartas
+            Card c1 = new Card("" + yourCards[0].charAt(0), "" + yourCards[0].charAt(1));
+            Card c2 = new Card("" + yourCards[1].charAt(0), "" + yourCards[1].charAt(1));
+            deck.remove(c1); deck.remove(c2);
+
+            // cartas já abertas
+            List<Card> comm = new ArrayList<>();
+            for (String s : communityCards) {
+                if (s != null && !s.isEmpty()) {
+                    Card ct = new Card("" + s.charAt(0), "" + s.charAt(1));
+                    comm.add(ct);
+                    deck.remove(ct);
+                }
+            }
+
+            // completa a mesa (até 5 cartas)
+            while (comm.size() < 5)
+                comm.add(deck.draw(rnd));
+
+            // cartas do oponente
+            Card o1 = deck.draw(rnd);
+            Card o2 = deck.draw(rnd);
+
+            // monta mãos finais
+            List<Card> yourFinal = new ArrayList<>();
+            yourFinal.add(c1); yourFinal.add(c2); yourFinal.addAll(comm);
+
+            List<Card> oppFinal = new ArrayList<>();
+            oppFinal.add(o1); oppFinal.add(o2); oppFinal.addAll(comm);
+
+            int yourRank = evaluateHand(yourFinal);
+            int oppRank  = evaluateHand(oppFinal);
+
+            if (yourRank > oppRank) wins++;
+        }
+
+        return wins / (double) iterations;
+    }
+    /*
+        Formato:
+        A = Ace
+        K = King
+        Q = Queen
+        J = Jack
+        T = Ten
+        Naipes:
+        H = Copas (Hearts)
+        D = Ouros (Diamonds)
+        C = Paus (Clubs)
+        S = Espadas (Spades)    
+    */
+    // System.out.println( new PokerCalculator().getProbabilidade(new String[]{"AH", "KD"}, new String[]{"", "", "", "", ""}) ); // Ás de Copas e Rei de Ouros
+    public double getProbabilidade(String[] yourCards, String[] community){
+        return simulate(yourCards, community, 20000) * 100;
+    }
+}
+
 @SuppressWarnings({"unchecked", "deprecation"})
 class Util{    
     public String erroSequenciaIlegal="Erro, sequencia ilegal!";
@@ -17832,6 +17860,15 @@ class Util{
             System.out.println(i + " -> >>" + (int)a[i] + "<<");        
     }
     
+    public void mostra_array(int [] a){
+        mostra_array(a, a.length);
+    }
+
+    public void mostra_array(int [] a, int len){
+        for ( int i=0;i<(len<a.length?len:a.length);i++ )
+            System.out.println(i + " -> >>" + a[i] + "<<");        
+    }
+
     public boolean ends_array(byte [] a, int len, byte [] b){                
         if ( len > a.length || len < b.length || b.length < 1 )
             return false;
@@ -18991,6 +19028,13 @@ class Util{
         return args;        
     }
     
+    public int[] arrayList_to_array_int(ArrayList a){
+        int[] args=new int[a.size()];
+        for(int i=0;i<a.size();i++)
+            args[i]=(int)a.get(i);
+        return args;        
+    }
+
     public void erro_amigavel_exception(Exception e){
         erroFatal(get_erro_amigavel_exception(e));
     }
@@ -20057,7 +20101,8 @@ class Util{
     // %z no linux significa -0300, aqui esta sendo usado para empregar o zoneid America/Sao_Paulo    
     // no java, print de zzzz com zondeId America/Sao_Paulo sai Fuso horário de Brasília
     // lista de zoneid => java.time.ZoneId.getAvailableZoneIds()
-    // modelo padrao date_("+%Y%m%d_%H%M%S", null, null, null)
+    // modelo padrao 
+    // System.out.println(date_("+%Y%m%d_%H%M%S", null, null, null));
     public String [] format_codes_date_in= new String []{"%z"  , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",  "%Z" };
     public String [] format_codes_date_out=new String []{"zzzz",  "dd", "MM", "yyyy", "HH", "mm", "ss", "SSS", "X"  };    
     public String format_america_sao_paulo_zoneid="America/Sao_Paulo";
@@ -20297,6 +20342,421 @@ class Util{
         return robot_local;
     }
 
+    ///////////////
+    public void bmp_salvarRecorte(
+            byte[] bmpBytes,
+            int cropX1,
+            int cropY1,
+            int cropX2,
+            int cropY2,
+            String outputPath
+    )throws IOException{
+
+        // ----- LER WIDTH E HEIGHT -----
+        int width = bmp_salvarRecorte_readIntLE(bmpBytes, 18);
+        int height = bmp_salvarRecorte_readIntLE(bmpBytes, 22);
+
+        boolean originalTopDown = height < 0;
+        int absHeight = Math.abs(height);
+
+        // Bits por pixel
+        int bpp = bmp_salvarRecorte_readShortLE(bmpBytes, 28);
+        if (bpp != 24)
+            throw new IOException("Apenas BMP 24 bits sem compressão são suportados.");
+
+        // ----- PARÂMETROS -----
+        int cropWidth  = cropX2 - cropX1;
+        int cropHeight = cropY2 - cropY1;
+
+        int originalRowSize = (width * 3 + 3) & ~3;
+        int croppedRowSize  = (cropWidth * 3 + 3) & ~3;
+
+        int croppedImageSize = croppedRowSize * cropHeight;
+        int fileSize = 54 + croppedImageSize;
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(out);
+
+        // ----- BMP HEADER -----
+        dos.writeBytes("BM");
+        dos.writeInt(Integer.reverseBytes(fileSize));
+        dos.writeInt(0);
+        dos.writeInt(Integer.reverseBytes(54));
+
+        // ----- DIB HEADER -----
+        dos.writeInt(Integer.reverseBytes(40));
+        dos.writeInt(Integer.reverseBytes(cropWidth));
+
+        // GRAVAR SEMPRE TOP-DOWN (altura negativa)
+        dos.writeInt(Integer.reverseBytes(-cropHeight));
+
+        dos.writeShort(Short.reverseBytes((short) 1));
+        dos.writeShort(Short.reverseBytes((short) 24));
+        dos.writeInt(0);
+        dos.writeInt(Integer.reverseBytes(croppedImageSize));
+        dos.writeInt(Integer.reverseBytes(2835));
+        dos.writeInt(Integer.reverseBytes(2835));
+        dos.writeInt(0);
+        dos.writeInt(0);
+
+        // ----- COPIAR PIXELS -----
+
+        byte[] padding = new byte[croppedRowSize - cropWidth * 3];
+
+        for (int y = 0; y < cropHeight; y++) {
+
+            int sourceY;
+
+            if (originalTopDown) {
+                // → BMP original já é top-down
+                sourceY = cropY1 + y;
+            } else {
+                // → BMP original é bottom-up
+                sourceY = absHeight - 1 - (cropY1 + y);
+            }
+
+            int origem = 54 + sourceY * originalRowSize + cropX1 * 3;
+
+            dos.write(bmpBytes, origem, cropWidth * 3);
+            dos.write(padding);
+        }
+
+        try (FileOutputStream fos = new FileOutputStream(outputPath)) {
+            fos.write(out.toByteArray());
+        }
+    }
+
+/*
+            255,255,255
+255,255,255 232,232,233 232,232,233
+            221,221,222
+    
+255,255,255 255,255,255 255,255,255 
+255,255,255 232,232,233 232,232,233 
+255,255,255 221,220,222 222,221,223     
+
+255,255,255 255,255,255 255,255,255
+255,255,255 232,232,233 232,232,233
+255,255,255 221,220,222 222,221,223    
+
+ 255,255,255 255,255,255 255,255,255
+ 255,255,255 233,232,233 233,232,233
+ 255,255,255 222,221,222 223,222,223    
+
+255,255,255 255,255,255 255,255,255
+255,255,255 233,232,233 233,232,233
+255,255,255 222,221,222 223,222,223
+
+255,255,255 255,255,255 255,255,255
+255,255,255 233,232,233 233,232,233
+255,255,255 222,221,222 223,222,223   
+    */
+
+    public int[] bmp_findCardXY(
+            byte[] bmpBytes
+    ) {
+        ArrayList<Integer> resultados = new ArrayList<Integer>();
+
+        // ----------- LER HEADER -----------
+        int width  = encontrarPadroes_readIntLE(bmpBytes, 18);
+        int height = encontrarPadroes_readIntLE(bmpBytes, 22);
+        int bpp    = encontrarPadroes_readShortLE(bmpBytes, 28);
+
+        if (bpp != 24)
+            throw new RuntimeException("Somente BMP 24 bits sem compressão.");
+
+        int pixelDataOffset = encontrarPadroes_readIntLE(bmpBytes, 10);
+        int rowSize = (width * 3 + 3) & ~3; // alinhamento de 4 bytes
+
+        // Função para ler RGB de um ponto (x,y) em BMP invertido
+        class Pix {
+            int[] get(int x, int y) {
+                // y invertido
+                int realY = (height - 1 - y);
+                int index = pixelDataOffset + realY * rowSize + x * 3;
+                int b = bmpBytes[index] & 0xFF;
+                int g = bmpBytes[index + 1] & 0xFF;
+                int r = bmpBytes[index + 2] & 0xFF;
+                return new int[]{r, g, b};
+            }
+        }
+
+        Pix pix = new Pix();
+
+        // ----------- VARREDURA COMPLETA -----------
+        for (int y = 1; y < height - 1; y++) {
+            for (int x = 1; x < width - 1; x++) {
+
+                int[] centro = pix.get(x, y);
+                int[] cima   = pix.get(x, y - 1);
+                int[] baixo  = pix.get(x, y + 1);
+                int[] esq    = pix.get(x - 1, y);
+                int[] dir    = pix.get(x + 1, y);
+
+                if (
+                    (        
+                           (centro[0] == 232 || centro[0] == 233)
+                        && (centro[1] == 232 || centro[1] == 233)
+                        && (centro[2] == 232 || centro[2] == 233)
+                    ) &&                        
+                    encontrarPadroes_match(cima,   255,255,255) &&
+                    encontrarPadroes_match(esq,    255,255,255) &&
+                    (        
+                           (dir[0] == 232 || dir[0] == 233)
+                        && (dir[1] == 232 || dir[1] == 233)
+                        && (dir[2] == 232 || dir[2] == 233)
+                    ) &&                        
+                    (        
+                           (baixo[0] == 220 || baixo[0] == 221 || baixo[0] == 222)
+                        && (baixo[1] == 220 || baixo[1] == 221 || baixo[1] == 222)
+                        && (baixo[2] == 220 || baixo[2] == 221 || baixo[2] == 222)
+                    )
+                    ){
+                    resultados.add(x);
+                    resultados.add(y);
+                }
+            }
+        }
+        return arrayList_to_array_int(resultados);
+    }
+
+    // ------- Função auxiliar p/ comparar RGB ------
+    private boolean encontrarPadroes_match(int[] rgb, int r, int g, int b) {
+        return rgb[0] == r && rgb[1] == g && rgb[2] == b;
+    }
+
+    // ------- Funções LE já conhecidas -------
+    public int encontrarPadroes_readIntLE(byte[] data, int offset) {
+        return (data[offset] & 0xFF) |
+                ((data[offset + 1] & 0xFF) << 8) |
+                ((data[offset + 2] & 0xFF) << 16) |
+                ((data[offset + 3] & 0xFF) << 24);
+    }
+
+    public short encontrarPadroes_readShortLE(byte[] data, int offset) {
+        return (short) ((data[offset] & 0xFF) |
+                ((data[offset + 1] & 0xFF) << 8));
+    }
+
+    /*
+    retorno
+255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255
+255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255
+255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255 255,255,255
+255,255,255 255,255,255 255,255,255 255,255,255 232,232,233 232,232,233 232,232,233
+255,255,255 255,255,255 255,255,255 255,255,255 221,221,222 222,222,223 224,224,225
+255,255,255 255,255,255 255,255,255 255,255,255 221,221,222 237,237,237 255,255,255
+255,255,255 255,255,255 255,255,255 255,255,255 221,221,222 237,237,237 255,255,255
+255,255,255 255,255,255 255,255,255 255,255,255 221,221,222 237,237,237 255,255,255
+255,255,255 255,255,255 255,255,255 255,255,255 221,221,222 237,237,237 255,255,255
+    
+    */
+    public String bmp_dumpPixels(byte[] bmpBytes, int cropX1, int cropY1, int cropX2, int cropY2, boolean monocromatico) throws Exception{
+        int dataOffset = ((bmpBytes[10] & 0xFF) |
+                         ((bmpBytes[11] & 0xFF) << 8) |
+                         ((bmpBytes[12] & 0xFF) << 16) |
+                         ((bmpBytes[13] & 0xFF) << 24));
+        int width = ((bmpBytes[18] & 0xFF) |
+                    ((bmpBytes[19] & 0xFF) << 8) |
+                    ((bmpBytes[20] & 0xFF) << 16) |
+                    ((bmpBytes[21] & 0xFF) << 24));
+        int height = ((bmpBytes[22] & 0xFF) |
+                     ((bmpBytes[23] & 0xFF) << 8) |
+                     ((bmpBytes[24] & 0xFF) << 16) |
+                     ((bmpBytes[25] & 0xFF) << 24));
+        boolean flipped = height > 0;
+        height = Math.abs(height);
+        int rowSize = ((width * 3 + 3) / 4) * 4;
+        if (cropX1 < 0) cropX1 = 0;
+        if (cropY1 < 0) cropY1 = 0;
+        if (cropX2 > width) cropX2 = width;
+        if (cropY2 > height) cropY2 = height;
+        if (cropX2 <= cropX1 || cropY2 <= cropY1)
+            throw new Exception("Recorte inválido.");
+
+        int cropW = cropX2 - cropX1;
+        int cropH = cropY2 - cropY1;
+        StringBuilder sb = new StringBuilder();
+        for (int y = 0; y < cropH; y++) {
+            int srcY = flipped ? (height - 1 - (cropY1 + y)) : (cropY1 + y);
+            int rowStart = dataOffset + srcY * rowSize;
+            for (int x = 0; x < cropW; x++) {
+                int pixelIndex = rowStart + (cropX1 + x) * 3;
+                int b = bmpBytes[pixelIndex] & 0xFF;
+                int g = bmpBytes[pixelIndex + 1] & 0xFF;
+                int r = bmpBytes[pixelIndex + 2] & 0xFF;
+                if ( monocromatico ){
+                    if ( String.format("%03d,%03d,%03d", r, g, b).equals("255,255,255") )
+                        sb.append("1");
+                    else
+                        sb.append("0");
+                }else
+                    sb.append(String.format("%03d,%03d,%03d", r, g, b));
+                if (x < cropW - 1) sb.append(" ");
+            }
+            if (y < cropH - 1) sb.append("\n");
+        }
+        return sb.toString();
+    }
+    
+    public byte[] bmp_recortarSomentePixels(
+            byte[] bmpBytes,
+            int cropX1,
+            int cropY1,
+            int cropX2,
+            int cropY2
+    )throws IOException{
+        int width = bmp_salvarRecorte_readIntLE(bmpBytes, 18);
+        int height = bmp_salvarRecorte_readIntLE(bmpBytes, 22);
+        boolean originalTopDown = height < 0;
+        int absHeight = Math.abs(height);
+
+        int bpp = bmp_salvarRecorte_readShortLE(bmpBytes, 28);
+        if (bpp != 24)
+            throw new RuntimeException("Apenas BMP 24 bits são suportados");
+
+        int cropWidth  = cropX2 - cropX1;
+        int cropHeight = cropY2 - cropY1;
+
+        int originalRowSize = (width * 3 + 3) & ~3;
+        int croppedRowSize  = (cropWidth * 3 + 3) & ~3;
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        byte[] padding = new byte[croppedRowSize - cropWidth * 3];
+
+        for (int y = 0; y < cropHeight; y++) {
+
+            int sourceY;
+
+            if (originalTopDown) {
+                sourceY = cropY1 + y;
+            } else {
+                sourceY = absHeight - 1 - (cropY1 + y);
+            }
+
+            int origem = 54 + sourceY * originalRowSize + cropX1 * 3;
+
+            out.write(bmpBytes, origem, cropWidth * 3);
+            out.write(padding);
+        }
+
+        return out.toByteArray();
+    }
+    
+    public int bmp_salvarRecorte_readIntLE(byte[] data, int offset) {
+        return (data[offset] & 0xFF) |
+               ((data[offset + 1] & 0xFF) << 8) |
+               ((data[offset + 2] & 0xFF) << 16) |
+               ((data[offset + 3] & 0xFF) << 24);
+    }
+
+    public short bmp_salvarRecorte_readShortLE(byte[] data, int offset) {
+        return (short) (
+                (data[offset] & 0xFF) |
+                ((data[offset + 1] & 0xFF) << 8)
+        );
+    }
+
+    public void bmp_assinatura(File path, Integer len_block, OutputStream os) throws Exception{          
+        byte[] entrada_ = new byte[1];
+        int c=0;
+        int rgb=0;
+        int c18=1;
+        int c19=256;
+        int c20=256*256;
+        int c21=256*256*256;
+        int c22=1;
+        int c23=256;
+        int c24=256*256;
+        int c25=256*256*256;
+        int x=0; // posicao temporaria de x
+        int y=0; // posicao temporaria de y
+        int len_x=0; // len total em x
+        int len_y=0; // len total em y
+        int n_block_x=0; // numeros de blocos em x
+        int n_block_y=0; // numeros de blocos em y
+        int len_block_x=0; // len de trabalho em x
+        int len_block_y=0; // len de trabalho em y
+        int [][][] sums=null;   
+        int [][][] counts=null;
+        int count_pixels_block = 0;
+        if ( len_block != null )
+            count_pixels_block=len_block*len_block;
+        boolean header=true;
+        try{
+            if ( path != null )
+                readBytes(path);
+        }catch(Exception e){
+            erro_amigavel_exception(e);
+        }        
+        while ( read1Byte(entrada_) ){
+            int n=entrada_[0];
+            if ( n < 0 ) n+=256;
+            if ( header ){
+                if ( c == 18 ) c18*=n;
+                if ( c == 19 ) c19*=n;
+                if ( c == 20 ) c20*=n;
+                if ( c == 21 ){
+                    c21*=n;
+                    len_x=c18+c19+c20+c21;
+                    os.write((len_x+"").getBytes());
+                    os.write("\n".getBytes());
+                }
+                if ( c == 22 ) c22*=n;
+                if ( c == 23 ) c23*=n;
+                if ( c == 24 ) c24*=n;
+                if ( c == 25 ){
+                    c25*=n;
+                    len_y=c22+c23+c24+c25;
+                    os.write((len_y+"").getBytes());
+                    os.write("\n".getBytes());
+                    if ( len_block != null ){
+                        if (len_x < len_block || len_y < len_block )
+                            erroFatal("Nao eh possivel a assinatura menor que a img!");
+                        n_block_x=(int)(len_x/len_block);
+                        n_block_y=(int)(len_y/len_block);
+                        len_block_x=n_block_x*len_block;
+                        len_block_y=n_block_y*len_block;
+                        sums = new int[n_block_x][n_block_y][3];
+                        counts = new int[n_block_x][n_block_y][3];
+                    }
+                    header=false;
+                    c=0;
+                    continue;
+                }  
+                c++;                
+                continue;
+            }else{
+                if ( len_block == null ){
+                    // sem assinatura
+                    os.write((n+"").getBytes());
+                    os.write("\n".getBytes());
+                    continue;
+                }else{
+                    // com assinatura                    
+                    if ( c%len_x < len_block_x && c < len_x*len_block_y ){ // dentro da area de trabalho
+                        x = (int)((c%len_x)/len_block);
+                        y = (int)((c/len_x)/len_block);
+                        sums[x][y][rgb]+=n;
+                        counts[x][y][rgb]+=1;
+                        if ( counts[x][y][rgb] == count_pixels_block ){
+                            os.write(((int)(sums[x][y][rgb]/counts[x][y][rgb])+"").getBytes());
+                            os.write("\n".getBytes());
+                        }
+                    }
+                    rgb++;
+                    if ( rgb >= 3 ){
+                        rgb=0;
+                        c++;
+                    }
+                    continue;
+                }
+            }
+        } 
+        os.flush();
+    }   
+        
     public byte[] robotGetImgScreenBmpNamesDotaBytes() throws Exception{
         byte [] tmp=robotGetImgScreenBytes("bmp");
         bmp_editing(tmp, 
@@ -20734,6 +21194,8 @@ while ($true) {
             return new Socket();
         }
     }
+    
+    
 }
 
 
