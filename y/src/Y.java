@@ -27255,7 +27255,9 @@ Exemplos...
 [y audio]
     y audio vol
     y audio mute
-    y audio setvol 0.02 # 1 => 100%
+    y audio setvol 0.02 # 2%
+    y audio setvol 1    # 100%
+    y audio setvol 0.00109509244794026029 # menor valor do windows saindo som -> ≈ -59.2 dB
     y audio setmute true
     y audio mutingWhileProgramInPrincipalMonitor WorldOfTanks.exe
     obs: setvol e setmute precisa ser adm
