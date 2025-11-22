@@ -924,7 +924,9 @@ cat buffer.log
             dnsDoHServer(args[1], Integer.parseInt(args[2]), args[3]);
             return;
         }        
-        if ( args[0].equals("audio") ){
+        if ( args[0].equals("audio") || args[0].equals("vol") ){
+            if ( args[0].equals("vol") )
+                erroFatal("procure por:\ny help audio");
             audio(args);
             return;
         }
@@ -27157,7 +27159,7 @@ Exemplos...
 [y audio]
     y audio vol
     y audio mute
-    y audio setvol 0.75
+    y audio setvol 0.02 # 1 => 100%
     y audio setmute true
     y audio mutingWhileProgramInPrincipalMonitor WorldOfTanks.exe
     obs: setvol e setmute precisa ser adm
