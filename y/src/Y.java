@@ -15606,6 +15606,7 @@ class Tests extends Util{
         // {"C","D","H","S"}; // C = Paus (Clubs) // D = Ouros (Diamonds) // H = Copas (Hearts) // S = Espadas (Spades) 
         */
         ///////////////
+        boolean first=true;
         while( true ){
             try{
                 byte [] captura=robotGetImgScreenBytes("bmp");        
@@ -15624,6 +15625,7 @@ class Tests extends Util{
                     "87162053aa40b3ee506af3d5c7ba0540", "2",
                     "3550571b28480fc33e063ced9e6829bc", "3",
                     "2285000d0cbdd0e41e9228ecb4253b55", "3",
+                    "5c2bc75d23d3e0cbd0bef59dfe4e49ed", "3",
                     "3e3dd921bf91bf83c7b683243b5c0c9c", "4",
                     "1a8de96534c72f4ffffab8bf80ce6a5d", "5",
                     "7238e345344a5a65f3da0c3af713e983", "5",
@@ -15631,29 +15633,38 @@ class Tests extends Util{
                     "6bb360bdf85da4ea6c09581284e3e1e9", "7",
                     "00d58758b6f5ea7e3778621296a61394", "7",
                     "46b918a92922ba94fcc860df0a83900e", "8",
+                    "3b4ed506d37f1aceb8c29e8ffa01b631", "8",
                     "a4719a65c20f002f3ca0bd891fad72ea", "9",
                     "3cc4ca8e0f11393d146c28210bc6d59d", "T", // T = Ten
                     "ad0f65639a75cd1281868a93c259d3bc", "J",
+                    "3eba4b3e0584d2a0e57664fbb94b09b3", "J",
                     "dc155179d3dd45bfcd834c8fe6208987", "Q",
                     "c6a95146ee98ec70fe7be7a2331b5567", "Q",
                     "e55bcbce64e561d9fb7d2b120f944289", "Q",
                     "4face8bb12e46f96d110d83974c81243", "Q",
+                    "9be8cbbf7463c9ccefd45dcc158e98b8", "Q",
                     "62be4eac78a86832bc398094186d3e13", "K",
                     "a3a5884908eec5ae942c51104387c60f", "K",
+                    "a1d6d254748ab6d0278ad9940c374ed7", "K",
                     "5004c84bcbb5ba79531d6600bb261975", "A",
                     "16615d99d49f2a618a5b55dc7ac72aa7", "A",
+                    "a20eab5b7ddb06aa05352b333ab2923f", "A",
                     "976bae705bb586fbcb9db8168b42203f", "C", // C = ♣ Paus (Clubs)
                     "d90b876edb13b1a4783c798374741523", "D", // D = ♦ Ouros (Diamonds)
                     "bfbacb5a34eef014d5c44af7ba1b7c6b", "D", // D = ♦ Ouros (Diamonds)
+                    "24101eb6921e1d2f80feb73d3b514297", "D", // D = ♦ Ouros (Diamonds)
                     "622ea99532017e6b09987928014a9d85", "H", // H = ♥ Copas (Hearts)
                     "c060bd35eedbf9ed0272f4ef6a86e01a", "H", // H = ♥ Copas (Hearts)
                     "30f46d64d05ccf664275375771754eff", "S"  // S = ♠ Espadas (Spades) 
                 };
+                if ( first )
+                    first=false;
+                else
+                    sleepSeconds(1);
                 if ( cartas_xy.length == 2 )
                     lendo_mesa=false;
                 if ( cartas_xy.length == 0 ){
                     System.out.print("\r                                                    \r");
-                    sleepSeconds(1);
                     continue;
                 }else{
                     for ( int i=0;i<cartas_xy.length;i+=2 ){
@@ -15683,12 +15694,10 @@ class Tests extends Util{
                             mao += " " + card + naipe;
                     }
                 }
-                if ( mao.equals("") ){
-                    sleepSeconds(1);
-                    continue;
-                }
                 String [] mao_=mao.trim().split(" ");
                 String [] mesa_=mesa.trim().split(" ");
+                if ( mao_.length != 2 )
+                    continue;
                 while(mesa_.length < 5)
                     mesa_=addParm("", mesa_);
                 //System.out.println( new PokerCalculator().getProbabilidade(new String[]{"AH", "KD"}, new String[]{"", "", "", "", ""}) ); // Ás de Copas e Rei de Ouros
@@ -15700,13 +15709,11 @@ class Tests extends Util{
                     "-> mesa:" + mesa +
                     " mao:" + mao
                 );
-                /*
-0.0 % -> mesa: 5D 2D TS mao: 6S 6C               
-                */
             }catch(Exception e){
+                if ( e.toString().contains("java.lang.ArrayIndexOutOfBoundsException") )
+                    continue;
                 System.out.println(e.toString());
-            }
-            sleepSeconds(1);
+            }            
         }
     }
     
