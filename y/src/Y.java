@@ -15607,6 +15607,7 @@ class Tests extends Util{
         */
         ///////////////
         boolean first=true;
+        String tail_error="";        
         while( true ){
             try{
                 byte [] captura=robotGetImgScreenBytes("bmp");        
@@ -15618,7 +15619,8 @@ class Tests extends Util{
                 int x,y,x2,y2,x3,y3,n_find_parm;
                 String code_md5="";
                 String card="";
-                String naipe="";
+                String naipe="";                
+                String msg_error="";
                 String [] codes=new String[]{
                     "5514661a969303faafad0ac5c0cd4570", "2",
                     "07221e2510a9b660ea8562f036e5795b", "2",
@@ -15665,8 +15667,9 @@ class Tests extends Util{
                     lendo_mesa=false;
                 if ( cartas_xy.length == 0 ){
                     System.out.print("\r                                                    \r");
+                    tail_error=msg_error;
                     continue;
-                }else{
+                }else{                    
                     for ( int i=0;i<cartas_xy.length;i+=2 ){
                         if ( i > 0 && lendo_mesa && cartas_xy[i+1] != cartas_xy[i-1] )
                             lendo_mesa=false;
@@ -15675,17 +15678,19 @@ class Tests extends Util{
                         x2=-25; y2=-10; x3=-2; y3=22; // card
                         code_md5=digest_text(bmp_dumpPixels(captura,x+x2,y+y2,x+x3,y+y3,true), "md5");
                         n_find_parm=findParm(codes, code_md5, true);
-                        if ( n_find_parm == -1 ){
+                        if ( n_find_parm == -1 ){                            
                             bmp_salvarRecorte(captura,x+x2,y+y2,x+x3,y+y3,"c:\\tmp\\hj.bmp");
-                            erroFatal("Não foi possível decodificar o hash: " + code_md5 + "\nimg: " + out_path);
+                            msg_error="Não foi possível decodificar o hash: " + code_md5 + "\nimg: " + out_path;
+                            break;
                         }else
                             card=codes[n_find_parm+1];
                         x2=-25; y2=25; x3=-2; y3=45; // naipe
                         code_md5=digest_text(bmp_dumpPixels(captura,x+x2,y+y2,x+x3,y+y3,true), "md5");
                         n_find_parm=findParm(codes, code_md5, true);
-                        if ( n_find_parm == -1 ){
+                        if ( n_find_parm == -1 ){                            
                             bmp_salvarRecorte(captura,x+x2,y+y2,x+x3,y+y3,"c:\\tmp\\hj.bmp");
-                            erroFatal("Não foi possível decodificar o hash: " + code_md5 + "\nimg: " + out_path);
+                            msg_error="Não foi possível decodificar o hash: " + code_md5 + "\nimg: " + out_path;
+                            break;
                         }else
                             naipe=codes[n_find_parm+1];
                         if ( lendo_mesa )
@@ -15693,7 +15698,16 @@ class Tests extends Util{
                         else
                             mao += " " + card + naipe;
                     }
+                }                
+                
+                if ( !msg_error.equals("") ){
+                    if ( tail_error.equals(msg_error) )
+                        erroFatal(msg_error);
+                    tail_error=msg_error;
+                    continue;
                 }
+                tail_error=msg_error;
+                
                 String [] mao_=mao.trim().split(" ");
                 String [] mesa_=mesa.trim().split(" ");
                 if ( mao_.length != 2 )
