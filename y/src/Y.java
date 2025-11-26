@@ -7282,7 +7282,7 @@ cat buffer.log
                     }
                 }
                 if ( !achou )
-                    erroFatal("Trava de mudança de estrutura!\nA pasta \"" + f.getAbsolutePath() + "\" contém arquivo mas nenhum contém o S1E1!\nFormate a pasta!\nArquivo esperado: \"" + item + "\"");
+                    erroFatal("Trava de mudança de estrutura!\nA pasta \"" + f.getAbsolutePath() + "\" contém arquivo mas nenhum contém o S1E1!\nFormate a pasta!\nArquivo esperado: \"" + f.getAbsolutePath()+"\\"+item + "\"");
             }
         }
     }
