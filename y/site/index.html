@@ -467,10 +467,44 @@ function only_azAZ09(a){
 	return a.replace(/[^a-zA-Z0-9]/g, '');
 }
 
-function load_stream(a, b){
+function load_stream_ts_puro(a){
+	  var novaJanela = window.open('', '_blank');
+	  novaJanela.document.write(
+	    atob('PCFET0NUWVBFIGh0bWw+DQo8aHRtbCBsYW5nPSJwdC1CUiI+DQo8aGVhZD4NCiAgPG1ldGEgY2hhcnNldD0iVVRGLTgiPg0KICA8dGl0bGU+UGxheWVyIE1QRUctVFMgY29tIG1wZWd0cy5qczwvdGl0bGU+DQogIDxzdHlsZT4NCiAgICBib2R5IHsgZGlzcGxheTogZmxleDsganVzdGlmeS1jb250ZW50OiBjZW50ZXI7IGFsaWduLWl0ZW1zOiBjZW50ZXI7IGhlaWdodDogMTAwdmg7IGJhY2tncm91bmQ6ICMyMjI7IH0NCiAgICB2aWRlbyB7IHdpZHRoOiA4MCU7IGhlaWdodDogYXV0bzsgYmFja2dyb3VuZDogYmxhY2s7IH0NCiAgPC9zdHlsZT4NCjwvaGVhZD4NCjxib2R5Pg0KICA8dmlkZW8gaWQ9InZpZGVvRWxlbWVudCIgY29udHJvbHMgYXV0b3BsYXkgbXV0ZWQ+PC92aWRlbz4NCg0KICA8IS0tIEluY2x1aW5kbyBtcGVndHMuanMgdmlhIENETiAtLT4NCiAgPHNjcmlwdCBzcmM9Imh0dHBzOi8vY2RuLmpzZGVsaXZyLm5ldC9ucG0vbXBlZ3RzLmpzIj48L3NjcmlwdD4NCiAgPHNjcmlwdD4NCiAgICBjb25zdCB2aWRlbyA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2aWRlb0VsZW1lbnQnKTsNCg0KICAgIC8vIFVSTCBkbyBzZXUgc3RyZWFtIE1QRUctVFMNCiAgICBjb25zdCB1cmwgPSAn')
+	    + a
+	    + atob('JzsNCg0KICAgIC8vIFZlcmlmaWNhIHNlIG8gbmF2ZWdhZG9yIHN1cG9ydGEgTWVkaWFTb3VyY2UNCiAgICBpZiAobXBlZ3RzLmdldEZlYXR1cmVMaXN0KCkubXNlTGl2ZVBsYXliYWNrKSB7DQogICAgICBjb25zdCBwbGF5ZXIgPSBtcGVndHMuY3JlYXRlUGxheWVyKHsNCiAgICAgICAgdHlwZTogJ21wZWd0cycsDQogICAgICAgIHVybDogdXJsLA0KICAgICAgICBpc0xpdmU6IHRydWUsDQogICAgICB9KTsNCiAgICAgIHBsYXllci5hdHRhY2hNZWRpYUVsZW1lbnQodmlkZW8pOw0KICAgICAgcGxheWVyLmxvYWQoKTsNCiAgICAgIHBsYXllci5wbGF5KCk7DQoNCiAgICAgIC8vIEV2ZW50b3Mgw7p0ZWlzDQogICAgICBwbGF5ZXIub24obXBlZ3RzLkV2ZW50cy5FUlJPUiwgZnVuY3Rpb24oZXJyLCBkZXRhaWwpIHsNCiAgICAgICAgY29uc29sZS5lcnJvcignRXJybyBNUEVHLVRTOicsIGVyciwgZGV0YWlsKTsNCiAgICAgIH0pOw0KICAgIH0gZWxzZSB7DQogICAgICBjb25zb2xlLmVycm9yKCdPIG5hdmVnYWRvciBuw6NvIHN1cG9ydGEgTVNFLCBuw6NvIMOpIHBvc3PDrXZlbCByb2RhciBNUEVHLVRTIGRpcmV0by4nKTsNCiAgICB9DQogIDwvc2NyaXB0Pg0KPC9ib2R5Pg0KPC9odG1sPg==')
+	  );
+	  novaJanela.document.close();	
+	  return;
+}
+
+function load_stream_mp4_complicado(a){
+	  var novaJanela = window.open('', '_blank');
+	  novaJanela.document.write(
+	    atob('PCFET0NUWVBFIGh0bWw+DQo8aHRtbCBsYW5nPSJwdC1CUiI+DQo8Ym9keT4NCiAgPHZpZGVvIGlkPSJ2aWRlb1BsYXllciIgY29udHJvbHM+DQogICAgPHNvdXJjZSBzcmM9Ig==')
+	    + a
+	    + atob('IiB0eXBlPSJ2aWRlby9tcDQiPg0KICAgIFNldSBuYXZlZ2Fkb3IgbsOjbyBzdXBvcnRhIHbDrWRlbyBIVE1MNS4NCiAgPC92aWRlbz4NCiAgPHNjcmlwdD4NCiAgICBjb25zdCB2aWRlbyA9IGRvY3VtZW50LmdldEVsZW1lbnRCeUlkKCd2aWRlb1BsYXllcicpOw0KICAgIGFzeW5jIGZ1bmN0aW9uIGZldGNoUGFydGlhbFZpZGVvKHVybCwgc3RhcnQgPSAwLCBlbmQgPSAxMDAwMDAwKSB7DQogICAgICBjb25zdCByZXNwb25zZSA9IGF3YWl0IGZldGNoKHVybCwgew0KICAgICAgICBoZWFkZXJzOiB7DQogICAgICAgICAgJ1JhbmdlJzogYGJ5dGVzPSR7c3RhcnR9LSR7ZW5kfWANCiAgICAgICAgfQ0KICAgICAgfSk7DQogICAgICBjb25zdCBibG9iID0gYXdhaXQgcmVzcG9uc2UuYmxvYigpOw0KICAgICAgY29uc3QgdmlkZW9VUkwgPSBVUkwuY3JlYXRlT2JqZWN0VVJMKGJsb2IpOw0KICAgICAgdmlkZW8uc3JjID0gdmlkZW9VUkw7DQogICAgICB2aWRlby5wbGF5KCk7DQogICAgfQ0KICA8L3NjcmlwdD4NCjwvYm9keT4NCjwvaHRtbD4=')
+	  );
+	  novaJanela.document.close();	
+	  return;
+}
+
+function is_stream(a){
+	return a.indexOf('.m3u8') > -1 || a.endsWith('/ts') || (a.indexOf('/play/') && !a.endsWith('/ts'));
+}
+
+function load_stream(a, b){ // load_stream('_', 'https://example.com/playlist.m3u8')
     //a=b.split('/')[3];
     //if ( b.indexOf('') > -1 && b.replaceAll(':', '/').replaceAll('-', '/').split('/').length > 8 )
     //  a=b.replaceAll(':', '/').replaceAll('-', '/').split('/')[8];
+	if ( b.endsWith('/ts') ){
+	  load_stream_ts_puro(b);
+	  return;
+	}
+	if ( b.indexOf('/play/') && !b.endsWith('/ts') ){
+	  load_stream_mp4_complicado(b);
+	  return;
+	}
     if ( b.indexOf('https://onplaytv.net/') == 0 )
 	  b=b.substring(7);
     b=convert_chaturbate(b);
@@ -490,7 +524,6 @@ function load_stream(a, b){
 		//b=b.replaceAll('https://', '/redirect_stream_tv/');
 		console.log('track stream: '+b);
 	}
-	
     let nick_name=get_nick_name();
     if ( nick_name == null ){
         alert('Você precisa estar logado!');
@@ -500,6 +533,9 @@ function load_stream(a, b){
         alert('Lista vazia!');
         return;
     }
+	console.log('a b');
+	console.log(a);
+	console.log(b);
     load_movie([a], true, b);
 }
 
@@ -1286,11 +1322,11 @@ function load_movie(parm, table_click, streamURL){
     getVideo().addEventListener('timeupdate', function(){
       if ( getVideo() != null ){
         watchedBar.style.width = ((getVideo().currentTime / getVideo().duration) * 100) + '%';        
-		document.getElementsByClassName('time-remaining')[0].innerHTML = format_seconds(getVideo().duration - getVideo().currentTime);
+		document.getElementsByClassName('time-remaining')[0].innerHTML = format_seconds(getVideo().duration - getVideo().currentTime);		
         if ( streamURL != null )
           update_url( '/?'+streamURL );
         else
-          update_url( '/?'+parm.join('/') );
+          update_url( '/?'+parm.join('/') );		
       }
     });
     progressBar.addEventListener('mousemove', function(e) { cueTime(e); });
@@ -1501,6 +1537,7 @@ function load_movie(parm, table_click, streamURL){
 		if ( hls )
 			hls.destroy();
 		hls = new Hls();
+        console.log('loading hls.. '+streamURL);		
 		hls.loadSource(streamURL);
 		hls.attachMedia(document.getElementById('video'));                                      
 		document.getElementById('video').play();
@@ -2338,7 +2375,7 @@ function get_resume(){
     let _onclick="load_playlist(" + "['" + uri2.split('/').join("','") + "']" + ", true, '" + type + "', 'resume')";
 	tryRedirectTikTok(uri2);
     uri2=convert_chaturbate(uri2);	
-	if ( uri2.indexOf('.m3u8') > -1 )
+	if ( is_stream(uri2) )
       _onclick="load_stream('_', '" + uri2 + "')";
     if ( uri2 == 'offline' )
       _onclick="#";
