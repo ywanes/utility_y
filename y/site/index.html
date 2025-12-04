@@ -2303,6 +2303,10 @@ function prepara_principal(){
 }
 
 function load_playlist(parm, table_click, type, type_action_block_verify_buttom_reload){
+    if ( type == 'movie' && get_nick_name() == null ){ // logado?
+		alert('Você precisa estar logado!');
+		return;
+	}
 	if ( type_action_block_verify_buttom_reload == 'undefined' )
 		type_action_block_verify_buttom_reload=null;
 	if ( type_action_block_verify_buttom_reload == null && verify_buttom_reload() ) // enable buttom reload
