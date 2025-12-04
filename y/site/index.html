@@ -518,9 +518,8 @@ function load_stream_mp4_complicado(a, b){
 	return;
 }
 
-
 function is_stream(a){
-	return a.indexOf('.m3u8') > -1 || a.endsWith('/ts') || (a.indexOf('/play/') && !a.endsWith('/ts'));
+	return a.indexOf('.m3u8') > -1 || a.endsWith('/ts') || ( a.indexOf('/play/') > -1 && !a.endsWith('/ts') );
 }
 
 function load_stream(a, b){ // load_stream('_', 'https://example.com/playlist.m3u8')
@@ -1013,6 +1012,7 @@ function img_secret(){
 }
 
 function load_movie(parm, table_click, streamURL){        
+    console.log('load_movie: ' + parm + '::' + table_click + '::' + streamURL);
     var src='/'+parm.join('/');
     document.getElementById('login').style="display: none;";
     document.getElementById('nav').style="display: none;";
@@ -2410,8 +2410,10 @@ function get_resume(){
     let _onclick="load_playlist(" + "['" + uri2.split('/').join("','") + "']" + ", true, '" + type + "', 'resume')";
 	tryRedirectTikTok(uri2);
     uri2=convert_chaturbate(uri2);	
-	if ( is_stream(uri2) )
+	if ( is_stream(uri2) ){
+	  console.log('is_stream: ' + uri2);
       _onclick="load_stream('_', '" + uri2 + "')";
+	}
     if ( uri2 == 'offline' )
       _onclick="#";
     return {"uri": uri, 
