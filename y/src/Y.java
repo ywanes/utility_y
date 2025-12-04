@@ -847,14 +847,22 @@ cat buffer.log
             System.err.println("O correto nao seria printf?");
             System.exit(1);
         }   
-        if ( args[0].equals("sdiff") && args.length == 3 ){
-            File f=new File(args[1]);
+        if ( args[0].equals("sdiff") && args.length >= 3 ){
+            Object [] objs = get_parms_file1_file2_flagOnlyDiff(args);
+            if ( objs == null ){
+                comando_invalido(args);
+                System.exit(0);
+            }
+            String file1=(String)objs[0];
+            String file2=(String)objs[1];
+            Boolean flag_enable_equal=!(Boolean)objs[2];
+            File f=new File(file1);
             if ( f == null || !f.exists() || !f.isFile() )
                 erroFatal("Arquivo " + args[1] + " não existe!");
-            f=new File(args[2]);
+            f=new File(file2);
             if ( f == null || !f.exists() || !f.isFile() )
                 erroFatal("Arquivo " + args[2] + " não existe!");
-            new Diff(args[1], args[2], System.out);
+            new Diff(file1, file2, flag_enable_equal, System.out);
             return;
         }
         if ( args[0].equals("progressBar") ){
@@ -1037,15 +1045,24 @@ cat buffer.log
             }catch(Exception e){}            
         }        
         if ( args[0].equals("md5") ){
-            System.out.println(digest("MD5", null));
+            if ( args.length == 2 )
+                System.out.println(digest("MD5", args[1]));
+            else
+                System.out.println(digest("MD5", null));
             return;
         }        
         if ( args[0].equals("sha1") ){
-            System.out.println(digest("SHA-1", null));
+            if ( args.length == 2 )
+                System.out.println(digest("SHA-1", args[1]));
+            else
+                System.out.println(digest("SHA-1", null));
             return;
         }        
         if ( args[0].equals("sha256") ){
-            System.out.println(digest("SHA-256", null));
+            if ( args.length == 2 )
+                System.out.println(digest("SHA-256", args[1]));
+            else
+                System.out.println(digest("SHA-256", null));
             return;
         }        
         if ( args[0].equals("aes") && args.length > 1 ){
@@ -11535,6 +11552,34 @@ while True:
         return new Object []{ip, port, fps};
     }
     
+    public Object [] get_parms_file1_file2_flagOnlyDiff(String [] args){
+        String file1=null;
+        String file2=null;
+        Boolean flagOnlyDiff=false;
+        
+        args=sliceParm(1, args);
+        
+        while(args.length>0){
+            if ( args.length > 0 && !flagOnlyDiff && args[0].equals("-onlyDiff") ){
+                args=sliceParm(1, args);
+                flagOnlyDiff=true;
+                continue;
+            }
+            if ( args.length > 0 && file1 == null ){
+                file1=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && file2 == null ){
+                file2=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            return null;
+        }
+        return new Object []{file1, file2, flagOnlyDiff};        
+    }
+        
     private Object [] get_parms_host0_port0_host1_port1_typeShow_log_ipsBanidos_decodes_xor_noLogLocal(String [] args){        
         String host0=null;
         int port0=-1;
@@ -26880,7 +26925,7 @@ class Wget {  public int cont; public boolean list_mp3=false; public String moto
 /* class Diff  */ /* creditos - https://github.com/java-diff-utils/java-diff-utils */
 /* class Diff  */ 
 @SuppressWarnings({"unchecked", "deprecation"})
-class Diff extends Util{ public Diff(String caminho_a, String caminho_b, OutputStream out){ try{ byte [] bytes_write60="                                                            ".getBytes(); byte [] barra_n="\n".getBytes(); byte [] code_equal="   ".getBytes(); byte [] code_dif=" | ".getBytes(); byte [] code_dir=" > ".getBytes(); byte [] code_esq=" < ".getBytes(); Diff_DiffRowGenerator generator = Diff_DiffRowGenerator.create().showInlineDiffs(true).inlineDiffByWord(true).oldTag(f -> "").newTag(f -> "").build(); List<Diff_DiffRow> rows = generator.generateDiffRows(readAllLines(caminho_a), readAllLines(caminho_b)); for (Diff_DiffRow row : rows) { String old_=row.getOldLine(); String new_=row.getNewLine(); int tag_=row.getTag(); if ( tag_ == Diff_DiffRow.TAG_EQUAL ){ write60(old_, out, bytes_write60); out.write(code_equal); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_INSERT ){ write60(old_, out, bytes_write60); out.write(code_dir); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_DELETE ){ write60(old_, out, bytes_write60); out.write(code_esq); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_CHANGE ){ write60(old_, out, bytes_write60); out.write(code_dif); write60(new_, out, bytes_write60); out.write(barra_n); } }out.flush(); }catch(Exception e){ erroFatal(e); } }     public void write60(String a, OutputStream out, byte [] bytes_write60) throws Exception{ int len=a.length(); if ( len == 60 ){ out.write(a.getBytes()); return; } if ( len > 60 ){ out.write(a.substring(0, 60).getBytes()); return; } out.write(a.getBytes()); out.write(bytes_write60, 0, 60-len); } } 
+class Diff extends Util{ public Diff(String caminho_a, String caminho_b, Boolean flag_enable_equal, OutputStream out){ try{ byte [] bytes_write60="                                                            ".getBytes(); byte [] barra_n="\n".getBytes(); byte [] code_equal="   ".getBytes(); byte [] code_dif=" | ".getBytes(); byte [] code_dir=" > ".getBytes(); byte [] code_esq=" < ".getBytes(); Diff_DiffRowGenerator generator = Diff_DiffRowGenerator.create().showInlineDiffs(true).inlineDiffByWord(true).oldTag(f -> "").newTag(f -> "").build(); List<Diff_DiffRow> rows = generator.generateDiffRows(readAllLines(caminho_a), readAllLines(caminho_b)); for (Diff_DiffRow row : rows) { String old_=row.getOldLine(); String new_=row.getNewLine(); int tag_=row.getTag(); if ( tag_ == Diff_DiffRow.TAG_EQUAL && flag_enable_equal ){ write60(old_, out, bytes_write60); out.write(code_equal); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_INSERT ){ write60(old_, out, bytes_write60); out.write(code_dir); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_DELETE ){ write60(old_, out, bytes_write60); out.write(code_esq); write60(new_, out, bytes_write60); out.write(barra_n); } if ( tag_ == Diff_DiffRow.TAG_CHANGE ){ write60(old_, out, bytes_write60); out.write(code_dif); write60(new_, out, bytes_write60); out.write(barra_n); } }out.flush(); }catch(Exception e){ erroFatal(e); } }     public void write60(String a, OutputStream out, byte [] bytes_write60) throws Exception{ int len=a.length(); if ( len == 60 ){ out.write(a.getBytes()); return; } if ( len > 60 ){ out.write(a.substring(0, 60).getBytes()); return; } out.write(a.getBytes()); out.write(bytes_write60, 0, 60-len); } } 
 @SuppressWarnings({"unchecked", "deprecation"})
 abstract class Diff_AbstractDelta<T> { private final Diff_Chunk<T> source; 
 /* class Diff  */ private final Diff_Chunk<T> target; private final int type; public Diff_AbstractDelta(int type, Diff_Chunk<T> source, Diff_Chunk<T> target) { Objects.requireNonNull(source); Objects.requireNonNull(target); Objects.requireNonNull(type); this.type = type; this.source = source; this.target = target; } public Diff_Chunk<T> getSource() { return source; } public Diff_Chunk<T> getTarget() { return target; } public int getType() { return type; } protected void verifyChunk(List<T> target) throws Exception { getSource().verify(target); } public abstract void applyTo(List<T> target) throws Exception; public abstract void restore(List<T> target); public int hashCode() { return Objects.hash(this.source, this.target, this.type); } public boolean equals(Object obj) { if (this == obj) { return true; } if (obj == null) { return false; } if (getClass() != obj.getClass()) { return false; } final Diff_AbstractDelta<?> other = (Diff_AbstractDelta<?>) obj; if (!Objects.equals(this.source, other.source)) { return false; } if (!Objects.equals(this.target, other.target)) { return false; } if (this.type != other.type) { return false; } return true; } } 
@@ -27231,6 +27276,7 @@ Exemplos...
     obs2: echo -n AA gera o mesmo efeito que, printf AA
 [y sdiff]
     y sdiff file1.txt file2.txt
+    y sdiff file1.txt file2.txt -onlyDiff
 [y progressBar]
     ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar
     ( echo 1 text1; sleep 1; echo 2 text2; sleep 1; echo 1 text1 updated; sleep 1; echo done; ) | y progressBar -uniqLine
@@ -27333,10 +27379,13 @@ Exemplos...
     obs2: valor entre 0 e 255. Por padrao 100
 [y md5]
     cat arquivo | y md5
+    cat md5 arquivo
 [y sha1]
     cat arquivo | y sha1
+    cat sha1 arquivo
 [y sha256]
     cat arquivo | y sha256
+    cat sha256 arquivo
 [y aes]
     cat arquivo | y aes SENHA | y base64
     cat arquivo | y aes -e SENHA | y base64
