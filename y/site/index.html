@@ -2374,17 +2374,19 @@ function reload(){
 }
 
 function tryRedirectTikTok(a){ // http://203.cloudns.cl:8000/?https://vm.tiktok.com/ZMAmGMPjm/
+    // curl -X POST "https://www.tikwm.com/api/" -H "Content-Type: application/json" -d "{""url"": ""https://vt.tiktok.com/ZSP6bQRDk/""}" | y json "[elem['play'] for elem in data['data']]" | y tr "\\/" "/" | y tail -1 | y tr """" ""
 	if ( a.indexOf('.tiktok.com') > -1 ){
 		const xhr = new XMLHttpRequest();
 		xhr.open("POST", "https://www.tikwm.com/api/", true); // URL de destino
 		xhr.setRequestHeader("Content-Type", "application/json");
+		xhr.setRequestHeader("Host", "www.tikwm.com");
 		xhr.onreadystatechange = () => {
 		  if (xhr.readyState === 4) { // requisição completa
 			if (xhr.status >= 200 && xhr.status < 300) {
 			  window.location.href=JSON.parse(xhr.responseText)['data']['play'];
 			} else {
 			  console.error("Erro HTTP:", xhr.status);
-			  alert('nao foi possivel decodificar a url!');
+			  alert('nao foi possivel decodificar a url! com https://www.tikwm.com/api/' );
 			}
 		  }
 		};
