@@ -19919,13 +19919,19 @@ class Util{
                 tmp="Size: "+value;
                 DeviceID_FreeSpace_Size+=" "+value;
                 String [] FDS_partes=DeviceID_FreeSpace_Size.split(" ");                                        
-                retorno+=FDS_partes[0]
+                if ( FDS_partes.length > 3 ){
+                    retorno+=FDS_partes[0]
+                            +" "+FDS_partes[1]
+                            +" "+porcentagem(Long.parseLong(FDS_partes[3])-Long.parseLong(FDS_partes[2]), Long.parseLong(FDS_partes[3]))
+                            +" "+valor_to_text(Long.parseLong(FDS_partes[3])-Long.parseLong(FDS_partes[2]), false)
+                            +"/"
+                            +valor_to_text(Long.parseLong(FDS_partes[3]), false)
+                            +"\r\n";                    
+                }else{
+                    retorno+=FDS_partes[0]
                         +" "+FDS_partes[1]
-                        +" "+porcentagem(Long.parseLong(FDS_partes[3])-Long.parseLong(FDS_partes[2]), Long.parseLong(FDS_partes[3]))
-                        +" "+valor_to_text(Long.parseLong(FDS_partes[3])-Long.parseLong(FDS_partes[2]), false)
-                        +"/"
-                        +valor_to_text(Long.parseLong(FDS_partes[3]), false)
                         +"\r\n";
+                }
                 continue;
             }
             if ( tmp.startsWith("UserName: ") && !retorno.contains("UserName: ")){
@@ -27788,6 +27794,7 @@ Exemplos...
         y date fromNTP 0.ru.pool.ntp.org #(Rússia)
         y date fromNTP 0.cn.pool.ntp.org #(China)
         y date fromNTP 0.in.pool.ntp.org #(Índia)
+        SET FDATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%
 [y uptime]
     y uptime
     y uptime -ms
