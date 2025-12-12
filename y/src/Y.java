@@ -17456,6 +17456,11 @@ class Util{
         "D:/ProgramFiles/7z/7z.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.exe,b6d5860f368b28caa9dd14a51666a5cd",
         "D:/ProgramFiles/7z/7z.dll,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.dll,c4aabd70dc28c9516809b775a30fdd3f",
     };
+    
+    
+    HashMap cache_duolingo_hashmap=new HashMap();
+    StringBuilder cache_duolingo_sb=new StringBuilder();
+
     public boolean check_util(String a){
         try{
             if ( a.trim().length() == 0 )
@@ -25898,6 +25903,140 @@ class ClientThread extends Util{
             System.out.println("</table></html>");
             System.out.println("    |");
             output.write(sb.toString().getBytes());
+            return;
+        }
+        if ( uri.equals("/duolingo") ){            
+            File f=new File("D:\\ProgramFiles\\log_duolingo\\logs");            
+            if ( f.exists() ){
+                File [] items=f.listFiles();
+                for ( int i=0;i<items.length;i++ ){
+                    if ( items[i].isFile() ){
+                        if ( cache_duolingo_hashmap.containsKey( items[i].getName() ) )
+                            continue;
+                        else{
+                            cache_duolingo_hashmap.put(items[i].getName(), true);
+                            cache_duolingo_sb.append(items[i].getName());
+                            cache_duolingo_sb.append("\n");
+                            readLine(items[i].getAbsolutePath());
+                            ArrayList<String> lines=readAllLines();
+                            for ( int j=0;j<items.length;j++ ){                        
+                                cache_duolingo_sb.append(lines.get(j));
+                                cache_duolingo_sb.append("\n");
+                            }
+                        }
+                    }
+                }
+
+                String result="""
+HTTP/1.1 200 OK
+
+<!doctype html><html lang="pt-BR"><head><meta charset='utf-8'><title>Score Duolingo
+</title><script src='https://cdn.jsdelivr.net/npm/chart.js'></script></head><body><h2></h2><p></p><p></p>
+<canvas id='chart' width='1200' height='450'></canvas>
+<script>const data=`""" + cache_duolingo_sb.toString() +
+"""
+`;
+const labels = ['2025-12-03','2025-12-04','2025-12-05','2025-12-06','2025-12-07','2025-12-08','2025-12-09','2025-12-10','2025-12-11','2025-12-12'];
+const datasets = [
+{ label: 'ana paula Ara\u00fajo', data: [855, 855, null, null, null, null, null, null, null, 855] }
+,{ label: 'Belle Fontes', data: [null, null, null, null, null, null, null, null, null, 921] }
+,{ label: 'Bruno', data: [null, null, null, null, null, null, null, null, null, 496] }
+,{ label: 'Chris Hodges', data: [null, null, null, null, null, null, null, null, null, 1210] }
+,{ label: 'Cley Bolivar', data: [null, null, null, null, null, null, null, null, null, 3462] }
+,{ label: 'Cris Alc\u00e2ntara', data: [null, null, null, null, null, null, null, null, null, 345] }
+,{ label: 'Giuliano Calzetta', data: [null, null, null, null, null, null, null, null, null, 1569] }
+,{ label: 'Jacob', data: [null, null, null, null, null, null, null, null, null, 1117] }
+,{ label: 'Jessica', data: [null, null, null, null, null, null, null, null, null, 1799] }
+,{ label: 'Katie', data: [null, null, null, null, null, null, null, null, null, 1566] }
+,{ label: 'Kerventz Metellus', data: [null, null, null, null, null, null, null, null, null, 2733] }
+,{ label: 'larissa-pedrini', data: [null, null, null, null, null, null, null, null, null, 380] }
+,{ label: 'Leoc\u00edlia', data: [null, null, null, null, null, null, null, null, null, 1345] }
+,{ label: 'liliana', data: [null, null, null, null, null, null, null, null, null, 937] }
+,{ label: 'Lusia Ribeiro', data: [null, null, null, null, null, null, null, null, null, 1464] }
+,{ label: 'NicoyAry Illanes', data: [null, null, null, null, null, null, null, null, null, 1152] }
+,{ label: 'Oliver', data: [null, null, null, null, null, null, null, null, null, 2835] }
+,{ label: 'Pierre', data: [null, null, null, null, null, null, null, null, null, 1232] }
+,{ label: 'severino Gomes do Nascimento', data: [null, null, null, null, null, null, null, null, null, 659] }
+,{ label: 'y y', data: [null, null, null, null, null, null, null, null, null, 2946] },
+];
+function ultimoDomingo19h(str){ // console.log(ultimoDomingo19h("20251212_182352"));
+    // Extrai partes da data (AAAAMMDD_HHMMSS)
+    const ano = Number(str.slice(0, 4));
+    const mes = Number(str.slice(4, 6)) - 1; // JS usa 0-11
+    const dia = Number(str.slice(6, 8));
+
+    const hora = Number(str.slice(9, 11));
+    const min = Number(str.slice(11, 13));
+    const seg = Number(str.slice(13, 15));
+
+    // Data base
+    const dt = new Date(ano, mes, dia, hora, min, seg);
+
+    // Calcula o último domingo
+    const domingo = new Date(dt);
+    const diasAtras = domingo.getDay(); // 0=domingo
+    domingo.setDate(domingo.getDate() - diasAtras);
+
+    // Ajusta para 19:00
+    domingo.setHours(19, 0, 0, 0);
+
+    // Se for >= a data base, volta 7 dias
+    if (domingo >= dt) {
+        domingo.setDate(domingo.getDate() - 7);
+    }
+
+    // Formata para AAAAMMDD_HHMMSS
+    const pad = n => String(n).padStart(2, '0');
+
+    return (
+        domingo.getFullYear().toString() +
+        pad(domingo.getMonth() + 1) +
+        pad(domingo.getDate()) +
+        "_" +
+        pad(domingo.getHours()) +
+        pad(domingo.getMinutes()) +
+        pad(domingo.getSeconds())
+    );
+}
+function diff(str, segundosDiff){ // console.log(diff("20251212_182352", -3));
+    // Extrai partes da data (AAAAMMDD_HHMMSS)
+    const ano = Number(str.slice(0, 4));
+    const mes = Number(str.slice(4, 6)) - 1;
+    const dia = Number(str.slice(6, 8));
+
+    const hora = Number(str.slice(9, 11));
+    const min = Number(str.slice(11, 13));
+    const seg = Number(str.slice(13, 15));
+
+    // Cria o Date correspondente
+    const dt = new Date(ano, mes, dia, hora, min, seg);
+
+    // Aplica diferença em segundos
+    dt.setSeconds(dt.getSeconds() + segundosDiff);
+
+    // Função para completar com 2 dígitos
+    const pad = n => String(n).padStart(2, '0');
+
+    // Retorna no formato AAAAMMDD_HHMMSS
+    return (
+        dt.getFullYear().toString() +
+        pad(dt.getMonth() + 1) +
+        pad(dt.getDate()) +
+        "_" +
+        pad(dt.getHours()) +
+        pad(dt.getMinutes()) +
+        pad(dt.getSeconds())
+    );
+}
+console.log(`new Chart(document.getElementById('chart'), {type:'line',data:{labels:labels,datasets:datasets}});`);
+</script>
+</body>
+</html>                          
+""";
+                output.write(result.getBytes());
+                return;
+            }            
+            output.write("HTTP/1.1 404 Not Found\r\n\r\n404".getBytes());
             return;
         }
         // 404
