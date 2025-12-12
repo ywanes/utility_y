@@ -1002,7 +1002,7 @@ cat buffer.log
                 document.cookie='ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727';
                 document.cookie='ips4_member_id=178526';
                 document.cookie='ips4_login_key=74e18a46894d354f5adfa7dc881de6d7';                                
-                while [ true ]; do y cls && y curl -H "cookie: ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727; ips4_member_id=178526; ips4_login_key=74e18a46894d354f5adfa7dc881de6d7;" https://encontrei.org/id-62616/ | y tr "'" "\n" | y grep .com/f/;  sleep 30; done
+                while [ true ]; do y cls && y curl -H "cookie: ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727; ips4_member_id=178526; ips4_login_key=74e18a46894d354f5adfa7dc881de6d7;" https://encontrei.org/id-62616/ | y tr "'" "\n" | y grep .com/f/;  y curl https://mixdrop23.net/f/9wxdwkjof8o8zn | y grep "ALMOST THERE"; sleep 30; done
                 */
                 overflix(args);                
             }catch(Exception e){
