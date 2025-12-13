@@ -25919,10 +25919,11 @@ class ClientThread extends Util{
                             cache_duolingo_sb.append("\n");
                             readLine(items[i].getAbsolutePath());
                             ArrayList<String> lines=readAllLines();
-                            for ( int j=0;j<items.length;j++ ){                        
+                            for ( int j=0;j<lines.size();j++ ){                        
                                 cache_duolingo_sb.append(lines.get(j));
                                 cache_duolingo_sb.append("\n");
                             }
+                            closeLine();
                         }
                     }
                 }
