@@ -353,7 +353,7 @@ function load_elementos(){
     for ( let i=0;i<partes.length;i++ )
         if ( partes[i].length > len ){
 			// skip thumbnail
-			if ( partes[i].lastIndexOf('.png') > 0 && partes[i].lastIndexOf('.png') + 4 == partes[i].length )
+			if ( partes[i].endsWith('.png') || partes[i].endsWith('.vtt') )
 				continue;
             elementos.push(partes[i].substring(len));
 		}
@@ -467,25 +467,25 @@ function only_azAZ09(a){
 	return a.replace(/[^a-zA-Z0-9]/g, '');
 }
 
+let canais2={
+ 'history': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTYHmqDzvcSE2tuDg_OX2AqAIrnI-r6mhFrOnD76OHizA/ts', 'd': 'group-title="CANAIS || DOCUMENTARIOS",History HD'},
+ 'globo sp': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTdMptJhmuFFL4d5J8B5UvW8D66QCU4QJmyadz9FK32VT/ts', 'd': 'group-title="CANAIS || GLOBO SUDESTE",Globo SP HD'},
+ 'discovery channel': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTZNRGQd-HMZjLziGDNas-kr6nCrG465wujGiC5uWfyJq/ts', 'd': 'group-title="CANAIS || DOCUMENTARIOS",Discovery Channel HD'},
+ 'combate': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTcojcYN7zIcV9x3d1OLdi4pQXtz6eiYzzkhOuvGO8pjS/ts', 'd': 'group-title="CANAIS || UFC/COMBATE",Combate HD'},
+ 'warnerchannel': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTQisfE9vJm7QZQcZHMolBFnbocHNpi8veS6wiyqf2flR/ts', 'd': 'group-title="CANAIS || FILMES E SERIES",Warner Channel HD'},
+ 'history 2': {'u': 'http://c.superodin.nl70.top:80/play/3YyNCp-sSe8K9yeJa1bihd7DmNuFMGZL7MmsHCOK9ZYheI06yqW1FF2bcdyTP6nm#.mp4', 'd': 'group-title="⚡CANAIS | DOCUMENTÁRIOS",- History 2 HD -'},
+ 'sbt central': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTTBnLSoupXM5d174u0JZSv0xtqO8nyJROfH-sNHLv2bO/ts', 'd': 'group-title="CANAIS || SBT",SBT SP HD'},
+ 'band': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTSi4IBSpN3bMaZYhGbyCQUHeefp8o2czQpaE-EYmeC-a/ts', 'd': 'group-title="CANAIS || BAND",Band SP HD'},
+ 'adult swim': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTTAp61o4jd2BhVLCUMMGIdUPP5hk0LVw1YPh-rxoz1G8/ts', 'd': 'group-title="CANAIS || VARIEDADES",Adult Swim HD'},
+ 'discovery h&h': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTeKQhv8AWsx6HS5dM5cUfPGRIRgsluNY7_DtEuLLFSCJ/ts', 'd': 'group-title="CANAIS || DOCUMENTARIOS",Discovery H&H HD'},
+ 'discovery id': {'u': 'http://c.superodin.nl70.top:80/play/3YyNCp-sSe8K9yeJa1bihd7DmNuFMGZL7MmsHCOK9ZYheI06yqW1FF2bcdyTP6nm#.mp4', 'd': 'group-title="⚡CANAIS | 4K",- Discovery ID 4K -'},
+ 'cultura': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTbQRUl8d8b_nTmtN38IjVRyd3HgJ6QUWpjb165KJbVtd/ts', 'd': 'group-title="CANAIS || ABERTOS",Cultura HD'},	 
+ 'animal planet': {'u': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTfyeWhuEpQ3lPHjkLKenp6Nl7CAsCUXjTKWetqGegg-6/ts', 'd': 'group-title="CANAIS || DOCUMENTARIOS",Animal Planet HD'},
+ 'ae': {'u': 'http://cloudsalex.space:80/218916606/101421888/9014399', 'd': 'group-title="CANAIS || VARIEDADES",A&E HD'}
+};
 function novo_replace_in_load_stream(a){
-   let canais={
-     'history': 'http://agoraenois.shop:80/play/2Rw2FqvzJDA2NiUK4K_QfZvt-aLn_TcflFQpZF4cZCJ8XI1gGIq313uGtHo349CS/ts',
-	 'globo sp': 'http://agoraenois.shop:80/play/2Rw2FqvzJDA2NiUK4K_QffKluv2qIFB30aeSUyqiqsS3zp40lifI8NiFYN1mrJAr/ts',
-	 'discovery channel': 'http://agoraenois.shop:80/play/2Rw2FqvzJDA2NiUK4K_QfS6V1TcJfVjETbFkgMBmVob1HJGJsfdYEdrGi_f5U2pW/ts',
-	 'combate': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTVC5Vu1ERswXcP4_QpGz9Y06HopMprhoq7k4eTNeYJEA/ts',
-	 'warnerchannel': 'http://agoraenois.shop:80/play/2Rw2FqvzJDA2NiUK4K_QfesN9p3-y86JQXEaNRvOCQSk1-Q5OXjSdNHOe0LjqsnE/ts',
-	 'history 2': 'http://208.110.82.162:80/play/KCBniZC9glYn_BjMMJvsMA_Xxznh5g-t7WvX22t4fkU/ts',
-	 'sbt central': 'http://agoraenois.shop:80/play/2Rw2FqvzJDA2NiUK4K_QfbN-TW4n-QzCwnfVfWzjk8cwI6F8xpTmbkubY-53IIP5/ts',
-	 'band': 'http://agoraenois.shop:80/play/2Rw2FqvzJDA2NiUK4K_QfT_pI-zbiV45NLjbrs5fCjPnFkpgLkl8Bcesj-1bFjhy/ts',
-	 'adult swim': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTZc3lxT7ugt2NqhAWxvPcVCKl_1hNvmUG3cbEYeulZ8-/ts',
-	 'discovery h&h': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTWsEh4LUyJY66nxL4KFYCpvNUpt6cCJsWRDcRP3hMw8p/ts',
-	 'discovery id': 'http://208.110.82.162:80/play/KCBniZC9glYn_BjMMJvsMD1c4DGpXAieGyoIPBtAlhg/ts',
-	 'cultura': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTXZY3kKRSMS_59eNx-yQ2-z6HC1eauLE_E2X9VMLbLnG/ts',
-	 'animal planet': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTQkfif9IPl0VDSv7dleWjQNzHMOC21PSTH7Uru6c9uUX/ts',
-	 'ae': 'http://agoraenois.shop:80/play/v3YbbemKOS3yVIsc1FBqTdqk3oT1kiXttchY-1PiiFePHkTS1xuTpdynriyuzhn0/ts'
-   };
-   if ( canais[a] != null ){ 
-      load_stream_ts_puro(a, canais[a]);
+   if ( canais2[a] != null ){ 
+      load_stream_ts_puro(a, canais2[a]['u']);
 	  return;
    }
    console.log('stream >>' + a + '<< ainda nao foi decodificado!');
@@ -881,6 +881,14 @@ function pinga_canal(e, flag_pinga){
 	}
 }
 
+function carrega_canais_ofusca_quem_nao_estiver_em_uso(){
+	let items=document.getElementById('principal').children[0].children[0].children;
+	for ( let i=0;i<items.length;i++ ){
+	  if ( canais2[ items[i].children[2].children[0].getAttribute('onclick').split("'")[1] ] == null && items[i].children[2].children[0].getAttribute('style').indexOf('grayscale') == -1 )
+	    items[i].children[2].children[0].setAttribute('style', items[i].children[2].children[0].getAttribute('style') + ' filter: grayscale(100%) brightness(80%); opacity: 0.6;');
+    }
+}
+
 function carrega_canais(flag_all_channel, flag_pinga){
 	
 	toggleFullScreen(null, false);
@@ -927,6 +935,7 @@ function carrega_canais(flag_all_channel, flag_pinga){
 		  },
 		100);	
 	}	
+	carrega_canais_ofusca_quem_nao_estiver_em_uso();
 }
 
 function f_continue(){    
@@ -1016,9 +1025,18 @@ function load_movie(parm, table_click, streamURL){
     document.getElementById('div_index').style="display: none; position: relative; top: -34px;";
     document.getElementById('principal').style="";
 	document.getElementById('principal').parentElement.parentElement.setAttribute('valign', 'center');	
+	// old - em fase de teste -> <video src="`+src+`" id="video" style="width: 100%; height: 100%;" width_control="100" width_control_confirm="0"></video>
     document.getElementById('principal').innerHTML=`
           <div class="video-container">
-            <video src="`+src+`" id="video" style="width: 100%; height: 100%;" width_control="100" width_control_confirm="0"></video>
+            <video src="`+src+`" id="video" style="width: 100%; height: 100%;" width_control="100" width_control_confirm="0">
+		    <source>
+		      <track
+  			  kind="subtitles"
+			  src="`+src+`.vtt"
+			  srclang="pt-BR"
+			  label="Português"
+			  default>
+		    </video>
             <div class="controls-container0">            
                 <table border="0" align="left" style="width: 1%; padding: 0;">
                     <tr>
