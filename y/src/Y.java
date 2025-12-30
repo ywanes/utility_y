@@ -15190,6 +15190,8 @@ while True:
         if ( a.isFile() ){
             if ( a.getAbsolutePath().endsWith(".png") )
                 return "";
+            if ( a.getAbsolutePath().endsWith(".vtt") )
+                return "";
             if ( new File(a.getAbsolutePath()+".png").exists() )
                 return ""; 
         }else{
@@ -15215,6 +15217,8 @@ while True:
         int p=-1;
         for ( int i=0;i<10;i++ ){
             p=findParm(partes, "Stream #0:"+i, false);
+            if ( p < 0 )
+                erroFatal("arquivo " + a.getAbsolutePath() + " nao foi identificado corretamente!");
             if ( partes[p].contains(" fps, ") )
                 break;
             p=-1;
