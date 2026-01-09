@@ -7292,7 +7292,7 @@ cat buffer.log
             if ( lista.length > 0 ){
                 boolean achou=false;
                 for ( int i=0;i<lista.length;i++ ){
-                    if ( lista[i].getName().contains("S01E01") ){
+                    if ( lista[i].getName().contains("S01E01") || lista[i].getName().contains("S01E02") || lista[i].getName().contains("S01E03") || lista[i].getName().contains("S01E04") ){
                         achou=true;
                         break;
                     }
