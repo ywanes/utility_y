@@ -7243,7 +7243,7 @@ cat buffer.log
                 }
                 //s=getTokenIE_old(vToken, url);
                 //s=getTokenTESTCAFE_old(vToken, url);                
-                for ( int i=0;i<5;i++ ){
+                for ( int i=0;i<2;i++ ){
                     s=getTokenPuppeteer(url);
                     if ( s != null && s.trim().length() > 0 )
                         break;
