@@ -2420,7 +2420,7 @@ cat buffer.log
             }
             if ( i > 1 )
                 command+=" ";
-            if ( i == 1 && args[i].equals("tail") )
+            if ( i == 1 && ( args[i].equals("tail") || args[i].equals("-tail") ) )
                 command+="tail_command";
             else
                 command+=args[i];
@@ -25817,6 +25817,7 @@ class ClientThread extends Util{
                         "accept-ranges: bytes\r\n",
                         "Content-Length: " + lenTarget + "\r\n",
                         "Content-Range: bytes " + header_range + "-" + (header_range+lenTarget-1) + "/" + lenFile + "\r\n",
+                        "Connection: close\r\n",
                         "Access-Control-Allow-Origin: *\r\n",
                         "X-Frame-Options: SAMEORIGIN\r\n",
                         "\r\n"
@@ -25846,7 +25847,7 @@ class ClientThread extends Util{
                 return;
             } catch (Exception e) {
                 if ( e.toString().contains("Software caused connection abort: socket write error") ){}else{
-                    System.out.println("erro 404, não foi possivel ler o arquivo: " + nav);
+                    System.out.println("erro 404, a leitura parou do nada, o browser parou de ler ela: " + nav + " - " + e.toString());                    
                 }
                 return;
             }
@@ -26044,8 +26045,10 @@ console.log(`new Chart(document.getElementById('chart'), {type:'line',data:{labe
             output.write("HTTP/1.1 404 Not Found\r\n\r\n404".getBytes());
             return;
         }
-        // 404
-        sb = new StringBuilder();
+        output_404(output);
+    }
+    private void output_404(OutputStream output) throws Exception{
+        StringBuilder sb = new StringBuilder();
         for(String line: new String[]{
                 "HTTP/1.1 404 Not Found\r\n",
                 "Content-Type: text/html; charset=UTF-8\r\n",
@@ -26053,13 +26056,14 @@ console.log(`new Chart(document.getElementById('chart'), {type:'line',data:{labe
                 "X-Frame-Options: SAMEORIGIN\r\n",
                 "\r\n",
                 "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n<title>404 - File or directory not found.</title>\n<style type=\"text/css\">\n\nbody{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\nfieldset{padding:0 15px 10px 15px;} \nh1{font-size:2.4em;margin:0;color:#FFF;}\nh2{font-size:1.7em;margin:0;color:#CC0000;} \nh3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\nbackground-color:#555555;}\n#content{margin:0 0 0 2%;position:relative;}\n.content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n\n</style>\n</head>\n<body>\n<div id=\"header\"><h1>Server Error</h1></div>\n<div id=\"content\">\n<div class=\"content-container\"><fieldset>\n<h2>404 - File or directory not found.</h2>\n<h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n</fieldset></div>\n</div>\n</body>\n</html>"
-            }){
+        }){
             sb.append(line);
             System.out.print("    |---> " + line);
         }
         System.out.println("    |");
         output.write(sb.toString().getBytes());
     }
+    
     private String getContentType(String caminho) {
         // https://mimetype.io/all-types
         if (caminho.endsWith(".html") || caminho.endsWith(".htm")) return "text/html";
@@ -26096,7 +26100,7 @@ console.log(`new Chart(document.getElementById('chart'), {type:'line',data:{labe
         }
         return result;
     }
-    private void transf_bytes(OutputStream output, String nav, long header_range_resume, long lenTarget) throws Exception {
+    private void transf_bytes_old(OutputStream output, String nav, long header_range_resume, long lenTarget) throws Exception {
         int count;
         DataInputStream dis = new DataInputStream(new FileInputStream(nav));
         byte[] buffer = new byte[8192];
@@ -26117,6 +26121,35 @@ console.log(`new Chart(document.getElementById('chart'), {type:'line',data:{labe
             }
         }
         dis.close();
+    }
+    private void transf_bytes(OutputStream output, String nav, long header_range_resume, long lenTarget) throws Exception {
+        int count;
+        RandomAccessFile raf = new RandomAccessFile(nav, "r");
+        byte[] buffer = new byte[8192];
+        try {
+            if (header_range_resume > 0) {
+                raf.seek(header_range_resume);
+            }
+            while (true) {
+                int bytesToRead = buffer.length;
+                if (header_range_resume > 0 && lenTarget < buffer.length) {
+                    bytesToRead = (int) lenTarget;
+                }
+                count = raf.read(buffer, 0, bytesToRead);
+                if (count < 0) {
+                    break;
+                }
+                output.write(buffer, 0, count);
+                if (header_range_resume > 0) {
+                    lenTarget -= count;
+                    if (lenTarget <= 0) {
+                        break;
+                    }
+                }
+            }
+        } finally {
+            raf.close();
+        }
     }
     private boolean endsWith_OK(String url, String ends) {
         if (ends.equals("")) return true;
