@@ -7028,6 +7028,8 @@ cat buffer.log
     public int skiping_hide_count=0;
     public String getScriptRenameBySkip_in=null;
     public String getScriptRenameBySkip_out="";
+    public boolean overflix_interative=false;
+    //
     public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken, 
                              String titulo_serie, String titulo_filme, Boolean cam, String o_force_out, Boolean tags, String outPath,
                              Integer temporada_S, Integer temporada_E) throws Exception{
@@ -7243,10 +7245,14 @@ cat buffer.log
                 }
                 //s=getTokenIE_old(vToken, url);
                 //s=getTokenTESTCAFE_old(vToken, url);                
-                for ( int i=0;i<2;i++ ){
-                    s=getTokenPuppeteer(url);
-                    if ( s != null && s.trim().length() > 0 )
-                        break;
+                if ( overflix_interative && url.endsWith("?download") && url.contains(".com/f/") ){
+                    s=capturarTokenDoChrome(url + "&name=interative");
+                }else{
+                    for ( int i=0;i<2;i++ ){
+                        s=getTokenPuppeteer(url);
+                        if ( s != null && s.trim().length() > 0 )
+                            break;
+                    }
                 }
             }
             if ( s != null && s.trim().length() > 0 )
@@ -7283,6 +7289,31 @@ cat buffer.log
         }
         overflix_error+="Não foi possível resolver a url =>  "+ url;
         return;
+    }
+    
+    public String capturarTokenDoChrome(String url) throws java.io.IOException, java.util.concurrent.ExecutionException, java.lang.InterruptedException {
+        int porta = 222;
+        java.util.concurrent.CompletableFuture<String> resultado = new java.util.concurrent.CompletableFuture<>();
+        com.sun.net.httpserver.HttpServer servidor = com.sun.net.httpserver.HttpServer.create(
+            new java.net.InetSocketAddress(porta), 0
+        );
+        servidor.createContext("/", exchange -> {
+            String query = exchange.getRequestURI().getQuery();
+            byte[] resposta = "Capturado. Retorne ao Java.".getBytes();
+            exchange.sendResponseHeaders(200, resposta.length);
+            java.io.OutputStream os = exchange.getResponseBody();
+            os.write(resposta);
+            os.close();
+            resultado.complete(query);
+        });
+
+        servidor.start();
+        new java.lang.ProcessBuilder("cmd", "/c", "start", "chrome", "\""+url+"\"").start();
+        try {
+            return resultado.get();
+        } finally {
+            servidor.stop(0);
+        }
     }
     
     public void detect_changed_struct_folder(String path, String item){
@@ -11785,6 +11816,11 @@ while True:
             if ( args.length > 0 && getScriptRenameBySkipIn == null && args[0].startsWith("getScriptRenameBySkip,") ){
                 getScriptRenameBySkipIn=args[0].substring("getScriptRenameBySkip,".length());
                 args=sliceParm(1, args);
+                continue;
+            }  
+            if ( args.length > 0 && args[0].equals("-i") ){
+                args=sliceParm(1, args);
+                overflix_interative=true;
                 continue;
             }            
             if ( args.length > 0 && url == null ){
@@ -28186,6 +28222,7 @@ Exemplos...
     obs2: -vToken => mostra iexplorer.exe e não fecha.
          -o => force out path
          -tags => verbose profundo
+         -i => libera token pelo chrome
 [y connGui]
     connGui
     obs: teste de conexao(server e client)
