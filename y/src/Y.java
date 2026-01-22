@@ -8637,343 +8637,6 @@ while True:
         }
     }
 
-    public void curl_path(String url, String path) throws Exception{
-        curl(new FileOutputStream(path), "", "GET", false, false, url, null, null, null, null, null, null);
-    }
-    
-    public String curl_string_retry(String url, int vezes, int wait, int [] status_codes){
-        curl_flag_location=true; // set -L no curl
-        String s="";
-        for ( int i=0;i<vezes;i++ ){
-            s=curl_baos(url).toString();
-            boolean flag_continue=false;
-            for ( int j=0;j<status_codes.length;j++ ){
-                if ( curl_response_status == status_codes[j] ){
-                    if( curl_response_status == 502 && i == 0 )
-                        System.out.print("502 ..");
-                    if( curl_response_status == 502 && i == 1 ){
-                        // infinito.. aguardando sistema voltar!
-                        System.out.print(".");
-                        i--;
-                    }
-                    flag_continue=true;
-                    break;                    
-                }
-            }
-            if ( flag_continue ){
-                sleepSeconds(wait);
-                continue;
-            }            
-            break;
-        }
-        return s;
-    }
-    
-    public String curl_string(String url){
-        return curl_baos(url).toString();
-    }
-    
-    public byte [] curl_bytes(String url){
-        return curl_baos(url).toByteArray();
-    }
-    
-    public ByteArrayOutputStream curl_baos(String url){
-        ByteArrayOutputStream baos=new ByteArrayOutputStream();
-        curl(baos, "", "GET", false, false, url, null, null, null, null, null, null);
-        return baos;
-    }
-    
-    String curl_response_header="";
-    String curl_response_location="";
-    boolean curl_flag_location=false;
-    int curl_response_status=0;
-    long curl_response_len=0;
-    String curl_error=null;
-    String global_header="";// nao tirar o static
-    String curl_hash="";
-    Integer curl_timeout=null; // miliseconds
-    boolean curl_flag_skip_ssl_error=true;
-    boolean curl_flag_suprimir_stderr=false;
-    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
-                Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
-        try{   
-            if ( host.startsWith("https://embedtv-2.icu/") ){
-                String s="HTTP/1.1 200 OK\n\n" + runtimeExec(new String[]{"curl", host});
-                os_print.write(s.getBytes());
-                os_print.flush();
-                try{
-                    os_print.close();
-                }catch(Exception e){}                
-                return;
-            }
-            String protocol="HTTP";
-            int len=0;
-            int port = 80;  
-            if ( !host.toUpperCase().startsWith("HTTP" ) )
-                host = "http://" + host;
-            URL url=new URL(host);
-            if ( url.getProtocol().equals("https") ){
-                protocol="HTTPS";
-                port = 443;
-            }
-            host = url.getHost();
-            if ( url.getPort() != -1 )
-                port = url.getPort();
-            String path = url.getPath();
-            if ( path.equals("") )
-                path = "/";
-            if ( url.getQuery() != null )
-                path += "?" + url.getQuery();
-
-            Socket socket=new CustomSocket().getSocket(protocol.equals("HTTP"), curl_flag_skip_ssl_error);
-                        
-            if ( curl_timeout != null ){
-                socket.connect(new InetSocketAddress(host, port), curl_timeout);
-                socket.setSoTimeout(curl_timeout);
-            }else{
-                socket.connect(new InetSocketAddress(host, port));
-            }
-            
-            byte[] buffer = new byte[2048];
-            InputStream is=socket.getInputStream();
-            OutputStream os=socket.getOutputStream(); 
-            StringBuilder sb = new StringBuilder();
-            String http_version="HTTP/1.1";
-            boolean chunked=false;            
-            MessageDigest digest=null;
-            if ( tipo_hash != null )
-                digest=MessageDigest.getInstance(tipo_hash);
-            
-            // not implemented            
-            //if ( protocol.equals("HTTPS"))
-            //    http_version="HTTP/2";
-            http_version="HTTP/1.0";
-            //http_version="HTTP/1.1"; not implemented - problem with "Transfer-Encoding: chunked"
-            
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            if ( method.equals("POST") ){
-                if ( is_ == null )
-                    is_=System.in;
-                while( (len=is_.read(buffer,0,buffer.length)) > 0 )
-                    baos.write(buffer, 0, len);                
-            }
-            
-            String init_msg=method + " " + path + " " + http_version + "\r\n";            
-            String pre_header="";
-            header+=global_header;
-            header+="\r\n";
-            if ( !(init_msg+pre_header+header).contains("\r\nHost: ") )
-                pre_header+="Host: " + host + "\r\n";
-            if ( !(init_msg+pre_header+header).contains("\r\nUser-Agent: ") )
-                pre_header+="User-Agent: curl/8.0.1\r\n";
-            if ( !(init_msg+pre_header+header).contains("\r\nAccept: ") )
-                pre_header+="Accept: */*\r\n";
-            if ( method.equals("POST") && !(init_msg+pre_header+header).contains("\r\nContent-Type: ") )
-                pre_header+="Content-Type: application/x-www-form-urlencoded\r\n";
-            if ( method.equals("POST") && !(init_msg+pre_header+header).contains("\r\nContent-Length: ") )
-                pre_header+="Content-Length: " + baos.toByteArray().length + "\r\n";
-            
-            sb.append(init_msg);
-            sb.append(pre_header);
-            sb.append(header);  
-            byte [] bytes_sb=sb.toString().getBytes();
-            if ( verbose ){
-                os_print.write( ("* Connected " + socket.getInetAddress().toString().replace("/", " - ") + " port " + port + "\n").getBytes());
-                os_print.write(bytes_sb);
-            }
-            os.write(bytes_sb);                        
-            os.write(baos.toByteArray());            
-            os.flush();
-            
-            try{
-                boolean heading=true;
-                curl_response_header="";
-                curl_response_location="";
-                curl_response_status=0;
-                curl_response_len=0;
-                curl_hash="";
-                byte[] ending_head = new byte[4]; // \r\n\r\n 13 10 13 10
-                while( is.available() >= 0 && (len=is.read(buffer)) > -1 ){
-                    if ( heading ){
-                        for ( int i=0;i<len;i++ ){
-                            if ( verbose ){
-                                os_print.write(buffer, i, 1);                        
-                                os_print.flush();
-                            }
-
-                            curl_response_header+=(char)buffer[i];
-                            ending_head[0] = ending_head[1];
-                            ending_head[1] = ending_head[2];
-                            ending_head[2] = ending_head[3];
-                            ending_head[3] = buffer[i];
-                            if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){                                
-                                heading=false;  
-                                String [] partes_ = curl_response_header.split("\r\n");
-                                curl_response_status=Integer.parseInt(partes_[0].split(" ")[1]);
-                                for ( int j=0; j<partes_.length;j++ ){
-                                    if ( partes_[j].startsWith("location: ") || partes_[j].startsWith("Location: ") ){
-                                        curl_response_location=partes_[j].split(" ")[1];                                        
-                                    }      
-                                    if ( partes_[j].startsWith("Content-Length: ") ){
-                                        curl_response_len=Long.parseLong(partes_[j].split(" ")[1]);
-                                        if ( progress_len != null )
-                                            progress_len[progress_number]=curl_response_len;
-                                    }      
-                                    //Content-Length: 5892368384                                    
-                                }
-                                i++;
-                                if ( !raw && curl_response_header.contains("\r\nTransfer-Encoding: chunked")){
-                                    chunked=true;
-                                }
-                                if ( i < len ){
-                                    if ( chunked ){
-                                        if ( curl_chunk_write(buffer, i, len-i) ){
-                                            System.exit(0);
-                                        }
-                                    }else{
-                                        os_print.write(buffer, i, len-i); 
-                                        if ( tipo_hash != null )
-                                            digest.update(buffer, i, len-1);
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                    }else{
-                        if ( chunked ){
-                            if ( curl_chunk_write(buffer, 0, len) ){
-                                System.exit(0);
-                            }
-                        }else{
-                            if ( limitRate != null )
-                                sleepLimitRate(len, limitRate);
-                            os_print.write(buffer, 0, len);
-                            if ( tipo_hash != null )
-                                digest.update(buffer, 0, len);
-                            if ( progress_len != null ){
-                                progress_finished_len[progress_number]+=len;
-                            }
-                        }
-                    }
-                }
-                os_print.flush();
-                curl_error=null;
-                if ( tipo_hash != null )
-                    curl_hash=new String(encodeHex(digest.digest()));
-            }catch(Exception e){
-                curl_error="\nError "+e.toString() + " - host: " + host;
-                if ( !curl_flag_suprimir_stderr )
-                    os_print.write((curl_error).getBytes());                
-            }            
-        }catch(UnknownHostException e){
-            curl_error="Error UnknownHost: " + host + " " + e.toString();
-            if ( !curl_flag_suprimir_stderr )
-                System.err.println(curl_error);
-        }catch(Exception e){
-            curl_error="Error: " + e.toString() + " - host: " + host;
-            if ( !curl_flag_suprimir_stderr )
-                System.err.println(curl_error);
-        }        
-        if ( curl_flag_location && !curl_response_location.equals("") ){
-            curl(os_print, header, method, verbose, raw, curl_response_location, is_, limitRate, progress_finished_len, progress_len, progress_number, tipo_hash);
-            return;
-        }
-        if ( os_print != null ){
-            try{
-                os_print.close();
-            }catch(Exception e){}
-        }
-    }
-    
-    public Long sleepLimitRate_start=null;
-    public Long sleepLimitRate_sumLen=0L;
-    public void sleepLimitRate(int len, Long limitRate){
-        Long now=epochmili(null);
-        if ( sleepLimitRate_start == null )
-            sleepLimitRate_start=now;
-        sleepLimitRate_sumLen+=len;
-        Long delta=now-sleepLimitRate_start;
-        Long miliPrevisto=(sleepLimitRate_sumLen/limitRate)*1000;
-        if ( delta < miliPrevisto )
-            sleepMillis(miliPrevisto-delta);
-    }
-    
-    boolean flip=true; // true => head chunked | false => data chunked
-    int len_data_chunked=-1;
-    String txt_head_chunked="";
-    public boolean curl_chunk_write(byte buffer[], int off, int len) {
-        while(off < len){
-            if ( flip ){
-                if(buffer[off] == 13){
-                    off++;
-                    continue;
-                }
-                if(buffer[off] == 10){
-                    off++;
-                    len_data_chunked=hex_string_to_int(txt_head_chunked);
-                    if ( len_data_chunked == 0 ){
-                        return true; // finish
-                    }
-                    txt_head_chunked="";
-                    flip=false;                    
-                    continue;
-                }
-                txt_head_chunked+=((char)buffer[off++]+"").toUpperCase();
-                continue;
-            }else{
-                if ( len_data_chunked >= len-off ){
-                    System.out.write(buffer, off, len-off);  
-                    System.out.flush();
-                    len_data_chunked-=len-off;
-                    if ( len_data_chunked == 0 ){
-                        flip=true;
-                    }
-                    off=len;
-                    continue;
-                }else{
-                    System.out.write(buffer, off, len_data_chunked);  
-                    System.out.flush();
-                    off+=len_data_chunked;
-                    len_data_chunked=0;
-                    flip=true;
-                    continue;
-                }
-            }
-        }        
-        return false; // finish
-        
-        /*
-        //https://datatracker.ietf.org/doc/html/rfc9112#field.transfer-encoding
-        Transfer-Encoding: chunked
-        3 chunks of length 4, 6 and 14 (hexadecimal "E" or "e"):
-            4\r\n        (bytes to send)
-            Wiki\r\n     (data)
-            6\r\n        (bytes to send)
-            pedia \r\n   (data)
-            E\r\n        (bytes to send)
-            in \r\n
-            \r\n
-            chunks.\r\n  (data)
-            0\r\n        (final byte - 0)
-            \r\n         (end message)                                    
-        */
-    }
-    
-    public int hex_string_to_int(String a){
-        int retorno=0;
-        int lvl=1;
-        while(a.length()>0){
-            int len=a.length();            
-            int p=hex_string.indexOf(a.substring(len-1,len));
-            if ( p == -1 )
-                erroFatal(200);
-            retorno+=p*lvl;
-            a=a.substring(0, len-1);
-            lvl*=16;
-        }        
-        return retorno+2;
-    }
-    
     public void sedBasic(String [] args)
     {
         String line;
@@ -17490,6 +17153,19 @@ class Util{
     int V_0b111111000000=4032; // 0b111111000000 (4032)
     int V_0b111111110000=4080; // 0b111111110000 (4080)    
     
+    public Long sleepLimitRate_start=null;
+    public Long sleepLimitRate_sumLen=0L;
+    public void sleepLimitRate(int len, Long limitRate){
+        Long now=epochmili(null);
+        if ( sleepLimitRate_start == null )
+            sleepLimitRate_start=now;
+        sleepLimitRate_sumLen+=len;
+        Long delta=now-sleepLimitRate_start;
+        Long miliPrevisto=(sleepLimitRate_sumLen/limitRate)*1000;
+        if ( delta < miliPrevisto )
+            sleepMillis(miliPrevisto-delta);
+    }
+        
     public String [] check_util_list=new String[]{
         "D:/ProgramFiles/iso/manual.txt,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/manual.txt,e7574cf7b22bf7ffa180921f0706a43e",
         "D:/ProgramFiles/iso/efisys.bin,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/efisys.bin,65602bb5e3c7c39a88a973c73e896765",
@@ -17499,10 +17175,333 @@ class Util{
         "D:/ProgramFiles/7z/7z.dll,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.dll,c4aabd70dc28c9516809b775a30fdd3f",
     };
     
-    
+    public int hex_string_to_int(String a){
+        int retorno=0;
+        int lvl=1;
+        while(a.length()>0){
+            int len=a.length();            
+            int p=hex_string.indexOf(a.substring(len-1,len));
+            if ( p == -1 )
+                erroFatal(200);
+            retorno+=p*lvl;
+            a=a.substring(0, len-1);
+            lvl*=16;
+        }        
+        return retorno+2;
+    }
+        
     HashMap cache_duolingo_hashmap=new HashMap();
     StringBuilder cache_duolingo_sb=new StringBuilder();
 
+    boolean flip=true; // true => head chunked | false => data chunked
+    int len_data_chunked=-1;
+    String txt_head_chunked="";
+    public boolean curl_chunk_write(byte buffer[], int off, int len) {
+        while(off < len){
+            if ( flip ){
+                if(buffer[off] == 13){
+                    off++;
+                    continue;
+                }
+                if(buffer[off] == 10){
+                    off++;
+                    len_data_chunked=hex_string_to_int(txt_head_chunked);
+                    if ( len_data_chunked == 0 ){
+                        return true; // finish
+                    }
+                    txt_head_chunked="";
+                    flip=false;                    
+                    continue;
+                }
+                txt_head_chunked+=((char)buffer[off++]+"").toUpperCase();
+                continue;
+            }else{
+                if ( len_data_chunked >= len-off ){
+                    System.out.write(buffer, off, len-off);  
+                    System.out.flush();
+                    len_data_chunked-=len-off;
+                    if ( len_data_chunked == 0 ){
+                        flip=true;
+                    }
+                    off=len;
+                    continue;
+                }else{
+                    System.out.write(buffer, off, len_data_chunked);  
+                    System.out.flush();
+                    off+=len_data_chunked;
+                    len_data_chunked=0;
+                    flip=true;
+                    continue;
+                }
+            }
+        }        
+        return false; // finish
+        
+        /*
+        //https://datatracker.ietf.org/doc/html/rfc9112#field.transfer-encoding
+        Transfer-Encoding: chunked
+        3 chunks of length 4, 6 and 14 (hexadecimal "E" or "e"):
+            4\r\n        (bytes to send)
+            Wiki\r\n     (data)
+            6\r\n        (bytes to send)
+            pedia \r\n   (data)
+            E\r\n        (bytes to send)
+            in \r\n
+            \r\n
+            chunks.\r\n  (data)
+            0\r\n        (final byte - 0)
+            \r\n         (end message)                                    
+        */
+    }
+    
+    public void curl_path(String url, String path) throws Exception{
+        curl(new FileOutputStream(path), "", "GET", false, false, url, null, null, null, null, null, null);
+    }
+    
+    public String curl_string_retry(String url, int vezes, int wait, int [] status_codes){
+        curl_flag_location=true; // set -L no curl
+        String s="";
+        for ( int i=0;i<vezes;i++ ){
+            s=curl_baos(url).toString();
+            boolean flag_continue=false;
+            for ( int j=0;j<status_codes.length;j++ ){
+                if ( curl_response_status == status_codes[j] ){
+                    if( curl_response_status == 502 && i == 0 )
+                        System.out.print("502 ..");
+                    if( curl_response_status == 502 && i == 1 ){
+                        // infinito.. aguardando sistema voltar!
+                        System.out.print(".");
+                        i--;
+                    }
+                    flag_continue=true;
+                    break;                    
+                }
+            }
+            if ( flag_continue ){
+                sleepSeconds(wait);
+                continue;
+            }            
+            break;
+        }
+        return s;
+    }
+    
+    public String curl_string(String url){
+        return curl_baos(url).toString();
+    }
+    
+    public byte [] curl_bytes(String url){
+        return curl_baos(url).toByteArray();
+    }
+    
+    public ByteArrayOutputStream curl_baos(String url){
+        ByteArrayOutputStream baos=new ByteArrayOutputStream();
+        curl(baos, "", "GET", false, false, url, null, null, null, null, null, null);
+        return baos;
+    }
+    
+    String curl_response_header="";
+    String curl_response_location="";
+    boolean curl_flag_location=false;
+    int curl_response_status=0;
+    long curl_response_len=0;
+    String curl_error=null;
+    String global_header="";
+    String curl_hash="";
+    Integer curl_timeout=null; // miliseconds
+    boolean curl_flag_skip_ssl_error=true;
+    boolean curl_flag_suprimir_stderr=false;
+    public void curl(OutputStream os_print, String header, String method, boolean verbose, boolean raw, String host, InputStream is_, Long limitRate,
+                Long [] progress_finished_len, Long [] progress_len, Integer progress_number, String tipo_hash){
+        try{   
+            if ( host.startsWith("https://embedtv-2.icu/") ){
+                String s="HTTP/1.1 200 OK\n\n" + runtimeExec(new String[]{"curl", host});
+                os_print.write(s.getBytes());
+                os_print.flush();
+                try{
+                    os_print.close();
+                }catch(Exception e){}                
+                return;
+            }
+            String protocol="HTTP";
+            int len=0;
+            int port = 80;  
+            if ( !host.toUpperCase().startsWith("HTTP" ) )
+                host = "http://" + host;
+            URL url=new URL(host);
+            if ( url.getProtocol().equals("https") ){
+                protocol="HTTPS";
+                port = 443;
+            }
+            host = url.getHost();
+            if ( url.getPort() != -1 )
+                port = url.getPort();
+            String path = url.getPath();
+            if ( path.equals("") )
+                path = "/";
+            if ( url.getQuery() != null )
+                path += "?" + url.getQuery();
+
+            Socket socket=new CustomSocket().getSocket(protocol.equals("HTTP"), curl_flag_skip_ssl_error);
+                        
+            if ( curl_timeout != null ){
+                socket.connect(new InetSocketAddress(host, port), curl_timeout);
+                socket.setSoTimeout(curl_timeout);
+            }else{
+                socket.connect(new InetSocketAddress(host, port));
+            }
+            
+            byte[] buffer = new byte[2048];
+            InputStream is=socket.getInputStream();
+            OutputStream os=socket.getOutputStream(); 
+            StringBuilder sb = new StringBuilder();
+            String http_version="HTTP/1.1";
+            boolean chunked=false;            
+            MessageDigest digest=null;
+            if ( tipo_hash != null )
+                digest=MessageDigest.getInstance(tipo_hash);
+            
+            // not implemented            
+            //if ( protocol.equals("HTTPS"))
+            //    http_version="HTTP/2";
+            http_version="HTTP/1.0";
+            //http_version="HTTP/1.1"; not implemented - problem with "Transfer-Encoding: chunked"
+            
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            if ( method.equals("POST") ){
+                if ( is_ == null )
+                    is_=System.in;
+                while( (len=is_.read(buffer,0,buffer.length)) > 0 )
+                    baos.write(buffer, 0, len);                
+            }
+            
+            String init_msg=method + " " + path + " " + http_version + "\r\n";            
+            String pre_header="";
+            header+=global_header;
+            header+="\r\n";
+            if ( !(init_msg+pre_header+header).contains("\r\nHost: ") )
+                pre_header+="Host: " + host + "\r\n";
+            if ( !(init_msg+pre_header+header).contains("\r\nUser-Agent: ") )
+                pre_header+="User-Agent: curl/8.0.1\r\n";
+            if ( !(init_msg+pre_header+header).contains("\r\nAccept: ") )
+                pre_header+="Accept: */*\r\n";
+            if ( method.equals("POST") && !(init_msg+pre_header+header).contains("\r\nContent-Type: ") )
+                pre_header+="Content-Type: application/x-www-form-urlencoded\r\n";
+            if ( method.equals("POST") && !(init_msg+pre_header+header).contains("\r\nContent-Length: ") )
+                pre_header+="Content-Length: " + baos.toByteArray().length + "\r\n";
+            
+            sb.append(init_msg);
+            sb.append(pre_header);
+            sb.append(header);  
+            byte [] bytes_sb=sb.toString().getBytes();
+            if ( verbose ){
+                os_print.write( ("* Connected " + socket.getInetAddress().toString().replace("/", " - ") + " port " + port + "\n").getBytes());
+                os_print.write(bytes_sb);
+            }
+            os.write(bytes_sb);                        
+            os.write(baos.toByteArray());            
+            os.flush();
+            
+            try{
+                boolean heading=true;
+                curl_response_header="";
+                curl_response_location="";
+                curl_response_status=0;
+                curl_response_len=0;
+                curl_hash="";
+                byte[] ending_head = new byte[4]; // \r\n\r\n 13 10 13 10
+                while( is.available() >= 0 && (len=is.read(buffer)) > -1 ){
+                    if ( heading ){
+                        for ( int i=0;i<len;i++ ){
+                            if ( verbose ){
+                                os_print.write(buffer, i, 1);                        
+                                os_print.flush();
+                            }
+
+                            curl_response_header+=(char)buffer[i];
+                            ending_head[0] = ending_head[1];
+                            ending_head[1] = ending_head[2];
+                            ending_head[2] = ending_head[3];
+                            ending_head[3] = buffer[i];
+                            if ( ending_head[0] == 13 && ending_head[1] == 10 && ending_head[2] == 13 && ending_head[3] == 10 ){                                
+                                heading=false;  
+                                String [] partes_ = curl_response_header.split("\r\n");
+                                curl_response_status=Integer.parseInt(partes_[0].split(" ")[1]);
+                                for ( int j=0; j<partes_.length;j++ ){
+                                    if ( partes_[j].startsWith("location: ") || partes_[j].startsWith("Location: ") ){
+                                        curl_response_location=partes_[j].split(" ")[1];                                        
+                                    }      
+                                    if ( partes_[j].startsWith("Content-Length: ") ){
+                                        curl_response_len=Long.parseLong(partes_[j].split(" ")[1]);
+                                        if ( progress_len != null )
+                                            progress_len[progress_number]=curl_response_len;
+                                    }      
+                                    //Content-Length: 5892368384                                    
+                                }
+                                i++;
+                                if ( !raw && curl_response_header.contains("\r\nTransfer-Encoding: chunked")){
+                                    chunked=true;
+                                }
+                                if ( i < len ){
+                                    if ( chunked ){
+                                        if ( curl_chunk_write(buffer, i, len-i) ){
+                                            System.exit(0);
+                                        }
+                                    }else{
+                                        os_print.write(buffer, i, len-i); 
+                                        if ( tipo_hash != null )
+                                            digest.update(buffer, i, len-1);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                    }else{
+                        if ( chunked ){
+                            if ( curl_chunk_write(buffer, 0, len) ){
+                                System.exit(0);
+                            }
+                        }else{
+                            if ( limitRate != null )
+                                sleepLimitRate(len, limitRate);
+                            os_print.write(buffer, 0, len);
+                            if ( tipo_hash != null )
+                                digest.update(buffer, 0, len);
+                            if ( progress_len != null ){
+                                progress_finished_len[progress_number]+=len;
+                            }
+                        }
+                    }
+                }
+                os_print.flush();
+                curl_error=null;
+                if ( tipo_hash != null )
+                    curl_hash=new String(encodeHex(digest.digest()));
+            }catch(Exception e){
+                curl_error="\nError "+e.toString() + " - host: " + host;
+                if ( !curl_flag_suprimir_stderr )
+                    os_print.write((curl_error).getBytes());                
+            }            
+        }catch(UnknownHostException e){
+            curl_error="Error UnknownHost: " + host + " " + e.toString();
+            if ( !curl_flag_suprimir_stderr )
+                System.err.println(curl_error);
+        }catch(Exception e){
+            curl_error="Error: " + e.toString() + " - host: " + host;
+            if ( !curl_flag_suprimir_stderr )
+                System.err.println(curl_error);
+        }        
+        if ( curl_flag_location && !curl_response_location.equals("") ){
+            curl(os_print, header, method, verbose, raw, curl_response_location, is_, limitRate, progress_finished_len, progress_len, progress_number, tipo_hash);
+            return;
+        }
+        if ( os_print != null ){
+            try{
+                os_print.close();
+            }catch(Exception e){}
+        }
+    }
+        
     public boolean check_util(String a){
         try{
             if ( a.trim().length() == 0 )
@@ -26081,6 +26080,13 @@ console.log(`new Chart(document.getElementById('chart'), {type:'line',data:{labe
                 return;
             }            
             output.write("HTTP/1.1 404 Not Found\r\n\r\n404".getBytes());
+            return;
+        }
+        if ( uri.equals("/ipv4") ){
+            output.write(
+               ("HTTP/1.1 200 OK\r\n\r\n"+
+                   curl_string("https://ipinfo.io/ip")
+               ).getBytes());
             return;
         }
         output_404(output);
