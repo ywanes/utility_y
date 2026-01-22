@@ -7233,11 +7233,11 @@ cat buffer.log
             
             File f=new File(out);
             boolean needDownload = !f.exists() || f.length() < 1024*1024;
-            String s="Token";
+            String s=null;
             if ( onlyPreLink 
                  || ( !onlyPreLink && !onlyLink && !needDownload )
             ){ 
-                // skip token
+                s="Token";
             }else{
                 if ( url.equals("") ){
                     overflix_error+="url vazia!\n";
@@ -7245,26 +7245,25 @@ cat buffer.log
                 }
                 //s=getTokenIE_old(vToken, url);
                 //s=getTokenTESTCAFE_old(vToken, url);                
-                if ( overflix_interative && url.endsWith("?download") && url.contains(".com/f/") ){
-                    s=capturarTokenDoChrome(url + "&name=interative");
-                }else{
-                    for ( int i=0;i<2;i++ ){
-                        s=getTokenPuppeteer(url);
-                        if ( s != null && s.trim().length() > 0 )
-                            break;
-                    }
+                int tentativas=3;
+                if ( overflix_interative && url.endsWith("?download") && url.contains(".com/f/") )
+                    tentativas=1;
+                for ( int i=1;i<=tentativas;i++ ){
+                    s=getTokenPuppeteer(url);
+                    if ( s != null )
+                        break;
                 }
+                if ( s == null && overflix_interative && url.endsWith("?download") && url.contains(".com/f/") )
+                    s=capturarTokenDoChrome(url + "&name=interative");
             }
-            if ( s != null && s.trim().length() > 0 )
-                s=s.trim();
-            else{
+            if ( s == null ){
                 if ( runtimeExecError.trim().equals("") ){
                     overflix_error+="não foi possível solucionar pelo token.. pegue o arquivo pela url: " + url + " file: \"" + out+"\"\n";
                     return;
                 }else{
                     overflix_error+="Error script token: " + runtimeExecError+"\n";
                     return;
-               }
+                }
             }
             overflix_verbose(verbose, tags, "curl \"" + s + "\" > \"" + out + "\"");
             if ( onlyLink || onlyPreLink ){
@@ -7514,7 +7513,10 @@ cat buffer.log
                 throw new Exception(alert_puppeteer);
             throw new Exception("erro: \n" + runtimeExecError);
         }
-        return s.trim();
+        s=s.trim();
+        if ( s.equals("") )
+            return null;
+        return s;
     }
     
     public String getTokenTESTCAFE_old(Boolean enable_visible, String url) throws Exception{
