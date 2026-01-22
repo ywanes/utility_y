@@ -203,7 +203,10 @@ function toggleFullScreen(event, op){
     if ( o_que_quero == null )
         o_que_quero=!o_que_ta;
     if ( o_que_ta != o_que_quero ){
-        if ( o_que_quero ){
+        if ( o_que_quero ){ 
+			// nao pode usar document.getElementById('video') senao buga varias coisas
+			// o topo nao aparece
+			// o error timeout tb nao aparece caso o video de problema
             document.getElementById('body').requestFullscreen();
         }else{
             document.exitFullscreen();
@@ -1029,7 +1032,6 @@ function load_movie(parm, table_click, streamURL){
     document.getElementById('div_index').style="display: none; position: relative; top: -34px;";
     document.getElementById('principal').style="";
 	document.getElementById('principal').parentElement.parentElement.setAttribute('valign', 'center');	
-	// old - em fase de teste -> <video src="`+src+`" id="video" style="width: 100%; height: 100%;" width_control="100" width_control_confirm="0"></video>
     document.getElementById('principal').innerHTML=`
           <div class="video-container">
             <video src="`+src+`" id="video" style="width: 100%; height: 100%;" width_control="100" width_control_confirm="0">
@@ -2119,18 +2121,6 @@ function load_music(parm, elements){
                     if ( t.children[i].children[0].style.background != '')
                       return t.children[i].children[0];
                   return null;
-                }
-                Fullscreen=function(videoOn) { // ocorre um erro se for invocado sem interação de tela(bloqueio nativo do browser)
-                  element=document.children[0];
-                  if(element.requestFullscreen) element.requestFullscreen();
-                  else if(element.mozRequestFullScreen) element.mozRequestFullScreen();
-                  else if(element.webkitRequestFullscreen) element.webkitRequestFullscreen();
-                  else if(element.msRequestFullscreen) element.msRequestFullscreen();
-                  document.getElementById("f11").style.display="none";
-                  if(videoOn)
-                    document.getElementById("f11bg").style.display="";
-                  //document.getElementById("cursor").style.cursor="none";
-                  document.children[0].style.cursor="none";
                 }
                 function DisableFullscreen() {
                   if(document.exitFullscreen) document.exitFullscreen();
