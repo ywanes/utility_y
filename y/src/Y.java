@@ -18283,7 +18283,9 @@ class Util{
     }
     
     public boolean salvando_file(String texto, File arquivo, boolean append) {
-        try{                    
+        try{      
+            // analisar depois - java.nio.charset.StandardCharsets.UTF_8
+            // BufferedWriter out = new BufferedWriter(new FileWriter(arquivo, java.nio.charset.StandardCharsets.UTF_8, append));
             BufferedWriter out = new BufferedWriter(new FileWriter(arquivo, append));
             out.write(texto);            
             out.flush();
