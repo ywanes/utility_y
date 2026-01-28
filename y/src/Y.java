@@ -197,6 +197,7 @@ import javax.swing.JPanel;
 import javax.swing.JButton;
 import java.awt.event.MouseAdapter;
 import java.text.DecimalFormat;
+import java.util.Scanner;
 
 
 @SuppressWarnings({"unchecked", "deprecation"})
@@ -1677,8 +1678,8 @@ cat buffer.log
                 erroFatal("Erro de parametros!");
             String host=(String)parm_[0];
             Integer port=(Integer)parm_[1];
-            Boolean verbose=(Boolean)parm_[2];
-            new ProxyServer(host, port, verbose);
+            Boolean verbose=(Boolean)parm_[2]; // descontinuado
+            new ProxyServer(host, port);
             return;
         }        
         if ( args[0].equals("wget")){
@@ -26495,220 +26496,128 @@ class ConnGui extends javax.swing.JFrame {
 
 @SuppressWarnings({"unchecked", "deprecation"})
 class ProxyServer {
-    private String host="localhost";
-    private int PROXY_PORT = 8080;
-    private boolean verbose = false; // Modo verbose desativado por padrão
-    public ProxyServer(String host, int port, boolean verbose_){
+    private int port = 8080;
+    private String host = "localhost";
+    private final Set<String> blacklist = new java.util.concurrent.ConcurrentSkipListSet<>();
+    private final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newCachedThreadPool();
+
+    public ProxyServer(String host, int port) {
         this.host=host;
-        this.PROXY_PORT=port;
-        this.verbose=verbose_;
+        this.port=port;
+        // verbose descontinuado
+        System.setProperty("java.net.preferIPv4Stack", "true");
+        System.setProperty("networkaddress.cache.ttl", "0");
+        iniciarInterfaceControle();
 
-        try (ServerSocket serverSocket = new ServerSocket(PROXY_PORT)) {
-            System.out.println("Servidor Proxy escutando na porta " + PROXY_PORT);
-
+        try (ServerSocket server = new ServerSocket(port, 250, InetAddress.getByName(host))) {
+            System.out.println("Proxy rodando em " + host + ":" + port);
+            System.out.println("na configuração do windows colocar exceto " + host);
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Conexão recebida de: " + clientSocket.getInetAddress());
+                Socket client = server.accept();
+                executor.submit(() -> handle(client));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-                // Cria uma thread para lidar com a requisição do cliente
-                new Thread(() -> {
-                    try {
-                        handleClientRequest(clientSocket);
-                    } catch (IOException e) {
-                        e.printStackTrace();
+    private void iniciarInterfaceControle() {
+        new Thread(() -> {
+            Scanner sc = new Scanner(System.in);            
+            System.out.println("Comandos: [dominio] para bloquear | un [dominio] para liberar (aceita lista separada por virgula)");
+            
+            while (true) {
+                String input = sc.nextLine().toLowerCase().trim();
+                if (input.isEmpty()) continue;
+
+                // Split por vírgula primeiro para processar cada intenção
+                String[] parts = input.split(",");
+                for (String part : parts) {
+                    String item = part.trim();
+                    if (item.isEmpty()) continue;
+
+                    if (item.startsWith("un")) {
+                        String domain = item.substring(2).replaceAll("\\s+", "");
+                        if (blacklist.remove(domain)) {
+                            System.out.println("LIBERADO: " + domain);
+                        }
+                    } else {
+                        String domain = item.replaceAll("\\s+", "");
+                        if (!domain.isEmpty()) {
+                            if (blacklist.add(domain)) {
+                                System.out.println("BLOQUEADO: " + domain);
+                            }
+                        }
                     }
-                }).start();
+                }
+                System.out.println("LISTA DOS BLOQUEADOS: " + blacklist);
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        }).start();
     }
 
-    private void handleClientRequest(Socket clientSocket) throws IOException {
-        try (BufferedReader clientInput = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-             OutputStream clientOutput = clientSocket.getOutputStream()) {
+    private void handle(Socket client) {
+        try (client) {
+            client.setSoTimeout(10000);
+            InputStream in = client.getInputStream();
+            byte[] buffer = new byte[16384];
+            int len = in.read(buffer);
+            if (len <= 0) return;
 
-            // Lê a primeira linha da requisição (ex: GET /path HTTP/1.1)
-            String requestLine = clientInput.readLine();
-            if (requestLine == null || requestLine.isEmpty()) {
-                return; // Requisição inválida
+            String head = new String(buffer, 0, len);
+            String firstLine = head.split("\r\n")[0];
+            String[] parts = firstLine.split(" ");
+            if (parts.length < 2) return;
+
+            String method = parts[0];
+            String target = parts[1];
+            String host = method.equalsIgnoreCase("CONNECT") ? target.split(":")[0] : new URL(target).getHost();
+            host = host.toLowerCase().trim();
+
+            if (isBlacklisted(host)) {
+                System.out.println("[-] BLOCK " + host);
+                return;
             }
 
-            // Extrai o método, caminho e versão HTTP
-            String[] requestParts = requestLine.split(" ");
-            if (requestParts.length < 3) {
-                return; // Requisição malformada
-            }
+            InetAddress addr = InetAddress.getByName(host);
+            System.out.println("[+]       " + host + " -> " + addr.getHostAddress());
 
-            String method = requestParts[0]; // Ex: GET
-            String path = requestParts[1];  // Ex: /index.html
-            String httpVersion = requestParts[2]; // Ex: HTTP/1.1
+            int portTarget = method.equalsIgnoreCase("CONNECT") ? 
+                       (target.contains(":") ? Integer.parseInt(target.split(":")[1]) : 443) : 80;
 
-            // Lê o cabeçalho "Host" e outros cabeçalhos
-            String hostHeader = "";
-            StringBuilder requestHeaders = new StringBuilder();
-            String line;
-            while (!(line = clientInput.readLine()).isEmpty()) {
-                requestHeaders.append(line).append("\r\n");
-                if (line.startsWith("Host:")) {
-                    hostHeader = line.substring("Host:".length()).trim();
+            try (Socket targetSocket = new Socket()) {
+                targetSocket.connect(new InetSocketAddress(addr, portTarget), 5000);
+                if (method.equalsIgnoreCase("CONNECT")) {
+                    client.getOutputStream().write("HTTP/1.1 200 Connection Established\r\n\r\n".getBytes());
+                } else {
+                    targetSocket.getOutputStream().write(buffer, 0, len);
                 }
+                relay(client, targetSocket);
             }
-
-            if (hostHeader.isEmpty()) {
-                return; // Host não especificado
-            }
-
-            // Modo verbose: exibe os cabeçalhos da requisição
-            if (verbose) {
-                System.out.println("=== Request ===");
-                System.out.println(requestLine);
-                System.out.print(requestHeaders.toString());
-                System.out.println("=========================================");
-            }
-
-            // Extrai o host e a porta do cabeçalho "Host"
-            String host;
-            int port;
-            if (hostHeader.contains(":")) {
-                String[] hostParts = hostHeader.split(":");
-                host = hostParts[0];
-                port = Integer.parseInt(hostParts[1]);
-            } else {
-                host = hostHeader;
-                port = 80; // Porta padrão para HTTP
-            }
-
-            // Verifica se é uma requisição HTTPS (CONNECT)
-            if (method.equalsIgnoreCase("CONNECT")) {
-                // Requisição HTTPS (Tunelamento SSL/TLS)
-                handleHttpsRequest(clientSocket, host, port, clientOutput);
-            } else {
-                // Requisição HTTP
-                handleHttpRequest(clientSocket, host, port, method, path, httpVersion, requestHeaders.toString(), clientInput, clientOutput);
-            }
-        } finally {
-            try {
-                clientSocket.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
+        } catch (Exception e) {}
     }
 
-    private void handleHttpRequest(Socket clientSocket, String host, int port, String method, String path,
-                                         String httpVersion, String requestHeaders, BufferedReader clientInput, OutputStream clientOutput) {
-        try (Socket targetSocket = new Socket(host, port);
-             BufferedReader targetInput = new BufferedReader(new InputStreamReader(targetSocket.getInputStream()));
-             OutputStream targetOutput = targetSocket.getOutputStream()) {
-
-            // Reconstroi a requisição para o servidor de destino
-            StringBuilder requestBuilder = new StringBuilder();
-            requestBuilder.append(method).append(" ").append(path).append(" ").append(httpVersion).append("\r\n");
-            requestBuilder.append(requestHeaders); // Inclui os cabeçalhos originais
-            requestBuilder.append("\r\n");
-
-            // Modo verbose: exibe os cabeçalhos da requisição encaminhada
-            if (verbose) {
-                System.out.println("=== Requisicao Encaminhada ===");
-                System.out.print(requestBuilder.toString());
-                System.out.println("===========================================");
-            }
-
-            // Encaminha a requisição para o servidor de destino
-            targetOutput.write(requestBuilder.toString().getBytes());
-            targetOutput.flush();
-
-            // Lê a resposta do servidor de destino
-            StringBuilder responseHeaders = new StringBuilder();
-            String responseLine;
-            while ((responseLine = targetInput.readLine()) != null) {
-                responseHeaders.append(responseLine).append("\r\n");
-                if (responseLine.isEmpty()) {
-                    break; // Fim dos cabeçalhos
-                }
-            }
-
-            // Modo verbose: exibe os cabeçalhos da resposta
-            if (verbose) {
-                System.out.println("=== Response ===");
-                System.out.print(responseHeaders.toString());
-                System.out.println("========================================");
-            }
-
-            // Encaminha os cabeçalhos da resposta para o cliente
-            clientOutput.write(responseHeaders.toString().getBytes());
-            clientOutput.flush();
-
-            // Encaminha o corpo da resposta para o cliente
-            forwardData(targetSocket.getInputStream(), clientOutput, "Resposta HTTP", false); // false = HTTP
-        } catch (IOException e) {
-            e.printStackTrace();
+    private boolean isBlacklisted(String host) {
+        for (String b : blacklist) {
+            if (host.equals(b) || host.endsWith("." + b)) return true;
         }
+        return false;
     }
 
-    private void handleHttpsRequest(Socket clientSocket, String host, int port, OutputStream clientOutput) {
-        try (Socket targetSocket = new Socket(host, port)) {
-            // Envia uma resposta 200 para o cliente (indicando que o túnel foi estabelecido)
-            String response = "HTTP/1.1 200 Connection Established\r\n\r\n";
-            clientOutput.write(response.getBytes());
-            clientOutput.flush();
-
-            // Modo verbose: exibe os cabeçalhos da resposta de estabelecimento do túnel
-            if (verbose) {
-                System.out.println("=== Cabecalhos da Resposta (Tunel HTTPS) ===");
-                System.out.print(response);
-                System.out.println("===========================================");
-            }
-
-            // Estabelece o túnel entre o cliente e o servidor de destino
-            InputStream clientInput = clientSocket.getInputStream();
-            OutputStream targetOutput = targetSocket.getOutputStream();
-
-            // Encaminha os dados entre o cliente e o servidor de destino
-            Thread clientToTarget = new Thread(() -> {
-                try {
-                    forwardData(clientInput, targetOutput, "Cliente -> Servidor (HTTPS)", true); // true = HTTPS
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-
-            Thread targetToClient = new Thread(() -> {
-                try {
-                    forwardData(targetSocket.getInputStream(), clientOutput, "Servidor -> Cliente (HTTPS)", true); // true = HTTPS
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-
-            clientToTarget.start();
-            targetToClient.start();
-
-            clientToTarget.join();
-            targetToClient.join();
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
-        }
+    private void relay(Socket s1, Socket s2) {
+        java.util.concurrent.Future<?> f1 = executor.submit(() -> pipe(s1, s2));
+        java.util.concurrent.Future<?> f2 = executor.submit(() -> pipe(s2, s1));
+        try { f1.get(); f2.get(); } catch (Exception e) {}
     }
 
-    private void forwardData(InputStream input, OutputStream output, String description, boolean isHttps) throws IOException {
-        byte[] buffer = new byte[4096];
-        int bytesRead;
-        while ((bytesRead = input.read(buffer)) != -1) {
-            output.write(buffer, 0, bytesRead);
-            output.flush();
-
-            // Modo verbose: exibe os cabeçalhos (se não for HTTPS)
-            if (verbose && !isHttps) {
-                String data = new String(buffer, 0, bytesRead);
-                if (data.contains("\r\n\r\n")) { // Verifica se há cabeçalhos
-                    System.out.println("=== " + description + " ===");
-                    System.out.print(data.substring(0, data.indexOf("\r\n\r\n"))); // Exibe apenas os cabeçalhos
-                    System.out.println("=========================");
-                }
+    private void pipe(Socket in, Socket out) {
+        try (InputStream is = in.getInputStream(); OutputStream os = out.getOutputStream()) {
+            byte[] buf = new byte[65536];
+            int r;
+            while ((r = is.read(buf)) != -1) {
+                os.write(buf, 0, r);
+                os.flush();
             }
-        }
+        } catch (IOException e) {}
     }
 }
 
@@ -27915,7 +27824,7 @@ Exemplos...
     obs3: -mode webdav só suporta os parametros -host, -port e -pass. No preenchimento de -pass é separado por virgula a cadeia user,senha,user,senha...
     obs4: o parametro -pass só esta implementado para o -mode webdav
 [y [httpProxy|hp]]
-    y httpProxy -ip localhost -port 8080 -verbose
+    y httpProxy -ip localhost -port 8080
 [y wget]
     y wget -h
 [y pwd]
