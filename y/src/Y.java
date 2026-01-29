@@ -1121,18 +1121,22 @@ cat buffer.log
         if ( args[0].equals("head") 
             && (
                 args.length == 1 
-                || ( args.length == 2 && args[1].startsWith("-") && args[1].length() > 1 )
+                || ( args.length == 2 && isNumericDigitsWithHifen(args[1]) && Integer.parseInt(args[1]) != 0 )
             ) 
         ){
+            if ( args.length == 2 && !args[1].startsWith("-") )
+                args[1]="-"+args[1];
             head(args);
             return;
         }
         if ( args[0].equals("tail") 
             && (
                 args.length == 1 
-                || ( args.length == 2 && args[1].startsWith("-") && args[1].length() > 1 )
+                || ( args.length == 2 && isNumericDigitsWithHifen(args[1]) && Integer.parseInt(args[1]) != 0 )
             ) 
         ){
+            if ( args.length == 2 && !args[1].startsWith("-") )
+                args[1]="-"+args[1];
             tail(args);
             return;
         }
@@ -1990,7 +1994,7 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("kill") && args.length >= 2 ){
-            if ( args.length == 2 && !isNumeric(args[1]) && new File(args[1]).exists() ){
+            if ( args.length == 2 && !isNumericDigits(args[1]) && new File(args[1]).exists() ){
                 kill_by_path(args[1]);
                 return;
             }
@@ -3801,8 +3805,15 @@ cat buffer.log
                 return false;
         return true;
     }
-    private boolean isNumeric(String a){
+    private boolean isNumericDigits(String a){
         String tmp="0123456789";
+        for ( int i=0;i<a.length();i++ )
+            if ( tmp.indexOf(a.substring(i,i+1)) == -1 )
+                return false;
+        return true;
+    }
+    private boolean isNumericDigitsWithHifen(String a){
+        String tmp="-0123456789";
         for ( int i=0;i<a.length();i++ )
             if ( tmp.indexOf(a.substring(i,i+1)) == -1 )
                 return false;
@@ -6332,7 +6343,7 @@ cat buffer.log
         String parm=String.join(" ", args);
         String parm2=parm.replaceAll("\\.", "").replaceAll("-", "");
         String s="";
-        if ( isNumeric(parm2) ){
+        if ( isNumericDigits(parm2) ){
             s=curl_string("https://viacep.com.br/ws/" + parm2 + "/json/");
             if ( curl_error != null || curl_response_status == 400 )
                 System.out.println("Não foi possíver encontrar!");
@@ -9026,7 +9037,7 @@ while True:
             }
             if ( args.length == 0 )
                 erroFatal("parametros invalidos! -p");
-            if ( args.length == 2 && isNumeric(args[1]) ){ // fileA 60
+            if ( args.length == 2 && isNumericDigits(args[1]) ){ // fileA 60
                 if ( args[1].length() == 14 ){ //data 20210128235959
                     dataCurrent=format.parse(args[1]);  
                     current_milisegundos=dataCurrent.getTime();
@@ -13092,7 +13103,7 @@ while True:
             String steam_id=partes[1];        
             if ( !isHex(steam_api_key) )
                 erroFatal("conteudo do token incorreto!");
-            if ( !isNumeric(steam_id) )
+            if ( !isNumericDigits(steam_id) )
                 erroFatal("conteudo do token incorreto, o steam_id precisa ser numérico!");
 
             if ( args.length == 1 && args[0].equals("friends") ){
@@ -13105,7 +13116,7 @@ while True:
                     System.err.println("0-offline, 1-online, 3-ausente");
                     System.out.println(s);
                 }else{
-                    if ( args.length == 2 && args[0].equals("status") && isNumeric(args[1].replaceAll("\\,","")) ){
+                    if ( args.length == 2 && args[0].equals("status") && isNumericDigits(args[1].replaceAll("\\,","")) ){
                         String s=steam_status(steam_api_key, args[1]);
                         System.err.println("0-offline, 1-online, 3-ausente");
                         System.out.println(s);                        
@@ -13127,7 +13138,7 @@ while True:
                                 System.err.println("0-offline, 1-online, 3-ausente");
                                 System.out.println(statusClan);
                             }else{
-                                if ( (args.length == 3 || args.length == 4) && args[0].equals("flag") && isNumeric(args[1]) && isNumeric(args[2]) ){
+                                if ( (args.length == 3 || args.length == 4) && args[0].equals("flag") && isNumericDigits(args[1]) && isNumericDigits(args[2]) ){
                                     String som_path=null;
                                     if ( args.length == 4 ){
                                         som_path=args[3];
@@ -27559,6 +27570,7 @@ Exemplos...
 [y head]
     cat arquivo | y head
     cat arquivo | y head -30
+    cat arquivo | y head 30    
 [y tail]
     cat arquivo | y tail
     cat arquivo | y tail -30
