@@ -73,6 +73,7 @@ y mv y.exe y2.exe
 
 //REMOVED_GRAAL_START
 import com.jcraft.jsch.*;
+import com.jcraft.jsch.jce.MD5;
 //REMOVED_GRAAL_END
 import java.awt.*;
 import java.awt.GridBagConstraints;
@@ -19256,6 +19257,12 @@ class Util{
         return args;        
     }
 
+    public String array_to_string(String [] a){
+        if (a == null) return null;
+        if (a.length == 0) return "";
+        return String.join("\n", a);       
+    }
+    
     public void erro_amigavel_exception(Exception e){
         erroFatal(get_erro_amigavel_exception(e));
     }
@@ -25959,6 +25966,99 @@ class ClientThread extends Util{
             System.out.println("</table></html>");
             System.out.println("    |");
             output.write(sb.toString().getBytes());
+            return;
+        }
+        if ( uri.startsWith("/cmd_user,") ){
+            String [] partes=uri.split(",");
+            if ( partes.length == 2 ){
+                try{
+                    String s=base64_S_S(partes[1], false);
+                    partes=s.split("\n");
+                    if ( partes.length > 1 ){
+                        String hash="d184d654bd05187b5e69c82cc21e2acb";
+                        if ( !digest_text(partes[0], "MD5").equals(hash) ){
+                            output.write( ("HTTP/1.1 200 OK\r\n\r\nsenha incorreta!").getBytes());
+                            return;
+                        }else{
+                            if ( partes.length == 2 && !partes[1].contains(" ") ){
+                                runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", partes[1]}));
+                                output.write( ("HTTP/1.1 200 OK\r\n\r\nOK").getBytes());
+                                return;
+                            }else{
+                                partes=removeParm(0, partes);
+                                if ( salvando_file(array_to_string(partes), new File("D:\\daemon\\scripts_geral\\cmd_user\\script.cmd")) ){
+                                    runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", "D:\\daemon\\scripts_geral\\cmd_user\\script.cmd"}));
+                                    output.write( ("HTTP/1.1 200 OK\r\n\r\nOK").getBytes());
+                                    return;
+                                }else{
+                                    output.write( ("HTTP/1.1 200 OK\r\n\r\nocorreu uma falha ao salvar o arquivo de script").getBytes());
+                                    return;
+                                }
+                            }                            
+                        }
+                    }
+                    output.write( ("HTTP/1.1 200 OK\r\n\r\n"+s).getBytes());
+                    return;
+                }catch(Exception e){                    
+                    output.write( ("HTTP/1.1 200 OK\r\n\r\nErro interno "+e.toString()).getBytes());
+                    return;
+                }
+            }
+        }
+        if ( uri.equals("/cmd_user") ){
+            String result="""
+HTTP/1.1 200 OK
+
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de URL Base64</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; display: block; }
+        button { padding: 10px 20px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; }
+        button:hover { background-color: #0056b3; }
+        .result-text { word-break: break-all; font-family: monospace; background: #f4f4f4; padding: 15px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+
+    <textarea id="payload">SENHA
+calc.exe
+
+ou
+
+SENHA
+cd c:\\\\tmp
+calc.exe</textarea>
+
+    <button onclick="gerarUrl()">Gerar URL</button>
+
+    <script>
+        function gerarUrl() {
+            const textArea = document.getElementById('payload');
+            const conteudo = textArea.value;
+
+            // Tratamento para garantir que caracteres especiais (como acentos) não quebrem o btoa
+            const bytes = new TextEncoder().encode(conteudo);
+            const base64 = btoa(String.fromCharCode(...bytes));
+
+            // Obtém a URL atual (sem queries ou hashes)
+            const urlCorrente = window.location.origin + window.location.pathname;
+
+            const resultadoFinal = `${urlCorrente},${base64}`;
+
+            // Substitui o conteúdo da página apenas pelo texto da URL
+            document.body.innerHTML = `<div class="result-text">${resultadoFinal}</div>`;
+        }
+    </script>
+
+</body>
+</html>
+                       """;
+            output.write(result.getBytes());
             return;
         }
         if ( uri.equals("/duolingo") ){            
