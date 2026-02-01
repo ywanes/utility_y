@@ -5880,6 +5880,11 @@ cat buffer.log
     
     public void iso(String [] args){
         try{
+            boolean cidata=false;
+            if ( args.length > 0 && args[args.length-1].equals("-cidata") ){
+                args=removeParm(args.length-1, args);
+                cidata=true;
+            }
             Object [] objs=get_parms_iso_source_flagMake(args);
             if ( objs == null )
                 erroFatal("Erro de parametros!");
@@ -5907,23 +5912,12 @@ cat buffer.log
                     efisys=efisys_try;                
                 if ( new File(etfsboot_try).exists() )
                     etfsboot=etfsboot_try;                
-                //runtimeExec(null, new String[]{dir+"/oscdimg", "-lISO", "-m", "-o", "-u2", 
-                //    "-udfver102", "-bootdata:2#p0,e,b"+etfsboot+"#pEF,e,b"+efisys, source, iso}, null, null, false);
-                //runtimeExec(null, new String[]{dir+"/oscdimg", "-lCIDATA", "-m", "-o", "-u2", 
-                //    "-udfver102", source, iso}, null, null, false);                
-                //runtimeExec(null, new String[]{dir+"/oscdimg", "-lCIDATA", "-m", "-o", source, iso}, null, null, false);                
-                //runtimeExec(null, new String[]{dir+"/oscdimg", "-lCIDATA", "-n", "-m", "-o", source, iso}, null, null, false);
-                //runtimeExec(null, new String[]{dir+"/oscdimg", "-lCIDATA", "-n", "-m", source, iso}, null, null, false);
-runtimeExec(null, new String[]{
-    dir + "/oscdimg", 
-    "-lCIDATA", 
-    "-n",        // Permite nomes longos
-    "-d",        // NÃO converte nomes para maiúsculas (crucial!)
-    "-m",        // Ignora o limite de tamanho máximo da imagem
-    source, 
-    iso
-}, null, null, false);
-                
+                if ( cidata ){
+                    runtimeExec(null, new String[]{ dir + "/oscdimg", "-lCIDATA", "-n", "-d", "-m", source, iso}, null, null, false);                    
+                }else{
+                    runtimeExec(null, new String[]{dir+"/oscdimg", "-lISO", "-m", "-o", "-u2", 
+                        "-udfver102", "-bootdata:2#p0,e,b"+etfsboot+"#pEF,e,b"+efisys, source, iso}, null, null, false);                    
+                }
                 System.out.println("fim");
             }else{
                 if ( !new File(iso).exists() )
@@ -27570,6 +27564,7 @@ Exemplos...
 [y iso]
     y iso win11.iso source
     y iso source win11.iso
+    y iso source cidata.iso -cidata
     obs: detalhes build na pasta sources, cmd admin:
     dism /Get-WimInfo /WimFile:"install.wim"
     obs: criar iso do tipo linux pode dar ruim
