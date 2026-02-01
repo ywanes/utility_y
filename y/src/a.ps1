@@ -3,15 +3,36 @@
     Script unificado para gerenciamento de VM Ubuntu via QEMU + HAXM.
 #>
 
+
 # ==========================================================
-# FLAGS DE CONFIGURAÇÃO (Ajuste aqui)
+# exemplo de chamada
+# powershell -ExecutionPolicy Bypass -File "C:\qemu_hax\a.ps1"
+# powershell -ExecutionPolicy Bypass -File "C:\qemu_hax\a.ps1" -MODE_INSTALL 0 -GUI_ENABLE 0 -AUTO_INSTALL 0 -TAP_NETWORK 1 -DELETE_DISK 0
 # ==========================================================
-$MODE_INSTALL   = $false          # $true: Modo instalação (monta ISOs) | $false: Modo uso (apenas disco)
-$GUI_ENABLE     = $false          # $true: Abre janela do QEMU | $false: Modo terminal (-nographic)
-$AUTO_INSTALL   = $true          # $true: Tenta automação via cloud-init/cidata (requer kernel/initrd extraídos)
-$TAP_NETWORK    = $true          # $true: Ativa a segunda placa de rede via tap0 (Windows bridge-like)
-$DELETE_DISK    = $false         # $true: Apaga o disco atual e cria um novo do zero
+$MODE_INSTALL = $true
+$GUI_ENABLE   = $false
+$AUTO_INSTALL = $true
+$TAP_NETWORK  = $true
+$DELETE_DISK  = $true
 # ==========================================================
+
+# 1. LOOP PARA INTERPRETAR PARÂMETROS DA CLI
+# Exemplo: a.ps1 -MODE_INSTALL 1 -GUI_ENABLE 0
+for ($i = 0; $i -lt $args.Count; $i += 2) {
+    $paramName = $args[$i].Replace("-", "").ToUpper()
+    $paramValue = $args[$i + 1]
+
+    # Converte valor para booleano real (aceita 1, 0, true, false)
+    $boolValue = ($paramValue -eq "true" -or $paramValue -eq "1" -or $paramValue -eq $true)
+
+    switch ($paramName) {
+        "MODE_INSTALL" { $MODE_INSTALL = $boolValue }
+        "GUI_ENABLE"   { $GUI_ENABLE   = $boolValue }
+        "AUTO_INSTALL" { $AUTO_INSTALL = $boolValue }
+        "TAP_NETWORK"  { $TAP_NETWORK  = $boolValue }
+        "DELETE_DISK"  { $DELETE_DISK  = $boolValue }
+    }
+}
 
 # Caminhos de diretórios
 $P1 = "C:\qemu"
@@ -27,24 +48,13 @@ $QEMU_FWD = "user,id=net0,hostfwd=tcp::2222-:22"
 $QEMU_SHARE = "$P4"
 $QEMU_KERNEL = "$P2\vmlinuz_gui"
 $QEMU_INIT = "$P2\initrd_gui"
-$UBUNTU_ISO = "$P3\ubuntu-25.10-desktop-amd64.iso"
-$UBUNTU_SERVER_ISO = "$P3\ubuntu-25.10-live-server-amd64.iso"
+$UBUNTU_ISO = "$P3\ubuntu-26.04-desktop-amd64.iso"
+$UBUNTU_SERVER_ISO = "$P3\ubuntu-26.04-live-server-amd64.iso"
 $CIDATA_ISO = "$P2\cidata.iso"
+$7Z = "D:\ProgramFiles\7-Zip\7z.exe"
 
 # 1. Limpeza de processos anteriores
 taskkill /f /im qemu-system-x86_64.exe 2>$null
-
-# 2. Gerenciamento do Disco (qcow2)
-if ($DELETE_DISK -and (Test-Path $DISK)) {
-    Write-Host "Removendo disco existente..." -ForegroundColor Yellow
-    Remove-Item $DISK -Force
-}
-
-if (!(Test-Path $DISK)) {
-    Write-Host "Criando novo disco virtual de 900GB..." -ForegroundColor Cyan
-    # qemu-img create define o formato (qcow2) e o tamanho máximo (dinâmico)
-    & $QEMU_IMG create -f qcow2 $DISK 900G
-}
 
 # 3. Verificação do Acelerador HAXM
 $haxmStatus = sc.exe query intelhaxm
@@ -82,6 +92,7 @@ if ($GUI_ENABLE) {
     $QEMU_ARGS += "-vga", "std"
     $QEMU_ARGS += "-device", "usb-ehci,id=usb,bus=pci.0,addr=0x7"
     $QEMU_ARGS += "-device", "usb-tablet"
+	$DISK = "$P2\ubuntu_disk_gui.qcow2"	
 } else {
     # Desativa interface gráfica e redireciona a serial para o terminal do host
     $QEMU_ARGS += "-nographic"
@@ -89,8 +100,11 @@ if ($GUI_ENABLE) {
 	$UBUNTU_ISO = $UBUNTU_SERVER_ISO
 	$QEMU_KERNEL = "$P2\vmlinuz_nogui"
 	$QEMU_INIT = "$P2\initrd_nogui"
-
 }
+& $7Z e $UBUNTU_ISO "casper/vmlinuz" -o"$P2" -y | Out-Null
+Move-Item "$P2\vmlinuz" $QEMU_KERNEL -Force
+& $7Z e $UBUNTU_ISO "casper/initrd" -o"$P2" -y | Out-Null
+Move-Item "$P2\initrd" $QEMU_INIT -Force	
 
 # Rede 1: Modo Usuário (NAT) com Redirecionamento de Porta SSH (2222 -> 22)
 $QEMU_ARGS += "-netdev", $QEMU_FWD
@@ -125,6 +139,17 @@ if ($MODE_INSTALL) {
             Write-Host "AVISO: vmlinuz/initrd não encontrados em $P2. Autoinstall pode falhar no console." -ForegroundColor Red
         }
     }
+}
+
+if ($DELETE_DISK -and (Test-Path $DISK)) {
+    Write-Host "Removendo disco existente..." -ForegroundColor Yellow
+    Remove-Item $DISK -Force
+}
+
+if (!(Test-Path $DISK)) {
+    Write-Host "Criando novo disco virtual de 900GB..." -ForegroundColor Cyan
+    # qemu-img create define o formato (qcow2) e o tamanho máximo (dinâmico)
+    & $QEMU_IMG create -f qcow2 $DISK 900G
 }
 
 Write-Host "comandos usados:"
