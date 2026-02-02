@@ -3,17 +3,16 @@
     Script unificado para gerenciamento de VM Ubuntu via QEMU + HAXM.
 #>
 
-
 # ==========================================================
 # exemplo de chamada
 # powershell -ExecutionPolicy Bypass -File "C:\qemu_hax\a.ps1"
 # powershell -ExecutionPolicy Bypass -File "C:\qemu_hax\a.ps1" -MODE_INSTALL 0 -GUI_ENABLE 0 -AUTO_INSTALL 0 -TAP_NETWORK 1 -DELETE_DISK 0
 # ==========================================================
-$MODE_INSTALL = $true
+$MODE_INSTALL = $false
 $GUI_ENABLE   = $false
 $AUTO_INSTALL = $true
 $TAP_NETWORK  = $true
-$DELETE_DISK  = $true
+$DELETE_DISK  = $false
 # ==========================================================
 
 # 1. LOOP PARA INTERPRETAR PARÂMETROS DA CLI
@@ -52,6 +51,13 @@ $UBUNTU_ISO = "$P3\ubuntu-26.04-desktop-amd64.iso"
 $UBUNTU_SERVER_ISO = "$P3\ubuntu-26.04-live-server-amd64.iso"
 $CIDATA_ISO = "$P2\cidata.iso"
 $7Z = "D:\ProgramFiles\7-Zip\7z.exe"
+$QEMU_ACCEL = "hax"
+$QEMU_CPU = "core2duo"
+# se for usar HypervisorPlatform ->
+# dism /online /enable-feature /featurename:HypervisorPlatform /all /norestart
+# $QEMU_ACCEL = "whpx,kernel-irqchip=off" 
+# $QEMU_CPU = "Nehalem"
+
 
 # 1. Limpeza de processos anteriores
 taskkill /f /im qemu-system-x86_64.exe 2>$null
