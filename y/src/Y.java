@@ -1004,7 +1004,7 @@ cat buffer.log
                 document.cookie='ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727';
                 document.cookie='ips4_member_id=178526';
                 document.cookie='ips4_login_key=74e18a46894d354f5adfa7dc881de6d7';                                
-                while [ true ]; do y cls && y curl -H "cookie: ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727; ips4_member_id=178526; ips4_login_key=74e18a46894d354f5adfa7dc881de6d7;" https://encontre.us/id-62616/ | y tr "'" "\n" | y grep .com/f/;  y curl https://mixdrop23.net/f/9wxdwkjof8o8zn | y grep "ALMOST THERE"; sleep 30; done
+                while [ true ]; do y cls && y curl -H "cookie: ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727; ips4_member_id=178526; ips4_login_key=74e18a46894d354f5adfa7dc881de6d7;" https://encontrei.info/id-62616/ | y tr "'" "\n" | y grep .com/f/;  y curl https://mixdrop23.net/f/9wxdwkjof8o8zn | y grep "ALMOST THERE"; sleep 30; done
                 */
                 overflix(args);                
             }catch(Exception e){
@@ -6601,7 +6601,7 @@ cat buffer.log
         String s="";
         if ( args.length == 0 )
             erroFatal("Erro de parametro no overflix_busca!");
-        String url="https://encontre.us/pesquisar/?p=" + String.join("+", args);
+        String url="https://encontrei.info/pesquisar/?p=" + String.join("+", args);
         String html=curl_string(url);        
         String [] partes=regex_matcher("<div class=\'videoboxGridview\'>", "</main>", html, true); 
         if ( partes.length != 1 )
@@ -7059,7 +7059,7 @@ cat buffer.log
         // y overflix "https://overflix.bar/assistir-meu-malvado-favorito-4-dublado-online-36169/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
         // y overflix "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
-        // y overflix "https://encontre.us/assistir-prometheus-dublado-online-1012/"
+        // y overflix "https://encontrei.info/assistir-prometheus-dublado-online-1012/"
         
         overflix_verbose(verbose, tags, url);
             
@@ -28257,8 +28257,8 @@ Exemplos...
     y overflix -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
     y overflix -onlyPreLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"    
     y overflix -v -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
-    y overflix "https://encontre.us/assistir-ruptura-2x4-dublado-online-46643/" -outPath "D:\\ProgramFiles\\site\\series\\Ruptura"
-    y overflix "https://encontre.us/assistir-anne-com-um-e-dublado-online-49039/" "getScriptRenameBySkip,7,10,10"
+    y overflix "https://encontrei.info/assistir-ruptura-2x4-dublado-online-46643/" -outPath "D:\\ProgramFiles\\site\\series\\Ruptura"
+    y overflix "https://encontrei.info/assistir-anne-com-um-e-dublado-online-49039/" "getScriptRenameBySkip,7,10,10"
     obs: getScriptRenameBySkip só interpreta comandos skip, caso contrario baixa
     obs2: -vToken => mostra iexplorer.exe e não fecha.
          -o => force out path
