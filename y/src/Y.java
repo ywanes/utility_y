@@ -1667,11 +1667,12 @@ cat buffer.log
             Long redisSeconds=(Long)parm_[13];
             String redisAll=(String)parm_[14];
             String redisLike=(String)parm_[15];
+            Boolean titulo_url_opcional=(Boolean)parm_[16];
             if ( mode != null && mode.equals("webdav") ){
                 new WebDAVServer(host, port, pass);
                 return;
             }
-            new HttpServer(mode, host, port, pass, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike);
+            new HttpServer(mode, host, port, pass, titulo_url, titulo, dir, endsWiths, ips_banidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike, titulo_url_opcional);
             return;
         }
         if ( args[0].equals("httpProxy") || args[0].equals("hp") )
@@ -8424,7 +8425,8 @@ while True:
                                                 "HTTP/1.1 404 Not Found\r\n"
                                                 + "Content-Type: text/html; charset=UTF-8\r\n"
                                                 + "Access-Control-Allow-Origin: *\r\n"
-                                                + "X-Frame-Options: SAMEORIGIN\r\n"
+                                                + "Content-Security-Policy: frame-ancestors *\r\n"
+                                                + "X-Frame-Options: ALLOWALL\r\n"
                                                 + "\r\n"
                                                 + "chamada invalida para cors.. vc deve utilizar \"?\" na url e nao pode ser no final"
                                             ).getBytes();
@@ -8463,7 +8465,8 @@ while True:
                                                     "HTTP/1.1 400 OK\r\n"
                                                     + "Content-Type: text/html; charset=UTF-8\r\n"
                                                     + "Access-Control-Allow-Origin: *\r\n"
-                                                    + "X-Frame-Options: SAMEORIGIN\r\n"
+                                                    + "Content-Security-Policy: frame-ancestors *\r\n"
+                                                    + "X-Frame-Options: ALLOWALL\r\n"
                                                     + "\r\n"
                                                     + "base64 invalida: " + texto
                                                 ).getBytes()                                        
@@ -8487,7 +8490,8 @@ while True:
                                                 "HTTP/1.1 400 OK\r\n"
                                                 + "Content-Type: text/html; charset=UTF-8\r\n"
                                                 + "Access-Control-Allow-Origin: *\r\n"
-                                                + "X-Frame-Options: SAMEORIGIN\r\n"
+                                                + "Content-Security-Policy: frame-ancestors *\r\n"
+                                                + "X-Frame-Options: ALLOWALL\r\n"
                                                 + "\r\n"
                                                 + "solicitacao nao permitida de acordo com os parametros -sw"
                                             ).getBytes()                                        
@@ -8519,7 +8523,8 @@ while True:
                                                     "HTTP/1.1 400 OK\r\n"
                                                     + "Content-Type: text/html; charset=UTF-8\r\n"
                                                     + "Access-Control-Allow-Origin: *\r\n"
-                                                    + "X-Frame-Options: SAMEORIGIN\r\n"
+                                                    + "Content-Security-Policy: frame-ancestors *\r\n"
+                                                    + "X-Frame-Options: ALLOWALL\r\n"
                                                     + "\r\n"
                                                     + "redirect nao permitido para cors:\n" + status_301 + "\n" + location
                                                 ).getBytes()                                        
@@ -8543,7 +8548,8 @@ while True:
                                             "HTTP/1.1 400 OK\r\n"
                                             + "Content-Type: text/html; charset=UTF-8\r\n"
                                             + "Access-Control-Allow-Origin: *\r\n"
-                                            + "X-Frame-Options: SAMEORIGIN\r\n"
+                                            + "Content-Security-Policy: frame-ancestors *\r\n"
+                                            + "X-Frame-Options: ALLOWALL\r\n"
                                             + "\r\n"
                                             + curl_error
                                         ).getBytes()                                        
@@ -12178,13 +12184,14 @@ while True:
             return null;
         return new Object []{host, port, tray};
     }
-           
+               
     private Object [] get_parm_httpserver(String [] args){
         String mode=null;
         String host=get_ip();        
         Integer port=8888;
         String pass="";
         String tituloUrl="";
+        boolean tituloUrlOpcional=false;
         String titulo="titulo";
         String dir=".";
         String endsWiths="";
@@ -12231,6 +12238,13 @@ while True:
             if ( args[0].equals("-titulo_url_token") ){
                 args=sliceParm(1,args);
                 tituloUrl=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-titulo_url_opcional") ){
+                args=sliceParm(1,args);
+                tituloUrl=args[0];
+                tituloUrlOpcional=true;
                 args=sliceParm(1,args);
                 continue;
             }
@@ -12306,7 +12320,7 @@ while True:
             erroFatal("-mode " + mode + " inválido!");
         if ( mode != null && !mode.equals("webdav") && !pass.equals("") )
             erroFatal("-pass só pode ser usado com -mode webdav");
-        return new Object[]{mode, host, port, pass, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike};
+        return new Object[]{mode, host, port, pass, tituloUrl, titulo, dir, endsWiths, ipsBanidos, log_ips, noLogLocal, cfg, redisDir, redisSeconds, redisAll, redisLike, tituloUrlOpcional};
     }
 
     private Object [] get_parm_httpproxy(String [] args){
@@ -16912,7 +16926,8 @@ class WebDAVServer extends Util{
                 (additionalHeader == null || !additionalHeader.contains("Content-Type: ") ? "Content-Type: text/plain\r\n" : "") +
                 "Content-Length: " + body.getBytes().length + "\r\n" +
                 "Access-Control-Allow-Origin: *\r\n" +
-                "X-Frame-Options: SAMEORIGIN\r\n" +                    
+                "Content-Security-Policy: frame-ancestors *\r\n" +                    
+                "X-Frame-Options: ALLOWALL\r\n" +
                 (additionalHeader != null ? additionalHeader + "\r\n" : "") +
                 "\r\n" +
                 body;
@@ -23651,7 +23666,8 @@ class Texto_longo extends Util{
         String result1="HTTP/1.1 200 OK\n" +
         "Content-Type: text/html; charset=UTF-8\n" +
         "Access-Control-Allow-Origin: *\n" +
-        "X-Frame-Options: SAMEORIGIN\n" +
+        "Content-Security-Policy: frame-ancestors *\n" +
+        "X-Frame-Options: ALLOWALL\r\n" +
         "Content-Length: ?\n" +
         "\n";
         String result2="<script type=\"text/javascript\">\n" +
@@ -25418,15 +25434,17 @@ class HttpServer extends Util{
     String mode, host, pass, titulo_url, titulo, dir, nav, endsWiths, ips_banidos, log_ips, cfg;
     int port;
     Boolean noLogLocal=false;
+    Boolean titulo_url_opcional=false;
     Socket socket = null;    
     public HttpServer(String mode, String host, Integer port, String pass, String titulo_url, String titulo, String dir, 
                       String endsWiths, String ips_banidos, String log_ips, Boolean noLogLocal, String cfg, 
-                      String redisDir, Long redisSeconds, String redisAll, String redisLike){
+                      String redisDir, Long redisSeconds, String redisAll, String redisLike, Boolean titulo_url_opcional){
         this.mode = mode;
         this.host = host;
         this.port = port;
         this.pass = pass; // ainda não implementado aqui
         this.titulo_url = titulo_url;
+        this.titulo_url_opcional = titulo_url_opcional;
         this.titulo = titulo;
         this.dir = dir;
         this.endsWiths = endsWiths;
@@ -25474,7 +25492,7 @@ class HttpServer extends Util{
                     continue;
                 }else
                     System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
-                new ClientThread(mode, socket, titulo_url, titulo, dir, endsWiths, host_display, cfg);
+                new ClientThread(mode, socket, titulo_url, titulo, dir, endsWiths, host_display, cfg, titulo_url_opcional);
             } catch (Exception e) {
                 System.out.println("Erro ao executar servidor:" + e.toString());
             }
@@ -25496,8 +25514,9 @@ class ClientThread extends Util{
     Reader reader = null;
     BufferedInputStream bis = null;
     String host_display=null;
+    Boolean titulo_url_opcional=false;
     Y y=new Y();
-    public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg) {
+    public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg, Boolean titulo_url_opcional) {
         this.titulo_url = titulo_url;
         this.titulo = titulo;
         this.dir = dir;
@@ -25505,6 +25524,7 @@ class ClientThread extends Util{
         this.mode = mode;
         this.host_display = host_display;
         this.cfg = cfg;
+        this.titulo_url_opcional = titulo_url_opcional;
         new Thread() {
             public void run() {
                 try {
@@ -25647,7 +25667,8 @@ class ClientThread extends Util{
                     "HTTP/1.1 200\r\n", 
                     "Access-Control-Allow-Origin: *\r\n",
                     "Access-Control-Allow-Headers: *\r\n",
-                    "X-Frame-Options: SAMEORIGIN\r\n",
+                    "Content-Security-Policy: frame-ancestors *\r\n",
+                    "X-Frame-Options: ALLOWALL\r\n",
                     "\r\n",
                 }) {
                 sb.append(line);
@@ -25744,7 +25765,8 @@ class ClientThread extends Util{
                     "HTTP/1.1 200 OK\r\n",
                     "Content-Type: text/html; charset=UTF-8\r\n",
                     "Access-Control-Allow-Origin: *\r\n",
-                    "X-Frame-Options: SAMEORIGIN\r\n",
+                    "Content-Security-Policy: frame-ancestors *\r\n",
+                    "X-Frame-Options: ALLOWALL\r\n",
                     "\r\n",
                     txt
                 }) {
@@ -25765,7 +25787,8 @@ class ClientThread extends Util{
             String txt="HTTP/1.1 200 OK\r\n";
             txt+="Content-Type: text/html; charset=UTF-8\r\n";
             txt+="Access-Control-Allow-Origin: *\r\n";
-            txt+="X-Frame-Options: SAMEORIGIN\r\n";
+            txt+="Content-Security-Policy: frame-ancestors *\r\n";
+            txt+="X-Frame-Options: ALLOWALL\r\n";
             txt+="\r\n";
             if ( playlistserver == null )
                 txt+="erro interno 435353";
@@ -25783,8 +25806,13 @@ class ClientThread extends Util{
         if ( titulo_url.length() > 0 ){
             if ( uri.startsWith("/"+titulo_url) )
                 nav = dir + uri.substring(titulo_url.length()+1).replace("//", "/").trim(); 
-            else
-                nav = "[invalido]";
+            else{
+                if ( titulo_url_opcional ){
+                    //ok
+                }else{
+                    nav = "[invalido]";
+                }
+            }
         }
         nav = nav.replace("//", "/");
         nav = decodeUrl(nav);
@@ -25814,7 +25842,8 @@ class ClientThread extends Util{
                                 "HTTP/1.1 200 OK\r\n",
                                 "Content-Type: text/html; charset=UTF-8\r\n",
                                 "Access-Control-Allow-Origin: *\r\n",
-                                "X-Frame-Options: SAMEORIGIN\r\n",
+                                "Content-Security-Policy: frame-ancestors *\r\n",
+                                "X-Frame-Options: ALLOWALL\r\n",
                                 "\r\n"
                             }) {
                             sb.append(line);
@@ -25866,6 +25895,13 @@ class ClientThread extends Util{
         // favicon
         if ( ! uri.equals("/favicon.ico"))
             System.out.println("nav: " + nav + ";uri: " + uri);
+/*        
+System.out.println(11);        
+System.out.println(nav);        
+System.out.println(new File(nav).exists());        
+System.out.println(new File(nav).isFile());        
+System.out.println(endsWith_OK(nav, endsWiths));       
+*/
         // nav file
         if (new File(nav).exists() && new File(nav).isFile() && endsWith_OK(nav, endsWiths)) {
             long lenFile = new File(nav).length();
@@ -25886,7 +25922,8 @@ class ClientThread extends Util{
                         "Content-Range: bytes " + header_range + "-" + (header_range+lenTarget-1) + "/" + lenFile + "\r\n",
                         "Connection: close\r\n",
                         "Access-Control-Allow-Origin: *\r\n",
-                        "X-Frame-Options: SAMEORIGIN\r\n",
+                        "Content-Security-Policy: frame-ancestors *\r\n",
+                        "X-Frame-Options: ALLOWALL\r\n",
                         "\r\n"
                     }) {
                     sb.append(line);
@@ -25898,7 +25935,8 @@ class ClientThread extends Util{
                         "Content-Type: " + getContentType(nav) + "; charset=UTF-8\r\n",
                         "Content-Length: " + lenFile + "\r\n",
                         "Access-Control-Allow-Origin: *\r\n",
-                        "X-Frame-Options: SAMEORIGIN\r\n",
+                        "Content-Security-Policy: frame-ancestors *\r\n",
+                        "X-Frame-Options: ALLOWALL\r\n",
                         "\r\n"
                     }) {
                     sb.append(line);
@@ -25918,7 +25956,7 @@ class ClientThread extends Util{
                 }
                 return;
             }
-        } else {
+        }else{
             if (uri.equals("/favicon.ico")) {
                 return;
             }else{
@@ -25936,7 +25974,8 @@ class ClientThread extends Util{
                     "HTTP/1.1 200 OK\r\n",
                     "Content-Type: text/html; charset=UTF-8\r\n",
                     "Access-Control-Allow-Origin: *\r\n",
-                    "X-Frame-Options: SAMEORIGIN\r\n",
+                    "Content-Security-Policy: frame-ancestors *\r\n",
+                    "X-Frame-Options: ALLOWALL\r\n",
                     "\r\n",
                     "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
                     "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
@@ -26220,7 +26259,8 @@ console.log(`new Chart(document.getElementById('chart'), {type:'line',data:{labe
                 "HTTP/1.1 404 Not Found\r\n",
                 "Content-Type: text/html; charset=UTF-8\r\n",
                 "Access-Control-Allow-Origin: *\r\n",
-                "X-Frame-Options: SAMEORIGIN\r\n",
+                "Content-Security-Policy: frame-ancestors *\r\n",
+                "X-Frame-Options: ALLOWALL\r\n",
                 "\r\n",
                 "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n<title>404 - File or directory not found.</title>\n<style type=\"text/css\">\n\nbody{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\nfieldset{padding:0 15px 10px 15px;} \nh1{font-size:2.4em;margin:0;color:#FFF;}\nh2{font-size:1.7em;margin:0;color:#CC0000;} \nh3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\nbackground-color:#555555;}\n#content{margin:0 0 0 2%;position:relative;}\n.content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n\n</style>\n</head>\n<body>\n<div id=\"header\"><h1>Server Error</h1></div>\n<div id=\"content\">\n<div class=\"content-container\"><fieldset>\n<h2>404 - File or directory not found.</h2>\n<h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n</fieldset></div>\n</div>\n</body>\n</html>"
         }){
@@ -27926,6 +27966,7 @@ Exemplos...
     host: 127.0.0.1
     port: 8888
     titulo_url_token: ""
+    titulo_url_opcional: ""
     titulo: titulo
     Exemplo de endsWith: "jar,zip"
     Exemplo de ips_banidos: "8.8.8.8,4.4.4.4"

@@ -108,8 +108,16 @@ async function send_not_work(a){
 	).then(response => response.text());
 }
 
+const tracker = (label, params) => {
+    console.log(`comando: ${label}`);
+    params.forEach((val, i) => {
+        console.log(`[${i}]: ${val}`);
+    });
+};
+
 function send(a, n){
 z=a;
+	tracker('send', [a, n]);
 	if ( a.replaceAll('\n','|').split('\|').length > 1 ){
 		// se tirar essas duas linhas o celular buga!
 		// header muito grande buga no celular
@@ -131,7 +139,7 @@ z=a;
 		//a=a.split('\n').map(item => item.trim()).join('|');
 	}
 	var xmlHttp = new XMLHttpRequest();	
-	xmlHttp.open('GET', window.location.pathname, false);
+	xmlHttp.open('GET', wrapper_getpathname(), false);
 	xmlHttp.setRequestHeader('acao', a); // espaço adicionar para o mobile não bugar!
 	xmlHttp.send();
 	let s=xmlHttp.responseText;
@@ -142,6 +150,13 @@ z=a;
 			return send(a, n+1);
 	}
 	return s;
+}
+
+this.new_location_pathname=null;
+function wrapper_getpathname(){
+	if ( this.new_location_pathname != null )
+		return this.new_location_pathname;
+	return window.location.pathname;
 }
 
 function get_custom_start(sec_default, name){
@@ -204,12 +219,20 @@ function get_custom_vol(vol_default, name){ // VOLUMEEEE
 	return 1;
 }
 
+this.new_vol=null;
+function get_vol(){
+	if ( this.new_vol != null )
+		return this.new_vol;
+	return document.querySelector('input[name="vol"]:checked').value;
+}
+
 function minisend(a, c, n, worker_loop){ // n -> faixa
+	tracker('minisend', [a, c, n, worker_loop]);
 	if ( typeof n == 'undefined' || n == null )
 		n=0;
 	if ( typeof worker_loop == 'undefined' || worker_loop == null )
 		worker_loop='yes'
-	let b=document.querySelector('input[name="vol"]:checked').value;
+	let b=get_vol();
 	let faixas=a.trim().split('\n').map(item => item.trim());
 	let n_faixas=faixas.length;
 	let s='\nn_faixas '+n_faixas+'\n';
