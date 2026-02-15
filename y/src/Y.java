@@ -25814,6 +25814,11 @@ class ClientThread extends Util{
                 }
             }
         }
+        
+        // desliga titulo_url para titulo_url_opcional a partir de aqui
+        if ( titulo_url_opcional )
+            titulo_url="";
+        
         nav = nav.replace("//", "/");
         nav = decodeUrl(nav);
         // nav detect index
