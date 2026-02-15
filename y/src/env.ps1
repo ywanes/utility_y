@@ -1,4 +1,3 @@
-
 # powershell adm
 # irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.ps1 | iex
 
@@ -12,17 +11,14 @@ if ( ! $validaAdm ){
   exit
 }
 
-
 New-Item c:/programFiles -ItemType Directory -ea 0
 cd c:/programFiles
 
-
 # ffmpeg.exe
-Invoke-WebRequest -uri "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffmpeg.exe" -Method "GET"  -Outfile ffmpeg.exe
+curl -L "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffmpeg.exe" -o ffmpeg.exe
 
 # ffplay.exe
-Invoke-WebRequest -uri "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay.exe" -Method "GET"  -Outfile ffplay.exe
-
+curl -L "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay.exe" -o ffplay.exe
 
 # nssm.exe
 # http://nssm.cc/download
@@ -35,23 +31,23 @@ Invoke-WebRequest -uri "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay
 
 
 # https://www.openlogic.com/openjdk-downloads -> link quebrado
-Invoke-WebRequest -uri "https://mirrors.huaweicloud.com/openjdk/21/openjdk-21_windows-x64_bin.zip" -Method "GET"  -Outfile java.zip
+curl -L "https://mirrors.huaweicloud.com/openjdk/21/openjdk-21_windows-x64_bin.zip" -o java.zip
 Expand-Archive -LiteralPath 'java.zip'
 [Environment]::SetEnvironmentVariable("JAVA_HOME", "c:\programFiles\java\jdk-21", "Machine")
 
 $NewPATH = ("%JAVA_HOME%\bin;c:\programFiles\java\jdk-21\bin;c:\programFiles;" + [Environment]::GetEnvironmentVariable("PATH"))
 [Environment]::SetEnvironmentVariable("PATH", $NewPath, [EnvironmentVariableTarget]::Machine)   
 
-
-
 New-Item c:/y -ItemType Directory -ea 0
 cd c:/y
-Invoke-WebRequest -uri "https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar" -Method "GET"  -Outfile ojdbc6.jar
-Invoke-WebRequest -uri "https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar" -Method "GET"  -Outfile sqljdbc4-3.0.jar
-Invoke-WebRequest -uri "https://adams.cms.waikato.ac.nz/nexus/repository/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar" -Method "GET"  -Outfile mysql-connector-java-8.0.26.jar
-Invoke-WebRequest -uri "https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar" -Method "GET"  -Outfile postgresql-42.7.5.jar
-Invoke-WebRequest -uri "https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar" -Method "GET"  -Outfile jsch-0.1.55.jar
-Invoke-WebRequest -uri "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java" -Method "GET"  -Outfile Y.java
+
+curl -L "https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar" -o ojdbc6.jar
+curl -L "https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar" -o sqljdbc4-3.0.jar
+curl -L "https://adams.cms.waikato.ac.nz/nexus/repository/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar" -o mysql-connector-java-8.0.26.jar
+curl -L "https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar" -o postgresql-42.7.5.jar
+curl -L "https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar" -o jsch-0.1.55.jar
+curl -L "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java" -o Y.java
+
 c:\programFiles\java\jdk-21\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;." Y.java
 
 Set-Content c:/windows/y.bat '@echo off
@@ -87,16 +83,14 @@ Set-Content config_y.reg 'Windows Registry Editor Version 5.00
 "Autorun"="doskey cd=cd0 $* && chcp 65001 1>NUL && doskey cat=y cat $* && doskey printf=y printf $* && doskey sed=y sed $* && doskey ls=y ls $* && doskey lss=y lss $* && doskey pss=y pss $* && doskey du=y du $*"
 '
 
-
-Set-Content compila2.cmd 'curl -s https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
+Set-Content compila2.cmd 'curl -s -L https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;. Y.java
 '
 
-Set-Content compilaCurl.cmd 'curl https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
+Set-Content compilaCurl.cmd 'curl -L https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;. Y.java
 pause
 '
-
 
 # windows-kill -2 222 # equivalente ao kill -2 222
 # creditos https://github.com/ElyDotDev/windows-kill
@@ -104,8 +98,6 @@ pause
 
 
 
-
 reg import ./config_y.reg
 
 echo "FIM!"
-
