@@ -21062,8 +21062,15 @@ class Util{
             java.awt.Rectangle rec=null;
             if ( monitor_id == -1 )
                 rec = new java.awt.Rectangle(java.awt.Toolkit.getDefaultToolkit().getScreenSize());
-            else
-                rec = robotGetScreenDevices()[monitor_id].getConfigurations()[0].getBounds();
+            else{
+                if ( monitor_id == 99 ){
+                    rec = new Rectangle();
+                    java.awt.GraphicsDevice[] devices=robotGetScreenDevices();
+                    for ( int i=0;i<devices.length;i++ )
+                        rec=rec.union( devices[i].getConfigurations()[0].getBounds() );
+                }else
+                    rec = robotGetScreenDevices()[monitor_id].getConfigurations()[0].getBounds();
+            }
             return robot.createScreenCapture(rec);
         }catch(Exception e){
             System.out.println("Erro " + e.toString());
@@ -28223,7 +28230,9 @@ Exemplos...
     y monitor cpu oneLine
 [y printScreen]
     y printScreen
+    y printScreen 0
     y printScreen 2
+    y printScreen 99 -> uma unica imagem completa com todos os monitores
     obs: pasta padrão: d:/ProgramFiles/screens
 [y ocr]
     y ocr D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp
