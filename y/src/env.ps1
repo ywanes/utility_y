@@ -1,5 +1,10 @@
 # powershell adm
 # irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.ps1 | iex
+#
+# versao limpando cache:
+# $headers = @{"Cache-Control"="no-cache"; "Pragma"="no-cache"}
+# irm -Uri "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.ps1" -Headers $headers | iex
+
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 $validaAdm=$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
