@@ -9,33 +9,30 @@
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 $validaAdm=$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if ( ! $validaAdm ){
-  echo ""
-  echo "Erro... Eh preciso estar no powershell adm"
-  echo ""
-  pause
-  exit
+    Write-Host "`nErro... É preciso executar como Administrador!`n" -ForegroundColor Red
+    pause
+    exit
 }
 
 function Get-VHDXBootEntries {
-    <#
-    .SYNOPSIS
-        Lista todas as entradas de boot que utilizam arquivos VHDX.
-    #>
     try {
+        # Busca no BCD ignorando maiúsculas/minúsculas
         $bcdEnum = bcdedit /enum all /v
-        $entries = $bcdEnum -split "(?=\r?\nIdentificador)"
+        # Split baseado em Identificador ou Identifier
+        $entries = $bcdEnum -split "(?i)(?=\r?\nidentificador|identifier)"
         $results = @()
 
         foreach ($entry in $entries) {
             if ($entry -match "vhd=\[(.*?)\]") {
-                $guidMatch = $entry | Select-String "identificador\s+({[a-z0-9-]+})"
+                # Regex flexível para Identificador/Identifier e GUID
+                $guidMatch = $entry | Select-String "(?i)(identificador|identifier)\s+({[a-z0-9-]+})"
                 $pathMatch = $entry | Select-String "vhd=\[(.*?)\]"
-                $descMatch = $entry | Select-String "description\s+(.*)"
+                $descMatch = $entry | Select-String "(?i)(description|descrição)\s+(.*)"
                 
                 if ($guidMatch -and $pathMatch) {
                     $results += [PSCustomObject]@{
-                        GUID        = $guidMatch.Matches.Groups[1].Value
-                        Description = ($descMatch.Matches.Groups[1].Value).Trim()
+                        GUID        = $guidMatch.Matches.Groups[2].Value
+                        Description = if ($descMatch) { ($descMatch.Matches.Groups[2].Value).Trim() } else { "Sem Descrição" }
                         VHDXPath    = $pathMatch.Matches.Groups[1].Value
                     }
                 }
@@ -55,10 +52,6 @@ function Get-VHDXBootEntries {
 }
 
 function Add-VHDXToDualBoot {
-    <#
-    .SYNOPSIS
-        Adiciona um arquivo VHDX ao menu de boot.
-    #>
     param (
         [Parameter(Mandatory=$true)]
         [string]$VHDXPath
@@ -70,16 +63,26 @@ function Add-VHDXToDualBoot {
     }
 
     try {
-        $copyCmd = bcdedit /copy {current} /d "novo_item"
+        # Extrai a letra da unidade (ex: C:) do caminho completo
+        $driveLetter = [System.IO.Path]::GetPathRoot($VHDXPath).Replace("\","")
+        $fileName = [System.IO.Path]::GetFileNameWithoutExtension($VHDXPath)
+
+        Write-Host "Criando entrada para: $fileName..." -ForegroundColor Cyan
         
-        if ($copyCmd -match "{([a-z0-9-]+)}") {
-            $guid = "{$($matches[1])}"
+        # Cria a cópia e captura a saída
+        $copyOutput = bcdedit /copy {current} /d "$fileName (VHDX)"
+        
+        if ($copyOutput -match "({[a-z0-9-]+})") {
+            $guid = $matches[1]
             
-            bcdedit /set $guid device "vhd=[$VHDXPath]"
-            bcdedit /set $guid osdevice "vhd=[$VHDXPath]"
+            # Configura os parâmetros do VHDX
+            bcdedit /set $guid device "vhd=[$driveLetter]\$([System.IO.Path]::GetFileName($VHDXPath))"
+            bcdedit /set $guid osdevice "vhd=[$driveLetter]\$([System.IO.Path]::GetFileName($VHDXPath))"
             bcdedit /set $guid detecthal on
             
             Write-Host "Sucesso: VHDX adicionado com GUID $guid" -ForegroundColor Green
+        } else {
+            Write-Host "Erro ao capturar o GUID do novo item." -ForegroundColor Red
         }
     }
     catch {
@@ -88,23 +91,23 @@ function Add-VHDXToDualBoot {
 }
 
 function Remove-AllVHDXBootEntries {
-    <#
-    .SYNOPSIS
-        Remove todas as entradas do menu de boot que contenham a extensão .vhdx.
-    #>
     try {
         $bcdEnum = bcdedit /enum all /v
-        $entries = $bcdEnum -split "(?=\r?\nIdentificador)"
+        $entries = $bcdEnum -split "(?i)(?=\r?\nidentificador|identifier)"
         $count = 0
 
         foreach ($entry in $entries) {
-            if ($entry -match "\.vhdx") {
-                $guidMatch = $entry | Select-String "identificador\s+({[a-z0-9-]+})"
+            # Procura por .vhd ou .vhdx na entrada
+            if ($entry -match "\.vhd") {
+                $guidMatch = $entry | Select-String "(?i)(identificador|identifier)\s+({[a-z0-9-]+})"
                 if ($guidMatch) {
-                    $guid = $guidMatch.Matches.Groups[1].Value
-                    bcdedit /delete $guid
-                    Write-Host "Removida entrada: $guid" -ForegroundColor Yellow
-                    $count++
+                    $guid = $guidMatch.Matches.Groups[2].Value
+                    # Evita deletar a entrada atual por segurança
+                    if ($entry -notmatch "{current}") {
+                        bcdedit /delete $guid
+                        Write-Host "Removida entrada: $guid" -ForegroundColor Yellow
+                        $count++
+                    }
                 }
             }
         }
@@ -118,7 +121,7 @@ function Remove-AllVHDXBootEntries {
 # --- Menu Interativo ---
 do {
     Write-Host "`n========================================" -ForegroundColor Magenta
-    Write-Host "   GERENCIADOR DE BOOT VHDX (ADMIN)   " -ForegroundColor White
+    Write-Host "    GERENCIADOR DE BOOT VHDX (ADMIN)    " -ForegroundColor White
     Write-Host "========================================" -ForegroundColor Magenta
     Write-Host "1) Consultar entradas VHDX atuais"
     Write-Host "2) Adicionar novo VHDX ao Dual Boot"
@@ -129,13 +132,10 @@ do {
     $choice = Read-Host "Selecione uma opção"
 
     switch ($choice) {
-        "1" {
-            Get-VHDXBootEntries
-        }
+        "1" { Get-VHDXBootEntries }
         "2" {
             $path = Read-Host "Digite o caminho completo do arquivo .vhdx"
-            # Remove aspas caso o usuário tenha colado com elas
-            $path = $path.Replace('"', '') 
+            $path = $path.Replace('"', '').Trim()
             Add-VHDXToDualBoot -VHDXPath $path
         }
         "3" {
@@ -148,8 +148,6 @@ do {
             Write-Host "Encerrando..." -ForegroundColor Cyan
             break
         }
-        Default {
-            Write-Host "Opção inválida." -ForegroundColor Red
-        }
+        Default { Write-Host "Opção inválida." -ForegroundColor Red }
     }
 } while ($choice -ne "4")
