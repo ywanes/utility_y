@@ -4,7 +4,9 @@
 # versao limpando cache:
 # $headers = @{"Cache-Control"="no-cache"; "Pragma"="no-cache"}
 # irm -Uri "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/vhdx.ps1" -Headers $headers | iex
-
+#
+# acesso mais rapido
+# irm http://203.cloudns.cl:8000/z_outros/src/vhdx.ps1 | iex
 
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
