@@ -5,9 +5,12 @@
 # $headers = @{"Cache-Control"="no-cache"; "Pragma"="no-cache"}
 # irm -Uri "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/vhdx.ps1" -Headers $headers | iex
 #
-# acesso mais rapido
-# irm http://203.cloudns.cl:8000/z_outros/src/vhdx.ps1 | iex
-
+# link do desenvolvedor(acesso antecipado)
+# irm http://4.203.cloudns.cl:8000/z_outros/src/vhdx.ps1 | iex
+#
+# vhdx win11 pro refs sem tpm 98G pronto para colocar usuario
+# http://203.cloudns.cl:8000/z_outros/vhdx/win11_98G.vhdx
+#
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 $validaAdm=$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -18,7 +21,6 @@ function Get-VHDXBootEntries {
         $bcdRaw = cmd /c "bcdedit /enum all /v"
         $results = @()
         $currentEntry = $null
-
         foreach ($line in $bcdRaw) {
             if ($line -match "{([a-f0-9-]{36})}") {
                 if ($currentEntry -and $currentEntry.IsVHD) {
@@ -49,17 +51,7 @@ function Add-VHDXToDualBoot {
     param ([string]$VHDXPath, [string]$CustomDesc)
     
     $path = $VHDXPath.Replace('"', '').Trim()
-    if (-not (Test-Path $path)) { Write-Host "Caminho invalido." -ForegroundColor Red; return }
-
-    # AUTO-CLEAN: Remove duplicados antes de adicionar
-    $fileName = [System.IO.Path]::GetFileName($path)
-    $existentes = Get-VHDXBootEntries
-    foreach ($item in $existentes) {
-        if ($item.Path -like "*$fileName*") {
-            Write-Host "Limpando entrada antiga: $($item.GUID)" -ForegroundColor Yellow
-            cmd /c "bcdedit /delete $($item.GUID) /f" | Out-Null
-        }
-    }
+    if (-not (Test-Path $path)) { Write-Host "arquivo nao encontrado " -ForegroundColor Red; return }
 
     if ([string]::IsNullOrWhiteSpace($CustomDesc)) {
         $CustomDesc = [System.IO.Path]::GetFileNameWithoutExtension($path)
@@ -70,7 +62,7 @@ function Add-VHDXToDualBoot {
         $relPath = $path.Substring($drive.Length)
         if (-not $relPath.StartsWith("\")) { $relPath = "\" + $relPath }
         
-        Write-Host "Criando entrada: $CustomDesc..." -ForegroundColor Cyan
+        Write-Host "Adicionando entrada: $CustomDesc..." -ForegroundColor Cyan
         
         $copyOutput = cmd /c "bcdedit /copy {current} /d `"$CustomDesc`"" 2>$null
         if ($null -eq $copyOutput -or $copyOutput -match "incorret|error") {
@@ -91,7 +83,7 @@ function Add-VHDXToDualBoot {
 
 function Remove-AllVHDXBootEntries {
     try {
-        Write-Host "Iniciando limpeza total..." -ForegroundColor Cyan
+        Write-Host "Limpando entradas VHDX..." -ForegroundColor Cyan
         $bcdRaw = cmd /c "bcdedit /enum all /v"
         $targets = @()
         $currentBoot = bcdedit /get {current} | Select-String "identifier"
@@ -110,32 +102,26 @@ function Remove-AllVHDXBootEntries {
             cmd /c "bcdedit /delete $_ /f"
             Write-Host "Removido: $_" -ForegroundColor Yellow
         }
-        Write-Host "Limpeza concluida." -ForegroundColor Green
     }
     catch { Write-Host "Erro na limpeza." -ForegroundColor Red }
 }
 
 function Set-BootTimeout {
-    try {
-        $currentTimeout = bcdedit /timeout | Select-String "\d+"
-        Write-Host "`nTempo atual: $($currentTimeout) segundos." -ForegroundColor Cyan
-        $newTimeout = Read-Host "Digite o novo tempo (segundos)"
-        if ($newTimeout -match "^\d+$") {
-            cmd /c "bcdedit /timeout $newTimeout"
-            Write-Host "Tempo alterado com sucesso!" -ForegroundColor Green
-        } else {
-            Write-Host "Valor invalido." -ForegroundColor Red
-        }
+    $currentTimeout = bcdedit /timeout | Select-String "\d+"
+    Write-Host "`nTempo atual: $($currentTimeout) segundos." -ForegroundColor Cyan
+    $newTimeout = Read-Host "Digite o novo tempo (segundos)"
+    if ($newTimeout -match "^\d+$") {
+        cmd /c "bcdedit /timeout $newTimeout"
+        Write-Host "Tempo alterado!" -ForegroundColor Green
     }
-    catch { Write-Host "Erro ao ajustar timeout." -ForegroundColor Red }
 }
 
 # --- Menu ---
 do {
-    Write-Host "`n=== GERENCIADOR BOOT VHDX (v10.2) ===" -ForegroundColor Magenta
+    Write-Host "`n=== GERENCIADOR BOOT VHDX (v11.0) ===" -ForegroundColor Magenta
     Write-Host "1. Listar Entradas"
-    Write-Host "2. Adicionar VHDX (Auto-Clean)"
-    Write-Host "3. Limpar Tudo (FORCE)"
+    Write-Host "2. Adicionar VHDX (Com Descricao)"
+    Write-Host "3. Limpar Tudo (VHDX)"
     Write-Host "4. Ajustar Tempo (Timeout)"
     Write-Host "5. Sair"
     
