@@ -1,5 +1,10 @@
 # powershell adm
-# Gerenciador de Boot VHDX - Versao 10.0 (Anti-Duplicidade & Filtro de Path)
+# irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/vhdx.ps1 | iex
+#
+# versao limpando cache:
+# $headers = @{"Cache-Control"="no-cache"; "Pragma"="no-cache"}
+# irm -Uri "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/vhdx.ps1" -Headers $headers | iex
+
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 $validaAdm=$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
@@ -41,18 +46,17 @@ function Add-VHDXToDualBoot {
     param ([string]$VHDXPath, [string]$CustomDesc)
     
     $path = $VHDXPath.Replace('"', '').Trim()
-    if (-not (Test-Path $path)) { Write-Host "Caminho invalido: $path" -ForegroundColor Red; return }
+    if (-not (Test-Path $path)) { Write-Host "Caminho invalido." -ForegroundColor Red; return }
 
-    # --- TRAVA DE DUPLICIDADE ---
+    # --- AUTO-CLEAN: Remove duplicatas do mesmo arquivo antes de adicionar ---
+    $fileName = [System.IO.Path]::GetFileName($path)
     $existentes = Get-VHDXBootEntries
-    $jaExiste = $existentes | Where-Object { $_.Path -like "*$([System.IO.Path]::GetFileName($path))*" }
-    
-    if ($jaExiste) {
-        Write-Host "`nAVISO: Este VHDX ja parece estar no menu de boot!" -ForegroundColor Yellow
-        $confirm = Read-Host "Deseja adicionar outra entrada mesmo assim? (S/N)"
-        if ($confirm -ne "S" -and $confirm -ne "s") { return }
+    foreach ($item in $existentes) {
+        if ($item.Path -like "*$fileName*") {
+            Write-Host "Limpando entrada antiga duplicada: $($item.GUID)" -ForegroundColor Yellow
+            cmd /c "bcdedit /delete $($item.GUID) /f" | Out-Null
+        }
     }
-    # ----------------------------
 
     if ([string]::IsNullOrWhiteSpace($CustomDesc)) {
         $CustomDesc = [System.IO.Path]::GetFileNameWithoutExtension($path)
@@ -63,7 +67,7 @@ function Add-VHDXToDualBoot {
         $relPath = $path.Substring($drive.Length)
         if (-not $relPath.StartsWith("\")) { $relPath = "\" + $relPath }
         
-        Write-Host "Criando entrada: $CustomDesc..." -ForegroundColor Cyan
+        Write-Host "Criando entrada limpa para: $CustomDesc..." -ForegroundColor Cyan
         
         $copyOutput = cmd /c "bcdedit /copy {current} /d `"$CustomDesc`"" 2>$null
         if ($null -eq $copyOutput -or $copyOutput -match "incorret|error") {
@@ -86,11 +90,9 @@ function Add-VHDXToDualBoot {
 
 function Remove-AllVHDXBootEntries {
     try {
-        Write-Host "Iniciando limpeza forcada..." -ForegroundColor Cyan
+        Write-Host "Iniciando limpeza total..." -ForegroundColor Cyan
         $bcdRaw = cmd /c "bcdedit /enum all /v"
         $targets = @()
-        $lastGUID = ""
-
         $currentBoot = bcdedit /get {current} | Select-String "identifier"
         $safeGuid = ""
         if ($currentBoot -match "{([a-f0-9-]{36})}") { $safeGuid = $matches[0] }
@@ -103,51 +105,34 @@ function Remove-AllVHDXBootEntries {
                 }
             }
         }
-
-        $targets = $targets | Select-Object -Unique
-        foreach ($g in $targets) {
-            cmd /c "bcdedit /delete $g /f"
-            Write-Host "Removido: $g" -ForegroundColor Yellow
+        $targets | Select-Object -Unique | ForEach-Object {
+            cmd /c "bcdedit /delete $_ /f"
+            Write-Host "Removido: $_" -ForegroundColor Yellow
         }
         Write-Host "Limpeza concluida." -ForegroundColor Green
     }
     catch { Write-Host "Erro na limpeza." -ForegroundColor Red }
 }
 
-function Set-BootTimeout {
-    try {
-        $currentTimeout = bcdedit /timeout | Select-String "\d+"
-        Write-Host "`nTempo atual: $($currentTimeout) segundos." -ForegroundColor Cyan
-        $newTimeout = Read-Host "Digite o novo tempo"
-        if ($newTimeout -match "^\d+$") {
-            cmd /c "bcdedit /timeout $newTimeout"
-            Write-Host "Tempo alterado!" -ForegroundColor Green
-        }
-    }
-    catch { Write-Host "Erro no timeout." -ForegroundColor Red }
-}
-
-# --- Menu ---
+# --- Menu Simplificado ---
 do {
-    Write-Host "`n=== GERENCIADOR BOOT VHDX (v10.0) ===" -ForegroundColor Magenta
-    Write-Host "1. Listar VHDX"
-    Write-Host "2. Adicionar VHDX"
+    Write-Host "`n=== GERENCIADOR BOOT VHDX (v10.1) ===" -ForegroundColor Magenta
+    Write-Host "1. Listar Entradas"
+    Write-Host "2. Adicionar VHDX (Auto-Clean Duplicados)"
     Write-Host "3. Limpar Tudo (FORCE)"
-    Write-Host "4. Ajustar Tempo (Timeout)"
-    Write-Host "5. Sair"
+    Write-Host "4. Sair"
     
     $op = Read-Host "Opcao"
     switch ($op) {
         "1" { 
             $v = Get-VHDXBootEntries
-            if ($v) { $v | Format-Table -AutoSize } else { Write-Host "Nada encontrado." -ForegroundColor Yellow }
+            if ($v) { $v | Format-Table -AutoSize } else { Write-Host "Vazio." -ForegroundColor Yellow }
         }
         "2" { 
             $p = Read-Host "Caminho do .vhdx"
-            $d = Read-Host "Nome no menu"
+            $d = Read-Host "Descricao"
             Add-VHDXToDualBoot -VHDXPath $p -CustomDesc $d 
         }
         "3" { Remove-AllVHDXBootEntries }
-        "4" { Set-BootTimeout }
     }
-} while ($op -ne "5")
+} while ($op -ne "4")
