@@ -16,22 +16,19 @@ if ( ! $validaAdm ){
 
 function Get-VHDXBootEntries {
     try {
-        # Busca no BCD ignorando maiúsculas/minúsculas
         $bcdEnum = bcdedit /enum all /v
-        # Split baseado em Identificador ou Identifier
         $entries = $bcdEnum -split "(?i)(?=\r?\nidentificador|identifier)"
         $results = @()
 
         foreach ($entry in $entries) {
             if ($entry -match "vhd=\[(.*?)\]") {
-                # Regex flexível para Identificador/Identifier e GUID
-                $guidMatch = $entry | Select-String "(?i)(identificador|identifier)\s+({[a-z0-9-]+})"
+                $guidMatch = $entry | Select-String "(?i)({[a-f0-9-]+})"
                 $pathMatch = $entry | Select-String "vhd=\[(.*?)\]"
                 $descMatch = $entry | Select-String "(?i)(description|descrição)\s+(.*)"
                 
                 if ($guidMatch -and $pathMatch) {
                     $results += [PSCustomObject]@{
-                        GUID        = $guidMatch.Matches.Groups[2].Value
+                        GUID        = $guidMatch.Matches[0].Value
                         Description = if ($descMatch) { ($descMatch.Matches.Groups[2].Value).Trim() } else { "Sem Descrição" }
                         VHDXPath    = $pathMatch.Matches.Groups[1].Value
                     }
@@ -63,26 +60,36 @@ function Add-VHDXToDualBoot {
     }
 
     try {
-        # Extrai a letra da unidade (ex: C:) do caminho completo
-        $driveLetter = [System.IO.Path]::GetPathRoot($VHDXPath).Replace("\","")
+        $drive = [System.IO.Path]::GetPathRoot($VHDXPath).Replace("\","")
+        $relativeVHDPath = $VHDXPath.Substring($drive.Length)
+        if (-not $relativeVHDPath.StartsWith("\")) { $relativeVHDPath = "\" + $relativeVHDPath }
+        
         $fileName = [System.IO.Path]::GetFileNameWithoutExtension($VHDXPath)
+        $description = "$fileName (VHDX)"
 
         Write-Host "Criando entrada para: $fileName..." -ForegroundColor Cyan
         
-        # Cria a cópia e captura a saída
-        $copyOutput = bcdedit /copy {current} /d "$fileName (VHDX)"
+        # Tentativa 1: Usando {current}. Tentativa 2: Usando {default} se a 1 falhar.
+        # Usamos --% para parar o parsing do PowerShell e enviar o comando puro ao CMD
+        $copyOutput = cmd /c "bcdedit /copy {current} /d `"$description`"" 2>$null
         
-        if ($copyOutput -match "({[a-z0-9-]+})") {
-            $guid = $matches[1]
+        if ($null -eq $copyOutput -or $copyOutput -match "incorreto" -or $copyOutput -eq "") {
+            $copyOutput = cmd /c "bcdedit /copy {default} /d `"$description`""
+        }
+        
+        if ($copyOutput -match "{([a-fA-F0-9-]+)}") {
+            $guid = "{$($matches[1])}"
+            $vhdBcdPath = "vhd=[$drive]$relativeVHDPath"
             
-            # Configura os parâmetros do VHDX
-            bcdedit /set $guid device "vhd=[$driveLetter]\$([System.IO.Path]::GetFileName($VHDXPath))"
-            bcdedit /set $guid osdevice "vhd=[$driveLetter]\$([System.IO.Path]::GetFileName($VHDXPath))"
-            bcdedit /set $guid detecthal on
+            # Configuração das propriedades
+            cmd /c "bcdedit /set $guid device `"$vhdBcdPath`""
+            cmd /c "bcdedit /set $guid osdevice `"$vhdBcdPath`""
+            cmd /c "bcdedit /set $guid detecthal on"
             
             Write-Host "Sucesso: VHDX adicionado com GUID $guid" -ForegroundColor Green
         } else {
-            Write-Host "Erro ao capturar o GUID do novo item." -ForegroundColor Red
+            Write-Host "Erro: O BCD não aceitou o comando de cópia." -ForegroundColor Red
+            Write-Host "Saída: $copyOutput"
         }
     }
     catch {
@@ -97,14 +104,12 @@ function Remove-AllVHDXBootEntries {
         $count = 0
 
         foreach ($entry in $entries) {
-            # Procura por .vhd ou .vhdx na entrada
-            if ($entry -match "\.vhd") {
-                $guidMatch = $entry | Select-String "(?i)(identificador|identifier)\s+({[a-z0-9-]+})"
+            if ($entry -match "\.vhdx?") {
+                $guidMatch = $entry | Select-String "(?i)({[a-f0-9-]+})"
                 if ($guidMatch) {
-                    $guid = $guidMatch.Matches.Groups[2].Value
-                    # Evita deletar a entrada atual por segurança
-                    if ($entry -notmatch "{current}") {
-                        bcdedit /delete $guid
+                    $guid = $guidMatch.Matches[0].Value
+                    if ($entry -notmatch "{current}" -and $entry -notmatch "{default}") {
+                        cmd /c "bcdedit /delete $guid"
                         Write-Host "Removida entrada: $guid" -ForegroundColor Yellow
                         $count++
                     }
@@ -118,7 +123,7 @@ function Remove-AllVHDXBootEntries {
     }
 }
 
-# --- Menu Interativo ---
+# --- Menu ---
 do {
     Write-Host "`n========================================" -ForegroundColor Magenta
     Write-Host "    GERENCIADOR DE BOOT VHDX (ADMIN)    " -ForegroundColor White
