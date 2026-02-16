@@ -15,10 +15,10 @@ New-Item c:/programFiles -ItemType Directory -ea 0
 cd c:/programFiles
 
 # ffmpeg.exe
-curl -L "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffmpeg.exe" -o ffmpeg.exe
+curl.exe -L "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffmpeg.exe" -o ffmpeg.exe
 
 # ffplay.exe
-curl -L "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay.exe" -o ffplay.exe
+curl.exe -L "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay.exe" -o ffplay.exe
 
 # nssm.exe
 # http://nssm.cc/download
@@ -31,7 +31,7 @@ curl -L "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay.exe" -o ffplay
 
 
 # https://www.openlogic.com/openjdk-downloads -> link quebrado
-curl -L "https://mirrors.huaweicloud.com/openjdk/21/openjdk-21_windows-x64_bin.zip" -o java.zip
+curl.exe -L "https://mirrors.huaweicloud.com/openjdk/21/openjdk-21_windows-x64_bin.zip" -o java.zip
 Expand-Archive -LiteralPath 'java.zip'
 [Environment]::SetEnvironmentVariable("JAVA_HOME", "c:\programFiles\java\jdk-21", "Machine")
 
@@ -41,12 +41,12 @@ $NewPATH = ("%JAVA_HOME%\bin;c:\programFiles\java\jdk-21\bin;c:\programFiles;" +
 New-Item c:/y -ItemType Directory -ea 0
 cd c:/y
 
-curl -L "https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar" -o ojdbc6.jar
-curl -L "https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar" -o sqljdbc4-3.0.jar
-curl -L "https://adams.cms.waikato.ac.nz/nexus/repository/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar" -o mysql-connector-java-8.0.26.jar
-curl -L "https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar" -o postgresql-42.7.5.jar
-curl -L "https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar" -o jsch-0.1.55.jar
-curl -L "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java" -o Y.java
+curl.exe -L "https://www.datanucleus.org/downloads/maven2/oracle/ojdbc6/11.2.0.3/ojdbc6-11.2.0.3.jar" -o ojdbc6.jar
+curl.exe -L "https://repo.clojars.org/com/microsoft/sqljdbc4/3.0/sqljdbc4-3.0.jar" -o sqljdbc4-3.0.jar
+curl.exe -L "https://adams.cms.waikato.ac.nz/nexus/repository/public/mysql/mysql-connector-java/8.0.26/mysql-connector-java-8.0.26.jar" -o mysql-connector-java-8.0.26.jar
+curl.exe -L "https://artifacts-oss.talend.com/nexus/content/groups/public/org/postgresql/postgresql/42.7.5/postgresql-42.7.5.jar" -o postgresql-42.7.5.jar
+curl.exe -L "https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar" -o jsch-0.1.55.jar
+curl.exe -L "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java" -o Y.java
 
 c:\programFiles\java\jdk-21\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;." Y.java
 
@@ -83,11 +83,11 @@ Set-Content config_y.reg 'Windows Registry Editor Version 5.00
 "Autorun"="doskey cd=cd0 $* && chcp 65001 1>NUL && doskey cat=y cat $* && doskey printf=y printf $* && doskey sed=y sed $* && doskey ls=y ls $* && doskey lss=y lss $* && doskey pss=y pss $* && doskey du=y du $*"
 '
 
-Set-Content compila2.cmd 'curl -s -L https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
+Set-Content compila2.cmd 'curl.exe -s -L https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;. Y.java
 '
 
-Set-Content compilaCurl.cmd 'curl -L https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
+Set-Content compilaCurl.cmd 'curl.exe -L https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;. Y.java
 pause
 '
