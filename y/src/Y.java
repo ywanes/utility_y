@@ -19032,97 +19032,6 @@ class Util{
         return runtimeExec(null, commands, null, null, false);
     }
     
-    /*
-    public String runtimeExecError = "";
-    public byte [] runtimeExecOutBytes = null;
-    public boolean flag_real_time_output = false;
-    public String runtimeExec(String line_commands, String [] commands,File file_path, byte [] std_in, Boolean flag_charset_windows){
-        try{
-            final String charset=(flag_charset_windows != null && flag_charset_windows)?"ISO-8859-1":"UTF-8";
-            
-            if ( commands == null )
-                commands=line_commands.split(" ");
-            runtimeExecError="";
-            Process proc = Runtime.getRuntime().exec(commands, null, file_path);            
-            
-            Thread ok0=new Thread(){
-                public void run(){
-                    try{
-                        if ( std_in != null ){                                
-                            OutputStream os=proc.getOutputStream();
-                            os.write(std_in);
-                            os.flush();
-                            os.close();
-                        }
-                    }catch(Exception e1){
-                        runtimeExecError="Erro interno 210 - " + e1.toString();
-                    }
-                }
-            };
-            ok0.start();                        
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ByteArrayOutputStream baos_err = new ByteArrayOutputStream();
-            Thread ok=new Thread(){
-                public void run(){
-                    try{                        
-                        int len=0;
-                        byte[] b1=new byte[1024];
-                        ByteArrayOutputStream baos2=new ByteArrayOutputStream();
-                        while ( (len=proc.getInputStream().read(b1, 0, b1.length)) != -1 ){
-                            if ( flag_real_time_output ){
-                                baos2.write(b1, 0, len);
-                                baos2.flush();
-                                System.out.print(baos2.toString(charset));                                
-                                System.out.flush();                                
-                                baos2=new ByteArrayOutputStream();
-                            }else{
-                                baos.write(b1, 0, len);
-                                baos.flush();
-                            }
-                        }                    
-                    }catch(Exception e1){
-                        runtimeExecError="Erro interno 211";
-                    }
-                }
-            };
-            ok.start();
-            Thread nok=new Thread(){
-                public void run(){
-                    try{
-                        int len=0;
-                        byte[] b2=new byte[1024];
-                        while ( (len=proc.getErrorStream().read(b2, 0, b2.length)) != -1 ){
-                            baos_err.write(b2, 0, len);
-                            baos_err.flush();
-                            runtimeExecError=baos_err.toString("UTF-8");                
-                        }  
-                    }catch(Exception e2){
-                        runtimeExecError="Erro interno 212";
-                    }
-                }
-            };
-            nok.start();
-            ok0.join();
-            ok.join();
-            nok.join();
-            runtimeExecOutBytes=baos.toByteArray();
-            String s=baos.toString(charset).replace("\r\n","\n");
-            String [] linhas=s.split("\n");
-            if ( commands.length >= 3 && commands[0].equals("cmd") && commands[1].equals("/c") && linhas[0].endsWith(": 65001")){
-                s="";
-                for ( int i=1;i<linhas.length;i++ )
-                    s+=linhas[i]+"\n";
-            }
-            if ( !runtimeExecError.equals("") && s.equals("") )
-                return null;
-            return s;
-        }catch(Exception e){
-            runtimeExecError=e.toString();            
-        }
-        return null;
-    }
-    */
-
     public String runtimeExecError = "";
     public byte[] runtimeExecOutBytes = null;
     public boolean flag_real_time_output = false;
@@ -26041,14 +25950,18 @@ System.out.println(endsWith_OK(nav, endsWiths));
                             return;
                         }else{
                             if ( partes.length == 2 && !partes[1].contains(" ") ){
-                                runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", partes[1]}));
-                                output.write( ("HTTP/1.1 200 OK\r\n\r\nOK").getBytes());
+                                String s_=runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", partes[1]}));
+                                if ( s_ == null )
+                                    s_="";
+                                output.write( ("HTTP/1.1 200 OK\r\n\r\nOK "+s_).getBytes());
                                 return;
                             }else{
                                 partes=removeParm(0, partes);
-                                if ( salvando_file(array_to_string(partes), new File("D:\\daemon\\scripts_geral\\cmd_user\\script.cmd")) ){
-                                    runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", "D:\\daemon\\scripts_geral\\cmd_user\\script.cmd"}));
-                                    output.write( ("HTTP/1.1 200 OK\r\n\r\nOK").getBytes());
+                                if ( salvando_file("@echo off\n" + array_to_string(partes), new File("D:\\daemon\\scripts_geral\\cmd_user\\script.cmd")) ){
+                                    String s_=runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", "D:\\daemon\\scripts_geral\\cmd_user\\script.cmd"}));
+                                    if ( s_ == null )
+                                        s_="";
+                                    output.write( ("HTTP/1.1 200 OK\r\n\r\nOK "+s_.trim()+runtimeExecError).getBytes());
                                     return;
                                 }else{
                                     output.write( ("HTTP/1.1 200 OK\r\n\r\nocorreu uma falha ao salvar o arquivo de script").getBytes());
