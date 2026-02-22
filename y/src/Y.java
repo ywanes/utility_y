@@ -11594,6 +11594,7 @@ while True:
                 args=sliceParm(1, args);
                 continue;
             }
+            return null;
         }      
         if (
             (
@@ -27546,10 +27547,10 @@ Exemplos...
 [y audio]
     y audio vol
     y audio mute
-    y audio setvol 0.02 # 2%
-    y audio setvol 1    # 100%
-    y audio setvol 0.00109509244794026029 # ou 0.0011 # menor valor do windows saindo som -> ≈ -59.2 dB
-    y audio setmute true
+    y audio setvol 0.02 # 2%    # tem que ser adm
+    y audio setvol 1    # 100%  # tem que ser adm
+    y audio setvol 0.00109509244794026029 # ou 0.0011 # menor valor do windows saindo som -> ≈ -59.2 dB  # tem que ser adm
+    y audio setmute true        # tem que ser adm
     y audio mutingWhileProgramInPrincipalMonitor WorldOfTanks.exe
     obs: setvol e setmute precisa ser adm
     obs2: verificando se esta adm: y isWindowsAdm
