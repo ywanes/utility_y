@@ -1,0 +1,4 @@
+cmdw.exe echo 1
+cmdw.exe /admin echo 1
+cmdw.exe /c echo 1
+
