@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Menu Grid Flexível</title>
+  <title>Menu</title>
 
   <style>
     * { box-sizing: border-box; }
@@ -111,14 +111,22 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
-
+    /* EVIDENCIA DE QUE A PAGINA NAO ESTA TRAVADA */
+    @keyframes heartbeat {
+      0% { opacity: 1; }
+      30% { opacity: 0.6; }
+      100% { opacity: 1; }
+    }
+    .alive-indicator {
+      animation: heartbeat 9s infinite ease-in-out;
+    }
 
   </style>
 </head>
 
 <body id="body" style="display: none">
   <div class="app">
-	<div id="bloco1">
+	<div id="bloco1" class="alive-indicator">
 		<div class="menu" style="--total-cols: 3;">
 		  <a href="javascript:void(0);" class="blue" onclick="load('..');">voltar</a>
 		</div>
@@ -134,6 +142,17 @@
 </html>
 
 <script type="text/javascript">
+
+// TRY-CATCH GLOBAL PARA CAPTURAR ERROS FATAIS
+window.onerror = function(msg, url, lineNo, columnNo, error) {
+    console.error('Erro Global: ', msg, " Linha: ", lineNo);
+    alert('Erro detectado: ' + msg);
+    return false;
+};
+
+window.onunhandledrejection = function(event) {
+    console.error('Promise Rejeitada: ', event.reason);
+};
 
 // o minimo é 0.0011
 // os primeiros 80% da barra manipula 20% do audio
@@ -268,133 +287,138 @@ function mais_temp(e){
 }
 
 function load(a){	
-	if ( document.getElementById('radio').src == '' )
-		document.getElementById('radio').src='/k='+get_senha_radio();
-	if ( a.indexOf('/' ) != 0 ) // y lock w vira /Menu/y lock w
-		a=getCaminho()+'/'+a;
-	if ( a.endsWith('/..') ){
-		load(getPai(getPai(a)));
-		return;
-	}
-	if ( a == '/Menu' ){
-		document.getElementById('bloco2').innerHTML=`
-		<div class="header">/Menu</div>
-		<div class="menu" style="--total-cols: 3;">
-		  <a href="javascript:void(0);" class="blue" onclick="load('y lock 0')">y lock 0</a>
-		  <a href="javascript:void(0);" class="blue" onclick="load('y lock')">y lock</a>
-		  <a href="javascript:void(0);" class="green" onclick="load('y lock w')">y lock w</a>
-		  <a href="javascript:void(0);" class="orange" onclick="load('Musicas')">Musicas</a>
-		  <a href="javascript:void(0);" class="red" onclick="load('Dota')">Dota</a>
-		  <a href="javascript:void(0);" class="red" onclick="load('DotaNoOCR')">DotaNoOCR</a>
-		  <a href="/idle.html" class="pink"">idle</a>
-		  <a href="javascript:void(0);" class="purple" onclick="load('printScreen 2')">printScreen 2</a>
-		  <a href="javascript:void(0);" class="purple" onclick="load('printScreen 99')">printScreen 99</a>
-		  <a href="javascript:void(0);" class="purple" onclick="load('printScreen 0')">printScreen 0</a>
-		  <a href="javascript:void(0);" class="purple" onclick="load('printScreen 1')">printScreen 1</a>
-		  <a href="javascript:void(0);" class="purple" onclick="load('printScreen 3')">printScreen 3</a>
-		  <a href="javascript:void(0);" class="yellow" onclick="load('A_C')">Ar Condicionado</a>
-		  <a href="javascript:void(0);" class="gray" ></a>
-		  <a href="javascript:void(0);" class="gray" ></a>
-		  ` + mostraVolumeControle() + `
-		</div>		
-		`;
-		return;
-	}
-	if ( a == '/Menu/y lock 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0') ); return; }
-	if ( a == '/Menu/y lock' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe') ); return; }
-	if ( a == '/Menu/y lock w' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w') ); return; }
-	if ( a == '/Menu/Dota' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll') ); return; }
-	if ( a == '/Menu/DotaNoOCR' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll -nicks no_ocr') ); return; }
-	if ( a == '/Menu/printScreen 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 0') ); return; }	// D:\ProgramFiles\screens
-	if ( a == '/Menu/printScreen 1' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 1') ); return; }	// D:\ProgramFiles\screens
-	if ( a == '/Menu/printScreen 2' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 2') ); return; }	// D:\ProgramFiles\screens
-	if ( a == '/Menu/printScreen 3' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 3') ); return; }	// D:\ProgramFiles\screens
-	if ( a == '/Menu/printScreen 99' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 99') ); return; }	// 99 -> uma unica imagem completa com todos os monitores
-	
-	if ( a.indexOf('/Menu/Musicas') == 0 ){
-		if ( a.indexOf('.') > -1 ){
-			console.log('toca musica');
-			return;
-		}
-		var base='/D:/ProgramFiles/site/musicas';
-		var finder=base + a.substr('/Menu/Musicas'.length) + '/';
-		var elements=document.getElementById('radio').contentWindow.get_lista(finder);
-		var s='';
-		for ( var i=0;i<elements.length;i++ ){
-			if ( i == 0 )
-				s+=mostraBotoesBackStopPlayNext();
-			if ( elements[i].indexOf('.') > -1 ){
-				s+="<a href=\"javascript:void(0);\" class=\"orange\" onclick=\"play('" + i + "', true)\">1play</a>";
-				s+="<a href=\"javascript:void(0);\" class=\"orange span-3\" onclick=\"play('" + i + "', false)\">" + elements[i] + "</a>";
-			}else							
-				s+="<a href=\"javascript:void(0);\" class=\"orange full\" onclick=\"load('" + elements[i] + "')\">" + elements[i] + "</a>";
-		}
-		s+=mostraVolume();
-		s="<div class=\"menu\" style=\"--total-cols: 4;\">" + s + "</div>";
-		document.getElementById('bloco2').innerHTML="<div class=\"header\">" + a + "</div>" + s;
-		return;
-	}
-	if ( a == '/Menu/Musicas/angra' ){
-		if ( document.getElementById('radio').src == '' )
-			document.getElementById('radio').src='/k='+get_senha_radio();
-		document.getElementById('bloco2').innerHTML=`
-		<div class="header">/Menu/Musicas/angra</div>
-		<div class="menu" style="--total-cols: 4;">
-		  <a href="javascript:void(0);" class="gray full" onclick="load('1998 - Fireworks.001.Wings Of Reality.webm')">1998 - Fireworks.001.Wings Of Reality.webm</a>
-		  <a href="javascript:void(0);" class="gray full" onclick="load('1998 - Fireworks.002.Petrified Eyes.webm')">1998 - Fireworks.002.Petrified Eyes.webm</a>
-		</div>		
-		`;
-		return;
-	}
-	if ( a == '/Menu/A_C' ){
-		document.getElementById('bloco2').innerHTML='<div class="header">loading...</div>';
-		setTimeout(() => {
-			var cor_ligado='green';
-			var ligado=get_ar_ligado();
-			if ( ligado == 'OK ligado' ){
-				ligado='ligado';
-			}else{				
-				if ( ligado == 'OK desligado' ){
-					ligado='desligado';
-					cor_ligado='red';
-				}else{
-					document.getElementById('bloco2').innerHTML=ligado;
-					return;
-				}
-			}
-			document.getElementById('bloco2').innerHTML=`
-			<div class="header">/Menu/A_C</div>
-			<div class="menu" style="--total-cols: 6;">				
-				<a href="javascript:void(0);" class="`+ cor_ligado + ` span-1" onclick="load('on_off')">on/off</a>
-				<a href="javascript:void(0);" class="teal span-2" onclick="menos_temp(this)">-</a>				
-				<a class="blue span-1">25</a>
-				<a href="javascript:void(0);" class="teal span-2" onclick="mais_temp(this)">+</a>
-			</div>		
-			`;
-		}, 1);
-		return;
-	}
-	if ( a == '/Menu/A_C/on_off' ){
-		document.getElementById('bloco2').innerHTML='<div class="header">loading...</div>';
-		setTimeout(() => {
-			var ligado=get_ar_ligado();
-			if ( ligado == 'OK ligado' ){
-				set_ar_ligado('off');
-				load('/Menu/A_C');
-				return;
-			}else{				
-				if ( ligado == 'OK desligado' ){
-					set_ar_ligado('on');
-					load('/Menu/A_C');
-					return;
-				}else{
-					document.getElementById('bloco2').innerHTML=ligado;
-					return;
-				}
-			}
-		}, 1);
-		return;
-	}
+    try {
+        if ( document.getElementById('radio').src == '' )
+            document.getElementById('radio').src='/k='+get_senha_radio();
+        if ( a.indexOf('/' ) != 0 ) // y lock w vira /Menu/y lock w
+            a=getCaminho()+'/'+a;
+        if ( a.endsWith('/..') ){
+            load(getPai(getPai(a)));
+            return;
+        }
+        if ( a == '/Menu' ){
+            document.getElementById('bloco2').innerHTML=`
+            <div class="header">/Menu</div>
+            <div class="menu" style="--total-cols: 3;">
+              <a href="javascript:void(0);" class="blue" onclick="load('y lock 0')">y lock 0</a>
+              <a href="javascript:void(0);" class="blue" onclick="load('y lock')">y lock</a>
+              <a href="javascript:void(0);" class="green" onclick="load('y lock w')">y lock w</a>
+              <a href="javascript:void(0);" class="orange" onclick="load('Musicas')">Musicas</a>
+              <a href="javascript:void(0);" class="red" onclick="load('Dota')">Dota</a>
+              <a href="javascript:void(0);" class="red" onclick="load('DotaNoOCR')">DotaNoOCR</a>
+              <a href="/idle.html" class="pink"">idle</a>
+              <a href="javascript:void(0);" class="purple" onclick="load('printScreen 2')">printScreen 2</a>
+              <a href="javascript:void(0);" class="purple" onclick="load('printScreen 99')">printScreen 99</a>
+              <a href="javascript:void(0);" class="purple" onclick="load('printScreen 0')">printScreen 0</a>
+              <a href="javascript:void(0);" class="purple" onclick="load('printScreen 1')">printScreen 1</a>
+              <a href="javascript:void(0);" class="purple" onclick="load('printScreen 3')">printScreen 3</a>
+              <a href="javascript:void(0);" class="yellow" onclick="load('A_C')">Ar Condicionado</a>
+              <a href="javascript:void(0);" class="gray" ></a>
+              <a href="javascript:void(0);" class="gray" ></a>
+              ` + mostraVolumeControle() + `
+            </div>		
+            `;
+            return;
+        }
+        if ( a == '/Menu/y lock 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0') ); return; }
+        if ( a == '/Menu/y lock' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe') ); return; }
+        if ( a == '/Menu/y lock w' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w') ); return; }
+        if ( a == '/Menu/Dota' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll') ); return; }
+        if ( a == '/Menu/DotaNoOCR' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll -nicks no_ocr') ); return; }
+        if ( a == '/Menu/printScreen 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 0') ); return; }	// D:\ProgramFiles\screens
+        if ( a == '/Menu/printScreen 1' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 1') ); return; }	// D:\ProgramFiles\screens
+        if ( a == '/Menu/printScreen 2' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 2') ); return; }	// D:\ProgramFiles\screens
+        if ( a == '/Menu/printScreen 3' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 3') ); return; }	// D:\ProgramFiles\screens
+        if ( a == '/Menu/printScreen 99' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 99') ); return; }	// 99 -> uma unica imagem completa com todos os monitores
+        
+        if ( a.indexOf('/Menu/Musicas') == 0 ){
+            if ( a.indexOf('.') > -1 ){
+                console.log('toca musica');
+                return;
+            }
+            var base='/D:/ProgramFiles/site/musicas';
+            var finder=base + a.substr('/Menu/Musicas'.length) + '/';
+            var elements=document.getElementById('radio').contentWindow.get_lista(finder);
+            var s='';
+            for ( var i=0;i<elements.length;i++ ){
+                if ( i == 0 )
+                    s+=mostraBotoesBackStopPlayNext();
+                if ( elements[i].indexOf('.') > -1 ){
+                    s+="<a href=\"javascript:void(0);\" class=\"orange\" onclick=\"play('" + i + "', true)\">1play</a>";
+                    s+="<a href=\"javascript:void(0);\" class=\"orange span-3\" onclick=\"play('" + i + "', false)\">" + elements[i] + "</a>";
+                }else							
+                    s+="<a href=\"javascript:void(0);\" class=\"orange full\" onclick=\"load('" + elements[i] + "')\">" + elements[i] + "</a>";
+            }
+            s+=mostraVolume();
+            s="<div class=\"menu\" style=\"--total-cols: 4;\">" + s + "</div>";
+            document.getElementById('bloco2').innerHTML="<div class=\"header\">" + a + "</div>" + s;
+            return;
+        }
+        if ( a == '/Menu/Musicas/angra' ){
+            if ( document.getElementById('radio').src == '' )
+                document.getElementById('radio').src='/k='+get_senha_radio();
+            document.getElementById('bloco2').innerHTML=`
+            <div class="header">/Menu/Musicas/angra</div>
+            <div class="menu" style="--total-cols: 4;">
+              <a href="javascript:void(0);" class="gray full" onclick="load('1998 - Fireworks.001.Wings Of Reality.webm')">1998 - Fireworks.001.Wings Of Reality.webm</a>
+              <a href="javascript:void(0);" class="gray full" onclick="load('1998 - Fireworks.002.Petrified Eyes.webm')">1998 - Fireworks.002.Petrified Eyes.webm</a>
+            </div>		
+            `;
+            return;
+        }
+        if ( a == '/Menu/A_C' ){
+            document.getElementById('bloco2').innerHTML='<div class="header">loading...</div>';
+            setTimeout(() => {
+                var cor_ligado='green';
+                var ligado=get_ar_ligado();
+                if ( ligado == 'OK ligado' ){
+                    ligado='ligado';
+                }else{				
+                    if ( ligado == 'OK desligado' ){
+                        ligado='desligado';
+                        cor_ligado='red';
+                    }else{
+                        document.getElementById('bloco2').innerHTML=ligado;
+                        return;
+                    }
+                }
+                document.getElementById('bloco2').innerHTML=`
+                <div class="header">/Menu/A_C</div>
+                <div class="menu" style="--total-cols: 6;">				
+                    <a href="javascript:void(0);" class="`+ cor_ligado + ` span-1" onclick="load('on_off')">on/off</a>
+                    <a href="javascript:void(0);" class="teal span-2" onclick="menos_temp(this)">-</a>				
+                    <a class="blue span-1">25</a>
+                    <a href="javascript:void(0);" class="teal span-2" onclick="mais_temp(this)">+</a>
+                </div>		
+                `;
+            }, 1);
+            return;
+        }
+        if ( a == '/Menu/A_C/on_off' ){
+            document.getElementById('bloco2').innerHTML='<div class="header">loading...</div>';
+            setTimeout(() => {
+                var ligado=get_ar_ligado();
+                if ( ligado == 'OK ligado' ){
+                    set_ar_ligado('off');
+                    load('/Menu/A_C');
+                    return;
+                }else{				
+                    if ( ligado == 'OK desligado' ){
+                        set_ar_ligado('on');
+                        load('/Menu/A_C');
+                        return;
+                    }else{
+                        document.getElementById('bloco2').innerHTML=ligado;
+                        return;
+                    }
+                }
+            }, 1);
+            return;
+        }
+    } catch (e) {
+        console.error("Erro ao carregar menu: ", e);
+        document.getElementById('bloco2').innerHTML = '<div class="header" style="color:red">Erro Interno</div>';
+    }
 }
 
 function mostraBotoesBackStopPlayNext(){
