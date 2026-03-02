@@ -114,7 +114,7 @@
     /* EVIDENCIA DE QUE A PAGINA NAO ESTA TRAVADA */
     @keyframes heartbeat {
       0% { opacity: 1; }
-      30% { opacity: 0.6; }
+      /*30% { opacity: 0.6; }*/
       100% { opacity: 1; }
     }
     .alive-indicator {
@@ -206,7 +206,13 @@ function setVol(a){
 	document.getElementById('radio').contentWindow.send('vol worker '+a, null);
 }
 this.vol_pc=0.04;
-function get_vol_pc(){
+function get_vol_pc(real_request){
+	if ( real_request ){
+		let s=getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y audio vol'), false );
+		if ( s.indexOf('OK ') == 0 )
+			return s.substring(3);
+		return this.vol_pc;
+	}
 	return this.vol_pc;
 }
 function set_vol_pc(a){
@@ -237,12 +243,15 @@ function play(a, is1play){
 		document.getElementById('radio').contentWindow.minisend(s, -1, a);
 	window.scrollBy(0,99999);	
 }
-function mostraVolumeControle() {
-    var currentVol = get_vol_pc();
+function update_painel_vol(){
+	document.getElementsByClassName('volume-container')[0].outerHTML=mostraVolumeControle(true);
+}
+function mostraVolumeControle(real_request) {
+    var currentVol = get_vol_pc(real_request);
     var sliderPos = inverseMap(currentVol);
     return `
     <div class="volume-container">
-        <span id="vol-display" style="min-width: 60px; font-variant-numeric: tabular-nums;">
+        <span id="vol-display" style="min-width: 60px; font-variant-numeric: tabular-nums;" onclick="update_painel_vol()">
             ${parseFloat(currentVol).toFixed(4)}
         </span>
         <input type="range" class="volume-slider-custom" 
@@ -252,7 +261,7 @@ function mostraVolumeControle() {
     </div>`;
 }
 function get_ar_ligado(){
-	return getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'python3 D:\\daemon\\scripts_geral\\ArCondicionado\\p.py status'));
+	return getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'python3 D:\\daemon\\scripts_geral\\ArCondicionado\\p.py status'), false);
 }
 function set_ar_ligado(a){
 	return getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'python3 D:\\daemon\\scripts_geral\\ArCondicionado\\p.py ' + a));
@@ -270,7 +279,7 @@ function menos_temp(e){
 	clearTimeout(timer_menos);
 	clearTimeout(timer_mais);
 	timer_menos = setTimeout(function(){
-		getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'python3 D:\\daemon\\scripts_geral\\ArCondicionado\\p.py temp ' + temp_menos_mais));
+		getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'python3 D:\\daemon\\scripts_geral\\ArCondicionado\\p.py temp ' + temp_menos_mais), false);
 	}, 1000);
 }
 function mais_temp(e){
@@ -282,7 +291,7 @@ function mais_temp(e){
 	clearTimeout(timer_menos);
 	clearTimeout(timer_mais);
 	timer_mais = setTimeout(function(){
-		getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'python3 D:\\daemon\\scripts_geral\\ArCondicionado\\p.py temp ' + temp_menos_mais));
+		getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'python3 D:\\daemon\\scripts_geral\\ArCondicionado\\p.py temp ' + temp_menos_mais), false);
 	}, 1000);
 }
 
@@ -292,6 +301,11 @@ function load(a){
             document.getElementById('radio').src='/k='+get_senha_radio();
         if ( a.indexOf('/' ) != 0 ) // y lock w vira /Menu/y lock w
             a=getCaminho()+'/'+a;
+		if ( a == '/Menu/..' ){
+			document.getElementsByClassName('app')[0].innerHTML='<div class="header">loading...</div>';
+			location.reload();
+			return;
+		}
         if ( a.endsWith('/..') ){
             load(getPai(getPai(a)));
             return;
@@ -513,13 +527,17 @@ function get_senha_storage(){
 	return localStorage.getItem('user_auth_token');
 }
 
-function getBinary(file){
+function getBinary(file, queroAsync){
+	if ( queroAsync == null )
+		queroAsync=true;	
     var xhr = new XMLHttpRequest();
 	xhr.withCredentials = false;
-    xhr.open("GET", file, false);
+    xhr.open("GET", file, queroAsync);
     xhr.overrideMimeType("text/plain; charset=x-user-defined");
     xhr.send(null);
-    return xhr.responseText;
+	if ( queroAsync )
+		return 'nao foi solicitado o retorno do texto';
+	return xhr.responseText;
 }
 
 // 2. Carrega a biblioteca de MD5 dinamicamente
@@ -583,7 +601,7 @@ function renderLogin() {
 		
 	// Hyperlink Opcional
 	const linkJogar = document.createElement('a');
-	linkJogar.href = "/apk.html";
+	linkJogar.href = "/idle.html";
 	linkJogar.innerText = "jogar";
 	linkJogar.style.cssText = "text-align: center; color: #007bff; text-decoration: none; font-size: 14px; margin-top: 5px;";
 
