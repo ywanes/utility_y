@@ -17,7 +17,7 @@ type javac 2> /tmp/not
 if [ $((`cat /tmp/not | wc -l`)) -ge 1 ]
 then
   echo instale o javac, use o comando abaixo:
-  echo "apt install -y openjdk-21-jdk"
+  echo "apt install -y openjdk-21-jdk" # limpa -> apt purge -y openjdk-* default-jdk default-jre && apt autoremove -y
   echo Mas antes, faça apt update e apt upgrade
   exit 1
 fi
