@@ -27638,6 +27638,7 @@ Exemplos...
     cat arquivo | y grep ^Texto$
     cat arquivo | y grep AB
     cat arquivo | y grep -i -v aa bb cc
+    obs: grep -L arquivos-sem-essa-palavra *
 [y wc]
     cat arquivo | y wc -l
     cat arquivo | y wc -w
