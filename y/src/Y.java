@@ -28287,7 +28287,7 @@ Dica: copiar o arquivo hash do token pra o nome do banco. cd $TOKEN_Y;cp 38b3492
 Dica2: vendo os tokens: grep ":" $TOKEN_Y/*
 Dica3: vendo warnnings ORA: cat $ORAs_Y
 Mostrando lista dos scripts: 
-curl -s https://github.com/ywanes/utility_y/tree/master/y/src | grep -oP ',"path":"y/src/\K[^"]+' | sed 's|^|https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/|' | sort | uniq
+curl -s https://github.com/ywanes/utility_y/tree/master/y/src | grep -oP ',"path":"y/src/\\K[^"]+' | sed 's|^|https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/|' | sort | uniq
 """;
         
         if ( caminho.equals("/y/ORAs") )
