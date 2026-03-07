@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# bash <(curl -s https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/jail_java.sh) desmonta
+# bash <(curl -s https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/jail_java.sh)
+
 set -euo pipefail
 
 CHROOT=/jaula
