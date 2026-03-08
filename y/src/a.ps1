@@ -69,7 +69,7 @@ if ($LASTEXITCODE -ne 0 -or !($haxmStatus -match "RUNNING")) {
     Write-Error "# https://github.com/intel/haxm/releases/download/v7.8.0/haxm-windows_v7_8_0.zip"
     Write-Error "# fonte: https://github.com/intel/haxm/releases/tag/v7.8.0"
     Write-Error "# instale assim cmd adm"
-    Write-Error "# haxm-7.8.0-setup.exe /S"
+    Write-Error "# haxm-7.8.0-setup.exe /S" # comando para testar => haxm-7.8.0-setup.exe /S CORES=6
     exit
 }
 
