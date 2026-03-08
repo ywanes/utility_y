@@ -5,10 +5,27 @@
 
 # ==========================================================
 # Exemplo de chamada:
-# powershell -ExecutionPolicy Bypass -File "C:\qemu_hax\android.ps1" -GUI_ENABLE 1
-# adb -s 127.0.0.1:5556 shell
-# http://203.cloudns.cl:8000/z_outros/android9.qcow2
-# https://mirrors.dotsrc.org/osdn/android-x86/71931/android-x86_64-9.0-r2.iso
+# adb connect 127.0.0.1:5556 && adb shell
+# http://203.cloudns.cl:8000/z_outros/android11.qcow2
+# https://dn720809.ca.archive.org/0/items/android-x-86-11-r-arm-x86-64-iso/Android-x86%2011-R%202022-05-04%20%28x86_64%29%20K5.4.40-M21-arm-noGapps-by-Xigo.iso
+# https://apkpure.com/br/leek-factory-tycoon-idle-game/com.gaman.games.leek.factory.tycoon
+# adb -s 127.0.0.1:5556 install-multiple com.gaman.games.leek.factory.tycoon.apk config.armeabi_v7a.apk config.en.apk config.vi.apk
+# https://apkpure.com/br/dnschanger-for-ipv4-ipv6/com.frostnerd.dnschanger/download?utm_content=1008
+# adb -s 127.0.0.1:5556 install "DNSChanger for IPv4_IPv6_1.16.5.11_APKPure.apk"
+# criando f1 e f7 no adb
+# su -c "mount -o remount,rw /"
+# echo -e '#!/system/bin/sh\nservice call SurfaceFlinger 1008 i32 0 i32 0 && chvt 1' > /system/xbin/f1 && chmod 755 /system/xbin/f1
+# echo -e '#!/system/bin/sh\nservice call SurfaceFlinger 1008 i32 0 i32 2 && sleep 2 && chvt 7' > /system/xbin/f7 && chmod 755 /system/xbin/f7
+# tira cursor piscando(su)
+# mount -o remount,rw / && echo -e '#!/system/bin/sh\nwhile true; do\n  echo 0 > /sys/class/graphics/fbcon/cursor_blink\n  sleep 10\ndone' > /system/xbin/nocursor && chmod 755 /system/xbin/nocursor && echo -e 'service nocursor /system/xbin/nocursor\n    class main\n    user root' > /system/etc/init/nocursor.rc && chmod 644 /system/etc/init/nocursor.rc
+# bootloader 1 segundo
+# mount -o remount,rw / && mkdir -p /tmp/boot && mount -t ext4 /dev/block/vda1 /tmp/boot && sed -i 's|timeout=6|timeout=1|' /tmp/boot/grub/menu.lst
+# apaga tudo
+# adb shell "su -c 'pm clear com.gaman.games.leek.factory.tycoon'"
+# backup
+# adb shell "su -c 'tar czf - --exclude=lib -C /data/data com.gaman.games.leek.factory.tycoon | base64'" > a.txt
+# restore
+# adb shell am force-stop com.gaman.games.leek.factory.tycoon && adb shell "su -c 'settings put secure android_id $(cat /proc/sys/kernel/random/uuid | cut -d- -f1-2)'" && y cat a.txt | adb shell "su -c 'rm -rf /data/data/com.gaman.games.leek.factory.tycoon && base64 -d | tar xzf - -C /data/data && restorecon -R /data/data/com.gaman.games.leek.factory.tycoon'"
 # ==========================================================
 $MODE_INSTALL = $false
 $GUI_ENABLE   = $true
@@ -33,12 +50,12 @@ $P2 = "C:\qemu_hax6"
 $P3 = "C:\qemu_isos"
 $P4 = "C:\qemu_share"
 $BIN = "$P1\qemu-system-x86_64.exe"
-$DISK = "$P2\android9.qcow2"
+$DISK = "$P2\android11.qcow2"
 $QEMU_IMG = "$P1\qemu-img.exe"
 $QEMU_MEMORIA = "4G"
 $QEMU_N_PROCESSADORES = "4"
 $QEMU_SHARE = "$P4"
-$ANDROID_ISO = "$P3\android-x86_64-9.0-r2.iso"
+$ANDROID_ISO = "$P3\Android-x86 11-R 2022-05-04 (x86_64) K5.4.40-M21-arm-noGapps-by-Xigo.iso"
 
 # Redirecionamento de Portas: SSH (222) e ADB (5556)
 $QEMU_FWD = "user,id=net0,hostfwd=tcp::222-:22,hostfwd=tcp::5556-:5555"
@@ -67,8 +84,16 @@ $QEMU_ARGS += "-drive", "file=$DISK,if=virtio,cache=writeback"
 # Configuração de Vídeo e Mouse
 if ($GUI_ENABLE) {
     # virtio-vga é o padrão para aceleração no Android-x86
-    $QEMU_ARGS += "-vga", "std" 
-    $QEMU_ARGS += "-display", "gtk"
+    #$QEMU_ARGS += "-vga", "std" 
+	
+    $QEMU_ARGS += "-vga", "qxl" 
+	$QEMU_ARGS += "-monitor", "stdio"
+	
+    #$QEMU_ARGS += "-device", "virtio-vga", "-serial", "none", "-monitor", "none" 
+	#$QEMU_ARGS += "-append", "quiet video=1280x720"
+	
+	
+    $QEMU_ARGS += "-display", "sdl"
     $QEMU_ARGS += "-device", "usb-ehci,id=usb,bus=pci.0,addr=0x7"
     $QEMU_ARGS += "-device", "usb-tablet" # Essencial para o mouse não dessincronizar
 } else {
@@ -100,10 +125,8 @@ if (!(Test-Path $DISK)) {
 }
 
 # 4. Execução
-Write-Host "Iniciando QEMU (Android 9)..." -ForegroundColor Green
+Write-Host "Iniciando QEMU..." -ForegroundColor Green
 Write-Host "Comandos: $QEMU_ARGS" -ForegroundColor Gray
 & $BIN $QEMU_ARGS
 
-# 5. Instruções Pós-Boot
-Write-Host "`nPara conectar o ADB, aguarde o Android carregar e use:" -ForegroundColor Yellow
-Write-Host "adb connect 127.0.0.1:5556" -ForegroundColor White
+
