@@ -5,6 +5,7 @@
 
 # ==========================================================
 # Exemplo de chamada:
+# powershell -ExecutionPolicy Bypass -File "C:\qemu_hax\android.ps1" -GUI_ENABLE 1
 # adb connect 127.0.0.1:5556 && adb shell
 # http://203.cloudns.cl:8000/z_outros/android11.qcow2
 # https://dn720809.ca.archive.org/0/items/android-x-86-11-r-arm-x86-64-iso/Android-x86%2011-R%202022-05-04%20%28x86_64%29%20K5.4.40-M21-arm-noGapps-by-Xigo.iso
@@ -84,16 +85,8 @@ $QEMU_ARGS += "-drive", "file=$DISK,if=virtio,cache=writeback"
 # Configuração de Vídeo e Mouse
 if ($GUI_ENABLE) {
     # virtio-vga é o padrão para aceleração no Android-x86
-    #$QEMU_ARGS += "-vga", "std" 
-	
-    $QEMU_ARGS += "-vga", "qxl" 
-	$QEMU_ARGS += "-monitor", "stdio"
-	
-    #$QEMU_ARGS += "-device", "virtio-vga", "-serial", "none", "-monitor", "none" 
-	#$QEMU_ARGS += "-append", "quiet video=1280x720"
-	
-	
-    $QEMU_ARGS += "-display", "sdl"
+    $QEMU_ARGS += "-vga", "std" 
+    $QEMU_ARGS += "-display", "gtk"
     $QEMU_ARGS += "-device", "usb-ehci,id=usb,bus=pci.0,addr=0x7"
     $QEMU_ARGS += "-device", "usb-tablet" # Essencial para o mouse não dessincronizar
 } else {
