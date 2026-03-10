@@ -28078,6 +28078,7 @@ Exemplos...
     obs2: list -> monta uma shell de verificacao de ips para outra maquina
 [y mouse]
     y mouse # mostra as coordenadas do mouse
+    y mouse delta -956 74 -100 836 # considera 0 0 nesse ponto
     y mouse "m 32 1009 c c m 927 467 cD cD s 2 cD cD s 9 m 64 1043 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base baixa - Os Iluminados
     y mouse "m 177 879 c c m 927 467 cD cD s 2 cD cD s 9 m 209 910 c c m 927 467 cD cD s 2 cD cD s 9" # away dota base alta - Os Temidos
     y mouse "dontMove c s 0.01"
