@@ -70,6 +70,22 @@ if ($LASTEXITCODE -ne 0 -or !($haxmStatus -match "RUNNING")) {
     Write-Error "# fonte: https://github.com/intel/haxm/releases/tag/v7.8.0"
     Write-Error "# instale assim cmd adm"
     Write-Error "# haxm-7.8.0-setup.exe /S" # comando para testar => haxm-7.8.0-setup.exe /S CORES=6
+    # install hax
+    # https://github.com/intel/haxm/releases/download/v7.8.0/haxm-windows_v7_8_0.zip
+    # fonte: https://github.com/intel/haxm/releases/tag/v7.8.0
+    # ou https://github.com/ywanes/utility_y/raw/refs/heads/master/y/utils_exe/haxm-7.8.0-setup.exe
+    # instale assim cmd adm
+    # haxm-7.8.0-setup.exe /S
+    # desativar os e-cores de intel 12 gen para o haxm funcionar
+    # powershell - olhando quantidade de cores ativados
+    # (Get-WmiObject Win32_Processor).NumberOfLogicalProcessors
+    # cmd - olhando quantidade de cores existentes
+    # wmic cpu get ThreadCount
+    # cmd, coloque a metade para ativar somente metade
+    # bcdedit /set numproc 6
+    # reinicie a maquina
+    # cmd adm
+    # sc create intelhaxm binPath= "C:\Program Files\Intel2\HAXM\intelhaxm.sys" type= kernel start= auto displayname= "Intel HAXM"
     exit
 }
 
@@ -177,21 +193,6 @@ Write-Host "Iniciando QEMU com as configuracoes definidas..." -ForegroundColor G
 # qemu testei com essa versao
 # https://qemu.weilnetz.de/w64/2022/qemu-w64-setup-20221230.exe
 
-# install hax
-# https://github.com/intel/haxm/releases/download/v7.8.0/haxm-windows_v7_8_0.zip
-# fonte: https://github.com/intel/haxm/releases/tag/v7.8.0
-# ou https://github.com/ywanes/utility_y/raw/refs/heads/master/y/utils_exe/haxm-7.8.0-setup.exe
-# instale assim cmd adm
-# haxm-7.8.0-setup.exe /S
-
-# desativar os e-cores de intel 12 gen para o haxm funcionar
-# powershell - olhando quantidade de cores ativados
-# (Get-WmiObject Win32_Processor).NumberOfLogicalProcessors
-# cmd - olhando quantidade de cores existentes
-# wmic cpu get ThreadCount
-# cmd, coloque a metade para ativar somente metade
-# bcdedit /set numproc 6
-# reinicie a maquina
 
 
 # baixa o cidata.iso para instalacao automatica, login e senha base
