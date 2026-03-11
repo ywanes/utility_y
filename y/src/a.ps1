@@ -115,6 +115,10 @@ if ($LASTEXITCODE -ne 0 -or !($haxmStatus -match "RUNNING")) {
     # Clique no botão de alternância em Integridade da Memória para desligá-lo (ficará cinza)
     # Reinicie o computador
     # O Windows pedirá para reiniciar para aplicar a alteração.
+    # desligando VBS
+    # reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v "EnableVirtualizationBasedSecurity" /t REG_DWORD /d 0 /f
+    # reg add "HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard" /v "RequirePlatformSecurityFeatures" /t REG_DWORD /d 0 /f
+    # reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v "LsaCfgFlags" /t REG_DWORD /d 0 /f
 }
 
 # 4. Construção dos Argumentos do QEMU
