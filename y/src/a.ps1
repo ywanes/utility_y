@@ -86,6 +86,24 @@ if ($LASTEXITCODE -ne 0 -or !($haxmStatus -match "RUNNING")) {
     # reinicie a maquina
     # cmd adm
     # sc create intelhaxm binPath= "C:\Program Files\Intel2\HAXM\intelhaxm.sys" type= kernel start= auto displayname= "Intel HAXM"
+    # possiveis problemas
+    # consultando
+    # sc.exe query intelhaxm
+    # ligando
+    # sc start intelhaxm
+    # deixe o vt-x de vt-d ligados
+    # [SC] StartService FALHA 31:
+    # Um dispositivo conectado ao sistema não está funcionando.
+    # No menu Iniciar, digite Isolamento de Núcleo.
+    # Desative a opção Integridade da Memória.
+    # desligue tb o VirtualMachinePlatform
+    # dism /online /disable-feature /featurename:VirtualMachinePlatform
+    # desliga isso tb
+    # bcdedit /set hypervisorlaunchtype off
+    # Reinicie o computador. (Obrigatório para aplicar).
+    # desistala
+    # sc delete intelhaxm
+
     exit
 }
 
