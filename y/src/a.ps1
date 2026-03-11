@@ -70,6 +70,7 @@ if ($LASTEXITCODE -ne 0 -or !($haxmStatus -match "RUNNING")) {
     Write-Error "# fonte: https://github.com/intel/haxm/releases/tag/v7.8.0"
     Write-Error "# instale assim cmd adm"
     Write-Error "# haxm-7.8.0-setup.exe /S" # comando para testar => haxm-7.8.0-setup.exe /S CORES=6
+    exit
     # install hax
     # https://github.com/intel/haxm/releases/download/v7.8.0/haxm-windows_v7_8_0.zip
     # fonte: https://github.com/intel/haxm/releases/tag/v7.8.0
@@ -103,8 +104,17 @@ if ($LASTEXITCODE -ne 0 -or !($haxmStatus -match "RUNNING")) {
     # Reinicie o computador. (Obrigatório para aplicar).
     # desistala
     # sc delete intelhaxm
-
-    exit
+    # desligando integridade de memoria
+    # Abra as Configurações do Windows
+    # Pressione Windows + I
+    # Acesse Segurança do Windows
+    # Vá em Privacidade e Segurança → Segurança do Windows → Segurança do Dispositivo
+    # Abra os detalhes de Isolamento do Núcleo
+    # Clique em Detalhes de isolamento do núcleo
+    # Desative a Integridade da Memória
+    # Clique no botão de alternância em Integridade da Memória para desligá-lo (ficará cinza)
+    # Reinicie o computador
+    # O Windows pedirá para reiniciar para aplicar a alteração.
 }
 
 # 4. Construção dos Argumentos do QEMU
