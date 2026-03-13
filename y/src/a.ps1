@@ -60,7 +60,8 @@ $QEMU_CPU = "core2duo"
 
 
 # 1. Limpeza de processos anteriores
-taskkill /f /im qemu-system-x86_64.exe 2>$null
+#taskkill /f /im qemu-system-x86_64.exe 2>$null
+cmd /c 'y kill text ubuntu_disk'
 
 # 3. Verificação do Acelerador HAXM
 $haxmStatus = sc.exe query intelhaxm
