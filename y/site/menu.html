@@ -327,7 +327,7 @@ function load(a){
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 1')">printScreen 1</a>
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 3')">printScreen 3</a>
               <a href="javascript:void(0);" class="yellow" onclick="load('A_C')">Ar Condicionado</a>
-              <a href="javascript:void(0);" class="gray" ></a>
+              <a href="javascript:void(0);" class="gray" onclick="load('kill')" >kill</a>
               <a href="javascript:void(0);" class="red" onclick="load('Rabisco')">Rabisco</a>
               ` + mostraVolumeControle() + `
             </div>		
@@ -429,6 +429,25 @@ function load(a){
             }, 1);
             return;
         }
+        if ( a == '/Menu/kill' ){
+            document.getElementById('bloco2').innerHTML=`
+            <div class="header">/Menu/kill</div>
+            <div class="menu" style="--total-cols: 3;">
+              <a href="javascript:void(0);" class="gray" onclick="load('java')">java</a>
+              <a href="javascript:void(0);" class="gray" onclick="load('chrome')">chrome</a>
+              <a href="javascript:void(0);" class="gray" onclick="load('cmd')">cmd</a>
+              <a href="javascript:void(0);" class="gray" onclick="load('dota2')">dota2</a>
+              <a href="javascript:void(0);" class="gray" onclick="load('netbeans')">netbeans</a>
+              ` + mostraVolumeControle() + `
+            </div>		
+            `;
+            return;		
+		}
+        if ( a == '/Menu/kill/java' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'taskkill /im java.exe /f\ntaskkill /im javaw.exe /f' ) ); return; }
+        if ( a == '/Menu/kill/chrome' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'taskkill /im chrome.exe /f' ) ); return; }
+        if ( a == '/Menu/kill/cmd' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'taskkill /im cmd.exe /f' ) ); return; }
+        if ( a == '/Menu/kill/dota2' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'taskkill /im dota2.exe /f' ) ); return; }
+        if ( a == '/Menu/kill/netbeans' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y kill text -Dnetbeans netbeans' ) ); return; }
         if ( a == '/Menu/Rabisco' ){
             document.getElementById('bloco2').innerHTML=`
             <div class="header">/Menu/Rabisco</div>
