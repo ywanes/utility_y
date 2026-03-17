@@ -27416,6 +27416,7 @@ Exemplos...
     y selectCSV -csv file.csv -sql consulta.sql
     obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean
     obs2: se usar rownum com where ele poderá mostrar o numero errado! esse bug será corrigido depois
+    alternativa y json mostraEstrutura: y echo '{"a":1,"b":[1,2,3]}' | python3 -m json.tool
 [y xlsxToCSV]
     xlsxToCSV arquivo.xlsx mostraEstrutura
     xlsxToCSV arquivo.xlsx listaAbas
@@ -27919,6 +27920,7 @@ Exemplos...
     obs2: key iniciada com 'secret-' não é exibida nem com o comando configurado [ALL]
     obs3: -mode webdav só suporta os parametros -host, -port e -pass. No preenchimento de -pass é separado por virgula a cadeia user,senha,user,senha...
     obs4: o parametro -pass só esta implementado para o -mode webdav
+    alternativa: python3 -m http.server 8080 --bind 10.0.0.10 --directory /tmp/arquivos
 [y [httpProxy|hp]]
     y httpProxy -ip localhost -port 8080
 [y wget]

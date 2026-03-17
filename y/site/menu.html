@@ -328,7 +328,7 @@ function load(a){
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 3')">printScreen 3</a>
               <a href="javascript:void(0);" class="yellow" onclick="load('A_C')">Ar Condicionado</a>
               <a href="javascript:void(0);" class="gray" ></a>
-              <a href="javascript:void(0);" class="gray" ></a>
+              <a href="javascript:void(0);" class="red" onclick="load('Rabisco')">Rabisco</a>
               ` + mostraVolumeControle() + `
             </div>		
             `;
@@ -429,6 +429,36 @@ function load(a){
             }, 1);
             return;
         }
+        if ( a == '/Menu/Rabisco' ){
+            document.getElementById('bloco2').innerHTML=`
+            <div class="header">/Menu/Rabisco</div>
+            <div class="menu" style="--total-cols: 3;">
+              <a href="javascript:void(0);" class="red" onclick="load('Rabisco 1')">Rabisco 1</a>
+              <a href="javascript:void(0);" class="red" onclick="load('Rabisco 2')">Rabisco 2</a>
+              <a href="javascript:void(0);" class="red" onclick="load('Rabisco 4')">Rabisco 4</a>
+              <a href="javascript:void(0);" class="red" onclick="load('Rabisco 1')">Rabisco 6</a>
+              <a href="javascript:void(0);" class="red" onclick="load('Rabisco 2')">Rabisco 8</a>
+              <a href="javascript:void(0);" class="red" onclick="load('Rabisco 4')">Rabisco 10</a>
+              <a href="javascript:void(0);" class="red" onclick="load('aff')">aff</a>
+              <a href="javascript:void(0);" class="red" onclick="load('mid')">mid</a>
+              <a href="javascript:void(0);" class="red" onclick="load('lixo')">lixo</a>
+              <a href="javascript:void(0);" class="red" onclick="load('time baum')">time baum</a>
+              <a href="javascript:void(0);" class="red" onclick="load('help')">help</a>
+              <a href="javascript:void(0);" class="red" onclick="load('help top')">help top</a>
+              <a href="javascript:void(0);" class="red" onclick="load('help mid')">help mid</a>
+              <a href="javascript:void(0);" class="red" onclick="load('help bot')">help bot</a>
+              <a href="javascript:void(0);" class="red" onclick="load('ajuda')">ajuda</a>
+              <a href="javascript:void(0);" class="red" onclick="load('bora')">bora</a>
+              <a href="javascript:void(0);" class="red" onclick="load('top')">top</a>
+              <a href="javascript:void(0);" class="red" onclick="load('excelente')">excelente</a>
+              <a href="javascript:void(0);" class="red" onclick="load('ai meu cu')">ai meu cu</a>
+              ` + mostraVolumeControle() + `
+            </div>		
+            `;
+            return;
+        }		
+        if ( a.indexOf('/Menu/Rabisco/Rabisco ') == 0 ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'd:\ncd D:\\daemon\\scripts_geral\\RabiscoDota\ndotnet run ' + a.substr('/Menu/Rabisco/Rabisco '.length) ) ); return; }
+        if ( a.indexOf('/Menu/Rabisco/') == 0 ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'd:\ncd D:\\daemon\\scripts_geral\\EscritaDota\ndotnet run "' + a.substr('/Menu/Rabisco/'.length) + '"') ); return; }
     } catch (e) {
         console.error("Erro ao carregar menu: ", e);
         document.getElementById('bloco2').innerHTML = '<div class="header" style="color:red">Erro Interno</div>';
