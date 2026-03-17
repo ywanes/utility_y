@@ -27937,6 +27937,7 @@ Exemplos...
     y find -type f -pre "y cat" -pos "| y grep 'PESQUISA AQUI'" 
     obs: -L para navegar dentro do SymbolicLink, ex: y find / -L
     obs2: -type contem as opcoes f e d
+    alternativa: find 'dag_id=backup_e_discovery_folhas_monitoramento' -exec ls -ldtr {} +
 [y ls]
     y ls
     y ls pasta1
