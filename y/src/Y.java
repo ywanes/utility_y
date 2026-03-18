@@ -13624,7 +13624,7 @@ F6 liga/desliga
             if ( runtimeExecError.contains("No module named 'keyboard'") )
                 erroFatal("\n\nERRO!, é preciso instalar o keyboard, use pip install keyboard");
             if ( runtimeExecError.contains("No module named 'pyautogui'") )
-                erroFatal("\n\nERRO!, é preciso instalar o keyboard, use pip install pyautogui");
+                erroFatal("\n\nERRO!, é preciso instalar o pyautogui, use pip install pyautogui");
             System.out.println("Erro: " + runtimeExecError);
         }
         return;
