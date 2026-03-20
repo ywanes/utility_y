@@ -122,24 +122,24 @@ then
 else
   echo "disable -> verify new ubuntu and LTS"
 fi
-alias gcloud='$HOME/google-cloud-sdk/bin/gcloud'
-alias gsutil='$HOME/google-cloud-sdk/bin/gsutil'
-alias bq='$HOME/google-cloud-sdk/bin/bq'
-export CLOUDSDK_CONFIG="$HOME/.cf"
-export REQUESTS_CA_BUNDLE=""
+#alias gcloud='$HOME/google-cloud-sdk/bin/gcloud'
+#alias gsutil='$HOME/google-cloud-sdk/bin/gsutil'
+#alias bq='$HOME/google-cloud-sdk/bin/bq'
+#export CLOUDSDK_CONFIG="$HOME/.cf"
+#export REQUESTS_CA_BUNDLE=""
 #export CLOUDSDK_PYTHON="/usr/bin/python3.11" #apt install python3.11.2 #fix error No module named 'imp' in python3.12
-export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missio@mb.com.br/adc.json"
-alias gopen='gcloud cloud-shell ssh'
-alias openzeus='gcloud --project="mb-prod-277215" beta compute ssh "zeus-bi-replica" --zone "us-east4-a"'
+#export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missio@mb.com.br/adc.json"
+#alias gopen='gcloud cloud-shell ssh'
+#alias openzeus='gcloud --project="mb-prod-277215" beta compute ssh "zeus-bi-replica" --zone "us-east4-a"'
 # new img p11:
 # docker load < /p11.tar
 # new container p11:
 # docker stop p11;docker rm p11;docker run -dt --name p11 p11;
 # entra p11 ou inicia e entra p11
-alias p11='if [ `docker ps -f name=p11 | wc -l` == "2" ]; then docker exec -it p11 bash 2>/dev/null; else echo ligando p11..;docker start p11 >/dev/null;docker exec -it p11 bash 2>/dev/null; fi'
-alias destino='bq query --format=csv --use_legacy_sql=false --max_rows=1000000'
-
+#alias p11='if [ `docker ps -f name=p11 | wc -l` == "2" ]; then docker exec -it p11 bash 2>/dev/null; else echo ligando p11..;docker start p11 >/dev/null;docker exec -it p11 bash 2>/dev/null; fi'
+#alias destino='bq query --format=csv --use_legacy_sql=false --max_rows=1000000'
 #setxkbmap -model abnt2 -layout br
+alias c='cd /home/base/claude && claude --effort max'
 EOF
 chmod 777 /opt/env_
 
