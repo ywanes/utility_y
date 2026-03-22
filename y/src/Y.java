@@ -2704,8 +2704,8 @@ cat buffer.log
                                                 results+=nome + " - nome invalido para uma proc windows\n";
                                                 continue;
                                             }                                                                                        
-                                            if ( restart ){                   
-                                                kill_by_text(" -ignore DAEMON" + nome + " ");
+                                            if ( restart ){                                                                   
+                                                kill_by_text("DAEMON" + nome); //kill_by_text(" -ignore DAEMON" + nome + " ");
                                             }                                            
                                             boolean jaEmUso=false;
                                             for ( int i=0;i<procs.size();i++ ){
@@ -2753,8 +2753,8 @@ cat buffer.log
                                                     break;
                                                 }
                                             if ( !jaEmUso )
-                                                result=nome + " nao esta em execucao";
-                                            if ( kill_by_text(" -ignore DAEMON" + nome + " ") )
+                                                result=nome + " nao esta em execucao";                                            
+                                            if ( kill_by_text("DAEMON" + nome) ) //if ( kill_by_text(" -ignore DAEMON" + nome + " ") )
                                                 result=nome + " stopado";
                                             results+=result+"\n";
                                         }
