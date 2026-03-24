@@ -2548,8 +2548,16 @@ cat buffer.log
                             String result=null;
                             boolean ok=true;
                             String dir_base="/daemon";
-                            if ( isWindows() )
+                            if ( isWindows() ){
                                 dir_base="d:/daemon";
+                                if (!new File(dir_base).exists()){
+                                    dir_base="c:/daemon";
+                                }
+                            }
+                            if (!new File(dir_base).exists()){
+                                System.err.println("pasta daemon nao encontrada!");
+                                System.exit(1);                                
+                            }
                             String dir=".";                            
                             String dir_init=".";
                             String tail_dir=".";
