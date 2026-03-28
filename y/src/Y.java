@@ -27580,7 +27580,6 @@ Exemplos...
     y cat ">>" file1.txt
     y cat
     obs: pode ser outra tag, não precisa ser EOF
-    obs2: até o momento o codigo "<<EOF>" só esta liberado para windows!
 [y redis]
     procure por y help httpServer
     na parte -redisDir
