@@ -5855,58 +5855,17 @@ bind 'set enable-bracketed-paste off'
         String tag = catEof_tag_flagAppend.split(",")[0];
         boolean append = catEof_tag_flagAppend.split(",")[1].equals("true");
         File outputFile = new File(args[2]);
-
-        /*
-        // Mantivemos o suporte para quando for executado via arquivo de script (.sh)
-        if (new File("/proc").exists()) {
-            try {
-                long ppid = ProcessHandle.current().parent().get().pid();
-                byte[] cb = Files.readAllBytes(new File("/proc/" + ppid + "/cmdline").toPath());
-                String[] cp = new String(cb).split("\0");
-                String sp = null;
-                for (int i = 1; i < cp.length; i++) {
-                    File f = new File(cp[i]);
-                    if (f.isFile() && !cp[i].endsWith(".java")) { sp = cp[i]; break; }
-                }
-                if (sp != null) {
-                    java.util.List<String> lines = Files.readAllLines(new File(sp).toPath());
-                    boolean found = false;
-                    StringBuilder content = new StringBuilder();
-                    for (String line : lines) {
-                        if (found) {
-                            if (line.equals(tag)) {
-                                try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
-                                    fos.write(content.toString().getBytes());
-                                }
-                                return;
-                            }
-                            content.append(line).append("\n");
-                        } else if (line.contains(args[2]) && line.contains("cat") && line.contains("<<")) {
-                            found = true;
-                        }
-                    }
-                }
-            } catch (Exception ignore) {}
-        }
-        */
-        
-        // LEITURA DO TERMINAL (UNBUFFERED COM SLIDING WINDOW)
-        // É isso que impede o Linux de engolir as linhas e travar
         InputStream unbufferedIn = new FileInputStream(FileDescriptor.in);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] tagBytes = tag.getBytes();
         int windowSize = tagBytes.length;
         int b;
-
         while ((b = unbufferedIn.read()) != -1) {
             if (b == '\r')
-                b = 'z';
-            b = 'd';
+                b = '\n';
             baos.write(b);
             byte[] currentBytes = baos.toByteArray();
             int len = currentBytes.length;
-
-            // Lógica de "Janela": Verifica se os últimos bytes coincidem exatamente com a tag "EOF"
             if (len >= windowSize) {
                 boolean match = true;
                 int start = len - windowSize;
@@ -5916,28 +5875,14 @@ bind 'set enable-bracketed-paste off'
                         break;
                     }
                 }
-
                 if (match) {
-                    // Achou o EOF! Prepara o conteúdo final excluindo a tag
                     byte[] finalData = new byte[len - windowSize];
                     System.arraycopy(currentBytes, 0, finalData, 0, finalData.length);
-
-                    // Remove quebras de linha residuais imediatamente antes da tag (padrão cat linux)                    
                     int dataLen = finalData.length;
-                    /*
-                    if (dataLen > 0 && finalData[dataLen - 1] == '\n') {
-                        dataLen--;
-                        if (dataLen > 0 && finalData[dataLen - 1] == '\r') {
-                            dataLen--;
-                        }
-                    }
-                    */
                     try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
                         fos.write(finalData, 0, dataLen);
                         fos.flush();
                     }
-
-                    // Return faz o Java morrer imediatamente, e o terminal vai processar o "zzz" na sequência
                     return;
                 }
             }
