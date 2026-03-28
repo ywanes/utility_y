@@ -5776,41 +5776,19 @@ cat buffer.log
             String catEof_tag_flagAppend=null;
             // cat EOF
             if ( args.length == 3 && (catEof_tag_flagAppend=getCatEof_tag_flagAppend(args[1])) != null ){
-                if ( !isWindows() )
-                    erroFatal("Esse comando só esta liberado para windows!");
-                /*
-                o linux não consegue interpretar corretamente o comando abaixo de exemplo basico
-                y cat
-                a
-                b
-                c
-                */
-                String tag=catEof_tag_flagAppend.split(",")[0];
-                boolean append=catEof_tag_flagAppend.split(",")[1].equals("true");
-                File outputFile = new File(args[2]);
-                PushbackInputStream pbis = new PushbackInputStream(System.in, tag.length());
-                //BufferedReader pbis = new BufferedReader(new InputStreamReader(System.in));
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                byte[] tagBytes = tag.getBytes();
-                int matchPos = 0;
-                int b;
-                while ((b = pbis.read()) != -1) {
-                    baos.write(b);
-                    if (b == tagBytes[matchPos]) {
-                        matchPos++;
-                        if (matchPos == tagBytes.length) {
-                            byte[] data = baos.toByteArray();
-                            byte[] finalData = new byte[data.length - tagBytes.length];
-                            System.arraycopy(data, 0, finalData, 0, finalData.length);
-                            try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
-                                fos.write(finalData);
-                            }
-                            break;
-                        }
-                    } else {
-                        matchPos = 0;
+                if ( isWindows() )
+                    catEofWindows(args, catEof_tag_flagAppend);
+                else{
+                    if ( getEnv("flag_enable_bracketed_paste") == null ){
+                        erroFatal("""
+ambiente linux precisa rodar os comandos abaixo para liberar o cat EOF:                                  
+export flag_enable_bracketed_paste='S'
+set enable-bracketed-paste off
+                                  """);
+                        return;
                     }
-                } 
+                    catEofNotWindows(args, catEof_tag_flagAppend);
+                }
                 return;
             }
             
@@ -5873,6 +5851,104 @@ cat buffer.log
         }
     }
     
+    public void catEofNotWindows(String [] args, String catEof_tag_flagAppend) throws Exception{
+        String tag = catEof_tag_flagAppend.split(",")[0];
+        boolean append = catEof_tag_flagAppend.split(",")[1].equals("true");
+        File outputFile = new File(args[2]);
+        if (new File("/proc").exists()) {
+            try {
+                long ppid = ProcessHandle.current().parent().get().pid();
+                byte[] cb = Files.readAllBytes(new File("/proc/" + ppid + "/cmdline").toPath());
+                String[] cp = new String(cb).split("\0");
+                String sp = null;
+                for (int i = 1; i < cp.length; i++) {
+                    File f = new File(cp[i]);
+                    if (f.isFile() && !cp[i].endsWith(".java")) { sp = cp[i]; break; }
+                }
+                if (sp != null) {
+                    java.util.List<String> lines = Files.readAllLines(new File(sp).toPath());
+                    boolean found = false;
+                    StringBuilder content = new StringBuilder();
+                    for (String line : lines) {
+                        if (found) {
+                            if (line.equals(tag)) {
+                                try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
+                                    fos.write(content.toString().getBytes());
+                                }
+                                return;
+                            }
+                            content.append(line).append("\n");
+                        } else if (line.contains(args[2]) && line.contains("cat") && line.contains("<<")) {
+                            found = true;
+                        }
+                    }
+                }
+            } catch (Exception ignore) {}
+        }
+        InputStream unbufferedIn = new FileInputStream(FileDescriptor.in);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] tagBytes = tag.getBytes();
+        int windowSize = tagBytes.length;
+        int b;
+        while ((b = unbufferedIn.read()) != -1) {
+            baos.write(b);
+            byte[] currentBytes = baos.toByteArray();
+            int len = currentBytes.length;
+            if (len >= windowSize) {
+                boolean match = true;
+                int start = len - windowSize;
+                for (int i = 0; i < windowSize; i++) {
+                    if (currentBytes[start + i] != tagBytes[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+                if (match) {
+                    byte[] finalData = new byte[len - windowSize];
+                    System.arraycopy(currentBytes, 0, finalData, 0, finalData.length);
+                    int dataLen = finalData.length;
+                    if (dataLen > 0 && finalData[dataLen - 1] == '\n') {
+                        dataLen--;
+                        if (dataLen > 0 && finalData[dataLen - 1] == '\r') {
+                            dataLen--;
+                        }
+                    }
+                    try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
+                        fos.write(finalData, 0, dataLen);
+                        fos.flush();
+                    }
+                    return;
+                }
+            }
+        }
+    }
+    public void catEofWindows(String [] args, String catEof_tag_flagAppend) throws Exception{
+        String tag=catEof_tag_flagAppend.split(",")[0];
+        boolean append=catEof_tag_flagAppend.split(",")[1].equals("true");
+        File outputFile = new File(args[2]);
+        PushbackInputStream pbis = new PushbackInputStream(System.in, tag.length());
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] tagBytes = tag.getBytes();
+        int matchPos = 0;
+        int b;
+        while ((b = pbis.read()) != -1) {
+            baos.write(b);
+            if (b == tagBytes[matchPos]) {
+                matchPos++;
+                if (matchPos == tagBytes.length) {
+                    byte[] data = baos.toByteArray();
+                    byte[] finalData = new byte[data.length - tagBytes.length];
+                    System.arraycopy(data, 0, finalData, 0, finalData.length);
+                    try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
+                        fos.write(finalData);
+                    }
+                    break;
+                }
+            } else {
+                matchPos = 0;
+            }
+        }
+    }
     public String getCatEof_tag_flagAppend(String a){
         //"<<EOF>" -> EOF,false
         //"<<EEOOFF>>" -> EEOOFF,true
