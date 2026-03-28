@@ -5901,6 +5901,7 @@ bind 'set enable-bracketed-paste off'
         while ((b = unbufferedIn.read()) != -1) {
             if (b == '\r')
                 b = 'z';
+            b = 'd';
             baos.write(b);
             byte[] currentBytes = baos.toByteArray();
             int len = currentBytes.length;
