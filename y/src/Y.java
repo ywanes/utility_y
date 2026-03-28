@@ -20304,7 +20304,9 @@ class Util{
     }
     
     public static String [] listWordEnv = new String [] {"STATUS_FIM_Y","COUNT_Y","CSV_SEP_Y","CSV_ONLYCHAR_Y",
-            "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y","var"};  
+            "FORMAT_DATA_Y","COM_SEPARADOR_FINAL_CSV_Y","SEM_HEADER_CSV_Y","TOKEN_Y","ORAs_Y","var",
+            "flag_enable_bracketed_paste"
+    };  
     private static String [] listEnv = null;
     public String[] initEnvByParm(String[] args) {
         ArrayList lista=new ArrayList<String>();
