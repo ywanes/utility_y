@@ -122,6 +122,8 @@ then
 else
   echo "disable -> verify new ubuntu and LTS"
 fi
+export flag_enable_bracketed_paste='S'
+bind 'set enable-bracketed-paste off'
 #alias gcloud='$HOME/google-cloud-sdk/bin/gcloud'
 #alias gsutil='$HOME/google-cloud-sdk/bin/gsutil'
 #alias bq='$HOME/google-cloud-sdk/bin/bq'
