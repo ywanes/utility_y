@@ -5856,6 +5856,7 @@ bind 'set enable-bracketed-paste off'
         boolean append = catEof_tag_flagAppend.split(",")[1].equals("true");
         File outputFile = new File(args[2]);
 
+        /*
         // Mantivemos o suporte para quando for executado via arquivo de script (.sh)
         if (new File("/proc").exists()) {
             try {
@@ -5887,7 +5888,8 @@ bind 'set enable-bracketed-paste off'
                 }
             } catch (Exception ignore) {}
         }
-
+        */
+        
         // LEITURA DO TERMINAL (UNBUFFERED COM SLIDING WINDOW)
         // É isso que impede o Linux de engolir as linhas e travar
         InputStream unbufferedIn = new FileInputStream(FileDescriptor.in);
@@ -5898,7 +5900,7 @@ bind 'set enable-bracketed-paste off'
 
         while ((b = unbufferedIn.read()) != -1) {
             if (b == '\r')
-                b = '\n';
+                b = 'z';
             baos.write(b);
             byte[] currentBytes = baos.toByteArray();
             int len = currentBytes.length;
