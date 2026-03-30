@@ -129,8 +129,7 @@
 	<div id="bloco1" class="alive-indicator">
 		<div class="menu" style="--total-cols: 3;">
 		  <a href="javascript:void(0);" class="blue" onclick="load('..');">voltar</a>
-		</div>
-		<br>
+		</div>		
 	</div>
 	<div id="bloco2">	
 		<div class="header">loading...</div>
@@ -317,6 +316,15 @@ function load(a){
               <a href="javascript:void(0);" class="blue" onclick="load('y lock 0')">y lock 0</a>
               <a href="javascript:void(0);" class="blue" onclick="load('y lock')">y lock</a>
               <a href="javascript:void(0);" class="green" onclick="load('y lock w')">y lock w</a>
+              <a href="javascript:void(0);" class="gray"></a>
+              <a href="javascript:void(0);" class="blue" onclick="load('atualiza ipv6')">atualiza ipv6</a>
+              <a href="javascript:void(0);" class="blue" onclick="load('Win+L')">Win+L</a>
+			  
+			  
+			  <!-- 			  
+			  D:\daemon\scripts_ipv6\sc0.bat
+			  rundll32.exe user32.dll,LockWorkStation
+			  -->
               <a href="javascript:void(0);" class="orange" onclick="load('Musicas')">Musicas</a>
               <a href="javascript:void(0);" class="red" onclick="load('Dota')">Dota</a>
               <a href="javascript:void(0);" class="red" onclick="load('DotaNoOCR')">DotaNoOCR</a>
@@ -337,6 +345,8 @@ function load(a){
         if ( a == '/Menu/y lock 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0') ); return; }
         if ( a == '/Menu/y lock' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe') ); return; }
         if ( a == '/Menu/y lock w' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w') ); return; }
+        if ( a == '/Menu/atualiza ipv6' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_ipv6\\sc0.bat') ); return; }		
+		if ( a == '/Menu/Win+L' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'rundll32.exe user32.dll,LockWorkStation') ); return; }				
         if ( a == '/Menu/Dota' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll') ); return; }
         if ( a == '/Menu/DotaNoOCR' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll -nicks no_ocr') ); return; }
         if ( a == '/Menu/printScreen 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 0') ); return; }	// D:\ProgramFiles\screens
