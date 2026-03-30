@@ -28027,6 +28027,8 @@ Exemplos...
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
     obs2: whoami funciona no windows e linux
+    verificando se o usuario expira: wmic useraccount where name='%username%' get PasswordExpires
+    setando para nao expirar: wmic useraccount where name='%username%' set PasswordExpires=FALSE
 [y pss]
     y pss
     y pss " y lock "
