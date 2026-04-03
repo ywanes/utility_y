@@ -882,6 +882,10 @@ cat buffer.log
             cat(args);
             return;
         }
+        if ( args[0].equals("uncat") ){
+            uncat(args);
+            return;
+        }
         if ( args[0].equals("sort") ){
             try{
                 new ExternalSort(System.in, System.out);
@@ -2231,7 +2235,6 @@ cat buffer.log
             String retorno=null;
             if ( args.length == 2 )
                 retorno=helplikecase(args[1], false);
-            //////////////////
             if ( retorno == null )
                 System.out.println(
                     "Utilitário Y versão:" + lendo_arquivo_pacote("/y/versao") + "\n"
@@ -5888,6 +5891,7 @@ bind 'set enable-bracketed-paste off'
             }
         }
     }
+    
     public void catEofWindows(String [] args, String catEof_tag_flagAppend) throws Exception{
         String tag=catEof_tag_flagAppend.split(",")[0];
         boolean append=catEof_tag_flagAppend.split(",")[1].equals("true");
@@ -5915,6 +5919,7 @@ bind 'set enable-bracketed-paste off'
             }
         }
     }
+    
     public String getCatEof_tag_flagAppend(String a){
         //"<<EOF>" -> EOF,false
         //"<<EEOOFF>>" -> EEOOFF,true
@@ -5927,6 +5932,28 @@ bind 'set enable-bracketed-paste off'
         if ( a.endsWith(">") && a.replaceAll(">", "").length() == a.length()-1 )
             return a.replaceAll("<", "").replaceAll(">", "")+",false";
         return null;
+    }
+    
+    public void uncat(String [] args){
+        if ( args.length > 1 )
+            erroFatal("parte ainda nao implemetada!");        
+        StringBuilder sb=new StringBuilder();
+        int c=0;
+        File [] files=new File(".").listFiles();
+        for ( int i=0;i<files.length;i++ ){
+            if ( !files[i].isFile() )
+                continue;
+            if ( c > 0 )
+                sb.append("\n\n");
+            String name=files[i].getName();            
+            sb.append("y cat \"<<EOF>\" ");
+            sb.append(name);
+            sb.append("\n");
+            sb.append(lendo_arquivo(name));
+            sb.append("EOF\n");
+            c++;
+        }
+        System.out.println(sb.toString());
     }
     
     public void iso(String [] args){
@@ -20566,7 +20593,6 @@ class Util{
         return robot_local;
     }
 
-    ///////////////
     public void bmp_salvarRecorte(
             byte[] bmpBytes,
             int cropX1,
@@ -27298,6 +27324,7 @@ usage:
   [y progressBar]
   [y xargs]
   [y cat]
+  [y uncat]
   [y redis]
   [y sort]
   [y sorte
@@ -27580,6 +27607,12 @@ Exemplos...
     y cat ">>" file1.txt
     y cat
     obs: pode ser outra tag, não precisa ser EOF
+[y uncat]
+    y uncat # todos os arquivos
+    y uncat arquivo
+    y uncat "**/*.py" # todos os python, pastas envolvidas e subpastas envolvidas
+    y uncat "**/" # todas as pastas e subpastas
+    y uncat "*/" # todas as pastas
 [y redis]
     procure por y help httpServer
     na parte -redisDir
