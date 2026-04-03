@@ -5940,17 +5940,16 @@ bind 'set enable-bracketed-paste off'
         StringBuilder sb=new StringBuilder();
         int c=0;
         File [] files=new File(".").listFiles();
+        String eof="EOF"+random(1000,9999);
         for ( int i=0;i<files.length;i++ ){
             if ( !files[i].isFile() )
                 continue;
             if ( c > 0 )
                 sb.append("\n\n");
             String name=files[i].getName();            
-            sb.append("y cat \"<<EOF>\" ");
-            sb.append(name);
-            sb.append("\n");
+            sb.append("y cat \"<<"+eof+">\" \"" + name + "\"\n");
             sb.append(lendo_arquivo(name));
-            sb.append("EOF\n");
+            sb.append(eof + "\n");
             c++;
         }
         System.out.println(sb.toString());
