@@ -17287,7 +17287,15 @@ class Util{
     }
         
     public void set_clipboard(String a){
-        java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(a), null);
+        if ( isWindows() )
+            java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(a), null);
+        else{
+            try{
+                set_clipboard_linux(a);
+            }catch(Exception e){
+                erroFatal(e);
+            }
+        }
     }
     
     public String get_clipboard(){
@@ -17299,7 +17307,36 @@ class Util{
         }        
         return null;
     }
-    
+
+    public void set_clipboard_linux(String text) throws Exception {
+        String[] cmd;
+        if (check_set_clipboard_linux("xclip")) {
+            cmd = new String[]{"xclip", "-selection", "clipboard"};
+        } else if (check_set_clipboard_linux("xsel")) {
+            cmd = new String[]{"xsel", "--clipboard", "--input"};
+        } else {
+            // fallback para AWT
+            java.awt.Toolkit.getDefaultToolkit()
+                .getSystemClipboard()
+                .setContents(new java.awt.datatransfer.StringSelection(text), null);
+            return;
+        }
+
+        Process proc = Runtime.getRuntime().exec(cmd);
+        proc.getOutputStream().write(text.getBytes());
+        proc.getOutputStream().close();
+        proc.waitFor();
+    }
+
+    private boolean check_set_clipboard_linux(String cmd) {
+        try {
+            return Runtime.getRuntime().exec(new String[]{"which", cmd})
+                          .waitFor() == 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public String [] check_util_list=new String[]{
         "D:/ProgramFiles/iso/manual.txt,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/manual.txt,e7574cf7b22bf7ffa180921f0706a43e",
         "D:/ProgramFiles/iso/efisys.bin,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/efisys.bin,65602bb5e3c7c39a88a973c73e896765",
