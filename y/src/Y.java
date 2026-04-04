@@ -17308,32 +17308,18 @@ class Util{
         return null;
     }
 
-    public void set_clipboard_linux(String text) throws Exception {
-        String[] cmd;
-        if (check_set_clipboard_linux("xclip")) {
-            cmd = new String[]{"xclip", "-selection", "clipboard"};
-        } else if (check_set_clipboard_linux("xsel")) {
-            cmd = new String[]{"xsel", "--clipboard", "--input"};
-        } else {
-            // fallback para AWT
-            java.awt.Toolkit.getDefaultToolkit()
-                .getSystemClipboard()
-                .setContents(new java.awt.datatransfer.StringSelection(text), null);
-            return;
-        }
-
-        Process proc = Runtime.getRuntime().exec(cmd);
-        proc.getOutputStream().write(text.getBytes());
-        proc.getOutputStream().close();
-        proc.waitFor();
-    }
-
-    private boolean check_set_clipboard_linux(String cmd) {
+    public void set_clipboard_linux(String text){
+        String[] cmd = new String[]{"xclip", "-selection", "clipboard"};
         try {
-            return Runtime.getRuntime().exec(new String[]{"which", cmd})
-                          .waitFor() == 0;
+            if ( Runtime.getRuntime().exec(new String[]{"which", "xclip"}).waitFor() != 0 ){
+                Process proc = Runtime.getRuntime().exec(cmd);
+                proc.getOutputStream().write(text.getBytes());
+                proc.getOutputStream().close();
+                proc.waitFor();                
+            }else
+                erroFatal("Erro:\nInstale o xclip primeiro!\nsudo apt install xclip");
         } catch (Exception e) {
-            return false;
+            erroFatal(e);
         }
     }
 
