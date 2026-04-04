@@ -17312,7 +17312,7 @@ class Util{
         String[] cmd = new String[]{"xclip", "-selection", "clipboard"};
         try {
             int rc=Runtime.getRuntime().exec(new String[]{"which", "xclip"}).waitFor();
-            if ( rc != 0 ){
+            if ( rc == 0 ){
                 Process proc = Runtime.getRuntime().exec(cmd);
                 proc.getOutputStream().write(text.getBytes());
                 proc.getOutputStream().close();
