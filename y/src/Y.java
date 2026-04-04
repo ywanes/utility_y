@@ -5952,7 +5952,9 @@ bind 'set enable-bracketed-paste off'
             sb.append(eof + "\n");
             c++;
         }
-        System.out.println(sb.toString());
+        if ( c > 0 )
+            sb.append("\n");
+        set_clipboard(sb.toString());
     }
     
     public void iso(String [] args){
@@ -17284,6 +17286,20 @@ class Util{
             sleepMillis(miliPrevisto-delta);
     }
         
+    public void set_clipboard(String a){
+        java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(a), null);
+    }
+    
+    public String get_clipboard(){
+        try {
+            String result = (String) java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().getData(java.awt.datatransfer.DataFlavor.stringFlavor);
+            return result;
+        }catch(Exception e){
+            erroFatal(e);
+        }        
+        return null;
+    }
+    
     public String [] check_util_list=new String[]{
         "D:/ProgramFiles/iso/manual.txt,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/manual.txt,e7574cf7b22bf7ffa180921f0706a43e",
         "D:/ProgramFiles/iso/efisys.bin,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/efisys.bin,65602bb5e3c7c39a88a973c73e896765",
@@ -27606,8 +27622,8 @@ Exemplos...
     y cat ">>" file1.txt
     y cat
     obs: pode ser outra tag, não precisa ser EOF
-[y uncat]
-    y uncat # todos os arquivos
+[y uncat]    
+    y uncat # vai direto para o clipboard
     y uncat arquivo
     y uncat "**/*.py" # todos os python, pastas envolvidas e subpastas envolvidas
     y uncat "**/" # todas as pastas e subpastas
