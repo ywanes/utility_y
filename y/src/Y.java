@@ -17311,13 +17311,14 @@ class Util{
     public void set_clipboard_linux(String text){
         String[] cmd = new String[]{"xclip", "-selection", "clipboard"};
         try {
-            if ( Runtime.getRuntime().exec(new String[]{"which", "xclip"}).waitFor() != 0 ){
+            int rc=Runtime.getRuntime().exec(new String[]{"which", "xclip"}).waitFor();
+            if ( rc != 0 ){
                 Process proc = Runtime.getRuntime().exec(cmd);
                 proc.getOutputStream().write(text.getBytes());
                 proc.getOutputStream().close();
                 proc.waitFor();                
             }else
-                erroFatal("Erro:\nInstale o xclip primeiro!\nsudo apt install xclip");
+                erroFatal("Erro:\nInstale o xclip primeiro!\nsudo apt install xclip\nrc: " + rc);
         } catch (Exception e) {
             erroFatal(e);
         }
