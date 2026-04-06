@@ -343,8 +343,16 @@ function load(a){
             return;
         }
         if ( a == '/Menu/y lock 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0') ); return; }
-        if ( a == '/Menu/y lock' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe') ); return; }
-        if ( a == '/Menu/y lock w' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w') ); return; }
+        if ( a == '/Menu/y lock' ){ 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0'), false); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe') ); 
+			return; 
+		}
+        if ( a == '/Menu/y lock w' ){ 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0'), false); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w') ); 
+			return; 
+		}
         if ( a == '/Menu/atualiza ipv6' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_ipv6\\sc0.bat') ); return; }		
 		if ( a == '/Menu/Win+L' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'rundll32.exe user32.dll,LockWorkStation') ); return; }				
         if ( a == '/Menu/Dota' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll') ); return; }
@@ -586,7 +594,7 @@ function get_senha_storage(){
 	return localStorage.getItem('user_auth_token');
 }
 
-function getBinary(file, queroAsync){
+function getBinary(file, queroAsync){ // queroAsync = false para aguardar retorno
 	if ( queroAsync == null )
 		queroAsync=true;	
     var xhr = new XMLHttpRequest();
