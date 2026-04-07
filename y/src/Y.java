@@ -5935,6 +5935,11 @@ bind 'set enable-bracketed-paste off'
     }
     
     public void uncat(String [] args){
+        boolean flag_out=false;
+        if ( args.length == 2 && args[1].equals("-out") ){
+            args=new String[]{args[0]};
+            flag_out=true;
+        }
         if ( args.length > 1 )
             erroFatal("parte ainda nao implemetada!");        
         StringBuilder sb=new StringBuilder();
@@ -5954,7 +5959,10 @@ bind 'set enable-bracketed-paste off'
         }
         if ( c > 0 )
             sb.append("\n");
-        set_clipboard(sb.toString());
+        if ( flag_out )
+            System.out.println(sb.toString());
+        else
+            set_clipboard(sb.toString());
     }
     
     public void iso(String [] args){
@@ -27648,6 +27656,7 @@ Exemplos...
     obs: pode ser outra tag, não precisa ser EOF
 [y uncat]    
     y uncat # vai direto para o clipboard
+    y uncat -out # vai para a tela
     y uncat arquivo
     y uncat "**/*.py" # todos os python, pastas envolvidas e subpastas envolvidas
     y uncat "**/" # todas as pastas e subpastas
