@@ -122,6 +122,235 @@ then
 else
   echo "disable -> verify new ubuntu and LTS"
 fi
+
+cat <<'EOF'> /opt/porteiro.py
+#!/usr/bin/env python3
+import sys
+import os
+import socket
+import threading
+import time
+import random
+
+
+terminal_lock = threading.Lock()
+
+
+def tprint(*args, **kwargs):
+    with terminal_lock:
+        print(*args, **kwargs)
+
+
+class Porteiro:
+    def __init__(self):
+        self.prefixos_permitidos = []
+
+    def carregar_config(self):
+        if os.name == 'nt':
+            path = r'c:\programFiles\serverrouter_ponteiro.cfg'
+        else:
+            path = '/opt/serverrouter_porteiro.cfg'
+
+        if not os.path.exists(path):
+            print(f"ERRO: Arquivo de configuracao do porteiro nao encontrado: {path}")
+            return False
+
+        with open(path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#'):
+                    self.prefixos_permitidos.append(line.lower())
+
+        print(f"Porteiro: {len(self.prefixos_permitidos)} prefixo(s) carregado(s): {self.prefixos_permitidos}")
+        return True
+
+    def is_permitido(self, post_body):
+        body_lower = self._remover_comentarios_sql(post_body.strip().lower())
+        for prefixo in self.prefixos_permitidos:
+            if body_lower.startswith(prefixo):
+                return True
+        return False
+
+    def _remover_comentarios_sql(self, texto):
+        linhas = []
+        for linha in texto.splitlines():
+            linha_limpa = linha.strip()
+            if not linha_limpa.startswith('--'):
+                linhas.append(linha_limpa)
+        return '\n'.join(linhas).strip()
+
+    def is_post(self, request):
+        return request.upper().startswith("POST ")
+
+    def extrair_body_post(self, request):
+        idx = request.find("\r\n\r\n")
+        if idx != -1:
+            return request[idx + 4:]
+        idx = request.find("\n\n")
+        if idx != -1:
+            return request[idx + 2:]
+        return None
+
+    def perguntar_terminal(self, post_body):
+        with terminal_lock:
+            print("-------------------------------------------")
+            print("PORTEIRO - Conteudo do POST:")
+            print(post_body)
+            print("-------------------------------------------")
+            resposta = input("Enter para aceitar ou n: ")
+            return resposta.strip().lower() != 'n'
+
+
+RESP_403 = b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+
+
+def ponte(client_sock, dest_host, dest_port, ponte_id, porteiro=None):
+    accumulated = b""
+    dest_sock = None
+    try:
+        if porteiro:
+            # acumula dados por 1 segundo antes de analisar
+            client_sock.settimeout(0.1)
+            start = time.time()
+            try:
+                while time.time() - start < 0.1:
+                    chunk = client_sock.recv(4096)
+                    if not chunk:
+                        return
+                    accumulated += chunk
+            except socket.timeout:
+                pass
+            client_sock.settimeout(None)
+
+            if not accumulated:
+                return
+
+            request_str = accumulated.decode('utf-8', errors='replace')
+
+            if porteiro.is_post(request_str):
+                post_body = porteiro.extrair_body_post(request_str)
+                if post_body:
+                    if not porteiro.is_permitido(post_body):
+                        # nao auto-aprovado, perguntar no terminal
+                        if not porteiro.perguntar_terminal(post_body):
+                            # negado
+                            client_sock.sendall(RESP_403)
+                            client_sock.close()
+                            return
+
+        # conecta ao destino
+        dest_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        dest_sock.connect((dest_host, dest_port))
+
+        # se porteiro, envia dados acumulados
+        if accumulated:
+            dest_sock.sendall(accumulated)
+
+        # ponte bidirecional
+        stop = threading.Event()
+
+        def forward(src, dst):
+            try:
+                while not stop.is_set():
+                    data = src.recv(4096)
+                    if not data:
+                        break
+                    dst.sendall(data)
+            except Exception:
+                pass
+            stop.set()
+            try:
+                src.close()
+            except Exception:
+                pass
+            try:
+                dst.close()
+            except Exception:
+                pass
+
+        t1 = threading.Thread(target=forward, args=(client_sock, dest_sock), daemon=True)
+        t2 = threading.Thread(target=forward, args=(dest_sock, client_sock), daemon=True)
+        t1.start()
+        t2.start()
+        t1.join()
+        t2.join()
+
+    except Exception:
+        pass
+    finally:
+        try:
+            client_sock.close()
+        except Exception:
+            pass
+        if dest_sock:
+            try:
+                dest_sock.close()
+            except Exception:
+                pass
+    tprint(f"finalizando ponte id {ponte_id}")
+
+
+def server_router(host0, port0, host1, port1, mode):
+    porteiro = None
+    if mode == "porteiro":
+        porteiro = Porteiro()
+        if not porteiro.carregar_config():
+            sys.exit(1)
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        server.bind((host0, port0))
+    except Exception as e:
+        print(f"Nao foi possivel utilizar a porta {port0} - {e}")
+        sys.exit(1)
+    server.listen(50)
+
+    tprint("ServerRouter criado.")
+    if porteiro:
+        tprint(f"Modo PORTEIRO ativo. Prefixos permitidos: {porteiro.prefixos_permitidos}")
+    tprint("obs: A ponte so estabelece conexao com o destino quando detectar o inicio da origem")
+
+    while True:
+        try:
+            client_sock, addr = server.accept()
+            ip_origem = addr[0]
+            ponte_id = str(random.randint(0, 99999)).zfill(6)
+            tprint(f"Conexao de origem: {ip_origem}, data: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+            tprint(f"iniciando ponte id {ponte_id} - ip origem {ip_origem}")
+            t = threading.Thread(
+                target=ponte,
+                args=(client_sock, host1, port1, ponte_id, porteiro),
+                daemon=True
+            )
+            t.start()
+        except Exception as e:
+            tprint(f"FIM {e}")
+            break
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 5:
+        print("Uso: python serverrouter.py <host_origem> <porta_origem> <host_destino> <porta_destino> [porteiro]")
+        sys.exit(1)
+
+    host0 = sys.argv[1]
+    port0 = int(sys.argv[2])
+    host1 = sys.argv[3]
+    port1 = int(sys.argv[4])
+    mode = sys.argv[5] if len(sys.argv) > 5 else ""
+
+    server_router(host0, port0, host1, port1, mode)
+EOF
+
+cat <<'EOF'> /opt/serverrouter_porteiro.cfg
+show
+select
+describe
+with
+insert into
+EOF
+
 export flag_enable_bracketed_paste='S'
 bind 'set enable-bracketed-paste off'
 #alias gcloud='$HOME/google-cloud-sdk/bin/gcloud'
@@ -142,6 +371,15 @@ bind 'set enable-bracketed-paste off'
 #alias destino='bq query --format=csv --use_legacy_sql=false --max_rows=1000000'
 #setxkbmap -model abnt2 -layout br
 alias c='cd /home/base/claude && claude --effort max'
+# alias porteiro='echo para editar: /opt/serverrouter_porteiro.cfg; echo; sudo -u base2 python3 /opt/porteiro.py localhost 9000 localhost 3500 porteiro'
+# ssh -L 3050:localhost:8080 -L 3051:localhost:8081 data-warehouse-azure -N -f 1>/dev/null 2>/dev/null & disown
+# ssh -L 3500:localhost:8123 -L 3501:localhost:9000 -L 3502:localhost:9009 data-warehouse-database-azure -N -f 1>/dev/null 2>/dev/null & disown
+# ssh -L 5434:localhost:5434 internal-tools-azure -N -f 1>/dev/null 2>/dev/null & disown
+# sudo iptables -A OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
+# sudo ip6tables -A OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
+# # desbloqueando
+# # sudo iptables -D OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
+# # sudo ip6tables -D OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
 EOF
 chmod 777 /opt/env_
 
