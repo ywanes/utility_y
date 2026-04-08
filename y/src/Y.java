@@ -1619,6 +1619,10 @@ cat buffer.log
             sshinfo(null, null);
             return;
         }    
+        if ( args[0].equals("sshgen") && args.length >= 1){
+            sshgen(args);
+            return;
+        }    
 		//REMOVED_GRAAL_END
 		//REMOVED_GRAAL_START
         if ( args[0].equals("sshinfo") && args.length == 2){
@@ -2072,7 +2076,7 @@ cat buffer.log
                     if ( args.length == 2 ){
                         input=readAllBytes(args[1]);
                     }else
-                        erroFatal("parametros invalidos!");
+                        erroFatalParametrosInvalidos();
                 ocr(input, System.out);
             }catch(Exception e){
                 erroFatal(e);
@@ -7086,7 +7090,7 @@ bind 'set enable-bracketed-paste off'
         Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(args);
         
         if ( objs == null )
-            erroFatal("parametros invalidos!");
+            erroFatalParametrosInvalidos();
         String url=(String)objs[0];
         Boolean verbose=(Boolean)objs[1];
         Boolean onlyLink=(Boolean)objs[2];
@@ -8422,7 +8426,7 @@ while True:
         String algo="SHA256withECDSA";
         Object [] obj = get_parms_sign(args);
         if ( obj == null )
-            erroFatal("Parametros invalidos");
+            erroFatalParametrosInvalidos();
         String msg=(String)obj[0];
         String pass=(String)obj[1];
         Boolean verify=(Boolean)obj[2];
@@ -8474,7 +8478,7 @@ while True:
     public void cors(String [] args){
         Object [] obj = get_parms_cors_ip_port_sw(args);
         if ( obj == null )
-            erroFatal("Parametros invalidos");
+            erroFatalParametrosInvalidos();
         String ip=(String)obj[0];
         Integer port=(Integer)obj[1];        
         final String [] sw=(obj[2]==null)?(new String[]{}):(((String)obj[2]).split("\\|"));
@@ -10850,6 +10854,22 @@ while True:
             System.exit(1);
         }
     }
+    private void sshgen(String [] args){
+        boolean flag_out=false;
+        if ( args.length == 4 && args[3].equals("-out") ){
+            flag_out=true;
+            args=removeParm(3, args);
+        }
+        if ( args.length == 3 ){
+            try{
+                new DeriveSSHKey().go(new String []{args[1], args[2]}, flag_out);
+            }catch(Exception e){
+                erroFatal(e);
+            }
+        }
+        else
+            erroFatalParametrosInvalidos();
+    }    
 	//REMOVED_GRAAL_END
     
 	//REMOVED_GRAAL_START
@@ -12178,7 +12198,7 @@ while True:
                 args=sliceParm(1, args);
                 continue;
             }
-            erroFatal("parametros invalidos!");
+            erroFatalParametrosInvalidos();
         }
         
         return new Object []{sleep, nicks};
@@ -13284,7 +13304,7 @@ while True:
                                         tail_status_code=status_code;
                                     }
                                 }else
-                                    erroFatal("Parametros invalidos");                                
+                                    erroFatalParametrosInvalidos();
                             }
                         }
                     }
@@ -14053,7 +14073,7 @@ while True:
     public void play(String [] parms) throws Exception{        
         Object [] objs=get_parms_f_mixer_line_wav_mp3_volume(parms);
         if ( objs == null )
-            erroFatal("Parametros invalidos");
+            erroFatalParametrosInvalidos();
         String f=(String)objs[0];
         String mixer=(String)objs[1];
         Boolean line=(Boolean)objs[2];
@@ -14132,7 +14152,7 @@ while True:
     public void gravador(String [] parms) throws Exception{        
         Object [] objs=get_parms_f_mixer_line_wav_mp3_volume(parms);
         if ( objs == null )
-            erroFatal("Parametros invalidos");
+            erroFatalParametrosInvalidos();
         String f=(String)objs[0];
         String mixer=(String)objs[1];
         Boolean line=(Boolean)objs[2];
@@ -18506,6 +18526,8 @@ class Util{
             erroFatal("erro interno removeParm");
         String [] retorno=new String[args.length-1];
         for ( int i=0;i<args.length;i++ ){
+            if ( i == n )
+                continue;
             if ( i > n )
                 retorno[i-1]=args[i];
             else
@@ -18519,6 +18541,8 @@ class Util{
             erroFatal("erro interno removeParm");
         int [] retorno=new int[args.length-1];
         for ( int i=0;i<args.length;i++ ){
+            if ( i == n )
+                continue;
             if ( i > n )
                 retorno[i-1]=args[i];
             else
@@ -18531,6 +18555,8 @@ class Util{
             erroFatal("erro interno removeParm");
         long [] retorno=new long[args.length-1];
         for ( int i=0;i<args.length;i++ ){
+            if ( i == n )
+                continue;
             if ( i > n )
                 retorno[i-1]=args[i];
             else
@@ -20550,6 +20576,10 @@ class Util{
     
     public static void erroFatal(String a) {
         System.err.println(a);
+        System.exit(1);
+    }    
+    public static void erroFatalParametrosInvalidos() {
+        System.err.println("parametros invalidos!");
         System.exit(1);
     }    
     
@@ -27229,6 +27259,205 @@ class TabelaSAC {
         System.out.println("Total pago (empréstimo + juros): R$ " + df.format(valor + totalJuros));
     }
 }
+class DeriveSSHKey {
+
+    final int ITERATIONS = 400_000;
+
+    final java.math.BigInteger P;
+    final java.math.BigInteger D;
+    final java.math.BigInteger SQRT_M1;
+    final java.math.BigInteger[] BASE;
+
+    DeriveSSHKey() {
+        P       = java.math.BigInteger.TWO.pow(255)
+                    .subtract(java.math.BigInteger.valueOf(19));
+        D       = modInv(java.math.BigInteger.valueOf(121666))
+                    .multiply(java.math.BigInteger.valueOf(-121665).mod(P)).mod(P);
+        SQRT_M1 = java.math.BigInteger.TWO.modPow(
+                    P.subtract(java.math.BigInteger.ONE)
+                     .divide(java.math.BigInteger.valueOf(4)), P);
+        java.math.BigInteger gy = modInv(java.math.BigInteger.valueOf(5))
+                    .multiply(java.math.BigInteger.valueOf(4)).mod(P);
+        BASE = new java.math.BigInteger[]{ recoverX(gy, 0), gy };
+    }
+
+    void go(String[] args, boolean flag_out) throws Exception {
+        if (args.length < 2) {
+            System.err.println("Uso : java DeriveSSHKey <frase-secreta> <nome-da-chave>");
+            System.err.println("Ex  : java DeriveSSHKey \"minha frase secreta\" id_ed25519_note");
+            System.err.println("Os arquivos serao gravados na pasta atual: " + java.nio.file.Path.of("").toAbsolutePath());
+            System.exit(1);
+        }
+        String passphrase = args[0];
+        String keyName    = args[1];
+
+        byte[] seed = deriveSeed(passphrase, keyName);
+
+        byte[] h = sha512(seed);
+        h[0]  &= 248;
+        h[31] &= 127;
+        h[31] |= 64;
+
+        java.math.BigInteger scalar  = fromLE(h, 0, 32);
+        byte[]               pubBytes  = encodePoint(scalarMul(BASE, scalar));
+        byte[]               seedBytes = java.util.Arrays.copyOf(seed, 32);
+
+        java.nio.file.Path priv = java.nio.file.Path.of(keyName);
+        java.nio.file.Path pub  = java.nio.file.Path.of(keyName + ".pub");
+        String _pri=buildPrivateKey(seedBytes, pubBytes, keyName);
+        String _pub=buildPublicKey(pubBytes, keyName);
+        if ( flag_out ){
+            System.out.println(_pub);
+        }else{
+            java.nio.file.Files.writeString(priv, _pri);
+            java.nio.file.Files.writeString(pub,  _pub);
+            System.out.println("Chaves geradas!");
+            System.out.println("  Privada : " + priv.toAbsolutePath());
+            System.out.println("  Publica : " + pub.toAbsolutePath());
+            System.out.println("Linha para authorized_keys:");
+            System.out.println("  " + _pub);
+            System.out.println("No windows com usuario administrador fica aqui: C:\\ProgramData\\ssh\\administrators_authorized_keys");
+            System.out.println("A parte " + keyName + " eh um comentario na linha, totalmente opcional");
+        }
+    }
+
+    byte[] deriveSeed(String pass, String salt) throws Exception {
+        javax.crypto.spec.PBEKeySpec spec = new javax.crypto.spec.PBEKeySpec(
+                pass.toCharArray(),
+                salt.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                ITERATIONS, 256);
+        return javax.crypto.SecretKeyFactory
+                .getInstance("PBKDF2WithHmacSHA512")
+                .generateSecret(spec).getEncoded();
+    }
+
+    java.math.BigInteger modInv(java.math.BigInteger x) {
+        return x.modPow(P.subtract(java.math.BigInteger.TWO), P);
+    }
+
+    java.math.BigInteger recoverX(java.math.BigInteger y, int xSign) {
+        java.math.BigInteger y2  = y.multiply(y).mod(P);
+        java.math.BigInteger u   = y2.subtract(java.math.BigInteger.ONE).mod(P);
+        java.math.BigInteger v   = D.multiply(y2).add(java.math.BigInteger.ONE).mod(P);
+        java.math.BigInteger x2  = u.multiply(modInv(v)).mod(P);
+
+        if (x2.equals(java.math.BigInteger.ZERO)) return java.math.BigInteger.ZERO;
+
+        java.math.BigInteger exp = P.add(java.math.BigInteger.valueOf(3))
+                                    .divide(java.math.BigInteger.valueOf(8));
+        java.math.BigInteger x   = x2.modPow(exp, P);
+
+        if (!x.multiply(x).mod(P).equals(x2)) x = x.multiply(SQRT_M1).mod(P);
+        if (x.testBit(0) != (xSign == 1))      x = P.subtract(x);
+        return x;
+    }
+
+    java.math.BigInteger[] pointAdd(java.math.BigInteger[] A, java.math.BigInteger[] B) {
+        java.math.BigInteger x1 = A[0], y1 = A[1], x2 = B[0], y2 = B[1];
+        java.math.BigInteger dxy = D.multiply(x1).multiply(x2).multiply(y1).multiply(y2).mod(P);
+        java.math.BigInteger x3  = x1.multiply(y2).add(y1.multiply(x2))
+                                     .multiply(modInv(java.math.BigInteger.ONE.add(dxy))).mod(P);
+        java.math.BigInteger y3  = y1.multiply(y2).add(x1.multiply(x2))
+                                     .multiply(modInv(java.math.BigInteger.ONE.subtract(dxy).mod(P))).mod(P);
+        return new java.math.BigInteger[]{ x3, y3 };
+    }
+
+    java.math.BigInteger[] scalarMul(java.math.BigInteger[] point, java.math.BigInteger scalar) {
+        java.math.BigInteger[] result = null;
+        java.math.BigInteger[] cur    = point;
+        while (scalar.signum() > 0) {
+            if (scalar.testBit(0)) result = (result == null) ? cur : pointAdd(result, cur);
+            cur    = pointAdd(cur, cur);
+            scalar = scalar.shiftRight(1);
+        }
+        return result;
+    }
+
+    byte[] encodePoint(java.math.BigInteger[] pt) {
+        byte[] out = toLE32(pt[1]);
+        if (pt[0].testBit(0)) out[31] |= (byte) 0x80;
+        return out;
+    }
+
+    byte[] sha512(byte[] data) throws Exception {
+        return java.security.MessageDigest.getInstance("SHA-512").digest(data);
+    }
+
+    java.math.BigInteger fromLE(byte[] b, int off, int len) {
+        byte[] le = java.util.Arrays.copyOfRange(b, off, off + len);
+        for (int i = 0, j = le.length - 1; i < j; i++, j--) {
+            byte t = le[i]; le[i] = le[j]; le[j] = t;
+        }
+        return new java.math.BigInteger(1, le);
+    }
+
+    byte[] toLE32(java.math.BigInteger n) {
+        byte[] be  = n.toByteArray();
+        int    off = (be.length > 32 && be[0] == 0) ? 1 : 0;
+        int    len = be.length - off;
+        byte[] out = new byte[32];
+        for (int i = 0; i < len && i < 32; i++) out[i] = be[off + len - 1 - i];
+        return out;
+    }
+
+    String buildPublicKey(byte[] pub, String comment) throws java.io.IOException {
+        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+        writeBlob(buf, "ssh-ed25519".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        writeBlob(buf, pub);
+        return "ssh-ed25519 "
+                + java.util.Base64.getEncoder().encodeToString(buf.toByteArray())
+                + " " + comment + "\n";
+    }
+
+    String buildPrivateKey(byte[] seed, byte[] pub, String comment) throws java.io.IOException {
+        byte[] priv64 = new byte[64];
+        System.arraycopy(seed, 0, priv64,  0, 32);
+        System.arraycopy(pub,  0, priv64, 32, 32);
+
+        java.io.ByteArrayOutputStream pubBlob = new java.io.ByteArrayOutputStream();
+        writeBlob(pubBlob, "ssh-ed25519".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        writeBlob(pubBlob, pub);
+
+        java.io.ByteArrayOutputStream block = new java.io.ByteArrayOutputStream();
+        writeInt32(block, 0x12345678);
+        writeInt32(block, 0x12345678);
+        writeBlob(block, "ssh-ed25519".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        writeBlob(block, pub);
+        writeBlob(block, priv64);
+        writeBlob(block, comment.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        byte[] raw    = block.toByteArray();
+        int    padLen = (8 - (raw.length % 8)) % 8;
+        byte[] padded = java.util.Arrays.copyOf(raw, raw.length + padLen);
+        for (int i = 0; i < padLen; i++) padded[raw.length + i] = (byte)(i + 1);
+
+        java.io.ByteArrayOutputStream outer = new java.io.ByteArrayOutputStream();
+        outer.write("openssh-key-v1\0".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        writeBlob(outer, "none".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        writeBlob(outer, "none".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        writeBlob(outer, new byte[0]);
+        writeInt32(outer, 1);
+        writeBlob(outer, pubBlob.toByteArray());
+        writeBlob(outer, padded);
+
+        String b64 = java.util.Base64.getMimeEncoder(70, new byte[]{'\n'})
+                                     .encodeToString(outer.toByteArray());
+        return "-----BEGIN OPENSSH PRIVATE KEY-----\n" + b64
+                + "\n-----END OPENSSH PRIVATE KEY-----\n";
+    }
+
+    void writeBlob(java.io.ByteArrayOutputStream os, byte[] data) throws java.io.IOException {
+        writeInt32(os, data.length);
+        os.write(data);
+    }
+
+    void writeInt32(java.io.ByteArrayOutputStream os, int v) {
+        os.write((v >>> 24) & 0xFF);
+        os.write((v >>> 16) & 0xFF);
+        os.write((v >>>  8) & 0xFF);
+        os.write( v         & 0xFF);
+    }
+}
 
 /* class Wget */ // download do Wget muito instavel, melhor refatorar baseado no curl
 /* class Wget */ //String [] args2 = {"-h"};               
@@ -27430,6 +27659,7 @@ usage:
   [y execSsh]
   [y ssh]
   [y sshinfo]
+  [y sshgen]
   [y sftp]
   [y [serverRouter|sr]]
   [y [httpServer|hs]]
@@ -27992,6 +28222,10 @@ Exemplos...
     y sshinfo
     y sshinfo 192.168.0.100
     y sshinfo 192.168.0.100 22
+[y sshgen]
+    y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc"
+    y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc" -out # imprime na tela o conteudo public
+    obs: gera os arquivo pruvate e public na pasta corrent do terminal
 [y sftp]
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22
