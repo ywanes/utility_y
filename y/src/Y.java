@@ -28163,8 +28163,14 @@ Exemplos...
         y date fromNTP 0.ru.pool.ntp.org #(Rússia)
         y date fromNTP 0.cn.pool.ntp.org #(China)
         y date fromNTP 0.in.pool.ntp.org #(Índia)
-        SET FDATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%
-        set date cmd admin: powershell -Command "Set-Date -Date '2026-03-30 12:52:25'"
+        # criando variavel FDATE no windows:
+            SET FDATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%
+        # arrumando relogio no windows cmd admin: 
+            powershell -Command "Set-Date -Date '2026-03-30 12:52:25'"
+        # arrumando relogio no linux:
+            date
+            timedatectl set-ntp off
+            timedatectl set-ntp on
 [y uptime]
     y uptime
     y uptime -ms
