@@ -28145,7 +28145,7 @@ Exemplos...
 [y mkdir]
     y mkdir pasta1
     modelo windows powershell para pasta exclusiva(tudo dentro da pasta herdará essa permissao):
-        New-Item -ItemType Directory -Path C:\minhas-chaves
+        New-Item -ItemType Directory -Path C:\\minhas-chaves
         icacls C:\\minhas-chaves /inheritance:r /grant "%USERNAME%:F"
         deixa pasta normal herdada do pai:
         icacls C:\\minhas-chaves /grant "%USERNAME%:F"
