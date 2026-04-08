@@ -28226,7 +28226,7 @@ Exemplos...
     y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc"
     y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc" -out # imprime na tela o conteudo public
     obs: gera os arquivo pruvate e public na pasta corrent do terminal
-    conectando: ssh -i id_ed25519_maquina user2@host2
+    conectando: ssh -i id_ed25519_pc user2@host2
 [y sftp]
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22
