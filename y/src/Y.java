@@ -28144,6 +28144,11 @@ Exemplos...
     obs: equivalente a cd $HOME no linux e cd %userprofile% no windows
 [y mkdir]
     y mkdir pasta1
+    modelo windows powershell para pasta exclusiva(tudo dentro da pasta herdará essa permissao):
+        New-Item -ItemType Directory -Path C:\minhas-chaves
+        icacls C:\\minhas-chaves /inheritance:r /grant "%USERNAME%:F"
+        deixa pasta normal herdada do pai:
+        icacls C:\\minhas-chaves /grant "%USERNAME%:F"
 [y iconv]
     y iconv -f UTF-8 -t ISO-8859-1 file
     cat file | y iconv -f UTF-8 -t ISO-8859-1 
@@ -28223,10 +28228,14 @@ Exemplos...
     y sshinfo 192.168.0.100
     y sshinfo 192.168.0.100 22
 [y sshgen]
-    y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc"
+    y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc" # criando chave derivada de palavra passe
     y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc" -out # imprime na tela o conteudo public
     obs: gera os arquivo pruvate e public na pasta corrent do terminal
+    obs2: cria as chaves no .ssh para que o ssh nao recuse, pois se algum outro usuario tiver acesso também o ssh nao aceita
+          comando powershell windows para deixar permissao exclusiva: icacls id_ed25519_pc /inheritance:r /grant "%USERNAME%:F"
     conectando: ssh -i id_ed25519_pc user2@host2
+    outro exemplo: ssh -i id_ed25519_pc -p 2222 base@127.0.0.1    
+    criando chave randomica: ssh-keygen -t ed25519 -C "comentario1" -f C:\\Users\\usuario1\\.ssh\\id_ed25519_pc
 [y sftp]
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22
