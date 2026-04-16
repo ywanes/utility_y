@@ -7206,8 +7206,34 @@ bind 'set enable-bracketed-paste off'
                 temporada=Integer.parseInt(url.split("=")[1]);            
             // chamando itens da temporada
             for ( int i=0;i<partes.length;i++ ){
-                overflix_verbose(verbose, tags, "TAG:3");
-                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada, i+1);
+                overflix_verbose(verbose, tags, "TAG:3");                
+                temporada_S=temporada;
+                temporada_E=i+1;
+                // tentar dar skip rapido nas series para evitar perder tempo lendo pagina
+                if ( titulo_serie != null ){
+                    String extensao_presumida=".mp4";
+                    String titulo_presumido=titulo_serie + " S" + lpad(temporada_S, 2, "0") + "E" + lpad(temporada_E, 2, "0") + extensao_presumida;
+                    String dir_presumido="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
+                    String out_presumido=dir_presumido+titulo_presumido;
+                    File f_presumido=new File(out_presumido);
+                    boolean needDownload_presumido = !f_presumido.exists() || f_presumido.length() < 1024*1024;
+                    if ( onlyLink || onlyPreLink ){
+                        //
+                    }else{                
+                        if ( needDownload_presumido ){
+                            //
+                        }else{
+                            if ( skiping_show ){
+                                System.out.println("skip " + out_presumido);
+                                if ( getScriptRenameBySkip_in != null )
+                                    getScriptRenameBySkip_out+=out_presumido+"\n";
+                            }else
+                                skiping_hide_count++;
+                            continue; // skip rapido nas series para evitar perder tempo lendo pagina
+                        }
+                    }                          
+                }
+                overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
             }
             // chamando proximas temporadas
             if ( !url.contains("?temporada=") ){
