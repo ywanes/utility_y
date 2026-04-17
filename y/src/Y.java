@@ -1071,39 +1071,33 @@ cat buffer.log
             return;
         }        
         if ( args[0].equals("aes") && args.length > 1 ){
-            String[] senha_isEncoding_md_salt=get_senha_isEncoding_md_salt(args);
+            Object[] senha_isEncoding_md_salt=get_senha_isEncoding_md_salt(args);
+            String senha=(String)senha_isEncoding_md_salt[0];
+            Boolean isEncoding=(Boolean)senha_isEncoding_md_salt[1];
+            String md=(String)senha_isEncoding_md_salt[2];
+            String salt=(String)senha_isEncoding_md_salt[3];
+                    
             if ( senha_isEncoding_md_salt != null ){
-                aes(senha_isEncoding_md_salt[0],senha_isEncoding_md_salt[1].equals("S"),senha_isEncoding_md_salt[2],senha_isEncoding_md_salt[3]==null?null:hexTobytes(senha_isEncoding_md_salt[3]));
+                aes(senha,isEncoding,md,salt==null?null:hexTobytes(salt));
                 return;
             }
         }        
-        if ( args[0].equals("base64") 
-            && ( 
-                args.length == 1 
-                || ( args.length == 2 && args[1].equals("-e") )
-                || ( args.length == 2 && args[1].equals("-d") )
-                || ( args.length == 3 && args[1].equals("-e") && args[2].length() > 0 )
-                || ( args.length == 3 && args[1].equals("-d") && args[2].length() > 0 )
-            )    
-        ){
+        if ( args[0].equals("base64") ){
+            Object[] isEncoding_texto_w=get_isEncoding_texto_w(args);
+            Boolean isEncoding=(Boolean)isEncoding_texto_w[0];
+            String texto=(String)isEncoding_texto_w[1];
+            base64encode_w=(Integer)isEncoding_texto_w[2];
             try{
-                if ( args.length == 1 ){
-                    base64(System.in,System.out,true);
-                    return;
-                }
-                boolean encoding=args[1].equals("-e");
-                if ( args.length == 2 ){
-                    base64(System.in,System.out,encoding);
-                    return;
-                }
-                if ( args.length == 3 ){
+                if ( texto == null ){
+                    if ( isEncoding )
+                        base64encode(System.in, System.out);
+                    else
+                        base64decode(System.in, System.out);                        
+                }else{
                     System.out.println(
-                        base64(args[2], encoding)
-                    );
-                    return;
+                        base64_S_S(texto, isEncoding)
+                    );                    
                 }
-                System.err.println("Erro inesperado!");
-                System.exit(1);
             }catch(Exception e){
                 System.err.println(e.toString());
                 System.exit(1);
@@ -3764,9 +3758,9 @@ cat buffer.log
         return new Object[]{csvFile, sqlFile, sqlText, outJson};        
     }
     
-    public String [] get_senha_isEncoding_md_salt(String [] args){
+    public Object[] get_senha_isEncoding_md_salt(String [] args){
         String senha=null;
-        String isEncoding="S";
+        Boolean isEncoding=true;
         String md=null;
         String salt=null;
         
@@ -3775,9 +3769,9 @@ cat buffer.log
                 
         if ( args.length > 0 && ( args[0].equals("-e") || args[0].equals("-d") ) ){
             if ( args[0].equals("-e") )
-                isEncoding="S";
+                isEncoding=true;
             if ( args[0].equals("-d") )
-                isEncoding="N";
+                isEncoding=false;
             args=sliceParm(1,args);
         }
 
@@ -3806,14 +3800,48 @@ cat buffer.log
             }
         }
 
-        if ( args.length > 0 ){
-            return null;
-        }
-        if ( senha==null )
-            return null;
+        if ( args.length > 0 || senha == null )
+            erroFatalParametrosInvalidos();
         
-        return new String[]{senha,isEncoding,md,salt};        
+        return new Object[]{senha,isEncoding,md,salt};        
     }
+         
+    
+    public Object[] get_isEncoding_texto_w(String [] args){
+        Boolean isEncoding=null;
+        String texto=null;
+        int w=0;
+        
+        args=sliceParm(1,args);
+                
+        while( args.length > 0 ){
+            if ( args[0].equals("-e") && isEncoding == null ){
+                isEncoding=true;
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-d") && isEncoding == null ){
+                isEncoding=false;
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("w") && args.length > 1 && isNumericDigits(args[1]) ){
+                w=Integer.parseInt(args[1]);
+                args=sliceParm(2,args);
+                continue;
+            }
+            if ( texto == null ){
+                texto=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            erroFatalParametrosInvalidos();
+        }
+        
+        if ( isEncoding == null )
+            isEncoding=true;
+        return new Object[]{isEncoding,texto,w};
+    }                 
             
     private boolean isHex(String a){
         String tmp="0123456789ABCDEF";
@@ -10173,7 +10201,7 @@ while True:
         
         System.out.print("jobexecute "); // funciona como orientador, não tem função prática
         System.out.println( 
-            base64(
+            base64_S_S(
                 "jobexecute\n"
                 + "-conn\n"
                 + conn+"\n"
@@ -10193,7 +10221,7 @@ while True:
         
         System.out.print("jobcarga "+outTable+" "); // funciona como orientador, não tem função prática
         System.out.println(
-            base64(
+            base64_S_S(
                 "jobcarga\n"
                 + "-connIn\n"
                 + connIn+"\n"
@@ -10327,7 +10355,7 @@ while True:
                         return;
                     }
 
-                    value_=base64(hash,false);
+                    value_=base64_S_S(hash,false);
 
                     if ( value_ == null )
                     {
@@ -19478,14 +19506,39 @@ class Util{
     // ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=
     public static String txtBase64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
     
-    public void base64(InputStream pipe_in,OutputStream pipe_out,boolean encoding) throws Exception{        
+    public void base64b(InputStream pipe_in,OutputStream pipe_out,boolean encoding) throws Exception{        
         // ex: base64(System.in,System.out,true);
         if ( encoding )
             base64encode(pipe_in,pipe_out);
         else
             base64decode(pipe_in,pipe_out);                    
     }
+
+    public byte[] base64_B_B(byte[] txt,boolean encoding) throws Exception{ // byte in byte out
+        ByteArrayInputStream bais=new ByteArrayInputStream(txt);
+        ByteArrayOutputStream baos=new ByteArrayOutputStream();
+        if ( encoding )
+            base64encode(bais,baos);
+        else
+            base64decode(bais,baos);
+        return baos.toByteArray();
+    }
     
+    public String base64_S_S(String txt,boolean encoding) throws Exception{ // String in String out
+        return new String(base64_B_B(txt.getBytes(),encoding));
+    }
+
+    public String base64_B_S(byte[] txt,boolean encoding) throws Exception{ // byte in String out
+        return new String(base64_B_B(txt,encoding));
+    }
+    
+    public byte[] base64_S_B(String txt,boolean encoding) throws Exception{ // String in byte out
+        return base64_B_B(txt.getBytes(),encoding);
+    }
+    
+    public int base64encode_w=0; // tamanho por linha
+    public int base64encode_w_c=0; // contador
+    public OutputStream base64encode_pipe_out=null;
     public void base64encode(InputStream pipe_in,OutputStream pipe_out) throws Exception{        
         int BUFFER_SIZE_ = 1;
         byte [] buf=new byte[BUFFER_SIZE_];
@@ -19494,17 +19547,18 @@ class Util{
         int agulha=0;
         int agulha_count=0;
         int indexPadding=61; // "="
+        base64encode_pipe_out=pipe_out;
         while(true){
             while( (len=pipe_in.read(buf,0,BUFFER_SIZE_)) == 0 ){}
             if ( len == -1 ){
                 if ( agulha_count == 4 ){
-                    pipe_out.write( indexBase64[ agulha<<2 ] );
-                    pipe_out.write( indexPadding );
+                    base64encode_write_com_w( indexBase64[ agulha<<2 ] );
+                    base64encode_write_com_w( indexPadding );
                 }
                 if ( agulha_count == 2 ){
-                    pipe_out.write( indexBase64[ agulha<<4 ] );
-                    pipe_out.write( indexPadding );
-                    pipe_out.write( indexPadding );
+                    base64encode_write_com_w( indexBase64[ agulha<<4 ] );
+                    base64encode_write_com_w( indexPadding );
+                    base64encode_write_com_w( indexPadding );
                 }  
                 break;
             }
@@ -19513,32 +19567,43 @@ class Util{
             agulha_count+=8;
             while(agulha_count>=6){
                 if ( agulha_count == 6 ){
-                    pipe_out.write( indexBase64[ agulha ] );
+                    base64encode_write_com_w( indexBase64[ agulha ] );
                     agulha=0;
                     agulha_count-=6;
                     continue;
                 }
                 if ( agulha_count == 8 ){
-                    pipe_out.write( indexBase64[ (agulha & V_0b11111100)>>2 ] );
+                    base64encode_write_com_w( indexBase64[ (agulha & V_0b11111100)>>2 ] );
                     agulha&=V_0b00000011;
                     agulha_count-=6;
                     continue;
                 }
                 if ( agulha_count == 10 ){
-                    pipe_out.write( indexBase64[ (agulha & V_0b1111110000)>>4 ] );
+                    base64encode_write_com_w( indexBase64[ (agulha & V_0b1111110000)>>4 ] );
                     agulha&=V_0b0000001111;
                     agulha_count-=6;
                     continue;
                 }
                 if ( agulha_count == 12 ){
-                    pipe_out.write( indexBase64[ (agulha & V_0b111111000000)>>6 ] );
+                    base64encode_write_com_w( indexBase64[ (agulha & V_0b111111000000)>>6 ] );
                     agulha&=V_0b000000111111;
                     agulha_count-=6;
                     continue;
                 }
             }
         }    
-        pipe_out.flush();
+        base64encode_pipe_out.flush();
+    }
+    
+    public void base64encode_write_com_w(int a) throws Exception{        
+        if ( base64encode_w > 0 ){
+            base64encode_w_c++;
+            if ( base64encode_w_c > base64encode_w ){
+                base64encode_w_c-=base64encode_w;
+                base64encode_pipe_out.write(10);
+            }
+        }
+        base64encode_pipe_out.write(a);
     }
     
     public void base64decode(InputStream pipe_in,OutputStream pipe_out) throws Exception{        
@@ -19606,29 +19671,6 @@ class Util{
         pipe_out.flush();        
     }
     
-    public byte[] base64_B_B(byte[] txt,boolean encoding) throws Exception{ // byte in byte out
-        ByteArrayInputStream bais=new ByteArrayInputStream(txt);
-        ByteArrayOutputStream baos=new ByteArrayOutputStream();
-        base64(bais,baos,encoding);
-        return baos.toByteArray();
-    }
-    
-    public String base64_S_S(String txt,boolean encoding) throws Exception{ // String in String out
-        return new String(base64_B_B(txt.getBytes(),encoding));
-    }
-
-    public String base64_B_S(byte[] txt,boolean encoding) throws Exception{ // byte in String out
-        return new String(base64_B_B(txt,encoding));
-    }
-    
-    public byte[] base64_S_B(String txt,boolean encoding) throws Exception{ // String in byte out
-        return base64_B_B(txt.getBytes(),encoding);
-    }
-    
-    public String base64(String txt,boolean encoding) throws Exception{        
-        return base64_S_S(txt,encoding);
-    }
-        
     public static String hex_string="0123456789ABCDEF";
     public String lendo_arquivo(String caminho) {
         String result="";
@@ -23379,7 +23421,7 @@ class PlaylistServer extends Util{
         if ( a.startsWith("base64 ") ){
             a=a.substring("base64 ".length());
             try{
-                a=base64(a, false);
+                a=base64_S_S(a, false);
             }catch(Exception e){
                 return e.toString();
             }
@@ -28027,6 +28069,7 @@ Exemplos...
     y base64 -d "YQ=="
     y printf "texto" | base64 -e 
     obs: -e para encode e -d para decode
+    obs2: y printf 1234567 | y base64 w 70 # gerando linhas com tamanho 70
 [y grep]
     cat arquivo | y grep ^Texto$
     cat arquivo | y grep AB
