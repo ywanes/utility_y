@@ -5984,9 +5984,16 @@ bind 'set enable-bracketed-paste off'
             if ( c > 0 )
                 sb.append("\n\n");
             String name=files[i].getName();            
-            sb.append("y cat \"<<"+eof+">\" \"" + name + "\"\n");
-            sb.append(lendo_arquivo(name));
-            sb.append(eof + "\n");
+            lendo_arquivo_VerificaSeEhSoASCII=true;
+            lendo_arquivo_DeixaSoASCII=true;
+            String txt=lendo_arquivo(name);
+            if ( lendo_arquivo_EhSoASCII ){
+                sb.append("y cat \"<<"+eof+">\" \"" + name + "\"\n");
+                sb.append(txt);
+                sb.append(eof + "\n");
+            }else{
+                sb.append("echo " + name + " suprimido!(char "+ lendo_arquivo_N + " nao ascii)\n");
+            }
             c++;
         }
         if ( c > 0 )
@@ -19671,23 +19678,59 @@ class Util{
         pipe_out.flush();        
     }
     
-    public static String hex_string="0123456789ABCDEF";
-    public String lendo_arquivo(String caminho) {
-        String result="";
+    public String hex_string="0123456789ABCDEF";
+    boolean lendo_arquivo_VerificaSeEhSoASCII=false;
+    boolean lendo_arquivo_EhSoASCII=true;
+    boolean lendo_arquivo_DeixaSoASCII=false; // funciona somente para quando o arquivo é texto e tem pequenas sujeiras, se for binario o try falha para readString
+    Integer lendo_arquivo_N=null;
+    public String lendo_arquivo(String caminho){
+        lendo_arquivo_EhSoASCII=true;
+        try{
+            String texto = Files.readString(java.nio.file.Path.of(caminho), java.nio.charset.StandardCharsets.UTF_8);
+            if ( lendo_arquivo_DeixaSoASCII )
+                texto = texto.replaceAll("[^\\x00-\\x7F]", "");
+            else{
+                if ( lendo_arquivo_VerificaSeEhSoASCII ){
+                    for (int i = 0; i < texto.length(); i++) {
+                        char c = texto.charAt(i);
+                        if (c > 127){
+                            lendo_arquivo_N=(int)c;
+                            if ( lendo_arquivo_N < 0 )
+                                lendo_arquivo_N+=256;
+                            lendo_arquivo_EhSoASCII=false;
+                            break;
+                        }
+                    }
+                }
+            }
+            return texto.replace("\r\n", "\n").replace("\r", "\n");
+        }catch(Exception e){
+            if ( lendo_arquivo_VerificaSeEhSoASCII ){
+                lendo_arquivo_EhSoASCII=false;
+                return "";                
+            }
+            System.out.println(e.toString());
+        }
+        return "";
+    }    
+    public String lendo_arquivo_old(String caminho) {
         String strLine;
+        StringBuilder sb=new StringBuilder();
+        boolean first=true;
         try{
             readLine(caminho);
-            while ((strLine = readLine()) != null)   {
-                if ( result.equals("") )
-                    result+=strLine;
+            while ((strLine = readLine()) != null){
+                if ( first )
+                    first=false;
                 else
-                    result+="\n"+strLine;
+                    sb.append("\n");
+                sb.append(strLine);
             }
             closeLine();
         }catch (Exception e){
             System.out.println(e.toString());
         }
-        return result;
+        return sb.toString();
     }
     
     public static int random(int min, int max){
