@@ -319,12 +319,6 @@ function load(a){
               <a href="javascript:void(0);" class="blue" onclick="load('Win+L')">Win+L</a>
               <a href="javascript:void(0);" class="blue" onclick="load('atualiza ipv6')">atualiza ipv6</a>
               <a href="javascript:void(0);" class="gray"></a>
-			  
-			  
-			  <!-- 			  
-			  D:\daemon\scripts_ipv6\sc0.bat
-			  rundll32.exe user32.dll,LockWorkStation
-			  -->
               <a href="javascript:void(0);" class="orange" onclick="load('Musicas')">Musicas</a>
               <a href="javascript:void(0);" class="red" onclick="load('Dota')">Dota</a>
               <a href="javascript:void(0);" class="red" onclick="load('DotaNoOCR')">DotaNoOCR</a>
@@ -337,6 +331,9 @@ function load(a){
               <a href="javascript:void(0);" class="yellow" onclick="load('A_C')">Ar Condicionado</a>
               <a href="javascript:void(0);" class="gray" onclick="load('kill')" >kill</a>
               <a href="javascript:void(0);" class="red" onclick="load('Rabisco')">Rabisco</a>
+			  <a href="javascript:void(0);" class="red" onclick="load('relogio')">relogio</a>
+			  <a href="javascript:void(0);" class="gray"></a>
+			  <a href="javascript:void(0);" class="gray"></a>
               ` + mostraVolumeControle() + `
             </div>		
             `;
@@ -496,6 +493,13 @@ function load(a){
         }		
         if ( a.indexOf('/Menu/Rabisco/Rabisco ') == 0 ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'd:\ncd D:\\daemon\\scripts_geral\\RabiscoDota\ndotnet run ' + a.substr('/Menu/Rabisco/Rabisco '.length) ) ); return; }
         if ( a.indexOf('/Menu/Rabisco/') == 0 ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'd:\ncd D:\\daemon\\scripts_geral\\EscritaDota\ndotnet run "' + a.substr('/Menu/Rabisco/'.length) + '"') ); return; }
+        if ( a == '/Menu/relogio' ){
+            document.getElementById('bloco2').innerHTML=`
+            <div class="header">/Menu/relogio</div>
+            <br><div id="relogio"></div>`;
+			aplica_relogio();
+			return;
+		}		
     } catch (e) {
         console.error("Erro ao carregar menu: ", e);
         document.getElementById('bloco2').innerHTML = '<div class="header" style="color:red">Erro Interno</div>';
@@ -679,6 +683,62 @@ function renderLogin() {
 	
 	document.body.appendChild(container);
 	document.body.style.display = "block";	
+}
+
+function aplica_relogio() {
+  clearInterval(aplica_relogio._tick);
+  clearInterval(aplica_relogio._sync);
+
+  let offset = 0;
+
+  async function sync() {
+    try {
+      const t0 = Date.now();
+      const r  = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC', { cache: 'no-store' });
+      const j  = await r.json();
+      const t1 = Date.now();
+      offset = new Date(j.dateTime + 'Z').getTime() + (t1 - t0)/2 - t1;
+    } catch {}
+  }
+
+  function estilizar(el) {
+    if (el.dataset.relogioStyled) return;
+    el.dataset.relogioStyled = '1';
+    el.innerHTML = '<span></span>';
+    Object.assign(el.style, { textAlign: 'center', padding: '.5em 0' });
+    Object.assign(el.firstElementChild.style, {
+      display:            'inline-block',
+      color:              '#fff',
+      fontFamily:         'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontWeight:         '300',
+      fontSize:           '1.6rem',
+      letterSpacing:      '0.18em',
+      fontVariantNumeric: 'tabular-nums',
+      padding:            '.55em 1.2em',
+      background:         'rgba(255,255,255,0.08)',
+      border:             '1px solid rgba(255,255,255,0.18)',
+      borderRadius:       '10px',
+      backdropFilter:     'blur(10px)',
+      WebkitBackdropFilter:'blur(10px)',
+      boxShadow:          '0 8px 24px rgba(0,0,0,0.25)'
+    });
+  }
+
+  function tick() {
+    const el = document.getElementById('relogio');
+    if (!el) return;
+    estilizar(el);
+    const d = new Date(Date.now() + offset);
+    const p = n => String(n).padStart(2, '0');
+    el.firstElementChild.textContent = `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  }
+
+  sync();
+  aplica_relogio._sync = setInterval(sync, 5 * 60 * 1000);
+  aplica_relogio._tick = setInterval(tick, 250);
+  tick();
+
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
 }
 
 window.onload = function() {
