@@ -5967,6 +5967,13 @@ bind 'set enable-bracketed-paste off'
     }
     
     public void uncat(String [] args){
+        //////////// -ascii -bin -out elem
+        Object [] parms_ascii_bin_out_elem=get_parms_ascii_bin_out_elem(args);
+        Boolean ascii=(Boolean)parms_ascii_bin_out_elem[0];
+        Boolean bin=(Boolean)parms_ascii_bin_out_elem[1];
+        Boolean out=(Boolean)parms_ascii_bin_out_elem[2];
+        String elem=(String)parms_ascii_bin_out_elem[3];
+
         boolean flag_out=false;
         if ( args.length == 2 && args[1].equals("-out") ){
             args=new String[]{args[0]};
@@ -11775,7 +11782,42 @@ while True:
             return null;
         return new Object []{vol, mute, setvol, setmute, program, mutingWhileProgramInPrincipalMonitor};
     }        
-
+    
+    public Object [] get_parms_ascii_bin_out_elem(String [] args){
+        Boolean ascii=null;
+        Boolean bin=null;
+        Boolean out=null;
+        String elem=null;
+        
+        args=sliceParm(1, args);
+        while(args.length > 0){
+            if ( args.length > 0 && ascii == null && args[0].equals("-ascii") ){
+                ascii=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && bin == null && args[0].equals("-bin") ){
+                bin=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && out == null && args[0].equals("-out") ){
+                out=true;
+                args=sliceParm(1, args);
+                continue;
+            }
+            if ( args.length > 0 && elem == null ){
+                elem=args[0];
+                args=sliceParm(1, args);
+                continue;
+            }
+            erroFatalParametrosInvalidos();
+        }
+        if ( ascii != null && bin != null )
+            erroFatalParametrosInvalidos();
+        return new Object[]{ascii, bin, out, elem};
+    }   
+    
     public Object [] get_parms_iso_source_flagMake(String [] args){
         String iso=null;
         String source=null;
@@ -19684,6 +19726,8 @@ class Util{
     boolean lendo_arquivo_DeixaSoASCII=false; // funciona somente para quando o arquivo é texto e tem pequenas sujeiras, se for binario o try falha para readString
     Integer lendo_arquivo_N=null;
     public String lendo_arquivo(String caminho){
+        //byte[] bytes = Files.readAllBytes(java.nio.file.Path.of(caminho));
+        //String texto = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
         lendo_arquivo_EhSoASCII=true;
         try{
             String texto = Files.readString(java.nio.file.Path.of(caminho), java.nio.charset.StandardCharsets.UTF_8);
@@ -28002,6 +28046,7 @@ Exemplos...
     y uncat "**/*.py" # todos os python, pastas envolvidas e subpastas envolvidas
     y uncat "**/" # todas as pastas e subpastas
     y uncat "*/" # todas as pastas
+    obs: -ascii -bin
 [y redis]
     procure por y help httpServer
     na parte -redisDir
