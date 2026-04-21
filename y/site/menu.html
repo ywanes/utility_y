@@ -332,8 +332,8 @@ function load(a){
               <a href="javascript:void(0);" class="gray" onclick="load('kill')" >kill</a>
               <a href="javascript:void(0);" class="red" onclick="load('Rabisco')">Rabisco</a>
 			  <a href="javascript:void(0);" class="red" onclick="load('relogio')">relogio</a>
-			  <a href="javascript:void(0);" class="gray"></a>
-			  <a href="javascript:void(0);" class="gray"></a>
+			  <a href="javascript:void(0);" class="red" onclick="load('cronometro')">cronometro</a>
+			  <a href="javascript:void(0);" class="red" onclick="load('timer')">timer</a>
               ` + mostraVolumeControle() + `
             </div>		
             `;
@@ -498,6 +498,20 @@ function load(a){
             <div class="header">/Menu/relogio</div>
             <br><div id="relogio"></div>`;
 			aplica_relogio();
+			return;
+		}		
+        if ( a == '/Menu/cronometro' ){
+            document.getElementById('bloco2').innerHTML=`
+            <div class="header">/Menu/cronometro</div>
+            <br><div id="cronometro"></div>`;
+			aplica_cronometro();
+			return;
+		}		
+        if ( a == '/Menu/timer' ){
+            document.getElementById('bloco2').innerHTML=`
+            <div class="header">/Menu/timer</div>
+            <br><div id="timer"></div>`;
+			aplica_timer();
 			return;
 		}		
     } catch (e) {
@@ -739,6 +753,337 @@ function aplica_relogio() {
   tick();
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+}
+
+function aplica_cronometro() {
+  const el = document.getElementById('cronometro');
+  if (!el) return;
+
+  // estiliza uma vez
+  if (!el.dataset.cronoStyled) {
+    el.dataset.cronoStyled = '1';
+    el.innerHTML = `
+      <span class="crono-display"></span>
+      <div class="crono-botoes">
+        <button class="crono-btn" data-acao="start">iniciar</button>
+        <button class="crono-btn" data-acao="lap">flag</button>
+        <button class="crono-btn" data-acao="reset">zerar</button>
+      </div>
+      <ol class="crono-laps"></ol>
+    `;
+    Object.assign(el.style, { textAlign: 'center', padding: '.5em 0' });
+
+    const display = el.querySelector('.crono-display');
+    Object.assign(display.style, {
+      display:            'inline-block',
+      color:              '#fff',
+      fontFamily:         'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontWeight:         '300',
+      fontSize:           '1.6rem',
+      letterSpacing:      '0.12em',
+      fontVariantNumeric: 'tabular-nums',
+      padding:            '.55em 1.2em',
+      background:         'rgba(255,255,255,0.08)',
+      border:             '1px solid rgba(255,255,255,0.18)',
+      borderRadius:       '10px',
+      backdropFilter:     'blur(10px)',
+      WebkitBackdropFilter:'blur(10px)',
+      boxShadow:          '0 8px 24px rgba(0,0,0,0.25)',
+      minWidth:           '7em'
+    });
+
+    const botoes = el.querySelector('.crono-botoes');
+    Object.assign(botoes.style, {
+      display: 'flex', justifyContent: 'center', gap: '.5em', marginTop: '.8em', flexWrap: 'wrap'
+    });
+    el.querySelectorAll('.crono-btn').forEach(b => Object.assign(b.style, {
+      color:        '#fff',
+      background:   'rgba(255,255,255,0.06)',
+      border:       '1px solid rgba(255,255,255,0.18)',
+      borderRadius: '8px',
+      padding:      '.5em 1em',
+      fontSize:     '.9rem',
+      fontFamily:   'inherit',
+      cursor:       'pointer',
+      WebkitTapHighlightColor: 'transparent'
+    }));
+
+    const laps = el.querySelector('.crono-laps');
+    Object.assign(laps.style, {
+      listStyle: 'none', padding: '0', margin: '.8em auto 0', maxWidth: '18em',
+      color: '#fff', fontFamily: 'inherit', fontSize: '.9rem',
+      fontVariantNumeric: 'tabular-nums', textAlign: 'left'
+    });
+  }
+
+  const display = el.querySelector('.crono-display');
+  const lapsUl  = el.querySelector('.crono-laps');
+  const btnStart = el.querySelector('[data-acao="start"]');
+
+  // estado persistente entre chamadas
+  const s = aplica_cronometro._s ||= { rodando: false, acumulado: 0, inicio: 0, voltas: [] };
+
+  function agora()    { return s.rodando ? s.acumulado + (Date.now() - s.inicio) : s.acumulado; }
+  function formata(ms) {
+    const p = (n, z = 2) => String(n).padStart(z, '0');
+    const cs = Math.floor(ms / 10) % 100;
+    const ss = Math.floor(ms / 1000) % 60;
+    const mm = Math.floor(ms / 60000) % 60;
+    const hh = Math.floor(ms / 3600000);
+    return (hh ? p(hh) + ':' : '') + p(mm) + ':' + p(ss) + '.' + p(cs);
+  }
+
+  function render() {
+    display.textContent = formata(agora());
+    btnStart.textContent = s.rodando ? 'pausar' : 'iniciar';
+  }
+
+  clearInterval(aplica_cronometro._tick);
+  aplica_cronometro._tick = setInterval(render, 31); // ~30fps
+
+  // (re)amarra os cliques
+  el.querySelectorAll('.crono-btn').forEach(b => b.onclick = () => {
+    const a = b.dataset.acao;
+    if (a === 'start') {
+      if (s.rodando) { s.acumulado = agora(); s.rodando = false; }
+      else           { s.inicio = Date.now(); s.rodando = true; }
+    } else if (a === 'lap' && s.rodando) {
+      s.voltas.push(agora());
+      const li = document.createElement('li');
+      li.style.padding = '.2em 0';
+      li.style.borderTop = '1px solid rgba(255,255,255,0.12)';
+      li.textContent = `#${s.voltas.length}  ${formata(s.voltas.at(-1))}`;
+      lapsUl.prepend(li);
+    } else if (a === 'reset') {
+      s.rodando = false; s.acumulado = 0; s.voltas = [];
+      lapsUl.innerHTML = '';
+    }
+    render();
+  });
+
+  render();
+}
+
+function aplica_timer() {
+  const el = document.getElementById('timer');
+  if (!el) return;
+
+  // ---------- estiliza uma vez ----------
+  if (!el.dataset.timerStyled) {
+    el.dataset.timerStyled = '1';
+    el.innerHTML = `
+      <div class="timer-inputs">
+        <input class="timer-in" data-u="h" type="number" min="0" max="99" placeholder="hh">
+        <span class="timer-sep">:</span>
+        <input class="timer-in" data-u="m" type="number" min="0" max="59" placeholder="mm" value="5">
+        <span class="timer-sep">:</span>
+        <input class="timer-in" data-u="s" type="number" min="0" max="59" placeholder="ss">
+      </div>
+      <span class="timer-display"></span>
+      <div class="timer-botoes">
+        <button class="timer-btn" data-acao="start">iniciar</button>
+        <button class="timer-btn" data-acao="reset">zerar</button>
+      </div>
+    `;
+    Object.assign(el.style, { textAlign: 'center', padding: '.5em 0' });
+
+    const inputs = el.querySelector('.timer-inputs');
+    Object.assign(inputs.style, {
+      display: 'inline-flex', alignItems: 'center', gap: '.2em', marginBottom: '.6em'
+    });
+    el.querySelectorAll('.timer-in').forEach(i => Object.assign(i.style, {
+      width: '3.2em', textAlign: 'center',
+      background: 'rgba(255,255,255,0.06)',
+      color: '#fff',
+      border: '1px solid rgba(255,255,255,0.18)',
+      borderRadius: '6px',
+      padding: '.35em .2em',
+      fontSize: '1rem',
+      fontFamily: 'inherit',
+      fontVariantNumeric: 'tabular-nums',
+      MozAppearance: 'textfield'
+    }));
+    el.querySelectorAll('.timer-sep').forEach(s => Object.assign(s.style, {
+      color: 'rgba(255,255,255,0.6)', fontSize: '1rem'
+    }));
+
+    const display = el.querySelector('.timer-display');
+    Object.assign(display.style, {
+      display:            'block',
+      margin:             '0 auto',
+      width:              'fit-content',
+      color:              '#fff',
+      fontFamily:         'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+      fontWeight:         '300',
+      fontSize:           '1.6rem',
+      letterSpacing:      '0.12em',
+      fontVariantNumeric: 'tabular-nums',
+      padding:            '.55em 1.2em',
+      background:         'rgba(255,255,255,0.08)',
+      border:             '1px solid rgba(255,255,255,0.18)',
+      borderRadius:       '10px',
+      backdropFilter:     'blur(10px)',
+      WebkitBackdropFilter:'blur(10px)',
+      boxShadow:          '0 8px 24px rgba(0,0,0,0.25)',
+      minWidth:           '7em',
+      transition:         'background .2s, color .2s'
+    });
+
+    const botoes = el.querySelector('.timer-botoes');
+    Object.assign(botoes.style, {
+      display: 'flex', justifyContent: 'center', gap: '.5em', marginTop: '.8em', flexWrap: 'wrap'
+    });
+    el.querySelectorAll('.timer-btn').forEach(b => Object.assign(b.style, {
+      color: '#fff',
+      background: 'rgba(255,255,255,0.06)',
+      border: '1px solid rgba(255,255,255,0.18)',
+      borderRadius: '8px',
+      padding: '.5em 1em',
+      fontSize: '.9rem',
+      fontFamily: 'inherit',
+      cursor: 'pointer',
+      WebkitTapHighlightColor: 'transparent'
+    }));
+  }
+
+  const display  = el.querySelector('.timer-display');
+  const btnStart = el.querySelector('[data-acao="start"]');
+  const inputs   = el.querySelector('.timer-inputs');
+  const ins      = {
+    h: el.querySelector('[data-u="h"]'),
+    m: el.querySelector('[data-u="m"]'),
+    s: el.querySelector('[data-u="s"]')
+  };
+
+  // ---------- áudio: gera um WAV em JS ----------
+  function gerarWavBeep() {
+    const sr = 44100;
+    const tom = 0.18, silencio = 0.12, freq = 880;
+    const padrao = [tom, silencio, tom, silencio, tom]; // 3 bipes
+    const total = padrao.reduce((a,b) => a+b, 0);
+    const N = Math.floor(sr * total);
+    const buf = new Int16Array(N);
+
+    let i = 0, tocando = true;
+    for (const dur of padrao) {
+      const n = Math.floor(sr * dur);
+      for (let k = 0; k < n; k++, i++) {
+        if (tocando) {
+          const env = Math.min(1, k/200, (n-k)/600);
+          buf[i] = Math.sin(2*Math.PI*freq*k/sr) * env * 0x4fff;
+        } else buf[i] = 0;
+      }
+      tocando = !tocando;
+    }
+
+    const header = new ArrayBuffer(44);
+    const dv = new DataView(header);
+    const w = (o, str) => { for (let i=0;i<str.length;i++) dv.setUint8(o+i, str.charCodeAt(i)); };
+    w(0,'RIFF'); dv.setUint32(4, 36 + buf.byteLength, true);
+    w(8,'WAVEfmt '); dv.setUint32(16, 16, true);
+    dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, sr, true); dv.setUint32(28, sr*2, true);
+    dv.setUint16(32, 2, true); dv.setUint16(34, 16, true);
+    w(36,'data'); dv.setUint32(40, buf.byteLength, true);
+
+    const bytes = new Uint8Array(header.byteLength + buf.byteLength);
+    bytes.set(new Uint8Array(header), 0);
+    bytes.set(new Uint8Array(buf.buffer), header.byteLength);
+    let bin = '';
+    for (let k = 0; k < bytes.length; k++) bin += String.fromCharCode(bytes[k]);
+    return 'data:audio/wav;base64,' + btoa(bin);
+  }
+
+  let audio = document.getElementById('timer-beep');
+  if (!audio) {
+    audio = document.createElement('audio');
+    audio.id = 'timer-beep';
+    audio.src = gerarWavBeep();
+    audio.preload = 'auto';
+    document.body.appendChild(audio);
+  }
+  function beep() {
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+
+  // ---------- lógica do timer ----------
+  function lerInputs() {
+    const h = +ins.h.value || 0, m = +ins.m.value || 0, sec = +ins.s.value || 0;
+    return ((h * 3600) + (m * 60) + sec) * 1000;
+  }
+  function restante() { return s.rodando ? Math.max(0, s.fimEm - Date.now()) : s.totalMs; }
+  function formata(ms) {
+    const t = Math.ceil(ms / 1000);
+    const p = n => String(n).padStart(2, '0');
+    return p(Math.floor(t / 3600)) + ':' + p(Math.floor(t / 60) % 60) + ':' + p(t % 60);
+  }
+
+  // estado persistente entre chamadas
+  const s = aplica_timer._s ||= { rodando: false, totalMs: 0, fimEm: 0, alarme: false };
+  if (!s.rodando && s.totalMs === 0) s.totalMs = lerInputs();   // padrão: 5 min
+
+  function render() {
+    const ms = restante();
+    display.textContent = formata(ms);
+    btnStart.textContent = s.rodando ? 'pausar' : 'iniciar';
+    inputs.style.opacity = s.rodando ? '.4' : '1';
+    inputs.style.pointerEvents = s.rodando ? 'none' : 'auto';
+
+    if (s.rodando && ms === 0 && !s.alarme) {
+      s.alarme = true; s.rodando = false; s.totalMs = 0;
+      display.style.background = 'rgba(255,80,80,0.9)';
+      try { navigator.vibrate?.([200, 100, 200, 100, 400]); } catch {}
+      beep();
+    } else if (!s.alarme) {
+      display.style.background = 'rgba(255,255,255,0.08)';
+    }
+  }
+
+  clearInterval(aplica_timer._tick);
+  aplica_timer._tick = setInterval(render, 200);
+
+  // (re)amarra cliques
+  el.querySelectorAll('.timer-btn').forEach(b => b.onclick = () => {
+    // destrava áudio no iOS uma única vez, em silêncio — cinto e suspensório
+    if (!aplica_timer._destravado) {
+      aplica_timer._destravado = true;       // marca JÁ, antes do play (evita race)
+      audio.muted = true;
+      audio.volume = 0;
+      const restaurar = () => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.muted = false;
+        audio.volume = 1;
+      };
+      const p = audio.play();
+      if (p && p.then) p.then(restaurar).catch(restaurar);
+      else restaurar();
+    }
+
+    const a = b.dataset.acao;
+    if (a === 'start') {
+      if (s.rodando) {
+        s.totalMs = restante(); s.rodando = false;
+      } else {
+        s.alarme = false;
+        if (s.totalMs <= 0) s.totalMs = lerInputs();
+        if (s.totalMs <= 0) return;
+        s.fimEm = Date.now() + s.totalMs; s.rodando = true;
+      }
+    } else if (a === 'reset') {
+      s.rodando = false; s.totalMs = 0; s.alarme = false;
+      display.style.background = 'rgba(255,255,255,0.08)';
+    }
+    render();
+  });
+
+  // atualiza display ao digitar (quando parado)
+  Object.values(ins).forEach(i => i.oninput = () => {
+    if (!s.rodando) { s.totalMs = lerInputs(); render(); }
+  });
+
+  render();
 }
 
 window.onload = function() {
