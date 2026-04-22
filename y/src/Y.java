@@ -5914,8 +5914,10 @@ bind 'set enable-bracketed-paste off'
                     byte[] finalData = new byte[len - windowSize];
                     System.arraycopy(currentBytes, 0, finalData, 0, finalData.length);
                     int dataLen = finalData.length;
+                    if ( getCatEof_tag_flagAppend_b64 )
+                        finalData=base64_B_B(finalData, false);                    
                     try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
-                        fos.write(finalData, 0, dataLen);
+                        fos.write(finalData);
                         fos.flush();
                     }
                     return;
@@ -5927,7 +5929,7 @@ bind 'set enable-bracketed-paste off'
     public void catEofWindows(String [] args, String catEof_tag_flagAppend) throws Exception{
         String tag=catEof_tag_flagAppend.split(",")[0];
         boolean append=catEof_tag_flagAppend.split(",")[1].equals("true");
-        File outputFile = new File(args[2]);
+        File outputFile = new File(args[2]);        
         PushbackInputStream pbis = new PushbackInputStream(System.in, tag.length());
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         byte[] tagBytes = tag.getBytes();
@@ -5941,6 +5943,8 @@ bind 'set enable-bracketed-paste off'
                     byte[] data = baos.toByteArray();
                     byte[] finalData = new byte[data.length - tagBytes.length];
                     System.arraycopy(data, 0, finalData, 0, finalData.length);
+                    if ( getCatEof_tag_flagAppend_b64 )
+                        finalData=base64_B_B(finalData, false);
                     try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
                         fos.write(finalData);
                     }
@@ -5952,7 +5956,14 @@ bind 'set enable-bracketed-paste off'
         }
     }
     
+    Boolean getCatEof_tag_flagAppend_b64=false;
     public String getCatEof_tag_flagAppend(String a){
+        getCatEof_tag_flagAppend_b64=false;
+        if ( a.endsWith(">b64") ){
+            a=a.replaceAll(">b64", ">");
+            getCatEof_tag_flagAppend_b64=true;
+        }else
+            getCatEof_tag_flagAppend_b64=false;
         //"<<EOF>" -> EOF,false
         //"<<EEOOFF>>" -> EEOOFF,true
         if ( a.contains(",") || a.contains(" ") || a.contains("/") || a.contains("\\") )
@@ -5967,48 +5978,73 @@ bind 'set enable-bracketed-paste off'
     }
     
     public void uncat(String [] args){
-        //////////// -ascii -bin -out elem
-        Object [] parms_ascii_bin_out_elem=get_parms_ascii_bin_out_elem(args);
-        Boolean ascii=(Boolean)parms_ascii_bin_out_elem[0];
-        Boolean bin=(Boolean)parms_ascii_bin_out_elem[1];
-        Boolean out=(Boolean)parms_ascii_bin_out_elem[2];
-        String elem=(String)parms_ascii_bin_out_elem[3];
-
-        boolean flag_out=false;
-        if ( args.length == 2 && args[1].equals("-out") ){
-            args=new String[]{args[0]};
-            flag_out=true;
-        }
-        if ( args.length > 1 )
-            erroFatal("parte ainda nao implemetada!");        
-        StringBuilder sb=new StringBuilder();
-        int c=0;
-        File [] files=new File(".").listFiles();
-        String eof="EOF"+random(1000,9999);
-        for ( int i=0;i<files.length;i++ ){
-            if ( !files[i].isFile() )
-                continue;
-            if ( c > 0 )
-                sb.append("\n\n");
-            String name=files[i].getName();            
-            lendo_arquivo_VerificaSeEhSoASCII=true;
-            lendo_arquivo_DeixaSoASCII=true;
-            String txt=lendo_arquivo(name);
-            if ( lendo_arquivo_EhSoASCII ){
-                sb.append("y cat \"<<"+eof+">\" \"" + name + "\"\n");
-                sb.append(txt);
-                sb.append(eof + "\n");
+        //////////// 
+        Object [] parms_ascii_bin_allbin_out_elem=get_parms_ascii_bin_allbin_out_elem(args);
+        Boolean ascii=(Boolean)parms_ascii_bin_allbin_out_elem[0];
+        Boolean bin=(Boolean)parms_ascii_bin_allbin_out_elem[1];
+        Boolean allbin=(Boolean)parms_ascii_bin_allbin_out_elem[2];
+        Boolean flag_out=(Boolean)parms_ascii_bin_allbin_out_elem[3];
+        String elem=(String)parms_ascii_bin_allbin_out_elem[4];        
+        
+        try{
+            StringBuilder sb=new StringBuilder();
+            int c=0;
+            File [] files=null;
+            if ( elem != null ){
+                File elem_f=new File(elem);
+                if ( ! elem_f.exists() )
+                    erroFatal("Esse caminho nao existe: " + elem);
+                if ( elem_f.isFile() )
+                    files=new File[]{elem_f};
+                else
+                    files=elem_f.listFiles();
             }else{
-                sb.append("echo " + name + " suprimido!(char "+ lendo_arquivo_N + " nao ascii)\n");
+                files=new File(".").listFiles();
             }
-            c++;
+            String eof="EOF"+random(1000,9999);        
+            for ( int i=0;i<files.length;i++ ){
+                if ( !files[i].isFile() )
+                    continue;
+                if ( c > 0 )
+                    sb.append("\n\n");
+                String name=files[i].getName();            
+                String txt=lendo_arquivo(name);
+                // suprimindo
+                if ( elem == null && lendo_arquivo_has_bin && ascii ){
+                    sb.append("echo " + name + " suprimido!\n");                
+                    c++;
+                    continue;
+                }
+                // bin
+                if (  
+                    (allbin)
+                    || (bin && lendo_arquivo_has_bin)
+                    || (elem != null && lendo_arquivo_has_bin)
+                ){           
+                    sb.append("y cat \"<<"+eof+">b64\" \"" + name + "\"\n");
+                    base64encode_w=70;
+                    sb.append(base64_B_S(lendo_arquivo_bytes, true));
+                    sb.append("\n" + eof + "\n");
+                    c++;
+                    continue;
+                }
+                // ascii
+                sb.append("y cat \"<<"+eof+">\" \"" + name + "\"\n");
+                sb.append(txt.replaceAll("[^\\x00-\\x7F]", ""));
+                sb.append(eof + "\n");
+                c++;
+                //byte [] lendo_arquivo_bytes=null;
+                //Boolean lendo_arquivo_has_bin=null;
+            }
+            if ( c > 0 )
+                sb.append("\n");
+            if ( flag_out )
+                System.out.println(sb.toString());
+            else
+                set_clipboard(sb.toString());
+        }catch(Exception e){
+            erroFatal(e);
         }
-        if ( c > 0 )
-            sb.append("\n");
-        if ( flag_out )
-            System.out.println(sb.toString());
-        else
-            set_clipboard(sb.toString());
     }
     
     public void iso(String [] args){
@@ -11783,9 +11819,10 @@ while True:
         return new Object []{vol, mute, setvol, setmute, program, mutingWhileProgramInPrincipalMonitor};
     }        
     
-    public Object [] get_parms_ascii_bin_out_elem(String [] args){
+    public Object [] get_parms_ascii_bin_allbin_out_elem(String [] args){
         Boolean ascii=null;
         Boolean bin=null;
+        Boolean allbin=null;
         Boolean out=null;
         String elem=null;
         
@@ -11801,6 +11838,11 @@ while True:
                 args=sliceParm(1, args);
                 continue;
             }
+            if ( args.length > 0 && allbin == null && args[0].equals("-allbin") ){
+                allbin=true;
+                args=sliceParm(1, args);
+                continue;
+            }
             if ( args.length > 0 && out == null && args[0].equals("-out") ){
                 out=true;
                 args=sliceParm(1, args);
@@ -11813,9 +11855,16 @@ while True:
             }
             erroFatalParametrosInvalidos();
         }
-        if ( ascii != null && bin != null )
+        int n=(ascii!=null?1:0) + (bin!=null?1:0) + (allbin!=null?1:0);
+        if ( n > 1 )
             erroFatalParametrosInvalidos();
-        return new Object[]{ascii, bin, out, elem};
+        if ( n == 0 )
+            ascii=true;
+        if ( ascii == null ) ascii=false;
+        if ( bin == null ) bin=false;
+        if ( allbin == null ) allbin=false;
+        if ( out == null ) out=false;
+        return new Object[]{ascii, bin, allbin, out, elem};
     }   
     
     public Object [] get_parms_iso_source_flagMake(String [] args){
@@ -17464,6 +17513,7 @@ class Util{
         "D:/ProgramFiles/7z/7z.dll,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.dll,c4aabd70dc28c9516809b775a30fdd3f",
     };
     
+    public String hex_string="0123456789ABCDEF";
     public int hex_string_to_int(String a){
         int retorno=0;
         int lvl=1;
@@ -19585,7 +19635,7 @@ class Util{
         return base64_B_B(txt.getBytes(),encoding);
     }
     
-    public int base64encode_w=0; // tamanho por linha
+    public int base64encode_w=0; // tamanho por linha // muito comum 70
     public int base64encode_w_c=0; // contador
     public OutputStream base64encode_pipe_out=null;
     public void base64encode(InputStream pipe_in,OutputStream pipe_out) throws Exception{        
@@ -19720,42 +19770,33 @@ class Util{
         pipe_out.flush();        
     }
     
-    public String hex_string="0123456789ABCDEF";
-    boolean lendo_arquivo_VerificaSeEhSoASCII=false;
-    boolean lendo_arquivo_EhSoASCII=true;
-    boolean lendo_arquivo_DeixaSoASCII=false; // funciona somente para quando o arquivo é texto e tem pequenas sujeiras, se for binario o try falha para readString
-    Integer lendo_arquivo_N=null;
+    byte [] lendo_arquivo_bytes=null;
+    Boolean lendo_arquivo_has_bin=null;
+    // auxilio
+    // texto = texto.replaceAll("[^\\x00-\\x7F]", "");
     public String lendo_arquivo(String caminho){
-        //byte[] bytes = Files.readAllBytes(java.nio.file.Path.of(caminho));
-        //String texto = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-        lendo_arquivo_EhSoASCII=true;
         try{
-            String texto = Files.readString(java.nio.file.Path.of(caminho), java.nio.charset.StandardCharsets.UTF_8);
-            if ( lendo_arquivo_DeixaSoASCII )
-                texto = texto.replaceAll("[^\\x00-\\x7F]", "");
-            else{
-                if ( lendo_arquivo_VerificaSeEhSoASCII ){
-                    for (int i = 0; i < texto.length(); i++) {
-                        char c = texto.charAt(i);
-                        if (c > 127){
-                            lendo_arquivo_N=(int)c;
-                            if ( lendo_arquivo_N < 0 )
-                                lendo_arquivo_N+=256;
-                            lendo_arquivo_EhSoASCII=false;
-                            break;
-                        }
-                    }
-                }
-            }
-            return texto.replace("\r\n", "\n").replace("\r", "\n");
+            lendo_arquivo_bytes = Files.readAllBytes(java.nio.file.Path.of(caminho));
+            String texto = new String(lendo_arquivo_bytes, java.nio.charset.StandardCharsets.UTF_8);            
+            lendo_arquivo_has_bin=isBinario(lendo_arquivo_bytes);
+            return texto;
         }catch(Exception e){
-            if ( lendo_arquivo_VerificaSeEhSoASCII ){
-                lendo_arquivo_EhSoASCII=false;
-                return "";                
-            }
-            System.out.println(e.toString());
+            lendo_arquivo_has_bin=true;
         }
-        return "";
+        return null;
+    }    
+    public static boolean isBinario(byte[] bytes) {
+        if (bytes.length == 0) return false;
+        int limite = Math.min(bytes.length, 8192);
+        int naoTexto = 0;
+        for (int i = 0; i < limite; i++) {
+            byte b = bytes[i];
+            if (b == 0x00) return true;
+            if (b >= 0 && b < 32 && b != 9 && b != 10 && b != 13) {
+                naoTexto++;
+            }
+        }
+        return (naoTexto * 100 / limite) > 10;
     }    
     public String lendo_arquivo_old(String caminho) {
         String strLine;
@@ -28046,7 +28087,8 @@ Exemplos...
     y uncat "**/*.py" # todos os python, pastas envolvidas e subpastas envolvidas
     y uncat "**/" # todas as pastas e subpastas
     y uncat "*/" # todas as pastas
-    obs: -ascii -bin
+    obs: -ascii -bin -allbin
+    obs2: os * ainda nao foram implementados!
 [y redis]
     procure por y help httpServer
     na parte -redisDir
