@@ -5916,6 +5916,8 @@ bind 'set enable-bracketed-paste off'
                     int dataLen = finalData.length;
                     if ( getCatEof_tag_flagAppend_b64 )
                         finalData=base64_B_B(finalData, false);                    
+                    else
+                        finalData=array_rn_to_n(finalData);
                     try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
                         fos.write(finalData);
                         fos.flush();
@@ -5945,6 +5947,8 @@ bind 'set enable-bracketed-paste off'
                     System.arraycopy(data, 0, finalData, 0, finalData.length);
                     if ( getCatEof_tag_flagAppend_b64 )
                         finalData=base64_B_B(finalData, false);
+                    else
+                        finalData=array_rn_to_n(finalData);
                     try (FileOutputStream fos = new FileOutputStream(outputFile, append)) {
                         fos.write(finalData);
                     }
@@ -5977,6 +5981,21 @@ bind 'set enable-bracketed-paste off'
         return null;
     }
     
+    public byte[] array_rn_to_n(byte[] data) {
+        if (data == null || data.length == 0) return data;
+        byte[] out = new byte[data.length];
+        int o = 0, i = 0;
+        while (i < data.length) {
+            if (data[i] == '\r' && i + 1 < data.length && data[i + 1] == '\n') {
+                out[o++] = '\n';
+                i += 2;
+            } else {
+                out[o++] = data[i++];
+            }
+        }
+        return o == data.length ? out : java.util.Arrays.copyOf(out, o);
+    }
+
     public void uncat(String [] args){
         //////////// 
         Object [] parms_ascii_bin_allbin_out_elem=get_parms_ascii_bin_allbin_out_elem(args);
