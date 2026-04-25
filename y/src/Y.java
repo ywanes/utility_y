@@ -27992,6 +27992,7 @@ Exemplos...
     obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean
     obs2: se usar rownum com where ele poderá mostrar o numero errado! esse bug será corrigido depois
     alternativa y json mostraEstrutura: y echo '{"a":1,"b":[1,2,3]}' | python3 -m json.tool
+                                        y echo '{"a":1,"b":[1,2,3]}' | jq
 [y xlsxToCSV]
     xlsxToCSV arquivo.xlsx mostraEstrutura
     xlsxToCSV arquivo.xlsx listaAbas
