@@ -28573,6 +28573,12 @@ Exemplos...
     obs2: whoami funciona no windows e linux
     verificando se o usuario expira: wmic useraccount where name='%username%' get PasswordExpires
     setando para nao expirar: wmic useraccount where name='%username%' set PasswordExpires=FALSE
+    consultando ultima iso:
+        curl -s "https://api.uupdump.net/listid.php?search=windows%2011" \\
+            | jq -r '.response.builds 
+            | map(select(.arch=="amd64" and (.title | startswith("Windows 11, version")))) 
+            | max_by(.build | split(".") | map(tonumber)) 
+            | "\\(.title)\\nbuild: \\(.build)\\nlink:  https://uupdump.net/selectlang.php?id=\\(.uuid)"'
 [y pss]
     y pss
     y pss " y lock "
