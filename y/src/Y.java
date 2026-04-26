@@ -15917,6 +15917,7 @@ class multiCurl extends Util{
         Thread t=new Thread(){
             public void run(){
                 try{
+                    //////////////////
                     sleepMillis(random(1, 2000));    
                     Y y=new Y();
                     y.preparaPath(caminho, true, 0);
@@ -20793,6 +20794,7 @@ class Util{
         System.err.println(a);
         System.exit(1);
     }    
+    
     public static void erroFatalParametrosInvalidos() {
         System.err.println("parametros invalidos!");
         System.exit(1);
