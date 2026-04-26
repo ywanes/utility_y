@@ -2482,6 +2482,41 @@ function remove_playing(e){
 	}
 }
 
+function mountVideoInto(slotElOrId){
+    const slot = (typeof slotElOrId === 'string')
+        ? document.getElementById(slotElOrId)
+        : slotElOrId;
+    if (!slot) return null;
+    
+    const video = document.getElementById('video');
+    if (!video) return null;
+    
+    if (video.parentNode !== slot) {
+        slot.appendChild(video);
+    }
+    video.dataset.active = 'true';
+    return video;
+}
+
+function unmountVideo(){
+    const video = document.getElementById('video');
+    if (!video) return;
+    
+    try { video.pause(); } catch(e){}
+    video.dataset.active = 'false';
+    
+    let host = document.getElementById('video-host');
+    if (!host) {
+        host = document.createElement('div');
+        host.id = 'video-host';
+        host.style.cssText = 'position: absolute; left: -99999px; top: -99999px; width: 1px; height: 1px; overflow: hidden;';
+        document.body.appendChild(host);
+    }
+    if (video.parentNode !== host) {
+        host.appendChild(video);
+    }
+}
+
 function nick_click(){
     document.getElementById('nick').style='display: none';
     if ( document.getElementById('nick_name').value.indexOf('#') > -1 )
