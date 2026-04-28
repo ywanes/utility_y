@@ -2034,10 +2034,8 @@ cat buffer.log
                 return;
         }
         if ( args[0].equals("lock") ){
-            String p1=null;
-            if ( args.length > 1 )
-                p1=args[1];
-            lock(p1);
+            args=removeParm(0, args);
+            new lock().go(args);
             return;
         }
         if ( args[0].equals("monitor") ){
@@ -14762,110 +14760,6 @@ while True:
         return true;
     }
 
-    private void analise_click_min_ou_exit(int n_buttom, int i_){
-        if ( n_buttom == 3 ) // click direito
-            states_frames[i_]=true;
-        else
-            System.exit(0);        
-        int count_false=0;
-        for ( int i=0; i<states_frames.length;i++ )
-            if ( states_frames[i] == false )
-                count_false++;
-        if ( count_false == 0 )
-            System.exit(0);
-    }
-     
-    Frame [] lock_frames=null;
-    Color [] lock_frames_color=null;
-    boolean [] states_frames=null;    
-    private void lock(String parm){
-        kill_by_text(" y lock ");
-        if ( parm != null && parm.equals("0") )
-            return;
-        GraphicsDevice[] gs=null;
-        boolean hasConfigurationDevice=true;
-        try{
-            gs = robotGetScreenDevices();
-        }catch(Exception e){
-            erroFatal("Esse sistema não tem ambiente grafico.");
-        }
-        int len=gs.length;
-        lock_frames = new Frame[len];
-        lock_frames_color = new Color[len];
-        states_frames = new boolean[len]; // false => 0 => tela visivel
-        for ( int i=0;i<len;i++ ){
-            if ( hasConfigurationDevice )
-                lock_frames[i] = new Frame(gs[i].getDefaultConfiguration());
-            else
-                lock_frames[i] = new Frame();
-            if ( parm == null )
-                lock_frames_color[i]=Color.black;                
-            else
-                lock_frames_color[i]=Color.white;
-            lock_frames[i].setBackground(lock_frames_color[i]);
-            
-            if ( !hasConfigurationDevice ){
-                lock_frames[i].setUndecorated(true); // tira borda do aplicativo
-                lock_frames[i].setExtendedState(lock_frames[i].MAXIMIZED_BOTH);        
-            }
-            if ( parm == null )
-                lock_frames[i].setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(1,1,1), new Point( 0, 0), "" ));            
-            else
-                lock_frames[i].setCursor(Toolkit.getDefaultToolkit().createCustomCursor(new BufferedImage(2,2,2), new Point( 0, 0), "" ));            
-            lock_frames[i].addWindowListener(new java.awt.event.WindowAdapter() {
-                public void windowClosing(java.awt.event.WindowEvent e) {
-                    System.exit(0);
-                }
-            });
-            final int i_=i;
-            lock_frames[i].addComponentListener(new ComponentListener(){
-                public void componentResized(ComponentEvent e){
-                    e.getComponent().addMouseListener(new MouseListener() {
-                        public void mouseClicked(MouseEvent e){analise_click_min_ou_exit(e.getButton(), i_);}
-                        public void mousePressed(MouseEvent e){analise_click_min_ou_exit(e.getButton(), i_);}
-                        public void mouseReleased(MouseEvent e){}
-                        public void mouseEntered(MouseEvent e){}
-                        public void mouseExited(MouseEvent e){}
-                    });
-                }
-                public void componentMoved(ComponentEvent e){}
-                public void componentShown(ComponentEvent e){}
-                public void componentHidden(ComponentEvent e){}
-            });            
-            lock_frames[i].addWindowStateListener(new java.awt.event.WindowStateListener() {
-               public void windowStateChanged(java.awt.event.WindowEvent e){
-                   // bug here - dont use this Listener
-               }
-            });            
-            gs[i].setFullScreenWindow(lock_frames[i]);            
-            sleepMillis(100);
-        }  
-        
-        new Thread(){
-            public void run(){
-                try{
-                    while(true){
-                        sleepMillis(100);
-                        if ( lock_frames == null )
-                            continue;
-                        for ( int i=0;i<lock_frames.length;i++ ){
-                            if ( lock_frames[i] == null )
-                                continue;
-                            if ( states_frames[i] )
-                                lock_frames[i].setExtendedState(1);  
-                            else
-                                lock_frames[i].setExtendedState(0);  
-                            // BUG
-                            //lock_frames[i].setBackground(lock_frames_color[i]);
-                            //lock_frames[i].revalidate();
-                            //lock_frames[i].repaint();
-                        }                        
-                    }
-                }catch(Exception e){}
-            }
-        }.start();        
-    }
-       
     public void monitor(boolean oneLine){
         while(true){
             String s=runtimeExec("wmic cpu get loadpercentage", null, null, null, null);
@@ -15639,6 +15533,167 @@ class YDB{
     }
 }
 
+class lock {
+    public static void go(String[] args) {
+        try {
+            String pid = java.lang.management.ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+            String selfJar = new java.io.File(lock.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getName();
+            Process ps = new ProcessBuilder("wmic", "process", "where", "name='java.exe' or name='javaw.exe'", "get", "ProcessId,CommandLine", "/format:csv").redirectErrorStream(true).start();
+            java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(ps.getInputStream()));
+            String line;
+            while ((line = br.readLine()) != null) {
+                if (line.contains(selfJar) && !line.contains(pid)) {
+                    String[] parts = line.split(",");
+                    String opid = parts[parts.length - 1].trim();
+                    if (!opid.isEmpty() && !opid.equals(pid)) {
+                        try { new ProcessBuilder("taskkill", "/F", "/PID", opid).start().waitFor(1, java.util.concurrent.TimeUnit.SECONDS); } catch (Exception ex) {}
+                    }
+                }
+            }
+        } catch (Exception e) {}
+        boolean white = false;
+        int monitorIndex = -1;
+        boolean monitorRequested = false;
+        for (String a : args) {
+            if (a.equals("-1")) return;
+            if (a.equalsIgnoreCase("w")) white = true;
+            else {
+                try { monitorIndex = Integer.parseInt(a); monitorRequested = true; } catch (Exception ex) {}
+            }
+        }
+        java.awt.GraphicsDevice[] allScreens = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+        if (monitorRequested && (monitorIndex < 0 || monitorIndex >= allScreens.length)) {
+            System.out.println("Monitor " + monitorIndex + " nao existe.");
+            System.out.println();
+            System.out.println("Monitores disponiveis: " + allScreens.length);
+            System.out.print("Indices validos: 0");
+            if (allScreens.length > 1) System.out.print(" a " + (allScreens.length - 1));
+            System.out.println();
+            System.out.println();
+            System.out.println("Uso:");
+            System.out.println("  (sem args)  -> todos os monitores, preto");
+            System.out.println("  w           -> todos os monitores, branco");
+            System.out.println("  N           -> monitor N, preto");
+            System.out.println("  w N         -> monitor N, branco");
+            System.out.println("  -1          -> encerra instancia em execucao");
+            return;
+        }
+        final java.awt.Color selectedColor = white ? java.awt.Color.WHITE : java.awt.Color.BLACK;
+        final int targetMonitor = monitorIndex;
+        final boolean monitorWasRequested = monitorRequested;
+        final java.util.List<javax.swing.JFrame> frames = new java.util.ArrayList<>();
+        final boolean[] exiting = {false};
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            java.awt.GraphicsDevice[] all = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
+            java.awt.GraphicsDevice primary = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
+            java.awt.GraphicsDevice[] screens;
+            if (monitorWasRequested) {
+                screens = new java.awt.GraphicsDevice[]{all[targetMonitor]};
+            } else {
+                screens = all;
+            }
+            for (java.awt.GraphicsDevice screen : screens) {
+                java.awt.Rectangle bounds = screen.getDefaultConfiguration().getBounds();
+                boolean isPrimary = (screens.length == 1) || (screen == primary);
+                javax.swing.JFrame frame = new javax.swing.JFrame("Lanterna");
+                frame.setUndecorated(true);
+                frame.setBounds(bounds);
+                frame.getContentPane().setBackground(selectedColor);
+                frame.setAlwaysOnTop(true);
+                frame.setDefaultCloseOperation(javax.swing.JFrame.DO_NOTHING_ON_CLOSE);
+                frame.setType(isPrimary ? java.awt.Window.Type.NORMAL : java.awt.Window.Type.UTILITY);
+                java.awt.image.BufferedImage blank = new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+                final java.awt.Cursor blankCursor = java.awt.Toolkit.getDefaultToolkit().createCustomCursor(blank, new java.awt.Point(0, 0), "blank");
+                final java.awt.Cursor defaultCursor = java.awt.Cursor.getDefaultCursor();
+                final boolean[] cursorVisible = {true};
+                final java.awt.Point[] lastLocation = {new java.awt.Point(-1, -1)};
+                final boolean[] pressedHere = {false};
+                final java.awt.Rectangle frameBounds = bounds;
+                final javax.swing.Timer mouseTimer = new javax.swing.Timer(2000, null);
+                mouseTimer.addActionListener(ev -> {
+                    if (cursorVisible[0]) { frame.setCursor(blankCursor); cursorVisible[0] = false; }
+                    mouseTimer.stop();
+                });
+                mouseTimer.setRepeats(false);
+                javax.swing.Timer focusTimer = new javax.swing.Timer(500, ev -> {
+                    if (!frame.isDisplayable()) return;
+                    int state = frame.getExtendedState();
+                    if ((state & javax.swing.JFrame.ICONIFIED) != 0) {
+                        frame.setExtendedState(javax.swing.JFrame.NORMAL);
+                    }
+                    if (!frame.isVisible()) frame.setVisible(true);
+                    if (!frame.isAlwaysOnTop()) frame.setAlwaysOnTop(true);
+                    if (!frame.getBounds().equals(frameBounds)) frame.setBounds(frameBounds);
+                });
+                focusTimer.start();
+                frame.addWindowListener(new java.awt.event.WindowAdapter() {
+                    @Override public void windowOpened(java.awt.event.WindowEvent e) {
+                        frame.setCursor(blankCursor);
+                        cursorVisible[0] = false;
+                    }
+                    @Override public void windowIconified(java.awt.event.WindowEvent e) {
+                        frame.setExtendedState(javax.swing.JFrame.NORMAL);
+                    }
+                    @Override public void windowClosing(java.awt.event.WindowEvent e) {
+                        focusTimer.stop();
+                        mouseTimer.stop();
+                        if (isPrimary && !exiting[0]) {
+                            exiting[0] = true;
+                            for (javax.swing.JFrame f : frames) f.dispose();
+                            Runtime.getRuntime().halt(0);
+                        }
+                    }
+                });
+                frame.addWindowStateListener(e -> {
+                    if ((e.getNewState() & javax.swing.JFrame.ICONIFIED) != 0) {
+                        frame.setExtendedState(javax.swing.JFrame.NORMAL);
+                    }
+                });
+                frame.addMouseMotionListener(new java.awt.event.MouseMotionAdapter() {
+                    @Override public void mouseMoved(java.awt.event.MouseEvent e) {
+                        java.awt.Point current = java.awt.MouseInfo.getPointerInfo().getLocation();
+                        if (!current.equals(lastLocation[0])) {
+                            if (!cursorVisible[0]) { frame.setCursor(defaultCursor); cursorVisible[0] = true; }
+                            mouseTimer.restart();
+                            lastLocation[0] = current;
+                        }
+                    }
+                });
+                frame.addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override public void mousePressed(java.awt.event.MouseEvent e) {
+                        pressedHere[0] = true;
+                        e.consume();
+                    }
+                    @Override public void mouseReleased(java.awt.event.MouseEvent e) {
+                        if (!pressedHere[0]) return;
+                        pressedHere[0] = false;
+                        e.consume();
+                        if (javax.swing.SwingUtilities.isLeftMouseButton(e)) {
+                            if (!exiting[0]) {
+                                exiting[0] = true;
+                                focusTimer.stop();
+                                mouseTimer.stop();
+                                for (javax.swing.JFrame f : frames) f.dispose();
+                                Runtime.getRuntime().halt(0);
+                            }
+                        } else if (javax.swing.SwingUtilities.isRightMouseButton(e)) {
+                            focusTimer.stop();
+                            mouseTimer.stop();
+                            frame.dispose();
+                            frames.remove(frame);
+                            if (frames.isEmpty() && !exiting[0]) {
+                                exiting[0] = true;
+                                Runtime.getRuntime().halt(0);
+                            }
+                        }
+                    }
+                });
+                frames.add(frame);
+                frame.setVisible(true);
+            }
+        });
+    }
+}
 
 @SuppressWarnings({"unchecked", "deprecation"})
 class Tests extends Util{
@@ -28763,7 +28818,8 @@ Exemplos...
 [y lock]
     y lock
     y lock w
-    y lock 0 -> desliga lock
+    y lock -1 -> desliga lock
+    y lock 0 -> somente o primeiro monitor
     obs: gera black screen
     obs2: y lock w -> white screen
 [y monitor]
