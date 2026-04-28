@@ -15543,13 +15543,19 @@ class lock {
             String line;
             while ((line = br.readLine()) != null) {
                 if (line.contains(selfJar) && !line.contains(pid)) {
+                    boolean hasLockArg = false;
+                    for (String token : line.split("[\\s,]+")) {
+                        String t = token.replace("\"", "").trim();
+                        if (t.equals("lock")) { hasLockArg = true; break; }
+                    }
+                    if (!hasLockArg) continue;
                     String[] parts = line.split(",");
                     String opid = parts[parts.length - 1].trim();
                     if (!opid.isEmpty() && !opid.equals(pid)) {
                         try { new ProcessBuilder("taskkill", "/F", "/PID", opid).start().waitFor(1, java.util.concurrent.TimeUnit.SECONDS); } catch (Exception ex) {}
                     }
                 }
-            }
+            }            
         } catch (Exception e) {}
         boolean white = false;
         int monitorIndex = -1;
