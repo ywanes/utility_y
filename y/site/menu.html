@@ -313,12 +313,12 @@ function load(a){
             document.getElementById('bloco2').innerHTML=`
             <div class="header">/Menu</div>
             <div class="menu" style="--total-cols: 3;">
-              <a href="javascript:void(0);" class="blue" onclick="load('y lock 0')">y lock 0</a>
+              <a href="javascript:void(0);" class="blue" onclick="load('y lock -1')">y lock -1</a>
               <a href="javascript:void(0);" class="blue" onclick="load('y lock')">y lock</a>
               <a href="javascript:void(0);" class="green" onclick="load('y lock w')">y lock w</a>
               <a href="javascript:void(0);" class="blue" onclick="load('Win+L')">Win+L</a>
               <a href="javascript:void(0);" class="blue" onclick="load('atualiza ipv6')">atualiza ipv6</a>
-              <a href="javascript:void(0);" class="gray"></a>
+              <a href="javascript:void(0);" class="green" onclick="load('y lock w 2')">y lock w 2</a>
               <a href="javascript:void(0);" class="orange" onclick="load('Musicas')">Musicas</a>
               <a href="javascript:void(0);" class="red" onclick="load('Dota')">Dota</a>
               <a href="javascript:void(0);" class="red" onclick="load('DotaNoOCR')">DotaNoOCR</a>
@@ -339,15 +339,20 @@ function load(a){
             `;
             return;
         }
-        if ( a == '/Menu/y lock 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0') ); return; }
+        if ( a == '/Menu/y lock -1' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1') ); return; }
         if ( a == '/Menu/y lock' ){ 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0'), false); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
 			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe') ); 
 			return; 
 		}
         if ( a == '/Menu/y lock w' ){ 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe 0'), false); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
 			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w') ); 
+			return; 
+		}
+        if ( a == '/Menu/y lock w 2' ){ 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w 2') ); 
 			return; 
 		}
         if ( a == '/Menu/atualiza ipv6' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_ipv6\\sc0.bat') ); return; }		
