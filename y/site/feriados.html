@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feriados Nacionais do Brasil</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding: 25px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .description {
+            color: #7f8c8d;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.5;
+        }
+        
+        .year-selector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 25px;
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+        }
+        
+        .year-selector button {
+            background-color: #2c3e50;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .year-selector button:hover:not(:disabled) {
+            background-color: #34495e;
+            transform: scale(1.1);
+        }
+        
+        .year-selector button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+        
+        .year-selector h2,
+        .year-selector select {
+            color: #2c3e50;
+            min-width: 120px;
+            text-align: center;
+            font-size: 28px;
+        }
+        
+        .year-selector select {
+            border: 2px solid #2c3e50;
+            border-radius: 8px;
+            padding: 6px 10px;
+            background: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+            text-align-last: center;
+            transition: all 0.2s ease;
+        }
+        
+        .year-selector select:hover {
+            background: #2c3e50;
+            color: white;
+        }
+        
+        .year-selector select:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.2);
+        }
+        
+        .calendars-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 30px;
+        }
+        
+        .calendar {
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+            padding: 15px;
+            transition: transform 0.3s ease;
+        }
+        
+        .calendar:hover {
+            transform: translateY(-3px);
+        }
+        
+        .calendar-header {
+            text-align: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        .weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #7f8c8d;
+            font-size: 11px;
+        }
+        
+        .days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 3px;
+        }
+        
+        .day {
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            cursor: default;
+            transition: all 0.2s ease;
+            position: relative;
+            font-size: 13px;
+        }
+        
+        .day:not(.empty):hover {
+            background-color: #f1f3f5;
+            transform: scale(1.1);
+            z-index: 5;
+        }
+        
+        .other-month, .empty {
+            color: #ccc;
+            opacity: 0.5;
+        }
+        
+        .holiday-national {
+            background-color: #e74c3c;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .holiday-national:hover {
+            background-color: #c0392b !important;
+        }
+        
+        .holiday-facultative {
+            background-color: #f39c12;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .holiday-facultative:hover {
+            background-color: #d68910 !important;
+        }
+        
+        .today {
+            box-shadow: 0 0 0 3px #2196f3;
+            font-weight: bold;
+        }
+        
+        .day[data-tooltip]:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            white-space: nowrap;
+            margin-bottom: 6px;
+            z-index: 10;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            font-weight: normal;
+        }
+        
+        .day[data-tooltip]:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 5px solid transparent;
+            border-top-color: #2c3e50;
+            margin-bottom: -4px;
+            z-index: 10;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            background: white;
+            padding: 8px 14px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        
+        .legend-color {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+        }
+        
+        .holidays-list {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+        }
+        
+        .holidays-list h2 {
+            color: #2c3e50;
+            margin-bottom: 18px;
+            text-align: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 12px;
+        }
+        
+        .holiday-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: #f8f9fa;
+            border-left: 4px solid #e74c3c;
+            transition: all 0.2s ease;
+        }
+        
+        .holiday-item.facultative {
+            border-left-color: #f39c12;
+        }
+        
+        .holiday-item:hover {
+            background: #ecf0f1;
+            transform: translateX(4px);
+        }
+        
+        .holiday-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .holiday-name {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 15px;
+        }
+        
+        .holiday-type {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        
+        .holiday-date {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        
+        .holiday-date-day {
+            font-size: 16px;
+            font-weight: bold;
+            color: #e74c3c;
+        }
+        
+        .holiday-item.facultative .holiday-date-day {
+            color: #f39c12;
+        }
+        
+        .holiday-date-weekday {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: capitalize;
+        }
+        
+        @media (max-width: 900px) {
+            .calendars-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .calendars-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .holiday-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            
+            .holiday-date {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🇧🇷 Feriados Nacionais do Brasil</h1>
+            <p class="description">Calendário completo dos feriados nacionais e pontos facultativos para os próximos 100 anos. Os feriados móveis (Carnaval, Sexta-feira Santa e Corpus Christi) são calculados automaticamente.</p>
+        </header>
+        
+        <div class="year-selector">
+            <button id="prev-year" title="Ano anterior">‹</button>
+            <select id="year-select" title="Selecionar ano"></select>
+            <button id="next-year" title="Próximo ano">›</button>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #e74c3c;"></div>
+                <span>Feriado Nacional</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: #f39c12;"></div>
+                <span>Ponto Facultativo</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background-color: white; border: 3px solid #2196f3;"></div>
+                <span>Hoje</span>
+            </div>
+        </div>
+        
+        <div class="calendars-grid" id="calendars-grid"></div>
+        
+        <div class="holidays-list">
+            <h2>Lista de Feriados de <span id="list-year">2026</span></h2>
+            <div id="holidays-list-content"></div>
+        </div>
+    </div>
+
+    <script>
+        const today = new Date();
+        const START_YEAR = today.getFullYear();
+        const END_YEAR = START_YEAR + 99; // 100 anos no total, incluindo o atual
+        let selectedYear = START_YEAR;
+        
+        const monthNames = [
+            "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+            "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+        ];
+        
+        const weekdayNames = [
+            "domingo", "segunda-feira", "terça-feira", "quarta-feira",
+            "quinta-feira", "sexta-feira", "sábado"
+        ];
+        
+        // Algoritmo de Gauss/Anonymous Gregorian para calcular a Páscoa
+        function calculateEaster(year) {
+            const a = year % 19;
+            const b = Math.floor(year / 100);
+            const c = year % 100;
+            const d = Math.floor(b / 4);
+            const e = b % 4;
+            const f = Math.floor((b + 8) / 25);
+            const g = Math.floor((b - f + 1) / 3);
+            const h = (19 * a + b - d - g + 15) % 30;
+            const i = Math.floor(c / 4);
+            const k = c % 4;
+            const l = (32 + 2 * e + 2 * i - h - k) % 7;
+            const m = Math.floor((a + 11 * h + 22 * l) / 451);
+            const month = Math.floor((h + l - 7 * m + 114) / 31);
+            const day = ((h + l - 7 * m + 114) % 31) + 1;
+            return new Date(year, month - 1, day);
+        }
+        
+        function addDays(date, days) {
+            const result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+        
+        function getHolidays(year) {
+            const easter = calculateEaster(year);
+            
+            return [
+                { date: new Date(year, 0, 1), name: "Confraternização Universal", type: "national" },
+                { date: addDays(easter, -48), name: "Segunda-feira de Carnaval", type: "facultative" },
+                { date: addDays(easter, -47), name: "Terça-feira de Carnaval", type: "facultative" },
+                { date: addDays(easter, -2), name: "Sexta-feira Santa", type: "national" },
+                { date: easter, name: "Páscoa", type: "national" },
+                { date: new Date(year, 3, 21), name: "Tiradentes", type: "national" },
+                { date: new Date(year, 4, 1), name: "Dia do Trabalho", type: "national" },
+                { date: addDays(easter, 60), name: "Corpus Christi", type: "facultative" },
+                { date: new Date(year, 8, 7), name: "Independência do Brasil", type: "national" },
+                { date: new Date(year, 9, 12), name: "Nossa Senhora Aparecida", type: "national" },
+                { date: new Date(year, 10, 2), name: "Finados", type: "national" },
+                { date: new Date(year, 10, 15), name: "Proclamação da República", type: "national" },
+                { date: new Date(year, 10, 20), name: "Consciência Negra", type: "national" },
+                { date: new Date(year, 11, 25), name: "Natal", type: "national" }
+            ].sort((a, b) => a.date - b.date);
+        }
+        
+        function isSameDay(d1, d2) {
+            return d1.getDate() === d2.getDate() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getFullYear() === d2.getFullYear();
+        }
+        
+        function findHoliday(date, holidays) {
+            return holidays.find(h => isSameDay(h.date, date));
+        }
+        
+        function renderCalendar(month, year, holidays) {
+            const calendar = document.createElement('div');
+            calendar.className = 'calendar';
+            
+            const header = document.createElement('div');
+            header.className = 'calendar-header';
+            header.innerHTML = `<h3>${monthNames[month]}</h3>`;
+            calendar.appendChild(header);
+            
+            const weekdaysDiv = document.createElement('div');
+            weekdaysDiv.className = 'weekdays';
+            ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].forEach(d => {
+                const div = document.createElement('div');
+                div.textContent = d;
+                weekdaysDiv.appendChild(div);
+            });
+            calendar.appendChild(weekdaysDiv);
+            
+            const daysDiv = document.createElement('div');
+            daysDiv.className = 'days';
+            
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startingDayOfWeek = firstDay.getDay();
+            
+            // Espaços vazios antes do primeiro dia
+            for (let i = 0; i < startingDayOfWeek; i++) {
+                const empty = document.createElement('div');
+                empty.className = 'day empty';
+                daysDiv.appendChild(empty);
+            }
+            
+            // Dias do mês
+            for (let i = 1; i <= lastDay.getDate(); i++) {
+                const dateObj = new Date(year, month, i);
+                const dayElement = document.createElement('div');
+                dayElement.className = 'day';
+                dayElement.textContent = i;
+                
+                const holiday = findHoliday(dateObj, holidays);
+                if (holiday) {
+                    if (holiday.type === 'national') {
+                        dayElement.classList.add('holiday-national');
+                    } else {
+                        dayElement.classList.add('holiday-facultative');
+                    }
+                    dayElement.setAttribute('data-tooltip', holiday.name);
+                }
+                
+                if (isSameDay(dateObj, today)) {
+                    dayElement.classList.add('today');
+                }
+                
+                daysDiv.appendChild(dayElement);
+            }
+            
+            calendar.appendChild(daysDiv);
+            return calendar;
+        }
+        
+        function renderHolidaysList(holidays, year) {
+            const container = document.getElementById('holidays-list-content');
+            container.innerHTML = '';
+            
+            holidays.forEach(holiday => {
+                const item = document.createElement('div');
+                item.className = 'holiday-item' + (holiday.type === 'facultative' ? ' facultative' : '');
+                
+                const day = holiday.date.getDate().toString().padStart(2, '0');
+                const month = monthNames[holiday.date.getMonth()];
+                const weekday = weekdayNames[holiday.date.getDay()];
+                
+                item.innerHTML = `
+                    <div class="holiday-info">
+                        <div class="holiday-name">${holiday.name}</div>
+                        <div class="holiday-type">${holiday.type === 'national' ? 'Feriado Nacional' : 'Ponto Facultativo'}</div>
+                    </div>
+                    <div class="holiday-date">
+                        <div class="holiday-date-day">${day} de ${month}</div>
+                        <div class="holiday-date-weekday">${weekday}</div>
+                    </div>
+                `;
+                
+                container.appendChild(item);
+            });
+        }
+        
+        function updateView() {
+            const holidays = getHolidays(selectedYear);
+            
+            // Atualizar título
+            document.getElementById('year-select').value = selectedYear;
+            document.getElementById('list-year').textContent = selectedYear;
+            
+            // Atualizar botões
+            document.getElementById('prev-year').disabled = selectedYear <= START_YEAR;
+            document.getElementById('next-year').disabled = selectedYear >= END_YEAR;
+            
+            // Renderizar calendários
+            const grid = document.getElementById('calendars-grid');
+            grid.innerHTML = '';
+            for (let m = 0; m < 12; m++) {
+                grid.appendChild(renderCalendar(m, selectedYear, holidays));
+            }
+            
+            // Renderizar lista de feriados
+            renderHolidaysList(holidays, selectedYear);
+        }
+        
+        function populateYearSelect() {
+            const select = document.getElementById('year-select');
+            for (let y = START_YEAR; y <= END_YEAR; y++) {
+                const option = document.createElement('option');
+                option.value = y;
+                option.textContent = y;
+                select.appendChild(option);
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            populateYearSelect();
+            
+            document.getElementById('prev-year').addEventListener('click', () => {
+                if (selectedYear > START_YEAR) {
+                    selectedYear--;
+                    updateView();
+                }
+            });
+            
+            document.getElementById('next-year').addEventListener('click', () => {
+                if (selectedYear < END_YEAR) {
+                    selectedYear++;
+                    updateView();
+                }
+            });
+            
+            document.getElementById('year-select').addEventListener('change', (e) => {
+                selectedYear = parseInt(e.target.value, 10);
+                updateView();
+            });
+            
+            updateView();
+        });
+    </script>
+</body>
+</html>
