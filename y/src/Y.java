@@ -28054,8 +28054,6 @@ Exemplos...
     y selectCSV -csv file.csv -sql consulta.sql
     obs: alguns comandos => valor_int*valor_int | (valor_int) | valor_txt in (valor_txt ...) | if( boolean, valor_int, valor_int) | if( boolean, valor_txt, valor_txt) | parseInt(valor_txt) | substr( valor_txt, valor_int ) | substr( valor_txt, valor_int, valor_int ) | not boolean
     obs2: se usar rownum com where ele poderá mostrar o numero errado! esse bug será corrigido depois
-    alternativa y json mostraEstrutura: y echo '{"a":1,"b":[1,2,3]}' | python3 -m json.tool
-                                        y echo '{"a":1,"b":[1,2,3]}' | jq
 [y xlsxToCSV]
     xlsxToCSV arquivo.xlsx mostraEstrutura
     xlsxToCSV arquivo.xlsx listaAbas
@@ -28086,6 +28084,8 @@ Exemplos...
          y echo '{"folders": {"id1":11, "id2": 22, "id3": 33} }' | y json "[[elem['id1'],elem['id3']] for elem in data['folders']]"
    obs4: parametro noHeader => tira o header
    obs5: parametro list => resultado em forma de lista sem o header
+   alternativa y json mostraEstrutura: y echo '{"a":1,"b":[1,2,3]}' | python3 -m json.tool
+                                       y echo '{"a":1,"b":[1,2,3]}' | jq
 [y zip]
     y zip add File1.txt > saida.zip
     cat File1.txt | y zip add -name File1.txt > saida.zip
