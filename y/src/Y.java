@@ -13563,56 +13563,81 @@ while True:
         }
     }
     
-    private String pingMine(String host, int port) throws Exception{
+    private String pingMine(String host, int port) throws Exception {
         // refresh dns jvm
         // networkaddress.cache.ttl=5
         // networkaddress.cache.ttl=-1
         // in %JAVA_HOME%/jre/lib/security/java.security
-        String retorno=null;
-        Socket socket=new Socket();
-        socket.connect(new InetSocketAddress(host, port), 1000);
-        InputStream is=socket.getInputStream();
-        OutputStream os=socket.getOutputStream();         
-        byte[] b=new byte[]{(byte)43,(byte)0,(byte)191,(byte)4,(byte)36,      
-            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
-            (byte)50,(byte)50,(byte)50,(byte)58,    
-            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
-            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
-            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
-            (byte)50,(byte)50,(byte)58,    
-            (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,    
-            (byte)50,(byte)50,(byte)50,(byte)50,
-            (byte)99,(byte)222,(byte)1,(byte)1,(byte)0};
-        os.write(b);
-        byte [] buf=new byte[1024*10];
-        int len=is.read(buf);
-        if ( len == -1 )
-            throw new Exception("host nao responde: " + host+" " + port);
-        String s=new String(buf,0,len,"UTF-8");
-        while(s.length()>0&&!s.substring(0,1).equals("{"))
-            s=s.substring(1);
-        java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-        new JSON(new java.io.ByteArrayInputStream(s.getBytes()), "", false, true, false, false, false, baos);
-        retorno=baos.toString();
+        String retorno = null;
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), 1000);
+            socket.setSoTimeout(3000);
+            InputStream is = socket.getInputStream();
+            OutputStream os = socket.getOutputStream();
+
+            byte[] b = new byte[]{(byte)43,(byte)0,(byte)191,(byte)4,(byte)36,
+                (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,
+                (byte)50,(byte)50,(byte)50,(byte)58,
+                (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,
+                (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,
+                (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,
+                (byte)50,(byte)50,(byte)58,
+                (byte)50,(byte)50,(byte)50,(byte)50,(byte)58,
+                (byte)50,(byte)50,(byte)50,(byte)50,
+                (byte)99,(byte)221,(byte)1,(byte)1,(byte)0};
+            os.write(b);
+            os.flush();
+
+            int packetLen = ping_readVarInt(is); // tamanho total do pacote
+            int packetId  = ping_readVarInt(is); // deve ser 0
+            int jsonLen   = ping_readVarInt(is); // tamanho da string JSON
+
+            byte[] jsonBuf = new byte[jsonLen];
+            int got = 0;
+            while (got < jsonLen) {
+                int n = is.read(jsonBuf, got, jsonLen - got);
+                if (n == -1)
+                    throw new Exception("host nao responde: " + host + " " + port);
+                got += n;
+            }
+
+            String s = new String(jsonBuf, "UTF-8");
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            new JSON(new java.io.ByteArrayInputStream(s.getBytes("UTF-8")),
+                     "", false, true, false, false, false, baos);
+            retorno = baos.toString();
+        }
         return retorno;
     }
-    
+
+    private static int ping_readVarInt(InputStream is) throws Exception {
+        int value = 0, pos = 0, b;
+        while (true) {
+            b = is.read();
+            if (b == -1) throw new Exception("EOF lendo VarInt");
+            value |= (b & 0x7F) << pos;
+            if ((b & 0x80) == 0) return value;
+            pos += 7;
+            if (pos >= 32) throw new Exception("VarInt grande demais");
+        }
+    }
+
     public void pingMine_Tray(String host, int port){
         if ( !java.awt.SystemTray.isSupported() )
-            erroFatal("Tray não suportado nesse ambiente!");        
+            erroFatal("Tray não suportado nesse ambiente!");
         try{
-            java.awt.SystemTray tray = java.awt.SystemTray.getSystemTray();                
+            java.awt.SystemTray tray = java.awt.SystemTray.getSystemTray();
             java.awt.PopupMenu popup = new java.awt.PopupMenu();
-            java.awt.MenuItem item=new java.awt.MenuItem("Exit");
+            java.awt.MenuItem item = new java.awt.MenuItem("Exit");
             item.addActionListener(
                 new java.awt.event.ActionListener() {
                     public void actionPerformed(java.awt.event.ActionEvent e) {
                         System.exit(0);
                     }
                 }
-            );        
+            );
             popup.add(item);
-            java.awt.TrayIcon trayIcon = new java.awt.TrayIcon( convertOnlyDigitNumberToImage(pingMine_getPlayersOnline(host, port)), "numero de onlines minecraft " + host, popup );            
+            java.awt.TrayIcon trayIcon = new java.awt.TrayIcon( convertOnlyDigitNumberToImage(pingMine_getPlayersOnline(host, port)), "numero de onlines minecraft " + host, popup );
             trayIcon.setImageAutoSize(true);
             tray.add(trayIcon);
             while(true){
@@ -13623,7 +13648,7 @@ while True:
             erroFatal(e);
         }
     }
-    
+
     public BufferedImage convertOnlyDigitNumberToImage(int n){
         BufferedImage retorno=null;
         try {  

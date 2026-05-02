@@ -244,7 +244,9 @@ function add_shape(shape){
         div_value.className = 'shape-value-up';
     else
         div_value.className = 'shape-value-down';
-    div_value.textContent = formatarNumero(shape.value);
+    const valBi = toBigInt(shape.value);
+    div_value.setAttribute('data-value', valBi.toString());
+    div_value.textContent = formatarNumero(valBi);
     container.appendChild(div_value);
     container.children[1].setAttribute('style', '')
     canvas.appendChild(container);
@@ -378,8 +380,13 @@ function get_id_shape_clickado(e){
 }
 
 function get_value_shape(a){
-    const valueStr = document.getElementById(a).children[1].textContent.replace(/_/g, '');
-    return toBigInt(valueStr);
+    const elem = document.getElementById(a).children[1];
+    const dataVal = elem.getAttribute('data-value');
+    if (dataVal !== null && dataVal !== '') {
+        return toBigInt(dataVal);
+    }
+    // Fallback: estado salvo antes da mudança (sem data-value)
+    return toBigInt(elem.textContent.replace(/_/g, ''));
 }
 
 function reset_value_shape(a){
@@ -416,7 +423,10 @@ function calc_pendente(a){
 }
 
 function set_value_shape(a, b){
-    document.getElementById(a).children[1].textContent=formatarNumero(b);
+    const bi = toBigInt(b);
+    const elem = document.getElementById(a).children[1];
+    elem.setAttribute('data-value', bi.toString());
+    elem.textContent = formatarNumero(bi);
 }
 
 function add_value_shape(a, b){
@@ -582,6 +592,17 @@ z=function(){
     location.reload();
 }
 
+function letraDeIndice(n){
+    // 1->A, 2->B, ..., 26->Z, 27->AA, 28->AB, ... (estilo Excel)
+    let resultado = '';
+    while (n > 0) {
+        n--;
+        resultado = String.fromCharCode(65 + (n % 26)) + resultado;
+        n = Math.floor(n / 26);
+    }
+    return resultado;
+}
+
 function formatarNumero(numero){
 	if ( (numero+'') == '' )
 		return '';
@@ -600,6 +621,7 @@ function formatarNumero(numero){
         restante -= 9;
     }
     
+    // Formata o head (primeiro grupo) com _ a cada 3 dígitos
     if (grupos.length > 0) {
         const primeiroGrupo = grupos[0];
         let formatado = '';
@@ -611,7 +633,17 @@ function formatarNumero(numero){
         grupos[0] = formatado;
     }
     
-    const resultado = grupos.join('_');
+    // Compactação: se houver 2+ blocos de 9 dígitos (além do head),
+    // mantém head + primeiro bloco de 9 e substitui o resto por uma letra contadora.
+    let resultado;
+    const blocosDeNove = grupos.length - 1; // descontando o head
+    if (blocosDeNove >= 2) {
+        const extras = blocosDeNove - 1; // 1 -> A, 2 -> B, ...
+        resultado = grupos[0] + '_' + grupos[1] + '_' + letraDeIndice(extras);
+    } else {
+        resultado = grupos.join('_');
+    }
+    
     return negativo ? '-' + resultado : resultado;
 }
 
