@@ -116,6 +116,18 @@ function Set-BootTimeout {
     }
 }
 
+function Reset-EFIPartition {
+    Write-Host "`n=== Refazer UEFI ===" -ForegroundColor Cyan
+    
+    $letter = Read-Host "Letra da particao UEFI"
+    if ([string]::IsNullOrWhiteSpace($letter)) { Write-Host "Invalido." -ForegroundColor Red; return }
+    $letter = $letter.TrimEnd(':').ToUpper()
+    
+    if (-not (Test-Path "${letter}:\")) { Write-Host "Particao ${letter}: nao acessivel." -ForegroundColor Red; return }
+    
+    cmd /c "bcdboot C:\Windows /s ${letter}: /f UEFI /p"
+}
+
 # --- Menu ---
 do {
     Write-Host "`n=== GERENCIADOR BOOT VHDX (v11.0) ===" -ForegroundColor Magenta
@@ -123,7 +135,8 @@ do {
     Write-Host "2. Adicionar VHDX (Com Descricao)"
     Write-Host "3. Limpar Tudo (VHDX)"
     Write-Host "4. Ajustar Tempo (Timeout)"
-    Write-Host "5. Sair"
+    Write-Host "5. Refazer UEFI"
+    Write-Host "6. Sair"
     
     $op = Read-Host "Opcao"
     switch ($op) {
@@ -138,5 +151,6 @@ do {
         }
         "3" { Remove-AllVHDXBootEntries }
         "4" { Set-BootTimeout }
+        "5" { Reset-EFIPartition }
     }
-} while ($op -ne "5")
+} while ($op -ne "6")
