@@ -19316,10 +19316,38 @@ class Util{
             }
         }
     }
-    
-    public String fixNameFile(String a){
-        // nao pode colocar .replaceAll("#", "") senão quebra tudo.
-        return a.replaceAll("'", "").replaceAll(":", "-").replaceAll("&", "-").replaceAll("#039;", "").trim();
+
+    public String fixNameFile(String name) {
+        if (name == null || name.isBlank()) {
+            return "unnamed";
+        }
+
+        String result = name
+            // Entidades HTML comuns
+            .replace("&#039;", "")
+            .replace("&quot;", "")
+            .replace("&amp;", "-")
+            .replace("'", "")
+            // Caracteres inválidos em Windows/Unix viram '-'
+            .replaceAll("[<>:\"/\\\\|?*&#]", "-")
+            // Remove caracteres de controle (0x00-0x1F, 0x7F)
+            .replaceAll("\\p{Cntrl}", "")
+            // Colapsa traços consecutivos
+            .replaceAll("-+", "-")
+            // Remove pontos, traços e espaços do começo/fim
+            .replaceAll("^[.\\-\\s]+|[.\\-\\s]+$", "");
+
+        // Nomes reservados no Windows (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+        if (result.toUpperCase().matches("^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\\..*)?$")) {
+            result = "_" + result;
+        }
+
+        // Limite de tamanho (filesystems geralmente aceitam 255 bytes)
+        if (result.length() > 200) {
+            result = result.substring(0, 200);
+        }
+
+        return result.isEmpty() ? "unnamed" : result;
     }
     
     public ArrayList<String> getPivot(String a, String quebralinha){
