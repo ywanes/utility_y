@@ -1733,38 +1733,28 @@ cat buffer.log
             if ( isWindows() ){
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 find(args.length>1?args[1]:null, true, 0, true, null, null, null, true, null, baos);
-                String [] partes=baos.toString().split("\n");
-                int char_d=100;
-                int char_l=108;
-                int char_hifen=45;
+                String [] partes = baos.toString().split("\n");
                 Arrays.sort(partes, new Comparator<String>() {
                     public int compare(String a, String b){
                         if ( b.length() == 0 )
                             return 1;
                         if ( a.length() == 0 )
                             return -1;
-                        // "p"astas e "l"inks são prioridade 1 na ordenação
-                        // "-"hifen(arquivo) são prioridade 2
-                        int p1=a.charAt(0);
-                        int p2=b.charAt(0);
-                        if ( 
-                            (p1 != char_d && p1 != char_l && p1 != char_hifen)
-                            || (p2 != char_d && p2 != char_l && p2 != char_hifen)
-                        )
-                            erroFatal("Erro interno, tipo de elemento não identificado!");
-                        if ( p1 == char_d || p1 == char_l )
-                            p1=1;
-                        else
-                            p1=2;
-                        if ( p2 == char_d || p2 == char_l )
-                            p2=1;
-                        else
-                            p2=2;
+                        int p1 = prio(a.charAt(0));
+                        int p2 = prio(b.charAt(0));
                         if ( p1 != p2 )
-                            return p1 - p2;                        
+                            return p1 - p2;
                         return a.substring(16).compareTo(b.substring(16));
                     }
-                }); 
+                    private int prio(char c){
+                        // pasta + link-pra-pasta = grupo 1 (navegável)
+                        // link-pra-arquivo + arquivo = grupo 2
+                        if ( c == 'd' || c == 'l' ) return 1;
+                        if ( c == 'L' || c == '-' ) return 2;
+                        erroFatal("Erro interno, tipo de elemento não identificado: '" + c + "'");
+                        return 0;
+                    }
+                });
                 System.out.println(String.join("\n", partes));
             }
             else
@@ -12897,15 +12887,14 @@ while True:
             if ( print && (type != null || format_lss) ){
                 type_a="f";
                 type_lss="-";
-                if ( f.isDirectory() ){
-                    if(isSymbolicLink(f)){
-                        type_a = "l";
-                        type_lss="l";
-                    }else{
-                        type_a = "d";
-                        type_lss="d";
-                    }
-                }        
+                if ( isSymbolicLink(f) ){
+                    type_a = "l";
+                    // resolve o alvo: pasta -> 'l', arquivo (ou link quebrado) -> 'L'
+                    type_lss = java.nio.file.Files.isDirectory(f.toPath()) ? "l" : "L";
+                } else if ( f.isDirectory() ){
+                    type_a = "d";
+                    type_lss = "d";
+                }      
             }
             if ( print && type != null && !type.equals(type_a) )
                 print = false;
@@ -12916,7 +12905,7 @@ while True:
                     String space_="                                                       ";
                     int len_=35;//55
                     format_lss_ = type_lss + space_.substring(0, len_-format_lss_.length()) + format_lss_;                    
-                    if ( type_lss.equals("l") ){
+                    if ( type_lss.equals("l") || type_lss.equals("L") ){
                         format_lss_B= f.toPath().toRealPath().toString();
                         if ( format_lss_B.contains(" ") )
                             format_lss_B="\""+format_lss_B+"\"";
@@ -13230,15 +13219,20 @@ while True:
                 }
             }
         }
-        if ( !new File(fonte).exists() ){
+        File f_=new File(fonte);
+        if ( !f_.exists() ){
             System.out.println("Warning: O Elemento de origem " + fonte + " nao foi encontrado, mesmo assim o linked deve ser criado!");
         }
             
         String [] partes=null;        
         if ( System.getProperty("user.dir").contains("/") )
             partes = new String[]{"ln", "-s", fonte, new_};
-        else
-            partes = new String[]{"cmd", "/c", "mklink", "/j", new_, fonte};
+        else{
+            if ( f_.isFile() )
+                partes = new String[]{"cmd", "/c", "mklink", new_, fonte};
+            else
+                partes = new String[]{"cmd", "/c", "mklink", "/j", new_, fonte};
+        }
         
         try{
             String s=runtimeExec(null, partes, null, null, null);
@@ -28660,6 +28654,12 @@ Exemplos...
 [y lss]
     y lss
     y lss parta1
+    legenda: 
+        - -> file
+        d -> pasta
+        l -> symbolicLink pasta
+        L -> symbolicLink arquivo
+    obs: ordenado por (- e d), depois (l e L)
 [y du]
     y du
     y du . -g
@@ -28680,9 +28680,10 @@ Exemplos...
 [y link]
     y link "source" "new_"
     y link "c:\\tmp\\source" "new_"
-    comando windows: mklink /j "new_" "c:\\tmp\\source"
+    comando windows: mklink /j "new_" "c:\\tmp\\source" $ nao precisa de admin
     comando nao windows: ln -s '/opt/source' 'new_'
-    obs: se o volume nao for local, exemplo drive mapeado então deverá ser usado /D ao invés de /j do windows
+    obs: se o volume nao for local, exemplo drive mapeado então deverá ser usado /d ao invés de /j do windows # precisa de admin para o /d
+    obs2: para arquivo -> mklink "new_" "c:\\tmp\\source" # nao precisa de admin
 [y os]
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
