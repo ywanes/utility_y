@@ -15842,8 +15842,8 @@ class BCryptPassword {
         }
     }
     private byte[] cryptRaw(byte[] password, byte[] salt, int logRounds) {
-        if (logRounds < 4 || logRounds > 31) {
-            throw new IllegalArgumentException("Custo inválido (4..31)");
+        if (logRounds < 4 || logRounds > 30) {
+            throw new IllegalArgumentException("Custo inválido (4..30)");
         }
         if (salt.length != BCRYPT_SALT_LEN) {
             throw new IllegalArgumentException("Salt deve ter 16 bytes");
@@ -15922,8 +15922,8 @@ class BCryptPassword {
         return rs.toString();
     }
     public String gensalt(int logRounds, java.security.SecureRandom random) {
-        if (logRounds < 4 || logRounds > 31) {
-            throw new IllegalArgumentException("Custo inválido (4..31)");
+        if (logRounds < 4 || logRounds > 30) {
+            throw new IllegalArgumentException("Custo inválido (4..30)");
         }
         byte[] rnd = new byte[BCRYPT_SALT_LEN];
         random.nextBytes(rnd);
@@ -15999,7 +15999,7 @@ class BCryptPassword {
         out.println("  y bcrypt hash \"password\" 14");
         out.println("  y bcrypt check \"password\" \"$2a$14$uPMxyauwt6lrPXAW2rXsUeKo0fvcR/PP8dxQmPhcWFZqwoBmArnx2\"");
         out.println("obs: em linux usar \"\\$2a\\$14\\$uPMxyauwt6lrPXAW2rXsUeKo0fvcR/PP8dxQmPhcWFZqwoBmArnx2\"");
-        out.println("Custo: 4..31");
+        out.println("Custo: 4..30");
     }
 }
 
@@ -28813,7 +28813,7 @@ Exemplos...
     y bcrypt hash "password" 14
     y bcrypt check "password" "$2a$14$uPMxyauwt6lrPXAW2rXsUeKo0fvcR/PP8dxQmPhcWFZqwoBmArnx2"
     obs: em linux usar "\\$2a\\$14\\$uPMxyauwt6lrPXAW2rXsUeKo0fvcR/PP8dxQmPhcWFZqwoBmArnx2"
-    Custo: 4..31 
+    Custo: 4..30 
 [y redis]
     procure por y help httpServer
     na parte -redisDir
