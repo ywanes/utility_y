@@ -15998,6 +15998,7 @@ class BCryptPassword {
         out.println("Uso:");
         out.println("  y bcrypt hash \"password\" 14");
         out.println("  y bcrypt check \"password\" \"$2a$14$uPMxyauwt6lrPXAW2rXsUeKo0fvcR/PP8dxQmPhcWFZqwoBmArnx2\"");
+        out.println("obs: em linux usar \"\\$2a\\$14\\$uPMxyauwt6lrPXAW2rXsUeKo0fvcR/PP8dxQmPhcWFZqwoBmArnx2\"");
         out.println("Custo: 4..31");
     }
 }
@@ -28811,6 +28812,7 @@ Exemplos...
 [y bcrypt]
     y bcrypt hash "password" 14
     y bcrypt check "password" "$2a$14$uPMxyauwt6lrPXAW2rXsUeKo0fvcR/PP8dxQmPhcWFZqwoBmArnx2"
+    obs: em linux usar "\\$2a\\$14\\$uPMxyauwt6lrPXAW2rXsUeKo0fvcR/PP8dxQmPhcWFZqwoBmArnx2"
     Custo: 4..31 
 [y redis]
     procure por y help httpServer
