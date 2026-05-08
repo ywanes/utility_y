@@ -19900,11 +19900,13 @@ class Util{
         }
     }
 
+    String fixNameFile_filtro_asterisco="*";        
+    String fixNameFile_filtro_cerquilha="#";        
     public String fixNameFile(String name) {
         if (name == null || name.isBlank()) {
             return "unnamed";
         }
-
+        String asterisco="*";        
         String result = name
             // Entidades HTML comuns
             .replace("&#039;", "")
@@ -19912,13 +19914,11 @@ class Util{
             .replace("&amp;", "-")
             .replace("'", "")
             // Caracteres inválidos em Windows/Unix viram '-'
-            .replaceAll("[<>:\"/\\\\|?*&#]", "-")
+            .replaceAll("[<>:\"/\\\\|?" + fixNameFile_filtro_asterisco + fixNameFile_filtro_cerquilha + "&]", "-")
             // Remove caracteres de controle (0x00-0x1F, 0x7F)
             .replaceAll("\\p{Cntrl}", "")
             // Colapsa traços consecutivos
-            .replaceAll("-+", "-")
-            // Remove pontos, traços e espaços do começo/fim
-            .replaceAll("^[.\\-\\s]+|[.\\-\\s]+$", "");
+            .replaceAll("-+", "-");
 
         // Nomes reservados no Windows (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
         if (result.toUpperCase().matches("^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(\\..*)?$")) {
@@ -26676,8 +26676,11 @@ class ClientThread extends Util{
                 output.write(  ("HTTP/1.1 200 OK\r\nAccess-Control-Allow-Origin: *\r\n\r\n+OK").getBytes() );
                 return;                    
             }
-            if ( header_redis_key != null && header_redis_key.length() >= 255 )
+            if ( header_redis_key != null && header_redis_key.length() >= 255 ){
                 header_redis_key=header_redis_key.substring(0, 255);
+            }
+            fixNameFile_filtro_asterisco="";
+            fixNameFile_filtro_cerquilha="";
             if ( header_redis_key != null && !header_redis_key.equals("") && !header_redis_key.contains(" ") && header_redis_key.equals(fixNameFile(header_redis_key)) ){
                 // getAll
                 if ( header_redis_key.equals(redis.redisAll) ){                    
