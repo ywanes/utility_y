@@ -317,8 +317,6 @@ update=`
         </div>   
 `+ update;
 tmp_canvas=update;
-console.log(tmp_canvas);
-
 if ( tmp_canvas != null && tmp_canvas != '' ){
     document.getElementById('canvas').innerHTML=tmp_canvas;
 }else{
@@ -454,23 +452,79 @@ function reset_value_shape(a){
     }
 }
 
-function magico_value_shape(a){
-	add_value_shape(a, 0n);
-	// se for o primeiro e 1 nao faz nada
-	// tanto o segundo como o terceiro pode subir se tiver pendente, e precisa verificar o saldo do proximo para creditar. tenta usar o todos_level_multiplicado para fazer mais rapido
-	// em teoria, esse botao blinda acidentes tb!
-	/////////////////
-/*
-function add_value_shape(a, b){
-    if ( b == null )
-        b=1n+toBigInt(get_maior_id().substr(5))*2n+bonus();
-    let value=get_value_shape(a);
-    value+=toBigInt(b);
-    set_value_shape(a, value);
-    set_stroke_shape(a, false);
+function magico_value_shape(a2){
+console.log(a2);
+	let nid2=parseInt(a2.substr(5));
+	let nid4=nid2+2;
+	let nid3=nid2+1;
+	let nid1=nid2-1;
+	let nid0=nid2-2;
+	let shape4=document.getElementById('shape'+nid4);        
+	let shape3=document.getElementById('shape'+nid3);        
+	let shape2=document.getElementById('shape'+nid2);        
+	let shape1=document.getElementById('shape'+nid1);        
+	let shape0=document.getElementById('shape'+nid0);        
+	// primeiro numero de 3, e começa com 1, ex: >>1<<, 301, 601
+	if ( shape2 != null && shape1 != null && shape0 != null ){
+		let value2=get_value_shape('shape'+nid2);
+		let value1=get_value_shape('shape'+nid1);
+		let value0=get_value_shape('shape'+nid0);
+		if ( value2 == 1n && (value1-value2) == (value0-value1) )
+			return;
+	}
+	// segundo numero de 3, e começa com 1, ex: 1, >>299<<, 601
+	if ( shape3 != null && shape2 != null && shape1 != null ){
+		let value3=get_value_shape('shape'+nid3);
+		let value2=get_value_shape('shape'+nid2);
+		let value1=get_value_shape('shape'+nid1);
+		if ( value3 == 1n && (value2-value3) < (value1-value2) ){
+			let necessidade=calc_preenchimento_b(value3, value2, value1, this.level);
+			let value=1n;
+			for ( let i=todos_level_multiplicado.length-1;i>=0;i-- ){            
+				if ( todos_level_multiplicado[i] > value && todos_level_multiplicado[i] <= necessidade ){
+					value=todos_level_multiplicado[i];
+					break;
+				}
+			}
+			if ( value1 >= value*this.level ){ // validacao de segurança
+				add_value_shape('shape'+nid2, value);
+				set_value_shape('shape'+nid1, value1-(value*this.level));
+				return;
+			}
+		}			
+	}
+	// segundo numero de 3, e começa com 1, ex: 1, 301, >>599<<   o valor só é processado de o quarto elemento puder suprir 100% da necessidade!
+	if ( shape4 != null && shape3 != null && shape2 != null && shape1 != null ){
+		let value4=get_value_shape('shape'+nid4);
+		let value3=get_value_shape('shape'+nid3);
+		let value2=get_value_shape('shape'+nid2);
+		let value1=get_value_shape('shape'+nid1);
+		if ( value4 == 1n && (value3-value4) > (value2-value3) ){
+			let necessidade=(value3-value4)-(value2-value3);
+			let value=1n;
+			for ( let i=todos_level_multiplicado.length-1;i>=0;i-- ){            
+				if ( todos_level_multiplicado[i] > value && todos_level_multiplicado[i] <= necessidade ){
+					value=todos_level_multiplicado[i];
+					break;
+				}
+			}
+			if ( value1 >= value*this.level ){ // validacao de segurança
+				add_value_shape('shape'+nid2, value);
+				set_value_shape('shape'+nid1, value1-(value*this.level));
+				return;
+			}
+		}	
+	}	
 }
-*/
-	
+
+function calc_preenchimento_b(a, b, c, x) {
+    const y = (c + a - 2n * b) / (x + 2n);
+    if (y <= 0n) return 0n;
+    const custoEmC = x * y;
+    if (custoEmC > c) {
+        return c / x;
+    }
+    return y;
 }
 
 function calc_pendente(a){
