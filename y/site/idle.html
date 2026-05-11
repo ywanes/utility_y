@@ -154,9 +154,9 @@ function get_level_multiplicado(){
     let max=1n;
     for ( let i=2;i<assinatura.length;i++ ){
         if ( assinatura[i] > 0n && assinatura[i-1] > 0n && assinatura[i-2] > 0n 
-            && (assinatura[i-1] - assinatura[i]) === (assinatura[i-2] - assinatura[i-1])            
+            && (assinatura[i-1] - assinatura[i]) === (assinatura[i-2] - assinatura[i-1] )            
         ){
-			todos_level_multiplicado.push(assinatura[i]);
+			todos_level_multiplicado.push(assinatura[i-1] - assinatura[i]);
 			if ( (assinatura[i-1] - assinatura[i]) > max )
 				max=assinatura[i-1] - assinatura[i];
         }
@@ -200,7 +200,7 @@ if ( flag_mobile() ){
 			document.getElementById('svg1').children[0].getAttribute('fill') == svg_superEnable
 			|| document.getElementById('svg2').children[0].getAttribute('fill') == svg_superEnable
 			|| document.getElementById('svg3').children[0].getAttribute('fill') == svg_superEnable		
-			|| document.getElementById('svg4').children[0].getAttribute('fill') == svg_superEnable		
+			/*|| document.getElementById('svg4').children[0].getAttribute('fill') == svg_superEnable*/
 		)
 			atualizar=true;
 
