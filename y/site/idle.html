@@ -72,6 +72,11 @@
                 <polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
             </svg>
         </div>    
+        <div class="shape-container" id="extra" onclick="btn4()" style="left: 07.5px; top: 545px;margin-left: 330px;">
+            <svg id="svg4" style="width: 50px;height: 50px;">
+                <polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
+            </svg>
+        </div>    
         <div id="extra" style="left: 07.5px; margin-left: 10px;">            
             <div id="lbl1" class="shape-value-up">0</div>        
         </div>        
@@ -102,7 +107,7 @@ var limit_mili_double_click=200;
 var svg_disable='#456';
 var svg_enable='#a22';
 var svg_superEnable='#000';
-var epochmili={'svg1': 0, 'svg2': 0, 'svg3': 0};
+var epochmili={'svg1': 0, 'svg2': 0, 'svg3': 0, 'svg4': 0};
 const canvas = document.getElementById('canvas');
 
 // Função para converter string para BigInt, tratando números grandes
@@ -134,25 +139,37 @@ function flag_mobile() {
   return check;
 };
 
+var todos_level_multiplicado=[];
 function get_level_multiplicado(){
     let i=1;
     let assinatura=[];
+	todos_level_multiplicado=[];
     while(true){
         let shape=document.getElementById('shape'+i);        
         if ( shape == null )
             break;
-        assinatura.push(toBigInt(get_value_shape('shape'+i)));
+        assinatura.push(get_value_shape('shape'+i));
         i++;
     }
     let max=1n;
     for ( let i=2;i<assinatura.length;i++ ){
         if ( assinatura[i] > 0n && assinatura[i-1] > 0n && assinatura[i-2] > 0n 
-            && (assinatura[i-1] - assinatura[i]) === (assinatura[i-2] - assinatura[i-1])
-            && (assinatura[i-1] - assinatura[i]) > max
+            && (assinatura[i-1] - assinatura[i]) === (assinatura[i-2] - assinatura[i-1])            
         ){
-            max=assinatura[i-1] - assinatura[i];
+			todos_level_multiplicado.push(assinatura[i]);
+			if ( (assinatura[i-1] - assinatura[i]) > max )
+				max=assinatura[i-1] - assinatura[i];
         }
     }
+	todos_level_multiplicado.sort((a ,b) => {
+		if(a > b) {
+			return 1;
+		} else if (a < b){
+			return -1;
+		} else {
+			return 0;
+		}
+	});
     return max;
 }
 
@@ -183,6 +200,7 @@ if ( flag_mobile() ){
 			document.getElementById('svg1').children[0].getAttribute('fill') == svg_superEnable
 			|| document.getElementById('svg2').children[0].getAttribute('fill') == svg_superEnable
 			|| document.getElementById('svg3').children[0].getAttribute('fill') == svg_superEnable		
+			|| document.getElementById('svg4').children[0].getAttribute('fill') == svg_superEnable		
 		)
 			atualizar=true;
 
@@ -273,6 +291,34 @@ function createTriangleSVG(shape) {
 }
 
 let tmp_canvas=localStorage.getItem(canvas_tag);
+// update dom
+var update=localStorage.getItem(canvas_tag).indexOf('<div id="extra"');
+update=localStorage.getItem(canvas_tag).substring(update);
+update=`
+        <div class="shape-container" id="extra" onclick="btn1()" style="left: 07.5px; top: 545px;margin-left: 30px;">
+            <svg id="svg1" style="width: 50px;height: 50px;">
+                <polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
+            </svg>
+        </div>    
+        <div class="shape-container" id="extra" onclick="btn2()" style="left: 07.5px; top: 545px;margin-left: 130px;">
+            <svg id="svg2" style="width: 50px;height: 50px;">
+                <polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
+            </svg>
+        </div>    
+        <div class="shape-container" id="extra" onclick="btn3()" style="left: 07.5px; top: 545px;margin-left: 230px;">
+            <svg id="svg3" style="width: 50px;height: 50px;">
+                <polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
+            </svg>
+        </div>   
+        <div class="shape-container" id="extra" onclick="btn4()" style="left: 07.5px; top: 545px;margin-left: 330px;">
+            <svg id="svg4" style="width: 50px;height: 50px;">
+                <polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
+            </svg>
+        </div>   
+`+ update;
+tmp_canvas=update;
+console.log(tmp_canvas);
+
 if ( tmp_canvas != null && tmp_canvas != '' ){
     document.getElementById('canvas').innerHTML=tmp_canvas;
 }else{
@@ -314,11 +360,13 @@ function pontoDentroDoTriangulo(Ax, Ay, Bx, By, Cx, Cy, Px, Py){
     return !(hasNeg && hasPos);
 }
 
-function btn(alvo, colateral1, colateral2){
+function btn(alvo, colateral1, colateral2, colateral3){
     document.getElementById(colateral1).children[0].setAttribute('fill', svg_disable);
 	epochmili[colateral1]=0;
     document.getElementById(colateral2).children[0].setAttribute('fill', svg_disable);
 	epochmili[colateral2]=0;
+    document.getElementById(colateral3).children[0].setAttribute('fill', svg_disable);
+	epochmili[colateral3]=0;
     if ( document.getElementById(alvo).children[0].getAttribute('fill') != svg_disable ){
 	    if ( document.getElementById(alvo).children[0].getAttribute('fill') == svg_enable && epochmili[alvo] > 0 && (get_epochmili() - epochmili[alvo]) <= limit_mili_double_click )
 			document.getElementById(alvo).children[0].setAttribute('fill', svg_superEnable);
@@ -331,22 +379,26 @@ function btn(alvo, colateral1, colateral2){
 }
 
 function btn1(){    
-	btn('svg1', 'svg2', 'svg3');
+	btn('svg1', 'svg2', 'svg3', 'svg4');
 }
 
 function btn2(){    
-    btn('svg2', 'svg1', 'svg3');
+    btn('svg2', 'svg1', 'svg3', 'svg4');
 }
 
 function btn3(){    
-    btn('svg3', 'svg1', 'svg2');
+    btn('svg3', 'svg1', 'svg2', 'svg4');
+}
+
+function btn4(){    
+    btn('svg4', 'svg1', 'svg2', 'svg3');
 }
 
 function bonus(){
     let nid=parseInt(get_maior_id().substr(5));
     let s=0n;
     for ( let i=1;i<nid;i++ ){
-        let value=toBigInt(get_value_shape('shape'+i));
+        let value=get_value_shape('shape'+i);
         if ( value > 20n )
             s+=value*BigInt(i);
     }
@@ -390,7 +442,7 @@ function get_value_shape(a){
 }
 
 function reset_value_shape(a){
-    let value=toBigInt(get_value_shape(a));
+    let value=get_value_shape(a);
     if ( value > 1n ){
         let nid=parseInt(a.substr(5));
         let nid_anterior=nid-1;
@@ -402,6 +454,25 @@ function reset_value_shape(a){
     }
 }
 
+function magico_value_shape(a){
+	add_value_shape(a, 0n);
+	// se for o primeiro e 1 nao faz nada
+	// tanto o segundo como o terceiro pode subir se tiver pendente, e precisa verificar o saldo do proximo para creditar. tenta usar o todos_level_multiplicado para fazer mais rapido
+	// em teoria, esse botao blinda acidentes tb!
+	/////////////////
+/*
+function add_value_shape(a, b){
+    if ( b == null )
+        b=1n+toBigInt(get_maior_id().substr(5))*2n+bonus();
+    let value=get_value_shape(a);
+    value+=toBigInt(b);
+    set_value_shape(a, value);
+    set_stroke_shape(a, false);
+}
+*/
+	
+}
+
 function calc_pendente(a){
     let nid=parseInt(a.substr(5));
     if ( nid == 0 )
@@ -409,9 +480,9 @@ function calc_pendente(a){
     let nid_posterior=nid+1;
     let nid_posterior2=nid+2;
     if ( document.getElementById('shape'+nid_posterior) != null && document.getElementById('shape'+nid_posterior2) != null ){
-        let value=toBigInt(get_value_shape(a));
-        let value1=toBigInt(get_value_shape('shape'+nid_posterior));
-        let value2=toBigInt(get_value_shape('shape'+nid_posterior2));
+        let value=get_value_shape(a);
+        let value1=get_value_shape('shape'+nid_posterior);
+        let value2=get_value_shape('shape'+nid_posterior2);
         if ( value1 <= value2 || value2 == 0n ){
             return '';
         }
@@ -432,7 +503,7 @@ function set_value_shape(a, b){
 function add_value_shape(a, b){
     if ( b == null )
         b=1n+toBigInt(get_maior_id().substr(5))*2n+bonus();
-    let value=toBigInt(get_value_shape(a));
+    let value=get_value_shape(a);
     value+=toBigInt(b);
     set_value_shape(a, value);
     set_stroke_shape(a, false);
@@ -548,7 +619,7 @@ function tenta_promover(nid){
     let nid_anterior=nid-1;
     let shape_anterior=document.getElementById('shape'+nid_anterior);        
     if ( shape_anterior != null ){
-        let value_anterior=toBigInt(get_value_shape('shape'+nid_anterior));
+        let value_anterior=get_value_shape('shape'+nid_anterior);
         let level_multiplicado_candidato=value_anterior/this.level;        
         if ( level_multiplicado_candidato == 0n )
             return false;
@@ -578,7 +649,7 @@ function shape_clickado(id_shape_clickado){
     // tenta mudar stroke do shape
     let nid_posterior=nid+1;
     let shape_posterior=document.getElementById('shape'+nid_posterior);
-    let value=toBigInt(get_value_shape(id_shape_clickado));
+    let value=get_value_shape(id_shape_clickado);
     if ( value >= this.level && shape_posterior == null ){
         add_next_shape(id_shape_clickado);
         set_stroke_shape(id_shape_clickado, false);
@@ -672,6 +743,7 @@ function clickado(e){
             document.getElementById('svg1').children[0].setAttribute('fill', svg_disable);
             document.getElementById('svg2').children[0].setAttribute('fill', svg_disable);
             document.getElementById('svg3').children[0].setAttribute('fill', svg_disable);
+            document.getElementById('svg4').children[0].setAttribute('fill', svg_disable);
             return;
         }
         if ( document.getElementById('svg2').children[0].getAttribute('fill') != svg_disable ){
@@ -683,6 +755,7 @@ function clickado(e){
             document.getElementById('svg1').children[0].setAttribute('fill', svg_disable);
             document.getElementById('svg2').children[0].setAttribute('fill', svg_disable);
             document.getElementById('svg3').children[0].setAttribute('fill', svg_disable);
+            document.getElementById('svg4').children[0].setAttribute('fill', svg_disable);
             return;
         }
         if ( document.getElementById('svg3').children[0].getAttribute('fill') != svg_disable ){
@@ -694,6 +767,19 @@ function clickado(e){
             document.getElementById('svg1').children[0].setAttribute('fill', svg_disable);
             document.getElementById('svg2').children[0].setAttribute('fill', svg_disable);
             document.getElementById('svg3').children[0].setAttribute('fill', svg_disable);
+            document.getElementById('svg4').children[0].setAttribute('fill', svg_disable);
+            return;
+        }
+        if ( document.getElementById('svg4').children[0].getAttribute('fill') != svg_disable ){
+            magico_value_shape(id_shape_clickado);
+            set_lbl1_by_shape(id_shape_clickado);
+            set_lbl2(calc_pendente(id_shape_clickado));
+			if ( document.getElementById('svg4').children[0].getAttribute('fill') == svg_superEnable )
+				return;
+            document.getElementById('svg1').children[0].setAttribute('fill', svg_disable);
+            document.getElementById('svg2').children[0].setAttribute('fill', svg_disable);
+            document.getElementById('svg3').children[0].setAttribute('fill', svg_disable);
+            document.getElementById('svg4').children[0].setAttribute('fill', svg_disable);
             return;
         }
         shape_clickado(id_shape_clickado);
