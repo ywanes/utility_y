@@ -293,8 +293,9 @@ function createTriangleSVG(shape) {
 let tmp_canvas=localStorage.getItem(canvas_tag);
 // update dom
 var update=localStorage.getItem(canvas_tag).indexOf('<div id="extra"');
-update=localStorage.getItem(canvas_tag).substring(update);
-update=`
+if ( update > -1 ){
+	update=localStorage.getItem(canvas_tag).substring(update);
+	update=`
         <div class="shape-container" id="extra" onclick="btn1()" style="left: 07.5px; top: 545px;margin-left: 30px;">
             <svg id="svg1" style="width: 50px;height: 50px;">
                 <polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
@@ -315,8 +316,9 @@ update=`
                 <polygon points="0,0 50,0 50,50 0,50" fill="#456" stroke="none"></polygon>
             </svg>
         </div>   
-`+ update;
-tmp_canvas=update;
+	`+ update;
+	tmp_canvas=update;
+}
 if ( tmp_canvas != null && tmp_canvas != '' ){
     document.getElementById('canvas').innerHTML=tmp_canvas;
 }else{
@@ -453,7 +455,6 @@ function reset_value_shape(a){
 }
 
 function magico_value_shape(a2){
-console.log(a2);
 	let nid2=parseInt(a2.substr(5));
 	let nid4=nid2+2;
 	let nid3=nid2+1;
