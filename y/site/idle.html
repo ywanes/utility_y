@@ -211,6 +211,10 @@ if ( flag_mobile() ){
         }
         e.x=this.continuaX;
         e.y=this.continuaY;
+		if ( document.getElementById('svg4').children[0].getAttribute('fill') == svg_superEnable ){
+			magico_value_shape(get_id_shape_clickado(e));
+			return;
+		}
         clickado(e);
     }, false); 
 }else{
@@ -454,7 +458,7 @@ function reset_value_shape(a){
     }
 }
 
-function magico_value_shape(a2){
+function magico_value_shape(a2){	
 	let nid2=parseInt(a2.substr(5));
 	let nid4=nid2+2;
 	let nid3=nid2+1;
@@ -470,8 +474,10 @@ function magico_value_shape(a2){
 		let value2=get_value_shape('shape'+nid2);
 		let value1=get_value_shape('shape'+nid1);
 		let value0=get_value_shape('shape'+nid0);
-		if ( value2 == 1n && (value1-value2) == (value0-value1) )
+		if ( value2 == 1n && (value1-value2) == (value0-value1) ){
+			set_lbl2('-');
 			return;
+		}
 	}
 	// segundo numero de 3, e começa com 1, ex: 1, >>299<<, 601
 	if ( shape3 != null && shape2 != null && shape1 != null ){
@@ -490,6 +496,7 @@ function magico_value_shape(a2){
 			if ( value1 >= value*this.level ){ // validacao de segurança
 				add_value_shape('shape'+nid2, value);
 				set_value_shape('shape'+nid1, value1-(value*this.level));
+				set_lbl2('');
 				return;
 			}
 		}			
@@ -512,10 +519,12 @@ function magico_value_shape(a2){
 			if ( value1 >= value*this.level ){ // validacao de segurança
 				add_value_shape('shape'+nid2, value);
 				set_value_shape('shape'+nid1, value1-(value*this.level));
+				set_lbl2('');
 				return;
 			}
 		}	
-	}	
+	}
+	set_lbl2('-');
 }
 
 function calc_preenchimento_b(a, b, c, x) {
