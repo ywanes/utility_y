@@ -157,6 +157,7 @@ function get_level_multiplicado(){
             && (assinatura[i-1] - assinatura[i]) === (assinatura[i-2] - assinatura[i-1] )            
         ){
 			todos_level_multiplicado.push(assinatura[i-1] - assinatura[i]);
+			todos_level_multiplicado.push( (assinatura[i-1] - assinatura[i])*20n ); // brinde
 			if ( (assinatura[i-1] - assinatura[i]) > max )
 				max=assinatura[i-1] - assinatura[i];
         }
