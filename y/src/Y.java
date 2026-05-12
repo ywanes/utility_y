@@ -697,12 +697,12 @@ cat buffer.log
         if ( args[0].equals("zip") ){
             try{
                 if ( args.length >= 3 && args[1].equals("add") ){
-                    Object [] objs = get_parms_paths_virtualname_lvlStore(args);
+                    Object [] objs = get_parms_paths_virtualname_lvlCompress(args);
                     if ( objs != null ){
                         String [] paths=(String [])objs[0];
                         String virtualname=(String)objs[1];
-                        boolean lvlStore=(Boolean)objs[2];
-                        zip_add_router(paths, virtualname, lvlStore, System.out, null);
+                        Integer lvlCompress=(Integer)objs[2];
+                        zip_add_router(paths, virtualname, lvlCompress, System.out, null);
                         return;
                     }
                 }
@@ -3370,7 +3370,7 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_add_router(paths, "", true, pos1, "enviando - ");
+                            zip_add_router(paths, "", 0, pos1, "enviando - ");
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -5269,11 +5269,16 @@ cat buffer.log
         return null;
     }
     
-    private void zip_add_router(String [] paths, String virtual_name, boolean isLvlStore, OutputStream out, String pre_line_print_on) throws Exception {
+    private void zip_add_router(String [] paths, String virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on) throws Exception {
         this.virtual_name = virtual_name;                
         zip_output = new java.util.zip.ZipOutputStream(out);   
-        if ( isLvlStore )
-            zip_output.setLevel(ZipOutputStream.STORED);        
+        if ( lvlCompress == 0 )
+            zip_output.setLevel(ZipOutputStream.STORED);
+        else{
+            if ( lvlCompress == 9 )
+                zip_output.setLevel(Deflater.BEST_COMPRESSION);
+        }
+
         valida_paths(paths);
         zip_add(paths, pre_line_print_on);
         zip_output.closeEntry();
@@ -12735,16 +12740,21 @@ while True:
         return new Object[]{path,acceptSymbolicLink,bkmg};
     }    
     
-    private Object [] get_parms_paths_virtualname_lvlStore(String [] args){
+    private Object [] get_parms_paths_virtualname_lvlCompress(String [] args){
         String [] paths=new String[]{};
         String virtualname="";
-        boolean lvlStore=false;
+        Integer lvlCompress=1;
         ArrayList<String> tmp=new ArrayList<String>();
         
         args=sliceParm(2,args);
         while(args.length > 0){
             if ( args[0].equals("-lvlStore") ){
-                lvlStore=true;                
+                lvlCompress=0;                
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args[0].equals("-lvlBestCompress") ){
+                lvlCompress=9;
                 args=sliceParm(1,args);
                 continue;
             }
@@ -12769,7 +12779,7 @@ while True:
             for ( int i=0;i<tmp.size();i++ )
                 paths[i]=tmp.get(i);
         }
-        return new Object[]{paths, virtualname, lvlStore};
+        return new Object[]{paths, virtualname, lvlCompress};
     }
             
             
@@ -28731,6 +28741,7 @@ Exemplos...
     cat File1.txt | y zip add -name File1.txt > saida.zip
     y zip add /pasta1/pasta2 > saida.zip
     y zip add pasta2 -lvlStore > saida.zip
+    y zip add pasta2 -lvlBestCompress > saida.zip
     y zip add pasta1 pasta2 file3 -lvlStore > saida.zip
     y zip list arquivo.zip
     cat arquivo.zip | y zip list
@@ -28742,8 +28753,9 @@ Exemplos...
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
     y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
     cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
-    obs: se add pasta e a descricao de pasta tem "/" ou "\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.
-    obs2: extraindo o 7zip
+    obs: opcoes de compress opcionais: -lvlStore e -lvlBestCompress
+    obs2: se add pasta e a descricao de pasta tem "/" ou "\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.
+    obs3: extraindo o 7zip
     sudo apt install 7zip-standalone
     7zz x arquivo.7z
 [y gzip]
