@@ -495,8 +495,8 @@ function magico_value_shape(a2){
 			}
 			if ( value1 >= value*this.level ){ // validacao de segurança
 				add_value_shape('shape'+nid2, value);
-				set_value_shape('shape'+nid1, value1-(value*this.level));
-				set_lbl2('');
+				set_value_shape('shape'+nid1, value1-(value*this.level));				
+				document.getElementById('lbl2').textContent='need'+necessidade;//set_lbl2('need'+necessidade);
 				return;
 			}
 		}			
@@ -519,7 +519,7 @@ function magico_value_shape(a2){
 			if ( value1 >= value*this.level ){ // validacao de segurança
 				add_value_shape('shape'+nid2, value);
 				set_value_shape('shape'+nid1, value1-(value*this.level));
-				set_lbl2('');
+				document.getElementById('lbl2').textContent='need'+necessidade;//set_lbl2('need'+necessidade);
 				return;
 			}
 		}	
@@ -836,8 +836,8 @@ function clickado(e){
         }
         if ( document.getElementById('svg4').children[0].getAttribute('fill') != svg_disable ){
             magico_value_shape(id_shape_clickado);
-            set_lbl1_by_shape(id_shape_clickado);
-            set_lbl2(calc_pendente(id_shape_clickado));
+            //set_lbl1_by_shape(id_shape_clickado);
+            //set_lbl2(calc_pendente(id_shape_clickado));
 			if ( document.getElementById('svg4').children[0].getAttribute('fill') == svg_superEnable )
 				return;
             document.getElementById('svg1').children[0].setAttribute('fill', svg_disable);
