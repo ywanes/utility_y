@@ -1,4 +1,6 @@
 // fetch('https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
+// acima esta para https, caso precise de http use o comando abaixo no dominio 203
+// fetch('http://203/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 (function(){
   var version='0.117';
   var build=new Date().toISOString().slice(0,16).replace('T',' ');
