@@ -3,9 +3,6 @@
 // fetch('http://203/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 // gmail exige essa permissao antes
 // trustedTypes.createPolicy('default', { createScript: s => s });
-
-
-// fetch('https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 (function(){
   var version='0.120';
   var build=new Date().toISOString().slice(0,16).replace('T',' ');
