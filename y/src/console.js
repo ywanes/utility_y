@@ -1,11 +1,15 @@
 // fetch('https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 // acima esta para https, caso precise de http use o comando abaixo no dominio 203
 // fetch('http://203/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
+// gmail exige essa permissao antes
+// trustedTypes.createPolicy('default', { createScript: s => s });
+
+
+// fetch('https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 (function(){
-  var version='0.119';
+  var version='0.120';
   var build=new Date().toISOString().slice(0,16).replace('T',' ');
 
-  // Tenta criar 'default' Trusted Types policy no opener (pra new Function etc)
   try{
     if(window.trustedTypes&&window.trustedTypes.createPolicy&&!window.trustedTypes.defaultPolicy){
       window.trustedTypes.createPolicy('default',{createScript:function(s){return s;},createHTML:function(s){return s;},createScriptURL:function(s){return s;}});
@@ -15,7 +19,6 @@
   var w=window.open('about:blank','_blank','width=900,height=600');
   if(!w){alert('Popup bloqueado');return;}
 
-  // Tenta criar 'default' policy na POPUP também (pra w.eval funcionar)
   try{
     if(w.trustedTypes&&w.trustedTypes.createPolicy&&!w.trustedTypes.defaultPolicy){
       w.trustedTypes.createPolicy('default',{createScript:function(s){return s;},createHTML:function(s){return s;},createScriptURL:function(s){return s;}});
@@ -93,125 +96,11 @@
   );
   d.body.append(tabsBar,paneC,paneN,bar);
 
-  function targetInstaller(){
-    if(window.__dcInstalled)return;
-    window.__dcInstalled=true;
-    var popup=window.__devconsole;
-    if(!popup||popup.closed)return;
-    var dc=popup.__dc;
-    var MAX_BODY=100000;
-
-    function normHeaders(h){
-      if(!h)return{};
-      var out={};
-      try{
-        if(typeof h.forEach==='function'&&typeof h.get==='function'){h.forEach(function(v,k){out[k]=v;});}
-        else if(Array.isArray(h)){h.forEach(function(p){out[p[0]]=p[1];});}
-        else if(typeof h==='object'){Object.keys(h).forEach(function(k){out[k]=h[k];});}
-      }catch(_){}
-      return out;
-    }
-    function bodyToString(b){
-      if(b==null)return undefined;
-      try{
-        if(typeof b==='string')return b.slice(0,MAX_BODY);
-        if(b instanceof URLSearchParams)return b.toString().slice(0,MAX_BODY);
-        if(b instanceof FormData){
-          var parts=[];b.forEach(function(v,k){parts.push(encodeURIComponent(k)+'='+(typeof v==='string'?encodeURIComponent(v):'['+(v.constructor&&v.constructor.name||'binary')+']'));});
-          return '[FormData] '+parts.join('&');
-        }
-        if(b instanceof Blob)return '[Blob '+b.size+' bytes type='+b.type+']';
-        if(b instanceof ArrayBuffer)return '[ArrayBuffer '+b.byteLength+' bytes]';
-      }catch(_){}
-      return '['+(b.constructor&&b.constructor.name||'unknown')+']';
-    }
-
-    try{
-      var oF=window.fetch.bind(window);
-      window.fetch=function(input,init){
-        var url=typeof input==='string'?input:(input&&input.url)||'';
-        var method=(init&&init.method)||(typeof input==='object'&&input&&input.method)||'GET';
-        var hdrs=normHeaders((init&&init.headers)||(typeof input==='object'&&input&&input.headers));
-        var data={method:method.toUpperCase(),url:url,type:'fetch',status:'pending',time:Date.now(),reqHeaders:hdrs};
-        try{if(init&&init.body)data.reqBody=bodyToString(init.body);}catch(_){}
-        var id=dc.addNet(data);
-        var t0=performance.now();
-        return oF(input,init).then(function(res){
-          var rh={};try{res.headers.forEach(function(v,k){rh[k]=v;});}catch(_){}
-          dc.updateNet(id,{status:res.status,duration:performance.now()-t0,resHeaders:rh});
-          try{res.clone().text().then(function(txt){dc.updateNet(id,{resBody:txt.slice(0,MAX_BODY),size:txt.length});}).catch(function(){});}catch(_){}
-          return res;
-        }).catch(function(err){
-          dc.updateNet(id,{status:'ERR',error:err.message,duration:performance.now()-t0});throw err;
-        });
-      };
-    }catch(_){}
-
-    try{
-      var OO=XMLHttpRequest.prototype.open,OS=XMLHttpRequest.prototype.send,ORS=XMLHttpRequest.prototype.setRequestHeader;
-      XMLHttpRequest.prototype.open=function(m,u){this.__dcInfo={method:(m||'').toUpperCase(),url:u,type:'xhr',reqHeaders:{}};return OO.apply(this,arguments);};
-      XMLHttpRequest.prototype.setRequestHeader=function(n,v){if(this.__dcInfo)this.__dcInfo.reqHeaders[n]=v;return ORS.apply(this,arguments);};
-      XMLHttpRequest.prototype.send=function(body){
-        var info=this.__dcInfo;
-        if(info){
-          info.status='pending';info.time=Date.now();
-          try{if(body)info.reqBody=bodyToString(body);}catch(_){}
-          var id=dc.addNet(info),t0=performance.now(),self=this;
-          this.addEventListener('loadend',function(){
-            var upd={status:self.status||'ERR',duration:performance.now()-t0};
-            try{
-              var rh={};var raw=self.getAllResponseHeaders()||'';
-              raw.split(/\r?\n/).forEach(function(ln){var i=ln.indexOf(':');if(i>0)rh[ln.slice(0,i).trim()]=ln.slice(i+1).trim();});
-              upd.resHeaders=rh;
-            }catch(_){}
-            try{
-              if(self.responseType===''||self.responseType==='text'){var txt=self.responseText||'';upd.size=txt.length;upd.resBody=txt.slice(0,MAX_BODY);}
-              else if(self.response){upd.size=self.response.byteLength||self.response.size||0;upd.resBody='['+self.responseType+']';}
-            }catch(_){}
-            dc.updateNet(id,upd);
-          });
-        }
-        return OS.apply(this,arguments);
-      };
-    }catch(_){}
-
-    ['log','info','warn','error'].forEach(function(m){
-      try{
-        var o=console[m];
-        console[m]=function(){
-          var cls=m==='error'?'err':(m==='warn'?'warn':'out');
-          try{dc.addLog(Array.prototype.map.call(arguments,function(a){return dc.fmt(a);}).join(' '),cls);}catch(_){}
-          o.apply(console,arguments);
-        };
-      }catch(_){}
-    });
-
-    try{
-      var seen={};
-      var po=new PerformanceObserver(function(list){
-        list.getEntries().forEach(function(pe){
-          if(pe.initiatorType==='fetch'||pe.initiatorType==='xmlhttprequest')return;
-          var k=pe.name+'|'+pe.startTime;if(seen[k])return;seen[k]=1;
-          dc.addNet({method:'GET',url:pe.name,type:pe.initiatorType||'other',status:pe.responseStatus||200,duration:pe.duration,size:pe.transferSize||pe.encodedBodySize||0,time:Date.now()});
-        });
-      });
-      po.observe({type:'resource',buffered:true});
-    }catch(_){}
-
-    window.addEventListener('beforeunload',function(){
-      var url='';try{url=location.href;}catch(_){}
-      try{dc.onTargetUnload(url);}catch(_){}
-    });
-
-    var here='';try{here=location.href;}catch(_){}
-    try{dc.onTargetReady(here);}catch(_){}
-  }
-
   function popupSetup(popup){
-    // Sombreia globais pra função operar na popup tanto via eval-na-popup quanto chamada-direta-do-opener
     var window=popup;
     var document=popup.document;
     var d=document,dc=window.__dc;
+    var MAX_BODY=100000;
 
     function fmt(v){
       if(v===undefined)return'undefined';
@@ -228,6 +117,30 @@
     function shortUrl(u){try{var x=new URL(u);return x.pathname+(x.search||'')+'  ('+x.hostname+')';}catch(_){return u;}}
     function formatBody(b){if(!b)return'';var t=b.trim?b.trim():'';if(t.charAt(0)==='{'||t.charAt(0)==='['){try{return JSON.stringify(JSON.parse(b),null,2);}catch(_){}}return b;}
     function parseQS(url){var out={};try{var u=new URL(url,window.opener?window.opener.location.href:'http://x/');u.searchParams.forEach(function(v,k){out[k]=v;});}catch(_){}return out;}
+    function normHeaders(h){
+      if(!h)return{};var out={};
+      try{
+        if(typeof h.forEach==='function'&&typeof h.get==='function'){h.forEach(function(v,k){out[k]=v;});}
+        else if(Array.isArray(h)){h.forEach(function(p){out[p[0]]=p[1];});}
+        else if(typeof h==='object'){Object.keys(h).forEach(function(k){out[k]=h[k];});}
+      }catch(_){}
+      return out;
+    }
+    function bodyToString(b){
+      if(b==null)return undefined;
+      if(typeof b==='string')return b.slice(0,MAX_BODY);
+      var name=b.constructor&&b.constructor.name;
+      try{
+        if(name==='URLSearchParams')return b.toString().slice(0,MAX_BODY);
+        if(name==='FormData'){
+          var parts=[];b.forEach(function(v,k){parts.push(encodeURIComponent(k)+'='+(typeof v==='string'?encodeURIComponent(v):'['+(v.constructor&&v.constructor.name||'binary')+']'));});
+          return '[FormData] '+parts.join('&');
+        }
+        if(name==='Blob')return '[Blob '+b.size+' bytes type='+b.type+']';
+        if(name==='ArrayBuffer')return '[ArrayBuffer '+b.byteLength+' bytes]';
+      }catch(_){}
+      return '['+(name||'unknown')+']';
+    }
     dc.fmt=fmt;
 
     dc.addLog=function(text,cls){
@@ -387,6 +300,100 @@
       ta.value='';ta.focus();
     };
 
+    // ====== NEW: instala wraps direto via property assignment (sem eval/Function) ======
+    dc.installOnTarget=function(target){
+      if(target.__dcInstalled)return true;
+      target.__dcInstalled=true;
+
+      // fetch
+      try{
+        var oF=target.fetch.bind(target);
+        target.fetch=function(input,init){
+          var url=typeof input==='string'?input:(input&&input.url)||'';
+          var method=(init&&init.method)||(typeof input==='object'&&input&&input.method)||'GET';
+          var hdrs=normHeaders((init&&init.headers)||(typeof input==='object'&&input&&input.headers));
+          var data={method:method.toUpperCase(),url:url,type:'fetch',status:'pending',time:Date.now(),reqHeaders:hdrs};
+          try{if(init&&init.body)data.reqBody=bodyToString(init.body);}catch(_){}
+          var id=dc.addNet(data);
+          var t0=target.performance.now();
+          return oF(input,init).then(function(res){
+            var rh={};try{res.headers.forEach(function(v,k){rh[k]=v;});}catch(_){}
+            dc.updateNet(id,{status:res.status,duration:target.performance.now()-t0,resHeaders:rh});
+            try{res.clone().text().then(function(txt){dc.updateNet(id,{resBody:txt.slice(0,MAX_BODY),size:txt.length});}).catch(function(){});}catch(_){}
+            return res;
+          }).catch(function(err){
+            dc.updateNet(id,{status:'ERR',error:err.message,duration:target.performance.now()-t0});throw err;
+          });
+        };
+      }catch(e){dc.addLog('Falha ao wrappar fetch: '+e.message,'err');}
+
+      // XHR
+      try{
+        var OO=target.XMLHttpRequest.prototype.open,OS=target.XMLHttpRequest.prototype.send,ORS=target.XMLHttpRequest.prototype.setRequestHeader;
+        target.XMLHttpRequest.prototype.open=function(m,u){this.__dcInfo={method:(m||'').toUpperCase(),url:u,type:'xhr',reqHeaders:{}};return OO.apply(this,arguments);};
+        target.XMLHttpRequest.prototype.setRequestHeader=function(n,v){if(this.__dcInfo)this.__dcInfo.reqHeaders[n]=v;return ORS.apply(this,arguments);};
+        target.XMLHttpRequest.prototype.send=function(body){
+          var info=this.__dcInfo;
+          if(info){
+            info.status='pending';info.time=Date.now();
+            try{if(body)info.reqBody=bodyToString(body);}catch(_){}
+            var id=dc.addNet(info),t0=target.performance.now(),self=this;
+            this.addEventListener('loadend',function(){
+              var upd={status:self.status||'ERR',duration:target.performance.now()-t0};
+              try{
+                var rh={};var raw=self.getAllResponseHeaders()||'';
+                raw.split(/\r?\n/).forEach(function(ln){var i=ln.indexOf(':');if(i>0)rh[ln.slice(0,i).trim()]=ln.slice(i+1).trim();});
+                upd.resHeaders=rh;
+              }catch(_){}
+              try{
+                if(self.responseType===''||self.responseType==='text'){var txt=self.responseText||'';upd.size=txt.length;upd.resBody=txt.slice(0,MAX_BODY);}
+                else if(self.response){upd.size=self.response.byteLength||self.response.size||0;upd.resBody='['+self.responseType+']';}
+              }catch(_){}
+              dc.updateNet(id,upd);
+            });
+          }
+          return OS.apply(this,arguments);
+        };
+      }catch(e){dc.addLog('Falha ao wrappar XHR: '+e.message,'err');}
+
+      // console
+      ['log','info','warn','error'].forEach(function(m){
+        try{
+          var o=target.console[m];
+          target.console[m]=function(){
+            var cls=m==='error'?'err':(m==='warn'?'warn':'out');
+            try{dc.addLog(Array.prototype.map.call(arguments,function(a){return fmt(a);}).join(' '),cls);}catch(_){}
+            o.apply(target.console,arguments);
+          };
+        }catch(_){}
+      });
+
+      // PerformanceObserver
+      try{
+        var seen={};
+        var po=new target.PerformanceObserver(function(list){
+          list.getEntries().forEach(function(pe){
+            if(pe.initiatorType==='fetch'||pe.initiatorType==='xmlhttprequest')return;
+            var k=pe.name+'|'+pe.startTime;if(seen[k])return;seen[k]=1;
+            dc.addNet({method:'GET',url:pe.name,type:pe.initiatorType||'other',status:pe.responseStatus||200,duration:pe.duration,size:pe.transferSize||pe.encodedBodySize||0,time:Date.now()});
+          });
+        });
+        po.observe({type:'resource',buffered:true});
+      }catch(e){dc.addLog('Falha ao observar performance: '+e.message,'err');}
+
+      // beforeunload
+      try{
+        target.addEventListener('beforeunload',function(){
+          var url='';try{url=target.location.href;}catch(_){}
+          try{dc.onTargetUnload(url);}catch(_){}
+        });
+      }catch(_){}
+
+      var here='';try{here=target.location.href;}catch(_){}
+      try{dc.onTargetReady(here);}catch(_){}
+      return true;
+    };
+
     dc.onTargetReady=function(url){
       dc.addLog('Conectado em: '+url,'ok');
       dc.addEvent('Conectado em '+url,'ok');
@@ -422,24 +429,11 @@
 
     dc.bootstrap=function(target){
       try{
-        target.__devconsole=window;
-        // Tenta criar 'default' TT policy no target tamb\u00e9m
-        try{
-          if(target.trustedTypes&&target.trustedTypes.createPolicy&&!target.trustedTypes.defaultPolicy){
-            target.trustedTypes.createPolicy('default',{createScript:function(s){return s;},createHTML:function(s){return s;},createScriptURL:function(s){return s;}});
-          }
-        }catch(_){}
-        new target.Function(dc.installerSrc)();
+        dc.installOnTarget(target);
       }catch(e){
-        dc.addLog('\u2715 Falha ao injetar: '+e.message,'err');
-        dc.addEvent('Falha ao injetar: '+e.message,'err');
-        dc.disableInput('Inje\u00e7\u00e3o bloqueada');
-        return;
-      }
-      if(!target.__dcInstalled){
-        dc.addLog('\u2715 Installer rodou mas n\u00e3o setou __dcInstalled. Realm errado?','err');
-        dc.addEvent('Bootstrap em realm errado','err');
-        dc.disableInput('Bootstrap inv\u00e1lido');
+        dc.addLog('\u2715 Falha geral em installOnTarget: '+e.message,'err');
+        dc.addEvent('Falha: '+e.message,'err');
+        dc.disableInput('Inje\u00e7\u00e3o falhou');
       }
     };
 
@@ -474,13 +468,12 @@
     d.getElementById('__dc_cmd').focus();
   }
 
-  w.__dc={installerSrc:'('+targetInstaller.toString()+')()',entries:{},counter:0};
+  w.__dc={entries:{},counter:0};
 
   var setupMode='eval';
   try{
     w.eval('('+popupSetup.toString()+')(window)');
   }catch(e){
-    // Eval bloqueado (TT, CSP, ou outro). Fallback: chama popupSetup direto.
     setupMode='direct';
     try{
       popupSetup(w);
