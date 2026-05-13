@@ -1,6 +1,6 @@
 // fetch('https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 (function(){
-  var version='0.116';
+  var version='0.117';
   var build=new Date().toISOString().slice(0,16).replace('T',' ');
 
   var w=window.open('about:blank','_blank','width=900,height=600');
@@ -88,13 +88,9 @@
       if(!h)return{};
       var out={};
       try{
-        if(typeof h.forEach==='function'&&typeof h.get==='function'){
-          h.forEach(function(v,k){out[k]=v;});
-        }else if(Array.isArray(h)){
-          h.forEach(function(p){out[p[0]]=p[1];});
-        }else if(typeof h==='object'){
-          Object.keys(h).forEach(function(k){out[k]=h[k];});
-        }
+        if(typeof h.forEach==='function'&&typeof h.get==='function'){h.forEach(function(v,k){out[k]=v;});}
+        else if(Array.isArray(h)){h.forEach(function(p){out[p[0]]=p[1];});}
+        else if(typeof h==='object'){Object.keys(h).forEach(function(k){out[k]=h[k];});}
       }catch(_){}
       return out;
     }
@@ -248,66 +244,22 @@
       var pN=d.getElementById('__dc_paneN');if(pN.classList.contains('active'))pN.scrollTop=pN.scrollHeight;
     };
 
-    // ============ Detail builder (rico) ============
     function mkSec(title){var s=d.createElement('div');s.className='ndet-sec';var h=d.createElement('div');h.className='ndet-sh';h.textContent=title;s.appendChild(h);return s;}
-    function mkKV(obj){
-      var kv=d.createElement('div');kv.className='ndet-kv';
-      Object.keys(obj).forEach(function(k){
-        var kd=d.createElement('div');kd.className='ndet-k';kd.textContent=k;
-        var vd=d.createElement('div');vd.className='ndet-v';vd.textContent=obj[k];
-        kv.append(kd,vd);
-      });
-      return kv;
-    }
+    function mkKV(obj){var kv=d.createElement('div');kv.className='ndet-kv';Object.keys(obj).forEach(function(k){var kd=d.createElement('div');kd.className='ndet-k';kd.textContent=k;var vd=d.createElement('div');vd.className='ndet-v';vd.textContent=obj[k];kv.append(kd,vd);});return kv;}
     function mkCode(text){var pre=d.createElement('pre');pre.className='ndet-code';pre.textContent=text;return pre;}
 
     dc.buildDetail=function(e,entryId){
       var box=d.createElement('div');box.className='ndet';
-
-      // General
       var gen=mkSec('General');
-      gen.appendChild(mkKV({
-        'URL':e.url,
-        'Method':e.method||'\u2014',
-        'Status':e.status==null?'\u2014':String(e.status),
-        'Type':e.type||'\u2014',
-        'Size':fSize(e.size),
-        'Duration':fTime(e.duration),
-        'Time':e.time?new Date(e.time).toLocaleTimeString():'\u2014'
-      }));
+      gen.appendChild(mkKV({'URL':e.url,'Method':e.method||'\u2014','Status':e.status==null?'\u2014':String(e.status),'Type':e.type||'\u2014','Size':fSize(e.size),'Duration':fTime(e.duration),'Time':e.time?new Date(e.time).toLocaleTimeString():'\u2014'}));
       box.appendChild(gen);
-
-      // Query string
       var qs=parseQS(e.url);
-      if(qs&&Object.keys(qs).length){
-        var qsSec=mkSec('Query String');qsSec.appendChild(mkKV(qs));box.appendChild(qsSec);
-      }
-
-      // Request headers
-      if(e.reqHeaders&&Object.keys(e.reqHeaders).length){
-        var rh=mkSec('Request Headers');rh.appendChild(mkKV(e.reqHeaders));box.appendChild(rh);
-      }
-
-      // Request payload
-      if(e.reqBody){
-        var rp=mkSec('Request Payload');rp.appendChild(mkCode(formatBody(e.reqBody)));box.appendChild(rp);
-      }
-
-      // Response headers
-      if(e.resHeaders&&Object.keys(e.resHeaders).length){
-        var sh=mkSec('Response Headers');sh.appendChild(mkKV(e.resHeaders));box.appendChild(sh);
-      }
-
-      // Response body
-      if(e.resBody){
-        var rs=mkSec('Response Body');rs.appendChild(mkCode(formatBody(e.resBody)));box.appendChild(rs);
-      }
-
-      if(e.error){
-        var er=mkSec('Error');var p=d.createElement('div');p.className='ndet-err';p.textContent=e.error;er.appendChild(p);box.appendChild(er);
-      }
-
-      // Actions
+      if(qs&&Object.keys(qs).length){var qsSec=mkSec('Query String');qsSec.appendChild(mkKV(qs));box.appendChild(qsSec);}
+      if(e.reqHeaders&&Object.keys(e.reqHeaders).length){var rh=mkSec('Request Headers');rh.appendChild(mkKV(e.reqHeaders));box.appendChild(rh);}
+      if(e.reqBody){var rp=mkSec('Request Payload');rp.appendChild(mkCode(formatBody(e.reqBody)));box.appendChild(rp);}
+      if(e.resHeaders&&Object.keys(e.resHeaders).length){var sh=mkSec('Response Headers');sh.appendChild(mkKV(e.resHeaders));box.appendChild(sh);}
+      if(e.resBody){var rs=mkSec('Response Body');rs.appendChild(mkCode(formatBody(e.resBody)));box.appendChild(rs);}
+      if(e.error){var er=mkSec('Error');var p=d.createElement('div');p.className='ndet-err';p.textContent=e.error;er.appendChild(p);box.appendChild(er);}
       var act=d.createElement('div');act.className='ndet-act';
       function btn(label,cls,fn){var b=d.createElement('button');b.className='ndet-btn'+(cls?' '+cls:'');b.textContent=label;b.addEventListener('click',fn);return b;}
       act.append(
@@ -318,26 +270,20 @@
         btn('Copy URL','',function(){dc.copy(e.url,'URL');})
       );
       box.appendChild(act);
-
       return box;
     };
 
-    // ============ Replay ============
     dc.replay=function(id){
       var e=dc.entries[id];if(!e)return;
       var t=window.opener;
       if(!t||t.closed){dc.addLog('Replay falhou: sem target ativo.','err');return;}
       try{
         var opts={method:e.method||'GET',headers:e.reqHeaders||{},credentials:'include'};
-        if(e.reqBody&&opts.method!=='GET'&&opts.method!=='HEAD'){
-          opts.body=e.reqBody;
-        }
+        if(e.reqBody&&opts.method!=='GET'&&opts.method!=='HEAD')opts.body=e.reqBody;
         dc.addEvent('Replay: '+e.method+' '+e.url,'warn');
         t.fetch(e.url,opts).catch(function(err){dc.addLog('Replay falhou: '+err.message,'err');});
       }catch(err){dc.addLog('Replay erro: '+err.message,'err');}
     };
-
-    // ============ Geradores de comando ============
     dc.toFetch=function(id){
       var e=dc.entries[id];if(!e)return'';
       var opts={method:e.method||'GET'};
@@ -366,27 +312,16 @@
       parts.push('--compressed');
       return parts.join(' ^\n  ');
     };
-
-    // ============ Copy ============
     dc.copy=function(text,label){
       var ok=function(){dc.addEvent('Copiado: '+(label||'')+' ('+text.length+' chars)','ok');};
       var fail=function(m){dc.addLog('Falha ao copiar: '+m,'err');};
       try{
         if(navigator.clipboard&&navigator.clipboard.writeText){
           navigator.clipboard.writeText(text).then(ok,function(err){
-            // tenta fallback
-            try{
-              var ta=d.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
-              d.body.appendChild(ta);ta.select();
-              var ok2=d.execCommand('copy');ta.remove();
-              if(ok2)ok();else fail(err.message);
-            }catch(e2){fail(e2.message);}
+            try{var ta=d.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';d.body.appendChild(ta);ta.select();var ok2=d.execCommand('copy');ta.remove();if(ok2)ok();else fail(err.message);}catch(e2){fail(e2.message);}
           });
         }else{
-          var ta=d.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';
-          d.body.appendChild(ta);ta.select();
-          var ok2=d.execCommand('copy');ta.remove();
-          if(ok2)ok();else fail('execCommand falhou');
+          var ta=d.createElement('textarea');ta.value=text;ta.style.position='fixed';ta.style.opacity='0';d.body.appendChild(ta);ta.select();var ok2=d.execCommand('copy');ta.remove();if(ok2)ok();else fail('execCommand falhou');
         }
       }catch(err){fail(err.message);}
     };
@@ -399,7 +334,6 @@
       d.getElementById('__dc_bar').style.display=which==='c'?'flex':'none';
       if(which==='c')d.getElementById('__dc_cmd').focus();
     };
-
     dc.disableInput=function(msg){
       var b=d.getElementById('__dc_bar');if(!b)return;
       d.getElementById('__dc_cmd').style.display='none';
@@ -422,8 +356,16 @@
       try{
         var t=window.opener;
         if(!t||t.closed){dc.addLog('Sem target ativo.','err');}
-        else{dc.addLog(fmt(t.eval(code)),'out');}
-      }catch(e){dc.addLog(e.message,'err');}
+        else{
+          // Garante eval no realm do target
+          var r=new t.Function('return ('+code+');')();
+          dc.addLog(fmt(r),'out');
+        }
+      }catch(e){
+        // Se a expressão não é avaliável como expr, tenta como statement
+        try{var t2=window.opener;new t2.Function(code)();dc.addLog('undefined','out');}
+        catch(e2){dc.addLog(e2.message,'err');}
+      }
       ta.value='';ta.focus();
     };
 
@@ -459,14 +401,25 @@
         dc.bootstrap(nw);
       },200);
     };
+
+    // FIX 0.117: usa new target.Function() em vez de target.eval()
+    // garante que o código execute no REALM do target (Chrome às vezes
+    // avalia target.eval no realm do caller, dependendo de COOP/contexto).
     dc.bootstrap=function(target){
       try{
         target.__devconsole=window;
-        target.eval(dc.installerSrc);
+        new target.Function(dc.installerSrc)();
       }catch(e){
         dc.addLog('\u2715 Falha ao injetar (CSP unsafe-eval?): '+e.message,'err');
         dc.addEvent('Falha ao injetar: '+e.message,'err');
         dc.disableInput('CSP bloqueou eval');
+        return;
+      }
+      // Verifica\u00e7\u00e3o p\u00f3s-inje\u00e7\u00e3o
+      if(!target.__dcInstalled){
+        dc.addLog('\u2715 Installer rodou mas n\u00e3o setou __dcInstalled no target (realm errado?). Reporte esse bug.','err');
+        dc.addEvent('Bootstrap em realm errado','err');
+        dc.disableInput('Bootstrap inv\u00e1lido');
       }
     };
 
@@ -477,7 +430,6 @@
       else d.getElementById('__dc_netList').innerHTML='';
     });
     d.getElementById('__dc_netList').addEventListener('click',function(ev){
-      // ignora cliques dentro do detail panel (botões etc)
       if(ev.target.closest('.ndet'))return;
       var row=ev.target.closest&&ev.target.closest('.nrow');
       if(!row||!row.dataset.entryId)return;
