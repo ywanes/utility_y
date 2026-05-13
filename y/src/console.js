@@ -1,6 +1,6 @@
 // fetch('https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 (function(){
-  var version='0.111';
+  var version='0.112';
   var build=new Date().toISOString().slice(0,16).replace('T',' ');
 
   var w=window.open('about:blank','_blank','width=900,height=600');
@@ -25,6 +25,7 @@
    +'.out{color:#d4d4d4}.out::before{content:"\u27F5  ";color:#666}'
    +'.err{color:#f48771}.err::before{content:"\u2715  ";color:#f48771}'
    +'.warn{color:#dcdcaa}'
+   +'.ok{color:#6a9955}.ok::before{content:"\u2713  ";color:#6a9955}'
    +'.nrow{display:grid;grid-template-columns:55px 1fr 60px 70px 75px 70px;gap:8px;padding:4px 8px;border-bottom:1px solid #2a2a2a;cursor:pointer;align-items:center}'
    +'.nrow:hover,.nrow.exp{background:#2a2a2a}'
    +'.nhead{color:#888;font-weight:bold;border-bottom:1px solid #555;background:#252526;cursor:default}'
@@ -43,7 +44,7 @@
   var tC=el('div',{className:'tab active',textContent:'Console'});
   var tN=el('div',{className:'tab',textContent:'Network'});
   var sp=el('div',{className:'spacer'});
-  var ver=el('div',{className:'ver',textContent:'v'+version+'  ['+build+']',title:'Versão do código carregado'});
+  var ver=el('div',{className:'ver',textContent:'v'+version+'  ['+build+']',title:'Vers\u00E3o do c\u00F3digo carregado'});
   var bClr=el('div',{className:'tbtn',textContent:'\u232B Clear'});
   tabsBar.append(tC,tN,sp,ver,bClr);
 
@@ -78,7 +79,7 @@
     else netList.innerHTML='';
   });
 
-  // ===== Console =====
+  // ===== Console helpers =====
   var hist=[],hi=-1;
   function fmt(v){
     if(v===undefined)return'undefined';
@@ -104,8 +105,12 @@
     if(!code.trim())return;
     logAdd(code,'inp');
     hist.push(code);hi=hist.length;
-    try{logAdd(fmt(gEval(code)),'out');}
-    catch(e){logAdd(e.message,'err');}
+    try{
+      // sempre roda no escopo global do target atual, se ainda houver
+      var t=currentTarget||window;
+      var r=(t===window)?gEval(code):t.eval(code);
+      logAdd(fmt(r),'out');
+    }catch(e){logAdd(e.message,'err');}
     cmd.value='';cmd.focus();
   }
   runBtn.addEventListener('click',run);
@@ -121,17 +126,7 @@
   });
   cmd.focus();
 
-  ['log','info','warn','error'].forEach(function(m){
-    try{
-      var o=console[m];
-      console[m]=function(){
-        logAdd(Array.prototype.map.call(arguments,fmt).join(' '),m==='error'?'err':(m==='warn'?'warn':'out'));
-        o.apply(console,arguments);
-      };
-    }catch(e){}
-  });
-
-  // ===== Network =====
+  // ===== Network helpers =====
   function fSize(b){if(b==null||isNaN(b)||b===0)return'\u2014';if(b<1024)return b+' B';if(b<1048576)return(b/1024).toFixed(1)+' K';return(b/1048576).toFixed(2)+' M';}
   function fTime(ms){if(ms==null||isNaN(ms))return'\u2014';if(ms<1000)return Math.round(ms)+' ms';return(ms/1000).toFixed(2)+' s';}
   function sCls(s){if(s==='pending')return'sp';var n=parseInt(s,10);if(n>=200&&n<300)return's2';if(n>=300&&n<400)return's3';if(n>=400&&n<500)return's4';if(n>=500)return's5';return'';}
@@ -168,70 +163,149 @@
     if(paneN.classList.contains('active'))paneN.scrollTop=paneN.scrollHeight;
   }
 
-  // fetch
-  try{
-    var oF=window.fetch.bind(window);
-    window.fetch=function(input,init){
-      var url=typeof input==='string'?input:(input&&input.url)||'';
-      var method=(init&&init.method)||(typeof input==='object'&&input&&input.method)||'GET';
-      var e={method:method.toUpperCase(),url:url,type:'fetch',status:'pending',time:new Date()};
-      var t0=performance.now();
-      try{if(init&&init.body)e.reqBody=typeof init.body==='string'?init.body.slice(0,1000):'[non-string body]';}catch(_){}
-      addNet(e);
-      return oF(input,init).then(function(res){
-        e.status=res.status;e.duration=performance.now()-t0;
-        try{
-          var cl=res.clone();
-          cl.text().then(function(txt){e.resPreview=txt.slice(0,1000);e.size=txt.length;e._upd();}).catch(function(){});
-        }catch(_){}
-        e._upd();
-        return res;
-      }).catch(function(err){
-        e.status='ERR';e.error=err.message;e.duration=performance.now()-t0;e._upd();throw err;
-      });
-    };
-  }catch(e){}
+  // ===== Install: aplica os wraps numa janela alvo =====
+  var currentTarget=null;
+  function install(target){
+    if(currentTarget===target)return;
+    currentTarget=target;
 
-  // XHR
-  try{
-    var OO=XMLHttpRequest.prototype.open,OS=XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.open=function(m,u){this._n={method:(m||'').toUpperCase(),url:u,type:'xhr'};return OO.apply(this,arguments);};
-    XMLHttpRequest.prototype.send=function(body){
-      var e=this._n;
-      if(e){
-        e.status='pending';e.time=new Date();
-        try{if(body)e.reqBody=typeof body==='string'?body.slice(0,1000):'[non-string body]';}catch(_){}
-        var t0=performance.now(),self=this;
+    // fetch
+    try{
+      var oF=target.fetch.bind(target);
+      target.fetch=function(input,init){
+        var url=typeof input==='string'?input:(input&&input.url)||'';
+        var method=(init&&init.method)||(typeof input==='object'&&input&&input.method)||'GET';
+        var e={method:method.toUpperCase(),url:url,type:'fetch',status:'pending',time:new Date()};
+        var t0=performance.now();
+        try{if(init&&init.body)e.reqBody=typeof init.body==='string'?init.body.slice(0,1000):'[non-string body]';}catch(_){}
         addNet(e);
-        this.addEventListener('loadend',function(){
-          e.status=self.status||'ERR';e.duration=performance.now()-t0;
+        return oF(input,init).then(function(res){
+          e.status=res.status;e.duration=performance.now()-t0;
           try{
-            if(self.responseType===''||self.responseType==='text'){
-              var txt=self.responseText||'';
-              e.size=txt.length;e.resPreview=txt.slice(0,1000);
-            }else if(self.response){
-              e.size=self.response.byteLength||self.response.size||0;
-            }
+            var cl=res.clone();
+            cl.text().then(function(txt){e.resPreview=txt.slice(0,1000);e.size=txt.length;e._upd();}).catch(function(){});
           }catch(_){}
           e._upd();
+          return res;
+        }).catch(function(err){
+          e.status='ERR';e.error=err.message;e.duration=performance.now()-t0;e._upd();throw err;
         });
-      }
-      return OS.apply(this,arguments);
-    };
-  }catch(e){}
+      };
+    }catch(_){}
 
-  // PerformanceObserver para imagens, scripts, css, fontes etc
-  try{
-    var seen=new Set();
-    var po=new PerformanceObserver(function(list){
-      list.getEntries().forEach(function(pe){
-        if(pe.initiatorType==='fetch'||pe.initiatorType==='xmlhttprequest')return;
-        var k=pe.name+'|'+pe.startTime;if(seen.has(k))return;seen.add(k);
-        addNet({method:'GET',url:pe.name,type:pe.initiatorType||'other',status:pe.responseStatus||200,duration:pe.duration,size:pe.transferSize||pe.encodedBodySize||0,time:new Date()});
-      });
+    // XHR
+    try{
+      var OO=target.XMLHttpRequest.prototype.open;
+      var OS=target.XMLHttpRequest.prototype.send;
+      target.XMLHttpRequest.prototype.open=function(m,u){this._n={method:(m||'').toUpperCase(),url:u,type:'xhr'};return OO.apply(this,arguments);};
+      target.XMLHttpRequest.prototype.send=function(body){
+        var e=this._n;
+        if(e){
+          e.status='pending';e.time=new Date();
+          try{if(body)e.reqBody=typeof body==='string'?body.slice(0,1000):'[non-string body]';}catch(_){}
+          var t0=performance.now(),self=this;
+          addNet(e);
+          this.addEventListener('loadend',function(){
+            e.status=self.status||'ERR';e.duration=performance.now()-t0;
+            try{
+              if(self.responseType===''||self.responseType==='text'){
+                var txt=self.responseText||'';
+                e.size=txt.length;e.resPreview=txt.slice(0,1000);
+              }else if(self.response){
+                e.size=self.response.byteLength||self.response.size||0;
+              }
+            }catch(_){}
+            e._upd();
+          });
+        }
+        return OS.apply(this,arguments);
+      };
+    }catch(_){}
+
+    // Console
+    ['log','info','warn','error'].forEach(function(m){
+      try{
+        var o=target.console[m];
+        target.console[m]=function(){
+          logAdd(Array.prototype.map.call(arguments,fmt).join(' '),m==='error'?'err':(m==='warn'?'warn':'out'));
+          o.apply(target.console,arguments);
+        };
+      }catch(_){}
     });
-    po.observe({type:'resource',buffered:true});
-  }catch(e){}
 
-  logAdd('DevConsole v'+version+' carregado em '+build+'. Só captura requisições feitas a partir de agora.','warn');
+    // PerformanceObserver pra recursos passivos
+    try{
+      var seen=new Set();
+      var po=new target.PerformanceObserver(function(list){
+        list.getEntries().forEach(function(pe){
+          if(pe.initiatorType==='fetch'||pe.initiatorType==='xmlhttprequest')return;
+          var k=pe.name+'|'+pe.startTime;if(seen.has(k))return;seen.add(k);
+          addNet({method:'GET',url:pe.name,type:pe.initiatorType||'other',status:pe.responseStatus||200,duration:pe.duration,size:pe.transferSize||pe.encodedBodySize||0,time:new Date()});
+        });
+      });
+      po.observe({type:'resource',buffered:true});
+    }catch(_){}
+  }
+
+  // ===== Lifecycle: detecta postback, reinjeta, anuncia status =====
+  function attachLifecycle(target){
+    var prevDoc=target.document;
+    var prevUrl='';
+    try{prevUrl=target.location.href;}catch(_){prevUrl='(desconhecida)';}
+
+    try{
+      target.addEventListener('beforeunload',function(){
+        if(w.closed)return;
+        logAdd('\u26A0 Postback detectado em '+prevUrl+'. Aguardando nova p\u00E1gina...','warn');
+        // usa setInterval da POPUP pra sobreviver \u00e0 morte do opener
+        var iv=w.setInterval(function(){
+          if(w.closed){w.clearInterval(iv);return;}
+          var nw;
+          try{nw=w.opener;}catch(_){nw=null;}
+          if(!nw||nw.closed){
+            w.clearInterval(iv);
+            currentTarget=null;
+            logAdd('\u2715 Comunica\u00E7\u00E3o perdida totalmente: janela original foi fechada. Reclique o bookmarklet em outra aba pra reabrir.','err');
+            return;
+          }
+          var newDoc;
+          try{newDoc=nw.document;}
+          catch(_){
+            w.clearInterval(iv);
+            currentTarget=null;
+            logAdd('\u2715 Comunica\u00E7\u00E3o perdida totalmente: nova p\u00E1gina em origem diferente (cross-origin). Reclique o bookmarklet l\u00E1 pra reconectar.','err');
+            return;
+          }
+          if(newDoc===prevDoc)return;
+          if(newDoc.readyState!=='complete')return;
+          var newUrl;
+          try{newUrl=nw.location.href;}
+          catch(_){
+            w.clearInterval(iv);
+            currentTarget=null;
+            logAdd('\u2715 Comunica\u00E7\u00E3o perdida totalmente: nova p\u00E1gina em origem diferente (cross-origin). Reclique o bookmarklet l\u00E1 pra reconectar.','err');
+            return;
+          }
+          w.clearInterval(iv);
+          try{
+            currentTarget=null; // permite reinstalar
+            install(nw);
+            attachLifecycle(nw);
+            logAdd('Reconectado em: '+newUrl,'ok');
+          }catch(err){
+            currentTarget=null;
+            logAdd('\u2715 Comunica\u00E7\u00E3o perdida: falha ao reinjetar ('+err.message+').','err');
+          }
+        },200);
+      });
+    }catch(err){
+      logAdd('N\u00E3o consegui anexar lifecycle: '+err.message,'err');
+    }
+  }
+
+  // ===== Bootstrap =====
+  install(window);
+  attachLifecycle(window);
+
+  logAdd('DevConsole v'+version+' carregado em '+build+'. S\u00F3 captura requisi\u00E7\u00F5es feitas a partir de agora.','warn');
 })();
