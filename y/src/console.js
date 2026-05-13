@@ -2,13 +2,13 @@
 // acima esta para https, caso precise de http use o comando abaixo no dominio 203
 // fetch('http://203/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 (function(){
-  var version='0.117';
+  var version='0.118';
   var build=new Date().toISOString().slice(0,16).replace('T',' ');
 
   var w=window.open('about:blank','_blank','width=900,height=600');
   if(!w){alert('Popup bloqueado');return;}
   var d=w.document;
-  d.head.innerHTML='';d.body.innerHTML='';
+  d.head.textContent='';d.body.textContent='';
   d.title='DevConsole v'+version;
 
   var css='body{margin:0;font:12px/1.4 Menlo,Monaco,Consolas,monospace;background:#1e1e1e;color:#e0e0e0;display:flex;flex-direction:column;height:100vh}'
@@ -359,12 +359,10 @@
         var t=window.opener;
         if(!t||t.closed){dc.addLog('Sem target ativo.','err');}
         else{
-          // Garante eval no realm do target
           var r=new t.Function('return ('+code+');')();
           dc.addLog(fmt(r),'out');
         }
       }catch(e){
-        // Se a expressão não é avaliável como expr, tenta como statement
         try{var t2=window.opener;new t2.Function(code)();dc.addLog('undefined','out');}
         catch(e2){dc.addLog(e2.message,'err');}
       }
@@ -404,22 +402,18 @@
       },200);
     };
 
-    // FIX 0.117: usa new target.Function() em vez de target.eval()
-    // garante que o código execute no REALM do target (Chrome às vezes
-    // avalia target.eval no realm do caller, dependendo de COOP/contexto).
     dc.bootstrap=function(target){
       try{
         target.__devconsole=window;
         new target.Function(dc.installerSrc)();
       }catch(e){
-        dc.addLog('\u2715 Falha ao injetar (CSP unsafe-eval?): '+e.message,'err');
+        dc.addLog('\u2715 Falha ao injetar: '+e.message,'err');
         dc.addEvent('Falha ao injetar: '+e.message,'err');
-        dc.disableInput('CSP bloqueou eval');
+        dc.disableInput('Inje\u00e7\u00e3o bloqueada');
         return;
       }
-      // Verifica\u00e7\u00e3o p\u00f3s-inje\u00e7\u00e3o
       if(!target.__dcInstalled){
-        dc.addLog('\u2715 Installer rodou mas n\u00e3o setou __dcInstalled no target (realm errado?). Reporte esse bug.','err');
+        dc.addLog('\u2715 Installer rodou mas n\u00e3o setou __dcInstalled no target. Reporte esse bug.','err');
         dc.addEvent('Bootstrap em realm errado','err');
         dc.disableInput('Bootstrap inv\u00e1lido');
       }
@@ -428,8 +422,8 @@
     d.getElementById('__dc_tC').addEventListener('click',function(){dc.activate('c');});
     d.getElementById('__dc_tN').addEventListener('click',function(){dc.activate('n');});
     d.getElementById('__dc_clear').addEventListener('click',function(){
-      if(d.getElementById('__dc_paneC').classList.contains('active'))d.getElementById('__dc_log').innerHTML='';
-      else d.getElementById('__dc_netList').innerHTML='';
+      if(d.getElementById('__dc_paneC').classList.contains('active'))d.getElementById('__dc_log').textContent='';
+      else d.getElementById('__dc_netList').textContent='';
     });
     d.getElementById('__dc_netList').addEventListener('click',function(ev){
       if(ev.target.closest('.ndet'))return;
