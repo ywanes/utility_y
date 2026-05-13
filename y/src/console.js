@@ -2,11 +2,26 @@
 // acima esta para https, caso precise de http use o comando abaixo no dominio 203
 // fetch('http://203/console.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 (function(){
-  var version='0.118';
+  var version='0.119';
   var build=new Date().toISOString().slice(0,16).replace('T',' ');
+
+  // Tenta criar 'default' Trusted Types policy no opener (pra new Function etc)
+  try{
+    if(window.trustedTypes&&window.trustedTypes.createPolicy&&!window.trustedTypes.defaultPolicy){
+      window.trustedTypes.createPolicy('default',{createScript:function(s){return s;},createHTML:function(s){return s;},createScriptURL:function(s){return s;}});
+    }
+  }catch(_){}
 
   var w=window.open('about:blank','_blank','width=900,height=600');
   if(!w){alert('Popup bloqueado');return;}
+
+  // Tenta criar 'default' policy na POPUP também (pra w.eval funcionar)
+  try{
+    if(w.trustedTypes&&w.trustedTypes.createPolicy&&!w.trustedTypes.defaultPolicy){
+      w.trustedTypes.createPolicy('default',{createScript:function(s){return s;},createHTML:function(s){return s;},createScriptURL:function(s){return s;}});
+    }
+  }catch(_){}
+
   var d=w.document;
   d.head.textContent='';d.body.textContent='';
   d.title='DevConsole v'+version;
@@ -192,7 +207,10 @@
     try{dc.onTargetReady(here);}catch(_){}
   }
 
-  function popupSetup(){
+  function popupSetup(popup){
+    // Sombreia globais pra função operar na popup tanto via eval-na-popup quanto chamada-direta-do-opener
+    var window=popup;
+    var document=popup.document;
     var d=document,dc=window.__dc;
 
     function fmt(v){
@@ -405,6 +423,12 @@
     dc.bootstrap=function(target){
       try{
         target.__devconsole=window;
+        // Tenta criar 'default' TT policy no target tamb\u00e9m
+        try{
+          if(target.trustedTypes&&target.trustedTypes.createPolicy&&!target.trustedTypes.defaultPolicy){
+            target.trustedTypes.createPolicy('default',{createScript:function(s){return s;},createHTML:function(s){return s;},createScriptURL:function(s){return s;}});
+          }
+        }catch(_){}
         new target.Function(dc.installerSrc)();
       }catch(e){
         dc.addLog('\u2715 Falha ao injetar: '+e.message,'err');
@@ -413,7 +437,7 @@
         return;
       }
       if(!target.__dcInstalled){
-        dc.addLog('\u2715 Installer rodou mas n\u00e3o setou __dcInstalled no target. Reporte esse bug.','err');
+        dc.addLog('\u2715 Installer rodou mas n\u00e3o setou __dcInstalled. Realm errado?','err');
         dc.addEvent('Bootstrap em realm errado','err');
         dc.disableInput('Bootstrap inv\u00e1lido');
       }
@@ -451,12 +475,25 @@
   }
 
   w.__dc={installerSrc:'('+targetInstaller.toString()+')()',entries:{},counter:0};
+
+  var setupMode='eval';
   try{
-    w.eval('('+popupSetup.toString()+')()');
+    w.eval('('+popupSetup.toString()+')(window)');
   }catch(e){
-    alert('Falha ao instalar popup-side: '+e.message);return;
+    // Eval bloqueado (TT, CSP, ou outro). Fallback: chama popupSetup direto.
+    setupMode='direct';
+    try{
+      popupSetup(w);
+    }catch(e2){
+      alert('Falha total ao instalar popup-side: '+e2.message+' (eval: '+e.message+')');
+      return;
+    }
   }
-  w.__dc.addLog('DevConsole v'+version+' carregado em '+build+'.','warn');
-  w.__dc.addEvent('DevConsole v'+version+' iniciado','warn');
+  w.__dc.addLog('DevConsole v'+version+' carregado em '+build+' (modo: '+setupMode+').','warn');
+  w.__dc.addEvent('DevConsole v'+version+' iniciado [modo '+setupMode+']','warn');
+  if(setupMode==='direct'){
+    w.__dc.addLog('\u26A0 Modo degradado: handlers no realm do opener. Postback vai quebrar comunica\u00e7\u00e3o.','warn');
+    w.__dc.addEvent('\u26A0 Modo degradado: postback quebra console','warn');
+  }
   w.__dc.bootstrap(window);
 })();
