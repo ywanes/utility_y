@@ -122,6 +122,7 @@ then
 else
   echo "disable -> verify new ubuntu and LTS"
 fi
+EOF
 
 cat <<'EOF'> /opt/porteiro.py
 #!/usr/bin/env python3
