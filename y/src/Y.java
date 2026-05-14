@@ -29298,6 +29298,7 @@ Exemplos...
     y os
     obs: exibe informacoes do sistema operacional[windows/mac/linux/unix]
     obs2: whoami funciona no windows e linux
+    trocando senha user: net user usuario1 senha1
     verificando se o usuario expira: wmic useraccount where name='%username%' get PasswordExpires
     setando para nao expirar: wmic useraccount where name='%username%' set PasswordExpires=FALSE
     consultando ultima iso:
