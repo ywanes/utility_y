@@ -101,8 +101,8 @@ this.z=null;
 let canvas_tag='canvas20250629';
 this.continuaX=null;
 this.continuaY=null;
-this.level=7n; // Usando BigInt para o level
-var level_multiplicado=1n; // Usando BigInt para level_multiplicado
+this.level=7n;
+var level_multiplicado=1n;
 var limit_mili_double_click=200;
 var svg_disable='#456';
 var svg_enable='#a22';
@@ -110,14 +110,12 @@ var svg_superEnable='#000';
 var epochmili={'svg1': 0, 'svg2': 0, 'svg3': 0, 'svg4': 0};
 const canvas = document.getElementById('canvas');
 
-// Função para converter string para BigInt, tratando números grandes
 function toBigInt(value) {
     if (typeof value === 'bigint') return value;
     if (value === null || value === undefined) return 0n;
     if (typeof value === 'number') return BigInt(Math.floor(value));
     if (typeof value === 'boolean') return value ? 1n : 0n;
     
-    // Remove underscores e caracteres não numéricos
     const str = value.toString().replace(/_/g, '').replace(/[^0-9-]/g, '');
     if (str === '') return 0n;
     
@@ -157,7 +155,7 @@ function get_level_multiplicado(){
             && (assinatura[i-1] - assinatura[i]) === (assinatura[i-2] - assinatura[i-1] )            
         ){
 			todos_level_multiplicado.push(assinatura[i-1] - assinatura[i]);
-			todos_level_multiplicado.push( (assinatura[i-1] - assinatura[i])*20n ); // brinde
+			todos_level_multiplicado.push( (assinatura[i-1] - assinatura[i])*20n );
 			if ( (assinatura[i-1] - assinatura[i]) > max )
 				max=assinatura[i-1] - assinatura[i];
         }
@@ -192,6 +190,9 @@ if ( flag_mobile() ){
         else
             set_lbl3(''); 
         level_multiplicado=1n;
+		if ( document.getElementById('svg4').children[0].getAttribute('fill') == svg_superEnable ){
+			localStorage.setItem(canvas_tag, document.getElementById('canvas').innerHTML);
+		}
     }, false); 
     canvas.addEventListener('touchmove', function(e){
 		let atualizar=this.continuaX == null;
@@ -296,7 +297,6 @@ function createTriangleSVG(shape) {
 }
 
 let tmp_canvas=localStorage.getItem(canvas_tag);
-// update dom
 var update=localStorage.getItem(canvas_tag).indexOf('<div id="extra"');
 if ( update > -1 ){
 	update=localStorage.getItem(canvas_tag).substring(update);
@@ -342,26 +342,18 @@ function pontoDentro(Ax, Ay, Px, Py, flag_up){
 }
 
 function pontoDentroDoTriangulo(Ax, Ay, Bx, By, Cx, Cy, Px, Py){
-    // Função para calcular o produto vetorial
     function crossProduct(a, b, c) {
         return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
     }
-
-    // Convertendo pontos para objetos com propriedades x e y
     const A = {x: Ax, y: Ay};
     const B = {x: Bx, y: By};
     const C = {x: Cx, y: Cy};
     const P = {x: Px, y: Py};
-
-    // Calculando os produtos vetoriais
     const d1 = crossProduct(P, A, B);
     const d2 = crossProduct(P, B, C);
     const d3 = crossProduct(P, C, A);
-
-    // Verificando se todos têm o mesmo sinal
     const hasNeg = (d1 < 0) || (d2 < 0) || (d3 < 0);
     const hasPos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
     return !(hasNeg && hasPos);
 }
 
@@ -442,7 +434,6 @@ function get_value_shape(a){
     if (dataVal !== null && dataVal !== '') {
         return toBigInt(dataVal);
     }
-    // Fallback: estado salvo antes da mudança (sem data-value)
     return toBigInt(elem.textContent.replace(/_/g, ''));
 }
 
@@ -475,10 +466,8 @@ function magico_value_shape(a2){
 		let value2=get_value_shape('shape'+nid2);
 		let value1=get_value_shape('shape'+nid1);
 		let value0=get_value_shape('shape'+nid0);
-		if ( value2 == 1n && (value1-value2) == (value0-value1) ){
-			set_lbl2('-');
+		if ( value2 == 1n && (value1-value2) == (value0-value1) )
 			return;
-		}
 	}
 	// segundo numero de 3, e começa com 1, ex: 1, >>299<<, 601
 	if ( shape3 != null && shape2 != null && shape1 != null ){
@@ -497,7 +486,7 @@ function magico_value_shape(a2){
 			if ( value1 >= value*this.level ){ // validacao de segurança
 				add_value_shape('shape'+nid2, value);
 				set_value_shape('shape'+nid1, value1-(value*this.level));				
-				document.getElementById('lbl2').textContent='need'+necessidade;//set_lbl2('need'+necessidade);
+				set_lbl2_raw('need_'+necessidade);
 				return;
 			}
 		}			
@@ -520,12 +509,11 @@ function magico_value_shape(a2){
 			if ( value1 >= value*this.level ){ // validacao de segurança
 				add_value_shape('shape'+nid2, value);
 				set_value_shape('shape'+nid1, value1-(value*this.level));
-				document.getElementById('lbl2').textContent='need'+necessidade;//set_lbl2('need'+necessidade);
+				set_lbl2_raw('need_'+necessidade);
 				return;
 			}
 		}	
 	}
-	set_lbl2('-');
 }
 
 function calc_preenchimento_b(a, b, c, x) {
@@ -710,7 +698,6 @@ function shape_clickado(id_shape_clickado){
     debug('id_shape_clickado:' + id_shape_clickado);
     let nid=parseInt(id_shape_clickado.substr(5));
     tenta_promover_lista(nid);
-    
     // tenta mudar stroke do shape
     let nid_posterior=nid+1;
     let shape_posterior=document.getElementById('shape'+nid_posterior);
@@ -788,7 +775,11 @@ function set_lbl1_by_shape(a){
 }
 
 function set_lbl2(a){
-    document.getElementById('lbl2').textContent=formatarNumero(a);
+    set_lbl2_raw(formatarNumero(a));
+}
+
+function set_lbl2_raw(a){
+    document.getElementById('lbl2').textContent=a;
 }
 
 function set_lbl3(a){
@@ -837,8 +828,6 @@ function clickado(e){
         }
         if ( document.getElementById('svg4').children[0].getAttribute('fill') != svg_disable ){
             magico_value_shape(id_shape_clickado);
-            //set_lbl1_by_shape(id_shape_clickado);
-            //set_lbl2(calc_pendente(id_shape_clickado));
 			if ( document.getElementById('svg4').children[0].getAttribute('fill') == svg_superEnable )
 				return;
             document.getElementById('svg1').children[0].setAttribute('fill', svg_disable);
