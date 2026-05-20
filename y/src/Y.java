@@ -17727,10 +17727,31 @@ class terminal_linux {
 			jna.setShort(ws, 6, (short) 0);
 			jna.callInt(F_ioctl, slaveFd, TIOCSWINSZ, ws);
 
+			// PRE-MARSHAL: tudo o que envolve alocação/marshalling tem que acontecer
+			// AQUI no pai. Entre fork() e execvp() no filho só pode rodar código
+			// async-signal-safe; alocar Memory, converter String → const char* via JNA,
+			// ou chamar setenv() (que faz malloc internamente) podem dar deadlock se na
+			// hora do fork outra thread (GC, EDT) estiver segurando um lock interno.
+			Object shellMem       = jna.mem((long) shell.length() * 4 + 1);
+			jna.setString(shellMem, 0, shell);
+			Object workingDirMem  = jna.mem((long) workingDir.length() * 4 + 1);
+			jna.setString(workingDirMem, 0, workingDir);
+			Object argv = jna.mem((long) jna.POINTER_SIZE * 2);
+			jna.setPointer(argv, 0, shellMem);
+			jna.setPointer(argv, jna.POINTER_SIZE, null);
+
+			// Setar TERM no ambiente do PAI antes do fork — o filho herda environ via fork()
+			// e nunca precisa chamar setenv() (que não é async-signal-safe).
+			Object termNameMem  = jna.mem(5);   jna.setString(termNameMem,  0, "TERM");
+			Object termValueMem = jna.mem(16);  jna.setString(termValueMem, 0, "xterm-256color");
+			jna.callInt(F_setenv, termNameMem, termValueMem, 1);
+
 			childPid = jna.callInt(F_fork);
 			if (childPid < 0) throw new RuntimeException("fork failed");
 
 			if (childPid == 0) {
+				// FILHO: apenas chamadas async-signal-safe + Pointers já alocados.
+				// Sem mem(), sem setString(), sem String→char* automático do JNA.
 				jna.callInt(F_close, masterFd);
 				jna.callInt(F_setsid);
 				jna.callInt(F_ioctl, slaveFd, TIOCSCTTY, null);
@@ -17738,14 +17759,8 @@ class terminal_linux {
 				jna.callInt(F_dup2, slaveFd, 1);
 				jna.callInt(F_dup2, slaveFd, 2);
 				if (slaveFd > 2) jna.callInt(F_close, slaveFd);
-				jna.callInt(F_chdir, workingDir);
-				jna.callInt(F_setenv, "TERM", "xterm-256color", 1);
-				Object argv = jna.mem((long) jna.POINTER_SIZE * 2);
-				Object shellStr = jna.mem((long) shell.length() * 4 + 1);
-				jna.setString(shellStr, 0, shell);
-				jna.setPointer(argv, 0, shellStr);
-				jna.setPointer(argv, jna.POINTER_SIZE, null);
-				jna.callInt(F_execvp, shell, argv);
+				jna.callInt(F_chdir, workingDirMem);
+				jna.callInt(F_execvp, shellMem, argv);
 				jna.callVoid(F__exit, 1);
 			}
 
@@ -18149,21 +18164,12 @@ class terminal_linux {
 			addMouseWheelListener(this);
 		}
 
-		private java.awt.Font loadFontFromFile(java.io.File file) throws Exception {
-			if (file == null) return null;
-			byte[] bytes;
-			try (java.io.InputStream in = new java.io.FileInputStream(file)) {
-				bytes = in.readAllBytes();
-			}
-			try (java.io.InputStream bin = new java.io.ByteArrayInputStream(bytes)) {
-				return java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, bin);
-			}
-		}
-
 		private java.awt.Font[] loadFontsFromFiles(java.io.File regFile, java.io.File boldFile) {
 			java.awt.Font reg = null, bold = null;
-			try { reg  = loadFontFromFile(regFile);  } catch (Exception e) { e.printStackTrace(); }
-			try { bold = loadFontFromFile(boldFile); } catch (Exception e) { e.printStackTrace(); }
+			try { if (regFile  != null) reg  = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, regFile); }
+			catch (Exception e) { e.printStackTrace(); }
+			try { if (boldFile != null) bold = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, boldFile); }
+			catch (Exception e) { e.printStackTrace(); }
 			return new java.awt.Font[]{ reg, bold };
 		}
 
