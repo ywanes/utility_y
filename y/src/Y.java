@@ -17476,7 +17476,6 @@ class terminal_windows {
     }
 }
 
-
 class terminal_linux {
     final String JNA_URL = "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/jna-5.14.0.jar";
     final long   JNA_SIZE = 1_878_533L;
@@ -18150,12 +18149,21 @@ class terminal_linux {
 			addMouseWheelListener(this);
 		}
 
+		private java.awt.Font loadFontFromFile(java.io.File file) throws Exception {
+			if (file == null) return null;
+			byte[] bytes;
+			try (java.io.InputStream in = new java.io.FileInputStream(file)) {
+				bytes = in.readAllBytes();
+			}
+			try (java.io.InputStream bin = new java.io.ByteArrayInputStream(bytes)) {
+				return java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, bin);
+			}
+		}
+
 		private java.awt.Font[] loadFontsFromFiles(java.io.File regFile, java.io.File boldFile) {
 			java.awt.Font reg = null, bold = null;
-			try { if (regFile  != null) reg  = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, regFile); }
-			catch (Exception e) { e.printStackTrace(); }
-			try { if (boldFile != null) bold = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, boldFile); }
-			catch (Exception e) { e.printStackTrace(); }
+			try { reg  = loadFontFromFile(regFile);  } catch (Exception e) { e.printStackTrace(); }
+			try { bold = loadFontFromFile(boldFile); } catch (Exception e) { e.printStackTrace(); }
 			return new java.awt.Font[]{ reg, bold };
 		}
 
