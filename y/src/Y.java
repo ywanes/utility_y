@@ -930,7 +930,10 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("terminal") ){
-            new yTerminal().init();
+            if ( isWindows() )
+                new terminal_windows().main(new String[]{});
+            else
+                new terminal_linux().main(new String[]{});
             return;
         }
         if ( args[0].equals("dnsDoHServer") && args.length == 4 ){
@@ -16319,6 +16322,2151 @@ class lock {
     }
 }
 
+class terminal_windows {
+    String JNA_URL = "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/jna-5.14.0.jar";
+    long JNA_SIZE = 1_878_533L;
+	String JNA_FILENAME = "jna-5.14.0.jar";
+    java.io.File JNA_DIR = new java.io.File("c:\\y_lib");
+    Jna jna;
+    K32 k32;
+    public static void main(String[] args) { new terminal_windows().launch(); }
+    void launch() {
+        try {
+            java.security.Security.setProperty("jdk.tls.disabledAlgorithms", "");
+            java.security.Security.setProperty("jdk.certpath.disabledAlgorithms", "");
+            System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
+            javax.net.ssl.SSLContext sslCtx = javax.net.ssl.SSLContext.getInstance("TLS");
+            sslCtx.init(null, null, null);
+            javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(sslCtx.getSocketFactory());
+            java.io.File jnaJar = ensureJna();
+            java.net.URL appUrl = terminal_windows.class.getProtectionDomain()
+                .getCodeSource().getLocation();
+            java.net.URLClassLoader cl = new java.net.URLClassLoader(
+                new java.net.URL[]{ jnaJar.toURI().toURL(), appUrl },
+                ClassLoader.getPlatformClassLoader());
+            Thread.currentThread().setContextClassLoader(cl);
+            jna = new Jna();
+            jna.init(cl);
+            k32 = new K32();
+            run();
+        } catch (Throwable t) { showError(t); }
+    }
+
+    java.io.File ensureJna() throws Exception {
+        java.io.File cache = new java.io.File(JNA_DIR, JNA_FILENAME);
+        if (cache.isFile() && cache.length() == JNA_SIZE) return cache;
+
+        JNA_DIR.mkdirs();
+        java.net.HttpURLConnection con = (java.net.HttpURLConnection)
+            java.net.URI.create(JNA_URL).toURL().openConnection();
+        con.setConnectTimeout(15000); con.setReadTimeout(120000);
+        java.io.File tmp = new java.io.File(cache.getPath() + ".part");
+        try (java.io.InputStream in = con.getInputStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(tmp)) {
+            byte[] b = new byte[16384]; int n;
+            while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        }
+        if (tmp.length() != JNA_SIZE) {
+            long got = tmp.length(); tmp.delete();
+            throw new RuntimeException("jna.jar inválido: esperado " + JNA_SIZE + " bytes, obtido " + got);
+        }
+        java.nio.file.Files.move(tmp.toPath(), cache.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return cache;
+    }
+
+    void run() {
+        try { javax.swing.UIManager.setLookAndFeel(
+            javax.swing.UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) { }
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try { new MainForm().setVisible(true); }
+            catch (Exception ex) { showError(ex); }
+        });
+    }
+
+    void showError(Throwable t) {
+        try { javax.swing.UIManager.setLookAndFeel(
+            javax.swing.UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) { }
+        Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                       && t.getCause() != null) ? t.getCause() : t;
+        c.printStackTrace();
+        javax.swing.JOptionPane.showMessageDialog(null, c.toString(),
+            "ter - erro", javax.swing.JOptionPane.ERROR_MESSAGE);
+    }
+
+    class Jna {
+        int POINTER_SIZE, WCHAR_SIZE, ALT_CONVENTION;
+        Class<?> C_Pointer, C_Memory, C_Native, C_NativeLibrary, C_Function;
+        java.lang.reflect.Constructor<?> CT_Memory, CT_Pointer;
+        java.lang.reflect.Method M_libOpts, M_func,
+            M_invokeInt, M_invokeLong, M_invokeVoid, M_invokePointer,
+            M_setInt, M_setShort, M_setLong, M_setPointer, M_setWideString,
+            M_getInt, M_getLong, M_getShort, M_getPointer,
+            M_lastError, M_compPtr, M_clear;
+
+        void init(ClassLoader cl) throws Exception {
+            C_Pointer       = cl.loadClass("com.sun.jna.Pointer");
+            C_Memory        = cl.loadClass("com.sun.jna.Memory");
+            C_Native        = cl.loadClass("com.sun.jna.Native");
+            C_NativeLibrary = cl.loadClass("com.sun.jna.NativeLibrary");
+            C_Function      = cl.loadClass("com.sun.jna.Function");
+
+            POINTER_SIZE    = C_Native.getField("POINTER_SIZE").getInt(null);
+            WCHAR_SIZE      = C_Native.getField("WCHAR_SIZE").getInt(null);
+            ALT_CONVENTION  = C_Function.getField("ALT_CONVENTION").getInt(null);
+
+            CT_Memory  = C_Memory.getConstructor(long.class);
+            CT_Pointer = C_Pointer.getConstructor(long.class);
+
+            M_libOpts        = C_NativeLibrary.getMethod("getInstance", String.class, java.util.Map.class);
+            M_func           = C_NativeLibrary.getMethod("getFunction", String.class);
+            M_invokeInt      = C_Function.getMethod("invokeInt",     Object[].class);
+            M_invokeLong     = C_Function.getMethod("invokeLong",    Object[].class);
+            M_invokeVoid     = C_Function.getMethod("invokeVoid",    Object[].class);
+            M_invokePointer  = C_Function.getMethod("invokePointer", Object[].class);
+
+            M_setInt        = C_Pointer.getMethod("setInt",        long.class, int.class);
+            M_setShort      = C_Pointer.getMethod("setShort",      long.class, short.class);
+            M_setLong       = C_Pointer.getMethod("setLong",       long.class, long.class);
+            M_setPointer    = C_Pointer.getMethod("setPointer",    long.class, C_Pointer);
+            M_setWideString = C_Pointer.getMethod("setWideString", long.class, String.class);
+            M_getInt        = C_Pointer.getMethod("getInt",     long.class);
+            M_getLong       = C_Pointer.getMethod("getLong",    long.class);
+            M_getShort      = C_Pointer.getMethod("getShort",   long.class);
+            M_getPointer    = C_Pointer.getMethod("getPointer", long.class);
+            M_clear         = C_Memory.getMethod("clear");
+
+            M_lastError = C_Native.getMethod("getLastError");
+            try { M_compPtr = C_Native.getMethod("getComponentPointer", java.awt.Component.class); }
+            catch (NoSuchMethodException ignored) { }
+        }
+
+        Object stdLib(String name) {
+            java.util.HashMap<String,Object> opts = new java.util.HashMap<>();
+            opts.put("calling-convention", ALT_CONVENTION);
+            return inv(M_libOpts, null, name, opts);
+        }
+        Object func(Object lib, String name) { return inv(M_func, lib, name); }
+
+        int    callInt (Object f, Object... args) { return (int)  inv(M_invokeInt,     f, (Object) args); }
+        long   callLong(Object f, Object... args) { return (long) inv(M_invokeLong,    f, (Object) args); }
+        void   callVoid(Object f, Object... args) {               inv(M_invokeVoid,    f, (Object) args); }
+        Object callPtr (Object f, Object... args) { return        inv(M_invokePointer, f, (Object) args); }
+        boolean callBool(Object f, Object... args) { return callInt(f, args) != 0; }
+
+        Object mem(long size) { Object m = ctor(CT_Memory, size); inv(M_clear, m); return m; }
+        Object ptr(long addr) { return ctor(CT_Pointer, addr); }
+
+        void setInt       (Object p, long off, int v)    { inv(M_setInt,    p, off, v); }
+        void setShort     (Object p, long off, short v)  { inv(M_setShort,  p, off, v); }
+        void setLong      (Object p, long off, long v)   { inv(M_setLong,   p, off, v); }
+        void setPointer   (Object p, long off, Object v) { inv(M_setPointer,p, off, v); }
+        void setWideString(Object p, long off, String s) { inv(M_setWideString, p, off, s); }
+        void setSizeT(Object p, long off, long v) {
+            if (POINTER_SIZE == 8) setLong(p, off, v); else setInt(p, off, (int) v);
+        }
+        int    getInt    (Object p, long off) { return (int)  inv(M_getInt,    p, off); }
+        long   getLong   (Object p, long off) { return (long) inv(M_getLong,   p, off); }
+        Object getPointer(Object p, long off) { return        inv(M_getPointer,p, off); }
+        long getSizeT(Object p, long off) {
+            return POINTER_SIZE == 8 ? getLong(p, off) : (getInt(p, off) & 0xFFFFFFFFL);
+        }
+
+        int lastError() { return (int) inv(M_lastError, null); }
+        Object compPtr(java.awt.Component c) {
+            return M_compPtr == null ? null : inv(M_compPtr, null, c);
+        }
+
+        private Object inv(java.lang.reflect.Method m, Object target, Object... args) {
+            try { return m.invoke(target, args); }
+            catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable c = e.getCause();
+                if (c instanceof RuntimeException) throw (RuntimeException) c;
+                throw new RuntimeException(c);
+            } catch (Exception e) { throw new RuntimeException(e); }
+        }
+        private Object ctor(java.lang.reflect.Constructor<?> c, Object... args) {
+            try { return c.newInstance(args); }
+            catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cs = e.getCause();
+                if (cs instanceof RuntimeException) throw (RuntimeException) cs;
+                throw new RuntimeException(cs);
+            } catch (Exception e) { throw new RuntimeException(e); }
+        }
+    }
+    class CellColor {
+        final byte r, g, b;
+        CellColor(int r, int g, int b) { this.r = (byte) r; this.g = (byte) g; this.b = (byte) b; }
+        boolean same(CellColor o) { return r == o.r && g == o.g && b == o.b; }
+    }
+
+    class Cell {
+        char ch;
+        CellColor fg, bg;
+        boolean bold;
+        Cell() { ch = ' '; fg = new CellColor(0xCC, 0xCC, 0xCC); bg = new CellColor(0x19, 0x19, 0x19); }
+        Cell(char ch, CellColor fg, CellColor bg, boolean bold) {
+            this.ch = ch; this.fg = fg; this.bg = bg; this.bold = bold;
+        }
+    }
+    interface PtyConnection {
+        void start(short cols, short rows, String shell, String workingDir);
+        void write(byte[] data);
+        void resize(short cols, short rows);
+        void setDataReceivedHandler(java.util.function.Consumer<byte[]> handler);
+        void setExitedHandler(Runnable handler);
+        void dispose();
+    }
+    class K32 {
+        final int PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x00020016;
+        final int EXTENDED_STARTUPINFO_PRESENT = 0x00080000;
+        final int INFINITE = 0xFFFFFFFF;
+
+        Object lib;
+        Object CreatePseudoConsole, ResizePseudoConsole, ClosePseudoConsole;
+        Object CreatePipe, InitializeProcThreadAttributeList, UpdateProcThreadAttribute, DeleteProcThreadAttributeList;
+        Object CreateProcessW, ReadFile, WriteFile, CloseHandle, WaitForSingleObject;
+
+        K32() {
+            lib = jna.stdLib("kernel32");
+            CreatePseudoConsole               = jna.func(lib, "CreatePseudoConsole");
+            ResizePseudoConsole               = jna.func(lib, "ResizePseudoConsole");
+            ClosePseudoConsole                = jna.func(lib, "ClosePseudoConsole");
+            CreatePipe                        = jna.func(lib, "CreatePipe");
+            InitializeProcThreadAttributeList = jna.func(lib, "InitializeProcThreadAttributeList");
+            UpdateProcThreadAttribute         = jna.func(lib, "UpdateProcThreadAttribute");
+            DeleteProcThreadAttributeList     = jna.func(lib, "DeleteProcThreadAttributeList");
+            CreateProcessW                    = jna.func(lib, "CreateProcessW");
+            ReadFile                          = jna.func(lib, "ReadFile");
+            WriteFile                         = jna.func(lib, "WriteFile");
+            CloseHandle                       = jna.func(lib, "CloseHandle");
+            WaitForSingleObject               = jna.func(lib, "WaitForSingleObject");
+        }
+
+        int saSize()  { return jna.POINTER_SIZE == 8 ? 24 : 12; }
+        int piSize()  { return 2 * jna.POINTER_SIZE + 8; }
+        int siwSize() { return jna.POINTER_SIZE == 8 ? 104 : 68; }
+        int siexSize(){ return siwSize() + jna.POINTER_SIZE; }
+        int coord(short cols, short rows) { return ((rows & 0xFFFF) << 16) | (cols & 0xFFFF); }
+    }
+    class WinPty implements PtyConnection {
+        Object ptyHandle, inputWrite, outputRead, processHandle, threadHandle, attrList;
+        final java.util.concurrent.BlockingQueue<byte[]> writeQueue =
+            new java.util.concurrent.LinkedBlockingQueue<>();
+        volatile boolean disposed;
+        java.util.function.Consumer<byte[]> dataReceived;
+        Runnable exited;
+
+        @Override public void setDataReceivedHandler(java.util.function.Consumer<byte[]> h) { dataReceived = h; }
+        @Override public void setExitedHandler(Runnable h) { exited = h; }
+
+        @Override
+        public void start(short cols, short rows, String shell, String workingDir) {            
+            Object sa = jna.mem(k32.saSize());
+            jna.setInt(sa, 0, k32.saSize());                              
+            jna.setInt(sa, 2L * jna.POINTER_SIZE, 1);                     
+            Object inR  = jna.mem(jna.POINTER_SIZE), inW  = jna.mem(jna.POINTER_SIZE);
+            Object outR = jna.mem(jna.POINTER_SIZE), outW = jna.mem(jna.POINTER_SIZE);
+            jna.callBool(k32.CreatePipe, inR,  inW,  sa, 0);
+            jna.callBool(k32.CreatePipe, outR, outW, sa, 0);
+            inputWrite = jna.getPointer(inW, 0);
+            outputRead = jna.getPointer(outR, 0);
+            Object inRH  = jna.getPointer(inR,  0);
+            Object outWH = jna.getPointer(outW, 0);
+            Object phPC = jna.mem(jna.POINTER_SIZE);
+            int hr = jna.callInt(k32.CreatePseudoConsole,
+                k32.coord(cols, rows), inRH, outWH, 0, phPC);
+            if (hr != 0) throw new RuntimeException(
+                "CreatePseudoConsole failed: 0x" + Integer.toHexString(hr));
+            ptyHandle = jna.getPointer(phPC, 0);
+            jna.callBool(k32.CloseHandle, inRH);
+            jna.callBool(k32.CloseHandle, outWH);
+            Object szBuf = jna.mem(jna.POINTER_SIZE);
+            jna.callBool(k32.InitializeProcThreadAttributeList, null, 1, 0, szBuf);
+            long sz = jna.getSizeT(szBuf, 0);
+            attrList = jna.mem(sz);
+            jna.callBool(k32.InitializeProcThreadAttributeList, attrList, 1, 0, szBuf);
+            jna.callBool(k32.UpdateProcThreadAttribute,
+                attrList, 0,
+                jna.ptr(k32.PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE),
+                ptyHandle,
+                jna.ptr(jna.POINTER_SIZE),
+                null, null);
+            Object si = jna.mem(k32.siexSize());
+            jna.setInt(si, 0, k32.siexSize());                            
+            jna.setPointer(si, k32.siwSize(), attrList);                  
+
+            Object pi = jna.mem(k32.piSize());
+
+            Object cmd = jna.mem((long)(shell.length() + 1) * jna.WCHAR_SIZE);
+            jna.setWideString(cmd, 0, shell);
+            Object dir = jna.mem((long)(workingDir.length() + 1) * jna.WCHAR_SIZE);
+            jna.setWideString(dir, 0, workingDir);
+
+            if (!jna.callBool(k32.CreateProcessW,
+                    null, cmd, null, null, 0,
+                    k32.EXTENDED_STARTUPINFO_PRESENT,
+                    null, dir, si, pi))
+                throw new RuntimeException("CreateProcess failed: " + jna.lastError());
+
+            processHandle = jna.getPointer(pi, 0);
+            threadHandle  = jna.getPointer(pi, jna.POINTER_SIZE);
+
+            Thread rt = new Thread(this::readLoop,  "ConPTY-Read");  rt.setDaemon(true); rt.start();
+            Thread wt = new Thread(this::writeLoop, "ConPTY-Write"); wt.setDaemon(true); wt.start();
+            Thread pw = new Thread(() -> {
+                jna.callInt(k32.WaitForSingleObject, processHandle, k32.INFINITE);
+                if (!disposed && exited != null) exited.run();
+            }, "Process-Watch"); pw.setDaemon(true); pw.start();
+        }
+
+        void readLoop() {
+            byte[] buf = new byte[4096];
+            Object nRef = jna.mem(4);
+            while (!disposed) {
+                jna.setInt(nRef, 0, 0);
+                if (!jna.callBool(k32.ReadFile, outputRead, buf, buf.length, nRef, null)) {
+                    if (!disposed && exited != null) exited.run();
+                    break;
+                }
+                int n = jna.getInt(nRef, 0);
+                if (n == 0) { if (!disposed && exited != null) exited.run(); break; }
+                byte[] chunk = new byte[n];
+                System.arraycopy(buf, 0, chunk, 0, n);
+                if (dataReceived != null) dataReceived.accept(chunk);
+            }
+        }
+
+        void writeLoop() {
+            Object nRef = jna.mem(4);
+            try {
+                while (!disposed) {
+                    byte[] data = writeQueue.take();
+                    if (disposed) break;
+                    jna.setInt(nRef, 0, 0);
+                    jna.callBool(k32.WriteFile, inputWrite, data, data.length, nRef, null);
+                }
+            } catch (InterruptedException e) { }
+        }
+
+        @Override public void write(byte[] data) {
+            if (!disposed) try { writeQueue.put(data); }
+            catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+        }
+
+        @Override public void resize(short cols, short rows) {
+            if (ptyHandle != null)
+                jna.callInt(k32.ResizePseudoConsole, ptyHandle, k32.coord(cols, rows));
+        }
+
+        @Override public void dispose() {
+            if (disposed) return; disposed = true;
+            if (ptyHandle     != null) { jna.callVoid(k32.ClosePseudoConsole,            ptyHandle);     ptyHandle     = null; }
+            if (processHandle != null) { jna.callBool(k32.CloseHandle,                   processHandle); processHandle = null; }
+            if (threadHandle  != null) { jna.callBool(k32.CloseHandle,                   threadHandle);  threadHandle  = null; }
+            if (inputWrite    != null) { jna.callBool(k32.CloseHandle,                   inputWrite);    inputWrite    = null; }
+            if (outputRead    != null) { jna.callBool(k32.CloseHandle,                   outputRead);    outputRead    = null; }
+            if (attrList      != null) { jna.callVoid(k32.DeleteProcThreadAttributeList, attrList);      attrList      = null; }
+        }
+    }
+    class TerminalSession {
+        final PtyConnection pty = new WinPty();
+        java.util.function.Consumer<byte[]> dataReceived;
+        Runnable exited;
+
+        TerminalSession() {
+            pty.setDataReceivedHandler(d -> { if (dataReceived != null) dataReceived.accept(d); });
+            pty.setExitedHandler(() -> { if (exited != null) exited.run(); });
+        }
+
+        void setDataReceivedHandler(java.util.function.Consumer<byte[]> h) { dataReceived = h; }
+        void setExitedHandler(Runnable h) { exited = h; }
+        void start(short cols, short rows) { pty.start(cols, rows, "cmd.exe", System.getProperty("user.home")); }
+        void write(byte[] data) { pty.write(data); }
+        void write(String text) { pty.write(text.getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+        void resize(short cols, short rows) { pty.resize(cols, rows); }
+        void dispose() { pty.dispose(); }
+    }
+    class TerminalBuffer {
+        final int MAX_HISTORY = 5000;
+
+        final CellColor[] PAL = {
+            new CellColor(0x00,0x00,0x00), new CellColor(0xCC,0x55,0x55),
+            new CellColor(0x55,0xCC,0x55), new CellColor(0xCD,0xCD,0x55),
+            new CellColor(0x55,0x55,0xCC), new CellColor(0xCC,0x55,0xCC),
+            new CellColor(0x55,0xCC,0xCC), new CellColor(0xCC,0xCC,0xCC),
+            new CellColor(0x55,0x55,0x55), new CellColor(0xFF,0x55,0x55),
+            new CellColor(0x55,0xFF,0x55), new CellColor(0xFF,0xFF,0x55),
+            new CellColor(0x55,0x55,0xFF), new CellColor(0xFF,0x55,0xFF),
+            new CellColor(0x55,0xFF,0xFF), new CellColor(0xFF,0xFF,0xFF),
+        };
+
+        int cols, rows;
+        int cursorRow, cursorCol;
+        boolean cursorVisible = true, appCursorKeys, altScreenActive;
+
+        Cell[][] grid;
+        int scrollTop, scrollBottom;
+        final java.util.List<Cell[]> history = new java.util.ArrayList<>();
+
+        CellColor fg = new CellColor(0xCC, 0xCC, 0xCC), bg = new CellColor(0x19, 0x19, 0x19);
+        boolean bold, reverse;
+        int savedRow, savedCol;
+        Cell[][] altGrid; int altRow, altCol;
+        final java.nio.charset.CharsetDecoder utf8 = java.nio.charset.StandardCharsets.UTF_8.newDecoder();
+        final int PS_Ground = 0, PS_Escape = 1, PS_EscInter = 2, PS_CsiParam = 3, PS_OscStr = 4;
+        int state = PS_Ground;
+        final java.util.List<Integer> csiP = new java.util.ArrayList<>();
+        int curP; boolean hasP, csiQ;
+        final StringBuilder oscBuf = new StringBuilder();
+        final java.util.Queue<byte[]> responses = new java.util.LinkedList<>();
+        String pendingTitle;
+        Runnable changed;
+        boolean screenWasCleared;
+        int skipLF;
+
+        TerminalBuffer(int cols, int rows) {
+            this.cols = cols; this.rows = rows;
+            grid = new Cell[rows][cols]; scrollTop = 0; scrollBottom = rows - 1; clearAll();
+        }
+
+        Cell getCell(int r, int c) { return grid[r][c]; }
+        void setCell(int r, int c, char ch) {
+            if (r >= 0 && r < rows && c >= 0 && c < cols)
+                grid[r][c] = new Cell(ch, new CellColor(0xCC, 0xCC, 0xCC), new CellColor(0x19, 0x19, 0x19), false);
+        }
+        void setCellGray(int r, int c, char ch) {
+            if (r >= 0 && r < rows && c >= 0 && c < cols)
+                grid[r][c] = new Cell(ch, new CellColor(0xAA, 0xAA, 0xAA), new CellColor(0x19, 0x19, 0x19), false);
+        }
+        Cell getHistoryCell(int hr, int c) {
+            if (hr >= 0 && hr < history.size() && c >= 0 && c < cols) return history.get(hr)[c];
+            return new Cell();
+        }
+        int getHistoryCount() { return history.size(); }
+        boolean getScreenWasCleared() { return screenWasCleared; }
+        void setScreenWasCleared(boolean v) { screenWasCleared = v; }
+
+        void freeInputScroll() { scrollUp(); cursorCol = 0; skipLF++; }
+        void localLineFeed() {
+            cursorCol = 0;
+            if (cursorRow == scrollBottom) scrollUp();
+            else if (cursorRow < rows - 1) cursorRow++;
+        }
+
+        String consumeTitle() { String t = pendingTitle; pendingTitle = null; return t; }
+        byte[] dequeueResponse() { return responses.poll(); }
+
+        void feed(byte[] data, java.util.function.Consumer<byte[]> send) {
+            java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
+            java.nio.CharBuffer cb = java.nio.CharBuffer.allocate(data.length + 1);
+            utf8.decode(bb, cb, false); cb.flip();
+            while (cb.hasRemaining()) processChar(cb.get());
+            if (changed != null) changed.run();
+            byte[] r; while ((r = dequeueResponse()) != null) if (send != null) send.accept(r);
+        }
+
+        void resize(int nc, int nr) {
+            Cell[][] ng = new Cell[nr][nc];
+            for (int r = 0; r < nr; r++)
+                for (int c = 0; c < nc; c++)
+                    ng[r][c] = (r < rows && c < cols) ? grid[r][c] : blank();
+            grid = ng; cols = nc; rows = nr;
+            scrollTop = 0; scrollBottom = rows - 1;
+            cursorRow = Math.min(cursorRow, rows - 1); cursorCol = Math.min(cursorCol, cols - 1);
+        }
+
+        void processChar(char c) {
+            if (state == PS_Ground) {
+                if (c == '\u001B') state = PS_Escape;
+                else if (c == '\r') cursorCol = 0;
+                else if (c == '\n') lineFeed();
+                else if (c == '\t') cursorCol = Math.min(((cursorCol / 8) + 1) * 8, cols - 1);
+                else if (c == '\b') { if (cursorCol > 0) cursorCol--; }
+                else if (c == '\u0007') { }
+                else if (c >= ' ') putChar(c);
+            } else if (state == PS_Escape) {
+                if (c == '[') enterCsi();
+                else if (c == ']') { oscBuf.setLength(0); state = PS_OscStr; }
+                else if (c == '(' || c == ')' || c == '*' || c == '+') state = PS_EscInter;
+                else if (c == 'M') { reverseIndex(); state = PS_Ground; }
+                else if (c == '7') { savedRow = cursorRow; savedCol = cursorCol; state = PS_Ground; }
+                else if (c == '8') { cursorRow = savedRow; cursorCol = savedCol; state = PS_Ground; }
+                else state = PS_Ground;
+            } else if (state == PS_EscInter) {
+                state = PS_Ground;
+            } else if (state == PS_CsiParam) {
+                if (c == '?') csiQ = true;
+                else if (c >= '0' && c <= '9') { curP = curP * 10 + (c - '0'); hasP = true; }
+                else if (c == ';') { csiP.add(hasP ? curP : 0); curP = 0; hasP = false; }
+                else if (c >= 0x20 && c <= 0x2F) { }
+                else if (c >= '@' && c <= '~') { if (hasP) csiP.add(curP); execCsi(c); state = PS_Ground; }
+                else state = PS_Ground;
+            } else if (state == PS_OscStr) {
+                if (c == '\u0007' || c == '\u009C') { execOsc(); state = PS_Ground; }
+                else if (c == '\u001B') { execOsc(); state = PS_Escape; }
+                else oscBuf.append(c);
+            }
+        }
+
+        void enterCsi() { csiP.clear(); curP = 0; hasP = false; csiQ = false; state = PS_CsiParam; }
+
+        void putChar(char c) {
+            if (cursorCol >= cols) { cursorCol = 0; lineFeed(); }
+            CellColor f = reverse ? bg : fg, b = reverse ? fg : bg;
+            grid[cursorRow][cursorCol] = new Cell(c, f, b, bold);
+            cursorCol++;
+        }
+
+        void lineFeed() {
+            if (skipLF > 0) { skipLF--; return; }
+            if (cursorRow == scrollBottom) scrollUp();
+            else if (cursorRow < rows - 1) cursorRow++;
+        }
+
+        void reverseIndex() {
+            if (cursorRow == scrollTop) scrollDown();
+            else if (cursorRow > 0) cursorRow--;
+        }
+
+        void scrollUp() {
+            if (scrollTop == 0) {
+                Cell[] row = new Cell[cols];
+                for (int c = 0; c < cols; c++) row[c] = grid[0][c];
+                history.add(row);
+                if (history.size() > MAX_HISTORY) history.remove(0);
+            }
+            for (int r = scrollTop; r < scrollBottom; r++)
+                for (int c = 0; c < cols; c++) grid[r][c] = grid[r + 1][c];
+            clearRow(scrollBottom);
+        }
+
+        void scrollDown() {
+            for (int r = scrollBottom; r > scrollTop; r--)
+                for (int c = 0; c < cols; c++) grid[r][c] = grid[r - 1][c];
+            clearRow(scrollTop);
+        }
+
+        int P(int i, int d) {
+            if (i < csiP.size()) { int v = csiP.get(i); return (v == 0 && d != 0) ? d : v; }
+            return d;
+        }
+
+        void execCsi(char f) {
+            switch (f) {
+                case 'A': cursorRow = Math.max(scrollTop, cursorRow - P(0,1)); break;
+                case 'B': cursorRow = Math.min(scrollBottom, cursorRow + P(0,1)); break;
+                case 'C': cursorCol = Math.min(cols-1, cursorCol + P(0,1)); break;
+                case 'D': cursorCol = Math.max(0, cursorCol - P(0,1)); break;
+                case 'H': case 'f':
+                    cursorRow = clamp(P(0,1)-1, 0, rows-1);
+                    cursorCol = clamp(P(1,1)-1, 0, cols-1); break;
+                case 'G': cursorCol = clamp(P(0,1)-1, 0, cols-1); break;
+                case 'd': cursorRow = clamp(P(0,1)-1, 0, rows-1); break;
+                case 'J': eraseDisplay(P(0,0)); break;
+                case 'K': eraseLine(P(0,0)); break;
+                case 'L': insertLines(P(0,1)); break;
+                case 'M': deleteLines(P(0,1)); break;
+                case '@': insertChars(P(0,1)); break;
+                case 'P': deleteChars(P(0,1)); break;
+                case 'X': eraseChars(P(0,1)); break;
+                case 'S': for (int i=0;i<P(0,1);i++) scrollUp(); break;
+                case 'T': for (int i=0;i<P(0,1);i++) scrollDown(); break;
+                case 'r':
+                    scrollTop = clamp(P(0,1)-1, 0, rows-1);
+                    scrollBottom = clamp(P(1,rows)-1, 0, rows-1);
+                    cursorRow = scrollTop; cursorCol = 0; break;
+                case 'm': execSgr(); break;
+                case 'h': if (csiQ) decSet(P(0,0)); break;
+                case 'l': if (csiQ) decReset(P(0,0)); break;
+                case 'n':
+                    if (P(0,0)==6) responses.add(("\u001B["+(cursorRow+1)+";"+(cursorCol+1)+"R").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    break;
+                case 'c': responses.add("\u001B[?1;2c".getBytes(java.nio.charset.StandardCharsets.UTF_8)); break;
+            }
+        }
+
+        void execSgr() {
+            if (csiP.isEmpty()) { resetAttr(); return; }
+            for (int i = 0; i < csiP.size(); i++) {
+                int p = csiP.get(i);
+                if (p == 0) resetAttr();
+                else if (p == 1) bold = true;
+                else if (p == 7) reverse = true;
+                else if (p == 22) bold = false;
+                else if (p == 27) reverse = false;
+                else if (p >= 30 && p <= 37) fg = PAL[p-30];
+                else if (p >= 90 && p <= 97) fg = PAL[p-90+8];
+                else if (p == 39) fg = new CellColor(0xCC, 0xCC, 0xCC);
+                else if (p >= 40 && p <= 47) bg = PAL[p-40];
+                else if (p >= 100 && p <= 107) bg = PAL[p-100+8];
+                else if (p == 49) bg = new CellColor(0x19, 0x19, 0x19);
+                else if (p == 38) {
+                    if (nP(i,1)==5 && i+2<csiP.size()) { fg = c256(csiP.get(i+2)); i+=2; }
+                    else if (nP(i,1)==2 && i+4<csiP.size()) { fg = new CellColor(csiP.get(i+2),csiP.get(i+3),csiP.get(i+4)); i+=4; }
+                } else if (p == 48) {
+                    if (nP(i,1)==5 && i+2<csiP.size()) { bg = c256(csiP.get(i+2)); i+=2; }
+                    else if (nP(i,1)==2 && i+4<csiP.size()) { bg = new CellColor(csiP.get(i+2),csiP.get(i+3),csiP.get(i+4)); i+=4; }
+                }
+            }
+        }
+
+        int nP(int i, int off) { return (i+off)<csiP.size() ? csiP.get(i+off) : -1; }
+        void resetAttr() { fg = new CellColor(0xCC, 0xCC, 0xCC); bg = new CellColor(0x19, 0x19, 0x19); bold = false; reverse = false; }
+
+        void decSet(int m) {
+            switch (m) {
+                case 1: appCursorKeys = true; break;
+                case 25: cursorVisible = true; break;
+                case 47: case 1047:
+                    if (altGrid == null) {
+                        altGrid = new Cell[rows][cols];
+                        for (int r=0;r<rows;r++) for (int c=0;c<cols;c++) altGrid[r][c] = grid[r][c];
+                        altRow = cursorRow; altCol = cursorCol; clearAll();
+                    }
+                    altScreenActive = true;
+                    break;
+                case 1049:
+                    altGrid = new Cell[rows][cols];
+                    for (int r=0;r<rows;r++) for (int c=0;c<cols;c++) altGrid[r][c] = grid[r][c];
+                    altRow = cursorRow; altCol = cursorCol; clearAll();
+                    altScreenActive = true;
+                    break;
+            }
+        }
+
+        void decReset(int m) {
+            switch (m) {
+                case 1: appCursorKeys = false; break;
+                case 25: cursorVisible = false; break;
+                case 47: case 1047: case 1049:
+                    if (altGrid != null) { grid = altGrid; altGrid = null; cursorRow = altRow; cursorCol = altCol; }
+                    altScreenActive = false;
+                    break;
+            }
+        }
+
+        void execOsc() {
+            String s = oscBuf.toString(); int i = s.indexOf(';');
+            if (i >= 0) { String n = s.substring(0, i); if ("0".equals(n)||"2".equals(n)) pendingTitle = s.substring(i+1); }
+        }
+
+        void eraseDisplay(int m) {
+            switch (m) {
+                case 0: for (int c=cursorCol;c<cols;c++) grid[cursorRow][c]=blank();
+                        for (int r=cursorRow+1;r<rows;r++) clearRow(r); break;
+                case 1: for (int r=0;r<cursorRow;r++) clearRow(r);
+                        for (int c=0;c<=cursorCol&&c<cols;c++) grid[cursorRow][c]=blank(); break;
+                case 2: case 3: for (int r=0;r<rows;r++) clearRow(r); history.clear(); screenWasCleared=true; break;
+            }
+        }
+
+        void eraseLine(int m) {
+            int s = m==0 ? cursorCol : 0, e = m==1 ? Math.min(cursorCol+1,cols) : cols;
+            for (int c=s;c<e;c++) grid[cursorRow][c]=blank();
+        }
+
+        void eraseChars(int n) { for (int i=0;i<n&&cursorCol+i<cols;i++) grid[cursorRow][cursorCol+i]=blank(); }
+
+        void insertLines(int n) {
+            for (int i=0;i<n;i++) {
+                for (int r=scrollBottom;r>cursorRow;r--) for (int c=0;c<cols;c++) grid[r][c]=grid[r-1][c];
+                clearRow(cursorRow);
+            }
+        }
+
+        void deleteLines(int n) {
+            for (int i=0;i<n;i++) {
+                for (int r=cursorRow;r<scrollBottom;r++) for (int c=0;c<cols;c++) grid[r][c]=grid[r+1][c];
+                clearRow(scrollBottom);
+            }
+        }
+
+        void insertChars(int n) {
+            for (int c=cols-1;c>=cursorCol+n;c--) grid[cursorRow][c]=grid[cursorRow][c-n];
+            for (int c=cursorCol;c<Math.min(cursorCol+n,cols);c++) grid[cursorRow][c]=blank();
+        }
+
+        void deleteChars(int n) {
+            for (int c=cursorCol;c+n<cols;c++) grid[cursorRow][c]=grid[cursorRow][c+n];
+            for (int c=Math.max(0,cols-n);c<cols;c++) grid[cursorRow][c]=blank();
+        }
+
+        Cell blank() { return new Cell(' ', new CellColor(0xCC, 0xCC, 0xCC), new CellColor(0x19, 0x19, 0x19), false); }
+        void clearRow(int r) { for (int c=0;c<cols;c++) grid[r][c]=blank(); }
+        void clearAll() { for (int r=0;r<rows;r++) clearRow(r); }
+
+        int clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
+
+        CellColor c256(int i) {
+            if (i<16) return i<PAL.length ? PAL[i] : new CellColor(0xCC, 0xCC, 0xCC);
+            if (i<232) { i-=16; int r=i/36,g=(i/6)%6,b=i%6;
+                return new CellColor(r>0?r*40+55:0, g>0?g*40+55:0, b>0?b*40+55:0); }
+            int v=(i-232)*10+8; return new CellColor(v,v,v);
+        }
+    }
+    class TerminalPanel extends javax.swing.JPanel implements java.awt.event.KeyListener, java.awt.event.MouseListener, java.awt.event.MouseMotionListener, java.awt.event.MouseWheelListener {
+        TerminalBuffer buf;
+        TerminalSession sess;
+        java.awt.Font font, boldFont;
+        float cellW = 8, cellH = 16;
+        int fontAsc = 13;
+        javax.swing.Timer blink;
+        boolean cursorOn = true;
+
+        int selSR = -1, selSC, selER = -1, selEC;
+        boolean selecting;
+
+        int scrollBack;
+
+        final java.util.Map<Integer, java.awt.Color> cc = new java.util.HashMap<>();
+
+        boolean queueMode;
+        final java.util.List<String> cmdQueue = new java.util.ArrayList<>();
+        String localLine = "";
+        javax.swing.Timer promptTimer;
+
+        TerminalPanel() {
+            setBackground(new java.awt.Color(0x19, 0x19, 0x19)); setFocusable(true);
+            setFocusTraversalKeysEnabled(false); setDoubleBuffered(true);
+            addKeyListener(this); addMouseListener(this); addMouseMotionListener(this);
+            addMouseWheelListener(this);
+        }
+
+        void initTerminal() {
+            font = new java.awt.Font("Consolas", java.awt.Font.PLAIN, 16);
+            boldFont = new java.awt.Font("Consolas", java.awt.Font.BOLD, 16);
+
+            java.awt.image.BufferedImage bi = new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+            java.awt.Graphics2D g2 = bi.createGraphics();
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+            g2.setFont(font); java.awt.FontMetrics fm = g2.getFontMetrics();
+            cellW = fm.charWidth('M'); cellH = fm.getHeight(); fontAsc = fm.getAscent(); g2.dispose();
+
+            short cols = (short) Math.max(1, (int) (getWidth() / cellW));
+            short rows = (short) Math.max(1, (int) (getHeight() / cellH));
+            buf = new TerminalBuffer(cols, rows);
+            sess = new TerminalSession();
+
+            sess.setDataReceivedHandler(data -> {
+                try {
+                    javax.swing.SwingUtilities.invokeLater(() -> {
+                        buf.feed(data, resp -> sess.write(resp));
+                        scrollBack = 0;
+                        if (buf.altScreenActive) {
+                            if (queueMode) {
+                                cmdQueue.clear();
+                                localLine = "";
+                                queueMode = false;
+                                if (promptTimer != null) promptTimer.stop();
+                            }
+                        } else if (queueMode) {
+                            if (cmdQueue.isEmpty() && localLine.length() == 0 && looksLikePrompt()) {
+                                queueMode = false;
+                                if (promptTimer != null) promptTimer.stop();
+                            } else if (promptTimer != null) {
+                                promptTimer.restart();
+                            }
+                        }
+                        repaint();
+                    });
+                } catch (Exception ex) { }
+            });
+
+            sess.setExitedHandler(() -> {
+                try { javax.swing.SwingUtilities.invokeLater(() -> {
+                    cleanup();
+                    java.awt.Window w = javax.swing.SwingUtilities.getWindowAncestor(this);
+                    if (w != null) w.dispose();
+                    System.exit(0);
+                }); } catch (Exception e) { }
+            });
+
+            sess.start(cols, rows);
+
+            blink = new javax.swing.Timer(530, e -> { cursorOn = !cursorOn; repaint(); });
+            blink.start();
+
+            promptTimer = new javax.swing.Timer(10, e -> onOutputSettled());
+            promptTimer.setRepeats(false);
+
+            requestFocusInWindow();
+            repaint();
+        }
+
+        java.awt.Color color(byte r, byte g, byte b) {
+            int k = ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+            return cc.computeIfAbsent(k, x -> new java.awt.Color((x >> 16) & 0xFF, (x >> 8) & 0xFF, x & 0xFF));
+        }
+
+        boolean hasSelection() { return selSR >= 0 && selER >= 0 && (selSR != selER || selSC != selEC); }
+        int[] orderedSel() {
+            int sr = selSR, sc = selSC, er = selER, ec = selEC;
+            if (sr > er || (sr == er && sc > ec)) { int t = sr; sr = er; er = t; t = sc; sc = ec; ec = t; }
+            return new int[]{sr, sc, er, ec};
+        }
+        void clearSel() { selSR = selER = -1; selecting = false; }
+        boolean isSelected(int row, int col) {
+            if (!hasSelection() || buf == null) return false;
+            int[] s = orderedSel();
+            if (row < s[0] || row > s[2]) return false;
+            if (row == s[0] && row == s[2]) return col >= s[1] && col <= s[3];
+            if (row == s[0]) return col >= s[1];
+            if (row == s[2]) return col <= s[3];
+            return true;
+        }
+        String getSelectedText() {
+            if (!hasSelection() || buf == null) return "";
+            int[] s = orderedSel();
+            java.util.List<String> lines = new java.util.ArrayList<>();
+            for (int r = s[0]; r <= s[2]; r++) {
+                int c0 = r == s[0] ? s[1] : 0, c1 = r == s[2] ? s[3] : buf.cols - 1;
+                StringBuilder sb = new StringBuilder();
+                for (int c = c0; c <= c1; c++) { char ch = getDisplayCell(r, c).ch; sb.append(ch == 0 ? ' ' : ch); }
+                lines.add(sb.toString().stripTrailing());
+            }
+            return String.join(System.lineSeparator(), lines);
+        }
+
+        Cell getDisplayCell(int displayRow, int col) {
+            int vRow = buf.getHistoryCount() - scrollBack + displayRow;
+            if (vRow < 0 || col < 0 || col >= buf.cols) return new Cell();
+            if (vRow < buf.getHistoryCount())
+                return buf.getHistoryCell(vRow, col);
+            int bufRow = vRow - buf.getHistoryCount();
+            return bufRow < buf.rows ? buf.getCell(bufRow, col) : new Cell();
+        }
+
+        @Override
+        protected void paintComponent(java.awt.Graphics g) {
+            java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
+            g2.setColor(new java.awt.Color(0x19, 0x19, 0x19));
+            g2.fillRect(0, 0, getWidth(), getHeight());
+            if (buf == null || font == null) return;
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+
+            int rows = buf.rows, cols = buf.cols;
+            for (int r = 0; r < rows; r++) {
+                float y = r * cellH;
+                if (y > getHeight()) break;
+                int c = 0;
+                while (c < cols) {
+                    Cell cell = getDisplayCell(r, c);
+                    boolean sel = isSelected(r, c);
+                    CellColor fgc = sel ? new CellColor(0, 0, 0) : cell.fg;
+                    CellColor bgc = sel ? new CellColor(0xFF, 0xFF, 0xFF) : cell.bg;
+                    boolean bd = cell.bold;
+                    int start = c;
+                    StringBuilder sb = new StringBuilder();
+                    while (c < cols) {
+                        Cell cx = getDisplayCell(r, c);
+                        boolean cs = isSelected(r, c);
+                        CellColor cf = cs ? new CellColor(0, 0, 0) : cx.fg;
+                        CellColor cb = cs ? new CellColor(0xFF, 0xFF, 0xFF) : cx.bg;
+                        if (!cf.same(fgc) || !cb.same(bgc) || cx.bold != bd) break;
+                        sb.append(cx.ch == 0 ? ' ' : cx.ch);
+                        c++;
+                    }
+                    float x = start * cellW;
+                    if ((bgc.r & 0xFF) != 0x19 || (bgc.g & 0xFF) != 0x19 || (bgc.b & 0xFF) != 0x19) {
+                        g2.setColor(color(bgc.r, bgc.g, bgc.b));
+                        g2.fillRect((int) x, (int) y, (int) ((c - start) * cellW), (int) cellH);
+                    }
+                    g2.setFont(bd ? boldFont : font);
+                    g2.setColor(color(fgc.r, fgc.g, fgc.b));
+                    g2.drawString(sb.toString(), x, y + fontAsc);
+                }
+            }
+
+            if (queueMode && !buf.altScreenActive && scrollBack == 0 && localLine.length() > 0
+                    && buf.cursorRow >= 0 && buf.cursorRow < rows && buf.cursorCol < cols) {
+                g2.setFont(font);
+                float lly = buf.cursorRow * cellH;
+                g2.setColor(new java.awt.Color(0x19, 0x19, 0x19));
+                g2.fillRect((int)(buf.cursorCol * cellW), (int) lly,
+                    (int)((cols - buf.cursorCol) * cellW), (int) cellH);
+                g2.setColor(new java.awt.Color(0xCC, 0xCC, 0xCC));
+                g2.drawString(localLine, buf.cursorCol * cellW, lly + fontAsc);
+            }
+
+            if (buf.cursorVisible && cursorOn && scrollBack == 0) {
+                int cCol = (queueMode && !buf.altScreenActive) ? buf.cursorCol + localLine.length() : buf.cursorCol;
+                if (buf.cursorRow < rows && cCol < cols) {
+                    g2.setColor(java.awt.Color.WHITE);
+                    g2.fillRect((int) (cCol * cellW), (int) (buf.cursorRow * cellH), 2, (int) cellH);
+                }
+            }
+        }
+
+        @Override public void mousePressed(java.awt.event.MouseEvent e) {
+            if (javax.swing.SwingUtilities.isLeftMouseButton(e)) {
+                int r = Math.max(0, Math.min(buf == null ? 0 : buf.rows - 1, (int) (e.getY() / cellH)));
+                int c = Math.max(0, Math.min(buf == null ? 0 : buf.cols - 1, (int) (e.getX() / cellW)));
+                selSR = selER = r; selSC = selEC = c; selecting = true; repaint();
+            } else if (javax.swing.SwingUtilities.isRightMouseButton(e)) {
+                scrollBack = 0;
+                String t = clipGet(); if (t != null && sess != null) sess.write(t);
+                repaint();
+            }
+            requestFocusInWindow();
+        }
+        @Override public void mouseDragged(java.awt.event.MouseEvent e) {
+            if (selecting && buf != null) {
+                selER = Math.max(0, Math.min(buf.rows - 1, (int) (e.getY() / cellH)));
+                selEC = Math.max(0, Math.min(buf.cols - 1, (int) (e.getX() / cellW)));
+                repaint();
+            }
+        }
+        @Override public void mouseReleased(java.awt.event.MouseEvent e) { if (selecting) selecting = false; }
+        @Override public void mouseClicked(java.awt.event.MouseEvent e) {}
+        @Override public void mouseEntered(java.awt.event.MouseEvent e) {}
+        @Override public void mouseExited(java.awt.event.MouseEvent e) {}
+        @Override public void mouseMoved(java.awt.event.MouseEvent e) {}
+        @Override public void mouseWheelMoved(java.awt.event.MouseWheelEvent e) {
+            if (buf == null) return;
+            int lines = e.getWheelRotation() < 0 ? 3 : -3;
+            scrollBack = Math.max(0, Math.min(buf.getHistoryCount(), scrollBack + lines));
+            repaint();
+        }
+
+        @Override
+        public void keyPressed(java.awt.event.KeyEvent e) {
+            if (sess == null || buf == null) return;
+            boolean ctrl = e.isControlDown(), shift = e.isShiftDown();
+            int kc = e.getKeyCode();
+
+            boolean qm = queueMode && !buf.altScreenActive;
+
+            if (qm) {
+                if (ctrl && kc == java.awt.event.KeyEvent.VK_C) {
+                    if (hasSelection()) {
+                        String t = getSelectedText(); if (t.length() > 0) clipSet(t); clearSel();
+                    } else {
+                        cmdQueue.clear();
+                        localLine = "";
+                        queueMode = false;
+                        if (promptTimer != null) promptTimer.stop();
+                        sess.write(new byte[]{(byte) 0x03});
+                    }
+                    e.consume(); cursorOn = true; repaint(); return;
+                }
+                if (ctrl && kc == java.awt.event.KeyEvent.VK_V) {
+                    String t = clipGet();
+                    if (t != null) {
+                        for (char ch : t.toCharArray()) {
+                            if (ch == '\n' || ch == '\r') {
+                                commitLocalLine();
+                                buf.localLineFeed();
+                            } else if (!Character.isISOControl(ch)) {
+                                localLine += ch;
+                            }
+                        }
+                    }
+                    e.consume(); cursorOn = true; repaint(); return;
+                }
+                if (kc == java.awt.event.KeyEvent.VK_ENTER) {
+                    commitLocalLine();
+                    buf.localLineFeed();
+                    e.consume(); cursorOn = true; repaint(); return;
+                }
+                if (kc == java.awt.event.KeyEvent.VK_BACK_SPACE) {
+                    if (localLine.length() > 0) localLine = localLine.substring(0, localLine.length() - 1);
+                    e.consume(); cursorOn = true; repaint(); return;
+                }
+                e.consume(); return;
+            }
+
+            if (ctrl && kc == java.awt.event.KeyEvent.VK_C) {
+                if (hasSelection()) {
+                    String t = getSelectedText(); if (t.length() > 0) clipSet(t); clearSel(); repaint();
+                } else {
+                    sess.write(new byte[]{(byte) 0x03});
+                    repaint();
+                }
+                e.consume(); cursorOn = true; return;
+            }
+            if (ctrl && kc == java.awt.event.KeyEvent.VK_V) {
+                scrollBack = 0;
+                String t = clipGet();
+                if (t != null) {
+                    t = t.replace("\r\n", "\r").replace("\n", "\r");
+                    sess.write(t);
+                    repaint();
+                }
+                e.consume(); cursorOn = true; return;
+            }
+            if (hasSelection() && kc != java.awt.event.KeyEvent.VK_CONTROL && kc != java.awt.event.KeyEvent.VK_SHIFT) { clearSel(); repaint(); }
+            if (ctrl && kc >= java.awt.event.KeyEvent.VK_A && kc <= java.awt.event.KeyEvent.VK_Z) {
+                sess.write(new byte[]{(byte) (kc - java.awt.event.KeyEvent.VK_A + 1)});
+                e.consume(); cursorOn = true; return;
+            }
+
+            if (kc == java.awt.event.KeyEvent.VK_ENTER) {
+                sess.write("\r");
+                if (!buf.altScreenActive) queueMode = true;
+                e.consume(); cursorOn = true; return;
+            }
+            if (kc == java.awt.event.KeyEvent.VK_BACK_SPACE) {
+                sess.write("\u007F");
+                e.consume(); cursorOn = true; return;
+            }
+
+            if (kc == java.awt.event.KeyEvent.VK_ESCAPE) {
+                sess.write("\u001B");
+                e.consume(); cursorOn = true; return;
+            }
+
+            String arrow = (buf != null && buf.appCursorKeys) ? "\u001BO" : "\u001B[";
+            String seq = null;
+            switch (kc) {
+                case java.awt.event.KeyEvent.VK_TAB:       seq = shift ? "\u001B[Z" : "\t"; break;
+                case java.awt.event.KeyEvent.VK_UP:    seq = arrow + "A"; break;
+                case java.awt.event.KeyEvent.VK_DOWN:  seq = arrow + "B"; break;
+                case java.awt.event.KeyEvent.VK_RIGHT: seq = arrow + "C"; break;
+                case java.awt.event.KeyEvent.VK_LEFT:  seq = arrow + "D"; break;
+                case java.awt.event.KeyEvent.VK_HOME:  seq = "\u001B[H"; break;
+                case java.awt.event.KeyEvent.VK_END:   seq = "\u001B[F"; break;
+                case java.awt.event.KeyEvent.VK_INSERT:    seq = "\u001B[2~"; break;
+                case java.awt.event.KeyEvent.VK_DELETE:    seq = "\u001B[3~"; break;
+                case java.awt.event.KeyEvent.VK_PAGE_UP:   seq = "\u001B[5~"; break;
+                case java.awt.event.KeyEvent.VK_PAGE_DOWN: seq = "\u001B[6~"; break;
+                case java.awt.event.KeyEvent.VK_F1:  seq = "\u001BOP"; break;
+                case java.awt.event.KeyEvent.VK_F2:  seq = "\u001BOQ"; break;
+                case java.awt.event.KeyEvent.VK_F3:  seq = "\u001BOR"; break;
+                case java.awt.event.KeyEvent.VK_F4:  seq = "\u001BOS"; break;
+                case java.awt.event.KeyEvent.VK_F5:  seq = "\u001B[15~"; break;
+                case java.awt.event.KeyEvent.VK_F6:  seq = "\u001B[17~"; break;
+                case java.awt.event.KeyEvent.VK_F7:  seq = "\u001B[18~"; break;
+                case java.awt.event.KeyEvent.VK_F8:  seq = "\u001B[19~"; break;
+                case java.awt.event.KeyEvent.VK_F9:  seq = "\u001B[20~"; break;
+                case java.awt.event.KeyEvent.VK_F10: seq = "\u001B[21~"; break;
+                case java.awt.event.KeyEvent.VK_F11: seq = "\u001B[23~"; break;
+                case java.awt.event.KeyEvent.VK_F12: seq = "\u001B[24~"; break;
+            }
+            if (seq != null) { sess.write(seq); e.consume(); cursorOn = true; }
+        }
+
+        @Override
+        public void keyTyped(java.awt.event.KeyEvent e) {
+            if (buf == null || sess == null) return;
+            char ch = e.getKeyChar();
+            if (Character.isISOControl(ch)) return;
+            if (queueMode && !buf.altScreenActive) {
+                localLine += ch;
+                cursorOn = true; e.consume(); repaint();
+                return;
+            }
+            sess.write(String.valueOf(ch));
+            cursorOn = true; e.consume();
+        }
+
+        @Override public void keyReleased(java.awt.event.KeyEvent e) {}
+
+        void commitLocalLine() {
+            if (localLine.length() == 0) return;
+            int col = buf.cursorCol;
+            for (int i = 0; i < localLine.length() && col + i < buf.cols; i++) {
+                buf.setCell(buf.cursorRow, col + i, localLine.charAt(i));
+            }
+            cmdQueue.add(localLine);
+            localLine = "";
+        }
+
+        void onOutputSettled() {
+            if (promptTimer != null) promptTimer.stop();
+            if (!queueMode) return;
+            if (buf != null && buf.altScreenActive) {
+                cmdQueue.clear();
+                localLine = "";
+                queueMode = false;
+                return;
+            }
+
+            if (!cmdQueue.isEmpty()) {
+                String cmd = cmdQueue.remove(0);
+                if (sess != null) sess.write(cmd + "\r");
+                if (promptTimer != null) promptTimer.restart();
+            } else if (looksLikePrompt()) {
+                queueMode = false;
+                if (localLine.length() > 0) {
+                    if (sess != null) sess.write(localLine);
+                    localLine = "";
+                }
+            } else {
+                if (promptTimer != null) promptTimer.restart();
+            }
+            repaint();
+        }
+
+        boolean looksLikePrompt() {
+            if (buf == null) return false;
+            StringBuilder sb = new StringBuilder();
+            for (int c = 0; c < buf.cols; c++) {
+                char ch = buf.getCell(buf.cursorRow, c).ch;
+                if (ch == 0) break;
+                sb.append(ch);
+            }
+            String line = sb.toString().stripTrailing();
+            if (line.length() == 0) return false;
+            char last = line.charAt(line.length() - 1);
+            return last == '>' || last == '$' || last == '#';
+        }
+
+        @Override public void doLayout() {
+            super.doLayout();
+            if (buf == null || sess == null || getWidth() == 0 || getHeight() == 0) return;
+            short cols = (short) Math.max(1, (int) (getWidth() / cellW));
+            short rows = (short) Math.max(1, (int) (getHeight() / cellH));
+            if (cols != buf.cols || rows != buf.rows) { buf.resize(cols, rows); sess.resize(cols, rows); repaint(); }
+        }
+
+        void clipSet(String t) { try { java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(t), null); } catch (Exception x) {} }
+        String clipGet() { try { java.awt.datatransfer.Clipboard c = java.awt.Toolkit.getDefaultToolkit().getSystemClipboard(); if (c.isDataFlavorAvailable(java.awt.datatransfer.DataFlavor.stringFlavor)) return (String) c.getData(java.awt.datatransfer.DataFlavor.stringFlavor); } catch (Exception x) {} return null; }
+
+        void cleanup() {
+            if (blink != null) blink.stop();
+            if (promptTimer != null) promptTimer.stop();
+            if (sess != null) sess.dispose();
+        }
+    }
+    class MainForm extends javax.swing.JFrame {
+        final String PNG_BASE64 =
+            "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAYUlEQVR4nO3UwQ0AIAgDQCZh/1Hc"
+          + "ShMTv4pRKJo++r9AQVS1IiMEEEBAWoAU6YFOIAKxXIE3wtQBT4S5hF6IrSvwQLwxAWgHoFcA/QMp"
+          + "PmFEjgBjSrP8DYCvgAACCCDgRho3P3V8BMTTRgAAAABJRU5ErkJggg==";
+
+        final TerminalPanel panel;
+
+        MainForm() {
+            setTitle("ter"); setBackground(new java.awt.Color(0x19, 0x19, 0x19));
+            setSize(1024, 600); setMinimumSize(new java.awt.Dimension(400, 200));
+            setLocationRelativeTo(null); setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);
+
+            panel = new TerminalPanel();
+            getContentPane().setBackground(new java.awt.Color(0x19, 0x19, 0x19));
+            getContentPane().setLayout(new java.awt.BorderLayout());
+            getContentPane().add(panel, java.awt.BorderLayout.CENTER);
+
+            try {
+                byte[] png = java.util.Base64.getDecoder().decode(PNG_BASE64);
+                setIconImage(new javax.swing.ImageIcon(png).getImage());
+            } catch (Exception e) { }
+
+            addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override public void windowOpened(java.awt.event.WindowEvent e) {
+                    try { panel.initTerminal(); } catch (Exception ex) { ex.printStackTrace(); }
+                }
+                @Override public void windowClosing(java.awt.event.WindowEvent e) { panel.cleanup(); }
+            });
+        }
+
+        @Override public void addNotify() {
+            super.addNotify();
+            try {
+                Object hwnd = jna.compPtr(this);
+                if (hwnd != null) {
+                    Object dwm = jna.stdLib("dwmapi");
+                    Object f = jna.func(dwm, "DwmSetWindowAttribute");
+                    Object v = jna.mem(4);
+                    jna.setInt(v, 0, 1);
+                    jna.callInt(f, hwnd, 20, v, 4);
+                }
+            } catch (Throwable t) { /* não-Windows ou Win10 antigo: ignora */ }
+        }
+    }
+}
+
+
+class terminal_linux {
+    final String JNA_URL = "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/jna-5.14.0.jar";
+    final long   JNA_SIZE = 1_878_533L;
+    final String JNA_FILENAME = "jna-5.14.0.jar";
+    final String FONT_REG_URL  = "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/CascadiaMono-Regular.ttf";
+    final long   FONT_REG_SIZE = 575_912L;
+    final String FONT_REG_FILENAME = "CascadiaMono-Regular.ttf";
+    final String FONT_BOLD_URL  = "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/CascadiaMono-Bold.ttf";
+    final long   FONT_BOLD_SIZE = 581_704L;
+    final String FONT_BOLD_FILENAME = "CascadiaMono-Bold.ttf";
+    final java.io.File Y_LIB_DIR = new java.io.File("/opt/y_lib");
+
+    Jna jna;
+    java.io.File fontRegFile;
+    java.io.File fontBoldFile;
+    public static void main(String[] args) { new terminal_linux().launch(); }
+    void launch() {
+        try {
+            java.security.Security.setProperty("jdk.tls.disabledAlgorithms", "");
+            java.security.Security.setProperty("jdk.certpath.disabledAlgorithms", "");
+            System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
+            javax.net.ssl.SSLContext sslCtx = javax.net.ssl.SSLContext.getInstance("TLS");
+            sslCtx.init(null, null, null);
+            javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(sslCtx.getSocketFactory());
+
+            java.io.File jnaJar = ensureFile(JNA_URL, JNA_FILENAME, JNA_SIZE);
+            fontRegFile  = ensureFile(FONT_REG_URL,  FONT_REG_FILENAME,  FONT_REG_SIZE);
+            fontBoldFile = ensureFile(FONT_BOLD_URL, FONT_BOLD_FILENAME, FONT_BOLD_SIZE);
+
+            java.net.URL appUrl = null;
+            try { appUrl = terminal_linux.class.getProtectionDomain().getCodeSource().getLocation(); }
+            catch (Throwable ignored) { }
+            java.net.URL[] urls = (appUrl != null)
+                ? new java.net.URL[]{ jnaJar.toURI().toURL(), appUrl }
+                : new java.net.URL[]{ jnaJar.toURI().toURL() };
+            java.net.URLClassLoader cl = new java.net.URLClassLoader(
+                urls, ClassLoader.getPlatformClassLoader());
+            Thread.currentThread().setContextClassLoader(cl);
+
+            jna = new Jna();
+            jna.init(cl);
+
+            run();
+        } catch (Throwable t) { showError(t); }
+    }
+
+    java.io.File ensureFile(String url, String filename, long expectedSize) throws Exception {
+        java.io.File cache = new java.io.File(Y_LIB_DIR, filename);
+        if (cache.isFile() && cache.length() == expectedSize) return cache;
+
+        Y_LIB_DIR.mkdirs();
+        java.net.HttpURLConnection con = (java.net.HttpURLConnection)
+            java.net.URI.create(url).toURL().openConnection();
+        con.setConnectTimeout(15000); con.setReadTimeout(120000);
+        java.io.File tmp = new java.io.File(cache.getPath() + ".part");
+        try (java.io.InputStream in = con.getInputStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(tmp)) {
+            byte[] b = new byte[16384]; int n;
+            while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        }
+        if (tmp.length() != expectedSize) {
+            long got = tmp.length(); tmp.delete();
+            throw new RuntimeException(filename + " inválido: esperado " + expectedSize + " bytes, obtido " + got);
+        }
+        java.nio.file.Files.move(tmp.toPath(), cache.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return cache;
+    }
+
+    void run() {
+        try { javax.swing.UIManager.setLookAndFeel(
+            javax.swing.UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) { }
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            try { new MainForm().setVisible(true); }
+            catch (Exception ex) { showError(ex); }
+        });
+    }
+
+    void showError(Throwable t) {
+        try { javax.swing.UIManager.setLookAndFeel(
+            javax.swing.UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) { }
+        Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                       && t.getCause() != null) ? t.getCause() : t;
+        c.printStackTrace();
+        javax.swing.JOptionPane.showMessageDialog(null, c.toString(),
+            "ter - erro", javax.swing.JOptionPane.ERROR_MESSAGE);
+    }
+	class Jna {
+		int POINTER_SIZE;
+		Class<?> C_Pointer, C_Memory, C_Native, C_NativeLibrary, C_Function;
+		java.lang.reflect.Constructor<?> CT_Memory;
+		java.lang.reflect.Method M_lib, M_func,
+			M_invokeInt, M_invokeLong, M_invokeVoid, M_invokePointer,
+			M_setInt, M_setShort, M_setLong, M_setPointer, M_setString,
+			M_getInt, M_getLong, M_getShort, M_getPointer,
+			M_lastError, M_clear;
+
+		void init(ClassLoader cl) throws Exception {
+			C_Pointer       = cl.loadClass("com.sun.jna.Pointer");
+			C_Memory        = cl.loadClass("com.sun.jna.Memory");
+			C_Native        = cl.loadClass("com.sun.jna.Native");
+			C_NativeLibrary = cl.loadClass("com.sun.jna.NativeLibrary");
+			C_Function      = cl.loadClass("com.sun.jna.Function");
+
+			POINTER_SIZE = C_Native.getField("POINTER_SIZE").getInt(null);
+
+			CT_Memory = C_Memory.getConstructor(long.class);
+
+			M_lib            = C_NativeLibrary.getMethod("getInstance", String.class);
+			M_func           = C_NativeLibrary.getMethod("getFunction",  String.class);
+			M_invokeInt      = C_Function.getMethod("invokeInt",     Object[].class);
+			M_invokeLong     = C_Function.getMethod("invokeLong",    Object[].class);
+			M_invokeVoid     = C_Function.getMethod("invokeVoid",    Object[].class);
+			M_invokePointer  = C_Function.getMethod("invokePointer", Object[].class);
+
+			M_setInt     = C_Pointer.getMethod("setInt",     long.class, int.class);
+			M_setShort   = C_Pointer.getMethod("setShort",   long.class, short.class);
+			M_setLong    = C_Pointer.getMethod("setLong",    long.class, long.class);
+			M_setPointer = C_Pointer.getMethod("setPointer", long.class, C_Pointer);
+			M_setString  = C_Pointer.getMethod("setString",  long.class, String.class);
+			M_getInt     = C_Pointer.getMethod("getInt",     long.class);
+			M_getLong    = C_Pointer.getMethod("getLong",    long.class);
+			M_getShort   = C_Pointer.getMethod("getShort",   long.class);
+			M_getPointer = C_Pointer.getMethod("getPointer", long.class);
+			M_clear      = C_Memory.getMethod("clear");
+
+			M_lastError = C_Native.getMethod("getLastError");
+		}
+
+		Object lib(String name) { return inv(M_lib, null, name); }
+		Object func(Object lib, String name) { return inv(M_func, lib, name); }
+
+		int    callInt (Object f, Object... args) { return (int)  inv(M_invokeInt,     f, (Object) args); }
+		long   callLong(Object f, Object... args) { return (long) inv(M_invokeLong,    f, (Object) args); }
+		void   callVoid(Object f, Object... args) {               inv(M_invokeVoid,    f, (Object) args); }
+		Object callPtr (Object f, Object... args) { return        inv(M_invokePointer, f, (Object) args); }
+
+		Object mem(long size) { Object m = ctor(CT_Memory, size); inv(M_clear, m); return m; }
+
+		void setInt    (Object p, long off, int v)    { inv(M_setInt,     p, off, v); }
+		void setShort  (Object p, long off, short v)  { inv(M_setShort,   p, off, v); }
+		void setLong   (Object p, long off, long v)   { inv(M_setLong,    p, off, v); }
+		void setPointer(Object p, long off, Object v) { inv(M_setPointer, p, off, v); }
+		void setString (Object p, long off, String s) { inv(M_setString,  p, off, s); }
+
+		int    getInt    (Object p, long off) { return (int)   inv(M_getInt,     p, off); }
+		long   getLong   (Object p, long off) { return (long)  inv(M_getLong,    p, off); }
+		short  getShort  (Object p, long off) { return (short) inv(M_getShort,   p, off); }
+		Object getPointer(Object p, long off) { return         inv(M_getPointer, p, off); }
+
+		int lastError() { return (int) inv(M_lastError, null); }
+
+		Object inv(java.lang.reflect.Method m, Object target, Object... args) {
+			try { return m.invoke(target, args); }
+			catch (java.lang.reflect.InvocationTargetException ite) {
+				Throwable c = ite.getCause();
+				throw (c instanceof RuntimeException) ? (RuntimeException) c : new RuntimeException(c);
+			} catch (Exception e) { throw new RuntimeException(e); }
+		}
+		Object ctor(java.lang.reflect.Constructor<?> c, Object... args) {
+			try { return c.newInstance(args); }
+			catch (java.lang.reflect.InvocationTargetException ite) {
+				Throwable cc = ite.getCause();
+				throw (cc instanceof RuntimeException) ? (RuntimeException) cc : new RuntimeException(cc);
+			} catch (Exception e) { throw new RuntimeException(e); }
+		}
+	}
+	class CellColor {
+		public final byte r, g, b;
+
+		public CellColor(int r, int g, int b) {
+			this.r = (byte) r; this.g = (byte) g; this.b = (byte) b;
+		}
+
+		public boolean same(CellColor o) {
+			return r == o.r && g == o.g && b == o.b;
+		}
+	}
+
+	class Cell {
+		public char ch;
+		public CellColor fg, bg;
+		public boolean bold;
+
+		public Cell() { ch = ' '; fg = new CellColor(0xCC, 0xCC, 0xCC); bg = new CellColor(0x19, 0x19, 0x19); }
+		public Cell(char ch, CellColor fg, CellColor bg, boolean bold) {
+			this.ch = ch; this.fg = fg; this.bg = bg; this.bold = bold;
+		}
+	}
+	interface PtyConnection {
+		void start(short cols, short rows, String shell, String workingDir);
+		void write(byte[] data);
+		void resize(short cols, short rows);
+		void setDataReceivedHandler(java.util.function.Consumer<byte[]> handler);
+		void setExitedHandler(Runnable handler);
+		void dispose();
+	}
+	class LinuxPty implements PtyConnection {
+		final long TIOCSWINSZ = 0x5414L;
+		final long TIOCSCTTY  = 0x540EL;
+		Object libc;
+		Object F_openpty, F_fork, F_setsid, F_dup2, F_close, F_read, F_write,
+					   F_ioctl, F_chdir, F_execvp, F_waitpid, F_kill, F__exit, F_setenv;
+
+		private int masterFd = -1;
+		private int childPid = -1;
+		private volatile boolean disposed;
+		private final java.util.concurrent.BlockingQueue<byte[]> writeQueue = new java.util.concurrent.LinkedBlockingQueue<>();
+		private java.util.function.Consumer<byte[]> dataReceived;
+		private Runnable exited;
+
+		LinuxPty() {
+			libc = jna.lib("c");
+			try { F_openpty = jna.func(libc, "openpty"); }
+			catch (Throwable t) {
+				Object libutil = jna.lib("util");
+				F_openpty = jna.func(libutil, "openpty");
+			}
+			F_fork    = jna.func(libc, "fork");
+			F_setsid  = jna.func(libc, "setsid");
+			F_dup2    = jna.func(libc, "dup2");
+			F_close   = jna.func(libc, "close");
+			F_read    = jna.func(libc, "read");
+			F_write   = jna.func(libc, "write");
+			F_ioctl   = jna.func(libc, "ioctl");
+			F_chdir   = jna.func(libc, "chdir");
+			F_execvp  = jna.func(libc, "execvp");
+			F_waitpid = jna.func(libc, "waitpid");
+			F_kill    = jna.func(libc, "kill");
+			F__exit   = jna.func(libc, "_exit");
+			F_setenv  = jna.func(libc, "setenv");
+		}
+
+		@Override public void setDataReceivedHandler(java.util.function.Consumer<byte[]> h) { dataReceived = h; }
+		@Override public void setExitedHandler(Runnable h) { exited = h; }
+
+		@Override
+		public void start(short cols, short rows, String shell, String workingDir) {
+			int[] masterRef = new int[1];
+			int[] slaveRef  = new int[1];
+			if (jna.callInt(F_openpty, masterRef, slaveRef, null, null, null) != 0)
+				throw new RuntimeException("openpty failed");
+			masterFd = masterRef[0];
+			int slaveFd = slaveRef[0];
+			Object ws = jna.mem(8);
+			jna.setShort(ws, 0, rows);
+			jna.setShort(ws, 2, cols);
+			jna.setShort(ws, 4, (short) 0);
+			jna.setShort(ws, 6, (short) 0);
+			jna.callInt(F_ioctl, slaveFd, TIOCSWINSZ, ws);
+
+			childPid = jna.callInt(F_fork);
+			if (childPid < 0) throw new RuntimeException("fork failed");
+
+			if (childPid == 0) {
+				jna.callInt(F_close, masterFd);
+				jna.callInt(F_setsid);
+				jna.callInt(F_ioctl, slaveFd, TIOCSCTTY, null);
+				jna.callInt(F_dup2, slaveFd, 0);
+				jna.callInt(F_dup2, slaveFd, 1);
+				jna.callInt(F_dup2, slaveFd, 2);
+				if (slaveFd > 2) jna.callInt(F_close, slaveFd);
+				jna.callInt(F_chdir, workingDir);
+				jna.callInt(F_setenv, "TERM", "xterm-256color", 1);
+				Object argv = jna.mem((long) jna.POINTER_SIZE * 2);
+				Object shellStr = jna.mem((long) shell.length() * 4 + 1);
+				jna.setString(shellStr, 0, shell);
+				jna.setPointer(argv, 0, shellStr);
+				jna.setPointer(argv, jna.POINTER_SIZE, null);
+				jna.callInt(F_execvp, shell, argv);
+				jna.callVoid(F__exit, 1);
+			}
+
+			jna.callInt(F_close, slaveFd);
+			Thread rt = new Thread(this::readLoop, "PTY-Read"); rt.setDaemon(true); rt.start();
+			Thread wt = new Thread(this::writeLoop, "PTY-Write"); wt.setDaemon(true); wt.start();
+			Thread pw = new Thread(() -> {
+				int[] status = new int[1];
+				jna.callInt(F_waitpid, childPid, status, 0);
+				if (!disposed && exited != null) exited.run();
+			}, "Process-Watch"); pw.setDaemon(true); pw.start();
+		}
+
+		private void readLoop() {
+			byte[] buf = new byte[4096];
+			while (!disposed) {
+				int n = jna.callInt(F_read, masterFd, buf, buf.length);
+				if (n <= 0) { if (!disposed && exited != null) exited.run(); break; }
+				byte[] chunk = new byte[n];
+				System.arraycopy(buf, 0, chunk, 0, n);
+				if (dataReceived != null) dataReceived.accept(chunk);
+			}
+		}
+
+		private void writeLoop() {
+			try {
+				while (!disposed) {
+					byte[] data = writeQueue.take();
+					if (disposed) break;
+					jna.callInt(F_write, masterFd, data, data.length);
+				}
+			} catch (InterruptedException e) { }
+		}
+
+		@Override public void write(byte[] data) {
+			if (!disposed) try { writeQueue.put(data); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+		}
+
+		@Override public void resize(short cols, short rows) {
+			if (masterFd >= 0) {
+				Object ws = jna.mem(8);
+				jna.setShort(ws, 0, rows);
+				jna.setShort(ws, 2, cols);
+				jna.setShort(ws, 4, (short) 0);
+				jna.setShort(ws, 6, (short) 0);
+				jna.callInt(F_ioctl, masterFd, TIOCSWINSZ, ws);
+			}
+		}
+
+		@Override public void dispose() {
+			if (disposed) return; disposed = true;
+			if (masterFd >= 0) { jna.callInt(F_close, masterFd); masterFd = -1; }
+			if (childPid > 0) { jna.callInt(F_kill, childPid, 9); childPid = -1; }
+		}
+	}
+	class TerminalSession {
+		private final PtyConnection pty = new LinuxPty();
+		private java.util.function.Consumer<byte[]> dataReceived;
+		private Runnable exited;
+
+		TerminalSession() {
+			pty.setDataReceivedHandler(d -> { if (dataReceived != null) dataReceived.accept(d); });
+			pty.setExitedHandler(() -> { if (exited != null) exited.run(); });
+		}
+
+		void setDataReceivedHandler(java.util.function.Consumer<byte[]> h) { dataReceived = h; }
+		void setExitedHandler(Runnable h) { exited = h; }
+		void start(short cols, short rows) {
+			String shell = System.getenv("SHELL");
+			if (shell == null) shell = "/bin/bash";
+			pty.start(cols, rows, shell, System.getProperty("user.home"));
+		}
+		void write(byte[] data) { pty.write(data); }
+		void write(String text) { pty.write(text.getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+		void resize(short cols, short rows) { pty.resize(cols, rows); }
+		void dispose() { pty.dispose(); }
+	}
+	class TerminalBuffer {
+		private final int MAX_HISTORY = 5000;
+
+		private final CellColor[] PAL = {
+			new CellColor(0x00,0x00,0x00), new CellColor(0xCC,0x55,0x55),
+			new CellColor(0x55,0xCC,0x55), new CellColor(0xCD,0xCD,0x55),
+			new CellColor(0x55,0x55,0xCC), new CellColor(0xCC,0x55,0xCC),
+			new CellColor(0x55,0xCC,0xCC), new CellColor(0xCC,0xCC,0xCC),
+			new CellColor(0x55,0x55,0x55), new CellColor(0xFF,0x55,0x55),
+			new CellColor(0x55,0xFF,0x55), new CellColor(0xFF,0xFF,0x55),
+			new CellColor(0x55,0x55,0xFF), new CellColor(0xFF,0x55,0xFF),
+			new CellColor(0x55,0xFF,0xFF), new CellColor(0xFF,0xFF,0xFF),
+		};
+
+		int cols, rows;
+		int cursorRow, cursorCol;
+		boolean cursorVisible = true, appCursorKeys;
+
+		private Cell[][] grid;
+		private int scrollTop, scrollBottom;
+		private final java.util.List<Cell[]> history = new java.util.ArrayList<>();
+
+		private CellColor fg = new CellColor(0xCC, 0xCC, 0xCC), bg = new CellColor(0x19, 0x19, 0x19);
+		private boolean bold, reverse;
+		private int savedRow, savedCol;
+		private Cell[][] altGrid; private int altRow, altCol;
+
+		private final java.nio.charset.CharsetDecoder utf8 = java.nio.charset.StandardCharsets.UTF_8.newDecoder();
+
+		private enum PS { Ground, Escape, EscInter, CsiParam, OscStr, DcsStr }
+		private PS state = PS.Ground;
+		private final java.util.List<Integer> csiP = new java.util.ArrayList<>();
+		private int curP; private boolean hasP, csiQ;
+		private final StringBuilder oscBuf = new StringBuilder();
+		private final java.util.Queue<byte[]> responses = new java.util.LinkedList<>();
+		private String pendingTitle;
+		Runnable changed;
+		private boolean screenWasCleared;
+		private int skipLF;
+
+		TerminalBuffer(int cols, int rows) {
+			this.cols = cols; this.rows = rows;
+			grid = new Cell[rows][cols]; scrollTop = 0; scrollBottom = rows - 1; clearAll();
+		}
+
+		Cell getCell(int r, int c) { return grid[r][c]; }
+		Cell getHistoryCell(int hr, int c) {
+			if (hr >= 0 && hr < history.size() && c >= 0 && c < cols) return history.get(hr)[c];
+			return new Cell();
+		}
+		int getHistoryCount() { return history.size(); }
+		boolean getScreenWasCleared() { return screenWasCleared; }
+		void setScreenWasCleared(boolean v) { screenWasCleared = v; }
+
+		String consumeTitle() { String t = pendingTitle; pendingTitle = null; return t; }
+		byte[] dequeueResponse() { return responses.poll(); }
+
+		void feed(byte[] data, java.util.function.Consumer<byte[]> send) {
+			java.nio.ByteBuffer bb = java.nio.ByteBuffer.wrap(data);
+			java.nio.CharBuffer cb = java.nio.CharBuffer.allocate(data.length + 1);
+			utf8.decode(bb, cb, false); cb.flip();
+			while (cb.hasRemaining()) processChar(cb.get());
+			if (changed != null) changed.run();
+			byte[] r; while ((r = dequeueResponse()) != null) if (send != null) send.accept(r);
+		}
+
+		void resize(int nc, int nr) {
+			Cell[][] ng = new Cell[nr][nc];
+			for (int r = 0; r < nr; r++)
+				for (int c = 0; c < nc; c++)
+					ng[r][c] = (r < rows && c < cols) ? grid[r][c] : blank();
+			grid = ng; cols = nc; rows = nr;
+			scrollTop = 0; scrollBottom = rows - 1;
+			cursorRow = Math.min(cursorRow, rows - 1); cursorCol = Math.min(cursorCol, cols - 1);
+		}
+
+		private void processChar(char c) {
+			switch (state) {
+				case Ground:
+					if (c == '\u001B') state = PS.Escape;
+					else if (c == '\r') cursorCol = 0;
+					else if (c == '\n') lineFeed();
+					else if (c == '\t') cursorCol = Math.min(((cursorCol / 8) + 1) * 8, cols - 1);
+					else if (c == '\b') { if (cursorCol > 0) cursorCol--; }
+					else if (c == '\u0007') { }
+					else if (c >= ' ') putChar(c);
+					break;
+				case Escape:
+					if (c == '[') enterCsi();
+					else if (c == ']') { oscBuf.setLength(0); state = PS.OscStr; }
+					else if (c == 'P' || c == 'X' || c == '^' || c == '_') state = PS.DcsStr;
+					else if (c == '(' || c == ')' || c == '*' || c == '+') state = PS.EscInter;
+					else if (c == 'M') { reverseIndex(); state = PS.Ground; }
+					else if (c == '7') { savedRow = cursorRow; savedCol = cursorCol; state = PS.Ground; }
+					else if (c == '8') { cursorRow = savedRow; cursorCol = savedCol; state = PS.Ground; }
+					else state = PS.Ground;
+					break;
+				case EscInter: state = PS.Ground; break;
+				case CsiParam:
+					if (c == '?') csiQ = true;
+					else if (c == '>' || c == '=' || c == '<') { /* private CSI marker — swallow, body terminates at final byte */ }
+					else if (c >= '0' && c <= '9') { curP = curP * 10 + (c - '0'); hasP = true; }
+					else if (c == ';') { csiP.add(hasP ? curP : 0); curP = 0; hasP = false; }
+					else if (c >= 0x20 && c <= 0x2F) { }
+					else if (c >= '@' && c <= '~') { if (hasP) csiP.add(curP); execCsi(c); state = PS.Ground; }
+					else state = PS.Ground;
+					break;
+				case OscStr:
+					if (c == '\u0007' || c == '\u009C') { execOsc(); state = PS.Ground; }
+					else if (c == '\u001B') { execOsc(); state = PS.Escape; }
+					else oscBuf.append(c);
+					break;
+				case DcsStr:
+					if (c == '\u0007' || c == '\u009C') state = PS.Ground;
+					else if (c == '\u001B') state = PS.Escape;
+					break;
+			}
+		}
+
+		private void enterCsi() { csiP.clear(); curP = 0; hasP = false; csiQ = false; state = PS.CsiParam; }
+
+		private void putChar(char c) {
+			if (cursorCol >= cols) { cursorCol = 0; lineFeed(); }
+			CellColor f = reverse ? bg : fg, b = reverse ? fg : bg;
+			grid[cursorRow][cursorCol] = new Cell(c, f, b, bold);
+			cursorCol++;
+		}
+
+		private void lineFeed() {
+			if (skipLF > 0) { skipLF--; return; }
+			if (cursorRow == scrollBottom) scrollUp();
+			else if (cursorRow < rows - 1) cursorRow++;
+		}
+
+		private void reverseIndex() {
+			if (cursorRow == scrollTop) scrollDown();
+			else if (cursorRow > 0) cursorRow--;
+		}
+
+		private void scrollUp() {
+			if (scrollTop == 0) {
+				Cell[] row = new Cell[cols];
+				for (int c = 0; c < cols; c++) row[c] = grid[0][c];
+				history.add(row);
+				if (history.size() > MAX_HISTORY) history.remove(0);
+			}
+			for (int r = scrollTop; r < scrollBottom; r++)
+				for (int c = 0; c < cols; c++) grid[r][c] = grid[r + 1][c];
+			clearRow(scrollBottom);
+		}
+
+		private void scrollDown() {
+			for (int r = scrollBottom; r > scrollTop; r--)
+				for (int c = 0; c < cols; c++) grid[r][c] = grid[r - 1][c];
+			clearRow(scrollTop);
+		}
+
+		private int P(int i, int d) {
+			if (i < csiP.size()) { int v = csiP.get(i); return (v == 0 && d != 0) ? d : v; }
+			return d;
+		}
+
+		private void execCsi(char f) {
+			switch (f) {
+				case 'A': cursorRow = Math.max(scrollTop, cursorRow - P(0,1)); break;
+				case 'B': cursorRow = Math.min(scrollBottom, cursorRow + P(0,1)); break;
+				case 'C': cursorCol = Math.min(cols-1, cursorCol + P(0,1)); break;
+				case 'D': cursorCol = Math.max(0, cursorCol - P(0,1)); break;
+				case 'H': case 'f':
+					cursorRow = clamp(P(0,1)-1, 0, rows-1);
+					cursorCol = clamp(P(1,1)-1, 0, cols-1); break;
+				case 'G': cursorCol = clamp(P(0,1)-1, 0, cols-1); break;
+				case 'd': cursorRow = clamp(P(0,1)-1, 0, rows-1); break;
+				case 'J': eraseDisplay(P(0,0)); break;
+				case 'K': eraseLine(P(0,0)); break;
+				case 'L': insertLines(P(0,1)); break;
+				case 'M': deleteLines(P(0,1)); break;
+				case '@': insertChars(P(0,1)); break;
+				case 'P': deleteChars(P(0,1)); break;
+				case 'X': eraseChars(P(0,1)); break;
+				case 'S': for (int i=0;i<P(0,1);i++) scrollUp(); break;
+				case 'T': for (int i=0;i<P(0,1);i++) scrollDown(); break;
+				case 'r':
+					scrollTop = clamp(P(0,1)-1, 0, rows-1);
+					scrollBottom = clamp(P(1,rows)-1, 0, rows-1);
+					cursorRow = scrollTop; cursorCol = 0; break;
+				case 'm': execSgr(); break;
+				case 'h': if (csiQ) decSet(P(0,0)); break;
+				case 'l': if (csiQ) decReset(P(0,0)); break;
+				case 'n':
+					if (P(0,0)==6) responses.add(("\u001b["+(cursorRow+1)+";"+(cursorCol+1)+"R").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+					break;
+				case 'c': responses.add("\u001b[?1;2c".getBytes(java.nio.charset.StandardCharsets.UTF_8)); break;
+			}
+		}
+
+		private void execSgr() {
+			if (csiP.isEmpty()) { resetAttr(); return; }
+			for (int i = 0; i < csiP.size(); i++) {
+				int p = csiP.get(i);
+				if (p == 0) resetAttr();
+				else if (p == 1) bold = true;
+				else if (p == 7) reverse = true;
+				else if (p == 22) bold = false;
+				else if (p == 27) reverse = false;
+				else if (p >= 30 && p <= 37) fg = PAL[p-30];
+				else if (p >= 90 && p <= 97) fg = PAL[p-90+8];
+				else if (p == 39) fg = new CellColor(0xCC, 0xCC, 0xCC);
+				else if (p >= 40 && p <= 47) bg = PAL[p-40];
+				else if (p >= 100 && p <= 107) bg = PAL[p-100+8];
+				else if (p == 49) bg = new CellColor(0x19, 0x19, 0x19);
+				else if (p == 38) {
+					if (nP(i,1)==5 && i+2<csiP.size()) { fg = c256(csiP.get(i+2)); i+=2; }
+					else if (nP(i,1)==2 && i+4<csiP.size()) { fg = new CellColor(csiP.get(i+2),csiP.get(i+3),csiP.get(i+4)); i+=4; }
+				} else if (p == 48) {
+					if (nP(i,1)==5 && i+2<csiP.size()) { bg = c256(csiP.get(i+2)); i+=2; }
+					else if (nP(i,1)==2 && i+4<csiP.size()) { bg = new CellColor(csiP.get(i+2),csiP.get(i+3),csiP.get(i+4)); i+=4; }
+				}
+			}
+		}
+
+		private int nP(int i, int off) { return (i+off)<csiP.size() ? csiP.get(i+off) : -1; }
+		private void resetAttr() { fg = new CellColor(0xCC, 0xCC, 0xCC); bg = new CellColor(0x19, 0x19, 0x19); bold = false; reverse = false; }
+
+		private void decSet(int m) {
+			switch (m) {
+				case 1: appCursorKeys = true; break;
+				case 25: cursorVisible = true; break;
+				case 1049:
+					altGrid = new Cell[rows][cols];
+					for (int r=0;r<rows;r++) for (int c=0;c<cols;c++) altGrid[r][c] = grid[r][c];
+					altRow = cursorRow; altCol = cursorCol; clearAll(); break;
+			}
+		}
+
+		private void decReset(int m) {
+			switch (m) {
+				case 1: appCursorKeys = false; break;
+				case 25: cursorVisible = false; break;
+				case 1049: if (altGrid != null) { grid = altGrid; altGrid = null; cursorRow = altRow; cursorCol = altCol; } break;
+			}
+		}
+
+		private void execOsc() {
+			String s = oscBuf.toString(); int i = s.indexOf(';');
+			if (i >= 0) { String n = s.substring(0, i); if ("0".equals(n)||"2".equals(n)) pendingTitle = s.substring(i+1); }
+		}
+
+		private void eraseDisplay(int m) {
+			switch (m) {
+				case 0: for (int c=cursorCol;c<cols;c++) grid[cursorRow][c]=blank();
+						for (int r=cursorRow+1;r<rows;r++) clearRow(r); break;
+				case 1: for (int r=0;r<cursorRow;r++) clearRow(r);
+						for (int c=0;c<=cursorCol&&c<cols;c++) grid[cursorRow][c]=blank(); break;
+				case 2: case 3: for (int r=0;r<rows;r++) clearRow(r); history.clear(); screenWasCleared=true; break;
+			}
+		}
+
+		private void eraseLine(int m) {
+			int s = m==0 ? cursorCol : 0, e = m==1 ? Math.min(cursorCol+1,cols) : cols;
+			for (int c=s;c<e;c++) grid[cursorRow][c]=blank();
+		}
+
+		private void eraseChars(int n) { for (int i=0;i<n&&cursorCol+i<cols;i++) grid[cursorRow][cursorCol+i]=blank(); }
+
+		private void insertLines(int n) {
+			for (int i=0;i<n;i++) {
+				for (int r=scrollBottom;r>cursorRow;r--) for (int c=0;c<cols;c++) grid[r][c]=grid[r-1][c];
+				clearRow(cursorRow);
+			}
+		}
+
+		private void deleteLines(int n) {
+			for (int i=0;i<n;i++) {
+				for (int r=cursorRow;r<scrollBottom;r++) for (int c=0;c<cols;c++) grid[r][c]=grid[r+1][c];
+				clearRow(scrollBottom);
+			}
+		}
+
+		private void insertChars(int n) {
+			for (int c=cols-1;c>=cursorCol+n;c--) grid[cursorRow][c]=grid[cursorRow][c-n];
+			for (int c=cursorCol;c<Math.min(cursorCol+n,cols);c++) grid[cursorRow][c]=blank();
+		}
+
+		private void deleteChars(int n) {
+			for (int c=cursorCol;c+n<cols;c++) grid[cursorRow][c]=grid[cursorRow][c+n];
+			for (int c=Math.max(0,cols-n);c<cols;c++) grid[cursorRow][c]=blank();
+		}
+
+		private Cell blank() { return new Cell(' ', new CellColor(0xCC, 0xCC, 0xCC), new CellColor(0x19, 0x19, 0x19), false); }
+		private void clearRow(int r) { for (int c=0;c<cols;c++) grid[r][c]=blank(); }
+		private void clearAll() { for (int r=0;r<rows;r++) clearRow(r); }
+
+		private int clamp(int v, int lo, int hi) { return Math.max(lo, Math.min(hi, v)); }
+
+		private CellColor c256(int i) {
+			if (i<16) return i<PAL.length ? PAL[i] : new CellColor(0xCC, 0xCC, 0xCC);
+			if (i<232) { i-=16; int r=i/36,g=(i/6)%6,b=i%6;
+				return new CellColor(r>0?r*40+55:0, g>0?g*40+55:0, b>0?b*40+55:0); }
+			int v=(i-232)*10+8; return new CellColor(v,v,v);
+		}
+	}
+	class TerminalPanel extends javax.swing.JPanel implements java.awt.event.KeyListener, java.awt.event.MouseListener, java.awt.event.MouseMotionListener, java.awt.event.MouseWheelListener {
+
+		private TerminalBuffer buf;
+		private TerminalSession sess;
+		private java.awt.Font font, boldFont;
+		private float cellW = 8, cellH = 16;
+		private int fontAsc = 13;
+		private javax.swing.Timer blink;
+		private boolean cursorOn = true;
+
+		private int selSR = -1, selSC, selER = -1, selEC;
+		private boolean selecting;
+
+		private int scrollBack;
+
+		private final java.util.Map<Integer, java.awt.Color> cc = new java.util.HashMap<>();
+
+		TerminalPanel() {
+			setBackground(new java.awt.Color(0x19, 0x19, 0x19)); setFocusable(true);
+			setFocusTraversalKeysEnabled(false); setDoubleBuffered(true);
+			addKeyListener(this); addMouseListener(this); addMouseMotionListener(this);
+			addMouseWheelListener(this);
+		}
+
+		private java.awt.Font[] loadFontsFromFiles(java.io.File regFile, java.io.File boldFile) {
+			java.awt.Font reg = null, bold = null;
+			try { if (regFile  != null) reg  = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, regFile); }
+			catch (Exception e) { e.printStackTrace(); }
+			try { if (boldFile != null) bold = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, boldFile); }
+			catch (Exception e) { e.printStackTrace(); }
+			return new java.awt.Font[]{ reg, bold };
+		}
+
+		void initTerminal() {
+			if (getWidth() == 0 || getHeight() == 0) {
+				javax.swing.SwingUtilities.invokeLater(this::initTerminal);
+				return;
+			}
+			java.awt.Font[] embedded = loadFontsFromFiles(fontRegFile, fontBoldFile);
+			java.awt.Font base = embedded != null ? embedded[0] : null;
+			java.awt.Font baseBold = embedded != null ? embedded[1] : null;
+
+
+			if (base != null) {
+				font = base.deriveFont(java.awt.Font.PLAIN, 14f);
+				boldFont = (baseBold != null ? baseBold : base).deriveFont(java.awt.Font.BOLD, 14f);
+			} else {
+				font = new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 14);
+				boldFont = new java.awt.Font("Monospaced", java.awt.Font.BOLD, 14);
+			}
+
+			java.awt.image.BufferedImage bi = new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+			java.awt.Graphics2D g2 = bi.createGraphics();
+			g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+			g2.setRenderingHint(java.awt.RenderingHints.KEY_FRACTIONALMETRICS, java.awt.RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+			g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_LCD_CONTRAST, Integer.valueOf(140));
+			g2.setRenderingHint(java.awt.RenderingHints.KEY_STROKE_CONTROL, java.awt.RenderingHints.VALUE_STROKE_PURE);
+			
+			g2.setFont(font); java.awt.FontMetrics fm = g2.getFontMetrics();
+			cellW = (float) font.getStringBounds("M", g2.getFontRenderContext()).getWidth();
+			cellH = fm.getHeight();
+			fontAsc = fm.getAscent();
+			g2.dispose();
+
+			short cols = (short) Math.max(1, (int) (getWidth() / cellW));
+			short rows = (short) Math.max(1, (int) (getHeight() / cellH));
+			buf = new TerminalBuffer(cols, rows);
+			sess = new TerminalSession();
+
+			sess.setDataReceivedHandler(data -> {
+				try {
+					javax.swing.SwingUtilities.invokeLater(() -> {
+						buf.feed(data, resp -> sess.write(resp));
+						scrollBack = 0;
+						repaint();
+					});
+				} catch (Exception ex) { }
+			});
+
+			sess.setExitedHandler(() -> {
+				try { javax.swing.SwingUtilities.invokeLater(() -> {
+					cleanup();
+					java.awt.Window w = javax.swing.SwingUtilities.getWindowAncestor(this);
+					if (w != null) w.dispose();
+					System.exit(0);
+				}); } catch (Exception e) { }
+			});
+
+			sess.start(cols, rows);
+
+			blink = new javax.swing.Timer(530, e -> { cursorOn = !cursorOn; repaint(); });
+			blink.start();
+
+			requestFocusInWindow();
+			repaint();
+		}
+
+		private java.awt.Color color(byte r, byte g, byte b) {
+			int k = ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | (b & 0xFF);
+			return cc.computeIfAbsent(k, x -> new java.awt.Color((x >> 16) & 0xFF, (x >> 8) & 0xFF, x & 0xFF));
+		}
+
+		private boolean hasSelection() { return selSR >= 0 && selER >= 0 && (selSR != selER || selSC != selEC); }
+		private int[] orderedSel() {
+			int sr = selSR, sc = selSC, er = selER, ec = selEC;
+			if (sr > er || (sr == er && sc > ec)) { int t = sr; sr = er; er = t; t = sc; sc = ec; ec = t; }
+			return new int[]{sr, sc, er, ec};
+		}
+		private void clearSel() { selSR = selER = -1; selecting = false; }
+		private boolean isSelected(int row, int col) {
+			if (!hasSelection() || buf == null) return false;
+			int[] s = orderedSel();
+			if (row < s[0] || row > s[2]) return false;
+			if (row == s[0] && row == s[2]) return col >= s[1] && col <= s[3];
+			if (row == s[0]) return col >= s[1];
+			if (row == s[2]) return col <= s[3];
+			return true;
+		}
+		private String getSelectedText() {
+			if (!hasSelection() || buf == null) return "";
+			int[] s = orderedSel();
+			java.util.List<String> lines = new java.util.ArrayList<>();
+			for (int r = s[0]; r <= s[2]; r++) {
+				int c0 = r == s[0] ? s[1] : 0, c1 = r == s[2] ? s[3] : buf.cols - 1;
+				StringBuilder sb = new StringBuilder();
+				for (int c = c0; c <= c1; c++) { char ch = getDisplayCell(r, c).ch; sb.append(ch == 0 ? ' ' : ch); }
+				lines.add(sb.toString().stripTrailing());
+			}
+			return String.join(System.lineSeparator(), lines);
+		}
+
+		private Cell getDisplayCell(int displayRow, int col) {
+			int vRow = buf.getHistoryCount() - scrollBack + displayRow;
+			if (vRow < 0 || col < 0 || col >= buf.cols) return new Cell();
+			if (vRow < buf.getHistoryCount())
+				return buf.getHistoryCell(vRow, col);
+			int bufRow = vRow - buf.getHistoryCount();
+			return bufRow < buf.rows ? buf.getCell(bufRow, col) : new Cell();
+		}
+
+		@Override
+		protected void paintComponent(java.awt.Graphics g) {
+			java.awt.Graphics2D g2 = (java.awt.Graphics2D) g;
+			g2.setColor(new java.awt.Color(0x19, 0x19, 0x19));
+			g2.fillRect(0, 0, getWidth(), getHeight());
+			if (buf == null || font == null) return;
+			g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_LCD_HRGB);
+			g2.setRenderingHint(java.awt.RenderingHints.KEY_FRACTIONALMETRICS, java.awt.RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+			g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_LCD_CONTRAST, Integer.valueOf(140));
+			g2.setRenderingHint(java.awt.RenderingHints.KEY_STROKE_CONTROL, java.awt.RenderingHints.VALUE_STROKE_PURE);
+			int rows = buf.rows, cols = buf.cols;
+			char[] oneChar = new char[1];
+			for (int r = 0; r < rows; r++) {
+				float y = r * cellH;
+				if (y > getHeight()) break;
+				for (int c = 0; c < cols; c++) {
+					Cell cell = getDisplayCell(r, c);
+					boolean sel = isSelected(r, c);
+					CellColor bgc = sel ? new CellColor(0xFF, 0xFF, 0xFF) : cell.bg;
+					float x = c * cellW;
+					if ((bgc.r & 0xFF) != 0 || (bgc.g & 0xFF) != 0 || (bgc.b & 0xFF) != 0) {
+						g2.setColor(color(bgc.r, bgc.g, bgc.b));
+						g2.fillRect((int) x, (int) y, (int) Math.ceil(cellW), (int) cellH);
+					}
+					char ch = cell.ch;
+					if (ch == 0 || ch == ' ') continue;
+					CellColor fgc = sel ? new CellColor(0, 0, 0) : cell.fg;
+					g2.setFont(cell.bold ? boldFont : font);
+					g2.setColor(color(fgc.r, fgc.g, fgc.b));
+					oneChar[0] = ch;
+					g2.drawChars(oneChar, 0, 1, (int) x, (int) (y + fontAsc));
+				}
+			}
+
+			if (buf.cursorVisible && cursorOn && scrollBack == 0) {
+				if (buf.cursorRow < rows && buf.cursorCol < cols) {
+					g2.setColor(java.awt.Color.WHITE);
+					g2.fillRect((int) (buf.cursorCol * cellW), (int) (buf.cursorRow * cellH), 2, (int) cellH);
+				}
+			}
+		}
+
+		@Override public void mousePressed(java.awt.event.MouseEvent e) {
+			if (javax.swing.SwingUtilities.isLeftMouseButton(e)) {
+				int r = Math.max(0, Math.min(buf == null ? 0 : buf.rows - 1, (int) (e.getY() / cellH)));
+				int c = Math.max(0, Math.min(buf == null ? 0 : buf.cols - 1, (int) (e.getX() / cellW)));
+				selSR = selER = r; selSC = selEC = c; selecting = true; repaint();
+			} else if (javax.swing.SwingUtilities.isRightMouseButton(e)) {
+				scrollBack = 0;
+				String t = clipGet(); if (t != null && sess != null) sess.write(t);
+				repaint();
+			}
+			requestFocusInWindow();
+		}
+		@Override public void mouseDragged(java.awt.event.MouseEvent e) {
+			if (selecting && buf != null) {
+				selER = Math.max(0, Math.min(buf.rows - 1, (int) (e.getY() / cellH)));
+				selEC = Math.max(0, Math.min(buf.cols - 1, (int) (e.getX() / cellW)));
+				repaint();
+			}
+		}
+		@Override public void mouseReleased(java.awt.event.MouseEvent e) { if (selecting) selecting = false; }
+		@Override public void mouseClicked(java.awt.event.MouseEvent e) {}
+		@Override public void mouseEntered(java.awt.event.MouseEvent e) {}
+		@Override public void mouseExited(java.awt.event.MouseEvent e) {}
+		@Override public void mouseMoved(java.awt.event.MouseEvent e) {}
+		@Override public void mouseWheelMoved(java.awt.event.MouseWheelEvent e) {
+			if (buf == null) return;
+			int lines = e.getWheelRotation() < 0 ? 3 : -3;
+			scrollBack = Math.max(0, Math.min(buf.getHistoryCount(), scrollBack + lines));
+			repaint();
+		}
+
+		@Override
+		public void keyPressed(java.awt.event.KeyEvent e) {
+			if (sess == null) return;
+			boolean ctrl = e.isControlDown(), shift = e.isShiftDown();
+			int kc = e.getKeyCode();
+
+			if (ctrl && kc == java.awt.event.KeyEvent.VK_C) {
+				if (hasSelection()) {
+					String t = getSelectedText(); if (t.length() > 0) clipSet(t); clearSel(); repaint();
+				} else {
+					sess.write(new byte[]{(byte) 0x03});
+					repaint();
+				}
+				e.consume(); cursorOn = true; return;
+			}
+			if (ctrl && kc == java.awt.event.KeyEvent.VK_V) {
+				scrollBack = 0;
+				String t = clipGet();
+				if (t != null) { sess.write(t); repaint(); }
+				e.consume(); cursorOn = true; return;
+			}
+			if (hasSelection() && kc != java.awt.event.KeyEvent.VK_CONTROL && kc != java.awt.event.KeyEvent.VK_SHIFT) { clearSel(); repaint(); }
+			if (ctrl && kc >= java.awt.event.KeyEvent.VK_A && kc <= java.awt.event.KeyEvent.VK_Z) {
+				sess.write(new byte[]{(byte) (kc - java.awt.event.KeyEvent.VK_A + 1)});
+				e.consume(); cursorOn = true; return;
+			}
+
+			String arrow = (buf != null && buf.appCursorKeys) ? "\u001bO" : "\u001b[";
+			String seq = null;
+			switch (kc) {
+				case java.awt.event.KeyEvent.VK_ENTER:
+					sess.write("\r");
+					e.consume(); cursorOn = true; return;
+				case java.awt.event.KeyEvent.VK_BACK_SPACE:
+					sess.write("\u007f");
+					e.consume(); cursorOn = true; return;
+				case java.awt.event.KeyEvent.VK_ESCAPE:
+					sess.write("\u001b");
+					e.consume(); cursorOn = true; return;
+				case java.awt.event.KeyEvent.VK_TAB:       seq = shift ? "\u001b[Z" : "\t"; break;
+				case java.awt.event.KeyEvent.VK_UP:    seq = arrow + "A"; break;
+				case java.awt.event.KeyEvent.VK_DOWN:  seq = arrow + "B"; break;
+				case java.awt.event.KeyEvent.VK_RIGHT: seq = arrow + "C"; break;
+				case java.awt.event.KeyEvent.VK_LEFT:  seq = arrow + "D"; break;
+				case java.awt.event.KeyEvent.VK_HOME:  seq = "\u001b[H"; break;
+				case java.awt.event.KeyEvent.VK_END:   seq = "\u001b[F"; break;
+				case java.awt.event.KeyEvent.VK_INSERT:    seq = "\u001b[2~"; break;
+				case java.awt.event.KeyEvent.VK_DELETE:    seq = "\u001b[3~"; break;
+				case java.awt.event.KeyEvent.VK_PAGE_UP:   seq = "\u001b[5~"; break;
+				case java.awt.event.KeyEvent.VK_PAGE_DOWN: seq = "\u001b[6~"; break;
+				case java.awt.event.KeyEvent.VK_F1:  seq = "\u001bOP"; break;
+				case java.awt.event.KeyEvent.VK_F2:  seq = "\u001bOQ"; break;
+				case java.awt.event.KeyEvent.VK_F3:  seq = "\u001bOR"; break;
+				case java.awt.event.KeyEvent.VK_F4:  seq = "\u001bOS"; break;
+				case java.awt.event.KeyEvent.VK_F5:  seq = "\u001b[15~"; break;
+				case java.awt.event.KeyEvent.VK_F6:  seq = "\u001b[17~"; break;
+				case java.awt.event.KeyEvent.VK_F7:  seq = "\u001b[18~"; break;
+				case java.awt.event.KeyEvent.VK_F8:  seq = "\u001b[19~"; break;
+				case java.awt.event.KeyEvent.VK_F9:  seq = "\u001b[20~"; break;
+				case java.awt.event.KeyEvent.VK_F10: seq = "\u001b[21~"; break;
+				case java.awt.event.KeyEvent.VK_F11: seq = "\u001b[23~"; break;
+				case java.awt.event.KeyEvent.VK_F12: seq = "\u001b[24~"; break;
+			}
+			if (seq != null) { sess.write(seq); e.consume(); cursorOn = true; }
+		}
+
+		@Override
+		public void keyTyped(java.awt.event.KeyEvent e) {
+			if (buf == null || sess == null) return;
+			char ch = e.getKeyChar();
+			if (Character.isISOControl(ch)) return;
+			sess.write(String.valueOf(ch));
+			cursorOn = true; e.consume();
+		}
+
+		@Override public void keyReleased(java.awt.event.KeyEvent e) {}
+
+		@Override public void doLayout() {
+			super.doLayout();
+			if (buf == null || sess == null || getWidth() == 0 || getHeight() == 0) return;
+			short cols = (short) Math.max(1, (int) (getWidth() / cellW));
+			short rows = (short) Math.max(1, (int) (getHeight() / cellH));
+			if (cols != buf.cols || rows != buf.rows) { buf.resize(cols, rows); sess.resize(cols, rows); repaint(); }
+		}
+
+		private void clipSet(String t) { try { java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new java.awt.datatransfer.StringSelection(t), null); } catch (Exception x) {} }
+		private String clipGet() { try { java.awt.datatransfer.Clipboard c = java.awt.Toolkit.getDefaultToolkit().getSystemClipboard(); if (c.isDataFlavorAvailable(java.awt.datatransfer.DataFlavor.stringFlavor)) return (String) c.getData(java.awt.datatransfer.DataFlavor.stringFlavor); } catch (Exception x) {} return null; }
+
+		void cleanup() {
+			if (blink != null) blink.stop();
+			if (sess != null) sess.dispose();
+		}
+	}
+	class MainForm extends javax.swing.JFrame {
+		private final String PNG_BASE64 =
+			"iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAYUlEQVR4nO3UwQ0AIAgDQCZh/1Hc"
+		  + "ShMTv4pRKJo++r9AQVS1IiMEEEBAWoAU6YFOIAKxXIE3wtQBT4S5hF6IrSvwQLwxAWgHoFcA/QMp"
+		  + "PmFEjgBjSrP8DYCvgAACCCDgRho3P3V8BMTTRgAAAABJRU5ErkJggg==";
+
+		private final TerminalPanel panel;
+
+		MainForm() {
+			setTitle("ter"); setBackground(new java.awt.Color(0x19, 0x19, 0x19));
+			setSize(1024, 600); setMinimumSize(new java.awt.Dimension(400, 200));
+			setLocationRelativeTo(null); setDefaultCloseOperation(javax.swing.JFrame.EXIT_ON_CLOSE);
+
+			panel = new TerminalPanel();
+			getContentPane().setBackground(new java.awt.Color(0x19, 0x19, 0x19));
+			getContentPane().setLayout(new java.awt.BorderLayout());
+			getContentPane().add(panel, java.awt.BorderLayout.CENTER);
+
+			try {
+				byte[] png = java.util.Base64.getDecoder().decode(PNG_BASE64);
+				setIconImage(new javax.swing.ImageIcon(png).getImage());
+			} catch (Exception e) { }
+
+			addWindowListener(new java.awt.event.WindowAdapter() {
+				@Override public void windowOpened(java.awt.event.WindowEvent e) {
+					javax.swing.SwingUtilities.invokeLater(() -> {
+						try { panel.initTerminal(); } catch (Exception ex) { ex.printStackTrace(); }
+					});
+				}
+				@Override public void windowClosing(java.awt.event.WindowEvent e) { panel.cleanup(); }
+			});
+		}
+	}
+}
+
 @SuppressWarnings({"unchecked", "deprecation"})
 class Tests extends Util{
     public Tests(String [] args, boolean flag_test) throws Exception{
@@ -24358,7 +26506,7 @@ class PlaylistServer extends Util{
 }
 
 @SuppressWarnings({"unchecked", "deprecation"})
-class yTerminal extends JFrame {
+class terminal_old extends JFrame {
     @SuppressWarnings({"unchecked", "deprecation"})
     class UtilAux extends Util{}
     private BufferedImage image;
@@ -24391,7 +26539,7 @@ class yTerminal extends JFrame {
             "zqFA5GDuGRUGPLqS+E5WuNCsjkcrg/nXRR2q/SsOC4CBegVegUYH5VpxagZY8Bce+KkwncZeKm0/NzWSy7e+6rt1IP4eT3NZ0kjfSlqOKFLD1pI1MjjHIqvJNz0qxbzbaRo9jYt5Ft0Ax1pt1eblUZrNmuunNQ+YzZ5zipM+U17eXoc81t2rKqg55Nc5Yvu69a1Vm2r1oM5LoabXRGRnINM8/wCUg1RE/r0oml/dkryadyUi9BcbS2RzUktyBGwB4rGjuGZgScVGt024oTkZqepVi9dSEwisyS78mRGJyOc1eDB4WHWsO+/1bHPQ1Q1uWrzUnjjmZO8ZwK4Lxt8Up/EWkx6HplpJa2MYAnkIKtI3cH2rp5rjdHtyQcZBzVOJ40y7iMk9RtFVa50wsndo8507RE2gxxAv/s8ge1dn4f8ABMNwq3Gos0aA8Qgcn61q/ao0XaoQDqMKKbJqLvnnHpiosbSqSasdFayW+nQhY0REjHCqcf8A6657VtZmu5m+f92cjbUBupHDfNmqMv3ulTynPy63Zk3EfzmqUq7SK1LheapSR7qhjKnY0+JeRnkelIYyrU9WqBx3LBjQgFePam7B9abG3WlyaRvdEiYX2qZZiucVW3Zol3bflOKVxkskg+ZiRzxkdq5jxJ40TSXNlaoJrzHMjD5U9Pqa1JXK/eyeOlc1qPg99V1ae4mu9ttIQdiDnis2a04RerNTwbqV9eTtLdXHnIcbi3Uda6y6uvlKxj5R1rDsFg0q3jtoE2RAgAkfMfc1xeueKZ49awLh1gjkwFQZ3nsKUnrc66kVXlFQVrfidlJMqM5CqSarKxkfLfIKqR6qlwiSsuCwyfr3p099HJHhQQaRhy2epR8TM82mXFvbF3lZeNjYrh/C/hO7m1BJLzzLeFPmI8wksa7qJQ0md350+P8Adt+PpU9DqjLla0LKxuxAyFUdKWTzCu3PApQ+73pVOTU8xq6KlqjPmhePkg/NVGRsMe1dDMflGAGPvWDqbFpeAB9K0jLQ5JU3FlSSSohJubrTZGPHaljxRca2JfvdqFBzS+YEHrTGmH0oIsXrdgPanSOynIO6qCSj1qzHIrfxUBYmChlJK4OKjkZFX5RUg4Gd2R71BIw59KBCwwiTqRTjCAcGmJIBTvOB74xQBXlA3gDik2npUrMGOacrbTytAEUa/N0NX449y425/Cqyvvb5f0q5GpVe5xQJ3K9xb8ZIwaqtBuXpmrczFc/N19arSTnGBzQONynJGy8EVAW596mkkdm56UnkhiD3qGtTUiVmbtnFFWtipgYopWJaOVbpRjIooqDqFxinelFFJmi2Hxgc1E/3jRRQhvYarFSMVZSQ8DsaKK0Mhyk7mGSRTs0UVa2AcrGn0UUwHZ4pSxUbh1zj86KKpbA9i+2l22uaRcyXcQea34jmHDgeme/SuBnke0LGORsg45PWiivJn/Ese1X/AIVOXU0bPUZmwGIOfUVqKqybdyKc9eKKK2aR14duUNTE1SNI5cKoUe1Z8gyBRRVR2Pn8R/FY1elS26K0gUjINFFadTCOtSzLNxYxopcbge3NUFy2cn8aKKyXxGuJik1ZDpF27cHrSspRFIZjn1NFFV1MFo9BpXBFAzuOCR9KKKoz+0O3N03tj605VDUUUjNtuWo77RJH91yKsRXUkqkMdxHfvRRUs3i3dlnT7yXzypbco7Gr97EpUy4w3tRRUdTrTco6mX9okUxyBtrxyLtIr1u3kMkcLHqyAn60UV62E2Z5r6lyZyFTHFRbi3eiiu8y6CrM3mInarLOUkwOBRRQSPt8yZyenSpW+6eKKKCCu8hCgAAVEuGbkUUVSDoWJGO7HakZzwM0UUEgqhs55pk0aoyYHWiirWxSGSSMqHBxRb/MuTyaKKoXUesY8ytW3Y7AM5FFFKQnuWlPy4oXvRRQSDN0pNxooqSBisSTU9uN0gz60UUdCDWk+VlA6Ypu3c4zRRUjW5PnOKMkUUUGyHKx9at25NFFAmXFkZSuDWpbyttFFFM5au4snpVSboKKKye4RKhGWp0nyqcUUVLNGQxuW3ZNWIOaKKEQW7ZipGK0lY7aKKlmb3G7jyM06NjgjNFFSBFuIK/jSfxZoooH0J1cqDj0rGu2PzDtRRVRCJmOx5qpITzRRWjOhEYJxQzGiikWJvNNl6CiigGVJhmqciiiisZEkDCmKgbrRRWYEsahjyKJ41GKKKlmqGRqM0+b5Y+KKKhldGZ90xVximxsdjHuKKKg1pFa6ZjtYsc15vcfvdes0blWujmiiolseng/94ivNfmdldxqlwyKMKvQCodtFFNbEV/4svUliHU0rSEUUUzFDVncMcGrUczZFFFRI6obCXUzKpINYtxIzMcmiioWwVCo/Whe9FFWjmQtGM0UUxiLT0Yq3FFFLqSXc/u8VVmY4oorQhiR/NgGnycYxRRSARSeKduLAnvRRQImiG1xjireNyk5oooJZXPzk5qtMuMUUUAV5B0qW3UN1FFFBa2JZ41XbgUUUUCP/9k=";
     public void init() {
         javax.swing.SwingUtilities.invokeLater(() -> {
-            yTerminal frame = new yTerminal();
+            terminal_old frame = new terminal_old();
             frame.load();
             frame.setVisible(true);            
         });
