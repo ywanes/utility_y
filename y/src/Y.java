@@ -31230,6 +31230,8 @@ Exemplos...
     obs: -r mostra numero bytes
          -b octal bytes
          -c character
+    obs2: colocando tudo para unicode:
+         printf 'aab\u0061' | xxd -p | tr -d '\n' | sed 's/../\\u00&/g'
 [y touch]
     y touch fileA
     y touch fileA -3600
