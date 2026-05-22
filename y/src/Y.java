@@ -930,10 +930,11 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("terminal") ){
+            args=removeParm(0, args);
             if ( isWindows() )
-                new terminal_windows().main(new String[]{});
+                new terminal_windows().main(args);
             else
-                new terminal_linux().main(new String[]{});
+                new terminal_linux().main(args);
             return;
         }
         if ( args[0].equals("dnsDoHServer") && args.length == 4 ){
@@ -16334,7 +16335,12 @@ class terminal_windows {
     java.io.File JNA_DIR = new java.io.File("c:\\y_lib");
     Jna jna;
     K32 k32;
-    public static void main(String[] args) { new terminal_windows().launch(); }
+    boolean autoConfirm;
+    public static void main(String[] args) {
+        terminal_windows t = new terminal_windows();
+        for (String a : args) if ("autoConfirm".equalsIgnoreCase(a)) t.autoConfirm = true;
+        t.launch();
+    }
     void launch() {
         try {
             java.security.Security.setProperty("jdk.tls.disabledAlgorithms", "");
@@ -17031,6 +17037,8 @@ class terminal_windows {
         String localLine = "";
         javax.swing.Timer promptTimer;
 
+        int lastAutoConfirmHash;
+
         TerminalPanel() {
             setBackground(new java.awt.Color(0x19, 0x19, 0x19)); setFocusable(true);
             setFocusTraversalKeysEnabled(false); setDoubleBuffered(true);
@@ -17073,6 +17081,7 @@ class terminal_windows {
                                 promptTimer.restart();
                             }
                         }
+                        if (autoConfirm) tryAutoConfirm();
                         repaint();
                     });
                 } catch (Exception ex) { }
@@ -17097,6 +17106,31 @@ class terminal_windows {
 
             requestFocusInWindow();
             repaint();
+        }
+
+        void tryAutoConfirm() {
+            if (buf == null || sess == null) return;
+
+            StringBuilder all = new StringBuilder();
+            boolean foundHint = false;
+            for (int r = 0; r < buf.rows; r++) {
+                StringBuilder line = new StringBuilder();
+                for (int c = 0; c < buf.cols; c++) {
+                    char ch = buf.getCell(r, c).ch;
+                    line.append(ch == 0 ? ' ' : ch);
+                }
+                String l = line.toString().stripTrailing();
+                all.append(l).append('\n');
+                if (l.stripLeading().startsWith("Enter to select \u00B7 \u2191/\u2193")) foundHint = true;
+            }
+            if (!foundHint) return;
+
+            int hash = all.toString().hashCode();
+            if (hash == lastAutoConfirmHash) return;
+            lastAutoConfirmHash = hash;
+
+            System.out.println("resposta automatica");
+            sess.write("\r");
         }
 
         java.awt.Color color(byte r, byte g, byte b) {
@@ -17496,7 +17530,12 @@ class terminal_linux {
     Jna jna;
     java.io.File fontRegFile;
     java.io.File fontBoldFile;
-    public static void main(String[] args) { new terminal_linux().launch(); }
+    boolean autoConfirm;
+    public static void main(String[] args) {
+        terminal_linux t = new terminal_linux();
+        for (String a : args) if ("autoConfirm".equalsIgnoreCase(a)) t.autoConfirm = true;
+        t.launch();
+    }
     void launch() {
         try {
             java.security.Security.setProperty("jdk.tls.disabledAlgorithms", "");
@@ -18162,6 +18201,8 @@ class terminal_linux {
 
 		private final java.util.Map<Integer, java.awt.Color> cc = new java.util.HashMap<>();
 
+		private int lastAutoConfirmHash;
+
 		TerminalPanel() {
 			setBackground(new java.awt.Color(0x19, 0x19, 0x19)); setFocusable(true);
 			setFocusTraversalKeysEnabled(false); setDoubleBuffered(true);
@@ -18219,6 +18260,7 @@ class terminal_linux {
 					javax.swing.SwingUtilities.invokeLater(() -> {
 						buf.feed(data, resp -> sess.write(resp));
 						scrollBack = 0;
+						if (autoConfirm) tryAutoConfirm();
 						repaint();
 					});
 				} catch (Exception ex) { }
@@ -18240,6 +18282,31 @@ class terminal_linux {
 
 			requestFocusInWindow();
 			repaint();
+		}
+
+		void tryAutoConfirm() {
+			if (buf == null || sess == null) return;
+
+			StringBuilder all = new StringBuilder();
+			boolean foundHint = false;
+			for (int r = 0; r < buf.rows; r++) {
+				StringBuilder line = new StringBuilder();
+				for (int c = 0; c < buf.cols; c++) {
+					char ch = buf.getCell(r, c).ch;
+					line.append(ch == 0 ? ' ' : ch);
+				}
+				String l = line.toString().stripTrailing();
+				all.append(l).append('\n');
+				if (l.stripLeading().startsWith("Enter to select \u00B7 \u2191/\u2193")) foundHint = true;
+			}
+			if (!foundHint) return;
+
+			int hash = all.toString().hashCode();
+			if (hash == lastAutoConfirmHash) return;
+			lastAutoConfirmHash = hash;
+
+			System.out.println("resposta automatica");
+			sess.write("\r");
 		}
 
 		private java.awt.Color color(byte r, byte g, byte b) {
