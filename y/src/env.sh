@@ -198,30 +198,81 @@ class Porteiro:
             print("PORTEIRO - Conteudo do POST:")
             print(post_body)
             print("-------------------------------------------")
-            resposta = input("Enter para aceitar ou n: ")
+            try:
+                resposta = input("Enter para aceitar ou n: ")
+            except EOFError:
+                print("EOF no stdin -> negando por seguranca")
+                return False
             return resposta.strip().lower() != 'n'
 
 
 RESP_403 = b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
 
 
-def ponte(client_sock, dest_host, dest_port, ponte_id, porteiro=None):
+def ler_request_completo(sock, timeout_total=2.0):
+    """Le header + body baseado em Content-Length. Retorna bytes acumulados."""
+    accumulated = b""
+    start = time.time()
+    sock.settimeout(0.5)
+    try:
+        # Le ate ter fim do header
+        while time.time() - start < timeout_total:
+            if b"\r\n\r\n" in accumulated or b"\n\n" in accumulated:
+                break
+            try:
+                chunk = sock.recv(4096)
+            except socket.timeout:
+                continue
+            if not chunk:
+                return accumulated
+            accumulated += chunk
+
+        # Localiza fim do header
+        header_end = accumulated.find(b"\r\n\r\n")
+        if header_end != -1:
+            header_end += 4
+        else:
+            header_end = accumulated.find(b"\n\n")
+            if header_end != -1:
+                header_end += 2
+
+        if header_end == -1:
+            return accumulated  # sem header completo dentro do timeout
+
+        # Parseia Content-Length
+        header_str = accumulated[:header_end].decode('utf-8', errors='replace')
+        content_length = 0
+        for line in header_str.split("\r\n"):
+            if line.lower().startswith("content-length:"):
+                try:
+                    content_length = int(line.split(":", 1)[1].strip())
+                except (ValueError, IndexError):
+                    pass
+                break
+
+        # Le body ate ter content_length bytes
+        body_len = len(accumulated) - header_end
+        while body_len < content_length and time.time() - start < timeout_total:
+            try:
+                chunk = sock.recv(4096)
+            except socket.timeout:
+                continue
+            if not chunk:
+                break
+            accumulated += chunk
+            body_len = len(accumulated) - header_end
+    finally:
+        sock.settimeout(None)
+
+    return accumulated
+
+
+def ponte(client_sock, dest_host, dest_port, ponte_id, ip_origem, porteiro=None):
     accumulated = b""
     dest_sock = None
     try:
         if porteiro:
-            # acumula dados por 1 segundo antes de analisar
-            client_sock.settimeout(0.1)
-            start = time.time()
-            try:
-                while time.time() - start < 0.1:
-                    chunk = client_sock.recv(4096)
-                    if not chunk:
-                        return
-                    accumulated += chunk
-            except socket.timeout:
-                pass
-            client_sock.settimeout(None)
+            accumulated = ler_request_completo(client_sock)
 
             if not accumulated:
                 return
@@ -230,14 +281,19 @@ def ponte(client_sock, dest_host, dest_port, ponte_id, porteiro=None):
 
             if porteiro.is_post(request_str):
                 post_body = porteiro.extrair_body_post(request_str)
-                if post_body:
-                    if not porteiro.is_permitido(post_body):
-                        # nao auto-aprovado, perguntar no terminal
-                        if not porteiro.perguntar_terminal(post_body):
-                            # negado
-                            client_sock.sendall(RESP_403)
-                            client_sock.close()
-                            return
+                if post_body is None or post_body == "":
+                    post_body = "(body nao recebido ou vazio)"
+                if not porteiro.is_permitido(post_body):
+                    # nao auto-aprovado, perguntar no terminal
+                    if not porteiro.perguntar_terminal(post_body):
+                        # negado
+                        client_sock.sendall(RESP_403)
+                        client_sock.close()
+                        return
+
+        # Aprovado (ou sem porteiro). Log de conexao SOMENTE agora.
+        tprint(f"Conexao de origem: {ip_origem}, data: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+        tprint(f"iniciando ponte id {ponte_id} - ip origem {ip_origem}")
 
         # conecta ao destino
         dest_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -310,18 +366,16 @@ def server_router(host0, port0, host1, port1, mode):
     tprint("ServerRouter criado.")
     if porteiro:
         tprint(f"Modo PORTEIRO ativo. Prefixos permitidos: {porteiro.prefixos_permitidos}")
-    tprint("obs: A ponte so estabelece conexao com o destino quando detectar o inicio da origem")
+    tprint("obs: Os prefixos estão configurados para GET e nao POST!")
 
     while True:
         try:
             client_sock, addr = server.accept()
             ip_origem = addr[0]
             ponte_id = str(random.randint(0, 99999)).zfill(6)
-            tprint(f"Conexao de origem: {ip_origem}, data: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            tprint(f"iniciando ponte id {ponte_id} - ip origem {ip_origem}")
             t = threading.Thread(
                 target=ponte,
-                args=(client_sock, host1, port1, ponte_id, porteiro),
+                args=(client_sock, host1, port1, ponte_id, ip_origem, porteiro),
                 daemon=True
             )
             t.start()
@@ -346,10 +400,15 @@ EOF
 
 cat <<'EOF'> /opt/serverrouter_porteiro.cfg
 show
+show+
 select
+select+
 describe
+describe+
 with
+with+
 insert into
+insert+into+
 EOF
 
 export flag_enable_bracketed_paste='S'
