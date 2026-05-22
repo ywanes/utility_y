@@ -132,14 +132,36 @@ import socket
 import threading
 import time
 import random
+import queue
 
 
 terminal_lock = threading.Lock()
+input_queue = queue.Queue()
+pergunta_ativa = threading.Event()
 
 
 def tprint(*args, **kwargs):
     with terminal_lock:
         print(*args, **kwargs)
+
+
+def stdin_reader():
+    """Thread daemon: le stdin continuamente.
+    Quando pergunta_ativa esta setado, envia linha para input_queue.
+    Caso contrario, descarta e avisa imediato."""
+    while True:
+        try:
+            line = sys.stdin.readline()
+        except Exception:
+            return
+        if not line:
+            return  # EOF: thread encerra
+        line = line.rstrip('\n')
+        if pergunta_ativa.is_set():
+            input_queue.put(line)
+        else:
+            with terminal_lock:
+                print(f"(pre-resposta ignorada: {line!r})")
 
 
 class Porteiro:
@@ -198,12 +220,23 @@ class Porteiro:
             print("PORTEIRO - Conteudo do POST:")
             print(post_body)
             print("-------------------------------------------")
+            # Drena qualquer resposta residual da queue antes de pedir nova
+            while True:
+                try:
+                    input_queue.get_nowait()
+                except queue.Empty:
+                    break
+            print("Enter para aceitar ou n: ", end='', flush=True)
+            pergunta_ativa.set()
             try:
-                resposta = input("Enter para aceitar ou n: ")
-            except EOFError:
-                print("EOF no stdin -> negando por seguranca")
+                resposta = input_queue.get(timeout=300)  # 5 min
+            except queue.Empty:
+                print("\n(timeout 5min -> negando por seguranca)")
                 return False
-            return resposta.strip().lower() != 'n'
+            finally:
+                pergunta_ativa.clear()
+            print()
+        return resposta.strip().lower() in ('', 's', 'sim')
 
 
 RESP_403 = b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
@@ -366,7 +399,7 @@ def server_router(host0, port0, host1, port1, mode):
     tprint("ServerRouter criado.")
     if porteiro:
         tprint(f"Modo PORTEIRO ativo. Prefixos permitidos: {porteiro.prefixos_permitidos}")
-    tprint("obs: Os prefixos estão configurados para GET e nao POST!")
+        threading.Thread(target=stdin_reader, daemon=True).start()
 
     while True:
         try:
