@@ -17121,7 +17121,7 @@ class terminal_windows {
                 }
                 String l = line.toString().stripTrailing();
                 all.append(l).append('\n');
-                if (l.stripLeading().startsWith("Enter to select \u00B7 \u2191/\u2193")) foundHint = true;
+                if (l.stripLeading().startsWith("Enter to select \u00B7 ")) foundHint = true;
             }
             if (!foundHint) return;
 
@@ -18297,7 +18297,7 @@ class terminal_linux {
 				}
 				String l = line.toString().stripTrailing();
 				all.append(l).append('\n');
-				if (l.stripLeading().startsWith("Enter to select \u00B7 \u2191/\u2193")) foundHint = true;
+				if (l.stripLeading().startsWith("Enter to select \u00B7 ")) foundHint = true;
 			}
 			if (!foundHint) return;
 
