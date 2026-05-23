@@ -2223,6 +2223,9 @@ function get_back_next(_parm){
 }
 
 function get_elementos_filtrados(parm){
+    if ( elementos == null ){ // if de segurança de control shift T recover
+		load_elementos();
+    }
     let filter='/'+parm.join('/')+'/';
     let partes=elementos;
     let elements = [];

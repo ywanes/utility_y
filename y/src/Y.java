@@ -8642,7 +8642,6 @@ while True:
                                                 + "Access-Control-Allow-Origin: *\r\n"
                                                 + "Content-Security-Policy: frame-ancestors *\r\n"
                                                 + "X-Frame-Options: ALLOWALL\r\n"
-												+ "Cache-Control: no-store\r\n"
                                                 + "\r\n"
                                                 + "chamada invalida para cors.. vc deve utilizar \"?\" na url e nao pode ser no final"
                                             ).getBytes();
@@ -8683,7 +8682,6 @@ while True:
                                                     + "Access-Control-Allow-Origin: *\r\n"
                                                     + "Content-Security-Policy: frame-ancestors *\r\n"
                                                     + "X-Frame-Options: ALLOWALL\r\n"
-													+ "Cache-Control: no-store\r\n"
                                                     + "\r\n"
                                                     + "base64 invalida: " + texto
                                                 ).getBytes()                                        
@@ -8709,7 +8707,6 @@ while True:
                                                 + "Access-Control-Allow-Origin: *\r\n"
                                                 + "Content-Security-Policy: frame-ancestors *\r\n"
                                                 + "X-Frame-Options: ALLOWALL\r\n"
-												+ "Cache-Control: no-store\r\n"
                                                 + "\r\n"
                                                 + "solicitacao nao permitida de acordo com os parametros -sw"
                                             ).getBytes()                                        
@@ -8743,7 +8740,6 @@ while True:
                                                     + "Access-Control-Allow-Origin: *\r\n"
                                                     + "Content-Security-Policy: frame-ancestors *\r\n"
                                                     + "X-Frame-Options: ALLOWALL\r\n"
-													+ "Cache-Control: no-store\r\n"
                                                     + "\r\n"
                                                     + "redirect nao permitido para cors:\n" + status_301 + "\n" + location
                                                 ).getBytes()                                        
@@ -8769,7 +8765,6 @@ while True:
                                             + "Access-Control-Allow-Origin: *\r\n"
                                             + "Content-Security-Policy: frame-ancestors *\r\n"
                                             + "X-Frame-Options: ALLOWALL\r\n"
-											+ "Cache-Control: no-store\r\n"
                                             + "\r\n"
                                             + curl_error
                                         ).getBytes()                                        
@@ -20124,7 +20119,6 @@ class WebDAVServer extends Util{
                 "Access-Control-Allow-Origin: *\r\n" +
                 "Content-Security-Policy: frame-ancestors *\r\n" +                    
                 "X-Frame-Options: ALLOWALL\r\n" +
-				"Cache-Control: no-store\r\n" +
                 (additionalHeader != null ? additionalHeader + "\r\n" : "") +
                 "\r\n" +
                 body;
@@ -26903,7 +26897,6 @@ class Texto_longo extends Util{
         "Access-Control-Allow-Origin: *\n" +
         "Content-Security-Policy: frame-ancestors *\n" +
         "X-Frame-Options: ALLOWALL\r\n" +
-		"Cache-Control: no-store\r\n" +
         "Content-Length: ?\n" +
         "\n";
         String result2="<script type=\"text/javascript\">\n" +
@@ -28905,7 +28898,6 @@ class ClientThread extends Util{
                     "Access-Control-Allow-Headers: *\r\n",
                     "Content-Security-Policy: frame-ancestors *\r\n",
                     "X-Frame-Options: ALLOWALL\r\n",
-					"Cache-Control: no-store\r\n",
                     "\r\n",
                 }) {
                 sb.append(line);
@@ -29007,7 +28999,6 @@ class ClientThread extends Util{
                     "Access-Control-Allow-Origin: *\r\n",
                     "Content-Security-Policy: frame-ancestors *\r\n",
                     "X-Frame-Options: ALLOWALL\r\n",
-					"Cache-Control: no-store\r\n",
                     "\r\n",
                     txt
                 }) {
@@ -29030,7 +29021,6 @@ class ClientThread extends Util{
             txt+="Access-Control-Allow-Origin: *\r\n";
             txt+="Content-Security-Policy: frame-ancestors *\r\n";
             txt+="X-Frame-Options: ALLOWALL\r\n";
-			txt+="Cache-Control: no-store\r\n";
             txt+="\r\n";
             if ( playlistserver == null )
                 txt+="erro interno 435353";
@@ -29091,7 +29081,6 @@ class ClientThread extends Util{
                                 "Access-Control-Allow-Origin: *\r\n",
                                 "Content-Security-Policy: frame-ancestors *\r\n",
                                 "X-Frame-Options: ALLOWALL\r\n",
-								"Cache-Control: no-store\r\n",
                                 "\r\n"
                             }) {
                             sb.append(line);
@@ -29172,7 +29161,6 @@ System.out.println(endsWith_OK(nav, endsWiths));
                         "Access-Control-Allow-Origin: *\r\n",
                         "Content-Security-Policy: frame-ancestors *\r\n",
                         "X-Frame-Options: ALLOWALL\r\n",
-                        "Cache-Control: no-store\r\n",
                         "\r\n"
                     }) {
                     sb.append(line);
@@ -29186,7 +29174,6 @@ System.out.println(endsWith_OK(nav, endsWiths));
                         "Access-Control-Allow-Origin: *\r\n",
                         "Content-Security-Policy: frame-ancestors *\r\n",
                         "X-Frame-Options: ALLOWALL\r\n",
-						"Cache-Control: no-store\r\n",
                         "\r\n"
                     }) {
                     sb.append(line);
@@ -29226,7 +29213,6 @@ System.out.println(endsWith_OK(nav, endsWiths));
                     "Access-Control-Allow-Origin: *\r\n",
                     "Content-Security-Policy: frame-ancestors *\r\n",
                     "X-Frame-Options: ALLOWALL\r\n",
-					"Cache-Control: no-store\r\n",
                     "\r\n",
                     "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n",
                     "<html xmlns=\"http://www.w3.org/1999/xhtml\">\n",
@@ -29516,7 +29502,6 @@ console.log(`new Chart(document.getElementById('chart'), {type:'line',data:{labe
                 "Access-Control-Allow-Origin: *\r\n",
                 "Content-Security-Policy: frame-ancestors *\r\n",
                 "X-Frame-Options: ALLOWALL\r\n",
-				"Cache-Control: no-store\r\n",
                 "\r\n",
                 "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n<html xmlns=\"http://www.w3.org/1999/xhtml\">\n<head>\n<meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"/>\n<title>404 - File or directory not found.</title>\n<style type=\"text/css\">\n\nbody{margin:0;font-size:.7em;font-family:Verdana, Arial, Helvetica, sans-serif;background:#EEEEEE;}\nfieldset{padding:0 15px 10px 15px;} \nh1{font-size:2.4em;margin:0;color:#FFF;}\nh2{font-size:1.7em;margin:0;color:#CC0000;} \nh3{font-size:1.2em;margin:10px 0 0 0;color:#000000;} \n#header{width:96%;margin:0 0 0 0;padding:6px 2% 6px 2%;font-family:\"trebuchet MS\", Verdana, sans-serif;color:#FFF;\nbackground-color:#555555;}\n#content{margin:0 0 0 2%;position:relative;}\n.content-container{background:#FFF;width:96%;margin-top:8px;padding:10px;position:relative;}\n\n</style>\n</head>\n<body>\n<div id=\"header\"><h1>Server Error</h1></div>\n<div id=\"content\">\n<div class=\"content-container\"><fieldset>\n<h2>404 - File or directory not found.</h2>\n<h3>The resource you are looking for might have been removed, had its name changed, or is temporarily unavailable.</h3>\n</fieldset></div>\n</div>\n</body>\n</html>"
         }){
