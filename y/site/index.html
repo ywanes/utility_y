@@ -1029,6 +1029,27 @@ function img_secret(){
 	}
 }
 
+function retry(){
+	console.log('retrying... ' + document.getElementById('video').src);
+	_resume = get_resume();
+	if ( _resume != null ){
+		let _resume_tmp=_resume['onclick'];
+		setTimeout(// retry video of NaN
+			function (){
+				if ( document.getElementsByClassName('time-remaining')[0].innerHTML.indexOf(error_NaN_load) >= 0 ){
+					if ( document.getElementById('video').duration != null && (document.getElementById('video').duration-document.getElementById('video').currentTime) < 25 )
+						document.getElementById('video').currentTime=document.getElementById('video').duration-25;
+					document.getElementById('video').src=document.getElementById('video').src;
+					document.getElementById('video').play().then(function(){
+					}).catch(function(error){
+						eval(_resume_tmp);
+					});
+				}
+			},
+		600);										
+	}
+}
+
 function load_movie(parm, table_click, streamURL){        
     console.log('load_movie: ' + parm + '::' + table_click + '::' + streamURL);
     var src='/'+parm.join('/');
@@ -1258,20 +1279,7 @@ function load_movie(parm, table_click, streamURL){
 			if ( getVideo() == null ) 
 				return;
             if ( document.getElementsByClassName('time-remaining')[0].innerHTML.indexOf(error_NaN_load) >= 0 ){
-				_resume = get_resume();
-				if ( _resume != null ){
-					let _resume_tmp=_resume['onclick'];
-					setTimeout(// retry video of NaN
-						function (){
-							if ( document.getElementsByClassName('time-remaining')[0].innerHTML.indexOf(error_NaN_load) >= 0 ){
-								document.getElementById('video').play().then(function(){
-								}).catch(function(error){
-									eval(_resume_tmp);
-								});
-							}
-					    },
-					250);										
-				}
+				retry();
 				return;		
             }
             console.log('tagName clicked: ' + e.target.tagName);
@@ -1373,8 +1381,10 @@ function load_movie(parm, table_click, streamURL){
         second=''+second;
       if ( isNaN(hour) ){
 	    _resume=get_resume();
-        if ( _resume != null )
+        if ( _resume != null ){
+		  retry();
           return "<a onclick=\"" + _resume['onclick'] + "\">"+error_NaN_load+"</a>";
+		}
 	    return error_NaN_load;
       }
       return hour+':'+minute+':'+second;
