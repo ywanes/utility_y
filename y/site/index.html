@@ -1031,11 +1031,11 @@ function img_secret(){
 
 function retry(){
 	console.log('retrying... ' + document.getElementById('video').src);
-	_resume = get_resume();
-	if ( _resume != null ){
-		let _resume_tmp=_resume['onclick'];
-		setTimeout(// retry video of NaN
-			function (){
+	setTimeout(// retry video of NaN
+		function (){
+			_resume = get_resume();
+			if ( _resume != null ){
+				let _resume_tmp=_resume['onclick'];
 				if ( document.getElementsByClassName('time-remaining')[0].innerHTML.indexOf(error_NaN_load) >= 0 ){
 					if ( document.getElementById('video').duration != null && (document.getElementById('video').duration-document.getElementById('video').currentTime) < 25 )
 						document.getElementById('video').currentTime=document.getElementById('video').duration-25;
@@ -1045,9 +1045,9 @@ function retry(){
 						eval(_resume_tmp);
 					});
 				}
-			},
-		600);										
-	}
+			}
+		},
+	600);
 }
 
 function load_movie(parm, table_click, streamURL){        
@@ -1380,9 +1380,9 @@ function load_movie(parm, table_click, streamURL){
       else
         second=''+second;
       if ( isNaN(hour) ){
+	    retry();
 	    _resume=get_resume();
-        if ( _resume != null ){
-		  retry();
+        if ( _resume != null ){		  
           return "<a onclick=\"" + _resume['onclick'] + "\">"+error_NaN_load+"</a>";
 		}
 	    return error_NaN_load;
