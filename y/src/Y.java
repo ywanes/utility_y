@@ -31078,6 +31078,7 @@ Exemplos...
     referencia: https://calculojuridico.com.br/calculadora-price-sac/
 [y terminal]
     y terminal
+    y terminal autoConfirm # usado para claude code tui
 [y dotaMutandoAll]
     y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,neBullet"
     y dotaMutandoAll -sleep 3 -nicks "no_ocr"
