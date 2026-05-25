@@ -17119,6 +17119,7 @@ class terminal_windows {
                 // autoConfirm
                 if (l.stripLeading().startsWith("Enter to select \u00B7 ")) foundHint = true;
                 if (l.stripLeading().startsWith("Esc to cancel \u00B7 ")) foundHint = true;
+                if (l.stripLeading().startsWith("1\u00B7 Submit answers")) foundHint = true;
             }
             if (!foundHint) return;
 
@@ -18286,17 +18287,18 @@ class terminal_linux {
 
 			StringBuilder all = new StringBuilder();
 			boolean foundHint = false;
-			for (int r = 0; r < buf.rows; r++) {
-				StringBuilder line = new StringBuilder();
-				for (int c = 0; c < buf.cols; c++) {
-					char ch = buf.getCell(r, c).ch;
-					line.append(ch == 0 ? ' ' : ch);
-				}
-				String l = line.toString().stripTrailing();
-				all.append(l).append('\n');
-                                // autoConfirm
-                                if (l.stripLeading().startsWith("Enter to select \u00B7 ")) foundHint = true;
-                                if (l.stripLeading().startsWith("Esc to cancel \u00B7 ")) foundHint = true;
+			for (int r = 0; r < buf.rows; r++){
+                            StringBuilder line = new StringBuilder();
+                            for (int c = 0; c < buf.cols; c++) {
+                                    char ch = buf.getCell(r, c).ch;
+                                    line.append(ch == 0 ? ' ' : ch);
+                            }
+                            String l = line.toString().stripTrailing();
+                            all.append(l).append('\n');
+                            // autoConfirm
+                            if (l.stripLeading().startsWith("Enter to select \u00B7 ")) foundHint = true;
+                            if (l.stripLeading().startsWith("Esc to cancel \u00B7 ")) foundHint = true;
+                            if (l.stripLeading().startsWith("1\u00B7 Submit answers")) foundHint = true;
                         }
 			if (!foundHint) return;
 
