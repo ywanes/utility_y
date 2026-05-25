@@ -17119,7 +17119,7 @@ class terminal_windows {
                 // autoConfirm
                 if (l.stripLeading().startsWith("Enter to select \u00B7 ")) foundHint = true;
                 if (l.stripLeading().startsWith("Esc to cancel \u00B7 ")) foundHint = true;
-                if (l.stripLeading().contains("1.") && l.stripLeading().contains("Submit") && l.stripLeading().contains("answers")) foundHint = true;
+                if (l.stripLeading().contains("Submit answers")) foundHint = true;
             }
             if (!foundHint) return;
 
@@ -18298,7 +18298,7 @@ class terminal_linux {
                             // autoConfirm
                             if (l.stripLeading().startsWith("Enter to select \u00B7 ")) foundHint = true;
                             if (l.stripLeading().startsWith("Esc to cancel \u00B7 ")) foundHint = true;
-                            if (l.stripLeading().contains("1.") && l.stripLeading().contains("Submit") && l.stripLeading().contains("answers")) foundHint = true;
+                            if (l.stripLeading().contains("Submit answers")) foundHint = true;
                         }
 			if (!foundHint) return;
 
