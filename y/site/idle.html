@@ -156,6 +156,7 @@ function get_level_multiplicado(){
         ){
 			todos_level_multiplicado.push(assinatura[i-1] - assinatura[i]);
 			todos_level_multiplicado.push( (assinatura[i-1] - assinatura[i])*20n );
+			todos_level_multiplicado.push( (assinatura[i-1] - assinatura[i])*400n );
 			if ( (assinatura[i-1] - assinatura[i]) > max )
 				max=assinatura[i-1] - assinatura[i];
         }
