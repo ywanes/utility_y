@@ -16022,8 +16022,8 @@ class YDB{
     /*
     
     a estrutura é formada por blocos
-    [bloco] -> [tipo] [len] [subbloco]
                1byte  4byte  len-bytes
+    [bloco] -> [tipo] [len] [subbloco]
     
     [tipo]
            0 - table
@@ -16038,7 +16038,8 @@ class YDB{
     [value] -> [len] [data]
              1bytes len-bytes
     
-    obs: Se o data precisar ter o len maior que 256(2^8) é só repetir o mesmo nome de key na sequencia ex: key1 AA key1 AA key2 BB
+    obs: Se o data precisar ter o len maior que 256(2^8) é só repetir o mesmo nome de key na sequencia 
+        ex: key1 AA key1 AA key2 BB
     
     Exemplo de uso
     YDB ydb=new YDB();
@@ -16050,6 +16051,7 @@ class YDB{
     
     ByteArrayOutputStream baos=null;
     ByteArrayOutputStream baos_subbloco=null;
+    int TIPO_TABLE=0;//
     
     public YDB(){
         baos=new ByteArrayOutputStream();
@@ -16065,8 +16067,11 @@ class YDB{
     public void writeRecord(String a) throws Exception{
         resetSubBloco();
         String [] partes=a.split(",");
-        for ( int i=0;i<partes.length;i++ )
-            writeSubBloco(("f"+i+"_").getBytes(), partes[i].getBytes());
+        for ( int i=0;i<partes.length;i++ ){
+            byte [] key=("f"+i+"_").getBytes(); // nome generico do campo f0_
+            byte [] value=partes[i].getBytes();
+            writeSubBloco(key, value);
+        }
         writeBloco(new byte[]{2});
     }
 
