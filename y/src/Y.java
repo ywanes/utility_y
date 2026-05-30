@@ -18836,19 +18836,30 @@ class multiCurl extends Util{
         Thread t=new Thread(){
             public void run(){
                 try{
-                    //////////////////
                     sleepMillis(random(1, 2000));    
                     Y y=new Y();
                     y.preparaPath(caminho, true, 0);
                     y.curl(new FileOutputStream(caminho), "", "GET", false, false, url, null, 200000000L, progress_finished_len, progress_len, progress_number, null);
-                    if ( y.curl_response_status != 200 && progress_finished_len[progress_number].equals(0L) )
-                        progress_finished_len[progress_number]=-1L;
-                    // arredondando para finish
-                    if ( y.curl_response_status == 200 && progress_finished_len[progress_number] > 10000000 && progress_len[progress_number] > 0 && !progress_finished_len[progress_number].equals(progress_len[progress_number]) && (progress_finished_len[progress_number]+1000000) > progress_len[progress_number] )
-                        progress_finished_len[progress_number]=progress_len[progress_number];
-                    else{
-                        if ( flag_delete_fail )
-                            new File(caminho).delete();
+                    if ( progress_finished_len[progress_number].equals(progress_len[progress_number]) ){
+                        // ok
+                    }else{                        
+                        if ( y.curl_response_status != 200 && progress_finished_len[progress_number].equals(0L) ){
+                            // error
+                            progress_finished_len[progress_number]=-1L;
+                        }else{                            
+                            if ( y.curl_response_status == 200 && progress_finished_len[progress_number] > 10000000 
+                                    && progress_len[progress_number] > 0 && !progress_finished_len[progress_number].equals(progress_len[progress_number]) 
+                                    && (progress_finished_len[progress_number]+1000000) > progress_len[progress_number] 
+                            ){
+                                // arredondando para finish
+                                progress_finished_len[progress_number]=progress_len[progress_number];
+                            }else{
+                                if ( flag_delete_fail ){
+                                    // apaga o arquivo incompleto
+                                    new File(caminho).delete();
+                                }
+                            }
+                        }                        
                     }
                 }catch(Exception e1){
                     erroFatal(e1);
