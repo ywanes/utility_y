@@ -7510,7 +7510,7 @@ bind 'set enable-bracketed-paste off'
                 if ( needDownload ){
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();                    
-                    overflix_multi.addCurl(s,out);
+                    overflix_multi.addCurl(s, out, true);
                     overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(2);
                     skiping_show=false;
                 }else{
@@ -18827,7 +18827,7 @@ class multiCurl extends Util{
     Long [] progress_len=new Long[slots];
     ArrayList<Thread> threads=new ArrayList<Thread>();
     ArrayList<String> caminhos=new ArrayList<String>();
-    public void addCurl(String url, String caminho) throws Exception{        
+    public void addCurl(String url, String caminho, boolean flag_delete_fail) throws Exception{        
         if ( threads.size() == 0 ){
             init_progress();
             start_monitor();
@@ -18846,6 +18846,10 @@ class multiCurl extends Util{
                     // arredondando para finish
                     if ( y.curl_response_status == 200 && progress_finished_len[progress_number] > 10000000 && progress_len[progress_number] > 0 && !progress_finished_len[progress_number].equals(progress_len[progress_number]) && (progress_finished_len[progress_number]+1000000) > progress_len[progress_number] )
                         progress_finished_len[progress_number]=progress_len[progress_number];
+                    else{
+                        if ( flag_delete_fail )
+                            new File(caminho).delete();
+                    }
                 }catch(Exception e1){
                     erroFatal(e1);
                 }
