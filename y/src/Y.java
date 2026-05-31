@@ -31098,6 +31098,12 @@ Exemplos...
     obs: detalhes build na pasta sources, cmd admin:
     dism /Get-WimInfo /WimFile:"install.wim"
     obs: criar iso do tipo linux pode dar ruim
+    consultando ultima iso:
+        curl -s "https://api.uupdump.net/listid.php?search=windows%2011" \
+            | jq -r '.response.builds
+            | map(select(.arch=="amd64" and (.title | startswith("Windows 11, version"))))
+            | max_by(.build | split(".") | map(tonumber))
+            | "\(.title)\nbuild: \(.build)\nlink:  https://uupdump.net/selectlang.php?id=\(.uuid)"'
 [y [juros|emprestimo]]
     y juros price valor 15000 juros 1.0 a.m 10 parcelas
     y juros sac valor 15000 juros 1.0 a.m 10 parcelas
