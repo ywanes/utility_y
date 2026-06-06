@@ -14835,6 +14835,7 @@ while True:
             // variaveis auxiliares
             int _x=0;
             int _y=0;
+            int _delta_x=0;// -100;
             
             // fechar painel previsoes
             robotMouseMove(188+1400, 768);
@@ -14909,7 +14910,7 @@ while True:
             // mutando os jogadores
             int n_eu_mesmo=0; // 0 até 9
             for ( int i=0;i<10;i++ ){
-                _x=827-100;                
+                _x=827+_delta_x;                
                 _y=121+(70*i)+(i>=5?31:0);
                 if ( robotCheckRGB(_x, _y, "63 70 70") ){ // eu mesmo
                     System.out.println("eu mesmo como jogador  " + i);
@@ -14936,13 +14937,13 @@ while True:
             sleepMillis(150);
             
             // verifica se painel de ajuda está fechado
-            _x=987-100;
+            _x=987+_delta_x;
             boolean painel_ajuda_berto=robotCheckRGB(_x, 662, "10 13 17"); // painel ajuda aberto
             if ( painel_ajuda_berto )
                 erroFatal("Erro, painel de ajuda ja aberto");
             
             // abrindo bainel de ajuda
-            _x=853-100;
+            _x=853+_delta_x;
             System.out.println("abrindo painel de ajuda");
             robotMouseMove(_x, 834);
             sleepMillis(150);
@@ -14950,7 +14951,7 @@ while True:
             sleepMillis(150);
 
             // removendo ajuda
-            _x=1096-100;
+            _x=1096+_delta_x;
             for ( int i=0;i<10;i++ ){
                 if ( i == n_eu_mesmo )
                     continue;
