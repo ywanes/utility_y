@@ -14890,6 +14890,7 @@ while True:
                 naoBloquearEssesNomes=nicks.split(",");
             System.out.println("jogadores anti block:");
             mostra_array(naoBloquearEssesNomes);
+            
             // get players by OCR
             String [] players=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
             if ( naoBloquearEssesNomes.length == 1 && naoBloquearEssesNomes[0].equals("no_ocr") ){
@@ -14908,7 +14909,7 @@ while True:
             // mutando os jogadores
             int n_eu_mesmo=0; // 0 até 9
             for ( int i=0;i<10;i++ ){
-                _x=827;
+                _x=827-100;                
                 _y=121+(70*i)+(i>=5?31:0);
                 if ( robotCheckRGB(_x, _y, "63 70 70") ){ // eu mesmo
                     System.out.println("eu mesmo como jogador  " + i);
@@ -14935,28 +14936,21 @@ while True:
             sleepMillis(150);
             
             // verifica se painel de ajuda está fechado
-            boolean painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
+            _x=987-100;
+            boolean painel_ajuda_berto=robotCheckRGB(_x, 662, "10 13 17"); // painel ajuda aberto
             if ( painel_ajuda_berto )
                 erroFatal("Erro, painel de ajuda ja aberto");
             
             // abrindo bainel de ajuda
+            _x=853-100;
             System.out.println("abrindo painel de ajuda");
-            robotMouseMove(853, 834);
+            robotMouseMove(_x, 834);
             sleepMillis(150);
             robotMouseClickEsq();
             sleepMillis(150);
 
-            // verifica se painel de ajuda está aberto
-            /*
-            // esse codigo só olha o painel se estiver em baixo
-            painel_ajuda_berto=robotCheckRGB(987, 662, "10 13 17"); // painel ajuda aberto
-            if ( !painel_ajuda_berto ){
-                robotMouseMove(987, 662);
-                erroFatal("Erro, falha ao abrir o painel de ajuda");
-            }
-            */
-            
             // removendo ajuda
+            _x=1096-100;
             for ( int i=0;i<10;i++ ){
                 if ( i == n_eu_mesmo )
                     continue;
@@ -14967,7 +14961,7 @@ while True:
                 if ( findParm(new String[]{players[i]}, naoBloquearEssesNomes, false) >= 0 )
                     System.out.println("o jogador [" + i + "] - " + players[i] + " não pode ter a ajuda removida!");
                 else{                                        
-                    robotMouseMove(1096, _y);
+                    robotMouseMove(_x, _y);
                     sleepMillis(50);                
                     robotMouseClickEsq();
                     sleepMillis(50);
@@ -31103,7 +31097,7 @@ Exemplos...
             | jq -r '.response.builds
             | map(select(.arch=="amd64" and (.title | startswith("Windows 11, version"))))
             | max_by(.build | split(".") | map(tonumber))
-            | "\(.title)\nbuild: \(.build)\nlink:  https://uupdump.net/selectlang.php?id=\(.uuid)"'
+            | "\\(.title)\\nbuild: \\(.build)\\nlink:  https://uupdump.net/selectlang.php?id=\\(.uuid)"'
 [y [juros|emprestimo]]
     y juros price valor 15000 juros 1.0 a.m 10 parcelas
     y juros sac valor 15000 juros 1.0 a.m 10 parcelas
