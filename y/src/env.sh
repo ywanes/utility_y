@@ -79,7 +79,9 @@ if [ "1" == "1" ] # verify new ubuntu and LTS
 then
   if [ `whoami` == "root" ] && [ -e /etc/os-release ]
   then
-    # ultima atualização em 17/10/2025
+    # ultimas atualizacoes:
+    #    2025-10-17
+    #    2026-06-07 espectativa era 2026-04-20
     v1=`cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk ' { print $2 } '`
     v2=`curl https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk ' { print $2 } '`
     v3=`curl http://changelogs.ubuntu.com/meta-release-development 2>/dev/null | grep "Version: " | tail -1 | awk ' { print $2 } '`
