@@ -83,6 +83,9 @@
 	.silver   { background: #bdc3c7; }
     .volume-container {
       grid-column: 1 / -1 !important;
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
       display: flex;
       align-items: center;
       background: #333;
@@ -249,7 +252,7 @@ function mostraVolumeControle(real_request) {
     var currentVol = get_vol_pc(real_request);
     var sliderPos = inverseMap(currentVol);
     return `
-    <div class="volume-container">
+    <div class="volume-container" style="position: sticky; top: 0; z-index: 10;">
         <span id="vol-display" style="min-width: 60px; font-variant-numeric: tabular-nums;" onclick="update_painel_vol()">
             ${parseFloat(currentVol).toFixed(4)}
         </span>
@@ -334,6 +337,7 @@ function load(a){
 			  <a href="javascript:void(0);" class="red" onclick="load('relogio')">relogio</a>
 			  <a href="javascript:void(0);" class="red" onclick="load('cronometro')">cronometro</a>
 			  <a href="javascript:void(0);" class="red" onclick="load('timer')">timer</a>
+			  <a href="javascript:void(0);" class="red" onclick="load('calendario')">calendario</a>
               ` + mostraVolumeControle() + `
             </div>		
             `;
@@ -529,6 +533,13 @@ function load(a){
             <div class="header">/Menu/timer</div>
             <br><div id="timer"></div>`;
 			aplica_timer();
+			return;
+		}		
+        if ( a == '/Menu/calendario' ){
+            document.getElementById('bloco2').innerHTML=`
+            <div class="header">/Menu/calendario</div>
+            <br><div id="calendario"></div>`;
+			aplica_calendario();
 			return;
 		}		
     } catch (e) {
@@ -770,6 +781,141 @@ function aplica_relogio() {
   tick();
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
+}
+
+function aplica_calendario() {
+  const el = document.getElementById('calendario');
+  if (!el) return;
+
+  // estilo injetado uma única vez
+  if (!document.getElementById('cal-style')) {
+    const st = document.createElement('style');
+    st.id = 'cal-style';
+    st.textContent = `
+      #calendario{text-align:center;padding:.5em 0;color:#fff;font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+      #calendario .cal-box{display:inline-block;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:12px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.25);padding:1em 1.2em}
+      #calendario .cal-head{display:flex;align-items:center;gap:.5em;margin-bottom:.8em}
+      #calendario .cal-titulo{font-weight:300;font-size:1.1rem;letter-spacing:.04em;flex:1}
+      #calendario .cal-nav{color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:8px;width:2.2em;height:2.2em;font-size:1rem;cursor:pointer;-webkit-tap-highlight-color:transparent}
+      #calendario .cal-grid{display:grid;grid-template-columns:repeat(7,2.2em);gap:4px;font-variant-numeric:tabular-nums}
+      #calendario .cal-dow{font-size:.7rem;opacity:.6;padding:.3em 0}
+      #calendario .cal-dia{padding:.45em 0;border-radius:8px;font-size:.9rem;background:rgba(255,255,255,.04)}
+      #calendario .cal-vazio{background:transparent}
+      #calendario .cal-outro{opacity:.35;background:transparent}
+      #calendario .cal-hoje{outline:2px solid #fff;font-weight:600}
+      #calendario .cal-feriado{background:#d9534f}
+      #calendario .cal-facultativo{background:#f0ad4e;color:#222}
+      #calendario .cal-legenda{display:flex;justify-content:center;gap:1em;margin-top:.8em;font-size:.7rem;opacity:.85}
+      #calendario .cal-legenda span{display:inline-flex;align-items:center;gap:.35em}
+      #calendario .cal-pt{width:.8em;height:.8em;border-radius:3px;display:inline-block}
+    `;
+    document.head.appendChild(st);
+  }
+
+  const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const DIAS  = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+  // --- cálculo da Páscoa (algoritmo de Meeus/Butcher) ---
+  function pascoa(ano) {
+    const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100;
+    const d = Math.floor(b / 4), e = b % 4;
+    const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4), k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const mes = Math.floor((h + l - 7 * m + 114) / 31);
+    const dia = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(ano, mes - 1, dia);
+  }
+
+  // --- monta o mapa de feriados do ano ('mes0-dia' -> {nome,tipo}) ---
+  function feriados(ano) {
+    const map = {};
+    const add = (mes0, dia, nome, tipo) => { map[mes0 + '-' + dia] = { nome, tipo }; };
+
+    // feriados nacionais fixos
+    add(0,  1,  'Confraternização Universal', 'feriado');
+    add(3,  21, 'Tiradentes',                 'feriado');
+    add(4,  1,  'Dia do Trabalho',            'feriado');
+    add(8,  7,  'Independência',              'feriado');
+    add(9,  12, 'N. Sra. Aparecida',          'feriado');
+    add(10, 2,  'Finados',                    'feriado');
+    add(10, 15, 'Proclamação da República',   'feriado');
+    add(10, 20, 'Consciência Negra',          'feriado');   // nacional desde 2024
+    add(11, 25, 'Natal',                      'feriado');
+
+    // ponto facultativo fixo
+    add(9,  28, 'Dia do Servidor Público',    'facultativo');
+
+    // móveis (relativos à Páscoa)
+    const p = pascoa(ano);
+    const off = n => { const x = new Date(p); x.setDate(x.getDate() + n); return x; };
+    const reg = (dt, nome, tipo) => add(dt.getMonth(), dt.getDate(), nome, tipo);
+
+    reg(off(-48), 'Carnaval',           'facultativo');  // segunda
+    reg(off(-47), 'Carnaval',           'facultativo');  // terça
+    reg(off(-46), 'Quarta de Cinzas',   'facultativo');  // até 14h
+    reg(off(-2),  'Sexta-feira Santa',  'feriado');      // feriado nacional
+    reg(off(60),  'Corpus Christi',     'facultativo');
+
+    return map;
+  }
+
+  const hoje = new Date();
+  let ano = hoje.getFullYear();
+  let mes = hoje.getMonth();
+
+  function render() {
+    const inicio = new Date(ano, mes, 1).getDay();
+    const dias   = new Date(ano, mes + 1, 0).getDate();
+    const fmap   = feriados(ano);
+
+    const prevLast = new Date(ano, mes, 0).getDate();   // último dia do mês anterior
+    const lead     = inicio === 0 ? 7 : inicio;         // 1º domingo => linha extra inteira
+
+    let celulas = DIAS.map(d => `<div class="cal-dow">${d}</div>`).join('');
+    for (let i = 0; i < lead; i++) {
+      const diaPrev = prevLast - lead + 1 + i;
+      celulas += `<div class="cal-dia cal-outro">${diaPrev}</div>`;
+    }
+    for (let d = 1; d <= dias; d++) {
+      const ehHoje = d === hoje.getDate() && mes === hoje.getMonth() && ano === hoje.getFullYear();
+      const fer = fmap[mes + '-' + d];
+      let cls = 'cal-dia';
+      if (fer) cls += fer.tipo === 'feriado' ? ' cal-feriado' : ' cal-facultativo';
+      if (ehHoje) cls += ' cal-hoje';
+      const titulo = fer ? ` title="${fer.nome}"` : '';
+      celulas += `<div class="${cls}"${titulo}>${d}</div>`;
+    }
+
+    el.innerHTML = `
+      <div class="cal-box">
+        <div class="cal-head">
+          <button class="cal-nav" data-acao="prev">‹</button>
+          <span class="cal-titulo">${MESES[mes]} ${ano}</span>
+          <button class="cal-nav" data-acao="next">›</button>
+        </div>
+        <div class="cal-grid">${celulas}</div>
+        <div class="cal-legenda">
+          <span><i class="cal-pt" style="background:#d9534f"></i>feriado</span>
+          <span><i class="cal-pt" style="background:#f0ad4e"></i>facultativo</span>
+        </div>
+        <div class="cal-foot" style="margin-top:.8em">
+          <button class="cal-hoje-btn" data-acao="hoje" style="color:#fff;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);border-radius:8px;padding:.5em 1.2em;font-size:.85rem;cursor:pointer;-webkit-tap-highlight-color:transparent">hoje</button>
+        </div>
+      </div>`;
+
+    el.querySelectorAll('[data-acao]').forEach(b => b.onclick = () => {
+      const a = b.dataset.acao;
+      if (a === 'prev')      { if (--mes < 0)  { mes = 11; ano--; } }
+      else if (a === 'next') { if (++mes > 11) { mes = 0;  ano++; } }
+      else if (a === 'hoje') { ano = hoje.getFullYear(); mes = hoje.getMonth(); }
+      render();
+    });
+  }
+
+  render();
 }
 
 function aplica_cronometro() {
