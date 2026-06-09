@@ -124,7 +124,38 @@ then
 else
   echo "disable -> verify new ubuntu and LTS"
 fi
+
+export flag_enable_bracketed_paste='S'
+bind 'set enable-bracketed-paste off'
+#alias gcloud='$HOME/google-cloud-sdk/bin/gcloud'
+#alias gsutil='$HOME/google-cloud-sdk/bin/gsutil'
+#alias bq='$HOME/google-cloud-sdk/bin/bq'
+#export CLOUDSDK_CONFIG="$HOME/.cf"
+#export REQUESTS_CA_BUNDLE=""
+#export CLOUDSDK_PYTHON="/usr/bin/python3.11" #apt install python3.11.2 #fix error No module named 'imp' in python3.12
+#export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missio@mb.com.br/adc.json"
+#alias gopen='gcloud cloud-shell ssh'
+#alias openzeus='gcloud --project="mb-prod-277215" beta compute ssh "zeus-bi-replica" --zone "us-east4-a"'
+# new img p11:
+# docker load < /p11.tar
+# new container p11:
+# docker stop p11;docker rm p11;docker run -dt --name p11 p11;
+# entra p11 ou inicia e entra p11
+#alias p11='if [ `docker ps -f name=p11 | wc -l` == "2" ]; then docker exec -it p11 bash 2>/dev/null; else echo ligando p11..;docker start p11 >/dev/null;docker exec -it p11 bash 2>/dev/null; fi'
+#alias destino='bq query --format=csv --use_legacy_sql=false --max_rows=1000000'
+#setxkbmap -model abnt2 -layout br
+alias c='cd /home/base/claude && claude --effort max'
+# alias porteiro='echo para editar: /opt/serverrouter_porteiro.cfg; echo; sudo -u base2 python3 /opt/porteiro.py localhost 9000 localhost 3500 porteiro'
+# ssh -L 3050:localhost:8080 -L 3051:localhost:8081 data-warehouse-azure -N -f 1>/dev/null 2>/dev/null & disown
+# ssh -L 3500:localhost:8123 -L 3501:localhost:9000 -L 3502:localhost:9009 data-warehouse-database-azure -N -f 1>/dev/null 2>/dev/null & disown
+# ssh -L 5434:localhost:5434 internal-tools-azure -N -f 1>/dev/null 2>/dev/null & disown
+# sudo iptables -A OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
+# sudo ip6tables -A OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
+# # desbloqueando
+# # sudo iptables -D OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
+# # sudo ip6tables -D OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
 EOF
+chmod 777 /opt/env_
 
 cat <<'EOF'> /opt/porteiro.py
 #!/usr/bin/env python3
@@ -445,38 +476,6 @@ with+
 insert into
 insert+into+
 EOF
-
-export flag_enable_bracketed_paste='S'
-bind 'set enable-bracketed-paste off'
-#alias gcloud='$HOME/google-cloud-sdk/bin/gcloud'
-#alias gsutil='$HOME/google-cloud-sdk/bin/gsutil'
-#alias bq='$HOME/google-cloud-sdk/bin/bq'
-#export CLOUDSDK_CONFIG="$HOME/.cf"
-#export REQUESTS_CA_BUNDLE=""
-#export CLOUDSDK_PYTHON="/usr/bin/python3.11" #apt install python3.11.2 #fix error No module named 'imp' in python3.12
-#export GOOGLE_APPLICATION_CREDENTIALS="$HOME/.cf/legacy_credentials/renato.missio@mb.com.br/adc.json"
-#alias gopen='gcloud cloud-shell ssh'
-#alias openzeus='gcloud --project="mb-prod-277215" beta compute ssh "zeus-bi-replica" --zone "us-east4-a"'
-# new img p11:
-# docker load < /p11.tar
-# new container p11:
-# docker stop p11;docker rm p11;docker run -dt --name p11 p11;
-# entra p11 ou inicia e entra p11
-#alias p11='if [ `docker ps -f name=p11 | wc -l` == "2" ]; then docker exec -it p11 bash 2>/dev/null; else echo ligando p11..;docker start p11 >/dev/null;docker exec -it p11 bash 2>/dev/null; fi'
-#alias destino='bq query --format=csv --use_legacy_sql=false --max_rows=1000000'
-#setxkbmap -model abnt2 -layout br
-alias c='cd /home/base/claude && claude --effort max'
-# alias porteiro='echo para editar: /opt/serverrouter_porteiro.cfg; echo; sudo -u base2 python3 /opt/porteiro.py localhost 9000 localhost 3500 porteiro'
-# ssh -L 3050:localhost:8080 -L 3051:localhost:8081 data-warehouse-azure -N -f 1>/dev/null 2>/dev/null & disown
-# ssh -L 3500:localhost:8123 -L 3501:localhost:9000 -L 3502:localhost:9009 data-warehouse-database-azure -N -f 1>/dev/null 2>/dev/null & disown
-# ssh -L 5434:localhost:5434 internal-tools-azure -N -f 1>/dev/null 2>/dev/null & disown
-# sudo iptables -A OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
-# sudo ip6tables -A OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
-# # desbloqueando
-# # sudo iptables -D OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
-# # sudo ip6tables -D OUTPUT -p tcp --dport 3500 -m owner ! --uid-owner base2 -j REJECT
-EOF
-chmod 777 /opt/env_
 
 cat <<'EOF'> /opt/y/compila
 javac -encoding UTF-8 -cp .:ojdbc6.jar:sqljdbc4-3.0.jar:mysql-connector-java-8.0.26.jar:postgresql-42.7.5.jar:jsch-0.1.55.jar:. Y.java
