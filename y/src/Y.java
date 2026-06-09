@@ -2090,11 +2090,6 @@ cat buffer.log
             return;
         }
         
-        if ( args[0].equals("ffmpeg") ){
-            System.out.println(ffmpeg(args));
-            return;
-        }
-        
         if ( args[0].equals("mkv") ){
             try{
                 boolean verbose=false;
@@ -2118,7 +2113,15 @@ cat buffer.log
                 erroFatal(e);
             }
             return;
-        }        
+        }      
+        if ( args[0].equals("ffmpeg") ){
+            if ( args.length == 1 ){
+                System.out.println("digite:\ny help ffmpeg");
+                return;
+            }
+            System.out.println(ffmpeg(args));
+            return;
+        }
         if ( args[0].equals("thumbnail") || args[0].equals("tn") ){
             String tail="";
             while(true){
@@ -30878,6 +30881,7 @@ usage:
   [y ocr]
   [y paste]
   [y mkv]
+  [y ffmpeg]
   [y [thumbnail|tn]]
   [y insta]
   [y bmp]
@@ -31781,6 +31785,22 @@ Exemplos...
     aviso: "Audio: ac3 (ac-3" de mp4 não funciona na web
     checando:
     cd d:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep "Input #0" "(por): Audio: ac3"
+[y ffmpeg]
+    y ffmpeg desktop.mp4
+    y ffmpeg
+    # desktop
+    ffmpeg -f gdigrab -framerate ntsc -video_size 1920x1080 -i desktop -vcodec libx264 -pix_fmt yuv420p -preset ultrafast -f avi desktop.mp4 -y
+    # mic e desktop
+    ffmpeg -f gdigrab -framerate ntsc -video_size 1920x1080 -i desktop  -f dshow -i audio="Microfone (HUSKY)" -vcodec libx264 -pix_fmt yuv420p -preset ultrafast audio_mic_e_desktop.mp4 -y
+    # desktop pipe
+    ffmpeg -f gdigrab -framerate ntsc -video_size 1920x1080 -i desktop -vcodec libx264 -pix_fmt yuv420p -preset ultrafast -f avi pipe: > aa.avi
+    # mic e desktop pipe
+    ffmpeg -f gdigrab -framerate ntsc -video_size 1920x1080 -i desktop  -f dshow -i audio="Microfone (HUSKY)" -vcodec libx264 -pix_fmt yuv420p -preset ultrafast -f avi pipe: > aa.avi
+    # stdin e stdout format mp3
+    y cat a.wav | ffmpeg -i pipe: -f mp3 pipe:1 > a.mp3
+    # list devices mic
+    ffmpeg -list_devices true -f dshow -i dummy
+    # usado para preencher audio="Microfone (HUSKY)"
 [y [thumbnail|tn]]
     y thumbnail
 [y insta]
