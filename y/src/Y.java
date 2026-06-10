@@ -7745,7 +7745,7 @@ bind 'set enable-bracketed-paste off'
                       main();                      
         """;
         
-        String alert_puppeteer="puppeteer nao encontrado!, instale ele com npm install puppeteer na pasta C:/npm_puppeteer";
+        String alert_puppeteer="puppeteer nao encontrado!, instale ele com npm install puppeteer na pasta C:/npm_puppeteer\nPara instalar o npm: winget install OpenJS.NodeJS.LTS";
         if ( !new File("C:/npm_puppeteer").exists() )
             throw new Exception(alert_puppeteer);
         String s=runtimeExec(null, new String[]{"cmd", "/c", "node", "-", url},new File("C:/npm_puppeteer"), script.getBytes(), null);
