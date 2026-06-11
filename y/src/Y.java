@@ -31432,7 +31432,7 @@ Exemplos...
 [y sshgen]
     y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc" # criando chave derivada de palavra passe
     y sshgen "palavraPasseSeedGenerator" "id_ed25519_pc" -out # imprime na tela o conteudo public
-    obs: gera os arquivo pruvate e public na pasta corrent do terminal
+    obs: gera os arquivo private e public na pasta corrente do terminal
     obs2: cria as chaves no .ssh para que o ssh nao recuse, pois se algum outro usuario tiver acesso também o ssh nao aceita
           comando powershell windows para deixar permissao exclusiva: icacls id_ed25519_pc /inheritance:r /grant "%USERNAME%:F"
     conectando: ssh -i id_ed25519_pc user2@host2
