@@ -84,10 +84,6 @@ case "${1:-}" in
         # Série recém-aberta existe no dists/ mas vem VAZIA de amd64 até os pacotes
         # serem publicados (caso do 26.10 de 17/04 a 07/06). Cheio passa de 1 MB;
         # vazio fica em ~30 bytes ou 404.
-
-
-
-
         _b=0
         for _f in Packages.xz Packages.gz; do
           _cl="$(curl -fsSI "$_mir/dists/$_s/main/binary-amd64/$_f" 2>/dev/null \
@@ -95,16 +91,11 @@ case "${1:-}" in
           if [ -n "$_cl" ] && [ "$_cl" -gt "$_b" ] 2>/dev/null; then _b="$_cl"; fi
           [ "$_b" -ge 100000 ] 2>/dev/null && break
         done
-        [ "$_s" = stonking ] && _b=0    # <<< TESTE: finge que o 26.10 não tem pacotes amd64
         if [ "${_b:-0}" -ge 100000 ] 2>/dev/null; then
           _stat="disponível"
         else
           _stat="INDISPONÍVEL (sem pacotes amd64 no archive)"
         fi
-
-
-
-
         _name=""
         [ -r "$_csv" ] && _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
         printf '  %-11s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "$_stat"
