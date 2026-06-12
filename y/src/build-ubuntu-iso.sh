@@ -23,9 +23,6 @@
 # obs4: versoes muito antigas pode nao funcionar, depende do repositorio
 set -euo pipefail
 
-
-
-
 # ------------------------------- modo LIST ----------------------------------
 # 'list' mostra as versões do Ubuntu e seus codinomes de DUAS palavras.
 # NÃO precisa de root. Os codinomes de 2 palavras vêm do distro-info-data
@@ -42,7 +39,7 @@ case "${1:-}" in
       | grep -oE 'href="[a-z][a-z]+/"' \
       | sed -E 's#href="([a-z]+)/"#\1#' \
       | grep -vE '^(devel|stable|oldstable)$' \
-      | sort -u)"
+      | sort -u)" || true
     if [ -z "$_suites" ]; then
       echo "  ERRO: não consegui consultar $_mir/dists/ (sem rede?)."
       exit 1
@@ -54,10 +51,12 @@ case "${1:-}" in
     _csv="/usr/share/distro-info/ubuntu.csv"
     if [ "$(id -u)" -eq 0 ]; then
       echo ">> Atualizando distro-info-data (codinomes frescos)..." >&2
-      apt-get update -qq          >/dev/null 2>&1 || true
+      # NAO roda 'apt-get update' aqui: em VM com pouca RAM ele estoura a memória
+      # (OOM -> 'Killed'). Só instala/atualiza o pacote a partir das listas que já
+      # existem — bem mais leve. Para listas fresquíssimas, rode 'sudo apt update' antes.
       apt-get install -y -qq distro-info-data >/dev/null 2>&1 || true
     else
-      echo ">> dica: rode com sudo para atualizar os codinomes da devel mais nova." >&2
+      echo ">> dica: instale/atualize o distro-info-data para os codinomes mais novos." >&2
     fi
     # Também varre o old-releases: versões EOL que saíram do archive principal mas
     # ainda buildam pelo número. Lá os pacotes estão congelados/arquivados, então não
@@ -66,13 +65,13 @@ case "${1:-}" in
       | grep -oE 'href="[a-z][a-z]+/"' \
       | sed -E 's#href="([a-z]+)/"#\1#' \
       | grep -vE '^(devel|stable|oldstable)$' \
-      | sort -u)"
+      | sort -u)" || true
     [ -n "$_old" ] || echo ">> aviso: old-releases não retornou suites (sem rede pra ele agora?); as EOL não vão aparecer." >&2
     {
       # --- archive principal: número (Release) + status amd64 AO VIVO ---
       for _s in $_suites; do
         _ver="$(curl -fsSL -r 0-4095 "$_mir/dists/$_s/Release" 2>/dev/null \
-          | awk -F': ' '/^Version:/{print $2; exit}')"
+          | awk -F': ' '/^Version:/{print $2; exit}')" || true
         # sufixo LTS: o Release traz só "24.04"; abril (.04) de ano par é LTS
         # (regra válida desde o 8.04), pra casar com o listFast/CSV.
         case "$_ver" in *.04) [ $(( ${_ver%%.*} % 2 )) -eq 0 ] 2>/dev/null && _ver="$_ver LTS" ;; esac
@@ -83,14 +82,14 @@ case "${1:-}" in
         _b=0
         for _f in Packages.xz Packages.gz; do
           _cl="$(curl -fsSI "$_mir/dists/$_s/main/binary-amd64/$_f" 2>/dev/null \
-                | awk -F': ' 'tolower($1)=="content-length"{gsub(/\r/,"");print $2; exit}')"
+                | awk -F': ' 'tolower($1)=="content-length"{gsub(/\r/,"");print $2; exit}')" || true
           if [ -n "$_cl" ] && [ "$_cl" -gt "$_b" ] 2>/dev/null; then _b="$_cl"; fi
           [ "$_b" -ge 100000 ] 2>/dev/null && break
         done
         if [ "${_b:-0}" -ge 100000 ] 2>/dev/null; then
           _stat="disponível"
         else
-          _stat="INDISPONÍVEL (sem pacotes amd64 ainda)"
+          _stat="INDISPONÍVEL (sem pacotes amd64 no archive)"
         fi
         _name=""
         [ -r "$_csv" ] && _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
