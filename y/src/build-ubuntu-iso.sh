@@ -2,6 +2,7 @@
 #
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) list'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) listFast'
 #   ou
 #   chmod +x build-ubuntu-iso.sh
 #   sudo ./build-ubuntu-iso.sh 2610        # ou 26.04, 2610, 24.04, 25.10 ...
@@ -22,6 +23,7 @@
 # obs4: versoes muito antigas pode nao funcionar, depende do repositorio
 set -euo pipefail
 
+
 # ------------------------------- modo LIST ----------------------------------
 # 'list' mostra as versões do Ubuntu e seus codinomes de DUAS palavras.
 # NÃO precisa de root. Os codinomes de 2 palavras vêm do distro-info-data
@@ -29,23 +31,88 @@ set -euo pipefail
 # "suite"), que é o que este builder resolve sozinho na hora de construir.
 case "${1:-}" in
   list|-l|--list)
-    CSV="/usr/share/distro-info/ubuntu.csv"
-    if [ -r "$CSV" ]; then
-      echo "Versões do Ubuntu  (número | codinome | suite):"
+    _mir="http://archive.ubuntu.com/ubuntu"
+    echo "Versões no archive (número | codinome | suite | status):"
+    echo "(número/suite/status vêm do archive AO VIVO; 'status' = já tem pacotes amd64?)"
+    echo
+    # suites base (1 palavra) no dists/: tira pockets (-updates/-security/...) e aliases.
+    _suites="$(curl -fsSL "$_mir/dists/" 2>/dev/null \
+      | grep -oE 'href="[a-z][a-z]+/"' \
+      | sed -E 's#href="([a-z]+)/"#\1#' \
+      | grep -vE '^(devel|stable|oldstable)$' \
+      | sort -u)"
+    if [ -z "$_suites" ]; then
+      echo "  ERRO: não consegui consultar $_mir/dists/ (sem rede?)."
+      exit 1
+    fi
+    # CSV local = fonte do codinome de 2 palavras. (Opção B) Se estiver rodando como
+    # ROOT, atualiza o distro-info-data antes de ler — o codinome da devel mais nova
+    # mora nele e o pacote instalado pode estar velho (ex.: um CSV de out/2025 não
+    # conhece o 'stonking'). Sem root, usa o que houver e dá a dica do sudo.
+    _csv="/usr/share/distro-info/ubuntu.csv"
+    if [ "$(id -u)" -eq 0 ]; then
+      echo ">> Atualizando distro-info-data (codinomes frescos)..." >&2
+      apt-get update -qq          >/dev/null 2>&1 || true
+      apt-get install -y -qq distro-info-data >/dev/null 2>&1 || true
+    else
+      echo ">> dica: rode com sudo para atualizar os codinomes da devel mais nova." >&2
+    fi
+    for _s in $_suites; do
+      _ver="$(curl -fsSL -r 0-4095 "$_mir/dists/$_s/Release" 2>/dev/null \
+        | awk -F': ' '/^Version:/{print $2; exit}')"
+      # DISPONIBILIDADE REAL: o índice main/binary-amd64/Packages já tem conteúdo (MBs)?
+      # Uma suite recém-aberta existe no dists/ mas vem VAZIA de amd64 até os pacotes
+      # serem publicados — aí o debootstrap não tem o que baixar (foi o caso do 26.10
+      # de 17/04 a 07/06). Índice cheio passa de 1 MB; vazio fica em ~30 bytes ou 404.
+      _b=0
+      for _f in Packages.xz Packages.gz; do
+        _cl="$(curl -fsSI "$_mir/dists/$_s/main/binary-amd64/$_f" 2>/dev/null \
+              | awk -F': ' 'tolower($1)=="content-length"{gsub(/\r/,"");print $2; exit}')"
+        if [ -n "$_cl" ] && [ "$_cl" -gt "$_b" ] 2>/dev/null; then _b="$_cl"; fi
+        [ "$_b" -ge 100000 ] 2>/dev/null && break
+      done
+      if [ "${_b:-0}" -ge 100000 ] 2>/dev/null; then
+        _stat="disponível"
+      else
+        _stat="INDISPONÍVEL (sem pacotes amd64 ainda)"
+      fi
+      _name=""
+      [ -r "$_csv" ] && _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
+      printf '  %-8s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "$_stat"
+    done | sort -V
+    echo
+    echo "Construa pelo NÚMERO:  build-ubuntu-iso.sh <numero>   (ex: 26.04)"
+    echo "'status' INDISPONÍVEL = a suite existe mas ainda não tem pacotes amd64"
+    echo "publicados (típico de série devel recém-aberta) — não dá pra buildar ainda."
+    echo "O codinome de 2 palavras vem do distro-info-data; rodando com sudo, o list"
+    echo "atualiza ele antes (codinome fresco). Sem sudo e sem o pacote, vira '—'."
+    echo "Versões EOL não aparecem aqui, mas buildam pelo número (via old-releases)."
+    exit 0
+    ;;
+  listFast|listfast|--list-fast|-lf)
+    # 'listFast' = versão RÁPIDA: lê SÓ o distro-info-data local, sem consultar o
+    # archive. Instantâneo e offline, porém mostra o que o CSV local souber (pode
+    # estar velho) e NÃO verifica disponibilidade de pacotes amd64. Para a lista ao
+    # vivo (número/suite/status do archive + codinome fresco), use 'list'.
+    _csv="/usr/share/distro-info/ubuntu.csv"
+    if [ -r "$_csv" ]; then
+      echo "Versões do Ubuntu — rápido, do distro-info-data local (número | codinome | suite):"
       echo
       # CSV: version,codename,series,created,release,eol[,eol-server,eol-esm]
-      awk -F, 'NR>1 && $2 ~ / / {printf "  %-11s %-24s %s\n", $1, $2, $3}' "$CSV" \
+      awk -F, 'NR>1 && $2 ~ / / {printf "  %-11s %-24s %s\n", $1, $2, $3}' "$_csv" \
         | sort -V
       echo
-      echo "Para construir, passe o NÚMERO. ex.:  build-ubuntu-iso.sh 26.04"
-      echo "A 'suite' (1 palavra) é o codinome que o build resolve no archive."
+      echo "Construa pelo NÚMERO. ex.:  build-ubuntu-iso.sh 26.04"
+      echo "Lista RÁPIDA (CSV local): pode estar desatualizada e NÃO checa pacotes amd64."
+      echo "Para a lista AO VIVO (status + codinome fresco):  build-ubuntu-iso.sh list"
     else
-      echo "distro-info-data não encontrado em $CSV."
-      echo "Para ver os codinomes de 2 palavras:  sudo apt install distro-info-data"
+      echo "distro-info-data não encontrado em $_csv."
+      echo "Para os codinomes de 2 palavras:  sudo apt install distro-info-data"
+      echo "(ou use 'build-ubuntu-iso.sh list', que consulta o archive ao vivo.)"
       echo
-      echo "Suites disponíveis no archive agora (apenas 1 palavra):"
+      echo "Suites no archive agora (apenas 1 palavra):"
       curl -fsSL "http://archive.ubuntu.com/ubuntu/dists/" 2>/dev/null \
-        | grep -oE 'href="[a-z]+/"' \
+        | grep -oE 'href="[a-z][a-z]+/"' \
         | sed -E 's#href="([a-z]+)/"#  \1#' \
         | grep -vE '  (devel|stable|oldstable)$' \
         | sort -u \
@@ -54,6 +121,7 @@ case "${1:-}" in
     exit 0
     ;;
 esac
+ 
 
 # ----------------------------- versão (parâmetro) ----------------------------
 # Aceita "2604", "26.04", "2610", etc. Normaliza para o formato AA.MM.
