@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) list'
 #   ou
 #   chmod +x build-ubuntu-iso.sh
 #   sudo ./build-ubuntu-iso.sh 2610        # ou 26.04, 2610, 24.04, 25.10 ...
@@ -20,6 +21,39 @@
 # obs3: iso fica uns 2 gigas e o sistema instalado uns 4.5 gigas
 # obs4: versoes muito antigas pode nao funcionar, depende do repositorio
 set -euo pipefail
+
+# ------------------------------- modo LIST ----------------------------------
+# 'list' mostra as versões do Ubuntu e seus codinomes de DUAS palavras.
+# NÃO precisa de root. Os codinomes de 2 palavras vêm do distro-info-data
+# (CSV oficial do sistema) — o archive só expõe o codinome de 1 palavra (a
+# "suite"), que é o que este builder resolve sozinho na hora de construir.
+case "${1:-}" in
+  list|-l|--list)
+    CSV="/usr/share/distro-info/ubuntu.csv"
+    if [ -r "$CSV" ]; then
+      echo "Versões do Ubuntu  (número | codinome | suite):"
+      echo
+      # CSV: version,codename,series,created,release,eol[,eol-server,eol-esm]
+      awk -F, 'NR>1 && $2 ~ / / {printf "  %-11s %-24s %s\n", $1, $2, $3}' "$CSV" \
+        | sort -V
+      echo
+      echo "Para construir, passe o NÚMERO. ex.:  build-ubuntu-iso.sh 26.04"
+      echo "A 'suite' (1 palavra) é o codinome que o build resolve no archive."
+    else
+      echo "distro-info-data não encontrado em $CSV."
+      echo "Para ver os codinomes de 2 palavras:  sudo apt install distro-info-data"
+      echo
+      echo "Suites disponíveis no archive agora (apenas 1 palavra):"
+      curl -fsSL "http://archive.ubuntu.com/ubuntu/dists/" 2>/dev/null \
+        | grep -oE 'href="[a-z]+/"' \
+        | sed -E 's#href="([a-z]+)/"#  \1#' \
+        | grep -vE '  (devel|stable|oldstable)$' \
+        | sort -u \
+        || echo "  (sem rede para consultar o archive)"
+    fi
+    exit 0
+    ;;
+esac
 
 # ----------------------------- versão (parâmetro) ----------------------------
 # Aceita "2604", "26.04", "2610", etc. Normaliza para o formato AA.MM.
