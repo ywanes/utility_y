@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-#   bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10'
 #   ou
 #   chmod +x build-ubuntu-iso.sh
-#   sudo ./build-ubuntu-iso.sh 2604        # ou 26.04, 2610, 24.04, 25.10 ...
+#   sudo ./build-ubuntu-iso.sh 2610        # ou 26.04, 2610, 24.04, 25.10 ...
 #
 # Builder GENÉRICO de ISO live do Ubuntu (BIOS + UEFI, foco em VMware e qemu).
 # Você passa SÓ a versão; o script descobre o codinome/suíte sozinho no archive.
