@@ -116,7 +116,7 @@ case "${1:-}" in
     echo "status: 'disponível' = pronto p/ buildar;  'INDISPONÍVEL' = série existe mas"
     echo "ainda sem pacotes amd64 (devel recém-aberta);  'EOL (old-releases)' = antiga,"
     echo "fora do archive principal, mas ainda buildável pelo número (old-releases)."
-    echo "Codinome de 2 palavras vem do distro-info-data (com sudo, o list atualiza)."
+    echo "Codinome de 2 palavras vem do distro-info-data local; p/ atualizar: sudo apt install --only-upgrade distro-info-data"
     echo "Obs.: versões EOL muito antigas (pré-amd64) podem não buildar via debootstrap."
     exit 0
     ;;
