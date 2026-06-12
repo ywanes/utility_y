@@ -3,6 +3,10 @@
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) list'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) listFast'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10 listapt'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) listapt'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10 getapt'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) getapt'
 #   ou
 #   chmod +x build-ubuntu-iso.sh
 #   sudo ./build-ubuntu-iso.sh 2610        # ou 26.04, 2610, 24.04, 25.10 ...
@@ -146,13 +150,26 @@ esac
 
 # ----------------------------- versão (parâmetro) ----------------------------
 # Aceita "2604", "26.04", "2610", etc. Normaliza para o formato AA.MM.
+# >>> NOVO: listapt/getapt — como $1 = modo GLOBAL (todas as distros);
+#          como $2 = escopo de UMA versão (ex: "26.10 getapt").
+APT_CMD=""
+case "${1:-}" in listapt|getapt) APT_CMD="$1" ;; esac
+case "${2:-}" in listapt|getapt) APT_CMD="$2" ;; esac
+if [ -n "$APT_CMD" ] && [ "$APT_CMD" = "${1:-}" ]; then
+  VERSION_INPUT=""   # modo global: sem versão
+  VERSION=""         # precisa existir (set -u) por causa do OUT= na configuração
+else
 VERSION_INPUT="${1:-${VERSION:-}}"
-if [ -z "$VERSION_INPUT" ]; then
+fi
+if [ -z "$VERSION_INPUT" ] && [ -z "$APT_CMD" ]; then
   echo "Uso: sudo ./build-ubuntu-iso.sh <versao>"
   echo "  ex: sudo ./build-ubuntu-iso.sh 2604      (= 26.04)"
   echo "      sudo ./build-ubuntu-iso.sh 26.10"
+  echo "      sudo ./build-ubuntu-iso.sh 26.10 listapt|getapt   (cache p/ UMA versao)"
+  echo "      sudo ./build-ubuntu-iso.sh listapt|getapt         (cache p/ TODAS)"
   exit 1
 fi
+if [ -n "$VERSION_INPUT" ]; then   # >>> NOVO: modo global (sem versão) pula esta validação
 _digits="$(printf '%s' "$VERSION_INPUT" | tr -cd '0-9')"
 if [ "${#_digits}" -ne 4 ]; then
   echo "ERRO: versão inválida '$VERSION_INPUT'. Use AAMM (ex: 2604) ou AA.MM (ex: 26.04)."
@@ -170,6 +187,7 @@ if [ "$_mm" != "04" ] && [ "$_mm" != "10" ]; then
   echo "      Você quis dizer ${_yy}04 (${_yy}.04) ou ${_yy}10 (${_yy}.10)?"
   exit 1
 fi
+fi  # <<< fim do NOVO guard do modo global
 
 # ----------------------------- configuração ---------------------------------
 # >>> VALIDAÇÃO DE ASSINATURA <<<
@@ -212,6 +230,27 @@ discover_suite() {
 # cache persistente de .deb: fica FORA do $WORK, então não é apagado entre builds.
 # Se o .deb já estiver aqui, debootstrap/apt reaproveitam e pulam pro próximo.
 APTCACHE="${APTCACHE:-$(pwd)/apt-cache}"
+
+# >>> NOVO: cópia ATÔMICA de .deb — por segurança, NUNCA escrevemos um .deb no
+# destino com o nome final direto: escrevemos como temporário (sufixo -part,
+# que NENHUM glob *.deb enxerga) e só então RENOMEAMOS (mv no mesmo filesystem
+# = rename atômico). Um kill -9 / disco cheio no meio deixa apenas um .tmp
+# órfão (limpo na próxima execução), nunca um .deb TRUNCADO com nome válido —
+# que o "não sobrescrever" (comportamento do cp -an, preservado aqui)
+# imortalizaria no cache para sempre.
+safe_copy_debs() {  # $1=dir origem  $2=dir destino
+  local src="$1" dst="$2" f base tmp
+  mkdir -p "$dst"
+  rm -f "$dst"/.tmp.*.deb-part 2>/dev/null || true   # órfãos de execuções mortas
+  for f in "$src"/*.deb; do
+    [ -e "$f" ] || break              # glob sem resultado
+    base="$(basename "$f")"
+    [ -e "$dst/$base" ] && continue   # igual ao cp -an: não sobrescreve
+    tmp="$dst/.tmp.$$.$base-part"
+    cp "$f" "$tmp"
+    mv -f "$tmp" "$dst/$base"         # rename atômico
+  done
+}
 HOSTNAME_LIVE="ubuntu"
 LANG_LIVE="pt_BR.UTF-8"                        # troque p/ en_US.UTF-8 se preferir
 
@@ -252,6 +291,145 @@ else
   echo "ERRO: PROFILE inválido ('$PROFILE'). Use 'desktop' ou 'nogui'."
   exit 1
 fi
+
+# ===================== NOVO: modos listapt / getapt ===========================
+# Pré-aquece o $APTCACHE sem chroot e sem debootstrap: cria uma raiz APT
+# FICTÍCIA (sources.list da suíte alvo + dpkg/status VAZIO), roda 'apt update'
+# contra ela e resolve o fecho de dependências da mesma lista de pacotes que o
+# setup.sh instala. Com o status vazio o apt inclui os pacotes Essential
+# automaticamente (mesma técnica do mmdebstrap), cobrindo também a base do
+# debootstrap. Apontando Dir::Cache::archives para o $APTCACHE, o
+# --download-only deposita os .deb direto no cache persistente — e a validação
+# por hash garante que tudo que cair lá serve para o build de verdade.
+#   listapt = lista o fecho completo (o que o build instalaria)
+#   getapt  = mostra os PENDENTES (fora do cache) e baixa só eles
+if [ -n "$APT_CMD" ]; then
+  command -v curl >/dev/null 2>&1 || { apt-get update -y; apt-get install -y curl ca-certificates; }
+  # partial/ = o mecanismo tmp+rename NATIVO do apt: o --download-only baixa
+  # ali dentro e só move p/ o $APTCACHE com o nome final depois do hash conferir.
+  # Ou seja, o getapt já escreve no cache de forma atômica por construção.
+  mkdir -p "$APTCACHE/partial"
+
+  # ATENÇÃO: esta lista ESPELHA o 'apt-get install' do setup.sh (chroot).
+  # Se mudar a lista lá, mude aqui também, senão o cache pré-aquecido diverge.
+  APT_BASE_PKGS="linux-generic casper initramfs-tools grub-efi-amd64-signed \
+grub-pc-bin shim-signed systemd-resolved locales sudo curl"
+
+  apt_remote_open() {   # $1=suite $2=mirror  -> prepara $APTROOT/$APTGET e roda 'update'
+    local suite="$1" mir="$2" sec trust=""
+    APTROOT="$(mktemp -d)"
+    mkdir -p "$APTROOT/etc/apt/apt.conf.d" "$APTROOT/etc/apt/preferences.d" \
+             "$APTROOT/etc/apt/sources.list.d" "$APTROOT/etc/apt/trusted.gpg.d" \
+             "$APTROOT/var/lib/apt/lists/partial" "$APTROOT/var/lib/dpkg" \
+             "$APTROOT/var/cache/apt"
+    : > "$APTROOT/var/lib/dpkg/status"   # status vazio = "nada instalado" -> fecho completo
+    if [ "$mir" = "$OLD_MIRROR" ]; then sec="$mir"; else sec="http://security.ubuntu.com/ubuntu"; fi
+    # confiança: espelha o SKIP_GPG_CHECK do build, ou usa o keyring oficial do host
+    if [ "$SKIP_GPG_CHECK" = "true" ]; then
+      trust="[trusted=yes] "
+    elif [ -r /usr/share/keyrings/ubuntu-archive-keyring.gpg ]; then
+      trust="[signed-by=/usr/share/keyrings/ubuntu-archive-keyring.gpg] "
+    fi
+    cat > "$APTROOT/etc/apt/sources.list" <<EOF
+deb ${trust}$mir $suite main restricted universe multiverse
+deb ${trust}$mir ${suite}-updates main restricted universe multiverse
+deb ${trust}$sec ${suite}-security main restricted universe multiverse
+EOF
+    # EOL no old-releases: Release com Valid-Until vencido (mesma exceção do build)
+    [ "$mir" = "$OLD_MIRROR" ] && \
+      printf 'Acquire::Check-Valid-Until "false";\n' > "$APTROOT/etc/apt/apt.conf.d/99no-valid"
+    APTGET=(apt-get -q -o "Dir=$APTROOT"
+            -o "Dir::State::status=$APTROOT/var/lib/dpkg/status"
+            -o "Dir::Cache::archives=$APTCACHE"
+            -o "APT::Sandbox::User=root"
+            -o "Acquire::Languages=none"
+            -o "APT::Install-Recommends=$([ -z "$NO_RECO" ] && echo true || echo false)")
+    "${APTGET[@]}" update >/dev/null 2>&1
+  }
+  apt_remote_close() { rm -rf "${APTROOT:-}"; }
+
+  # corpo entre PARÊNTESES (subshell) de propósito: o 'set -f' desliga o globbing
+  # (senão o '?essential' poderia casar com algum arquivo do cwd) e morre junto
+  # com a subshell, sem vazar para o resto do script.
+  run_apt_cmd() (       # $1=suite  $2=mirror  $3=tag ("" = não anexa codinome na saída)
+    set -f
+    suite="$1"; mir="$2"; tag="$3"
+    if ! apt_remote_open "$suite" "$mir"; then
+      echo ">> $suite: 'apt update' falhou (suíte sem pacotes amd64 ainda?); pulando." >&2
+      apt_remote_close; return 0
+    fi
+    # '?essential' exige apt >= 2.0 (Ubuntu 20.04+ no host); se o apt local não
+    # souber o padrão, cai sem ele — os essenciais que faltarem o debootstrap
+    # baixa na hora do build e devolve ao cache, sem prejuízo.
+    pset="?essential apt $APT_BASE_PKGS $EXTRA_PKGS"
+    "${APTGET[@]}" -s install $pset >/dev/null 2>&1 || pset="apt $APT_BASE_PKGS $EXTRA_PKGS"
+    if ! "${APTGET[@]}" -s install $pset >/dev/null 2>&1; then
+      echo ">> $suite: não resolveu a lista (pacotes dessa era têm outros nomes?); pulando." >&2
+      apt_remote_close; return 0
+    fi
+    case "$APT_CMD" in
+      listapt)
+        # fecho COMPLETO (tudo que o build instalaria), via simulação do apt
+        { "${APTGET[@]}" -s install $pset 2>/dev/null || true; } \
+          | awk -v t="$tag" '/^Inst /{ if (t=="") print $2; else print $2, t }' | sort -u
+        ;;
+      getapt)
+        # PENDENTES = o que o --print-uris ainda mandaria baixar (o que já está
+        # no apt-cache com hash válido não aparece — exatamente o que queremos)
+        echo ">> $suite: pacotes PENDENTES (ainda fora do apt-cache):"
+        { "${APTGET[@]}" -y --print-uris install $pset 2>/dev/null || true; } \
+          | { grep "^'" || true; } | awk '{print $2}' | sed 's/_.*//' | sort -u \
+          | awk -v t="$tag" '{ if (t=="") print "  " $0; else print "  " $0 " " t }'
+        echo ">> $suite: baixando para $APTCACHE ..."
+        if ! "${APTGET[@]}" -y --download-only install $pset; then
+          echo ">> $suite: ERRO no download (rede/mirror)." >&2
+          apt_remote_close; return 1
+        fi
+        ;;
+    esac
+    apt_remote_close
+  )
+
+  if [ -n "$VERSION_INPUT" ]; then
+    # escopo: UMA versão (ex: "26.10 getapt")
+    echo ">> Descobrindo a suíte da versão ${VERSION} no archive..." >&2
+    _found="$(discover_suite "$VERSION" || true)"
+    if [ -z "$_found" ]; then
+      echo "ERRO: não encontrei nenhuma suíte com Version=${VERSION}."
+      exit 1
+    fi
+    echo ">> Versão ${VERSION} => suíte '${_found%%|*}' em ${_found##*|}" >&2
+    run_apt_cmd "${_found%%|*}" "${_found##*|}" ""
+  else
+    # escopo: TODAS as distros do archive principal (saída: "pacote codinome").
+    # As do old-releases entram só com INCLUDE_EOL=true (best-effort: nas eras
+    # antigas vários pacotes da lista nem existiam; essas suítes são puladas).
+    echo ">> Varrendo as suítes do archive principal..." >&2
+    _suites="$(curl -fsSL "$MIRROR/dists/" 2>/dev/null \
+      | grep -oE 'href="[a-z][a-z]+/"' \
+      | sed -E 's#href="([a-z]+)/"#\1#' \
+      | grep -vE '^(devel|stable|oldstable)$' \
+      | sort -u)" || true
+    [ -n "$_suites" ] || { echo "ERRO: não consegui listar $MIRROR/dists/ (sem rede?)."; exit 1; }
+    for _s in $_suites; do
+      run_apt_cmd "$_s" "$MIRROR" "$_s" || echo ">> $_s: falhou; seguindo para a próxima." >&2
+    done
+    if [ "${INCLUDE_EOL:-false}" = "true" ]; then
+      echo ">> INCLUDE_EOL=true: varrendo também o old-releases (best-effort)..." >&2
+      _old="$(curl -fsSL "$OLD_MIRROR/dists/" 2>/dev/null \
+        | grep -oE 'href="[a-z][a-z]+/"' \
+        | sed -E 's#href="([a-z]+)/"#\1#' \
+        | grep -vE '^(devel|stable|oldstable)$' \
+        | sort -u)" || true
+      for _s in $_old; do
+        printf '%s\n' "$_suites" | grep -qxF "$_s" && continue
+        run_apt_cmd "$_s" "$OLD_MIRROR" "$_s" || echo ">> $_s: falhou; seguindo." >&2
+      done
+    fi
+  fi
+  exit 0
+fi
+
 
 # ----------------------------- preflight -------------------------------------
 # (validação de root removida a pedido — atenção: ainda PRECISA rodar como root,
@@ -326,11 +504,23 @@ if [ "$SKIP_GPG_CHECK" = "true" ]; then
 fi
 # --cache-dir: reaproveita .deb já baixados; só busca os que faltam.
 # --components=main: a base só usa main; os outros 3 ficam no sources.list do chroot.
+# >>> NOVO (escrita atômica): o debootstrap grava no cache com o nome FINAL, sem
+# tmp+rename — um kill no meio deixaria um .deb truncado eternizado no cache.
+# Então ele trabalha num STAGING descartável (hardlinks do cache real = custo
+# ~zero de espaço e de tempo) e só os .deb NOVOS são promovidos ao cache real,
+# via safe_copy_debs (tmp+rename), DEPOIS de ele terminar com SUCESSO — quando
+# todos já passaram pela validação de checksum dele.
+DBSTAGE="$APTCACHE/.staging-debootstrap"
+rm -rf "$DBSTAGE"; mkdir -p "$DBSTAGE"
+cp -al "$APTCACHE"/*.deb "$DBSTAGE/" 2>/dev/null \
+  || cp -an "$APTCACHE"/*.deb "$DBSTAGE/" 2>/dev/null || true
 debootstrap --arch="$ARCH" --variant=minbase \
   ${GPG_FLAG} \
-  --cache-dir="$APTCACHE" \
+  --cache-dir="$DBSTAGE" \
   --components=main \
   "$SUITE" "$CHROOT" "$MIRROR"
+safe_copy_debs "$DBSTAGE" "$APTCACHE"   # promove só os novos, atomicamente
+rm -rf "$DBSTAGE"
 
 # ----------------------------- 2) sources + mounts ---------------------------
 # O repositório de segurança fica em security.ubuntu.com nas releases atuais,
@@ -374,7 +564,7 @@ echo ">> Instalando kernel, casper e pacotes (${PROFILE})..."
 # semeia o cache: copia .deb já baixados para dentro do chroot (pula os existentes),
 # assim o apt reaproveita e não rebaixa o que já temos.
 mkdir -p "$CHROOT/var/cache/apt/archives"
-cp -an "$APTCACHE"/*.deb "$CHROOT/var/cache/apt/archives/" 2>/dev/null || true
+safe_copy_debs "$APTCACHE" "$CHROOT/var/cache/apt/archives"   # >>> NOVO: tmp+rename
 
 cat > "$CHROOT/root/setup.sh" <<CHROOT_EOF
 #!/bin/bash
@@ -474,7 +664,7 @@ rm -f "$CHROOT/root/setup.sh"
 
 # devolve ao cache persistente os .deb novos (pula os já existentes), depois
 # esvazia o archive do chroot pra imagem não carregar os pacotes baixados.
-cp -an "$CHROOT/var/cache/apt/archives/"*.deb "$APTCACHE/" 2>/dev/null || true
+safe_copy_debs "$CHROOT/var/cache/apt/archives" "$APTCACHE"   # >>> NOVO: tmp+rename
 rm -f "$CHROOT/var/cache/apt/archives/"*.deb 2>/dev/null || true
 
 # ----------------------------- 4) extrair kernel/initrd ----------------------
