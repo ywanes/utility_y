@@ -25,6 +25,7 @@ set -euo pipefail
 
 
 
+
 # ------------------------------- modo LIST ----------------------------------
 # 'list' mostra as versões do Ubuntu e seus codinomes de DUAS palavras.
 # NÃO precisa de root. Os codinomes de 2 palavras vêm do distro-info-data
@@ -66,6 +67,7 @@ case "${1:-}" in
       | sed -E 's#href="([a-z]+)/"#\1#' \
       | grep -vE '^(devel|stable|oldstable)$' \
       | sort -u)"
+    [ -n "$_old" ] || echo ">> aviso: old-releases não retornou suites (sem rede pra ele agora?); as EOL não vão aparecer." >&2
     {
       # --- archive principal: número (Release) + status amd64 AO VIVO ---
       for _s in $_suites; do
