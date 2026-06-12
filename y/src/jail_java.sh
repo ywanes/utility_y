@@ -1,6 +1,6 @@
 #!/bin/bash
-# bash <(curl -s https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/jail_java.sh) desmonta
-# bash <(curl -s https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/jail_java.sh)
+# bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/jail_java.sh) desmonta
+# bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/jail_java.sh)
 
 set -euo pipefail
 

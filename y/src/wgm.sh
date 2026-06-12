@@ -1,5 +1,5 @@
 # WGetMinecraft
-# curl  https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/wgm.sh | bash
+# curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/wgm.sh | bash
 # testado no mac
 
 d=`ps -ef | grep "net.minecraft.client.main.Main" | grep -v grep | sed 's/ Launcher /_/g' | sed 's/Library\/Application Support/minecraft\/client/g' | sed 's/\/java /\n/g' | tail -1`
