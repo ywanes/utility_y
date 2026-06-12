@@ -108,16 +108,11 @@ case "${1:-}" in
           _ver="$(awk -F, -v s="$_s" '$3==s{print $1; exit}' "$_csv")"
           _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
         fi
-        printf '  %-11s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "EOL (old-releases)"
+        printf '  %-11s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "disponível"
       done
     } | sort -V
     echo
     echo "Construa pelo NÚMERO:  build-ubuntu-iso.sh <numero>   (ex: 26.04)"
-    echo "status: 'disponível' = pronto p/ buildar;  'INDISPONÍVEL' = série existe mas"
-    echo "ainda sem pacotes amd64 (devel recém-aberta);  'EOL (old-releases)' = antiga,"
-    echo "fora do archive principal, mas ainda buildável pelo número (old-releases)."
-    echo "Codinome de 2 palavras vem do distro-info-data local; p/ atualizar: sudo apt install --only-upgrade distro-info-data"
-    echo "Obs.: versões EOL muito antigas (pré-amd64) podem não buildar via debootstrap."
     exit 0
     ;;
   listFast|listfast|--list-fast|-lf)
@@ -132,10 +127,6 @@ case "${1:-}" in
       # CSV: version,codename,series,created,release,eol[,eol-server,eol-esm]
       awk -F, 'NR>1 && $2 ~ / / {printf "  %-11s %-24s %s\n", $1, $2, $3}' "$_csv" \
         | sort -V
-      echo
-      echo "Construa pelo NÚMERO. ex.:  build-ubuntu-iso.sh 26.04"
-      echo "Lista RÁPIDA (CSV local): pode estar desatualizada e NÃO checa pacotes amd64."
-      echo "Para a lista AO VIVO (status + codinome fresco):  build-ubuntu-iso.sh list"
     else
       echo "distro-info-data não encontrado em $_csv."
       echo "Para os codinomes de 2 palavras:  sudo apt install distro-info-data"
@@ -152,7 +143,6 @@ case "${1:-}" in
     exit 0
     ;;
 esac
- 
 
 # ----------------------------- versão (parâmetro) ----------------------------
 # Aceita "2604", "26.04", "2610", etc. Normaliza para o formato AA.MM.
