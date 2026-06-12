@@ -24,6 +24,7 @@
 set -euo pipefail
 
 
+
 # ------------------------------- modo LIST ----------------------------------
 # 'list' mostra as versões do Ubuntu e seus codinomes de DUAS palavras.
 # NÃO precisa de root. Os codinomes de 2 palavras vêm do distro-info-data
@@ -57,36 +58,60 @@ case "${1:-}" in
     else
       echo ">> dica: rode com sudo para atualizar os codinomes da devel mais nova." >&2
     fi
-    for _s in $_suites; do
-      _ver="$(curl -fsSL -r 0-4095 "$_mir/dists/$_s/Release" 2>/dev/null \
-        | awk -F': ' '/^Version:/{print $2; exit}')"
-      # DISPONIBILIDADE REAL: o índice main/binary-amd64/Packages já tem conteúdo (MBs)?
-      # Uma suite recém-aberta existe no dists/ mas vem VAZIA de amd64 até os pacotes
-      # serem publicados — aí o debootstrap não tem o que baixar (foi o caso do 26.10
-      # de 17/04 a 07/06). Índice cheio passa de 1 MB; vazio fica em ~30 bytes ou 404.
-      _b=0
-      for _f in Packages.xz Packages.gz; do
-        _cl="$(curl -fsSI "$_mir/dists/$_s/main/binary-amd64/$_f" 2>/dev/null \
-              | awk -F': ' 'tolower($1)=="content-length"{gsub(/\r/,"");print $2; exit}')"
-        if [ -n "$_cl" ] && [ "$_cl" -gt "$_b" ] 2>/dev/null; then _b="$_cl"; fi
-        [ "$_b" -ge 100000 ] 2>/dev/null && break
+    # Também varre o old-releases: versões EOL que saíram do archive principal mas
+    # ainda buildam pelo número. Lá os pacotes estão congelados/arquivados, então não
+    # checamos índice por suite — pegamos número/codinome do CSV e marcamos EOL.
+    _old="$(curl -fsSL "http://old-releases.ubuntu.com/ubuntu/dists/" 2>/dev/null \
+      | grep -oE 'href="[a-z][a-z]+/"' \
+      | sed -E 's#href="([a-z]+)/"#\1#' \
+      | grep -vE '^(devel|stable|oldstable)$' \
+      | sort -u)"
+    {
+      # --- archive principal: número (Release) + status amd64 AO VIVO ---
+      for _s in $_suites; do
+        _ver="$(curl -fsSL -r 0-4095 "$_mir/dists/$_s/Release" 2>/dev/null \
+          | awk -F': ' '/^Version:/{print $2; exit}')"
+        # sufixo LTS: o Release traz só "24.04"; abril (.04) de ano par é LTS
+        # (regra válida desde o 8.04), pra casar com o listFast/CSV.
+        case "$_ver" in *.04) [ $(( ${_ver%%.*} % 2 )) -eq 0 ] 2>/dev/null && _ver="$_ver LTS" ;; esac
+        # DISPONIBILIDADE REAL: o índice main/binary-amd64/Packages já tem conteúdo?
+        # Série recém-aberta existe no dists/ mas vem VAZIA de amd64 até os pacotes
+        # serem publicados (caso do 26.10 de 17/04 a 07/06). Cheio passa de 1 MB;
+        # vazio fica em ~30 bytes ou 404.
+        _b=0
+        for _f in Packages.xz Packages.gz; do
+          _cl="$(curl -fsSI "$_mir/dists/$_s/main/binary-amd64/$_f" 2>/dev/null \
+                | awk -F': ' 'tolower($1)=="content-length"{gsub(/\r/,"");print $2; exit}')"
+          if [ -n "$_cl" ] && [ "$_cl" -gt "$_b" ] 2>/dev/null; then _b="$_cl"; fi
+          [ "$_b" -ge 100000 ] 2>/dev/null && break
+        done
+        if [ "${_b:-0}" -ge 100000 ] 2>/dev/null; then
+          _stat="disponível"
+        else
+          _stat="INDISPONÍVEL (sem pacotes amd64 ainda)"
+        fi
+        _name=""
+        [ -r "$_csv" ] && _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
+        printf '  %-11s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "$_stat"
       done
-      if [ "${_b:-0}" -ge 100000 ] 2>/dev/null; then
-        _stat="disponível"
-      else
-        _stat="INDISPONÍVEL (sem pacotes amd64 ainda)"
-      fi
-      _name=""
-      [ -r "$_csv" ] && _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
-      printf '  %-8s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "$_stat"
-    done | sort -V
+      # --- old-releases: EOL (número/codinome do CSV; pula o que já está no archive) ---
+      for _s in $_old; do
+        printf '%s\n' "$_suites" | grep -qxF "$_s" && continue
+        _ver=""; _name=""
+        if [ -r "$_csv" ]; then
+          _ver="$(awk -F, -v s="$_s" '$3==s{print $1; exit}' "$_csv")"
+          _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
+        fi
+        printf '  %-11s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "EOL (old-releases)"
+      done
+    } | sort -V
     echo
     echo "Construa pelo NÚMERO:  build-ubuntu-iso.sh <numero>   (ex: 26.04)"
-    echo "'status' INDISPONÍVEL = a suite existe mas ainda não tem pacotes amd64"
-    echo "publicados (típico de série devel recém-aberta) — não dá pra buildar ainda."
-    echo "O codinome de 2 palavras vem do distro-info-data; rodando com sudo, o list"
-    echo "atualiza ele antes (codinome fresco). Sem sudo e sem o pacote, vira '—'."
-    echo "Versões EOL não aparecem aqui, mas buildam pelo número (via old-releases)."
+    echo "status: 'disponível' = pronto p/ buildar;  'INDISPONÍVEL' = série existe mas"
+    echo "ainda sem pacotes amd64 (devel recém-aberta);  'EOL (old-releases)' = antiga,"
+    echo "fora do archive principal, mas ainda buildável pelo número (old-releases)."
+    echo "Codinome de 2 palavras vem do distro-info-data (com sudo, o list atualiza)."
+    echo "Obs.: versões EOL muito antigas (pré-amd64) podem não buildar via debootstrap."
     exit 0
     ;;
   listFast|listfast|--list-fast|-lf)
