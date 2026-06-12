@@ -44,19 +44,24 @@ case "${1:-}" in
       echo "  ERRO: não consegui consultar $_mir/dists/ (sem rede?)."
       exit 1
     fi
-    # CSV local = fonte do codinome de 2 palavras. (Opção B) Se estiver rodando como
-    # ROOT, atualiza o distro-info-data antes de ler — o codinome da devel mais nova
-    # mora nele e o pacote instalado pode estar velho (ex.: um CSV de out/2025 não
-    # conhece o 'stonking'). Sem root, usa o que houver e dá a dica do sudo.
+    # CSV local = fonte do codinome de 2 palavras. Se ele já existe, usamos como está
+    # (sem apt) — é o caminho seguro contra OOM. Só instalamos o pacote quando ele
+    # estiver totalmente ausente. Para puxar codinomes mais novos num CSV velho, rode
+    # você mesmo:  sudo apt install --only-upgrade distro-info-data
     _csv="/usr/share/distro-info/ubuntu.csv"
-    if [ "$(id -u)" -eq 0 ]; then
-      echo ">> Atualizando distro-info-data (codinomes frescos)..." >&2
-      # NAO roda 'apt-get update' aqui: em VM com pouca RAM ele estoura a memória
-      # (OOM -> 'Killed'). Só instala/atualiza o pacote a partir das listas que já
-      # existem — bem mais leve. Para listas fresquíssimas, rode 'sudo apt update' antes.
+    # Só mexe no apt se o CSV NÃO existir. Mesmo o 'apt-get install' carrega o cache
+    # do apt na RAM e, numa VM apertada (pior ainda com um build rodando junto), pode
+    # estourar a memória e ser morto pelo OOM (SIGKILL -> 'Killed', rc 137) — e SIGKILL
+    # no processo pai NÃO dá pra pegar com '|| true'. Logo: se o CSV já está aqui, usa
+    # como está, sem apt, sem risco de OOM. Para forçar os codinomes mais novos, rode
+    # você mesmo com a VM folgada:  sudo apt install --only-upgrade distro-info-data
+    if [ -r "$_csv" ]; then
+      :   # CSV presente -> usa como está (sem apt; não arrisca OOM)
+    elif [ "$(id -u)" -eq 0 ]; then
+      echo ">> distro-info-data ausente; instalando (best-effort, leve)..." >&2
       apt-get install -y -qq distro-info-data >/dev/null 2>&1 || true
     else
-      echo ">> dica: instale/atualize o distro-info-data para os codinomes mais novos." >&2
+      echo ">> dica: sem distro-info-data; rode 'sudo apt install distro-info-data' p/ os codinomes." >&2
     fi
     # Também varre o old-releases: versões EOL que saíram do archive principal mas
     # ainda buildam pelo número. Lá os pacotes estão congelados/arquivados, então não
