@@ -358,10 +358,21 @@ EOF
       echo ">> $suite: 'apt update' falhou (suíte sem pacotes amd64 ainda?); pulando." >&2
       apt_remote_close; return 0
     fi
+    # >>> NOVO: filtra a lista pela suíte (análise de repositório, não hardcode).
+    # Pacotes como 'systemd-resolved' só existem do 22.10 em diante (antes vêm
+    # dentro do 'systemd'); 'ubuntu-desktop-minimal' só do 20.04. Em vez de
+    # pular a suíte inteira por causa de 1 nome ausente, perguntamos ao índice
+    # quais existem ali e seguimos com o resto, avisando o que foi descartado.
+    AC=(apt-cache -o "Dir=$APTROOT" -o "Dir::State::status=$APTROOT/var/lib/dpkg/status")
+    keep=""; drop=""
+    for _p in $APT_BASE_PKGS $EXTRA_PKGS; do
+      if "${AC[@]}" show "$_p" >/dev/null 2>&1; then keep="$keep $_p"; else drop="$drop $_p"; fi
+    done
+    [ -n "$drop" ] && echo ">> $suite: ausentes nesta suíte (descartados):$drop" >&2
     # '?essential' exige apt >= 2.0 (Ubuntu 20.04+ no host); se o apt local não
     # souber o padrão, cai sem ele — os essenciais que faltarem o debootstrap
     # baixa na hora do build e devolve ao cache, sem prejuízo.
-    pset="?essential apt $APT_BASE_PKGS $EXTRA_PKGS"
+    pset="?essential apt $keep"
     "${APTGET[@]}" -s install $pset >/dev/null 2>&1 || pset="apt $APT_BASE_PKGS $EXTRA_PKGS"
     if ! "${APTGET[@]}" -s install $pset >/dev/null 2>&1; then
       echo ">> $suite: não resolveu a lista (pacotes dessa era têm outros nomes?); pulando." >&2
@@ -581,14 +592,32 @@ export DEBIAN_FRONTEND=noninteractive
 export LANG=C
 
 apt-get update
+
+# >>> NOVO: nomes que mudaram entre releases são resolvidos consultando o ÍNDICE
+# (apt-cache show), não por número de versão. Assim o build funciona em suítes
+# antigas sem tabela hardcoded.
+#  - systemd-resolved: pacote separado só do 22.10+; antes vinha no 'systemd'
+#    (que a base já traz), então simplesmente não o adicionamos quando ausente.
+#  - ubuntu-desktop-minimal: só do 20.04+; na 18.04 caímos no 'ubuntu-desktop'.
+RESOLVED_PKG=""
+apt-cache show systemd-resolved >/dev/null 2>&1 && RESOLVED_PKG="systemd-resolved"
+EXTRA_FIXED="${EXTRA_PKGS}"
+if printf '%s' "\$EXTRA_FIXED" | grep -qw ubuntu-desktop-minimal \
+   && ! apt-cache show ubuntu-desktop-minimal >/dev/null 2>&1; then
+  if apt-cache show ubuntu-desktop >/dev/null 2>&1; then
+    echo ">> ubuntu-desktop-minimal ausente nesta suíte; usando ubuntu-desktop."
+    EXTRA_FIXED="\$(printf '%s' "\$EXTRA_FIXED" | sed 's/ubuntu-desktop-minimal/ubuntu-desktop/')"
+  fi
+fi
+
 # firefox- : o deb do firefox é só um stub que faz 'snap install firefox' no
 # pós-instalação; o snapd NÃO roda dentro do chroot, então isso falha e derruba
 # o build. Excluímos aqui; instale depois no sistema com 'snap install firefox'.
 apt-get install -y ${NO_RECO} \
   linux-generic casper initramfs-tools \
   grub-efi-amd64-signed grub-pc-bin shim-signed \
-  systemd-resolved \
-  locales sudo curl ${EXTRA_PKGS} \
+  \${RESOLVED_PKG} \
+  locales sudo curl \${EXTRA_FIXED} \
   firefox-
 
 # locale
