@@ -369,16 +369,24 @@ EOF
     fi
     case "$APT_CMD" in
       listapt)
-        # fecho COMPLETO (tudo que o build instalaria), via simulação do apt
+        # fecho COMPLETO (tudo que o build instalaria), via simulação do apt.
+        # Saída = NOME DO ARQUIVO .deb, igual ao que fica no apt-cache:
+        # pkg_versão_arch.deb, com ':' do epoch gravado como %3a (padrão do apt).
+        # Linha da simulação: "Inst pkg (versão origem [arch])"
         { "${APTGET[@]}" -s install $pset 2>/dev/null || true; } \
-          | awk -v t="$tag" '/^Inst /{ if (t=="") print $2; else print $2, t }' | sort -u
+          | awk -v t="$tag" '/^Inst /{
+              pkg=$2
+              ver=$3; gsub(/[()]/,"",ver); gsub(/:/,"%3a",ver)
+              arch=$NF; gsub(/[\[\])]/,"",arch)
+              f=pkg "_" ver "_" arch ".deb"
+              if (t=="") print f; else print f, t }' | sort -u
         ;;
       getapt)
         # PENDENTES = o que o --print-uris ainda mandaria baixar (o que já está
         # no apt-cache com hash válido não aparece — exatamente o que queremos)
         echo ">> $suite: pacotes PENDENTES (ainda fora do apt-cache):"
         { "${APTGET[@]}" -y --print-uris install $pset 2>/dev/null || true; } \
-          | { grep "^'" || true; } | awk '{print $2}' | sed 's/_.*//' | sort -u \
+          | { grep "^'" || true; } | awk '{print $2}' | sort -u \
           | awk -v t="$tag" '{ if (t=="") print "  " $0; else print "  " $0 " " t }'
         echo ">> $suite: baixando para $APTCACHE ..."
         if ! "${APTGET[@]}" -y --download-only install $pset; then
