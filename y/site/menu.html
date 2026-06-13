@@ -60,6 +60,19 @@
     /* CLASSES DE LARGURA CUSTOMIZADA */
     .span-2 { grid-column: span 2 !important; }
     .span-3 { grid-column: span 3 !important; }
+    .span-4 { grid-column: span 4 !important; }
+    .span-5 { grid-column: span 5 !important; }
+    .span-6 { grid-column: span 6 !important; }
+    .span-7 { grid-column: span 7 !important; }
+    .span-8 { grid-column: span 8 !important; }
+    .span-9 { grid-column: span 9 !important; }
+    .span-10 { grid-column: span 10 !important; }
+    .span-11 { grid-column: span 11 !important; }
+    .span-12 { grid-column: span 12 !important; }
+    .span-13 { grid-column: span 13 !important; }
+    .span-14 { grid-column: span 14 !important; }
+    .span-15 { grid-column: span 15 !important; }
+    .span-16 { grid-column: span 16 !important; }
     .full   { grid-column: 1 / -1 !important; } /* Ocupa a linha toda independente do n-colunas */
 
     .menu a:active {
@@ -224,7 +237,7 @@ function set_vol_pc(a){
 function get_vol(){
 	return document.getElementById('radio').contentWindow.get_vol();
 }
-function play(a, is1play){
+function play(a, is1play, isLoopPlay){
 	var base='/D:/ProgramFiles/site/musicas';
 	var finder=base + getCaminho().substr('/Menu/Musicas'.length) + '/';
 	var elements=document.getElementById('radio').contentWindow.get_lista(finder);
@@ -239,9 +252,12 @@ function play(a, is1play){
 		}else
 			s+=(finder+""+elements[i]).replaceAll('/', '\\').substr(1)+"\n";
 	}
-	if ( is1play )
-		document.getElementById('radio').contentWindow.minisend(s, -1, null, 'no');
-	else
+	if ( is1play ){
+		if ( isLoopPlay ){
+			document.getElementById('radio').contentWindow.minisend(s, -1, null, 'yes');
+		}else
+			document.getElementById('radio').contentWindow.minisend(s, -1, null, 'no');
+	}else
 		document.getElementById('radio').contentWindow.minisend(s, -1, a);
 	window.scrollBy(0,99999);	
 }
@@ -382,13 +398,14 @@ function load(a){
                 if ( i == 0 )
                     s+=mostraBotoesBackStopPlayNext();
                 if ( elements[i].indexOf('.') > -1 ){
-                    s+="<a href=\"javascript:void(0);\" class=\"orange\" onclick=\"play('" + i + "', true)\">1play</a>";
-                    s+="<a href=\"javascript:void(0);\" class=\"orange span-3\" onclick=\"play('" + i + "', false)\">" + elements[i] + "</a>";
+                    s+="<a href=\"javascript:void(0);\" class=\"orange\" onclick=\"play('" + i + "', true)\">1 ▶︎</a>";
+                    s+="<a href=\"javascript:void(0);\" class=\"orange\" onclick=\"play('" + i + "', true, true)\">🔁</a>";
+                    s+="<a href=\"javascript:void(0);\" class=\"orange span-6\" onclick=\"play('" + i + "', false)\">" + elements[i] + "</a>";
                 }else							
                     s+="<a href=\"javascript:void(0);\" class=\"orange full\" onclick=\"load('" + elements[i] + "')\">" + elements[i] + "</a>";
             }
             s+=mostraVolume();
-            s="<div class=\"menu\" style=\"--total-cols: 4;\">" + s + "</div>";
+            s="<div class=\"menu\" style=\"--total-cols: 8;\">" + s + "</div>";
             document.getElementById('bloco2').innerHTML="<div class=\"header\">" + a + "</div>" + s;
             return;
         }
@@ -550,10 +567,10 @@ function load(a){
 
 function mostraBotoesBackStopPlayNext(){
 	return `
-		<a href="javascript:void(0);" class="gray" onclick="back()">back</a>
-		<a href="javascript:void(0);" class="gray" onclick="stop()">stop</a>
-		<a href="javascript:void(0);" class="gray" onclick="play(0, false)">play</a>
-		<a href="javascript:void(0);" class="gray" onclick="next()">next</a>
+		<a href="javascript:void(0);" class="gray span-2" onclick="back()">back</a>
+		<a href="javascript:void(0);" class="gray span-2" onclick="stop()">stop</a>
+		<a href="javascript:void(0);" class="gray span-2" onclick="play(0, false)">play</a>
+		<a href="javascript:void(0);" class="gray span-2" onclick="next()">next</a>		
 	`;
 }
 
