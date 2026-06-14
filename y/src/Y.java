@@ -1871,6 +1871,14 @@ cat buffer.log
                 return;
             }
         }
+        if ( args[0].equals("fixMyDateFromNTP") && args.length == 2 ){
+            if ( !isWindows() )
+                erroFatal("implementado somente para windows!");
+            if ( !isWindowsAdm() )
+                erroFatal("é preciso estar no cmd admin!");
+            fixMyDateFromNTP(args[1]);
+            return;
+        }        
         if ( args[0].equals("uptime")){
             if ( args.length == 2 && args[1].equals("-ms") ){
                 uptime(true);
@@ -21229,7 +21237,11 @@ class Util{
         for (int i = 0; i < 4; i++)
             seconds = (seconds << 8) | (buffer[40 + i] & 0xFF);
         seconds-=2208988800L;
-        return seconds;
+        long frac = 0;                                   // fracao: bytes 44..47
+        for (int i = 0; i < 4; i++)
+            frac = (frac << 8) | (buffer[44 + i] & 0xFF);
+        long millis = (frac * 1000L) >>> 32;             // fracao -> milissegundos
+        return seconds * 1000L + millis;                 // agora em MILISSEGUNDOS
     }
     
     public String get_mixer(String like){
@@ -23598,17 +23610,28 @@ class Util{
         return null;
     }
     
-    // %z no linux significa -0300, aqui esta sendo usado para empregar o zoneid America/Sao_Paulo    
-    // no java, print de zzzz com zondeId America/Sao_Paulo sai Fuso horário de Brasília
+    // %z no linux significa -0300, aqui esta sendo usado para empregar o zoneid America/Sao_Paulo
+    // com java.time, %z -> VV imprime/parseia o zone-id direto (ex.: America/Sao_Paulo, UTC).
+    // %N = 9 digitos; %kN (k=1..30) = k digitos da fracao (GNU: k<=9 trunca, k>9 completa com zeros).
     // lista de zoneid => java.time.ZoneId.getAvailableZoneIds()
-    // modelo padrao 
-    // System.out.println(date_("+%Y%m%d_%H%M%S", null, null, null));
-    public String [] format_codes_date_in= new String []{"%z"  , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",  "%Z" };
-    public String [] format_codes_date_out=new String []{"zzzz",  "dd", "MM", "yyyy", "HH", "mm", "ss", "SSS", "X"  };    
+    public String [] format_codes_date_in= new String []{"%z" , "%d", "%m", "%Y",   "%H", "%M", "%S", "%N",        "%Z" };
+    public String [] format_codes_date_out=new String []{"VV",  "dd", "MM", "uuuu", "HH", "mm", "ss", "SSSSSSSSS", "X"  };
     public String format_america_sao_paulo_zoneid="America/Sao_Paulo";
-    public String format_america_sao_paulo_zzzz=get_zzzz(format_america_sao_paulo_zoneid);
+    public String format_america_sao_paulo_zzzz=get_zzzz(format_america_sao_paulo_zoneid); // (nao mais usado abaixo)
+
+    // fracao de segundo com k digitos (GNU): k<=9 trunca os 9 nanos; k>9 completa com zeros a direita.
+    public static String frac_nanos(java.time.ZonedDateTime d, int k){
+        String nano9 = String.format("%09d", d.getNano());
+        if ( k <= 9 )
+            return nano9.substring(0, k);
+        StringBuilder z = new StringBuilder(nano9);
+        for ( int t=9; t<k; t++ )
+            z.append('0');
+        return z.toString();
+    }
+
     public String date_(String format_out_, String date_from, String format_in_, String date_from_ntp) throws Exception{
-        if ( date_from_ntp != null ){            
+        if ( date_from_ntp != null ){
             date_from=getSecondsByNtp(date_from_ntp)+"";
             format_in_="+%s";
             date_from_ntp=null;
@@ -23620,72 +23643,113 @@ class Util{
             format_out=format_out_;
         if(format_out.startsWith("+"))
             format_out=format_out.substring(1);
-        Date d = date_from_mask(date_from, format_in_);
-        String w="";
+        java.time.ZonedDateTime d = date_from_mask(date_from, format_in_);
         for(int i=0;i<format_out.length();i++){
-            w+=format_out.substring(i, i+1);
-            if( w.equals("%") )
-                continue;
+            char c=format_out.charAt(i);
+            if ( c != '%' ){ sb.append(c); continue; }
+            // %<digitos>N  (fracao de segundo, k digitos; sem digitos = 9)
+            int j=i+1, k0=j;
+            while ( j<format_out.length() && Character.isDigit(format_out.charAt(j)) ) j++;
+            if ( j<format_out.length() && format_out.charAt(j)=='N' ){
+                int k=(k0==j)?9:Integer.parseInt(format_out.substring(k0,j));
+                sb.append(frac_nanos(d,k));
+                i=j; continue;
+            }
+            // %s
+            if ( i+1<format_out.length() && format_out.charAt(i+1)=='s' ){
+                sb.append(epoch(d)); i=i+1; continue;
+            }
+            // codigos de 2 chars (%d,%m,%Y,%H,%M,%S,%z,%Z)
+            String tok=format_out.substring(i, Math.min(i+2, format_out.length()));
             boolean achou=false;
-            for ( int j=0;j<format_codes_date_in.length;j++ ){
-                if ( format_codes_date_in[j].equals(w) ){
-                    achou=true;
-                    sb.append(new SimpleDateFormat(format_codes_date_out[j]).format(d));
-                    w="";
-                    break;
+            for ( int q=0;q<format_codes_date_in.length;q++ ){
+                if ( format_codes_date_in[q].equals(tok) ){
+                    sb.append(java.time.format.DateTimeFormatter.ofPattern(format_codes_date_out[q]).format(d));
+                    i=i+1; achou=true; break;
                 }
             }
-            if ( achou )
-                continue;            
-            if(w.equals("%s")){
-                sb.append(epoch(d));
-                w="";
-                continue;
-            }
-            sb.append(w);
-            w="";
+            if ( achou ) continue;
+            sb.append(c); // % solto
         }
-        return sb.toString().replace(format_america_sao_paulo_zzzz,format_america_sao_paulo_zoneid);
+        return sb.toString();
     }
-      
+
     public static String get_zzzz(String a){
-        SimpleDateFormat out = new SimpleDateFormat("zzzz");
+        java.text.SimpleDateFormat out = new java.text.SimpleDateFormat("zzzz");
         out.setTimeZone(java.util.TimeZone.getTimeZone(a));
-        return out.format(new Date());
+        return out.format(new java.util.Date());
     }
-    
-    public Date date_from_mask(String date_, String format){ // y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+
+    public java.time.ZonedDateTime date_from_mask(String date_, String format){
         if ( date_ == null || format == null )
-            return new Date();
+            return java.time.ZonedDateTime.now();
         if ( format.startsWith("\\+") )
-            erroFatal("mask invalida! " + format);        
-        format=format.substring(1);        
+            erroFatal("mask invalida! " + format);
+        format=format.substring(1);
         if ( format.equals("%s") || format.equals("%s%N") ){
-            Long tmp=Long.parseLong(date_);
+            long tmp=Long.parseLong(date_);
             if ( tmp < 1000000000000L )
                 tmp*=1000;
-            return new Date(tmp);
+            return java.time.Instant.ofEpochMilli(tmp).atZone(java.time.ZoneId.systemDefault());
         }
-        for ( int i=0;i<format_codes_date_in.length;i++ )
-            format=format.replace(format_codes_date_in[i], format_codes_date_out[i]);        
+        boolean hasZone = format.contains("%z") || format.contains("%Z");
+        // Isola QUALQUER %N ou %kN: na LEITURA a fracao aceita de 1 a 9 digitos.
+        String SENT="\uFFFF";
+        String pat=format.replaceAll("%\\d*N", java.util.regex.Matcher.quoteReplacement(SENT));
+        for ( int i=0;i<format_codes_date_in.length;i++ ){
+            if ( format_codes_date_in[i].equals("%N") )
+                continue;
+            pat=pat.replace(format_codes_date_in[i], format_codes_date_out[i]);
+        }
         try{
-            return new SimpleDateFormat( format ).parse(date_.replace(format_america_sao_paulo_zoneid,format_america_sao_paulo_zzzz));
+            java.time.format.DateTimeFormatterBuilder b=new java.time.format.DateTimeFormatterBuilder();
+            String[] parts=pat.split(SENT, -1);
+            for ( int i=0;i<parts.length;i++ ){
+                if ( !parts[i].isEmpty() )
+                    b.appendPattern(parts[i]);
+                if ( i < parts.length-1 )
+                    b.appendFraction(java.time.temporal.ChronoField.NANO_OF_SECOND, 1, 9, false);
+            }
+            java.time.format.DateTimeFormatter f=b.toFormatter().withResolverStyle(java.time.format.ResolverStyle.SMART);
+            if ( hasZone )
+                return java.time.ZonedDateTime.parse(date_, f);
+            return java.time.LocalDateTime.parse(date_, f).atZone(java.time.ZoneId.systemDefault());
         }catch(Exception e){
             erroFatal("Erro format " + e.toString() + " date_:" + date_ + " format: " + format);
         }
         return null;
     }
-    
-    public static long epoch(Date d) {
-        return Long.parseLong((epochmili(d)+"").substring(0,10));                
+
+    public static long epoch(java.time.ZonedDateTime d) {
+        return epochmili(d) / 1000;
     }
-    
-    public static long epochmili(Date d){
+
+    public static long epochmili(java.time.ZonedDateTime d){
         if ( d == null )
-            d = new Date();        
+            d = java.time.ZonedDateTime.now();
         return d.toInstant().toEpochMilli();
     }
-    
+
+    public void fixMyDateFromNTP(String url){
+        try{
+            long ntpMs   = getSecondsByNtp(url);                 // "_" -> pool.ntp.org
+            long localMs = System.currentTimeMillis();           // relogio local no MESMO instante
+            long offset  = ntpMs - localMs;                      // +atrasado / -adiantado
+
+            System.out.println("NTP   : " + java.time.Instant.ofEpochMilli(ntpMs));
+            System.out.println("local : " + java.time.Instant.ofEpochMilli(localMs));
+            System.out.println("offset: " + offset + " ms");
+
+            String cmd = "Set-Date -Adjust ([TimeSpan]::FromMilliseconds(" + offset + "))";
+            Process p = new ProcessBuilder("powershell", "-Command", cmd).inheritIO().start();
+            if ( p.waitFor() != 0 )
+                erroFatal("Set-Date falhou — rode o cmd como Administrador.");
+            System.out.println("relogio ajustado (offset: " + offset + " ms).");
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+
     public static String get_ip_origem_by_socket(Socket credencialSocket){        
         String ip_origem=credencialSocket.getRemoteSocketAddress().toString().substring(1);
         if ( ip_origem.contains(":") ){
@@ -31580,19 +31644,23 @@ Exemplos...
 [y date]
     y date
     y date "+%s" # epoch
-    y date "+%s%N" # epochmili
-    y date "+%Y%m%d_%H%M%S"
+    y date "+%s%3N" # epochmili reproduzido com gnudate +%s%3N
+    y date "+%s%6N" # epochmicro
+    y date "+%s%9N" # epochnano 
+    y date "+%s%N"  # epochnano
+    y date "+%Y%m%d_%H%M%S.%7N"
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s"
-    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N"    
+    y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%6N"    
     y date from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%N_%z"
-    y date "+%s%N" from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%N_%z"
-    y date "+%s%N" from "20240625_102251_345_UTC" mask "+%Y%m%d_%H%M%S_%N_%z"
-    y date "+%s%N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%N_%Z"
+    y date "+%s%3N" from "20240625_102251_345_America/Sao_Paulo" mask "+%Y%m%d_%H%M%S_%3N_%z"
+    y date "+%s%3N" from "20240625_102251_345_UTC" mask "+%Y%m%d_%H%M%S_%3N_%z"
+    y date "+%s%3N" from "20240625_102251_345_-03" mask "+%Y%m%d_%H%M%S_%3N_%Z"
     y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-05" mask "+%Y%m%d_%H%M%S_%z" # ET(Eastern Time) - America/New_York    - UTC−5/UTC−4 DST(Daylight Saving Time - algumas usam)
     y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-08" mask "+%Y%m%d_%H%M%S_%z" # PT(Pacific Time) - America/Los_Angeles - UTC−8/UTC−7 DST(Daylight Saving Time - algumas usam)
     y date "+%d/%m/%Y %H:%M:%S" from "20250525_230000_-06" mask "+%Y%m%d_%H%M%S_%z" # CT(Central Time) - America/Mexico_City - UTC−6/UTC−5 DST(Daylight Saving Time - algumas usam)
     y date "+%d/%m/%Y %H:%M:%S:%N %Z %s%N" fromNTP time.google.com
-    y date fromNTP _ && y date
+    verificando diferença de tempo:
+        y date "+%Y-%m-%d %H:%M:%S.%3N" fromNTP _ && y date "+%Y-%m-%d %H:%M:%S.%3N"
     fromNTP's:
         y date fromNTP pool.ntp.org
         y date fromNTP time.google.com
@@ -31623,14 +31691,19 @@ Exemplos...
         y date fromNTP 0.ru.pool.ntp.org #(Rússia)
         y date fromNTP 0.cn.pool.ntp.org #(China)
         y date fromNTP 0.in.pool.ntp.org #(Índia)
-        # criando variavel FDATE no windows:
-            SET FDATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%
-        # arrumando relogio no windows cmd admin: 
-            powershell -Command "Set-Date -Date '2026-03-30 12:52:25'"
-        # arrumando relogio no linux:
-            date
-            timedatectl set-ntp off
-            timedatectl set-ntp on
+    criando variavel FDATE no windows:
+        SET FDATE=%date:~-4,4%%date:~-10,2%%date:~-7,2%
+    arrumando relogio no windows cmd admin: 
+        y fixMyDateFromNTP _
+        powershell -Command "Set-Date -Date '2026-03-30 12:52:25'"
+    arrumando relogio no linux:
+        date
+        timedatectl set-ntp off
+        timedatectl set-ntp on
+    curiosidade, dias que acrescentaram um segundo, mas nao esta presente no UTC
+        curl -s https://data.iana.org/time-zones/tzdb/leapseconds | awk '/^Leap/{ m=($3=="Jan"?"01":$3=="Feb"?"02":$3=="Mar"?"03":$3=="Apr"?"04":$3=="May"?"05":$3=="Jun"?"06":$3=="Jul"?"07":$3=="Aug"?"08":$3=="Sep"?"09":$3=="Oct"?"10":$3=="Nov"?"11":"12"); printf "%s-%s-%02d\n", $2, m, $4 }'
+    bug declarado:
+        se a mask tiver %3N e o preenchimento tiver 6 digitos, ele aceita os 6 digitos sem dar warning
 [y uptime]
     y uptime
     y uptime -ms
