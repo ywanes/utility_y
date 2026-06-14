@@ -495,3 +495,4 @@ echo "Inclui na raiz: notpm.bat (bypass TPM/SecureBoot/RAM/CPU/Storage) + refs_f
 echo "Para um pendrive multiboot junto com a ISO do Ubuntu, use o Ventoy:"
 echo "  sudo sh Ventoy2Disk.sh -i /dev/sdX   # apaga o pendrive (confira com lsblk!)"
 echo "  cp '$OUT' ubuntu-*.iso /caminho/do/pendrive/"
+
