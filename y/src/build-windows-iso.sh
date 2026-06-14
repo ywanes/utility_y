@@ -12,6 +12,9 @@
 #   sudo ./build-windows-iso.sh list            # só mostra o build do canal e sai
 #   sudo ./build-windows-iso.sh <uuid>          # força um id específico do uupdump
 #
+#   baixando o chrome offline
+#   curl.exe -L -o chrome_offline.msi "https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi"
+#
 # Builder de ISO do Windows 11 (Pro, pt-BR) rodando 100% no Linux.
 # NÃO baixa uma ISO pronta: o uupdump entrega um PACOTE DE SCRIPTS que puxa os
 # pacotes UUP direto dos servidores da Microsoft e CONVERTE em ISO localmente
