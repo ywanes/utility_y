@@ -136,11 +136,11 @@ case "${1:-}" in
       _info="$(discover_uuid "$(prefix_for_channel "$_ch")" "$_json" || true)"
       _cmd="sudo ./build-windows-iso.sh"; [ "$_ch" != "oficial" ] && _cmd="$_cmd $_ch"
       if [ -n "$_info" ] && [ "$_info" != "null" ]; then
-        printf '  %-8s %s\n           %s\n           uuid:  %s\n           build: %s\n\n' \
+        printf '  %-9s %s\n            %s\n            uuid:  %s\n            build: %s\n\n' \
           "[$_ch]" "$(printf '%s' "$_info" | cut -f2)" "$_cmd" \
           "$(printf '%s' "$_info" | cut -f1)" "$(printf '%s' "$_info" | cut -f3 | sed 's/^build: //')"
       else
-        printf '  %-8s (nenhum build encontrado)\n\n' "[$_ch]"
+        printf '  %-9s (nenhum build encontrado)\n\n' "[$_ch]"
       fi
     done
     exit 0
