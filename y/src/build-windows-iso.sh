@@ -99,35 +99,50 @@ fi
 # ----------------------------- descoberta do build --------------------------
 # Mesmo espírito do discover_suite do builder Ubuntu: pergunta à API qual é o
 # build 11 amd64 mais novo e pega o uuid. (Seu alvo, parametrizado.)
-# Prefixo do título usado p/ filtrar a API, por canal. 'canal' é o rótulo que vai
-# no nome da ISO. DEV usa o prefixo genérico -> max_by(build) pega o Insider mais
-# novo (hoje 26H1/28000.x); oficial e RC fixam a série estável correspondente.
-# (Ao mudar de ano, ajuste 24H2/25H2 aqui.)
-case "$CHANNEL" in
-  RC)  TITLE_PREFIX="Windows 11, version 25H2"; canal="RC" ;;
-  DEV) TITLE_PREFIX="Windows 11, version ";     canal="DEV" ;;
-  *)   TITLE_PREFIX="Windows 11, version 24H2"; canal="oficial"; CHANNEL="oficial" ;;
-esac
+# Mapeia canal -> prefixo de título p/ filtrar a API. DEV usa o prefixo genérico
+# -> max_by(build) pega o Insider mais novo (hoje 26H1/28000.x); oficial e RC
+# fixam a série estável. (Ao mudar de ano, ajuste 24H2/25H2 aqui.)
+prefix_for_channel() {
+  case "$1" in
+    RC)  echo "Windows 11, version 25H2" ;;
+    DEV) echo "Windows 11, version " ;;
+    *)   echo "Windows 11, version 24H2" ;;
+  esac
+}
+# Normaliza o canal atual e define prefixo + rótulo do build em andamento.
+case "$CHANNEL" in RC) canal="RC" ;; DEV) canal="DEV" ;; *) canal="oficial"; CHANNEL="oficial" ;; esac
+TITLE_PREFIX="$(prefix_for_channel "$CHANNEL")"
+
+# Acha o build mais novo de um prefixo. Arg opcional = prefixo (default: do canal).
+# Pode receber o JSON já baixado em $2 p/ evitar baixar de novo (usado no 'list').
 discover_uuid() {
-  # `map(...)` no jq aceita objeto (itera valores), então não precisa converter
-  # `.response.builds` para array antes. `|| true` evita aborto pelo pipefail.
-  curl -fsSL -m 30 "$API/listid.php?search=windows%2011" 2>/dev/null \
-    | jq -r --arg pfx "$TITLE_PREFIX" '.response.builds
-        | map(select(.arch=="'"$ARCH"'" and (.title | startswith($pfx))))
+  local pfx="${1:-$TITLE_PREFIX}" json="${2:-}"
+  [ -n "$json" ] || json="$(curl -fsSL -m 30 "$API/listid.php?search=windows%2011" 2>/dev/null || true)"
+  printf '%s' "$json" \
+    | jq -r --arg pfx "$pfx" --arg arch "$ARCH" '.response.builds
+        | map(select(.arch==$arch and (.title | startswith($pfx))))
         | max_by(.build | split(".") | map(tonumber))
-        | "\(.uuid)\t\(.title)\tbuild: \(.build)"' \
+        | "\(.uuid)\t\(.title)\tbuild: \(.build)"' 2>/dev/null \
     || true
 }
 
 case "${1:-}" in
   list|-l|--list)
-    echo ">> Consultando o build 11 ($ARCH) mais novo no uupdump..."
-    info="$(discover_uuid || true)"        # validado: api.uupdump.net responde em 2026-06
-    [ -n "$info" ] || { echo "ERRO: API não respondeu (sem rede para $API?)."; exit 1; }
-    printf '%s\n' "$info" | awk -F'\t' '{printf "%s\n%s\nuuid:  %s\n", $2, $3, $1}'
+    echo ">> Builds mais novos por canal ($ARCH) no uupdump:"
     echo
-    echo "Construa com:  sudo ./build-windows-iso.sh        (usa este uuid)"
-    echo "         ou:   sudo ./build-windows-iso.sh $(printf '%s' "$info" | cut -f1)"
+    _json="$(curl -fsSL -m 30 "$API/listid.php?search=windows%2011" 2>/dev/null || true)"
+    [ -n "$_json" ] || { echo "ERRO: API não respondeu (sem rede para $API?)."; exit 1; }
+    for _ch in oficial RC DEV; do
+      _info="$(discover_uuid "$(prefix_for_channel "$_ch")" "$_json" || true)"
+      _cmd="sudo ./build-windows-iso.sh"; [ "$_ch" != "oficial" ] && _cmd="$_cmd $_ch"
+      if [ -n "$_info" ] && [ "$_info" != "null" ]; then
+        printf '  %-8s %s\n           %s\n           uuid:  %s\n           build: %s\n\n' \
+          "[$_ch]" "$(printf '%s' "$_info" | cut -f2)" "$_cmd" \
+          "$(printf '%s' "$_info" | cut -f1)" "$(printf '%s' "$_info" | cut -f3 | sed 's/^build: //')"
+      else
+        printf '  %-8s (nenhum build encontrado)\n\n' "[$_ch]"
+      fi
+    done
     exit 0
     ;;
 esac
