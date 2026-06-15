@@ -145,6 +145,7 @@ bind 'set enable-bracketed-paste off'
 #alias destino='bq query --format=csv --use_legacy_sql=false --max_rows=1000000'
 #setxkbmap -model abnt2 -layout br
 alias c='cd /home/base/claude && claude --effort max'
+alias cc='sudo npm install -g @anthropic-ai/claude-code'
 # alias porteiro='echo para editar: /opt/serverrouter_porteiro.cfg; echo; sudo -u base2 python3 /opt/porteiro.py localhost 9000 localhost 3500 porteiro'
 # ssh -L 3050:localhost:8080 -L 3051:localhost:8081 data-warehouse-azure -N -f 1>/dev/null 2>/dev/null & disown
 # ssh -L 3500:localhost:8123 -L 3501:localhost:9000 -L 3502:localhost:9009 data-warehouse-database-azure -N -f 1>/dev/null 2>/dev/null & disown
