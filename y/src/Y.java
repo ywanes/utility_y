@@ -1872,12 +1872,17 @@ cat buffer.log
             }
         }
         if ( args[0].equals("fixMyDateFromNTP") && args.length == 2 ){
-            if ( !isWindows() )
-                erroFatal("implementado somente para windows!");
-            if ( !isWindowsAdm() )
-                erroFatal("é preciso estar no cmd admin!");
-            fixMyDateFromNTP(args[1]);
-            return;
+            if ( isWindows() ){
+                if ( !isWindowsAdm() ){
+                    erroFatal("é preciso estar no cmd admin!");
+                }
+                fixMyDateFromNTP_windows(args[1]);
+                return;
+            }
+            if ( isLinux() ){
+                fixMyDateFromNTP_linux(args[1]);
+                return;
+            }            
         }        
         if ( args[0].equals("uptime")){
             if ( args.length == 2 && args[1].equals("-ms") ){
@@ -23730,7 +23735,7 @@ class Util{
         return d.toInstant().toEpochMilli();
     }
 
-    public void fixMyDateFromNTP(String url){
+    public void fixMyDateFromNTP_windows(String url){
         try{
             long ntpMs   = getSecondsByNtp(url);                 // "_" -> pool.ntp.org
             long localMs = System.currentTimeMillis();           // relogio local no MESMO instante
@@ -23744,6 +23749,30 @@ class Util{
             Process p = new ProcessBuilder("powershell", "-Command", cmd).inheritIO().start();
             if ( p.waitFor() != 0 )
                 erroFatal("Set-Date falhou — rode o cmd como Administrador.");
+            System.out.println("relogio ajustado (offset: " + offset + " ms).");
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+
+    public void fixMyDateFromNTP_linux(String url){
+        try{
+            long ntpMs   = getSecondsByNtp(url);                 // "_" -> pool.ntp.org
+            long localMs = System.currentTimeMillis();           // relogio local no MESMO instante
+            long offset  = ntpMs - localMs;                      // +atrasado / -adiantado
+
+            System.out.println("NTP   : " + java.time.Instant.ofEpochMilli(ntpMs));
+            System.out.println("local : " + java.time.Instant.ofEpochMilli(localMs));
+            System.out.println("offset: " + offset + " ms");
+
+            // epoch em segundos.milissegundos -> ex: @1718600000.123
+            String epoch = String.format(java.util.Locale.US,
+                    "@%d.%03d", ntpMs / 1000, Math.floorMod(ntpMs, 1000));
+
+            Process p = new ProcessBuilder("sudo", "date", "-s", epoch)
+                            .inheritIO().start();
+            if ( p.waitFor() != 0 )
+                erroFatal("date -s falhou — rode como root (sudo).");
             System.out.println("relogio ajustado (offset: " + offset + " ms).");
         }catch(Exception e){
             erroFatal(e);
