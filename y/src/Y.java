@@ -14850,8 +14850,7 @@ while True:
         try{
             // variaveis auxiliares
             int _x=0;
-            int _y=0;
-            int _delta_x=0;// -100;
+            int _y=0;            
             
             // fechar painel previsoes
             robotMouseMove(188+1400, 768);
@@ -14891,6 +14890,12 @@ while True:
             sleepMillis(50);
             robotMouseClickEsq();
             sleepMillis(150);
+            
+            // verifica painel reduzido sem tips
+            int _delta_x=0;// -100; painel reduzido sem
+            if ( robotCheckRGB(690, 128, "34 40 48") && robotCheckRGB(704, 131, "23 29 35") ){
+                _delta_x=-100;
+            }
             
             // verifica se o painel ainda esta fechado
             painel_fechado=robotCheckRGB(175, 839, "64 69 73"); 
