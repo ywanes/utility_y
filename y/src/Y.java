@@ -14893,7 +14893,10 @@ while True:
             
             // verifica painel reduzido sem tips
             int _delta_x=0;// -100; painel reduzido sem
-            if ( robotCheckRGB(690, 128, "34 40 48") && robotCheckRGB(704, 131, "23 29 35") ){
+            if ( 
+                (robotCheckRGB(690, 128, "34 40 48") && robotCheckRGB(704, 131, "23 29 35"))
+                || (robotCheckRGB(690, 128, "80 89 89") && robotCheckRGB(704, 131, "59 66 66"))
+            ){
                 _delta_x=-100;
             }
             
@@ -24462,7 +24465,12 @@ class Util{
     
     public boolean robotCheckRGB(int x, int y, String rgb) throws Exception{
         Color c=robotGet().getPixelColor(x, y);
-        return ( (c.getRed() + " " + c.getGreen() + " " + c.getBlue()).equals(rgb) || rgb.equals(c.getRGB()+"") );
+        boolean retorno=( (c.getRed() + " " + c.getGreen() + " " + c.getBlue()).equals(rgb) || rgb.equals(c.getRGB()+"") );
+        if ( !retorno ){
+            // debug
+            //System.out.println("false " + x + " " + y + " " + rgb + " esperado, mas veio " + c.getRed() + " " + c.getGreen() + " " + c.getBlue());
+        }
+        return retorno;
     }
     
     public void robotMouseMove(int a, int b) throws Exception{
