@@ -30892,6 +30892,7 @@ usage:
   [y sort]
   [y sorte
   [y iso]
+  [y qemu]
   [y [juros|emprestimo]]
   [y terminal]
   [y dotaMutandoAll]
@@ -31209,6 +31210,9 @@ Exemplos...
             | map(select(.arch=="amd64" and (.title | startswith("Windows 11, version"))))
             | max_by(.build | split(".") | map(tonumber))
             | "\\(.title)\\nbuild: \\(.build)\\nlink:  https://uupdump.net/selectlang.php?id=\\(.uuid)"'
+[y qemu]
+    qemu-img convert -f vmdk -O vhdx c:\\vm\\gc.vmdk c:\\vm\\GCC.vhdx
+    somente informativo -> y help qemu
 [y [juros|emprestimo]]
     y juros price valor 15000 juros 1.0 a.m 10 parcelas
     y juros sac valor 15000 juros 1.0 a.m 10 parcelas
