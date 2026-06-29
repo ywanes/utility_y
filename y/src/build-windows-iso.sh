@@ -26,7 +26,14 @@
 #
 # Variáveis: EDITION=Professional  LANG_WIN=pt-br  ARCH=amd64
 #            APPS=0|1 (1 = inclui apps da Store; 0 = sem apps, ISO menor)
+#            CHROME=0|1 (1 = Google Chrome instala no 1º boot, padrão 1)
+#            WINGET=0|1 (1 = winget/App Installer provisionado no 1º boot, padrão 1)
 #            WORK=/caminho   OUT=/caminho.iso
+#
+# Chrome + winget entram OFFLINE dentro da install.wim e são instalados no PRIMEIRO
+# boot por um SetupComplete.cmd (roda como SYSTEM no fim do Setup, antes do logon,
+# SEM precisar de rede). Chrome via msiexec; winget provisionado via DISM.
+# Log no Windows: C:\Windows\Setup\Scripts\buildiso-postinstall.log
 #
 # obs: requer ~25 GB livres em $WORK (pacotes UUP + WIM + ISO). O download
 #      vem da Microsoft; a velocidade depende da sua rede, não do uupdump.
@@ -45,6 +52,12 @@ ARCH="${ARCH:-amd64}"
 EDITION="${EDITION:-PROFESSIONAL}"     # MAIÚSCULAS! o get.php exige o nome exato do editionList (PROFESSIONAL/CORE)
 LANG_WIN="${LANG_WIN:-pt-br}"          # idioma no formato do uupdump (minúsculo)
 APPS="${APPS:-1}"                      # 1 = com apps da Store; 0 = sem (menor)
+# Apps offline enxertados na install.wim — instalam no 1º boot via SetupComplete.cmd
+# (roda como SYSTEM no fim do Setup, ANTES do logon e SEM precisar de rede):
+CHROME="${CHROME:-1}"                  # 1 = inclui Google Chrome (MSI enterprise offline)
+WINGET="${WINGET:-1}"                  # 1 = inclui winget/App Installer (provisionado via DISM)
+WINGET_REPO="${WINGET_REPO:-microsoft/winget-cli}"   # release de onde sai o App Installer
+CHROME_URL="${CHROME_URL:-https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi}"
 # Canal: oficial (24H2 estável) | RC (25H2 Release Preview) | DEV (Insider, build mais novo).
 # Via argumento posicional (RC/DEV) ou env CHANNEL=. Compat: RC=1 / DEV=1 também funcionam.
 CHANNEL="${CHANNEL:-oficial}"
@@ -322,6 +335,10 @@ prefetch_converters
 # assim entram na raiz da ISO (no UDF, que o Windows lê) pela mesma ferramenta
 # que monta o boot. NÃO usamos xorriso (não relê o UDF da ISO do Windows).
 EXTRAS_DIR="$WORK/_extras"
+# Instaladores offline (Chrome/winget) que vão p/ DENTRO da install.wim. Cache
+# compartilhado entre builds (por nome de arquivo) p/ não rebaixar ~370MB toda vez.
+PAYLOAD_DIR="$WORK/_payload"
+PAYLOAD_CACHE="${PAYLOAD_CACHE:-$CACHE_DIR/payload}"
 write_embedded_extras() {
   mkdir -p "$EXTRAS_DIR"
   cat > "$EXTRAS_DIR/notpm.bat" <<'NOTPM_EOF'
@@ -366,34 +383,255 @@ echo - C: (PRIMARY, ReFS)
 echo ========================================
 pause
 REFS_EOF
-  # Windows espera CRLF em .bat (idempotente: colapsa \r* p/ um \r só).
-  sed -i 's/\r*$/\r/' "$EXTRAS_DIR"/*.bat
-  echo ">> .bat embutidos gerados (CRLF): $(ls "$EXTRAS_DIR" | paste -sd' ' -)"
+  # add_user.bat — cria a conta local "base" (admin) e reinicia. Rodado pelo
+  # operador via Shift+F10 durante o Setup/OOBE. (msoobe é legado: em Win10/11
+  # pode não existir; o && garante que o shutdown só roda se o msoobe existir.)
+  cat > "$EXTRAS_DIR/add_user.bat" <<'ADDUSER_EOF'
+net user base /add
+net user base base
+rem tentativa br
+net localgroup administradores base /add
+rem tentativa en
+net localgroup administrators base /add
+rem & (nao &&): no cmd e' sequencial - roda o msoobe e ESPERA, depois reinicia
+rem SEMPRE (mesmo num errorlevel inesperado). -t 0 = reinicia na hora (sem os 30s).
+oobe\msoobe & shutdown -r -t 0
+ADDUSER_EOF
+  # SetupComplete.cmd: o Windows roda este arquivo automaticamente no FIM do Setup,
+  # como SYSTEM, antes do primeiro logon. Ideal p/ instalar apps offline (sem rede).
+  # Vai p/ \Windows\Setup\Scripts\ dentro da install.wim (ver inject_extras...).
+  cat > "$EXTRAS_DIR/SetupComplete.cmd" <<'SETUPC_EOF'
+@echo off
+setlocal
+set "LOG=%SystemRoot%\Setup\Scripts\buildiso-postinstall.log"
+set "SRC=%SystemRoot%\Setup\Files"
+echo [buildiso] SetupComplete iniciado %DATE% %TIME%>>"%LOG%"
+
+rem ---- Google Chrome (MSI enterprise offline, instala por maquina) ----
+if exist "%SRC%\chrome.msi" (
+  echo [buildiso] Instalando Google Chrome...>>"%LOG%"
+  msiexec /i "%SRC%\chrome.msi" /qn /norestart>>"%LOG%" 2>&1
+)
+
+rem ---- winget / App Installer ----
+rem  O SetupComplete roda DEPOIS do OOBE, quando o 1o usuario JA existe. Provisionar
+rem  (DISM) so registra p/ usuarios criados DEPOIS disso -> nao pega o 1o usuario.
+rem  Por isso: (1) provisiona p/ usuarios FUTUROS e (2) agenda um RunOnce que, no
+rem  1o logon, registra o winget p/ o usuario ATUAL via Add-AppxPackage (por-usuario,
+rem  sem timing nem licenca). O passo (2) e' o que faz o winget "vir" de verdade.
+if exist "%SRC%\winget\AppInstaller.msixbundle" (
+  echo [buildiso] Provisionando winget p/ usuarios futuros (DISM)...>>"%LOG%"
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%SystemRoot%\Setup\Scripts\install-winget.ps1">>"%LOG%" 2>&1
+  echo [buildiso] Agendando registro do winget p/ o 1o logon (RunOnce)...>>"%LOG%"
+  reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" /v "BuildisoWinget" /t REG_SZ /d "powershell -NoProfile -ExecutionPolicy Bypass -File \"%SystemRoot%\Setup\Scripts\register-winget.ps1\"" /f>>"%LOG%" 2>&1
+)
+echo [buildiso] SetupComplete concluido %DATE% %TIME%>>"%LOG%"
+endlocal
+exit /b 0
+SETUPC_EOF
+
+  # Provisiona o App Installer (winget) p/ todos os usuarios, com suas dependencias.
+  # Add-AppxProvisionedPackage aceita o array de deps direto — bem mais limpo que cmd.
+  cat > "$EXTRAS_DIR/install-winget.ps1" <<'WINGETPS_EOF'
+$ErrorActionPreference = 'Continue'
+$wg      = Join-Path $env:SystemRoot 'Setup\Files\winget'
+$bundle  = Join-Path $wg 'AppInstaller.msixbundle'
+$license = Join-Path $wg 'License.xml'
+$deps = @(Get-ChildItem -Path (Join-Path $wg 'deps') -Recurse -Include *.appx,*.msix -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+if (Test-Path $bundle) {
+  try {
+    if (Test-Path $license) {
+      Add-AppxProvisionedPackage -Online -PackagePath $bundle -DependencyPackagePath $deps -LicensePath $license | Out-Null
+    } else {
+      Add-AppxProvisionedPackage -Online -PackagePath $bundle -DependencyPackagePath $deps -SkipLicense | Out-Null
+    }
+    Write-Output "winget/App Installer provisionado com sucesso ($($deps.Count) dependencias)."
+  } catch {
+    Write-Output "ERRO ao provisionar winget: $($_.Exception.Message)"
+  }
+} else {
+  Write-Output "AVISO: bundle do App Installer nao encontrado em $bundle"
+}
+WINGETPS_EOF
+
+  # register-winget.ps1: roda no 1º LOGON do usuário (via RunOnce do SetupComplete),
+  # no contexto DELE. Add-AppxPackage registra o winget p/ o usuário atual — é o que
+  # garante o winget no PATH (provisionar via DISM não pega o 1º usuário do OOBE).
+  cat > "$EXTRAS_DIR/register-winget.ps1" <<'REGWG_EOF'
+$ErrorActionPreference = 'SilentlyContinue'
+$log = Join-Path $env:TEMP 'buildiso-winget-register.log'
+$wg  = Join-Path $env:SystemRoot 'Setup\Files\winget'
+"[buildiso] register-winget iniciado $(Get-Date)" | Out-File -FilePath $log -Append
+# Dependências PRIMEIRO (VCLibs / UI.Xaml / WindowsAppRuntime), depois o bundle.
+Get-ChildItem -Path (Join-Path $wg 'deps') -Recurse -Include *.appx,*.msix -ErrorAction SilentlyContinue | ForEach-Object {
+  try { Add-AppxPackage -Path $_.FullName -ForceApplicationShutdown; "  dep OK: $($_.Name)" | Out-File -FilePath $log -Append }
+  catch { "  dep ERRO: $($_.Name) :: $($_.Exception.Message)" | Out-File -FilePath $log -Append }
+}
+$bundle = Join-Path $wg 'AppInstaller.msixbundle'
+if (Test-Path $bundle) {
+  try { Add-AppxPackage -Path $bundle -ForceApplicationShutdown; "  bundle OK -> winget registrado p/ $env:USERNAME" | Out-File -FilePath $log -Append }
+  catch { "  bundle ERRO: $($_.Exception.Message)" | Out-File -FilePath $log -Append }
+}
+REGWG_EOF
+
+  # Windows espera CRLF em .bat/.cmd/.ps1 (idempotente: colapsa \r* p/ um \r só).
+  sed -i 's/\r*$/\r/' "$EXTRAS_DIR"/*.bat "$EXTRAS_DIR"/*.cmd "$EXTRAS_DIR"/*.ps1
+  echo ">> extras embutidos gerados (CRLF): $(ls "$EXTRAS_DIR" | paste -sd' ' -)"
 }
 
-# Insere no convert.sh um 'cp' dos extras p/ ISODIR, logo antes da criação da ISO.
+# Baixa os instaladores offline p/ $PAYLOAD_DIR (cache compartilhado por nome de
+# arquivo). Chrome = MSI enterprise. winget = bundle + license + deps (VCLibs /
+# UI.Xaml / WindowsAppRuntime) extraídas do DesktopAppInstaller_Dependencies.zip da
+# release oficial. Falhas são NÃO-fatais: apenas pula o app que não baixou.
+fetch_payloads() {
+  [ "$CHROME" = "1" ] || [ "$WINGET" = "1" ] || { echo ">> Chrome e winget desativados; sem payloads."; return 0; }
+  mkdir -p "$PAYLOAD_DIR"
+  mkdir -p "$PAYLOAD_CACHE" 2>/dev/null || true   # cache é best-effort (pode ser read-only)
+  # baixa url -> cache/<nome> (se faltar) e copia p/ destino. Sem cache, baixa direto.
+  _dl_cached() { # url  cachename  dest
+    local url="$1" cname="$2" dest="$3" cf="$PAYLOAD_CACHE/$2"
+    mkdir -p "$(dirname "$dest")"
+    if [ -w "$PAYLOAD_CACHE" ] && [ -s "$cf" ]; then
+      echo ">> cache HIT: $cname"; cp -f "$cf" "$dest"; return 0
+    fi
+    echo ">> baixando $cname ..."
+    curl -fSL --http1.1 -m 1800 --retry 5 --retry-delay 5 -o "$dest.partial" "$url" \
+      || { rm -f "$dest.partial"; return 1; }
+    mv -f "$dest.partial" "$dest"
+    [ -w "$PAYLOAD_CACHE" ] && cp -f "$dest" "$cf" 2>/dev/null || true
+    return 0
+  }
+
+  if [ "$CHROME" = "1" ]; then
+    _dl_cached "$CHROME_URL" "chrome.msi" "$PAYLOAD_DIR/chrome.msi" \
+      || { echo ">> AVISO: falha ao baixar o Chrome; seguindo SEM ele."; rm -f "$PAYLOAD_DIR/chrome.msi"; }
+  fi
+
+  if [ "$WINGET" = "1" ]; then
+    # arch do zip de deps: amd64->x64, arm64->arm64 (o uupdump é amd64 por padrão).
+    local zarch; case "$ARCH" in arm64) zarch="arm64" ;; *) zarch="x64" ;; esac
+    local rel burl lurl durl tag
+    rel="$(curl -fsSL -m 60 "https://api.github.com/repos/$WINGET_REPO/releases/latest" 2>/dev/null || true)"
+    burl="$(printf '%s' "$rel" | jq -r '.assets[]?|select(.name|endswith(".msixbundle"))|.browser_download_url' 2>/dev/null | head -1)"
+    lurl="$(printf '%s' "$rel" | jq -r '.assets[]?|select(.name|endswith("_License1.xml"))|.browser_download_url' 2>/dev/null | head -1)"
+    durl="$(printf '%s' "$rel" | jq -r '.assets[]?|select(.name=="DesktopAppInstaller_Dependencies.zip")|.browser_download_url' 2>/dev/null | head -1)"
+    tag="$(printf '%s' "$rel" | jq -r '.tag_name // "latest"' 2>/dev/null)"
+    if [ -n "$burl" ] && [ "$burl" != "null" ]; then
+      echo ">> winget release: $tag (deps: $zarch)"
+      local ok=1
+      _dl_cached "$burl" "winget_${tag}_AppInstaller.msixbundle" "$PAYLOAD_DIR/winget/AppInstaller.msixbundle" || ok=0
+      if [ -n "$lurl" ] && [ "$lurl" != "null" ]; then
+        _dl_cached "$lurl" "winget_${tag}_License.xml" "$PAYLOAD_DIR/winget/License.xml" \
+          || echo ">> (sem License.xml; uso -SkipLicense no provisionamento)"
+      fi
+      if [ -n "$durl" ] && [ "$durl" != "null" ]; then
+        if _dl_cached "$durl" "winget_${tag}_deps.zip" "$PAYLOAD_DIR/winget/_deps.zip"; then
+          rm -rf "$PAYLOAD_DIR/winget/deps"; mkdir -p "$PAYLOAD_DIR/winget/deps"
+          # -j: descarta a pasta arch; pega só os pacotes da arquitetura do build.
+          unzip -o -j "$PAYLOAD_DIR/winget/_deps.zip" "$zarch/*" -d "$PAYLOAD_DIR/winget/deps" >/dev/null 2>&1 \
+            || { echo ">> AVISO: não extraí deps '$zarch'; tentando todas."; unzip -o -j "$PAYLOAD_DIR/winget/_deps.zip" -d "$PAYLOAD_DIR/winget/deps" >/dev/null 2>&1 || ok=0; }
+          rm -f "$PAYLOAD_DIR/winget/_deps.zip"
+        else
+          ok=0
+        fi
+      fi
+      if [ "$ok" != "1" ] || [ ! -s "$PAYLOAD_DIR/winget/AppInstaller.msixbundle" ]; then
+        echo ">> AVISO: payload do winget incompleto; seguindo SEM winget."; rm -rf "$PAYLOAD_DIR/winget"
+      fi
+    else
+      echo ">> AVISO: não descobri o asset do winget (API GitHub indisponível?); seguindo SEM winget."
+    fi
+  fi
+
+  echo ">> Payloads prontos:"; find "$PAYLOAD_DIR" -type f -printf '   %p (%s bytes)\n' 2>/dev/null || true
+}
+
+# Injeta no convert.sh, logo antes da criação da ISO: (1) os .bat na raiz da ISO e
+# (2) Chrome/winget DENTRO da install.wim (todos os índices) + SetupComplete.cmd.
+# A lógica fica num arquivo separado ($WORK/buildiso_inject.sh) que o convert.sh
+# faz 'source' em runtime — assim ele enxerga as variáveis do conversor ($type,
+# $tempDir, $indexesExported, ISODIR) com aspas/escapes normais, sem inferno de awk.
+# Idempotente E atualizável: remove qualquer injeção anterior (bloco novo entre
+# sentinelas OU o formato antigo só-.bat já presente no cache) antes de reaplicar.
 inject_extras_into_convert() {
   local cs="$WORK/files/convert.sh"
-  [ -f "$cs" ] || { echo "ERRO: convert.sh ausente — não dá p/ injetar os .bat."; exit 1; }
-  grep -q 'BUILDISO_EXTRA_INJECT' "$cs" && return 0   # já aplicado nesta pasta
+  [ -f "$cs" ] || { echo "ERRO: convert.sh ausente — não dá p/ injetar os extras."; exit 1; }
   # Falha CEDO (antes da conversão longa) se o ponto-âncora não existir.
   grep -q 'Creating ISO image' "$cs" || {
     echo "ERRO: âncora 'Creating ISO image' não encontrada no convert.sh."
     echo "      A versão do conversor mudou — ajuste inject_extras_into_convert."
     exit 1
   }
-  awk -v d="$EXTRAS_DIR" '
+  # Limpa injeções anteriores: bloco novo (sentinelas) + formato antigo (.bat inline).
+  sed -i \
+    -e '/# BUILDISO_INJECT_BEGIN/,/# BUILDISO_INJECT_END/d' \
+    -e '/BUILDISO_EXTRA_INJECT/d' \
+    -e '\#_extras/notpm.bat.*ISODIR/#d' \
+    "$cs"
+
+  # Arquivo de injeção (sourced em runtime). Heredoc QUOTED: $type/$tempDir/etc.
+  # ficam literais p/ o convert.sh avaliar; @@EXTRAS@@/@@PAYLOAD@@ são placeholders.
+  local inj="$WORK/buildiso_inject.sh"
+  cat > "$inj" <<'INJ_EOF'
+# extras do build-windows-iso.sh — rodado via 'source' pelo convert.sh
+__EX="@@EXTRAS@@"
+__PL="@@PAYLOAD@@"
+
+# (1) .bat na raiz da ISO (gravados no UDF pelo genisoimage logo a seguir)
+cp -f "$__EX/notpm.bat" "$__EX/refs_formata_automatico.bat" "$__EX/add_user.bat" ISODIR/ 2>/dev/null \
+  && echo "  [extra] notpm.bat + refs_formata_automatico.bat + add_user.bat -> raiz da ISO" || true
+
+# (2) Chrome + winget DENTRO da install.$type (todos os índices) + SetupComplete.cmd.
+#     Instalam no 1º boot (SetupComplete.cmd roda como SYSTEM, sem rede).
+__wim="ISODIR/sources/install.$type"
+if [ -f "$__wim" ] && [ -f "$__EX/SetupComplete.cmd" ] \
+   && { [ -f "$__PL/chrome.msi" ] || [ -f "$__PL/winget/AppInstaller.msixbundle" ]; }; then
+  __u="${tempDir:-/tmp}/buildiso_payload_update.txt"
+  {
+    echo "add \"$__EX/SetupComplete.cmd\"    /Windows/Setup/Scripts/SetupComplete.cmd"
+    echo "add \"$__EX/install-winget.ps1\"   /Windows/Setup/Scripts/install-winget.ps1"
+    echo "add \"$__EX/register-winget.ps1\"  /Windows/Setup/Scripts/register-winget.ps1"
+    [ -f "$__PL/chrome.msi" ] && echo "add \"$__PL/chrome.msi\" /Windows/Setup/Files/chrome.msi"
+    if [ -f "$__PL/winget/AppInstaller.msixbundle" ]; then
+      echo "add \"$__PL/winget/AppInstaller.msixbundle\" /Windows/Setup/Files/winget/AppInstaller.msixbundle"
+      [ -f "$__PL/winget/License.xml" ] && echo "add \"$__PL/winget/License.xml\" /Windows/Setup/Files/winget/License.xml"
+      for __d in "$__PL"/winget/deps/*; do
+        [ -f "$__d" ] && echo "add \"$__d\" /Windows/Setup/Files/winget/deps/$(basename "$__d")"
+      done
+    fi
+  } > "$__u"
+  __i=1
+  while [ "$__i" -le "${indexesExported:-1}" ]; do
+    if wimlib-imagex update "$__wim" "$__i" < "$__u" >/dev/null 2>&1; then
+      echo "  [extra] Chrome/winget -> install.$type (índice $__i)"
+    else
+      echo "  [extra] AVISO: falhou enxertar payloads no índice $__i de install.$type"
+    fi
+    __i=$((__i + 1))
+  done
+else
+  echo "  [extra] (sem payloads para install.$type — Chrome/winget pulados)"
+fi
+true
+INJ_EOF
+  # Resolve os placeholders p/ caminhos absolutos (# como delim: paths têm /).
+  sed -i -e "s#@@EXTRAS@@#$EXTRAS_DIR#g" -e "s#@@PAYLOAD@@#$PAYLOAD_DIR#g" "$inj"
+
+  # Injeta UMA linha de 'source' antes de "Creating ISO image", entre sentinelas.
+  awk -v inj="$inj" '
     /Creating ISO image/ && !done {
-      print "# BUILDISO_EXTRA_INJECT — copia .bat extras p/ a raiz da ISO"
-      print "cp -f \"" d "/notpm.bat\" \"" d "/refs_formata_automatico.bat\" ISODIR/ && echo \"  [extra] notpm.bat + refs_formata_automatico.bat -> raiz da ISO\""
+      print "# BUILDISO_INJECT_BEGIN"
+      print ". \"" inj "\""
+      print "# BUILDISO_INJECT_END"
       done=1
     }
     { print }
   ' "$cs" > "$cs.new" && mv "$cs.new" "$cs"
   chmod +x "$cs"
-  echo ">> convert.sh ajustado: .bat entram na raiz da ISO (antes do genisoimage)."
+  echo ">> convert.sh ajustado: .bat na raiz + Chrome/winget na install.wim (antes do genisoimage)."
 }
 write_embedded_extras
+fetch_payloads
 inject_extras_into_convert
 
 # ----------------------------- ajustar ConvertConfig -------------------------
@@ -495,7 +733,8 @@ command -v sha256sum >/dev/null 2>&1 && sha256sum "$OUT"
 echo
 echo "ISO gerada em: $OUT"
 echo "Inclui na raiz: notpm.bat (bypass TPM/SecureBoot/RAM/CPU/Storage) + refs_formata_automatico.bat"
+{ [ "$CHROME" = "1" ] || [ "$WINGET" = "1" ]; } && \
+  echo "Instala no 1º boot (SetupComplete.cmd, sem rede):$([ "$CHROME" = "1" ] && echo ' Google Chrome')$([ "$WINGET" = "1" ] && echo ' winget/App-Installer') — log em C:\\Windows\\Setup\\Scripts\\buildiso-postinstall.log"
 echo "Para um pendrive multiboot junto com a ISO do Ubuntu, use o Ventoy:"
 echo "  sudo sh Ventoy2Disk.sh -i /dev/sdX   # apaga o pendrive (confira com lsblk!)"
 echo "  cp '$OUT' ubuntu-*.iso /caminho/do/pendrive/"
-
