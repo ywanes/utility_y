@@ -31212,6 +31212,10 @@ Exemplos...
             | "\\(.title)\\nbuild: \\(.build)\\nlink:  https://uupdump.net/selectlang.php?id=\\(.uuid)"'
 [y qemu]
     qemu-img convert -f vmdk -O vhdx c:\\vm\\gc.vmdk c:\\vm\\GCC.vhdx
+    qemu-img resize c:\\vm\\GCC.vhdx 100G
+    qemu-img info c:\\vm\\GCC.vhdx 
+    # compactando espaço livre. converter para ele mesmo
+        qemu-img convert -f vhdx -O vhdx c:\\vm\\GCC.vhdx c:\\vm\\GCC_compact.vhdx
     somente informativo -> y help qemu
 [y [juros|emprestimo]]
     y juros price valor 15000 juros 1.0 a.m 10 parcelas
