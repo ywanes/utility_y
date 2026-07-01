@@ -1029,8 +1029,10 @@ function img_secret(){
 	}
 }
 
+var acu_retry=600;
 function retry(){
 	console.log('retrying... ' + document.getElementById('video').src);
+	acu_retry+=50;
 	setTimeout(// retry video of NaN
 		function (){
 			_resume = get_resume();
@@ -1047,7 +1049,7 @@ function retry(){
 				}
 			}
 		},
-	600);
+	acu_retry);
 }
 
 function load_movie(parm, table_click, streamURL){        

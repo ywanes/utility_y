@@ -1018,6 +1018,13 @@ cat buffer.log
                 document.cookie='ips4_member_id=178526';
                 document.cookie='ips4_login_key=74e18a46894d354f5adfa7dc881de6d7';                                
                 while [ true ]; do y cls && y curl -H "cookie: ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727; ips4_member_id=178526; ips4_login_key=74e18a46894d354f5adfa7dc881de6d7;" https://encontrei.info/id-62616/ | y tr "'" "\n" | y grep .com/f/;  y curl https://mixdrop23.net/f/9wxdwkjof8o8zn | y grep "ALMOST THERE"; sleep 30; done
+                
+                nova consulta por 45607
+                curl -sS 'https://encontrei.info/index.php?app=videobox&module=video&controller=view&do=playerData&id=45607' \
+                  -H 'X-Requested-With: XMLHttpRequest' \
+                  -H 'cookie: ips4_device_key=311a4bbe7ff5706d42ecc82e640ab727; ips4_member_id=178526; ips4_login_key=74e18a46894d354f5adfa7dc881de6d7'
+                "servers_dub": "mixdrop=wld36n9nbwpwgq&amp;streamtape=PJK4zmW9BLsDPa&amp;byse=13j9wewes12m&amp;doodstream=jh3ew4mvdyde",
+                miixdrop.net/f/wld36n9nbwpwgq
                 */
                 overflix(args);                
             }catch(Exception e){
