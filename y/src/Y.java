@@ -11690,9 +11690,9 @@ bind 'set enable-bracketed-paste off'
                 boolean word_in=false;
                 long count=0;
                 if ( in != null )
-                    readLine(in);
+                    readLine(in, "UTF-8", "");
                 else
-                    readLine(caminho_file);
+                    readLine(caminho_file, "UTF-8", "");
                 while( (t=read1String()) != null ){
                     if(word_in){
                         if(notWord.indexOf(t) > -1){
@@ -11714,9 +11714,9 @@ bind 'set enable-bracketed-paste off'
                 String t=null;
                 long count=0;
                 if ( in != null )
-                    readLine(in);
+                    readLine(in, "UTF-8", "");
                 else
-                    readLine(caminho_file);            
+                    readLine(caminho_file, "UTF-8", "");
                 while( (t=read1String()) != null )
                     count++;
                 System.out.println(count);
@@ -26441,8 +26441,17 @@ class Util{
         readLine(new File(caminho));
     }
     
+    // 
+    public void readLine(String caminho, String encoding, String delimiter) throws Exception{
+        readLine(new File(caminho), encoding, delimiter);
+    }
+    
     public void readLine(File f) throws Exception{
         readLine(new FileInputStream(f));
+    }
+    
+    public void readLine(File f, String encoding, String delimiter) throws Exception{
+        readLine(new FileInputStream(f), encoding, delimiter);
     }
     
     public java.util.Scanner scanner_pipe=null;
@@ -26456,7 +26465,7 @@ class Util{
         if ( encoding == null )
             scanner_pipe=new java.util.Scanner(in);
         else
-            scanner_pipe=new java.util.Scanner(in,encoding);
+            scanner_pipe=new java.util.Scanner(in, encoding);// "UTF-8"
         scanner_pipe.useDelimiter(delimiter);        
     }    
     
@@ -26478,6 +26487,10 @@ class Util{
     }
     
     public String read1String(){
+        // altamente recomendado usar
+        // inicializacao com uma das opcoes abaixo
+        // readLine(in, "UTF-8", "");
+        // readLine(caminho_file, "UTF-8", "");
         while(true){
             try{            
                 if ( scanner_pipe == null )
