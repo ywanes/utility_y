@@ -1304,9 +1304,15 @@ cat buffer.log
             grep(args);
             return;
         }        
-        if ( args.length == 2 && args[0].equals("wc") && (args[1].equals("-l") || args[1].equals("-c") || args[1].equals("-w")) ){
-            wc(args[1]);
-            return;
+        if ( args.length >= 2 && args[0].equals("wc") && (args[1].equals("-l") || args[1].equals("-c") || args[1].equals("-w")) ){
+            if ( args.length == 2 ){
+                wc(System.in, null, args[1]);
+                return;
+            }
+            if ( args.length == 3 ){
+                wc(null, args[2], args[1]);
+                return;
+            }            
         }       
         if ( args.length == 1 && args[0].equals("len")){
             len();
@@ -9052,383 +9058,6 @@ cat buffer.log
         return "Formato desconhecido";
     }    
     
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-    
     public void gzip()
     {
         try{            
@@ -12037,10 +11666,12 @@ bind 'set enable-bracketed-paste off'
         return java.text.Normalizer.normalize(str, java.text.Normalizer.Form.NFD).replaceAll("[^\\p{ASCII}]", "");
     }    
     
-    public void wc(String parm){
-        if ( parm.equals("-l") ){
-            try{
-                InputStream inputStream_pipe=System.in;
+    public void wc(InputStream in, String caminho_file, String parm){
+        try{
+            if ( parm.equals("-l") ){
+                InputStream inputStream_pipe=in;
+                if ( in == null )
+                    inputStream_pipe=new FileInputStream(caminho_file);
                 byte[] buf = new byte[BUFFER_SIZE];
                 int count=0;
                 int len=0;
@@ -12052,41 +11683,49 @@ bind 'set enable-bracketed-paste off'
                 }
                 System.out.println(count);
                 return;
-            }catch(Exception e){
-                System.err.println(e.toString());
-                System.exit(1);
             }
-        }
-        if ( parm.equals("-w") ){
-            String t=null;
-            String notWord="\n\r\t ";
-            boolean word_in=false;
-            long count=0;
-            while( (t=read1String()) != null ){
-                if(word_in){
-                    if(notWord.indexOf(t) > -1){
-                        word_in=false;
-                        count++;
-                    }
-                }else{
-                    if(notWord.indexOf(t) == -1){
-                        word_in=true;
+            if ( parm.equals("-w") ){
+                String t=null;
+                String notWord="\n\r\t ";
+                boolean word_in=false;
+                long count=0;
+                if ( in != null )
+                    readLine(in);
+                else
+                    readLine(caminho_file);
+                while( (t=read1String()) != null ){
+                    if(word_in){
+                        if(notWord.indexOf(t) > -1){
+                            word_in=false;
+                            count++;
+                        }
+                    }else{
+                        if(notWord.indexOf(t) == -1){
+                            word_in=true;
+                        }
                     }
                 }
-            }
-            if(word_in)
-                count++;
-            System.out.println(count);
-            return;
-        }        
-        if ( parm.equals("-c") ){
-            String t=null;
-            long count=0;
-            while( (t=read1String()) != null )
-                count++;
-            System.out.println(count);
-            return;
-        }        
+                if(word_in)
+                    count++;
+                System.out.println(count);
+                return;
+            }        
+            if ( parm.equals("-c") ){
+                String t=null;
+                long count=0;
+                if ( in != null )
+                    readLine(in);
+                else
+                    readLine(caminho_file);            
+                while( (t=read1String()) != null )
+                    count++;
+                System.out.println(count);
+                return;
+            }        
+        }catch(Exception e){
+            System.err.println(e.toString());
+            System.exit(1);
+        }
     }
 
     public void len()
@@ -35207,9 +34846,10 @@ Exemplos...
     cat arquivo | y grep -i -v aa bb cc
     obs: grep -L arquivos-sem-essa-palavra *
 [y wc]
+    y wc -l arquivo
     cat arquivo | y wc -l
     cat arquivo | y wc -w
-    cat arquivo | y wc -c
+    cat arquivo | y wc -c    
     obs: conta. 
          l -> lines, w -> words, c -> chars
 [y len]
