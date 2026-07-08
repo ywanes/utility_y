@@ -438,7 +438,7 @@
         function getHolidays(year) {
             const easter = calculateEaster(year);
             
-            return [
+			return [
                 { date: new Date(year, 0, 1), name: "Confraternização Universal", type: "national" },
                 { date: addDays(easter, -48), name: "Segunda-feira de Carnaval", type: "facultative" },
                 { date: addDays(easter, -47), name: "Terça-feira de Carnaval", type: "facultative" },
@@ -446,12 +446,15 @@
                 { date: easter, name: "Páscoa", type: "national" },
                 { date: new Date(year, 3, 21), name: "Tiradentes", type: "national" },
                 { date: new Date(year, 4, 1), name: "Dia do Trabalho", type: "national" },
-                { date: addDays(easter, 60), name: "Corpus Christi", type: "facultative" },
+                { date: addDays(easter, 60), name: "Corpus Christi", type: "municipal" },      // feriado em Campinas
+                { date: new Date(year, 6, 9), name: "Revolução Constitucionalista", type: "state" },  // estadual SP
+                { date: new Date(year, 7, 12), name: "Dia do Evangélico", type: "municipal" }, // Campinas, desde 2025
                 { date: new Date(year, 8, 7), name: "Independência do Brasil", type: "national" },
                 { date: new Date(year, 9, 12), name: "Nossa Senhora Aparecida", type: "national" },
                 { date: new Date(year, 10, 2), name: "Finados", type: "national" },
                 { date: new Date(year, 10, 15), name: "Proclamação da República", type: "national" },
                 { date: new Date(year, 10, 20), name: "Consciência Negra", type: "national" },
+                { date: new Date(year, 11, 8), name: "N. Sra. da Conceição", type: "municipal" }, // padroeira de Campinas
                 { date: new Date(year, 11, 25), name: "Natal", type: "national" }
             ].sort((a, b) => a.date - b.date);
         }

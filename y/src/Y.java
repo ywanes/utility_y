@@ -696,54 +696,63 @@ cat buffer.log
         }
         if ( args[0].equals("zip") ){
             try{
+                String senha=null;
+                for ( int i=1;i<args.length;i++ ){
+                    if (args[i].equals("-pass") && args.length > (i+1) && args[i+1].length() > 0 ){
+                        senha=args[i+1];
+                        args=removeParm(i, args);
+                        args=removeParm(i, args);
+                        break;
+                    }
+                }
                 if ( args.length >= 3 && args[1].equals("add") ){
                     Object [] objs = get_parms_paths_virtualname_lvlCompress(args);
                     if ( objs != null ){
                         String [] paths=(String [])objs[0];
                         String virtualname=(String)objs[1];
                         Integer lvlCompress=(Integer)objs[2];
-                        zip_add_router(paths, virtualname, lvlCompress, System.out, null);
+                        zip_add_router(paths, virtualname, lvlCompress, System.out, null, senha);
                         return;
                     }
                 }
                 if ( args.length == 2 && args[1].equals("list") ){
-                    zip_list(null);
+                    zip_list(null, senha);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("list") ){
-                    zip_list(args[2]);
+                    zip_list(args[2], senha);
                     return;
                 }                
                 if ( args.length == 2 && args[1].equals("extract") ){
-                    zip_extract(System.in, null,null,null);
+                    zip_extract(System.in, null, null, null, senha);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("extract") ){
-                    zip_extract(null, args[2],null,null);
+                    zip_extract(null, args[2], null, null, senha);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("extract") && args[2].equals("-out")){
-                    zip_extract(System.in, null,args[3],null);
+                    zip_extract(System.in, null, args[3], null, senha);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("extract") && args[3].equals("-out")){
-                    zip_extract(null, args[2],args[4],null);
+                    zip_extract(null, args[2], args[4], null, senha);
                     return;
                 }
                 if ( args.length == 3 && args[1].equals("extractSelected") ){
-                    zip_extract(System.in, null,null,args[2]);
+                    zip_extract(System.in, null, null, args[2], senha);
                     return;
                 }
                 if ( args.length == 4 && args[1].equals("extractSelected") ){
-                    zip_extract(null, args[2],null,args[3]);
+                    zip_extract(null, args[2], null, args[3], senha);
                     return;
                 }
                 if ( args.length == 5 && args[1].equals("extractSelected") && args[3].equals("-out")){
-                    zip_extract(System.in, null,args[4],args[2]);
+                    zip_extract(System.in, null, args[4], args[2], senha);
                     return;
                 }
                 if ( args.length == 6 && args[1].equals("extractSelected") && args[4].equals("-out")){
-                    zip_extract(null, args[2],args[5],args[3]);
+                    zip_extract(null, args[2], args[5], args[3], senha);
                     return;
                 }
             }catch(Exception e){
@@ -3436,7 +3445,7 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_add_router(paths, "", 0, pos1, "enviando - ");
+                            zip_add_router(paths, "", 0, pos1, "enviando - ", null);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -3503,7 +3512,7 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_extract(pis2, null,null,null);                            
+                            zip_extract(pis2, null, null, null, null);                            
                             System.out.println("");
                         }catch(Exception e){
                             System.err.println("Erro extract zip - " + e.toString());
@@ -5335,9 +5344,12 @@ cat buffer.log
         return null;
     }
     
-    private void zip_add_router(String [] paths, String virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on) throws Exception {
-        this.virtual_name = virtual_name;                
-        zip_output = new java.util.zip.ZipOutputStream(out);   
+    private void zip_add_router(String [] paths, String virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on, String senha) throws Exception {
+        this.virtual_name = virtual_name;
+        if ( senha == null )
+            zip_output = new java.util.zip.ZipOutputStream(out);
+        else
+            zip_output = new ZipSenhaOutputStream(out, senha); // senha estilo windows (ZipCrypto)
         if ( lvlCompress == 0 )
             zip_output.setLevel(ZipOutputStream.STORED);
         else{
@@ -5349,7 +5361,7 @@ cat buffer.log
         zip_add(paths, pre_line_print_on);
         zip_output.closeEntry();
         zip_output.flush();
-        zip_output.close();        
+        zip_output.close();
     }
 
     private void valida_paths(String [] paths){
@@ -5359,7 +5371,7 @@ cat buffer.log
                 System.exit(1);
             }
     }
-    
+
     private java.util.zip.ZipOutputStream zip_output=null;
     private ArrayList<String> zip_elementos=null;
     private ArrayList<Long> zip_elementos_lastModified=null;
@@ -5367,10 +5379,10 @@ cat buffer.log
     private void zip_add(String [] paths, String pre_line_print_on) throws Exception {
         int len;
         java.util.zip.ZipEntry e=null;
-        if ( paths.length == 0 ){            
+        if ( paths.length == 0 ){
             e=new java.util.zip.ZipEntry(virtual_name);
             zip_output.putNextEntry(e);
-            byte[] buf = new byte[BUFFER_SIZE];                                    
+            byte[] buf = new byte[BUFFER_SIZE];
             while ((len = readBytes(buf)) > -1){
                 zip_output.write(buf, 0, len);
                 if ( pre_line_print_on != null )
@@ -5380,12 +5392,12 @@ cat buffer.log
         }else{
             for ( int i_=0; i_<paths.length;i_++ ){
                 File elem=new File(paths[i_]);
-                if ( elem.isFile() ){            
+                if ( elem.isFile() ){
                     e=new java.util.zip.ZipEntry(elem.getName());
                     e.setTime(elem.lastModified());
                     zip_output.putNextEntry(e);
                     readBytes(elem);
-                    byte[] buf = new byte[BUFFER_SIZE];                                    
+                    byte[] buf = new byte[BUFFER_SIZE];
                     long size_alert=-1;
                     long size=0;
                     size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
@@ -5401,8 +5413,8 @@ cat buffer.log
                     }
                     closeBytes();
                 }else{
-                    zip_elementos=new ArrayList<String>();            
-                    zip_elementos_lastModified=new ArrayList<Long>();            
+                    zip_elementos=new ArrayList<String>();
+                    zip_elementos_lastModified=new ArrayList<Long>();
                     if ( !paths[i_].startsWith("/") && !paths[i_].contains(":") ) // verifica se é relative path
                         zip_navega(elem,paths[i_]+"/");
                     else
@@ -5412,14 +5424,14 @@ cat buffer.log
                         e=new java.util.zip.ZipEntry( zip_elementos.get(i) );
                         e.setTime(zip_elementos_lastModified.get(i));
                         zip_output.putNextEntry(e);
-                        if ( ! zip_elementos.get(i).endsWith("/") ){                    
+                        if ( ! zip_elementos.get(i).endsWith("/") ){
                             File tmp = new File(zip_elementos.get(i));
                             long size_alert=tmp.length() + 1024*1024*100; // acima de 100MB do planejado
                             long size=0;
                             readBytes(tmp);
-                            byte[] buf = new byte[BUFFER_SIZE];                        
+                            byte[] buf = new byte[BUFFER_SIZE];
                             while ((len = readBytes(buf)) > -1){
-                                zip_output.write(buf, 0, len);                
+                                zip_output.write(buf, 0, len);
                                 if ( pre_line_print_on != null )
                                     print_cursor_speed(len, pre_line_print_on, null, true, null);
                                 size+=len;
@@ -5428,14 +5440,14 @@ cat buffer.log
                                     System.exit(1);
                                 }
                             }
-                            closeBytes();            
+                            closeBytes();
                         }
                     }
-                }  
+                }
             }
         }
     }
-    
+
     private void zip_navega(File a, String caminho) {
         java.io.File[] filhos=a.listFiles();
         if ( filhos == null ) return;
@@ -5451,8 +5463,19 @@ cat buffer.log
             }
         }
     }
-    
-    private void zip_list(String a) throws Exception {
+
+    private void zip_list(String a, String senha) throws Exception {
+        if ( senha != null ){ // zip com senha nao abre no ZipFile do java, vai pelo ZipSenhaFile
+            if ( a != null )
+                valida_paths(new String[]{a});
+            ZipSenhaFile zipFile = a == null ? new ZipSenhaFile(System.in, senha) : new ZipSenhaFile(a, senha);
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while(entries.hasMoreElements()){
+                System.out.println(entries.nextElement().getName());
+            }
+            zipFile.close();
+            return;
+        }
         valida_paths(new String[]{a});
         if ( a == null ){
             ZipInputStream zis=new ZipInputStream(System.in);
@@ -5464,14 +5487,14 @@ cat buffer.log
             ZipFile zipFile = new ZipFile(a);
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
             while(entries.hasMoreElements()){
-                ZipEntry entry = entries.nextElement();            
+                ZipEntry entry = entries.nextElement();
                 System.out.println(entry.getName());
-            }                
+            }
         }
     }
 
     private int zip_extract_count_encontrados=0;
-    private void zip_extract(InputStream in, String name_file_zip, String pre_dir, String filtro) throws Exception {
+    private void zip_extract(InputStream in, String name_file_zip, String pre_dir, String filtro, String senha) throws Exception {
         zip_extract_count_encontrados=0;
         if ( filtro != null && filtro.endsWith("/") ){
             System.err.println("Erro, o item selecionado não pode ser uma pasta!: "+filtro);
@@ -5500,10 +5523,22 @@ cat buffer.log
             pre_dir="";
         if ( name_file_zip != null )
             valida_paths(new String[]{name_file_zip});
-        if ( name_file_zip == null ){
+        if ( senha != null ){ // com senha vai pelo ZipSenhaFile, o resto continua igual
+            ZipSenhaFile zipFile = name_file_zip == null ? new ZipSenhaFile(in, senha) : new ZipSenhaFile(name_file_zip, senha);
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while(entries.hasMoreElements()){
+                ZipEntry entry = entries.nextElement();
+                if ( entry.getName().endsWith("/") ){
+                    zip_extract_grava(pre_dir,entry.getName(),null,filtro,entry.getTime());
+                }else{
+                    zip_extract_grava(pre_dir,entry.getName(),zipFile.getInputStream(entry),filtro,entry.getTime());
+                }
+            }
+            zipFile.close();
+        }else if ( name_file_zip == null ){
             ZipInputStream zis=new ZipInputStream(in);
             ZipEntry entry=null;
-            while( (entry=zis.getNextEntry()) != null ){                                
+            while( (entry=zis.getNextEntry()) != null ){
                 if ( entry.getName().endsWith("/") ){
                     zip_extract_grava(pre_dir,entry.getName(),null,filtro, entry.getTime());
                 }else{
@@ -5514,13 +5549,13 @@ cat buffer.log
             ZipFile zipFile = new ZipFile(name_file_zip);
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
             while(entries.hasMoreElements()){
-                ZipEntry entry = entries.nextElement();            
+                ZipEntry entry = entries.nextElement();
                 if ( entry.getName().endsWith("/") ){
                     zip_extract_grava(pre_dir,entry.getName(),null,filtro,entry.getTime());
                 }else{
                     zip_extract_grava(pre_dir,entry.getName(),zipFile.getInputStream(entry),filtro,entry.getTime());
                 }
-            }                
+            }
         }
         if ( filtro != null && zip_extract_count_encontrados == 0 ){
             System.err.println("Erro, elemento "+filtro+" não encontrado!");
@@ -5602,7 +5637,504 @@ cat buffer.log
             }
         }
     }
-    
+
+    // =====================================================================
+    // zip com senha (ZipCrypto, o formato de senha que o windows abre)
+    // atencao: protecao fraca, segura curioso mas nao protege dado sensivel
+    // limite: cada item dentro do zip pode ter no maximo 4GB
+    // =====================================================================
+
+    private int[] zip_senha_crc_tab=null;
+    private int zip_senha_chave0=0;
+    private int zip_senha_chave1=0;
+    private int zip_senha_chave2=0;
+    private ArrayList<String> zip_senha_nomes=null;
+    private ArrayList<Long> zip_senha_tempos=null;
+    private ArrayList<Long> zip_senha_crcs=null;
+    private ArrayList<Long> zip_senha_tam_comps=null;
+    private ArrayList<Long> zip_senha_tam_origs=null;
+    private ArrayList<Long> zip_senha_offsets=null;
+
+    private int zip_senha_crc(int chave, int c){
+        if ( zip_senha_crc_tab == null ){
+            zip_senha_crc_tab=new int[256];
+            for ( int n=0;n<256;n++ ){
+                int v=n;
+                for ( int k=0;k<8;k++ )
+                    v = (v & 1) != 0 ? (v >>> 1) ^ 0xEDB88320 : v >>> 1;
+                zip_senha_crc_tab[n]=v;
+            }
+        }
+        return (chave >>> 8) ^ zip_senha_crc_tab[(chave ^ c) & 0xFF];
+    }
+
+    private void zip_senha_inicia_chaves(String senha){
+        zip_senha_chave0=0x12345678;
+        zip_senha_chave1=0x23456789;
+        zip_senha_chave2=0x34567890;
+        byte[] bytes=senha.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        for ( int i=0;i<bytes.length;i++ )
+            zip_senha_atualiza_chaves(bytes[i]&0xFF);
+    }
+
+    private void zip_senha_atualiza_chaves(int c){
+        zip_senha_chave0=zip_senha_crc(zip_senha_chave0,c);
+        zip_senha_chave1=(zip_senha_chave1+(zip_senha_chave0&0xFF))*134775813+1;
+        zip_senha_chave2=zip_senha_crc(zip_senha_chave2,zip_senha_chave1>>>24);
+    }
+
+    private int zip_senha_cifra(int claro){
+        int t=(zip_senha_chave2|2)&0xFFFF;
+        int ks=((t*(t^1))>>8)&0xFF;
+        zip_senha_atualiza_chaves(claro);
+        return claro^ks;
+    }
+
+    private int zip_senha_decifra(int cifrado){
+        int t=(zip_senha_chave2|2)&0xFFFF;
+        int claro=cifrado^(((t*(t^1))>>8)&0xFF);
+        zip_senha_atualiza_chaves(claro);
+        return claro;
+    }
+
+    private int[] zip_senha_dos_tempo(long millis){
+        java.util.Calendar c=java.util.Calendar.getInstance();
+        c.setTimeInMillis(millis);
+        int ano=c.get(java.util.Calendar.YEAR);
+        if ( ano < 1980 )
+            return new int[]{0, 0x21}; // 01/01/1980
+        int hora=(c.get(java.util.Calendar.HOUR_OF_DAY)<<11) | (c.get(java.util.Calendar.MINUTE)<<5) | (c.get(java.util.Calendar.SECOND)/2);
+        int data=((ano-1980)<<9) | ((c.get(java.util.Calendar.MONTH)+1)<<5) | c.get(java.util.Calendar.DAY_OF_MONTH);
+        return new int[]{hora, data};
+    }
+
+    private long zip_senha_dos_para_millis(int hora, int data){
+        java.util.Calendar c=java.util.Calendar.getInstance();
+        c.clear();
+        c.set(1980+((data>>9)&0x7F), ((data>>5)&0x0F)-1, data&0x1F, (hora>>11)&0x1F, (hora>>5)&0x3F, (hora&0x1F)*2);
+        return c.getTimeInMillis();
+    }
+
+    private int zip_senha_le16(byte[] b, int off){
+        return (b[off]&0xFF) | ((b[off+1]&0xFF)<<8);
+    }
+
+    private long zip_senha_le32(byte[] b, int off){
+        return (b[off]&0xFFL) | ((b[off+1]&0xFFL)<<8) | ((b[off+2]&0xFFL)<<16) | ((b[off+3]&0xFFL)<<24);
+    }
+
+    // igual ao ZipOutputStream, mas gravando cada byte cifrado com a senha
+    private class ZipSenhaOutputStream extends java.util.zip.ZipOutputStream {
+        private OutputStream saida=null;
+        private String senha=null;
+        private java.security.SecureRandom aleatorio=new java.security.SecureRandom();
+        private int nivel=Deflater.DEFAULT_COMPRESSION;
+        private long offset=0;
+        private boolean finalizado=false;
+        private ZipEntry entry_atual=null;
+        private Deflater compressor=null;
+        private java.util.zip.CRC32 crc_atual=new java.util.zip.CRC32();
+        private byte[] buf_comp=new byte[8192];
+        private byte[] buf_num=new byte[4];
+        private long tam_orig=0;
+        private long tam_comp=0;
+        private long offset_header=0;
+
+        ZipSenhaOutputStream(OutputStream out, String senha){
+            super(out);
+            if ( senha.length() == 0 ){
+                System.err.println("Erro, a senha nao pode ser vazia!");
+                System.exit(1);
+            }
+            this.saida=out;
+            this.senha=senha;
+            zip_senha_nomes=new ArrayList<String>();
+            zip_senha_tempos=new ArrayList<Long>();
+            zip_senha_crcs=new ArrayList<Long>();
+            zip_senha_tam_comps=new ArrayList<Long>();
+            zip_senha_tam_origs=new ArrayList<Long>();
+            zip_senha_offsets=new ArrayList<Long>();
+        }
+
+        public void setLevel(int nivel){
+            if ( nivel < -1 || nivel > 9 ){
+                System.err.println("Erro, nivel de compressao invalido: "+nivel);
+                System.exit(1);
+            }
+            this.nivel=nivel;
+        }
+
+        public void putNextEntry(ZipEntry e) throws java.io.IOException {
+            if ( entry_atual != null )
+                closeEntry();
+            offset_header=offset;
+            byte[] nome=e.getName().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            long tempo=e.getTime() < 0 ? System.currentTimeMillis() : e.getTime();
+            int[] dos=zip_senha_dos_tempo(tempo);
+            if ( e.getName().endsWith("/") ){
+                // pasta nao tem dado, vai sem cifra
+                escreve_header(nome, 0x0800, 0, dos);
+                crc_atual.reset();
+                tam_comp=0;
+            }else{
+                // bit 0 = cifrado, bit 3 = data descriptor, bit 11 = nome em UTF-8
+                escreve_header(nome, 0x0809, 8, dos);
+                zip_senha_inicia_chaves(senha);
+                // header de 12 bytes: 11 aleatorios + 1 de verificacao da senha (vem da hora DOS)
+                byte[] cab=new byte[12];
+                aleatorio.nextBytes(cab);
+                cab[11]=(byte)(dos[0]>>>8);
+                for ( int i=0;i<12;i++ )
+                    cab[i]=(byte)zip_senha_cifra(cab[i]&0xFF);
+                grava(cab,0,12);
+                compressor=new Deflater(nivel,true);
+                crc_atual.reset();
+                tam_comp=12;
+            }
+            entry_atual=e;
+            if ( e.getTime() < 0 )
+                entry_atual.setTime(tempo);
+            tam_orig=0;
+        }
+
+        public synchronized void write(byte[] b, int off, int len) throws java.io.IOException {
+            if ( entry_atual == null ){
+                System.err.println("Erro, nenhuma entry aberta!");
+                System.exit(1);
+            }
+            if ( entry_atual.getName().endsWith("/") || len <= 0 )
+                return;
+            crc_atual.update(b,off,len);
+            compressor.setInput(b,off,len);
+            tam_orig+=len;
+            while ( ! compressor.needsInput() )
+                comprime_grava();
+        }
+
+        public void closeEntry() throws java.io.IOException {
+            if ( entry_atual == null )
+                return;
+            if ( ! entry_atual.getName().endsWith("/") ){
+                compressor.finish();
+                while ( ! compressor.finished() )
+                    comprime_grava();
+                compressor.end();
+                compressor=null;
+                if ( tam_comp > 4294967295L || tam_orig > 4294967295L ){
+                    System.err.println("Erro, conteudo acima de 4GB nao e suportado no zip com senha!");
+                    System.exit(1);
+                }
+                // data descriptor: crc e tamanhos reais depois do dado
+                grava32(0x08074b50L);
+                grava32(crc_atual.getValue());
+                grava32(tam_comp);
+                grava32(tam_orig);
+            }
+            zip_senha_nomes.add(entry_atual.getName());
+            zip_senha_tempos.add(entry_atual.getTime());
+            zip_senha_crcs.add(crc_atual.getValue());
+            zip_senha_tam_comps.add(tam_comp);
+            zip_senha_tam_origs.add(tam_orig);
+            zip_senha_offsets.add(offset_header);
+            entry_atual=null;
+        }
+
+        public void finish() throws java.io.IOException {
+            if ( finalizado )
+                return;
+            if ( entry_atual != null )
+                closeEntry();
+            long inicio_central=offset;
+            int len_cache=zip_senha_nomes.size();
+            for ( int i=0;i<len_cache;i++ )
+                escreve_central(i);
+            long tam_central=offset-inicio_central;
+            grava32(0x06054b50L);
+            grava16(0); grava16(0);
+            grava16(len_cache); grava16(len_cache);
+            grava32(tam_central);
+            grava32(inicio_central);
+            grava16(0);
+            finalizado=true;
+        }
+
+        public void flush() throws java.io.IOException {
+            saida.flush();
+        }
+
+        public void close() throws java.io.IOException {
+            finish();
+            def.end(); // libera o Deflater herdado do ZipOutputStream, que nao e usado aqui
+            saida.close();
+        }
+
+        private void comprime_grava() throws java.io.IOException {
+            int len=compressor.deflate(buf_comp);
+            if ( len > 0 ){
+                for ( int i=0;i<len;i++ )
+                    buf_comp[i]=(byte)zip_senha_cifra(buf_comp[i]&0xFF);
+                grava(buf_comp,0,len);
+                tam_comp+=len;
+            }
+        }
+
+        private void escreve_header(byte[] nome, int flag, int metodo, int[] dos) throws java.io.IOException {
+            grava32(0x04034b50L);
+            grava16(20); grava16(flag); grava16(metodo);
+            grava16(dos[0]); grava16(dos[1]);
+            grava32(0); grava32(0); grava32(0); // crc e tamanhos vao no data descriptor (pasta fica 0 mesmo)
+            grava16(nome.length); grava16(0);
+            grava(nome,0,nome.length);
+        }
+
+        private void escreve_central(int i) throws java.io.IOException {
+            String nome_=zip_senha_nomes.get(i);
+            boolean pasta=nome_.endsWith("/");
+            byte[] nome=nome_.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            int[] dos=zip_senha_dos_tempo(zip_senha_tempos.get(i));
+            grava32(0x02014b50L);
+            grava16(20); grava16(20);
+            grava16(pasta ? 0x0800 : 0x0809);
+            grava16(pasta ? 0 : 8);
+            grava16(dos[0]); grava16(dos[1]);
+            grava32(zip_senha_crcs.get(i));
+            grava32(zip_senha_tam_comps.get(i));
+            grava32(zip_senha_tam_origs.get(i));
+            grava16(nome.length); grava16(0); grava16(0); grava16(0); grava16(0);
+            grava32(pasta ? 0x10 : 0); // atributo de pasta do MS-DOS
+            grava32(zip_senha_offsets.get(i));
+            grava(nome,0,nome.length);
+        }
+
+        private void grava(byte[] b, int off, int len) throws java.io.IOException {
+            saida.write(b,off,len);
+            offset+=len;
+        }
+
+        private void grava16(int v) throws java.io.IOException {
+            buf_num[0]=(byte)v;
+            buf_num[1]=(byte)(v>>>8);
+            grava(buf_num,0,2);
+        }
+
+        private void grava32(long v) throws java.io.IOException {
+            buf_num[0]=(byte)v;
+            buf_num[1]=(byte)(v>>>8);
+            buf_num[2]=(byte)(v>>>16);
+            buf_num[3]=(byte)(v>>>24);
+            grava(buf_num,0,4);
+        }
+    }
+
+    // igual ao ZipFile (entries e getInputStream), mas decifrando com a senha
+    private class ZipSenhaFile {
+        private java.io.RandomAccessFile raf=null;
+        private String senha=null;
+        private ArrayList<ZipEntry> lista=null;
+        private ArrayList<long[]> lista_info=null; // {offset header, tam comprimido, metodo, flags, crc, hora dos}
+        private File temporario=null;
+
+        ZipSenhaFile(String caminho, String senha) throws Exception {
+            this.senha=senha;
+            raf=new java.io.RandomAccessFile(caminho,"r");
+            le_central();
+        }
+
+        // stdin: baixa para arquivo temporario, o indice do zip fica no final e precisa de seek
+        ZipSenhaFile(InputStream in, String senha) throws Exception {
+            this.senha=senha;
+            temporario=File.createTempFile("zipsenha_",".zip");
+            temporario.deleteOnExit();
+            FileOutputStream fos=new FileOutputStream(temporario);
+            byte[] buf=new byte[BUFFER_SIZE];
+            int len;
+            while ( (len=in.read(buf)) > -1 )
+                fos.write(buf,0,len);
+            fos.close();
+            raf=new java.io.RandomAccessFile(temporario,"r");
+            le_central();
+        }
+
+        Enumeration<? extends ZipEntry> entries(){
+            return java.util.Collections.enumeration(lista);
+        }
+
+        void close() throws Exception {
+            raf.close();
+            if ( temporario != null )
+                temporario.delete();
+        }
+
+        private void le_central() throws Exception {
+            lista=new ArrayList<ZipEntry>();
+            lista_info=new ArrayList<long[]>();
+            long tam=raf.length();
+            int max=(int)Math.min(tam, 22+65535);
+            byte[] cauda=new byte[max];
+            raf.seek(tam-max);
+            raf.readFully(cauda);
+            int p=-1;
+            for ( int i=max-22;i>=0;i-- )
+                if ( cauda[i] == 0x50 && cauda[i+1] == 0x4b && cauda[i+2] == 5 && cauda[i+3] == 6 ){
+                    p=i;
+                    break;
+                }
+            if ( p < 0 ){
+                System.err.println("Erro, o arquivo nao e um zip valido!");
+                System.exit(1);
+            }
+            int total=zip_senha_le16(cauda,p+10);
+            long tam_central=zip_senha_le32(cauda,p+12);
+            long inicio_central=zip_senha_le32(cauda,p+16);
+            byte[] central=new byte[(int)tam_central];
+            raf.seek(inicio_central);
+            raf.readFully(central);
+            int q=0;
+            for ( int i=0;i<total;i++ ){
+                if ( zip_senha_le32(central,q) != 0x02014b50L ){
+                    System.err.println("Erro, central directory corrompido!");
+                    System.exit(1);
+                }
+                int flags=zip_senha_le16(central,q+8);
+                int metodo=zip_senha_le16(central,q+10);
+                int hora=zip_senha_le16(central,q+12);
+                int data=zip_senha_le16(central,q+14);
+                long crc=zip_senha_le32(central,q+16);
+                long tam_comp=zip_senha_le32(central,q+20);
+                long tam_orig=zip_senha_le32(central,q+24);
+                int nome_len=zip_senha_le16(central,q+28);
+                int extra_len=zip_senha_le16(central,q+30);
+                int coment_len=zip_senha_le16(central,q+32);
+                long offset_header=zip_senha_le32(central,q+42);
+                String nome=new String(central,q+46,nome_len,java.nio.charset.StandardCharsets.UTF_8);
+                ZipEntry e=new ZipEntry(nome);
+                e.setTime(zip_senha_dos_para_millis(hora,data));
+                e.setSize(tam_orig);
+                lista.add(e);
+                lista_info.add(new long[]{offset_header, tam_comp, metodo, flags, crc, hora});
+                q+=46+nome_len+extra_len+coment_len;
+            }
+        }
+
+        InputStream getInputStream(ZipEntry e) throws Exception {
+            int pos=lista.indexOf(e);
+            if ( pos == -1 ){
+                System.err.println("Erro, entry desconhecida: "+e.getName());
+                System.exit(1);
+            }
+            long[] info=lista_info.get(pos);
+            raf.seek(info[0]);
+            byte[] header=new byte[30];
+            raf.readFully(header);
+            if ( zip_senha_le32(header,0) != 0x04034b50L ){
+                System.err.println("Erro, header corrompido: "+e.getName());
+                System.exit(1);
+            }
+            // pula nome e extra field do header local para chegar no dado
+            raf.seek(info[0]+30+zip_senha_le16(header,26)+zip_senha_le16(header,28));
+            long tam_comp=info[1];
+            long crc=info[4];
+            int metodo=(int)info[2];
+            int flags=(int)info[3];
+            int hora=(int)info[5];
+            if ( metodo == 99 ){
+                System.err.println("Erro, esse zip usa senha AES, use o 7-Zip para extrair: "+e.getName());
+                System.exit(1);
+            }
+            if ( metodo != 8 && metodo != 0 ){
+                System.err.println("Erro, metodo de compressao nao suportado ("+metodo+"): "+e.getName());
+                System.exit(1);
+            }
+            InputStream dados=null;
+            if ( (flags & 1) != 0 ){
+                zip_senha_inicia_chaves(senha);
+                byte[] cab=new byte[12];
+                raf.readFully(cab);
+                int ultimo=0;
+                for ( int i=0;i<12;i++ )
+                    ultimo=zip_senha_decifra(cab[i]&0xFF);
+                // ultimo byte do header confere a senha: com data descriptor vem da hora DOS, senao do crc
+                int esperado=(flags & 8) != 0 ? (hora>>>8)&0xFF : (int)((crc>>>24)&0xFF);
+                if ( ultimo != esperado ){
+                    System.err.println("Erro, senha incorreta!");
+                    System.exit(1);
+                }
+                dados=new ZipSenhaStream(tam_comp-12,true);
+            }else
+                dados=new ZipSenhaStream(tam_comp,false);
+            if ( metodo == 8 )
+                dados=new java.util.zip.InflaterInputStream(dados,new java.util.zip.Inflater(true),8192);
+            return new ZipSenhaStreamCRC(dados,crc);
+        }
+
+        // le a quantidade exata de bytes do dado da entry, decifrando se preciso
+        private class ZipSenhaStream extends InputStream {
+            private long restante=0;
+            private boolean cifrado=false;
+
+            ZipSenhaStream(long tam, boolean cifrado){
+                restante=tam;
+                this.cifrado=cifrado;
+            }
+
+            public int read() throws java.io.IOException {
+                byte[] b=new byte[1];
+                if ( read(b,0,1) == -1 )
+                    return -1;
+                return b[0]&0xFF;
+            }
+
+            public int read(byte[] b, int off, int len) throws java.io.IOException {
+                if ( restante <= 0 )
+                    return -1;
+                int lidos=raf.read(b,off,(int)Math.min(len,restante));
+                if ( lidos < 0 ){
+                    System.err.println("Erro, zip truncado!");
+                    System.exit(1);
+                }
+                restante-=lidos;
+                if ( cifrado )
+                    for ( int i=0;i<lidos;i++ )
+                        b[off+i]=(byte)zip_senha_decifra(b[off+i]&0xFF);
+                return lidos;
+            }
+        }
+
+        // no final do fluxo confere o crc do que foi extraido
+        private class ZipSenhaStreamCRC extends InputStream {
+            private InputStream origem=null;
+            private java.util.zip.CRC32 confere=new java.util.zip.CRC32();
+            private long esperado=0;
+            private boolean conferido=false;
+
+            ZipSenhaStreamCRC(InputStream origem, long esperado){
+                this.origem=origem;
+                this.esperado=esperado;
+            }
+
+            public int read() throws java.io.IOException {
+                byte[] b=new byte[1];
+                if ( read(b,0,1) == -1 )
+                    return -1;
+                return b[0]&0xFF;
+            }
+
+            public int read(byte[] b, int off, int len) throws java.io.IOException {
+                int lidos=origem.read(b,off,len);
+                if ( lidos == -1 ){
+                    if ( ! conferido && confere.getValue() != esperado ){
+                        System.err.println("Erro, senha incorreta ou arquivo corrompido!");
+                        System.exit(1);
+                    }
+                    conferido=true;
+                    return -1;
+                }
+                confere.update(b,off,lidos);
+                return lidos;
+            }
+        }
+    }    
+        
     public void gzip()
     {
         try{            
@@ -31150,6 +31682,7 @@ Exemplos...
     y zip add pasta2 -lvlStore > saida.zip
     y zip add pasta2 -lvlBestCompress > saida.zip
     y zip add pasta1 pasta2 file3 -lvlStore > saida.zip
+    y zip add /pasta1/pasta2 -pass a > saida_senha_a.zip
     y zip list arquivo.zip
     cat arquivo.zip | y zip list
     y zip extract entrada.zip
@@ -31163,6 +31696,7 @@ Exemplos...
     obs: opcoes de compress opcionais: -lvlStore e -lvlBestCompress
     obs2: se add pasta e a descricao de pasta tem "/" ou "\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.
     obs3: extraindo o 7zip
+    obs4: -pass compativel com zip windows
     sudo apt install 7zip-standalone
     7zz x arquivo.7z
 [y gzip]
