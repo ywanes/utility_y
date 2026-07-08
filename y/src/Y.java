@@ -671,30 +671,12 @@ cat buffer.log
                 }
             }
         }
-            
-        /*
-        y zip add File1.txt > saida.zip
-        cat File1.txt | y zip add -name File1.txt > saida.zip
-        y zip add /pasta1/pasta2 > saida.zip
-        y zip add pasta2 -lvlStore > saida.zip
-        y zip add pasta1 pasta2 file3 -lvlStore > saida.zip
-        y zip list arquivo.zip
-        cat arquivo.zip | y zip list
-        y zip extract entrada.zip
-        cat entrada.zip | y zip extract
-        y zip extract entrada.zip -out /destino
-        cat entrada.zip | y zip extract -out /destino
-        y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt -out /destino
-        cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt -out /destino
-        y zip extractSelected entrada.zip pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
-        cat entrada.zip | y zip extractSelected pasta1/unicoArquivoParaExtrair.txt > /destino/unicoArquivoParaExtrair.txt
-        obs: se add pasta e a descricao de pasta tem "/" ou "\\" então o pacote terá o conteudo da pasta, caso contrário terá a pasta citada+conteudo.
-        */
-        if ( args.length == 2 && args[0].equals("zip") && args[1].equals("add") ){
-            System.err.println("Erro!\nComando sugerido:\necho a.txt | y zip add -name a.txt > a.zip");
-            System.exit(1);            
-        }
+
         if ( args[0].equals("zip") ){
+            if ( args.length == 2 && args[1].equals("add") ){
+                System.err.println("Erro!\nComando sugerido:\ny cat a.txt | y zip add -name a.txt > a.zip");
+                System.exit(1);            
+            }
             try{
                 String senha=null;
                 for ( int i=1;i<args.length;i++ ){
@@ -753,6 +735,76 @@ cat buffer.log
                 }
                 if ( args.length == 6 && args[1].equals("extractSelected") && args[4].equals("-out")){
                     zip_extract(null, args[2], args[5], args[3], senha);
+                    return;
+                }
+            }catch(Exception e){
+                System.err.println(e.toString());
+                System.exit(1);
+            }
+        }
+        if ( args[0].equals("7z") ){
+            if ( args.length == 2 && args[1].equals("add") ){
+                System.err.println("Erro!\nComando sugerido:\ny cat a.txt | y 7z add -name a.txt > a.zip");
+                System.exit(1);            
+            }
+            try{
+                String senha=null;
+                for ( int i=1;i<args.length;i++ ){
+                    if (args[i].equals("-pass") && args.length > (i+1) && args[i+1].length() > 0 ){
+                        senha=args[i+1];
+                        args=removeParm(i, args);
+                        args=removeParm(i, args);
+                        break;
+                    }
+                }
+                if ( args.length >= 3 && args[1].equals("add") ){
+                    Object [] objs = get_parms_paths_virtualname_lvlCompress(args);
+                    if ( objs != null ){
+                        String [] paths=(String [])objs[0];
+                        String virtualname=(String)objs[1];
+                        Integer lvlCompress=(Integer)objs[2];
+                        s7_add_router(paths, virtualname, lvlCompress, System.out, null, senha);
+                        return;
+                    }
+                }
+                if ( args.length == 2 && args[1].equals("list") ){
+                    s7_list(null, senha);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("list") ){
+                    s7_list(args[2], senha);
+                    return;
+                }                
+                if ( args.length == 2 && args[1].equals("extract") ){
+                    s7_extract(System.in, null, null, null, senha);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("extract") ){
+                    s7_extract(null, args[2], null, null, senha);
+                    return;
+                }
+                if ( args.length == 4 && args[1].equals("extract") && args[2].equals("-out")){
+                    s7_extract(System.in, null, args[3], null, senha);
+                    return;
+                }
+                if ( args.length == 5 && args[1].equals("extract") && args[3].equals("-out")){
+                    s7_extract(null, args[2], args[4], null, senha);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("extractSelected") ){
+                    s7_extract(System.in, null, null, args[2], senha);
+                    return;
+                }
+                if ( args.length == 4 && args[1].equals("extractSelected") ){
+                    s7_extract(null, args[2], null, args[3], senha);
+                    return;
+                }
+                if ( args.length == 5 && args[1].equals("extractSelected") && args[3].equals("-out")){
+                    s7_extract(System.in, null, args[4], args[2], senha);
+                    return;
+                }
+                if ( args.length == 6 && args[1].equals("extractSelected") && args[4].equals("-out")){
+                    s7_extract(null, args[2], args[5], args[3], senha);
                     return;
                 }
             }catch(Exception e){
@@ -6134,7 +6186,836 @@ cat buffer.log
             }
         }
     }    
-        
+
+    // inicio - 7Z
+    // assinatura e ids do formato
+    private final byte[] s7_sig={(byte)0x37,(byte)0x7A,(byte)0xBC,(byte)0xAF,(byte)0x27,(byte)0x1C};
+    private final int s7_kEnd=0, s7_kHeader=1, s7_kMainStreams=4, s7_kFilesInfo=5, s7_kPackInfo=6,
+        s7_kUnpackInfo=7, s7_kSubStreams=8, s7_kSize=9, s7_kCRC=10, s7_kFolder=11,
+        s7_kCodersUnpackSize=12, s7_kNumUnpackStream=13, s7_kEmptyStream=14, s7_kEmptyFile=15,
+        s7_kName=17, s7_kMTime=20, s7_kWinAttr=21, s7_kEncodedHeader=23;
+    private final int s7_numCiclos=19; // 2^19 rounds na derivacao da chave
+
+    // listas de entradas coletadas para gravar
+    private ArrayList<String> s7_nomes=null;
+    private ArrayList<Boolean> s7_dir=null;
+    private ArrayList<Long> s7_size=null;
+    private ArrayList<Long> s7_mtime=null;
+    private ArrayList<File> s7_fonte=null; // arquivo de onde ler o dado (null p/ dir/vazio)
+
+    private void s7_add_router(String [] paths, String s7_virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on, String senha) throws Exception {
+        this.s7_virtual_name = s7_virtual_name;
+        s7_valida_paths(paths);
+        s7_nomes=new ArrayList<String>();
+        s7_dir=new ArrayList<Boolean>();
+        s7_size=new ArrayList<Long>();
+        s7_mtime=new ArrayList<Long>();
+        s7_fonte=new ArrayList<File>();
+        s7_add(paths, pre_line_print_on); // coleta as entradas
+        s7_grava(out, lvlCompress, senha, pre_line_print_on);
+    }
+
+    private void s7_valida_paths(String [] paths){
+        for ( int i=0; i<paths.length; i++ )
+            if ( ! new File(paths[i]).exists() ){
+                System.err.println("Erro, esse conteudo nao existe: "+paths[i]);
+                System.exit(1);
+            }
+    }
+
+    private String s7_virtual_name;
+    private ArrayList<String> s7_elementos=null;
+    private ArrayList<Long> s7_elementos_lastModified=null;
+
+    // coleta as entradas (no 7z nao da pra streamar entry a entry, junta tudo antes)
+    private void s7_add(String [] paths, String pre_line_print_on) throws Exception {
+        if ( paths.length == 0 ){
+            // stdin: grava num temporario e vira uma entrada com o s7_virtual_name
+            File tmp=File.createTempFile("s7in_",".bin");
+            tmp.deleteOnExit();
+            OutputStream os=new java.io.BufferedOutputStream(new FileOutputStream(tmp));
+            byte[] buf=new byte[BUFFER_SIZE];
+            int len;
+            while ( (len=readBytes(buf)) > -1 ){
+                os.write(buf,0,len);
+                if ( pre_line_print_on != null )
+                    print_cursor_speed(len, pre_line_print_on, null, true, null);
+            }
+            closeBytes();
+            os.close();
+            s7_ent(s7_virtual_name, false, tmp.length(), tmp.lastModified(), tmp);
+        }else{
+            for ( int i_=0; i_<paths.length; i_++ ){
+                File elem=new File(paths[i_]);
+                if ( elem.isFile() ){
+                    s7_ent(elem.getName(), false, elem.length(), elem.lastModified(), elem);
+                }else{
+                    s7_elementos=new ArrayList<String>();
+                    s7_elementos_lastModified=new ArrayList<Long>();
+                    if ( !paths[i_].startsWith("/") && !paths[i_].contains(":") ) // relative path
+                        s7_navega(elem, paths[i_]+"/");
+                    else
+                        s7_navega(elem, "");
+                    int len_cache=s7_elementos.size();
+                    for ( int i=0;i<len_cache;i++ ){
+                        String nome=s7_elementos.get(i);
+                        if ( nome.endsWith("/") )
+                            s7_ent(nome.substring(0,nome.length()-1), true, 0, s7_elementos_lastModified.get(i), null);
+                        else{
+                            File f=new File(nome);
+                            s7_ent(nome, false, f.length(), s7_elementos_lastModified.get(i), f);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void s7_ent(String nome, boolean dir, long size, long mtime, File fonte){
+        s7_nomes.add(nome);
+        s7_dir.add(dir);
+        s7_size.add(size);
+        s7_mtime.add(mtime);
+        s7_fonte.add(fonte);
+    }
+
+    private void s7_navega(File a, String caminho) {
+        java.io.File[] filhos=a.listFiles();
+        if ( filhos == null ) return;
+        for ( int i=0;i<filhos.length;i++ ){
+            if ( filhos[i].isFile() ){
+                s7_elementos.add(caminho+filhos[i].getName());
+                s7_elementos_lastModified.add(filhos[i].lastModified());
+            }
+            if ( filhos[i].isDirectory() && !filhos[i].getName().equals(".") && !filhos[i].getName().equals("..") ){
+                s7_elementos.add(caminho+filhos[i].getName()+"/");
+                s7_elementos_lastModified.add(filhos[i].lastModified());
+                s7_navega(filhos[i],caminho+filhos[i].getName()+"/");
+            }
+        }
+    }
+
+    // ---------------------------------------------------------- gravacao 7z
+
+    private void s7_grava(OutputStream out, int lvlCompress, String senha, String pre_line_print_on) throws Exception {
+        boolean usaDeflate = lvlCompress != 0;
+        boolean usaAes = senha != null;
+
+        // indices das entradas com dado (size>0); dirs e vazios sao "empty stream"
+        ArrayList<Integer> comDados=new ArrayList<Integer>();
+        for ( int i=0;i<s7_nomes.size();i++ )
+            if ( ! s7_dir.get(i) && s7_size.get(i) > 0 )
+                comDados.add(i);
+
+        long totalUnpack=0, deflatedSize=0, packSize=0;
+        long[] crcs=new long[comDados.size()];
+        byte[] salt=null, iv=null;
+        File tmpPack=File.createTempFile("s7pk_",".bin");
+        tmpPack.deleteOnExit();
+
+        if ( comDados.size() > 0 ){
+            // 1) concatena + (opcional) comprime num intermediario
+            File tmpComp=File.createTempFile("s7cp_",".bin");
+            tmpComp.deleteOnExit();
+            OutputStream co=new java.io.BufferedOutputStream(new FileOutputStream(tmpComp));
+            java.util.zip.Deflater def = usaDeflate ? new java.util.zip.Deflater(java.util.zip.Deflater.BEST_COMPRESSION, true) : null;
+            byte[] buf=new byte[BUFFER_SIZE];
+            byte[] saida=new byte[BUFFER_SIZE];
+            for ( int k=0;k<comDados.size();k++ ){
+                File f=s7_fonte.get(comDados.get(k));
+                java.util.zip.CRC32 crc=new java.util.zip.CRC32();
+                InputStream is=new java.io.BufferedInputStream(new FileInputStream(f));
+                int n;
+                while ( (n=is.read(buf)) > -1 ){
+                    crc.update(buf,0,n);
+                    totalUnpack+=n;
+                    if ( usaDeflate ){
+                        def.setInput(buf,0,n);
+                        while ( ! def.needsInput() ){
+                            int m=def.deflate(saida);
+                            if ( m>0 ) co.write(saida,0,m);
+                        }
+                    }else
+                        co.write(buf,0,n);
+                    if ( pre_line_print_on != null )
+                        print_cursor_speed(n, pre_line_print_on, null, true, null);
+                }
+                is.close();
+                crcs[k]=crc.getValue() & 0xFFFFFFFFL;
+            }
+            if ( usaDeflate ){
+                def.finish();
+                while ( ! def.finished() ){
+                    int m=def.deflate(saida);
+                    if ( m>0 ) co.write(saida,0,m);
+                }
+                def.end();
+            }
+            co.close();
+            deflatedSize=tmpComp.length();
+
+            // 2) cifra AES-256-CBC ou so copia
+            if ( usaAes ){
+                java.security.SecureRandom rnd=new java.security.SecureRandom();
+                salt=new byte[16]; rnd.nextBytes(salt);
+                iv=new byte[16]; rnd.nextBytes(iv);
+                byte[] chave=s7_deriva_chave(senha, salt, s7_numCiclos);
+                javax.crypto.Cipher c=javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+                c.init(javax.crypto.Cipher.ENCRYPT_MODE, new javax.crypto.spec.SecretKeySpec(chave,"AES"), new javax.crypto.spec.IvParameterSpec(iv));
+                InputStream is=new java.io.BufferedInputStream(new FileInputStream(tmpComp));
+                OutputStream os=new java.io.BufferedOutputStream(new FileOutputStream(tmpPack));
+                byte[] bloco=new byte[BUFFER_SIZE];
+                long restante=deflatedSize;
+                int n;
+                while ( (n=is.read(bloco)) > -1 ){
+                    int len=n;
+                    restante-=n;
+                    if ( restante == 0 && (len % 16) != 0 ){ // padding zero no ultimo bloco
+                        int novo=((len/16)+1)*16;
+                        for ( int z=len;z<novo;z++ ) bloco[z]=0;
+                        len=novo;
+                    }
+                    os.write(c.update(bloco,0,len));
+                }
+                os.write(c.doFinal());
+                is.close(); os.close();
+                packSize=tmpPack.length();
+            }else{
+                s7_copia(tmpComp, tmpPack);
+                packSize=deflatedSize;
+            }
+            tmpComp.delete();
+        }
+
+        // 3) monta o header
+        byte[] header=s7_monta_header(comDados, crcs, packSize, totalUnpack, deflatedSize, usaDeflate, usaAes, salt, iv);
+
+        // 4) escreve assinatura + packed + header
+        OutputStream fo=new java.io.BufferedOutputStream(out);
+        byte[] start=new byte[20];
+        s7_p64(start,0,packSize);          // NextHeaderOffset
+        s7_p64(start,8,header.length);     // NextHeaderSize
+        s7_p32(start,16,s7_crc(header,0,header.length));
+        fo.write(s7_sig);
+        fo.write(new byte[]{0,4});         // versao 0.4
+        byte[] sc=new byte[4]; s7_p32(sc,0,s7_crc(start,0,20)); fo.write(sc);
+        fo.write(start);
+        if ( packSize > 0 ){
+            InputStream is=new java.io.BufferedInputStream(new FileInputStream(tmpPack));
+            byte[] b=new byte[BUFFER_SIZE]; int n;
+            while ( (n=is.read(b)) > -1 ) fo.write(b,0,n);
+            is.close();
+        }
+        fo.write(header);
+        fo.flush();
+        fo.close();
+        tmpPack.delete();
+    }
+
+    private byte[] s7_monta_header(ArrayList<Integer> comDados, long[] crcs, long packSize, long totalUnpack,
+                                   long deflatedSize, boolean usaDeflate, boolean usaAes, byte[] salt, byte[] iv) throws Exception {
+        java.io.ByteArrayOutputStream h=new java.io.ByteArrayOutputStream();
+        s7_wb(h, s7_kHeader);
+        boolean temDados=comDados.size() > 0;
+        if ( temDados ){
+            s7_wb(h, s7_kMainStreams);
+            // PackInfo
+            s7_wb(h, s7_kPackInfo);
+            s7_wn(h, 0); s7_wn(h, 1);
+            s7_wb(h, s7_kSize); s7_wn(h, packSize);
+            s7_wb(h, s7_kEnd);
+            // UnpackInfo
+            s7_wb(h, s7_kUnpackInfo);
+            s7_wb(h, s7_kFolder);
+            s7_wn(h, 1); s7_wb(h, 0);
+            s7_escreve_folder(h, usaDeflate, usaAes, salt, iv);
+            s7_wb(h, s7_kCodersUnpackSize);
+            if ( usaDeflate && usaAes ){ s7_wn(h, totalUnpack); s7_wn(h, deflatedSize); }
+            else if ( usaDeflate ){ s7_wn(h, totalUnpack); }
+            else if ( usaAes ){ s7_wn(h, totalUnpack); s7_wn(h, totalUnpack); }
+            else { s7_wn(h, totalUnpack); }
+            s7_wb(h, s7_kEnd);
+            // SubStreamsInfo
+            s7_wb(h, s7_kSubStreams);
+            s7_wb(h, s7_kNumUnpackStream); s7_wn(h, comDados.size());
+            s7_wb(h, s7_kSize);
+            for ( int i=0;i<comDados.size()-1;i++ ) s7_wn(h, s7_size.get(comDados.get(i)));
+            s7_wb(h, s7_kCRC); s7_wb(h, 1);
+            for ( int i=0;i<comDados.size();i++ ){ byte[] c=new byte[4]; s7_p32(c,0,crcs[i]); h.write(c); }
+            s7_wb(h, s7_kEnd);
+            s7_wb(h, s7_kEnd);
+        }
+        // FilesInfo
+        s7_wb(h, s7_kFilesInfo);
+        s7_wn(h, s7_nomes.size());
+        int numEmpty=0, numEmptyFile=0;
+        for ( int i=0;i<s7_nomes.size();i++ ){
+            boolean empty = s7_dir.get(i) || s7_size.get(i)==0;
+            if ( empty ) numEmpty++;
+            if ( !s7_dir.get(i) && s7_size.get(i)==0 ) numEmptyFile++;
+        }
+        if ( numEmpty > 0 ){
+            s7_wb(h, s7_kEmptyStream);
+            ArrayList<Boolean> bits=new ArrayList<Boolean>();
+            for ( int i=0;i<s7_nomes.size();i++ ) bits.add(s7_dir.get(i) || s7_size.get(i)==0);
+            byte[] bv=s7_bits(bits);
+            s7_wn(h, bv.length); h.write(bv);
+            if ( numEmptyFile > 0 ){
+                s7_wb(h, s7_kEmptyFile);
+                ArrayList<Boolean> bits2=new ArrayList<Boolean>();
+                for ( int i=0;i<s7_nomes.size();i++ )
+                    if ( s7_dir.get(i) || s7_size.get(i)==0 ) bits2.add(!s7_dir.get(i) && s7_size.get(i)==0);
+                byte[] bv2=s7_bits(bits2);
+                s7_wn(h, bv2.length); h.write(bv2);
+            }
+        }
+        // Nomes (UTF-16LE, barra normal, terminados em 0)
+        java.io.ByteArrayOutputStream nomes=new java.io.ByteArrayOutputStream();
+        nomes.write(0);
+        for ( int i=0;i<s7_nomes.size();i++ ){
+            byte[] u=s7_nomes.get(i).getBytes("UTF-16LE");
+            nomes.write(u); nomes.write(0); nomes.write(0);
+        }
+        s7_wb(h, s7_kName); s7_wn(h, nomes.size()); h.write(nomes.toByteArray());
+        // MTime
+        java.io.ByteArrayOutputStream mt=new java.io.ByteArrayOutputStream();
+        mt.write(1); mt.write(0);
+        for ( int i=0;i<s7_nomes.size();i++ ){ byte[] ft=new byte[8]; s7_p64(ft,0,s7_ft(s7_mtime.get(i))); mt.write(ft); }
+        s7_wb(h, s7_kMTime); s7_wn(h, mt.size()); h.write(mt.toByteArray());
+        // Atributos
+        java.io.ByteArrayOutputStream at=new java.io.ByteArrayOutputStream();
+        at.write(1); at.write(0);
+        for ( int i=0;i<s7_nomes.size();i++ ){ byte[] a=new byte[4]; s7_p32(a,0, s7_dir.get(i)?0x10:0x20); at.write(a); }
+        s7_wb(h, s7_kWinAttr); s7_wn(h, at.size()); h.write(at.toByteArray());
+
+        s7_wb(h, s7_kEnd);
+        s7_wb(h, s7_kEnd);
+        return h.toByteArray();
+    }
+
+    private void s7_escreve_folder(java.io.ByteArrayOutputStream h, boolean usaDeflate, boolean usaAes, byte[] salt, byte[] iv) throws Exception {
+        int numCoders=1+(usaAes?1:0);
+        s7_wn(h, numCoders);
+        if ( !usaDeflate ){ s7_wb(h,0x01); s7_wb(h,0x00); }               // Copy
+        else { s7_wb(h,0x03); s7_wb(h,0x04); s7_wb(h,0x01); s7_wb(h,0x08); } // Deflate
+        if ( usaAes ){
+            s7_wb(h, 0x04|0x20);
+            s7_wb(h,0x06); s7_wb(h,0xF1); s7_wb(h,0x07); s7_wb(h,0x01);
+            int b0=(s7_numCiclos & 0x3F) | 0xC0;
+            int b1=((salt.length-1)<<4) | (iv.length-1);
+            java.io.ByteArrayOutputStream props=new java.io.ByteArrayOutputStream();
+            props.write(b0); props.write(b1); props.write(salt,0,salt.length); props.write(iv,0,iv.length);
+            byte[] p=props.toByteArray();
+            s7_wn(h, p.length); h.write(p);
+            s7_wn(h, 0); s7_wn(h, 1); // bindpair: in0 <- out1
+        }
+    }
+
+    private byte[] s7_deriva_chave(String senha, byte[] salt, int numPow) throws Exception {
+        byte[] pw=senha.getBytes("UTF-16LE");
+        java.security.MessageDigest md=java.security.MessageDigest.getInstance("SHA-256");
+        long rounds=1L << numPow;
+        byte[] ctr=new byte[8];
+        for ( long i=0;i<rounds;i++ ){
+            md.update(salt); md.update(pw);
+            for ( int k=0;k<8;k++ ) ctr[k]=(byte)(i >>> (8*k));
+            md.update(ctr);
+        }
+        return md.digest();
+    }
+
+    // ------------------------------------------------------------ leitura 7z
+
+    private long[] s7_packSizes=null;
+    private long s7_baseOffset=0;
+    private ArrayList<int[]> s7_folderCoders=null;     // por folder: sequencia de tipos (0=copy,1=deflate,2=aes)
+    private ArrayList<byte[]> s7_folderAesProps=null;  // props do AES por folder (ou null)
+    private ArrayList<Long> s7_folderOut=null;         // tamanho de saida por folder
+    private ArrayList<Long> s7_folderCrc=null;         // crc por folder (-1 se ausente)
+    private ArrayList<Long> s7_subSizes=null;          // tamanho de cada substream
+    private ArrayList<Long> s7_subCrcs=null;           // crc de cada substream (-1 se ausente)
+    private int[] s7_numUnpack=null;                   // qtde de substreams por folder
+    private ArrayList<String> s7_outNomes=null;
+    private ArrayList<Boolean> s7_outDir=null;
+    private ArrayList<Boolean> s7_outStream=null;
+    private ArrayList<Long> s7_outMtime=null;
+    private byte[] s7_cur=null; private int s7_pos=0;
+
+    private void s7_list(String a, String senha) throws Exception {
+        java.io.RandomAccessFile raf=new java.io.RandomAccessFile(a,"r");
+        s7_le_header(raf, senha);
+        for ( int i=0;i<s7_outNomes.size();i++ )
+            System.out.println(s7_outNomes.get(i)+(s7_outDir.get(i)?"/":""));
+        raf.close();
+    }
+
+    private int s7_extract_count_encontrados=0;
+    private void s7_extract(InputStream in, String name_file_zip, String pre_dir, String filtro, String senha) throws Exception {
+        s7_extract_count_encontrados=0;
+        if ( filtro != null && filtro.endsWith("/") ){
+            System.err.println("Erro, o item selecionado não pode ser uma pasta!: "+filtro);
+            System.exit(1);
+        }
+        if ( pre_dir != null ){
+            pre_dir=pre_dir.trim();
+            if ( pre_dir.length() == 0 ){
+                System.err.println("Erro, preenchimento incorreto de pasta!");
+                System.exit(1);
+            }
+            File pasta_=new File(pre_dir);
+            if ( ! pasta_.exists() ){
+                System.err.println("Erro, a pasta "+pre_dir+ " não existe!");
+                System.exit(1);
+            }else if ( ! pasta_.isDirectory() ){
+                System.err.println("Erro, o caminho a seguir não é uma pasta: "+pre_dir);
+                System.exit(1);
+            }
+            pre_dir=pre_dir.replace("\\","/");
+            if ( !pre_dir.endsWith("/") )
+                pre_dir+="/";
+        }else
+            pre_dir="";
+
+        // stdin nao da: o header do 7z fica no fim e precisa de seek. baixa p/ temporario
+        File tmp=null;
+        String arq=name_file_zip;
+        if ( arq == null ){
+            tmp=File.createTempFile("s7ex_",".7z");
+            tmp.deleteOnExit();
+            OutputStream os=new java.io.BufferedOutputStream(new FileOutputStream(tmp));
+            byte[] b=new byte[BUFFER_SIZE]; int n;
+            while ( (n=in.read(b)) > -1 ) os.write(b,0,n);
+            os.close();
+            arq=tmp.getAbsolutePath();
+        }else
+            s7_valida_paths(new String[]{arq});
+
+        java.io.RandomAccessFile raf=new java.io.RandomAccessFile(arq,"r");
+        s7_le_header(raf, senha);
+        // mapeia cada substream ao seu folder (o 7z real pode usar 1 folder por arquivo)
+        int nsub=s7_subSizes.size();
+        int[] folderDoSub=new int[nsub];
+        int si=0;
+        for ( int f=0; f<s7_numUnpack.length; f++ ) for ( int j=0;j<s7_numUnpack[f];j++ ) folderDoSub[si++]=f;
+        InputStream solido=null; int folderAtual=-1;
+        int subi=0;
+        for ( int i=0;i<s7_outNomes.size();i++ ){
+            String nome=s7_outNomes.get(i);
+            long mtime=s7_outMtime.get(i);
+            if ( s7_outDir.get(i) ){
+                s7_extract_grava(pre_dir, nome+"/", null, filtro, mtime);
+            }else if ( ! s7_outStream.get(i) ){
+                s7_extract_grava(pre_dir, nome, new java.io.ByteArrayInputStream(new byte[0]), filtro, mtime);
+            }else{
+                int folder=folderDoSub[subi];
+                if ( folder != folderAtual ){ // troca de folder: abre o proximo
+                    if ( solido != null ) solido.close();
+                    solido=s7_abre_folder(raf, folder, senha);
+                    folderAtual=folder;
+                }
+                long sz=s7_subSizes.get(subi);
+                long ecrc=s7_subCrcs.get(subi);
+                subi++;
+                S7Limite lim=new S7Limite(solido, sz); // fatia deste arquivo no stream do folder
+                try{
+                    s7_extract_grava(pre_dir, nome, lim, filtro, mtime);
+                    lim.drena(); // garante alinhamento mesmo se o filtro pulou este arquivo
+                }catch(Exception ex){
+                    // senha errada faz o Inflater estourar em dado decifrado como lixo
+                    System.err.println("Erro, senha incorreta ou arquivo corrompido!");
+                    System.exit(1);
+                }
+                // o 7z valida senha pelo CRC do conteudo (nao ha verificador de senha)
+                if ( ecrc != -1L && lim.crc() != ecrc ){
+                    System.err.println("Erro, senha incorreta ou arquivo corrompido!");
+                    System.exit(1);
+                }
+            }
+        }
+        if ( solido != null ) solido.close();
+        raf.close();
+        if ( tmp != null ) tmp.delete();
+        if ( filtro != null && s7_extract_count_encontrados == 0 ){
+            System.err.println("Erro, elemento "+filtro+" não encontrado!");
+            System.exit(1);
+        }
+    }
+
+    private void s7_extract_grava(String pre_dir, String name, InputStream is,String filtro, long lastModified) throws Exception {
+        String [] partes=name.split("/");
+        String dir="";
+        File tmp=null;
+        boolean out_console=false;
+        if ( filtro != null && pre_dir.equals("") )
+            out_console=true;
+        for ( int i=0;i<partes.length;i++ ){
+            if ( i == partes.length-1 ){
+                if ( is == null ){
+                    dir+=partes[i]+"/";
+                    if ( filtro != null && filtro.indexOf(dir) == -1 )
+                        continue;
+                    if ( ! out_console ){
+                        tmp=new File(pre_dir+dir);
+                        if ( tmp.exists() ){
+                            if ( !tmp.isDirectory() ){
+                                System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+pre_dir+dir);
+                                System.exit(1);
+                            }
+                        }else{
+                            tmp.mkdir();
+                            tmp.setLastModified(lastModified);
+                        }
+                    }
+                }else{
+                    dir+=partes[i];
+                    if ( filtro != null && filtro.indexOf(dir) == -1 )
+                        continue;
+                    if ( ! out_console ){
+                        tmp=new File(pre_dir+dir);
+                        if ( tmp.exists() ){
+                            if ( tmp.isDirectory() ){
+                                System.err.println("Erro, não é possível utilizar o caminho a seguir como arquivo: "+pre_dir+dir);
+                                System.exit(1);
+                            }
+                        }
+                    }
+                    if ( filtro == null ){
+                        tmp=new File(pre_dir+dir);
+                        copiaByStream(is, new FileOutputStream(tmp), dir);
+                        tmp.setLastModified(lastModified);
+                    }else{
+                        if ( filtro.equals(dir) ){
+                            s7_extract_count_encontrados++;
+                            if ( out_console ){
+                                copiaByStream(is, System.out, null);
+                            }else{
+                                tmp=new File(pre_dir+dir);
+                                copiaByStream(is, new FileOutputStream(tmp), dir);
+                                tmp.setLastModified(lastModified);
+                            }
+                        }
+                    }
+                }
+            }else{
+                dir+=partes[i]+"/";
+                if ( filtro != null && filtro.indexOf(dir) == -1 )
+                    continue;
+                if ( ! out_console ){
+                    tmp=new File(pre_dir+dir);
+                    if ( tmp.exists() ){
+                        if ( !tmp.isDirectory() ){
+                            System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+pre_dir+dir);
+                            System.exit(1);
+                        }
+                    }else{
+                        tmp.mkdir();
+                        tmp.setLastModified(lastModified);
+                    }
+                }
+            }
+        }
+    }
+
+    // ---- parsing do header ----
+
+    private int s7_u8(){ return s7_cur[s7_pos++] & 0xFF; }
+    private long s7_rn(){
+        int first=s7_u8(); long value=0; int mask=0x80;
+        for ( int i=0;i<8;i++ ){
+            if ( (first & mask)==0 ){ value |= ((long)(first & (mask-1)) << (8*i)); return value; }
+            value |= ((long)s7_u8() << (8*i)); mask>>=1;
+        }
+        return value;
+    }
+    private long s7_g32(byte[] b,int off){ long v=0; for(int i=0;i<4;i++) v|=((long)(b[off+i]&0xFF))<<(8*i); return v; }
+    private long s7_g64(byte[] b,int off){ long v=0; for(int i=0;i<8;i++) v|=((long)(b[off+i]&0xFF))<<(8*i); return v; }
+
+    private void s7_le_header(java.io.RandomAccessFile raf, String senha) throws Exception {
+        byte[] assin=new byte[32];
+        raf.seek(0); raf.readFully(assin);
+        for ( int i=0;i<6;i++ ) if ( assin[i]!=s7_sig[i] ){ System.err.println("Erro, nao e um arquivo 7z!"); System.exit(1); }
+        long nho=s7_g64(assin,12), nhs=s7_g64(assin,20);
+        byte[] header=new byte[(int)nhs];
+        raf.seek(32+nho); raf.readFully(header);
+        s7_cur=header; s7_pos=0;
+        int id=s7_u8();
+        if ( id==s7_kEncodedHeader ){
+            byte[] real=s7_decode_encoded(raf, senha);
+            s7_cur=real; s7_pos=0; id=s7_u8();
+        }
+        if ( id!=s7_kHeader ){ System.err.println("Erro, header 7z inesperado: "+id); System.exit(1); }
+        int t=s7_u8();
+        if ( t==s7_kMainStreams ){ s7_parse_streams(); t=s7_u8(); }
+        if ( t==s7_kFilesInfo ){ s7_parse_files(); t=s7_u8(); }
+    }
+
+    private byte[] s7_decode_encoded(java.io.RandomAccessFile raf, String senha) throws Exception {
+        s7_parse_streams();
+        InputStream is=s7_abre_folder(raf, 0, senha);
+        java.io.ByteArrayOutputStream bo=new java.io.ByteArrayOutputStream();
+        byte[] buf=new byte[BUFFER_SIZE]; int n; long resta=s7_folderOut.get(0);
+        while ( resta>0 && (n=is.read(buf,0,(int)Math.min(buf.length,resta)))>-1 ){ bo.write(buf,0,n); resta-=n; }
+        is.close();
+        s7_folderCoders=null; s7_folderAesProps=null; s7_folderOut=null;
+        return bo.toByteArray();
+    }
+
+    // le PackInfo + UnpackInfo + SubStreamsInfo do ponto atual
+    private void s7_parse_streams() throws Exception {
+        int id=s7_u8();
+        if ( id==s7_kPackInfo ){
+            long packPos=s7_rn(); long numPack=s7_rn();
+            s7_baseOffset=32+packPos;
+            int t=s7_u8();
+            if ( t==s7_kSize ){ s7_packSizes=new long[(int)numPack]; for(int i=0;i<numPack;i++) s7_packSizes[i]=s7_rn(); t=s7_u8(); }
+            while ( t!=s7_kEnd ){ s7_skip_prop(); t=s7_u8(); }
+            id=s7_u8();
+        }
+        int nf=0;
+        s7_folderCoders=new ArrayList<int[]>();
+        s7_folderAesProps=new ArrayList<byte[]>();
+        s7_folderOut=new ArrayList<Long>();
+        if ( id==s7_kUnpackInfo ){
+            s7_u8(); // kFolder
+            long numFolders=s7_rn(); nf=(int)numFolders; s7_u8(); // external
+            int[] nOutPorFolder=new int[nf];
+            for ( int i=0;i<nf;i++ ) nOutPorFolder[i]=s7_le_folder();
+            int t=s7_u8(); // kCodersUnpackSize
+            long[][] outSizes=new long[nf][];
+            for ( int i=0;i<nf;i++ ){ outSizes[i]=new long[nOutPorFolder[i]]; for(int j=0;j<nOutPorFolder[i];j++) outSizes[i][j]=s7_rn(); }
+            // tamanho final da folder = ultimo out (nossa cadeia deixa o dado original por ultimo na leitura)
+            for ( int i=0;i<nf;i++ ) s7_folderOut.add(outSizes[i][s7_folder_final_out(i, nOutPorFolder[i])]);
+            s7_folderCrc=new ArrayList<Long>(); for(int i=0;i<nf;i++) s7_folderCrc.add(-1L);
+            t=s7_u8();
+            while ( t!=s7_kEnd ){
+                if(t==s7_kCRC){ long[] d=s7_digests(nf); for(int i=0;i<nf;i++) s7_folderCrc.set(i, d[i]); }
+                else s7_skip_prop();
+                t=s7_u8();
+            }
+            id=s7_u8();
+        }
+        if ( s7_folderCrc==null ){ s7_folderCrc=new ArrayList<Long>(); for(int i=0;i<nf;i++) s7_folderCrc.add(-1L); }
+        int[] numUnpack=new int[nf]; for(int i=0;i<nf;i++) numUnpack[i]=1;
+        s7_subSizes=new ArrayList<Long>();
+        if ( id==s7_kSubStreams ){
+            int t=s7_u8();
+            if ( t==s7_kNumUnpackStream ){ for(int i=0;i<nf;i++) numUnpack[i]=(int)s7_rn(); t=s7_u8(); }
+            for ( int i=0;i<nf;i++ ){
+                long soma=0;
+                for ( int j=0;j<numUnpack[i]-1;j++ ){ long s=(t==s7_kSize)?s7_rn():0; s7_subSizes.add(s); soma+=s; }
+                s7_subSizes.add(s7_folderOut.get(i)-soma);
+            }
+            if ( t==s7_kSize ) t=s7_u8();
+            s7_subCrcs=new ArrayList<Long>(); for(int i=0;i<s7_subSizes.size();i++) s7_subCrcs.add(-1L);
+            while ( t!=s7_kEnd ){
+                if(t==s7_kCRC){
+                    int need=0;
+                    for(int i=0;i<nf;i++){ if(numUnpack[i]==1 && s7_folderCrc.get(i)!=-1L){} else need+=numUnpack[i]; }
+                    long[] d=s7_digests(need);
+                    int di=0, si=0;
+                    for(int i=0;i<nf;i++){
+                        if(numUnpack[i]==1 && s7_folderCrc.get(i)!=-1L){ s7_subCrcs.set(si, s7_folderCrc.get(i)); si++; }
+                        else for(int j=0;j<numUnpack[i];j++){ s7_subCrcs.set(si, d[di++]); si++; }
+                    }
+                } else s7_skip_prop();
+                t=s7_u8();
+            }
+            id=s7_u8();
+        }else{
+            for ( int i=0;i<nf;i++ ) s7_subSizes.add(s7_folderOut.get(i));
+            s7_subCrcs=new ArrayList<Long>(); for(int i=0;i<nf;i++) s7_subCrcs.add(s7_folderCrc.get(i));
+        }
+        s7_numUnpack=numUnpack;
+    }
+
+    // le um bloco de digests (crc32): AllDefined ou bitvector, valores de 4 bytes; -1 = indefinido
+    private long[] s7_digests(int n){
+        long[] r=new long[n];
+        boolean[] def=new boolean[n];
+        int allDef=s7_u8();
+        if ( allDef!=0 ){ for(int i=0;i<n;i++) def[i]=true; }
+        else { int bi=0,mask=0x80; for(int i=0;i<n;i++){ def[i]=(s7_cur[s7_pos+bi]&mask)!=0; mask>>=1; if(mask==0){mask=0x80;bi++;} } s7_pos+=(n+7)/8; }
+        for ( int i=0;i<n;i++ ){ if(def[i]){ r[i]=s7_g32(s7_cur,s7_pos); s7_pos+=4; } else r[i]=-1L; }
+        return r;
+    }
+
+    // le uma folder, guarda os coders como codigos (0=copy,1=deflate,2=aes); devolve nOut total
+    private int s7_le_folder() throws Exception {
+        long numCoders=s7_rn();
+        int totalIn=0, totalOut=0;
+        int[] tipos=new int[(int)numCoders];
+        byte[] aesProps=null;
+        for ( int i=0;i<numCoders;i++ ){
+            int flag=s7_u8();
+            int idSize=flag & 0x0F;
+            long cid=0; for(int k=0;k<idSize;k++) cid=(cid<<8)|s7_u8();
+            int nIn=1, nOut=1;
+            if ( (flag & 0x10)!=0 ){ nIn=(int)s7_rn(); nOut=(int)s7_rn(); }
+            if ( (flag & 0x20)!=0 ){ int ps=(int)s7_rn(); byte[] pr=new byte[ps]; for(int k=0;k<ps;k++) pr[k]=(byte)s7_u8();
+                if ( cid==0x06F10701L ) aesProps=pr; }
+            if ( cid==0x00L ) tipos[i]=0;
+            else if ( cid==0x040108L ) tipos[i]=1;
+            else if ( cid==0x06F10701L ) tipos[i]=2;
+            else { System.err.println("Erro, coder 7z nao suportado (LZMA?): "+Long.toHexString(cid)+" - use o 7-Zip"); System.exit(1); }
+            totalIn+=nIn; totalOut+=nOut;
+        }
+        int numBind=totalOut-1;
+        for ( int i=0;i<numBind;i++ ){ s7_rn(); s7_rn(); } // bindpairs (cadeia linear, ordem implicita)
+        int numPacked=totalIn-numBind;
+        if ( numPacked!=1 ) for(int i=0;i<numPacked;i++) s7_rn();
+        s7_folderCoders.add(tipos);
+        s7_folderAesProps.add(aesProps);
+        return totalOut;
+    }
+
+    // qual indice de out e o dado final. nas nossas cadeias o coder principal (copy/deflate)
+    // e o primeiro, e seu out (indice 0) e o dado final
+    private int s7_folder_final_out(int fi, int nOut){ return 0; }
+
+    private void s7_skip_prop(){ long sz=s7_rn(); s7_pos+=(int)sz; }
+
+    private void s7_parse_files() throws Exception {
+        long numFiles=s7_rn();
+        int nf=(int)numFiles;
+        boolean[] emptyStream=new boolean[nf];
+        boolean[] emptyFile=null;
+        int numEmpty=0;
+        String[] nomes=new String[nf];
+        long[] mtimes=new long[nf];
+        while ( true ){
+            int prop=s7_u8();
+            if ( prop==s7_kEnd ) break;
+            long size=s7_rn();
+            int fim=s7_pos+(int)size;
+            if ( prop==s7_kEmptyStream ){
+                int bi=0,mask=0x80;
+                for ( int i=0;i<nf;i++ ){ if((s7_cur[s7_pos+bi]&mask)!=0){emptyStream[i]=true;numEmpty++;} mask>>=1; if(mask==0){mask=0x80;bi++;} }
+            }else if ( prop==s7_kEmptyFile ){
+                emptyFile=new boolean[numEmpty]; int bi=0,mask=0x80;
+                for ( int i=0;i<numEmpty;i++ ){ if((s7_cur[s7_pos+bi]&mask)!=0)emptyFile[i]=true; mask>>=1; if(mask==0){mask=0x80;bi++;} }
+            }else if ( prop==s7_kName ){
+                s7_u8(); int idx=0; StringBuilder sb=new StringBuilder(); int q=s7_pos;
+                while ( q<fim ){
+                    int ch=(s7_cur[q]&0xFF)|((s7_cur[q+1]&0xFF)<<8); q+=2;
+                    if ( ch==0 ){ nomes[idx++]=sb.toString(); sb=new StringBuilder(); }
+                    else sb.append((char)ch);
+                }
+            }else if ( prop==s7_kMTime ){
+                s7_u8(); s7_u8();
+                for ( int i=0;i<nf;i++ ) mtimes[i]=s7_ms(s7_g64(s7_cur, s7_pos+8*i));
+            }
+            s7_pos=fim;
+        }
+        s7_outNomes=new ArrayList<String>();
+        s7_outDir=new ArrayList<Boolean>();
+        s7_outStream=new ArrayList<Boolean>();
+        s7_outMtime=new ArrayList<Long>();
+        int ei=0;
+        for ( int i=0;i<nf;i++ ){
+            boolean dir, stream;
+            if ( emptyStream[i] ){
+                stream=false;
+                boolean ef=(emptyFile!=null && emptyFile[ei]);
+                dir=!ef; ei++;
+            }else{ stream=true; dir=false; }
+            s7_outNomes.add(nomes[i]); s7_outDir.add(dir); s7_outStream.add(stream); s7_outMtime.add(mtimes[i]);
+        }
+    }
+
+    // ---- decodificacao da folder ----
+
+    private InputStream s7_abre_folder(java.io.RandomAccessFile raf, int fi, String senha) throws Exception {
+        int[] tipos=s7_folderCoders.get(fi);
+        byte[] aesProps=s7_folderAesProps.get(fi);
+        // offset: soma dos packSizes anteriores (1 pack por folder no nosso caso)
+        long off=s7_baseOffset;
+        for ( int i=0;i<fi;i++ ) off+=s7_packSizes[i];
+        long packSize=s7_packSizes[fi];
+        InputStream fluxo=new S7Regiao(raf, off, packSize);
+        // aplica coders na ordem: primeiro o AES (se houver, e o ultimo da lista), depois principal
+        // a lista tipos = [principal, aes] na escrita; na leitura decodifica aes -> principal
+        boolean temAes=false; int principal=0;
+        for ( int i=0;i<tipos.length;i++ ){ if(tipos[i]==2) temAes=true; else principal=tipos[i]; }
+        if ( temAes ){
+            if ( senha==null ){ System.err.println("Erro, o arquivo tem senha! Informe a senha."); System.exit(1); }
+            fluxo=s7_aes_stream(fluxo, aesProps, senha);
+        }
+        if ( principal==1 )
+            fluxo=new java.util.zip.InflaterInputStream(fluxo, new java.util.zip.Inflater(true), BUFFER_SIZE);
+        // principal==0 (Copy): passa direto
+        return fluxo;
+    }
+
+    private InputStream s7_aes_stream(InputStream base, byte[] props, String senha) throws Exception {
+        int b0=props[0]&0xFF; int numPow=b0&0x3F;
+        int saltSize=(b0>>7)&1, ivSize=(b0>>6)&1; int idx=1;
+        if ( (b0 & 0xC0)!=0 ){ int b1=props[1]&0xFF; saltSize+=(b1>>4); ivSize+=(b1&0x0F); idx=2; }
+        byte[] salt=new byte[saltSize]; System.arraycopy(props,idx,salt,0,saltSize); idx+=saltSize;
+        byte[] iv=new byte[16]; System.arraycopy(props,idx,iv,0,ivSize);
+        byte[] chave=s7_deriva_chave(senha, salt, numPow);
+        javax.crypto.Cipher c=javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+        c.init(javax.crypto.Cipher.DECRYPT_MODE, new javax.crypto.spec.SecretKeySpec(chave,"AES"), new javax.crypto.spec.IvParameterSpec(iv));
+        return new javax.crypto.CipherInputStream(base, c);
+    }
+
+    // ---- helpers de bytes ----
+
+    private void s7_wb(OutputStream o,int b) throws java.io.IOException { o.write(b & 0xFF); }
+    private void s7_wn(OutputStream o,long value) throws java.io.IOException {
+        int firstByte=0, mask=0x80, i;
+        for ( i=0;i<8;i++ ){
+            if ( Long.compareUnsigned(value, (1L << (7*(i+1)))) < 0 ){ firstByte |= (int)((value >>> (8*i)) & 0xFF); break; }
+            firstByte |= mask; mask>>=1;
+        }
+        o.write(firstByte);
+        for ( ; i>0; i-- ){ o.write((int)(value & 0xFF)); value>>>=8; }
+    }
+    private void s7_p32(byte[] b,int off,long v){ for(int i=0;i<4;i++) b[off+i]=(byte)(v>>>(8*i)); }
+    private void s7_p64(byte[] b,int off,long v){ for(int i=0;i<8;i++) b[off+i]=(byte)(v>>>(8*i)); }
+    private long s7_crc(byte[] b,int off,int len){ java.util.zip.CRC32 c=new java.util.zip.CRC32(); c.update(b,off,len); return c.getValue() & 0xFFFFFFFFL; }
+    private long s7_ft(long ms){ return (ms + 11644473600000L) * 10000L; }
+    private long s7_ms(long ft){ return ft/10000L - 11644473600000L; }
+    private byte[] s7_bits(ArrayList<Boolean> bits){
+        int nb=(bits.size()+7)/8; byte[] r=new byte[nb]; int mask=0x80, bi=0;
+        for ( int i=0;i<bits.size();i++ ){ if(bits.get(i)) r[bi]|=mask; mask>>=1; if(mask==0){mask=0x80;bi++;} }
+        return r;
+    }
+    private void s7_copia(File a, File b) throws java.io.IOException {
+        InputStream is=new java.io.BufferedInputStream(new FileInputStream(a));
+        OutputStream os=new java.io.BufferedOutputStream(new FileOutputStream(b));
+        byte[] buf=new byte[BUFFER_SIZE]; int n;
+        while ( (n=is.read(buf)) > -1 ) os.write(buf,0,n);
+        is.close(); os.close();
+    }
+
+    // le uma regiao [off, off+len) do arquivo, sequencial
+    private class S7Regiao extends InputStream {
+        private java.io.RandomAccessFile raf; private long pos, restante;
+        S7Regiao(java.io.RandomAccessFile raf, long off, long len){ this.raf=raf; this.pos=off; this.restante=len; }
+        public int read() throws java.io.IOException { byte[] b=new byte[1]; return read(b,0,1)==-1?-1:(b[0]&0xFF); }
+        public int read(byte[] b,int o,int l) throws java.io.IOException {
+            if ( restante<=0 ) return -1;
+            raf.seek(pos); int n=raf.read(b,o,(int)Math.min(l,restante)); if(n<0) return -1; pos+=n; restante-=n; return n;
+        }
+    }
+
+    // fatia de N bytes de um stream compartilhado (o stream solido); calcula CRC e drena o resto
+    private class S7Limite extends InputStream {
+        private InputStream base; private long restante;
+        private java.util.zip.CRC32 crc=new java.util.zip.CRC32();
+        S7Limite(InputStream base, long len){ this.base=base; this.restante=len; }
+        public int read() throws java.io.IOException { byte[] b=new byte[1]; return read(b,0,1)==-1?-1:(b[0]&0xFF); }
+        public int read(byte[] b,int o,int l) throws java.io.IOException {
+            if ( restante<=0 ) return -1;
+            int n=base.read(b,o,(int)Math.min(l,restante)); if(n<0) return -1; crc.update(b,o,n); restante-=n; return n;
+        }
+        void drena() throws java.io.IOException {
+            byte[] b=new byte[BUFFER_SIZE];
+            while ( restante>0 ){ int n=base.read(b,0,(int)Math.min(b.length,restante)); if(n<0) break; crc.update(b,0,n); restante-=n; }
+        }
+        long crc(){ return crc.getValue() & 0xFFFFFFFFL; }
+    }
+    
     public void gzip()
     {
         try{            
@@ -31453,6 +32334,7 @@ usage:
   [y gettoken]
   [y json]
   [y zip]
+  [y 7z]
   [y gzip]
   [y gunzip]
   [y tar]
@@ -31699,6 +32581,10 @@ Exemplos...
     obs4: -pass compativel com zip windows
     sudo apt install 7zip-standalone
     7zz x arquivo.7z
+[y 7z]
+    obs: 
+       veja y help zip
+       use os mesmo comandos, mas com 7z
 [y gzip]
     cat arquivo | y gzip > arquivo.gz
 [y gunzip]
