@@ -742,6 +742,66 @@ cat buffer.log
                 System.exit(1);
             }
         }
+        if ( args[0].equals("rar") ){
+            if ( args.length > 1 && args[1].equals("add") ){
+                System.err.println("Erro!\nrar add bloqueado por direitos autorais!");
+                System.exit(1);            
+            }
+            try{
+                String senha=null;
+                for ( int i=1;i<args.length;i++ ){
+                    if (args[i].equals("-pass") && args.length > (i+1) && args[i+1].length() > 0 ){
+                        senha=args[i+1];
+                        args=removeParm(i, args);
+                        args=removeParm(i, args);
+                        break;
+                    }
+                }
+                if ( args.length == 2 && args[1].equals("list") ){
+                    rar_list(null, senha);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("list") ){
+                    rar_list(args[2], senha);
+                    return;
+                }                
+                if ( args.length == 2 && args[1].equals("extract") ){
+                    rar_extract(System.in, null, null, null, senha);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("extract") ){
+                    rar_extract(null, args[2], null, null, senha);
+                    return;
+                }
+                if ( args.length == 4 && args[1].equals("extract") && args[2].equals("-out")){
+                    rar_extract(System.in, null, args[3], null, senha);
+                    return;
+                }
+                if ( args.length == 5 && args[1].equals("extract") && args[3].equals("-out")){
+                    rar_extract(null, args[2], args[4], null, senha);
+                    return;
+                }
+                if ( args.length == 3 && args[1].equals("extractSelected") ){
+                    rar_extract(System.in, null, null, args[2], senha);
+                    return;
+                }
+                if ( args.length == 4 && args[1].equals("extractSelected") ){
+                    rar_extract(null, args[2], null, args[3], senha);
+                    return;
+                }
+                if ( args.length == 5 && args[1].equals("extractSelected") && args[3].equals("-out")){
+                    rar_extract(System.in, null, args[4], args[2], senha);
+                    return;
+                }
+                if ( args.length == 6 && args[1].equals("extractSelected") && args[4].equals("-out")){
+                    rar_extract(null, args[2], args[5], args[3], senha);
+                    return;
+                }
+            }catch(Exception e){
+                System.err.println(e.toString());
+                System.exit(1);
+            }
+        }
         if ( args[0].equals("7z") ){
             if ( args.length == 2 && args[1].equals("add") ){
                 System.err.println("Erro!\nComando sugerido:\ny cat a.txt | y 7z add -name a.txt > a.zip");
@@ -812,6 +872,25 @@ cat buffer.log
                 System.exit(1);
             }
         }
+        if ( 
+            ( 
+                args[0].equals("zip") 
+                || args[0].equals("rar") 
+                || args[0].equals("7z")
+            ) && args.length > 1 && args[1].equals("info")
+        ){
+            try{
+                if ( args.length == 2 ){
+                    System.out.println(zip7zrar_info(System.in, null));
+                    return;
+                }
+                System.out.println(zip7zrar_info(null, args[2]));
+                return;
+            }catch(Exception e){
+                erroFatal(e);
+            }
+        }
+        //zip7zrar_info
         if ( args[0].equals("gzip") ){
             gzip();
             return;
@@ -7015,6 +7094,2340 @@ cat buffer.log
         }
         long crc(){ return crc.getValue() & 0xFFFFFFFFL; }
     }
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // inicio rar
+    private final byte[] rar_sig={0x52,0x61,0x72,0x21,0x1a,0x07,0x01,0x00}; // "Rar!" 1A 07 01 00 (RAR5)
+
+    // entradas lidas do arquivo
+    private ArrayList<String> rar_nomes=null;
+    private ArrayList<Boolean> rar_dir=null;
+    private ArrayList<Long> rar_size=null;
+    private ArrayList<Integer> rar_metodo=null;   // 0 = stored; 1..5 = comprimido
+    private ArrayList<Long> rar_dataOff=null;      // offset do dado no arquivo
+    private ArrayList<Long> rar_dataSize=null;     // tamanho do dado (comprimido)
+    private ArrayList<Long> rar_mtime=null;        // millis (0 se ausente)
+    private ArrayList<Boolean> rar_cifrado=null;   // entrada cifrada?
+    private ArrayList<Boolean> rar_solido=null;    // entrada solida (depende das anteriores)?
+    private ArrayList<Long> rar_crcs=null;         // crc32 do dado (-1 se ausente)
+    private ArrayList<Integer> rar_crLg2=null;     // cifra: log2 da contagem KDF (-1 se nao cifrado)
+    private ArrayList<byte[]> rar_crSalt=null;     // cifra: salt (16)
+    private ArrayList<byte[]> rar_crIV=null;       // cifra: IV AES (16)
+    private ArrayList<byte[]> rar_crPsw=null;      // cifra: password-check (8, ou null)
+    private boolean rar_arquivoCifrado=false;      // header de cifragem do arquivo?
+    private boolean rar_ehRar5=true;               // RAR5 (unpack50) vs RAR4 (unpack29)
+    private java.io.RandomAccessFile rar_raf=null;
+
+    // cursor sobre o header atual
+    private byte[] rar_h=null; private int rar_hp=0;
+    private int rar_u8(){ return rar_h[rar_hp++] & 0xFF; }
+    private long rar_vint(){ long v=0; int s=0; while(true){ int b=rar_u8(); v|=((long)(b&0x7F))<<s; if((b&0x80)==0) break; s+=7; } return v; }
+
+    private void rar_valida_paths(String [] paths){
+        for ( int i=0; i<paths.length; i++ )
+            if ( ! new File(paths[i]).exists() ){
+                System.err.println("Erro, esse conteudo nao existe: "+paths[i]);
+                System.exit(1);
+            }
+    }
+    private void rar_add_router(String [] paths, String rar_virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on, String senha) throws Exception {
+        rar_add(paths, pre_line_print_on);
+    }
+    private void rar_add(String [] paths, String pre_line_print_on) throws Exception {
+        throw new Exception("Criacao de RAR nao implementada: o formato e a compressao do RAR sao proprietarios (direitos autorais da win.rar GmbH), nao ha gravador de codigo aberto. Use zip ou 7z para criar, ou o WinRAR oficial.");
+    }
+
+    private byte[] rar_hdrKey=null; // chave AES dos headers cifrados (-hp)
+    private void rar_parse(String arq, String senha) throws Exception {
+        rar_nomes=new ArrayList<String>(); rar_dir=new ArrayList<Boolean>();
+        rar_size=new ArrayList<Long>(); rar_metodo=new ArrayList<Integer>();
+        rar_dataOff=new ArrayList<Long>(); rar_dataSize=new ArrayList<Long>();
+        rar_mtime=new ArrayList<Long>(); rar_cifrado=new ArrayList<Boolean>();
+        rar_solido=new ArrayList<Boolean>(); rar_crcs=new ArrayList<Long>();
+        rar_crLg2=new ArrayList<Integer>(); rar_crSalt=new ArrayList<byte[]>(); rar_crIV=new ArrayList<byte[]>();
+        rar_crPsw=new ArrayList<byte[]>();
+        rar_arquivoCifrado=false; rar_ehRar5=true;
+
+        rar_raf=new java.io.RandomAccessFile(arq,"r");
+        byte[] sig=new byte[8];
+        if ( rar_raf.read(sig) < 7 ){ System.err.println("Erro, nao e um arquivo RAR!"); System.exit(1); }
+        boolean rar5=true;
+        for ( int i=0;i<6;i++ ) if ( sig[i]!=rar_sig[i] ){ System.err.println("Erro, nao e um arquivo RAR!"); System.exit(1); }
+        if ( sig[6]==0x00 ){ rar_parse4(senha); return; } // "Rar!" 1A 07 00 = RAR4
+        if ( ! (sig[6]==0x01 && sig[7]==0x00) ){ System.err.println("Erro, versao de RAR desconhecida!"); System.exit(1); }
+
+        long pos=8, tam=rar_raf.length();
+        while ( pos < tam ){
+            rar_raf.seek(pos);
+            byte[] crc=new byte[4];
+            if ( rar_raf.read(crc) < 4 ) break;
+            // HeaderSize (vint) lido direto do arquivo
+            long hsize=0; int shift=0;
+            while ( true ){ int b=rar_raf.read(); if ( b<0 ) break; hsize|=((long)(b&0x7F))<<shift; if((b&0x80)==0) break; shift+=7; }
+            long hdrStart=rar_raf.getFilePointer();
+            if ( hsize <= 0 || hdrStart+hsize > tam ) break; // header invalido -> para
+            rar_h=new byte[(int)hsize]; rar_raf.readFully(rar_h); rar_hp=0;
+            long type=rar_vint();
+            long flags=rar_vint();
+            long extraSize=0, dataSize=0;
+            if ( (flags & 0x01)!=0 ) extraSize=rar_vint();
+            if ( (flags & 0x02)!=0 ) dataSize=rar_vint();
+            long dataStart=hdrStart+hsize;
+
+            if ( type==4 ){ // HEAD_CRYPT: indice cifrado (-hp)
+                rar_arquivoCifrado=true;
+                rar_vint(); // CryptVersion
+                long cflags=rar_vint();
+                int lg2=rar_u8();
+                byte[] salt=new byte[16]; System.arraycopy(rar_h,rar_hp,salt,0,16); rar_hp+=16;
+                byte[] psw=null;
+                if ( (cflags & 1)!=0 ){ psw=new byte[8]; System.arraycopy(rar_h,rar_hp,psw,0,8); rar_hp+=8; }
+                if ( senha == null ) return; // sem senha nao da p/ ler o indice; caller avisa
+                byte[][] kd=rar_kdf(senha, salt, lg2);
+                if ( psw!=null && ! java.util.Arrays.equals(kd[1], psw) ){
+                    System.err.println("Erro, senha incorreta (header cifrado)."); System.exit(1);
+                }
+                rar_hdrKey=kd[0];
+                rar_parseCifrado(hdrStart+hsize, tam); // le o resto decifrando
+                return;
+            }
+            if ( type==5 ) break;
+            rar_parseBloco(type, extraSize, dataSize, dataStart);
+            pos=dataStart+dataSize;
+        }
+    }
+
+    // parseia o corpo de um bloco RAR5 (file/service) a partir de rar_h/rar_hp (ja apos type/flags/extra/data)
+    private void rar_parseBloco(long type, long extraSize, long dataSize, long dataStart) throws Exception {
+        if ( type!=2 && type!=3 ) return;
+        long fileFlags=rar_vint();
+        long unpSize=rar_vint();
+        rar_vint(); // attributes
+        long mtime=0;
+        if ( (fileFlags & 0x02)!=0 ){
+            long s=(rar_h[rar_hp]&0xFFL)|((rar_h[rar_hp+1]&0xFFL)<<8)|((rar_h[rar_hp+2]&0xFFL)<<16)|((rar_h[rar_hp+3]&0xFFL)<<24);
+            rar_hp+=4; mtime=s*1000L;
+        }
+        long dcrc=-1;
+        if ( (fileFlags & 0x04)!=0 ){
+            dcrc=(rar_h[rar_hp]&0xFFL)|((rar_h[rar_hp+1]&0xFFL)<<8)|((rar_h[rar_hp+2]&0xFFL)<<16)|((rar_h[rar_hp+3]&0xFFL)<<24);
+            rar_hp+=4;
+        }
+        long comp=rar_vint();
+        rar_vint(); // host os
+        long nameLen=rar_vint();
+        byte[] nb=new byte[(int)nameLen]; System.arraycopy(rar_h,rar_hp,nb,0,(int)nameLen); rar_hp+=(int)nameLen;
+        String nome=new String(nb,"UTF-8");
+        boolean cifrado=false;
+        int crLg2=-1; byte[] crSalt=null, crIV=null, crPsw=null;
+        int fimExtra=rar_hp+(int)extraSize;
+        while ( rar_hp < fimExtra && rar_hp < rar_h.length ){
+            long recSize=rar_vint();
+            int recEnd=rar_hp+(int)recSize;
+            long recType=rar_vint();
+            if ( recType==1 ){ // registro de cifragem (FHEXTRA_CRYPT)
+                cifrado=true;
+                rar_vint(); // CryptVersion
+                long cflags=rar_vint();
+                crLg2=rar_u8();
+                crSalt=new byte[16]; System.arraycopy(rar_h,rar_hp,crSalt,0,16); rar_hp+=16;
+                crIV=new byte[16]; System.arraycopy(rar_h,rar_hp,crIV,0,16); rar_hp+=16;
+                if ( (cflags & 1)!=0 ){ crPsw=new byte[8]; System.arraycopy(rar_h,rar_hp,crPsw,0,8); rar_hp+=8; }
+            }
+            rar_hp=recEnd;
+        }
+        if ( type==2 ){
+            rar_nomes.add(nome); rar_dir.add((fileFlags & 0x01)!=0); rar_size.add(unpSize);
+            rar_metodo.add((int)((comp>>7)&0x07)); rar_dataOff.add(dataStart); rar_dataSize.add(dataSize);
+            rar_mtime.add(mtime); rar_cifrado.add(cifrado); rar_solido.add((comp & 0x40)!=0); rar_crcs.add(dcrc);
+            rar_crLg2.add(crLg2); rar_crSalt.add(crSalt); rar_crIV.add(crIV); rar_crPsw.add(crPsw);
+        }
+    }
+
+    // le os blocos com header cifrado (-hp): cada bloco vem precedido de um IV(16) e cifrado AES-CBC
+    private void rar_parseCifrado(long pos, long tam) throws Exception {
+        while ( pos < tam ){
+            rar_raf.seek(pos);
+            byte[] iv=new byte[16]; if ( rar_raf.read(iv) < 16 ) break;
+            long encStart=pos+16;
+            int chunk=(int)Math.min(tam-encStart, 4096); chunk-=chunk%16;
+            if ( chunk < 16 ) break;
+            byte[] enc=new byte[chunk]; rar_raf.seek(encStart); rar_raf.readFully(enc);
+            javax.crypto.Cipher ci=javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+            ci.init(javax.crypto.Cipher.DECRYPT_MODE, new javax.crypto.spec.SecretKeySpec(rar_hdrKey,"AES"), new javax.crypto.spec.IvParameterSpec(iv));
+            rar_h=ci.doFinal(enc); rar_hp=4; // pula o CRC do header
+            long hs=rar_vint();
+            int bodyStart=rar_hp;
+            int contentLen=bodyStart+(int)hs;
+            int encBytes=((contentLen+15)/16)*16;
+            long type=rar_vint();
+            long flags=rar_vint();
+            long extraSize=0, dataSize=0;
+            if ( (flags & 0x01)!=0 ) extraSize=rar_vint();
+            if ( (flags & 0x02)!=0 ) dataSize=rar_vint();
+            long dataStart=encStart+encBytes;
+            if ( type==5 ) break;
+            rar_parseBloco(type, extraSize, dataSize, dataStart);
+            pos=encStart+encBytes+dataSize;
+        }
+    }
+
+    // parser do formato antigo RAR4 (blocos de tamanho fixo, little-endian).
+    // list sempre; extract stored/comprimido; cifrado -p e header cifrado -hp
+    // (RAR3: AES-128-CBC + KDF de SHA-1 x 0x40000 rodadas).
+    // Nomes unicode do RAR4 (flag 0x200) usam esquema proprio; aqui pego a
+    // parte ASCII antes do byte 0 (basta p/ nomes ASCII).
+    private void rar_parse4(String senha) throws Exception {
+        rar_ehRar5=false;
+        long tam=rar_raf.length();
+        // o main header (em claro) fica logo apos a assinatura de 7 bytes
+        rar_raf.seek(7);
+        byte[] mh=new byte[7];
+        if ( rar_raf.read(mh) < 7 ) return;
+        int mtype=mh[2]&0xFF, mflags=rar_le16(mh,3), mhsize=rar_le16(mh,5);
+        if ( mtype==0x73 && (mflags & 0x80)!=0 ){ // -hp: TODOS os headers sao cifrados
+            rar_arquivoCifrado=true;
+            if ( senha == null ) return; // sem senha nao da p/ ler o indice; caller avisa
+            rar_parse4Cifrado(7+mhsize, tam, senha);
+            return;
+        }
+        long pos=7;
+        while ( pos < tam ){
+            rar_raf.seek(pos);
+            byte[] base=new byte[7];
+            if ( rar_raf.read(base) < 7 ) break;
+            int flags=rar_le16(base,3);
+            int headSize=rar_le16(base,5);
+            int type=base[2]&0xFF;
+            if ( headSize < 7 || pos+headSize > tam ) break;
+            rar_raf.seek(pos);
+            byte[] hb=new byte[headSize]; rar_raf.readFully(hb);
+            long addSize=(flags & 0x8000)!=0 ? rar_le32(hb,7) : 0;
+            long dataStart=pos+headSize;
+            if ( type==0x74 ){ // file header
+                rar_parseBloco4(hb, flags, dataStart);
+                long packSize=rar_le32(hb,7);
+                if ( (flags & 0x100)!=0 ) packSize |= rar_le32(hb,32)<<32;
+                addSize=packSize; // dado do arquivo
+            }else if ( type==0x7b ){ // end of archive
+                break;
+            }
+            pos=dataStart+addSize;
+        }
+    }
+
+    // parseia um file header RAR4 (a partir do byte[] hb ja em claro) e adiciona
+    // a entrada as listas. dataStart = offset do dado (comprimido/cifrado).
+    private void rar_parseBloco4(byte[] hb, int flags, long dataStart) throws Exception {
+        long packSize=rar_le32(hb,7);
+        long unpSize=rar_le32(hb,11);
+        long dcrc=rar_le32(hb,16);
+        long ftime=rar_le32(hb,20);
+        int method=hb[25]&0xFF;
+        int nameSize=rar_le16(hb,26);
+        int off=32;
+        if ( (flags & 0x100)!=0 ){ // arquivo grande (>4GB): parte alta
+            packSize |= rar_le32(hb,32)<<32;
+            unpSize  |= rar_le32(hb,36)<<32;
+            off=40;
+        }
+        byte[] nb=new byte[nameSize]; System.arraycopy(hb,off,nb,0,nameSize); off+=nameSize;
+        String nome;
+        if ( (flags & 0x200)!=0 ){ // nome unicode: pega a parte antes do byte 0
+            int z=0; while ( z<nb.length && nb[z]!=0 ) z++;
+            nome=new String(nb,0,z,"UTF-8");
+        }else
+            nome=new String(nb,"UTF-8");
+        nome=nome.replace('\\','/'); // RAR4 guarda separador estilo DOS
+        byte[] crSalt=null;
+        if ( (flags & 0x400)!=0 ){ // LHD_SALT: salt de 8 bytes apos o nome
+            crSalt=new byte[8]; System.arraycopy(hb,off,crSalt,0,8); off+=8;
+        }
+        boolean dir=(flags & 0x00E0)==0x00E0;
+        boolean cif=(flags & 0x04)!=0;
+        rar_nomes.add(nome);
+        rar_dir.add(dir);
+        rar_size.add(unpSize);
+        rar_metodo.add(method==0x30 ? 0 : (method-0x30));
+        rar_dataOff.add(dataStart);
+        rar_dataSize.add(packSize);
+        rar_mtime.add(rar_dos_millis(ftime));
+        rar_cifrado.add(cif);
+        rar_solido.add((flags & 0x10)!=0);
+        rar_crcs.add(dcrc & 0xFFFFFFFFL);
+        rar_crLg2.add(-1); rar_crSalt.add(crSalt); rar_crIV.add(null); rar_crPsw.add(null);
+    }
+
+    // le os headers cifrados (-hp): cada bloco vem precedido de salt(8) e cifrado
+    // AES-128-CBC (IV=AESInit reiniciado por bloco; tamanho cifrado = align(hsize,16)).
+    private void rar_parse4Cifrado(long pos, long tam, String senha) throws Exception {
+        boolean primeiro=true;
+        while ( pos+8+16 <= tam ){
+            rar_raf.seek(pos);
+            byte[] salt=new byte[8]; if ( rar_raf.read(salt) < 8 ) break;
+            byte[][] ki=rar_setKey30c(senha, salt);
+            long encStart=pos+8;
+            byte[] h0=rar_aesDecifra(ki[0], ki[1], rar_leRegiao(encStart,16)); // 1o bloco: acha hsize
+            int type=h0[2]&0xFF, flags=rar_le16(h0,3), hsize=rar_le16(h0,5);
+            if ( hsize < 7 || encStart+((hsize+15)/16)*16 > tam ){
+                if ( primeiro ){ System.err.println("Erro, senha incorreta (header cifrado -hp)."); System.exit(1); }
+                break; // fim/lixo: encerra
+            }
+            int encLen=((hsize+15)/16)*16;
+            byte[] hb=rar_aesDecifra(ki[0], ki[1], rar_leRegiao(encStart, encLen));
+            primeiro=false;
+            long add=(flags & 0x8000)!=0 ? rar_le32(hb,7) : 0;
+            long dataStart=encStart+encLen;
+            if ( type==0x74 ){
+                rar_parseBloco4(hb, flags, dataStart);
+                long packSize=rar_le32(hb,7);
+                if ( (flags & 0x100)!=0 ) packSize |= rar_le32(hb,32)<<32;
+                add=packSize;
+            }else if ( type==0x7b ) break; // end of archive
+            pos=dataStart+add;
+        }
+    }
+
+    private int rar_le16(byte[] b,int o){ return (b[o]&0xFF)|((b[o+1]&0xFF)<<8); }
+    private long rar_le32(byte[] b,int o){ return (b[o]&0xFFL)|((b[o+1]&0xFFL)<<8)|((b[o+2]&0xFFL)<<16)|((b[o+3]&0xFFL)<<24); }
+    private long rar_dos_millis(long ftime){
+        int dt=(int)ftime; int time=dt&0xFFFF, date=(dt>>>16)&0xFFFF;
+        java.util.Calendar c=java.util.Calendar.getInstance();
+        c.clear();
+        c.set(1980+((date>>9)&0x7F), ((date>>5)&0x0F)-1, date&0x1F, (time>>11)&0x1F, (time>>5)&0x3F, (time&0x1F)*2);
+        return c.getTimeInMillis();
+    }
+
+    private void rar_list(String a, String senha) throws Exception {
+        rar_valida_paths(new String[]{a});
+        rar_parse(a, senha);
+        if ( rar_arquivoCifrado && rar_nomes.isEmpty() ){
+            rar_raf.close();
+            System.err.println("Erro, arquivo com header cifrado (-hp): informe a senha para listar.");
+            System.exit(1);
+        }
+        for ( int i=0;i<rar_nomes.size();i++ )
+            System.out.println(rar_nomes.get(i)+(rar_dir.get(i)?"/":""));
+        rar_raf.close();
+    }
+
+    private int rar_extract_count_encontrados=0;
+    private void rar_extract(InputStream in, String name_file_zip, String pre_dir, String filtro, String senha) throws Exception {
+        rar_extract_count_encontrados=0;
+        if ( filtro != null && filtro.endsWith("/") ){
+            System.err.println("Erro, o item selecionado não pode ser uma pasta!: "+filtro);
+            System.exit(1);
+        }
+        if ( pre_dir != null ){
+            pre_dir=pre_dir.trim();
+            if ( pre_dir.length() == 0 ){
+                System.err.println("Erro, preenchimento incorreto de pasta!");
+                System.exit(1);
+            }
+            File pasta_=new File(pre_dir);
+            if ( ! pasta_.exists() ){
+                System.err.println("Erro, a pasta "+pre_dir+ " não existe!");
+                System.exit(1);
+            }else if ( ! pasta_.isDirectory() ){
+                System.err.println("Erro, o caminho a seguir não é uma pasta: "+pre_dir);
+                System.exit(1);
+            }
+            pre_dir=pre_dir.replace("\\","/");
+            if ( !pre_dir.endsWith("/") )
+                pre_dir+="/";
+        }else
+            pre_dir="";
+
+        // RAR5 precisa de arquivo com seek; se veio do stdin, baixa para temporario
+        File tmp=null;
+        String arq=name_file_zip;
+        if ( arq == null ){
+            tmp=File.createTempFile("rarex_",".rar");
+            tmp.deleteOnExit();
+            OutputStream os=new java.io.BufferedOutputStream(new FileOutputStream(tmp));
+            byte[] b=new byte[BUFFER_SIZE]; int n;
+            while ( (n=in.read(b)) > -1 ) os.write(b,0,n);
+            os.close();
+            arq=tmp.getAbsolutePath();
+        }else
+            rar_valida_paths(new String[]{arq});
+
+        rar_parse(arq, senha);
+
+        if ( rar_arquivoCifrado && rar_nomes.isEmpty() ){
+            rar_raf.close();
+            if ( tmp != null ) tmp.delete();
+            System.err.println("Erro, arquivo com header cifrado (-hp): informe a senha para extrair.");
+            System.exit(1);
+        }
+
+        // pre-checagem dos alvos
+        for ( int i=0;i<rar_nomes.size();i++ ){
+            if ( rar_dir.get(i) ) continue;
+            boolean alvo = (filtro == null) || filtro.equals(rar_nomes.get(i));
+            if ( ! alvo ) continue;
+            if ( rar_cifrado.get(i) && senha == null ){
+                System.err.println("Erro, arquivo cifrado! Informe a senha: "+rar_nomes.get(i));
+                if ( tmp != null ) tmp.delete(); System.exit(1);
+            }
+            if ( rar_metodo.get(i) != 0 && rar_solido.get(i) ){
+                System.err.println("Erro, RAR solido (-s) nao suportado em java puro: "+rar_nomes.get(i)+" - use o 7-Zip/WinRAR.");
+                if ( tmp != null ) tmp.delete();
+                System.exit(1);
+            }
+        }
+
+        for ( int i=0;i<rar_nomes.size();i++ ){
+            String nome=rar_nomes.get(i);
+            long mtime=rar_mtime.get(i);
+            if ( rar_dir.get(i) ){
+                rar_extract_grava(pre_dir, nome+"/", null, filtro, mtime);
+                continue;
+            }
+            boolean alvo = (filtro == null) || filtro.equals(nome);
+            InputStream is;
+            if ( ! alvo ){
+                is=new java.io.ByteArrayInputStream(new byte[0]); // nao sera lido (filtro nao casa)
+            }else if ( rar_metodo.get(i) == 0 && ! rar_cifrado.get(i) ){
+                is=new RarRegiao(rar_raf, rar_dataOff.get(i), rar_dataSize.get(i)); // stored, claro
+            }else{
+                // le a regiao de dados (decifra se cifrado) e descomprime se preciso
+                byte[] dados=rar_leRegiao(rar_dataOff.get(i), rar_dataSize.get(i));
+                boolean cif=rar_cifrado.get(i);
+                if ( cif ){
+                    if ( rar_ehRar5 ){
+                        byte[][] kd=rar_kdf(senha, rar_crSalt.get(i), rar_crLg2.get(i)); // {chave, pswcheck}
+                        byte[] psw=rar_crPsw.get(i);
+                        if ( psw!=null && ! java.util.Arrays.equals(kd[1], psw) ){
+                            System.err.println("Erro, senha incorreta: "+nome);
+                            if ( tmp != null ) tmp.delete();
+                            System.exit(1);
+                        }
+                        dados=rar_aesDecifra(kd[0], rar_crIV.get(i), dados);
+                    }else{
+                        // RAR3/RAR4: AES-128, chave+IV da KDF de SHA-1; sem campo de
+                        // verificacao de senha (o CRC32 abaixo detecta senha errada)
+                        byte[][] ki=rar_setKey30c(senha, rar_crSalt.get(i));
+                        dados=rar_aesDecifra(ki[0], ki[1], dados);
+                    }
+                }
+                byte[] out;
+                if ( rar_metodo.get(i) == 0 ){
+                    out=dados;
+                    if ( out.length > rar_size.get(i) ){ byte[] t=new byte[(int)(long)rar_size.get(i)]; System.arraycopy(out,0,t,0,t.length); out=t; }
+                }else{
+                    try {
+                        out=rar_ehRar5 ? rar_unpack5Buf(dados, rar_size.get(i)) : rar_unpack29Buf(dados, rar_size.get(i), nome);
+                    } catch ( RuntimeException ex ){
+                        // dados invalidos: no RAR4 cifrado quase sempre e senha errada
+                        if ( cif && ! rar_ehRar5 ){
+                            System.err.println("Erro, senha incorreta ou arquivo corrompido: "+nome);
+                            if ( tmp != null ) tmp.delete();
+                            System.exit(1);
+                        }
+                        throw ex;
+                    }
+                }
+                // CRC32: no RAR5 cifrado o campo vira HMAC (senha ja conferida pelo
+                // pswcheck), entao so checamos quando nao-cifrado. No RAR4 cifrado o
+                // CRC32 continua real e serve tambem para detectar senha errada.
+                long ecrc=rar_crcs.get(i);
+                if ( ecrc!=-1 && (! cif || ! rar_ehRar5) ){
+                    java.util.zip.CRC32 c=new java.util.zip.CRC32(); c.update(out);
+                    if ( (c.getValue() & 0xFFFFFFFFL) != ecrc ){
+                        if ( cif )
+                            System.err.println("Erro, senha incorreta ou arquivo corrompido: "+nome);
+                        else
+                            System.err.println("Erro, CRC nao confere ao descomprimir: "+nome+" (arquivo corrompido?)");
+                        if ( tmp != null ) tmp.delete();
+                        System.exit(1);
+                    }
+                }
+                is=new java.io.ByteArrayInputStream(out);
+            }
+            rar_extract_grava(pre_dir, nome, is, filtro, mtime);
+        }
+        rar_raf.close();
+        if ( tmp != null ) tmp.delete();
+        if ( filtro != null && rar_extract_count_encontrados == 0 ){
+            System.err.println("Erro, elemento "+filtro+" não encontrado!");
+            System.exit(1);
+        }
+    }
+
+    private void rar_extract_grava(String pre_dir, String name, InputStream is,String filtro, long lastModified) throws Exception {
+        String [] partes=name.split("/");
+        String dir="";
+        File tmp=null;
+        boolean out_console=false;
+        if ( filtro != null && pre_dir.equals("") )
+            out_console=true;
+        for ( int i=0;i<partes.length;i++ ){
+            if ( i == partes.length-1 ){
+                if ( is == null ){
+                    dir+=partes[i]+"/";
+                    if ( filtro != null && filtro.indexOf(dir) == -1 )
+                        continue;
+                    if ( ! out_console ){
+                        tmp=new File(pre_dir+dir);
+                        if ( tmp.exists() ){
+                            if ( !tmp.isDirectory() ){
+                                System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+pre_dir+dir);
+                                System.exit(1);
+                            }
+                        }else{
+                            tmp.mkdir();
+                            tmp.setLastModified(lastModified);
+                        }
+                    }
+                }else{
+                    dir+=partes[i];
+                    if ( filtro != null && filtro.indexOf(dir) == -1 )
+                        continue;
+                    if ( ! out_console ){
+                        tmp=new File(pre_dir+dir);
+                        if ( tmp.exists() ){
+                            if ( tmp.isDirectory() ){
+                                System.err.println("Erro, não é possível utilizar o caminho a seguir como arquivo: "+pre_dir+dir);
+                                System.exit(1);
+                            }
+                        }
+                    }
+                    if ( filtro == null ){
+                        tmp=new File(pre_dir+dir);
+                        copiaByStream(is, new FileOutputStream(tmp), dir);
+                        tmp.setLastModified(lastModified);
+                    }else{
+                        if ( filtro.equals(dir) ){
+                            rar_extract_count_encontrados++;
+                            if ( out_console ){
+                                copiaByStream(is, System.out, null);
+                            }else{
+                                tmp=new File(pre_dir+dir);
+                                copiaByStream(is, new FileOutputStream(tmp), dir);
+                                tmp.setLastModified(lastModified);
+                            }
+                        }
+                    }
+                }
+            }else{
+                dir+=partes[i]+"/";
+                if ( filtro != null && filtro.indexOf(dir) == -1 )
+                    continue;
+                if ( ! out_console ){
+                    tmp=new File(pre_dir+dir);
+                    if ( tmp.exists() ){
+                        if ( !tmp.isDirectory() ){
+                            System.err.println("Erro, não é possível utilizar o caminho a seguir como pasta: "+pre_dir+dir);
+                            System.exit(1);
+                        }
+                    }else{
+                        tmp.mkdir();
+                        tmp.setLastModified(lastModified);
+                    }
+                }
+            }
+        }
+    }
+
+    // le uma regiao [off, off+len) do arquivo, sequencial
+    private class RarRegiao extends InputStream {
+        private java.io.RandomAccessFile raf; private long pos, restante;
+        RarRegiao(java.io.RandomAccessFile raf, long off, long len){ this.raf=raf; this.pos=off; this.restante=len; }
+        public int read() throws java.io.IOException { byte[] b=new byte[1]; return read(b,0,1)==-1?-1:(b[0]&0xFF); }
+        public int read(byte[] b,int o,int l) throws java.io.IOException {
+            if ( restante<=0 ) return -1;
+            raf.seek(pos); int n=raf.read(b,o,(int)Math.min(l,restante)); if(n<0) return -1; pos+=n; restante-=n; return n;
+        }
+    }
+
+    // =====================================================================
+    // DESCOMPRESSOR RAR5 (unpack50) em Java puro, portado do unrar.
+    // Cobre LZ + filtros (E8/E8E9/ARM/DELTA) + multi-bloco. RAR5 nao usa PPMd.
+    // rar_unpack5(off,size,unpSize) le a regiao comprimida do arquivo e devolve
+    // os bytes originais. Validado byte-a-byte contra o unrar em varios arquivos.
+    // =====================================================================
+    private final int RAR_BC=20, RAR_NC=306, RAR_DCB=64, RAR_LDC=16, RAR_RC=44;
+    private final int RAR_HUFF=RAR_NC+RAR_DCB+RAR_RC+RAR_LDC; // 430
+    private final int RAR_MAXQUICK=9;
+    private final int RAR_FDELTA=0, RAR_FE8=1, RAR_FE8E9=2, RAR_FARM=3;
+    private final int RAR_MAXFILTERBLK=0x400000;
+
+    private byte[] rar_in; private int rar_inAddr, rar_inBit;
+    private int rar_getbits(){ int bf=((rar_in[rar_inAddr]&0xFF)<<16)|((rar_in[rar_inAddr+1]&0xFF)<<8)|(rar_in[rar_inAddr+2]&0xFF); return (bf>>>(8-rar_inBit))&0xFFFF; }
+    private long rar_getbits32(){ long bf=((long)(rar_in[rar_inAddr]&0xFF)<<24)|((rar_in[rar_inAddr+1]&0xFF)<<16)|((rar_in[rar_inAddr+2]&0xFF)<<8)|(rar_in[rar_inAddr+3]&0xFF); bf<<=rar_inBit; bf|=(rar_in[rar_inAddr+4]&0xFF)>>>(8-rar_inBit); return bf & 0xFFFFFFFFL; }
+    private void rar_addbits(int n){ rar_inBit+=n; rar_inAddr+=rar_inBit>>3; rar_inBit&=7; }
+
+    private class RarDT { int maxNum; int[] decodeLen=new int[16]; int[] decodePos=new int[16]; int quickBits; int[] quickLen; int[] quickNum; int[] decodeNum; }
+    private RarDT rar_BD=new RarDT(), rar_LD=new RarDT(), rar_DD=new RarDT(), rar_LDD=new RarDT(), rar_RD=new RarDT();
+    private boolean rar_tablePresent, rar_lastBlock; private int rar_blockBitSize; private long rar_blockEnd;
+    private byte[] rar_win; private int rar_unpPtr; private long[] rar_oldDist=new long[4]; private int rar_lastLength;
+    private class RarFlt { long blockStart; int blockLength, type, channels; }
+    private ArrayList<RarFlt> rar_filters;
+
+    private void rar_makeTables(byte[] lengthTable, int off, RarDT dec, int size){
+        dec.maxNum=size;
+        int[] cnt=new int[16];
+        for(int i=0;i<size;i++) cnt[lengthTable[off+i]&0xf]++;
+        cnt[0]=0; dec.decodeNum=new int[size]; dec.decodePos[0]=0; dec.decodeLen[0]=0;
+        int upper=0;
+        for(int i=1;i<16;i++){ upper+=cnt[i]; dec.decodeLen[i]=upper<<(16-i); upper*=2; dec.decodePos[i]=dec.decodePos[i-1]+cnt[i-1]; }
+        int[] copyPos=new int[16]; System.arraycopy(dec.decodePos,0,copyPos,0,16);
+        for(int i=0;i<size;i++){ int cb=lengthTable[off+i]&0xf; if(cb!=0) dec.decodeNum[copyPos[cb]++]=i; }
+        dec.quickBits=(size==RAR_NC)?RAR_MAXQUICK:(RAR_MAXQUICK>3?RAR_MAXQUICK-3:0);
+        int qsize=1<<dec.quickBits; dec.quickLen=new int[qsize]; dec.quickNum=new int[qsize];
+        int curBL=1;
+        for(int code=0;code<qsize;code++){
+            int bf=code<<(16-dec.quickBits);
+            while(curBL<16 && bf>=dec.decodeLen[curBL]) curBL++;
+            dec.quickLen[code]=curBL;
+            int dist=(bf-dec.decodeLen[curBL-1])>>>(16-curBL);
+            int pos;
+            if(curBL<16 && (pos=dec.decodePos[curBL]+dist)<size) dec.quickNum[code]=dec.decodeNum[pos]; else dec.quickNum[code]=0;
+        }
+    }
+    private int rar_decodeNumber(RarDT dec){
+        int bitField=rar_getbits() & 0xfffe;
+        if(bitField<dec.decodeLen[dec.quickBits]){ int code=bitField>>>(16-dec.quickBits); rar_addbits(dec.quickLen[code]); return dec.quickNum[code]; }
+        int bits=15; for(int i=dec.quickBits+1;i<15;i++) if(bitField<dec.decodeLen[i]){ bits=i; break; }
+        rar_addbits(bits);
+        int dist=(bitField-dec.decodeLen[bits-1])>>>(16-bits);
+        int pos=dec.decodePos[bits]+dist; if(pos>=dec.maxNum) pos=0;
+        return dec.decodeNum[pos];
+    }
+    private boolean rar_readBlockHeader(){
+        rar_addbits((8-rar_inBit)&7);
+        int bf=(rar_getbits()>>8)&0xFF; rar_addbits(8);
+        int byteCount=((bf>>3)&3)+1; if(byteCount==4) return false;
+        int bbs=(bf&7)+1;
+        int saved=(rar_getbits()>>8)&0xFF; rar_addbits(8);
+        int blockSize=0; for(int i=0;i<byteCount;i++){ blockSize+=((rar_getbits()>>8)&0xFF)<<(i*8); rar_addbits(8); }
+        int cs=(0x5a^bf^blockSize^(blockSize>>8)^(blockSize>>16))&0xFF; if(cs!=saved) return false;
+        rar_lastBlock=(bf&0x40)!=0; rar_tablePresent=(bf&0x80)!=0; rar_blockBitSize=bbs;
+        rar_blockEnd=(long)rar_inAddr+blockSize-1; return true;
+    }
+    private void rar_readTables(){
+        if(!rar_tablePresent) return;
+        byte[] bitLength=new byte[RAR_BC];
+        for(int i=0;i<RAR_BC;i++){
+            int len=(rar_getbits()>>12)&0xF; rar_addbits(4);
+            if(len==15){ int zc=(rar_getbits()>>12)&0xF; rar_addbits(4); if(zc==0) bitLength[i]=15; else { zc+=2; while(zc-->0 && i<RAR_BC) bitLength[i++]=0; i--; } }
+            else bitLength[i]=(byte)len;
+        }
+        rar_makeTables(bitLength,0,rar_BD,RAR_BC);
+        byte[] table=new byte[RAR_HUFF]; int size=RAR_HUFF;
+        for(int i=0;i<size;){
+            int num=rar_decodeNumber(rar_BD);
+            if(num<16){ table[i]=(byte)num; i++; }
+            else if(num<18){ int n; if(num==16){ n=((rar_getbits()>>13)&0x7)+3; rar_addbits(3);} else { n=((rar_getbits()>>9)&0x7F)+11; rar_addbits(7);} if(i==0) return; while(n-->0 && i<size){ table[i]=table[i-1]; i++; } }
+            else { int n; if(num==18){ n=((rar_getbits()>>13)&0x7)+3; rar_addbits(3);} else { n=((rar_getbits()>>9)&0x7F)+11; rar_addbits(7);} while(n-->0 && i<size) table[i++]=0; }
+        }
+        rar_makeTables(table,0,rar_LD,RAR_NC);
+        rar_makeTables(table,RAR_NC,rar_DD,RAR_DCB);
+        rar_makeTables(table,RAR_NC+RAR_DCB,rar_LDD,RAR_LDC);
+        rar_makeTables(table,RAR_NC+RAR_DCB+RAR_LDC,rar_RD,RAR_RC);
+    }
+    private int rar_slotToLength(int slot){
+        int lbits,length=2;
+        if(slot<8){ lbits=0; length+=slot; } else { lbits=slot/4-1; length+=(4|(slot&3))<<lbits; }
+        if(lbits>0){ length+=rar_getbits()>>>(16-lbits); rar_addbits(lbits); }
+        return length;
+    }
+    private void rar_insertOldDist(long d){ rar_oldDist[3]=rar_oldDist[2]; rar_oldDist[2]=rar_oldDist[1]; rar_oldDist[1]=rar_oldDist[0]; rar_oldDist[0]=d; }
+    private void rar_copyString(int length,long distance){ int src=(int)(rar_unpPtr-distance); for(int i=0;i<length;i++){ rar_win[rar_unpPtr++]=rar_win[src++]; } }
+    private int rar_readFilterData(){ int bc=(rar_getbits()>>14)+1; rar_addbits(2); int data=0; for(int i=0;i<bc;i++){ data+=((rar_getbits()>>8)&0xFF)<<(i*8); rar_addbits(8); } return data; }
+    private int rar_rawGet4(int p){ return (rar_win[p]&0xFF)|((rar_win[p+1]&0xFF)<<8)|((rar_win[p+2]&0xFF)<<16)|((rar_win[p+3]&0xFF)<<24); }
+    private void rar_rawPut4(int v,int p){ rar_win[p]=(byte)v; rar_win[p+1]=(byte)(v>>8); rar_win[p+2]=(byte)(v>>16); rar_win[p+3]=(byte)(v>>24); }
+
+    // le uma regiao do arquivo para memoria
+    private byte[] rar_leRegiao(long off, long size) throws Exception {
+        rar_raf.seek(off); byte[] b=new byte[(int)size]; rar_raf.readFully(b); return b;
+    }
+
+    // KDF do RAR5 (PBKDF2-HMAC-SHA256). Devolve {chaveAES256(32), pswcheck(8)}.
+    // chave = XOR acumulado apos 2^lg2 iteracoes; pswcheck = dobra do acumulado +32 iteracoes.
+    private byte[][] rar_kdf(String senha, byte[] salt, int lg2) throws Exception {
+        byte[] pwd=senha.getBytes("UTF-8");
+        javax.crypto.Mac mac=javax.crypto.Mac.getInstance("HmacSHA256");
+        mac.init(new javax.crypto.spec.SecretKeySpec(pwd,"HmacSHA256"));
+        byte[] saltData=new byte[salt.length+4];
+        System.arraycopy(salt,0,saltData,0,salt.length);
+        saltData[salt.length+3]=1; // Salt || INT(1)
+        byte[] u=mac.doFinal(saltData);
+        byte[] fn=u.clone();
+        long count=1L<<lg2;
+        long[] passos={count-1,16,16}; byte[] chave=null, v2=null;
+        for ( int p=0;p<3;p++ ){
+            for ( long j=0;j<passos[p];j++ ){ u=mac.doFinal(u); for(int k=0;k<fn.length;k++) fn[k]^=u[k]; }
+            if ( p==0 ) chave=fn.clone();
+            if ( p==2 ) v2=fn.clone();
+        }
+        byte[] pc=new byte[8];
+        for ( int i=0;i<32;i++ ) pc[i%8]^=v2[i];
+        return new byte[][]{chave, pc};
+    }
+
+    // =====================================================================
+    // KDF do RAR3/RAR4 (SetKey30 do unrar). AES-128. A partir da senha
+    // (UTF-16LE) + salt(8, opcional), roda SHA-1 por 0x40000 rodadas usando a
+    // variante sha1_process_rar29 (que reescreve o buffer da senha a cada bloco
+    // completo de 64 bytes) e coleta o IV byte a byte. Devolve {chave(16), IV(16)}.
+    // Sem campo de verificacao de senha (diferente do RAR5): senha errada e
+    // detectada pelo CRC32 apos extrair.
+    // =====================================================================
+    private int[] rar_shaState=new int[5]; private long rar_shaCount; private byte[] rar_shaBuf=new byte[64];
+    private void rar_shaInit(){ rar_shaState[0]=0x67452301; rar_shaState[1]=0xEFCDAB89; rar_shaState[2]=0x98BADCFE; rar_shaState[3]=0x10325476; rar_shaState[4]=0xC3D2E1F0; rar_shaCount=0; }
+    private int rar_rotl(int v,int n){ return (v<<n)|(v>>>(32-n)); }
+    // transforma 1 bloco de 64 bytes (SHA-1 big-endian); devolve o message schedule final (p/ o writeback do rar29)
+    private int[] rar_shaTransform(byte[] b,int off){
+        int[] w=new int[16];
+        for ( int i=0;i<16;i++ ) w[i]=((b[off+i*4]&0xFF)<<24)|((b[off+i*4+1]&0xFF)<<16)|((b[off+i*4+2]&0xFF)<<8)|(b[off+i*4+3]&0xFF);
+        int a=rar_shaState[0],bb=rar_shaState[1],c=rar_shaState[2],d=rar_shaState[3],e=rar_shaState[4];
+        for ( int i=0;i<80;i++ ){
+            int f,k;
+            if ( i<20 ){ f=(bb&(c^d))^d; k=0x5A827999; }
+            else if ( i<40 ){ f=bb^c^d; k=0x6ED9EBA1; }
+            else if ( i<60 ){ f=((bb|c)&d)|(bb&c); k=0x8F1BBCDC; }
+            else { f=bb^c^d; k=0xCA62C1D6; }
+            int wi;
+            if ( i<16 ) wi=w[i];
+            else { wi=rar_rotl(w[(i+13)&15]^w[(i+8)&15]^w[(i+2)&15]^w[i&15],1); w[i&15]=wi; }
+            int t=rar_rotl(a,5)+f+e+k+wi; e=d; d=c; c=rar_rotl(bb,30); bb=a; a=t;
+        }
+        rar_shaState[0]+=a; rar_shaState[1]+=bb; rar_shaState[2]+=c; rar_shaState[3]+=d; rar_shaState[4]+=e;
+        return w;
+    }
+    private void rar_shaProcess(byte[] data,int len){
+        int j=(int)(rar_shaCount&63); rar_shaCount+=len; int i;
+        if ( j+len>63 ){
+            System.arraycopy(data,0,rar_shaBuf,j,i=64-j); rar_shaTransform(rar_shaBuf,0);
+            for ( ; i+63<len; i+=64 ) rar_shaTransform(data,i);
+            j=0;
+        } else i=0;
+        if ( len>i ) System.arraycopy(data,i,rar_shaBuf,j,len-i);
+    }
+    private void rar_shaProcessRar29(byte[] data,int len){
+        int j=(int)(rar_shaCount&63); rar_shaCount+=len; int i;
+        if ( j+len>63 ){
+            System.arraycopy(data,0,rar_shaBuf,j,i=64-j); rar_shaTransform(rar_shaBuf,0);
+            for ( ; i+63<len; i+=64 ){
+                int[] w=rar_shaTransform(data,i); // escreve o schedule de volta em data (RawPut4, LE)
+                for ( int k=0;k<16;k++ ){ int v=w[k]; data[i+k*4]=(byte)v; data[i+k*4+1]=(byte)(v>>8); data[i+k*4+2]=(byte)(v>>16); data[i+k*4+3]=(byte)(v>>24); }
+            }
+            j=0;
+        } else i=0;
+        if ( len>i ) System.arraycopy(data,i,rar_shaBuf,j,len-i);
+    }
+    // finaliza uma copia do estado atual (nao destroi o corrente) -> digest[5]
+    private int[] rar_shaDone(){
+        int[] savS=rar_shaState.clone(); long savC=rar_shaCount; byte[] savB=rar_shaBuf.clone();
+        long bits=rar_shaCount*8; int bp=(int)(rar_shaCount&0x3f);
+        rar_shaBuf[bp++]=(byte)0x80;
+        if ( bp!=56 ){
+            if ( bp>56 ){ while ( bp<64 ) rar_shaBuf[bp++]=0; bp=0; }
+            if ( bp==0 ) rar_shaTransform(rar_shaBuf,0);
+            for ( int x=bp;x<56;x++ ) rar_shaBuf[x]=0;
+        }
+        rar_shaBuf[56]=(byte)(bits>>>56); rar_shaBuf[57]=(byte)(bits>>>48); rar_shaBuf[58]=(byte)(bits>>>40); rar_shaBuf[59]=(byte)(bits>>>32);
+        rar_shaBuf[60]=(byte)(bits>>>24); rar_shaBuf[61]=(byte)(bits>>>16); rar_shaBuf[62]=(byte)(bits>>>8); rar_shaBuf[63]=(byte)bits;
+        rar_shaTransform(rar_shaBuf,0);
+        int[] dg=rar_shaState.clone();
+        rar_shaState=savS; rar_shaCount=savC; rar_shaBuf=savB;
+        return dg;
+    }
+    private byte[][] rar_setKey30(String senha, byte[] salt) throws Exception {
+        byte[] pw=senha.getBytes("UTF-16LE");
+        int rawLen=pw.length+(salt!=null?8:0);
+        byte[] raw=new byte[rawLen];
+        System.arraycopy(pw,0,raw,0,pw.length);
+        if ( salt!=null ) System.arraycopy(salt,0,raw,pw.length,8);
+        rar_shaInit();
+        byte[] iv=new byte[16];
+        final int rounds=0x40000;
+        for ( int I=0;I<rounds;I++ ){
+            rar_shaProcessRar29(raw,rawLen);
+            byte[] num={(byte)I,(byte)(I>>8),(byte)(I>>16)};
+            rar_shaProcess(num,3);
+            if ( I%(rounds/16)==0 ){ int[] dg=rar_shaDone(); iv[I/(rounds/16)]=(byte)dg[4]; } // low byte de digest[4]
+        }
+        int[] dg=rar_shaDone();
+        byte[] chave=new byte[16];
+        for ( int I=0;I<4;I++ ) for ( int J=0;J<4;J++ ) chave[I*4+J]=(byte)(dg[I]>>>(J*8));
+        return new byte[][]{chave, iv};
+    }
+    // cache: os headers -hp repetem o mesmo salt (evita refazer a KDF cara por bloco)
+    private String rar_kdfPwCache=null; private byte[] rar_kdfSaltCache=null; private byte[][] rar_kdfKICache=null;
+    private byte[][] rar_setKey30c(String senha, byte[] salt) throws Exception {
+        if ( rar_kdfKICache!=null && senha.equals(rar_kdfPwCache) && java.util.Arrays.equals(salt, rar_kdfSaltCache) )
+            return rar_kdfKICache;
+        byte[][] ki=rar_setKey30(senha, salt);
+        rar_kdfPwCache=senha; rar_kdfSaltCache=(salt==null?null:salt.clone()); rar_kdfKICache=ki;
+        return ki;
+    }
+
+    private byte[] rar_aesDecifra(byte[] chave, byte[] iv, byte[] dados) throws Exception {
+        javax.crypto.Cipher c=javax.crypto.Cipher.getInstance("AES/CBC/NoPadding");
+        c.init(javax.crypto.Cipher.DECRYPT_MODE, new javax.crypto.spec.SecretKeySpec(chave,"AES"), new javax.crypto.spec.IvParameterSpec(iv));
+        int n=dados.length - (dados.length % 16); // AES-CBC exige multiplo de 16
+        return c.doFinal(dados,0,n);
+    }
+
+    private byte[] rar_unpack5(long off, long size, long unpSize) throws Exception {
+        return rar_unpack5Buf(rar_leRegiao(off,size), unpSize);
+    }
+
+    private byte[] rar_unpack5Buf(byte[] entrada, long unpSize) {
+        rar_in=new byte[entrada.length+16];
+        System.arraycopy(entrada,0,rar_in,0,entrada.length);
+        rar_inAddr=0; rar_inBit=0;
+        rar_win=new byte[(int)unpSize]; rar_unpPtr=0;
+        rar_oldDist=new long[4]; rar_lastLength=0;
+        rar_filters=new ArrayList<RarFlt>();
+        rar_blockEnd=-1; rar_lastBlock=false;
+        boolean done=false;
+        while(rar_unpPtr<unpSize){
+            while( rar_inAddr>rar_blockEnd || (rar_inAddr==rar_blockEnd && rar_inBit>=rar_blockBitSize) ){
+                if(rar_lastBlock){ done=true; break; }
+                if(!rar_readBlockHeader()){ System.err.println("Erro, bloco RAR5 invalido."); System.exit(1); }
+                rar_readTables();
+            }
+            if(done) break;
+            int mainSlot=rar_decodeNumber(rar_LD);
+            if(mainSlot<256){ rar_win[rar_unpPtr++]=(byte)mainSlot; continue; }
+            if(mainSlot==256){
+                RarFlt f=new RarFlt();
+                f.blockStart=rar_readFilterData(); f.blockLength=rar_readFilterData();
+                if(f.blockLength>RAR_MAXFILTERBLK) f.blockLength=0;
+                f.type=rar_getbits()>>13; rar_addbits(3);
+                if(f.type==RAR_FDELTA){ f.channels=(rar_getbits()>>11)+1; rar_addbits(5); }
+                f.blockStart+=rar_unpPtr; rar_filters.add(f); continue;
+            }
+            if(mainSlot==257){ if(rar_lastLength!=0) rar_copyString(rar_lastLength, rar_oldDist[0]); continue; }
+            if(mainSlot<262){
+                int distNum=mainSlot-258; long distance=rar_oldDist[distNum];
+                for(int i=distNum;i>0;i--) rar_oldDist[i]=rar_oldDist[i-1];
+                rar_oldDist[0]=distance;
+                int length=rar_slotToLength(rar_decodeNumber(rar_RD)); rar_lastLength=length;
+                rar_copyString(length,distance); continue;
+            }
+            int length=rar_slotToLength(mainSlot-262);
+            long distance=1; int distSlot=rar_decodeNumber(rar_DD); int dbits;
+            if(distSlot<4){ dbits=0; distance+=distSlot; } else { dbits=distSlot/2-1; distance+=(long)(2|(distSlot&1))<<dbits; }
+            if(dbits>0){
+                if(dbits>=4){
+                    if(dbits>4){ distance+=(rar_getbits32()>>>(36-dbits))<<4; rar_addbits(dbits-4); }
+                    distance+=rar_decodeNumber(rar_LDD);
+                } else { distance+=rar_getbits()>>>(16-dbits); rar_addbits(dbits); }
+            }
+            if(distance>0x100){ length++; if(distance>0x2000){ length++; if(distance>0x40000) length++; } }
+            rar_insertOldDist(distance); rar_lastLength=length; rar_copyString(length,distance);
+        }
+        rar_aplicaFiltros();
+        return rar_win;
+    }
+
+    private void rar_aplicaFiltros(){
+        for(RarFlt f: rar_filters){
+            if(f.blockLength<=0) continue;
+            int start=(int)f.blockStart, len=f.blockLength, fileOffset=start;
+            if(f.type==RAR_FE8 || f.type==RAR_FE8E9){
+                int cmp2=(f.type==RAR_FE8E9)?0xe9:0xe8; final int FS=0x1000000; int p=start;
+                for(int curPos=0; curPos+4<len; ){
+                    int cur=rar_win[p++]&0xFF; curPos++;
+                    if(cur==0xe8 || cur==cmp2){
+                        int offset=(int)(((long)curPos+fileOffset)%FS); int addr=rar_rawGet4(p);
+                        if((addr & 0x80000000)!=0){ if(((addr+offset)&0x80000000)==0) rar_rawPut4(addr+FS,p); }
+                        else { if(((addr-FS)&0x80000000)!=0) rar_rawPut4(addr-offset,p); }
+                        p+=4; curPos+=4;
+                    }
+                }
+            } else if(f.type==RAR_FARM){
+                for(int curPos=0; curPos+3<len; curPos+=4){
+                    int d=start+curPos;
+                    if((rar_win[d+3]&0xFF)==0xeb){
+                        int offset=(rar_win[d]&0xFF)+(rar_win[d+1]&0xFF)*0x100+(rar_win[d+2]&0xFF)*0x10000;
+                        offset-=(fileOffset+curPos)/4;
+                        rar_win[d]=(byte)offset; rar_win[d+1]=(byte)(offset>>8); rar_win[d+2]=(byte)(offset>>16);
+                    }
+                }
+            } else if(f.type==RAR_FDELTA){
+                byte[] dst=new byte[len]; int channels=f.channels, srcPos=0;
+                for(int ch=0; ch<channels; ch++){ byte prev=0; for(int destPos=ch; destPos<len; destPos+=channels){ prev=(byte)(prev-rar_win[start+srcPos]); srcPos++; dst[destPos]=prev; } }
+                System.arraycopy(dst,0,rar_win,start,len);
+            } else {
+                System.err.println("Erro, filtro RAR5 tipo "+f.type+" nao implementado - use o 7-Zip/WinRAR.");
+                System.exit(1);
+            }
+        }
+    }
+
+    // =====================================================================
+    // DESCOMPRESSOR RAR4/RAR3 (unpack29) em Java puro, portado do unrar.
+    // Cobre LZ + PPMd (blocos de texto) + filtros da "VM" do RAR3
+    // (E8/E8E9/Itanium/Delta/RGB/Audio).
+    // A VM do unrar reconhece os 6 filtros padrao pelo CRC32 do bytecode e
+    // roda a versao nativa; fazemos o mesmo (bytecode proprio nao existe na
+    // pratica - o rar so emite os padrao).
+    // Reusa rar_getbits/rar_addbits/rar_makeTables/rar_decodeNumber e a
+    // janela rar_win do RAR5 (huffman identico; nunca rodam ao mesmo tempo).
+    // Validado byte-a-byte contra o unrar (texto, codigo, executaveis, audio,
+    // PPMd em varias ordens/memorias, blocos mistos LZ<->PPM).
+    // =====================================================================
+    private final int RAR_NC30=299, RAR_DC30=60, RAR_LDC30=17, RAR_RC30=28, RAR_BC30=20;
+    private final int RAR_HUFF30=RAR_NC30+RAR_DC30+RAR_LDC30+RAR_RC30; // 404
+    private final int RAR_LDREP30=16; // LOW_DIST_REP_COUNT
+    private final int[] RAR_LDEC30={0,1,2,3,4,5,6,7,8,10,12,14,16,20,24,28,32,40,48,56,64,80,96,112,128,160,192,224};
+    private final int[] RAR_LBITS30={0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5};
+    private final int[] RAR_SDDEC30={0,4,8,16,32,64,128,192};
+    private final int[] RAR_SDBITS30={2,2,3,4,5,6,6,6};
+    private final int[] RAR_DBLC30={4,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,14,0,12}; // DBitLengthCounts
+    private int[] rar_DDecode30=null; private int[] rar_DBits30=null;
+    private byte[] rar_oldTable30=null;
+    private int rar_prevLowDist, rar_lowDistRep;
+    private boolean rar_blockPPM=false; // bloco atual e PPMd (nao LZ)?
+    private int rar_ppmEscChar=2;
+    private String rar_nomeAtual30; // so para mensagens de erro
+
+    private byte[] rar_unpack29Buf(byte[] entrada, long unpSize, String nome){
+        rar_nomeAtual30=nome;
+        rar_in=new byte[entrada.length+16];
+        System.arraycopy(entrada,0,rar_in,0,entrada.length);
+        rar_inAddr=0; rar_inBit=0;
+        if ( rar_DDecode30 == null ){ // tabela de distancias, montada 1 vez
+            rar_DDecode30=new int[RAR_DC30]; rar_DBits30=new int[RAR_DC30];
+            int dist=0, slot=0;
+            for ( int i=0;i<RAR_DBLC30.length;i++ )
+                for ( int j=0;j<RAR_DBLC30[i];j++ ){ rar_DDecode30[slot]=dist; rar_DBits30[slot]=i; slot++; dist+=(1<<i); }
+        }
+        rar_win=new byte[(int)unpSize]; rar_unpPtr=0;
+        rar_oldDist=new long[4]; rar_lastLength=0;
+        rar_oldTable30=new byte[RAR_HUFF30];
+        rar_filters30=new ArrayList<RarFlt30>();
+        rar_f30types=new ArrayList<Integer>(); rar_f30lens=new ArrayList<Integer>();
+        rar_lastFilter30=0; rar_prevLowDist=0; rar_lowDistRep=0;
+        rar_blockPPM=false; rar_ppmEscChar=2;
+        rar_readTables30();
+        while ( rar_unpPtr < unpSize ){
+            if ( rar_blockPPM ){ // bloco PPMd: simbolos vem do modelo, nao do huffman
+                int ch=rar_ppmDecodeChar();
+                if ( ch == -1 ) rar_erroPPM();
+                if ( ch == rar_ppmEscChar ){
+                    int nextCh=rar_ppmDecodeChar();
+                    if ( nextCh == -1 ) rar_erroPPM();
+                    if ( nextCh == 0 ){ rar_readTables30(); continue; } // fim da codificacao PPM
+                    if ( nextCh == 2 ) break;                           // fim do arquivo em modo PPM
+                    if ( nextCh == 3 ){ rar_readVMCodePPM(); continue; } // filtro VM dentro do PPM
+                    if ( nextCh == 4 ){ // LZ dentro do PPM
+                        int distance=0, length=0;
+                        for ( int i=0;i<4;i++ ){
+                            int c2=rar_ppmDecodeChar();
+                            if ( c2 == -1 ) rar_erroPPM();
+                            if ( i == 3 ) length=c2; else distance=(distance<<8)+c2;
+                        }
+                        rar_copyString(length+32,distance+2); continue;
+                    }
+                    if ( nextCh == 5 ){ // RLE dentro do PPM
+                        int length=rar_ppmDecodeChar();
+                        if ( length == -1 ) rar_erroPPM();
+                        rar_copyString(length+4,1); continue;
+                    }
+                    // nextCh==1: o byte e igual ao escape, grava normal
+                }
+                rar_win[rar_unpPtr++]=(byte)ch;
+                continue;
+            }
+            int number=rar_decodeNumber(rar_LD);
+            if ( number < 256 ){ rar_win[rar_unpPtr++]=(byte)number; continue; }
+            if ( number >= 271 ){ // match normal
+                int len=RAR_LDEC30[number-271]+3; int b=RAR_LBITS30[number-271];
+                if ( b > 0 ){ len+=rar_getbits()>>>(16-b); rar_addbits(b); }
+                int dn=rar_decodeNumber(rar_DD);
+                long distance=rar_DDecode30[dn]+1; b=rar_DBits30[dn];
+                if ( b > 0 ){
+                    if ( dn > 9 ){ // distancias grandes: 4 bits baixos vem da tabela LDD
+                        if ( b > 4 ){ distance+=((long)(rar_getbits()>>>(20-b)))<<4; rar_addbits(b-4); }
+                        if ( rar_lowDistRep > 0 ){ rar_lowDistRep--; distance+=rar_prevLowDist; }
+                        else {
+                            int lowDist=rar_decodeNumber(rar_LDD);
+                            if ( lowDist == 16 ){ rar_lowDistRep=RAR_LDREP30-1; distance+=rar_prevLowDist; }
+                            else { distance+=lowDist; rar_prevLowDist=lowDist; }
+                        }
+                    } else { distance+=rar_getbits()>>>(16-b); rar_addbits(b); }
+                }
+                if ( distance >= 0x2000 ){ len++; if ( distance >= 0x40000 ) len++; }
+                rar_insertOldDist(distance); rar_lastLength=len; rar_copyString(len,distance); continue;
+            }
+            if ( number == 256 ){ if ( ! rar_readEndOfBlock30() ) break; continue; }
+            if ( number == 257 ){ rar_readVMCode(); continue; }
+            if ( number == 258 ){ if ( rar_lastLength != 0 ) rar_copyString(rar_lastLength,rar_oldDist[0]); continue; }
+            if ( number < 263 ){ // repete uma das 4 ultimas distancias
+                int distNum=number-259; long distance=rar_oldDist[distNum];
+                for ( int i=distNum;i>0;i-- ) rar_oldDist[i]=rar_oldDist[i-1];
+                rar_oldDist[0]=distance;
+                int ln=rar_decodeNumber(rar_RD);
+                int len=RAR_LDEC30[ln]+2; int b=RAR_LBITS30[ln];
+                if ( b > 0 ){ len+=rar_getbits()>>>(16-b); rar_addbits(b); }
+                rar_lastLength=len; rar_copyString(len,distance); continue;
+            }
+            // 263..270: match curto (len 2) com distancia pequena
+            int s=number-263; long distance=RAR_SDDEC30[s]+1; int b=RAR_SDBITS30[s];
+            if ( b > 0 ){ distance+=rar_getbits()>>>(16-b); rar_addbits(b); }
+            rar_insertOldDist(distance); rar_lastLength=2; rar_copyString(2,distance);
+        }
+        rar_aplicaFiltros30();
+        return rar_win;
+    }
+
+    // le as tabelas huffman do bloco RAR4 (bit-lengths em DELTA vs tabela anterior)
+    private void rar_readTables30(){
+        byte[] bitLength=new byte[RAR_BC30]; byte[] table=new byte[RAR_HUFF30];
+        rar_addbits((8-rar_inBit)&7); // byte-align
+        int bf=rar_getbits();
+        if ( (bf & 0x8000) != 0 ){ // bloco PPMd (o proprio byte do flag e o MaxOrder do modelo)
+            rar_blockPPM=true;
+            if ( ! rar_ppmDecodeInit() ) rar_erroPPM();
+            return;
+        }
+        rar_blockPPM=false;
+        rar_prevLowDist=0; rar_lowDistRep=0;
+        if ( (bf & 0x4000) == 0 ) java.util.Arrays.fill(rar_oldTable30,(byte)0);
+        rar_addbits(2);
+        for ( int i=0;i<RAR_BC30;i++ ){
+            int len=(rar_getbits()>>12)&0xF; rar_addbits(4);
+            if ( len == 15 ){
+                int zc=(rar_getbits()>>12)&0xF; rar_addbits(4);
+                if ( zc == 0 ) bitLength[i]=15;
+                else { zc+=2; while ( zc-- > 0 && i < RAR_BC30 ) bitLength[i++]=0; i--; }
+            } else bitLength[i]=(byte)len;
+        }
+        rar_makeTables(bitLength,0,rar_BD,RAR_BC30);
+        for ( int i=0;i<RAR_HUFF30; ){
+            int num=rar_decodeNumber(rar_BD);
+            if ( num < 16 ){ table[i]=(byte)((num+rar_oldTable30[i])&0xf); i++; }
+            else if ( num < 18 ){
+                int n; if ( num == 16 ){ n=((rar_getbits()>>13)&0x7)+3; rar_addbits(3); } else { n=((rar_getbits()>>9)&0x7F)+11; rar_addbits(7); }
+                if ( i == 0 ){ System.err.println("Erro, tabela huffman RAR4 invalida (arquivo corrompido?)."); System.exit(1); }
+                while ( n-- > 0 && i < RAR_HUFF30 ){ table[i]=table[i-1]; i++; }
+            } else {
+                int n; if ( num == 18 ){ n=((rar_getbits()>>13)&0x7)+3; rar_addbits(3); } else { n=((rar_getbits()>>9)&0x7F)+11; rar_addbits(7); }
+                while ( n-- > 0 && i < RAR_HUFF30 ) table[i++]=0;
+            }
+        }
+        rar_makeTables(table,0,rar_LD,RAR_NC30);
+        rar_makeTables(table,RAR_NC30,rar_DD,RAR_DC30);
+        rar_makeTables(table,RAR_NC30+RAR_DC30,rar_LDD,RAR_LDC30);
+        rar_makeTables(table,RAR_NC30+RAR_DC30+RAR_LDC30,rar_RD,RAR_RC30);
+        System.arraycopy(table,0,rar_oldTable30,0,RAR_HUFF30);
+    }
+
+    // fim de bloco: false = fim dos dados deste arquivo
+    private boolean rar_readEndOfBlock30(){
+        int bf=rar_getbits(); boolean newFile=false;
+        if ( (bf & 0x8000) != 0 ) rar_addbits(1); // so tabela nova
+        else { newFile=true; rar_addbits(2); }
+        if ( newFile ) return false;
+        rar_readTables30();
+        return true;
+    }
+
+    // ---- filtros da VM RAR3 ----
+    private final int RAR_VME8=1, RAR_VME8E9=2, RAR_VMITAN=3, RAR_VMDELTA=4, RAR_VMRGB=5, RAR_VMAUDIO=6;
+    private final int[] RAR_VMLEN={53,57,120,29,149,216};
+    private final long[] RAR_VMCRC={0xad576887L,0x3cd7e57eL,0x3769893fL,0x0e06077dL,0x1c2c5dc8L,0xbc85e701L};
+    private final int[] RAR_VMTYPE={RAR_VME8,RAR_VME8E9,RAR_VMITAN,RAR_VMDELTA,RAR_VMRGB,RAR_VMAUDIO};
+    private class RarFlt30 { long blockStart; int blockLength; int type; int[] initR; }
+    private ArrayList<RarFlt30> rar_filters30;
+    private ArrayList<Integer> rar_f30types, rar_f30lens;
+    private int rar_lastFilter30;
+
+    // segundo bit-reader, sobre o bytecode do filtro (RarVM::ReadData)
+    private byte[] rar_vmIn; private int rar_vmAddr, rar_vmBit;
+    private int rar_vmGetbits(){ int bf=((rar_vmIn[rar_vmAddr]&0xFF)<<16)|((rar_vmIn[rar_vmAddr+1]&0xFF)<<8)|(rar_vmIn[rar_vmAddr+2]&0xFF); return (bf>>>(8-rar_vmBit))&0xFFFF; }
+    private void rar_vmAddbits(int n){ rar_vmBit+=n; rar_vmAddr+=rar_vmBit>>3; rar_vmBit&=7; }
+    private long rar_vmReadData(){
+        int data=rar_vmGetbits();
+        switch ( data & 0xc000 ){
+            case 0: rar_vmAddbits(6); return (data>>10)&0xf;
+            case 0x4000:
+                if ( (data & 0x3c00) == 0 ){ long d=0xffffff00L|((data>>2)&0xff); rar_vmAddbits(14); return d; }
+                else { long d=(data>>6)&0xff; rar_vmAddbits(10); return d; }
+            case 0x8000: rar_vmAddbits(2); { long d=rar_vmGetbits(); rar_vmAddbits(16); return d; }
+            default: rar_vmAddbits(2); { long d=((long)rar_vmGetbits())<<16; rar_vmAddbits(16); d|=rar_vmGetbits(); rar_vmAddbits(16); return d; }
+        }
+    }
+
+    // filtro anunciado dentro de bloco PPM: os bytes vem do decodificador PPMd
+    private void rar_readVMCodePPM(){
+        int firstByte=rar_ppmDecodeChar(); if ( firstByte == -1 ) rar_erroPPM();
+        int length=(firstByte&7)+1;
+        if ( length == 7 ){ int b1=rar_ppmDecodeChar(); if ( b1 == -1 ) rar_erroPPM(); length=b1+7; }
+        else if ( length == 8 ){
+            int b1=rar_ppmDecodeChar(); if ( b1 == -1 ) rar_erroPPM();
+            int b2=rar_ppmDecodeChar(); if ( b2 == -1 ) rar_erroPPM();
+            length=b1*256+b2;
+        }
+        if ( length == 0 ) rar_erroPPM();
+        byte[] code=new byte[length+8];
+        for ( int i=0;i<length;i++ ){ int ch=rar_ppmDecodeChar(); if ( ch == -1 ) rar_erroPPM(); code[i]=(byte)ch; }
+        rar_addVMCode(firstByte, code);
+    }
+
+    private void rar_erroPPM(){
+        System.err.println("Erro, dados PPMd invalidos em "+rar_nomeAtual30+" (arquivo corrompido?).");
+        System.exit(1);
+    }
+
+    // simbolo 257: le o bytecode do filtro do fluxo principal e registra o filtro
+    private void rar_readVMCode(){
+        int firstByte=(rar_getbits()>>8)&0xFF; rar_addbits(8);
+        int length=(firstByte&7)+1;
+        if ( length == 7 ){ length=((rar_getbits()>>8)&0xFF)+7; rar_addbits(8); }
+        else if ( length == 8 ){ length=rar_getbits(); rar_addbits(16); }
+        if ( length == 0 ){ System.err.println("Erro, filtro RAR4 invalido (arquivo corrompido?)."); System.exit(1); }
+        byte[] code=new byte[length+8];
+        for ( int i=0;i<length;i++ ){ code[i]=(byte)((rar_getbits()>>8)&0xFF); rar_addbits(8); }
+        rar_addVMCode(firstByte, code);
+    }
+
+    private void rar_addVMCode(int firstByte, byte[] code){
+        rar_vmIn=code; rar_vmAddr=0; rar_vmBit=0;
+        int filtPos;
+        if ( (firstByte & 0x80) != 0 ){
+            filtPos=(int)rar_vmReadData();
+            if ( filtPos == 0 ){ rar_f30types.clear(); rar_f30lens.clear(); }
+            else filtPos--;
+        } else filtPos=rar_lastFilter30;
+        if ( filtPos > rar_f30types.size() || filtPos > rar_f30lens.size() ){
+            System.err.println("Erro, filtro RAR4 invalido (arquivo corrompido?)."); System.exit(1);
+        }
+        rar_lastFilter30=filtPos;
+        boolean newFilter=(filtPos == rar_f30types.size());
+        long blockStart=rar_vmReadData();
+        if ( (firstByte & 0x40) != 0 ) blockStart+=258;
+        long blockStartAbs=blockStart+rar_unpPtr; // janela linear
+        int blockLength;
+        if ( (firstByte & 0x20) != 0 ){
+            blockLength=(int)rar_vmReadData();
+            if ( newFilter ) rar_f30lens.add(0);
+            rar_f30lens.set(filtPos, blockLength);
+        } else {
+            if ( newFilter ) rar_f30lens.add(0);
+            blockLength=filtPos < rar_f30lens.size() ? rar_f30lens.get(filtPos) : 0;
+        }
+        int[] initR=new int[7]; initR[4]=blockLength;
+        if ( (firstByte & 0x10) != 0 ){ // registradores iniciais
+            int mask=(rar_vmGetbits()>>9)&0x7F; rar_vmAddbits(7);
+            for ( int i=0;i<7;i++ ) if ( (mask & (1<<i)) != 0 ) initR[i]=(int)rar_vmReadData();
+        }
+        int type;
+        if ( newFilter ){
+            int vmCodeSize=(int)rar_vmReadData();
+            byte[] vmCode=new byte[vmCodeSize];
+            for ( int i=0;i<vmCodeSize;i++ ){ vmCode[i]=(byte)((rar_vmGetbits()>>8)&0xFF); rar_vmAddbits(8); }
+            java.util.zip.CRC32 c=new java.util.zip.CRC32(); c.update(vmCode);
+            long crc=c.getValue()&0xFFFFFFFFL;
+            type=0;
+            for ( int i=0;i<RAR_VMCRC.length;i++ )
+                if ( RAR_VMCRC[i] == crc && RAR_VMLEN[i] == vmCode.length ){ type=RAR_VMTYPE[i]; break; }
+            rar_f30types.add(type);
+        } else type=rar_f30types.get(filtPos);
+        RarFlt30 f=new RarFlt30();
+        f.blockStart=blockStartAbs; f.blockLength=blockLength; f.type=type; f.initR=initR;
+        rar_filters30.add(f);
+    }
+
+    // memoria da VM (Mem) para os filtros padrao
+    private byte[] rar_vmM;
+    private int rar_vmGet4(int p){ return (rar_vmM[p]&0xFF)|((rar_vmM[p+1]&0xFF)<<8)|((rar_vmM[p+2]&0xFF)<<16)|((rar_vmM[p+3]&0xFF)<<24); }
+    private void rar_vmPut4(int v,int p){ rar_vmM[p]=(byte)v; rar_vmM[p+1]=(byte)(v>>8); rar_vmM[p+2]=(byte)(v>>16); rar_vmM[p+3]=(byte)(v>>24); }
+    // acesso a campos de bits (filtro Itanium)
+    private int rar_itGet(int off,int bitPos,int bitCount){ int a=off+bitPos/8,b=bitPos&7; int bf=(rar_vmM[a]&0xFF)|((rar_vmM[a+1]&0xFF)<<8)|((rar_vmM[a+2]&0xFF)<<16)|((rar_vmM[a+3]&0xFF)<<24); bf>>>=b; return bf & (int)(0xffffffffL>>>(32-bitCount)); }
+    private void rar_itSet(int off,int bitField,int bitPos,int bitCount){ int a=off+bitPos/8,b=bitPos&7; int andMask=(int)(0xffffffffL>>>(32-bitCount)); andMask=~(andMask<<b); bitField<<=b; for ( int i=0;i<4;i++ ){ rar_vmM[a+i]&=andMask; rar_vmM[a+i]|=bitField; andMask=(andMask>>>8)|0xff000000; bitField>>>=8; } }
+
+    // aplica os filtros coletados sobre a janela (ExecuteStandardFilter do unrar)
+    private void rar_aplicaFiltros30(){
+        for ( RarFlt30 f: rar_filters30 ){
+            int start=(int)f.blockStart, len=f.blockLength;
+            if ( len <= 0 || start < 0 || start+len > rar_win.length ) continue;
+            rar_vmM=new byte[2*len+32]; System.arraycopy(rar_win,start,rar_vmM,0,len);
+            int[] R=f.initR.clone(); R[4]=len; R[6]=start; // R[6]=FileOffset (janela linear)
+            boolean segundaMetade=false; // filtros que escrevem em Mem+len
+            if ( f.type == RAR_VME8 || f.type == RAR_VME8E9 ){
+                int cmp2=(f.type==RAR_VME8E9)?0xe9:0xe8; final int FS=0x1000000;
+                int dataSize=R[4], fileOffset=R[6], d=0;
+                if ( dataSize >= 4 )
+                    for ( int curPos=0; curPos<dataSize-4; ){
+                        int cur=rar_vmM[d++]&0xFF; curPos++;
+                        if ( cur == 0xe8 || cur == cmp2 ){
+                            int offset=curPos+fileOffset; int addr=rar_vmGet4(d);
+                            if ( (addr & 0x80000000) != 0 ){ if ( ((addr+offset) & 0x80000000) == 0 ) rar_vmPut4(addr+FS,d); }
+                            else { if ( ((addr-FS) & 0x80000000) != 0 ) rar_vmPut4(addr-offset,d); }
+                            d+=4; curPos+=4;
+                        }
+                    }
+            } else if ( f.type == RAR_VMITAN ){
+                int dataSize=R[4], fileOffset=R[6]>>4, d=0, curPos=0;
+                int[] masks={4,4,6,6,0,0,7,7,4,4,0,0,4,4,0,0};
+                while ( curPos < dataSize-21 ){
+                    int b=(rar_vmM[d]&0x1f)-0x10;
+                    if ( b >= 0 ){
+                        int cmdMask=masks[b];
+                        if ( cmdMask != 0 )
+                            for ( int i=0;i<=2;i++ )
+                                if ( (cmdMask & (1<<i)) != 0 ){
+                                    int sp=i*41+5; int opType=rar_itGet(d,sp+37,4);
+                                    if ( opType == 5 ){ int off=rar_itGet(d,sp+13,20); rar_itSet(d,(off-fileOffset)&0xfffff,sp+13,20); }
+                                }
+                    }
+                    d+=16; curPos+=16; fileOffset++;
+                }
+            } else if ( f.type == RAR_VMDELTA ){
+                int dataSize=R[4], channels=R[0], srcPos=0, border=dataSize*2; segundaMetade=true;
+                if ( channels <= 0 ){ System.err.println("Erro, filtro delta RAR4 invalido (arquivo corrompido?)."); System.exit(1); }
+                for ( int ch=0;ch<channels;ch++ ){
+                    byte prev=0;
+                    for ( int destPos=dataSize+ch; destPos<border; destPos+=channels ){ prev=(byte)(prev-rar_vmM[srcPos++]); rar_vmM[destPos]=prev; }
+                }
+            } else if ( f.type == RAR_VMRGB ){
+                int dataSize=R[4], width=R[0]-3, posR=R[1]; segundaMetade=true;
+                if ( dataSize < 3 || width > dataSize || width < 0 || posR > 2 || posR < 0 ){ System.err.println("Erro, filtro rgb RAR4 invalido (arquivo corrompido?)."); System.exit(1); }
+                int src=0, dest=dataSize; final int CH=3;
+                for ( int ch=0;ch<CH;ch++ ){
+                    int prev=0;
+                    for ( int i=ch;i<dataSize;i+=CH ){
+                        int pred;
+                        if ( i >= width+3 ){
+                            int up=dest+i-width; int ub=rar_vmM[up]&0xFF, ul=rar_vmM[up-3]&0xFF;
+                            pred=prev+ub-ul;
+                            int pa=Math.abs(pred-prev), pb=Math.abs(pred-ub), pc=Math.abs(pred-ul);
+                            if ( pa<=pb && pa<=pc ) pred=prev; else if ( pb<=pc ) pred=ub; else pred=ul;
+                        } else pred=prev;
+                        prev=(pred-(rar_vmM[src++]&0xFF))&0xFF; rar_vmM[dest+i]=(byte)prev;
+                    }
+                }
+                for ( int i=posR, bd=dataSize-2; i<bd; i+=3 ){
+                    int g=rar_vmM[dest+i+1]&0xFF;
+                    rar_vmM[dest+i]=(byte)((rar_vmM[dest+i]&0xFF)+g);
+                    rar_vmM[dest+i+2]=(byte)((rar_vmM[dest+i+2]&0xFF)+g);
+                }
+            } else if ( f.type == RAR_VMAUDIO ){
+                int dataSize=R[4], channels=R[0], src=0, dest=dataSize; segundaMetade=true;
+                if ( channels <= 0 ){ System.err.println("Erro, filtro audio RAR4 invalido (arquivo corrompido?)."); System.exit(1); }
+                for ( int ch=0;ch<channels;ch++ ){
+                    int prevByte=0, prevDelta=0; int[] dif=new int[7]; int d1=0,d2=0,d3; int k1=0,k2=0,k3=0;
+                    for ( int i=ch, bc=0; i<dataSize; i+=channels, bc++ ){
+                        d3=d2; d2=prevDelta-d1; d1=prevDelta;
+                        int pred=8*prevByte+k1*d1+k2*d2+k3*d3; pred=(pred>>3)&0xff;
+                        int cur=rar_vmM[src++]&0xFF; pred=(pred-cur)&0xff; rar_vmM[dest+i]=(byte)pred;
+                        prevDelta=(byte)(pred-prevByte); prevByte=pred;
+                        int dd=((byte)cur)<<3;
+                        dif[0]+=Math.abs(dd); dif[1]+=Math.abs(dd-d1); dif[2]+=Math.abs(dd+d1);
+                        dif[3]+=Math.abs(dd-d2); dif[4]+=Math.abs(dd+d2); dif[5]+=Math.abs(dd-d3); dif[6]+=Math.abs(dd+d3);
+                        if ( (bc & 0x1f) == 0 ){
+                            int minDif=dif[0], num=0; dif[0]=0;
+                            for ( int j=1;j<7;j++ ){ if ( dif[j] < minDif ){ minDif=dif[j]; num=j; } dif[j]=0; }
+                            switch ( num ){
+                                case 1: if ( k1 >= -16 ) k1--; break;
+                                case 2: if ( k1 <  16 ) k1++; break;
+                                case 3: if ( k2 >= -16 ) k2--; break;
+                                case 4: if ( k2 <  16 ) k2++; break;
+                                case 5: if ( k3 >= -16 ) k3--; break;
+                                case 6: if ( k3 <  16 ) k3++; break;
+                            }
+                        }
+                    }
+                }
+            } else {
+                System.err.println("Erro, filtro RAR4 nao reconhecido (bytecode fora da lista padrao) - use o 7-Zip/WinRAR.");
+                System.exit(1);
+            }
+            System.arraycopy(rar_vmM, segundaMetade?len:0, rar_win, start, len);
+        }
+    }
+    // =====================================================================
+    // PPMd variante H (Dmitry Shkarin, via unrar). Heap emulado em byte[]:
+    // ponteiro = offset int, null = 0. HeapStart no offset 12 (offset 0 e a
+    // "s0" do GlueFreeBlocks, que precisa de um no fora da lista real).
+    // Structs: STATE 6B {Symbol@0, Freq@1, Successor@2(4B LE)} stride 6;
+    // CONTEXT 12B {NumStats@0(2B), SummFreq@2(2B)+Stats@4(4B) | OneState@2(6B), Suffix@8(4B)};
+    // MEM_BLK 12B {Stamp@0(2B), NU@2(2B), next@4(4B), prev@8(4B)}.
+    // =====================================================================
+    private final int RAR_PPM_MAXO=64, RAR_PPM_INT=128, RAR_PPM_BIN=16384, RAR_PPM_MAXFREQ=124;
+    private final int RAR_PPM_TOP=1<<24, RAR_PPM_BOT=1<<15, RAR_PPM_UNIT=12, RAR_PPM_NIDX=38;
+    private final int[] RAR_PPM_IBE={0x3CDD,0x1F3F,0x59BF,0x48F3,0x64A1,0x5ABC,0x6632,0x6051}; // InitBinEsc
+    private final int[] RAR_PPM_EXPESC={25,14,9,7,5,5,4,4,4,3,3,3,2,2,2,2};                     // ExpEscape
+
+    // heap + acessores
+    private byte[] rar_heap=null;
+    private int rar_pU8(int p){ return rar_heap[p]&0xFF; }
+    private int rar_pU16(int p){ return (rar_heap[p]&0xFF)|((rar_heap[p+1]&0xFF)<<8); }
+    private void rar_pW16(int p,int v){ rar_heap[p]=(byte)v; rar_heap[p+1]=(byte)(v>>8); }
+    private int rar_pI32(int p){ return (rar_heap[p]&0xFF)|((rar_heap[p+1]&0xFF)<<8)|((rar_heap[p+2]&0xFF)<<16)|((rar_heap[p+3]&0xFF)<<24); }
+    private void rar_pW32(int p,int v){ rar_heap[p]=(byte)v; rar_heap[p+1]=(byte)(v>>8); rar_heap[p+2]=(byte)(v>>16); rar_heap[p+3]=(byte)(v>>24); }
+    private void rar_swap6(int a,int b){ for(int i=0;i<6;i++){ byte t=rar_heap[a+i]; rar_heap[a+i]=rar_heap[b+i]; rar_heap[b+i]=t; } }
+    // CONTEXT: NumStats@0, SummFreq@2, Stats@4, Suffix@8; OneState = c+2
+    private int rar_cNS(int c){ return rar_pU16(c); }
+    private void rar_cWNS(int c,int v){ rar_pW16(c,v); }
+    private int rar_cSF(int c){ return rar_pU16(c+2); }
+    private void rar_cWSF(int c,int v){ rar_pW16(c+2,v); }
+    private int rar_cStats(int c){ return rar_pI32(c+4); }
+    private void rar_cWStats(int c,int v){ rar_pW32(c+4,v); }
+    private int rar_cSuffix(int c){ return rar_pI32(c+8); }
+
+    // ---- SubAllocator ----
+    private int rar_ppmSASize=0, rar_ppmLoUnit, rar_ppmHiUnit, rar_ppmText, rar_ppmUnitsStart, rar_ppmHeapEnd, rar_ppmFakeUS, rar_ppmGlueCount;
+    private int[] rar_ppmFreeList=new int[RAR_PPM_NIDX];
+    private int[] rar_ppmI2U=new int[RAR_PPM_NIDX]; int[] rar_ppmU2I=new int[128];
+
+    private void rar_ppmInsertNode(int p,int indx){ rar_pW32(p, rar_ppmFreeList[indx]); rar_ppmFreeList[indx]=p; }
+    private int rar_ppmRemoveNode(int indx){ int r=rar_ppmFreeList[indx]; rar_ppmFreeList[indx]=rar_pI32(r); return r; }
+    private void rar_ppmSplitBlock(int pv,int oldIndx,int newIndx){
+        int uDiff=rar_ppmI2U[oldIndx]-rar_ppmI2U[newIndx];
+        int p=pv+RAR_PPM_UNIT*rar_ppmI2U[newIndx];
+        int i=rar_ppmU2I[uDiff-1];
+        if(rar_ppmI2U[i]!=uDiff){ i--; rar_ppmInsertNode(p,i); int u=rar_ppmI2U[i]; p+=RAR_PPM_UNIT*u; uDiff-=u; }
+        rar_ppmInsertNode(p,rar_ppmU2I[uDiff-1]);
+    }
+    private boolean rar_ppmStartSubAlloc(int saSizeMB){
+        int t=saSizeMB<<20;
+        if(rar_ppmSASize==t) return true;
+        int allocSize=t/RAR_PPM_UNIT*RAR_PPM_UNIT+2*RAR_PPM_UNIT;
+        rar_heap=new byte[12+allocSize]; // HeapStart=12
+        rar_ppmHeapEnd=12+allocSize-RAR_PPM_UNIT;
+        rar_ppmSASize=t;
+        return true;
+    }
+    private void rar_ppmInitSubAlloc(){
+        java.util.Arrays.fill(rar_ppmFreeList,0);
+        rar_ppmText=12;
+        int size2=RAR_PPM_UNIT*(rar_ppmSASize/8/RAR_PPM_UNIT*7);
+        int size1=rar_ppmSASize-size2;
+        int realSize1=size1/RAR_PPM_UNIT*RAR_PPM_UNIT+RAR_PPM_UNIT;
+        rar_ppmLoUnit=rar_ppmUnitsStart=12+realSize1;
+        rar_ppmFakeUS=12+size1;
+        rar_ppmHiUnit=rar_ppmLoUnit+size2;
+        int i,k;
+        for(i=0,k=1;i<4;i++,k+=1) rar_ppmI2U[i]=k;
+        for(k++;i<8;i++,k+=2) rar_ppmI2U[i]=k;
+        for(k++;i<12;i++,k+=3) rar_ppmI2U[i]=k;
+        for(k++;i<RAR_PPM_NIDX;i++,k+=4) rar_ppmI2U[i]=k;
+        rar_ppmGlueCount=0;
+        for(k=0,i=0;k<128;k++){ if(rar_ppmI2U[i]<k+1) i++; rar_ppmU2I[k]=i; }
+    }
+    private void rar_ppmGlueFreeBlocks(){
+        final int s0=0; // no "fora do heap": usa os offsets 0..11, nunca usados por dados
+        if(rar_ppmLoUnit!=rar_ppmHiUnit) rar_heap[rar_ppmLoUnit]=0;
+        rar_pW32(s0+4,s0); rar_pW32(s0+8,s0);
+        for(int i=0;i<RAR_PPM_NIDX;i++)
+            while(rar_ppmFreeList[i]!=0){
+                int p=rar_ppmRemoveNode(i);
+                // p->insertAt(&s0)
+                int nx=rar_pI32(s0+4);
+                rar_pW32(p+8,s0); rar_pW32(p+4,nx); rar_pW32(nx+8,p); rar_pW32(s0+4,p);
+                rar_pW16(p,0xFFFF); rar_pW16(p+2,rar_ppmI2U[i]);
+            }
+        for(int p=rar_pI32(s0+4); p!=s0; p=rar_pI32(p+4)){
+            while(true){
+                int p1=p+RAR_PPM_UNIT*rar_pU16(p+2);
+                if(rar_pU16(p1)!=0xFFFF) break;
+                if(rar_pU16(p+2)+rar_pU16(p1+2)>=0x10000) break;
+                int pr=rar_pI32(p1+8), nx=rar_pI32(p1+4);
+                rar_pW32(pr+4,nx); rar_pW32(nx+8,pr); // p1->remove()
+                rar_pW16(p+2, rar_pU16(p+2)+rar_pU16(p1+2));
+            }
+        }
+        while(true){
+            int p=rar_pI32(s0+4);
+            if(p==s0) break;
+            int pr=rar_pI32(p+8), nx=rar_pI32(p+4);
+            rar_pW32(pr+4,nx); rar_pW32(nx+8,pr); // p->remove()
+            int sz=rar_pU16(p+2);
+            while(sz>128){ rar_ppmInsertNode(p,RAR_PPM_NIDX-1); sz-=128; p+=RAR_PPM_UNIT*128; }
+            int i=rar_ppmU2I[sz-1];
+            if(rar_ppmI2U[i]!=sz){ i--; int k=sz-rar_ppmI2U[i]; rar_ppmInsertNode(p+RAR_PPM_UNIT*(sz-k),k-1); }
+            rar_ppmInsertNode(p,i);
+        }
+    }
+    private int rar_ppmAllocUnitsRare(int indx){
+        if(rar_ppmGlueCount==0){
+            rar_ppmGlueCount=255;
+            rar_ppmGlueFreeBlocks();
+            if(rar_ppmFreeList[indx]!=0) return rar_ppmRemoveNode(indx);
+        }
+        int i=indx;
+        do{
+            if(++i==RAR_PPM_NIDX){
+                rar_ppmGlueCount--;
+                int ib=RAR_PPM_UNIT*rar_ppmI2U[indx];
+                if(rar_ppmFakeUS-rar_ppmText>ib){ rar_ppmFakeUS-=ib; rar_ppmUnitsStart-=ib; return rar_ppmUnitsStart; }
+                return 0;
+            }
+        }while(rar_ppmFreeList[i]==0);
+        int ret=rar_ppmRemoveNode(i);
+        rar_ppmSplitBlock(ret,i,indx);
+        return ret;
+    }
+    private int rar_ppmAllocUnits(int nu){
+        int indx=rar_ppmU2I[nu-1];
+        if(rar_ppmFreeList[indx]!=0) return rar_ppmRemoveNode(indx);
+        int ret=rar_ppmLoUnit;
+        rar_ppmLoUnit+=RAR_PPM_UNIT*rar_ppmI2U[indx];
+        if(rar_ppmLoUnit<=rar_ppmHiUnit) return ret;
+        rar_ppmLoUnit-=RAR_PPM_UNIT*rar_ppmI2U[indx];
+        return rar_ppmAllocUnitsRare(indx);
+    }
+    private int rar_ppmAllocContext(){
+        if(rar_ppmHiUnit!=rar_ppmLoUnit) return (rar_ppmHiUnit-=RAR_PPM_UNIT);
+        if(rar_ppmFreeList[0]!=0) return rar_ppmRemoveNode(0);
+        return rar_ppmAllocUnitsRare(0);
+    }
+    private int rar_ppmExpandUnits(int old,int oldNU){
+        int i0=rar_ppmU2I[oldNU-1], i1=rar_ppmU2I[oldNU];
+        if(i0==i1) return old;
+        int ptr=rar_ppmAllocUnits(oldNU+1);
+        if(ptr!=0){ System.arraycopy(rar_heap,old,rar_heap,ptr,RAR_PPM_UNIT*oldNU); rar_ppmInsertNode(old,i0); }
+        return ptr;
+    }
+    private int rar_ppmShrinkUnits(int old,int oldNU,int newNU){
+        int i0=rar_ppmU2I[oldNU-1], i1=rar_ppmU2I[newNU-1];
+        if(i0==i1) return old;
+        if(rar_ppmFreeList[i1]!=0){
+            int ptr=rar_ppmRemoveNode(i1);
+            System.arraycopy(rar_heap,old,rar_heap,ptr,RAR_PPM_UNIT*newNU);
+            rar_ppmInsertNode(old,i0);
+            return ptr;
+        }
+        rar_ppmSplitBlock(old,i0,i1);
+        return old;
+    }
+    private void rar_ppmFreeUnits(int ptr,int oldNU){ rar_ppmInsertNode(ptr,rar_ppmU2I[oldNU-1]); }
+
+    // ---- RangeCoder (Subbotin, carryless; tudo uint32 em int) ----
+    private int rar_rcLow, rar_rcCode, rar_rcRange, rar_rcSubLow, rar_rcSubHigh, rar_rcSubScale;
+    private int rar_ppmGetChar(){ return rar_in[rar_inAddr++]&0xFF; }
+    private void rar_rcInitDecoder(){
+        rar_rcLow=rar_rcCode=0; rar_rcRange=0xffffffff;
+        for(int i=0;i<4;i++) rar_rcCode=(rar_rcCode<<8)|rar_ppmGetChar();
+    }
+    private int rar_rcGetCount(){
+        rar_rcRange=Integer.divideUnsigned(rar_rcRange,rar_rcSubScale);
+        return Integer.divideUnsigned(rar_rcCode-rar_rcLow,rar_rcRange);
+    }
+    private int rar_rcGetShiftCount(int shift){
+        rar_rcRange>>>=shift;
+        return Integer.divideUnsigned(rar_rcCode-rar_rcLow,rar_rcRange);
+    }
+    private void rar_rcDecode(){ rar_rcLow+=rar_rcRange*rar_rcSubLow; rar_rcRange*=(rar_rcSubHigh-rar_rcSubLow); }
+    private void rar_rcNormalize(){
+        while(true){
+            if( ((rar_rcLow^(rar_rcLow+rar_rcRange))&0xffffffffL) >= RAR_PPM_TOP ){
+                if( (rar_rcRange&0xffffffffL) < RAR_PPM_BOT ) rar_rcRange=(-rar_rcLow)&(RAR_PPM_BOT-1);
+                else break;
+            }
+            rar_rcCode=(rar_rcCode<<8)|rar_ppmGetChar(); rar_rcRange<<=8; rar_rcLow<<=8;
+        }
+    }
+
+    // ---- ModelPPM ----
+    private int rar_ppmMinCtx, rar_ppmMaxCtx, rar_ppmFoundState;
+    private int rar_ppmNumMasked, rar_ppmInitEsc, rar_ppmOrderFall, rar_ppmMaxOrder, rar_ppmRunLength, rar_ppmInitRL;
+    private int[] rar_ppmCharMask=new int[256];
+    private int[] rar_ppmNS2I=new int[256], rar_ppmNS2BSI=new int[256], rar_ppmHB2F=new int[256];
+    private int rar_ppmEscCount, rar_ppmPrevSucc, rar_ppmHiBitsFlag;
+    int[][] rar_ppmBinSumm=new int[128][64];
+    // SEE2: 25*16 contextos + dummy no indice 400
+    private int[] rar_see2Summ=new int[401]; int[] rar_see2Shift=new int[401]; int[] rar_see2Count=new int[401];
+    private final int RAR_SEE2_DUMMY=400;
+
+    private int rar_see2Mean(int x){
+        int r=(rar_see2Summ[x]&0xFFFF)>>>rar_see2Shift[x];
+        rar_see2Summ[x]=(rar_see2Summ[x]-r)&0xFFFF;
+        return r+((r==0)?1:0);
+    }
+    private void rar_see2Update(int x){
+        if(rar_see2Shift[x]<7 && --rar_see2Count[x]==0){
+            rar_see2Summ[x]=(rar_see2Summ[x]<<1)&0xFFFF;
+            rar_see2Count[x]=3<<rar_see2Shift[x]++;
+        }
+    }
+
+    private void rar_ppmRestartModel(){
+        java.util.Arrays.fill(rar_ppmCharMask,0);
+        rar_ppmInitSubAlloc();
+        rar_ppmInitRL=-(rar_ppmMaxOrder<12?rar_ppmMaxOrder:12)-1;
+        rar_ppmMinCtx=rar_ppmMaxCtx=rar_ppmAllocContext();
+        rar_pW32(rar_ppmMinCtx+8,0); // Suffix=null
+        rar_ppmOrderFall=rar_ppmMaxOrder;
+        rar_cWNS(rar_ppmMinCtx,256); rar_cWSF(rar_ppmMinCtx,256+1);
+        int stats=rar_ppmAllocUnits(256/2);
+        rar_ppmFoundState=stats; rar_cWStats(rar_ppmMinCtx,stats);
+        rar_ppmRunLength=rar_ppmInitRL; rar_ppmPrevSucc=0;
+        for(int i=0;i<256;i++){ rar_heap[stats+6*i]=(byte)i; rar_heap[stats+6*i+1]=1; rar_pW32(stats+6*i+2,0); }
+        for(int i=0;i<128;i++)
+            for(int k=0;k<8;k++)
+                for(int m=0;m<64;m+=8)
+                    rar_ppmBinSumm[i][k+m]=RAR_PPM_BIN-RAR_PPM_IBE[k]/(i+2);
+        for(int i=0;i<25;i++)
+            for(int k=0;k<16;k++){ int x=i*16+k; rar_see2Shift[x]=7-4; rar_see2Summ[x]=(5*i+10)<<rar_see2Shift[x]; rar_see2Count[x]=4; }
+    }
+
+    private void rar_ppmStartModel(int maxOrder){
+        rar_ppmEscCount=1;
+        rar_ppmMaxOrder=maxOrder;
+        rar_ppmRestartModel();
+        rar_ppmNS2BSI[0]=0; rar_ppmNS2BSI[1]=2;
+        for(int i=2;i<11;i++) rar_ppmNS2BSI[i]=4;
+        for(int i=11;i<256;i++) rar_ppmNS2BSI[i]=6;
+        for(int i=0;i<3;i++) rar_ppmNS2I[i]=i;
+        int m=3,k=1,step=1;
+        for(int i=3;i<256;i++){
+            rar_ppmNS2I[i]=m;
+            if(--k==0){ k=++step; m++; }
+        }
+        for(int i=0;i<0x40;i++) rar_ppmHB2F[i]=0;
+        for(int i=0x40;i<0x100;i++) rar_ppmHB2F[i]=8;
+        rar_see2Shift[RAR_SEE2_DUMMY]=7;
+    }
+
+    // cria contexto filho: NumStats=1, OneState=(sym,freq,succ), Suffix=pc; pStats->Successor=filho
+    private int rar_ppmCreateChild(int pc,int pStats,int sym,int freq,int succ){
+        int c=rar_ppmAllocContext();
+        if(c!=0){
+            rar_cWNS(c,1);
+            rar_heap[c+2]=(byte)sym; rar_heap[c+3]=(byte)freq; rar_pW32(c+4,succ);
+            rar_pW32(c+8,pc);
+            rar_pW32(pStats+2,c);
+        }
+        return c;
+    }
+
+    private void rar_ppmRescale(int ctx){
+        int oldNS=rar_cNS(ctx), i=oldNS-1;
+        int stats=rar_cStats(ctx);
+        for(int p=rar_ppmFoundState;p!=stats;p-=6) rar_swap6(p,p-6);
+        rar_heap[stats+1]=(byte)(rar_pU8(stats+1)+4);
+        rar_cWSF(ctx,rar_cSF(ctx)+4);
+        int escFreq=rar_cSF(ctx)-rar_pU8(stats+1);
+        int adder=(rar_ppmOrderFall!=0)?1:0;
+        int p=stats;
+        int nf=(rar_pU8(p+1)+adder)>>1;
+        rar_heap[p+1]=(byte)nf;
+        int summ=nf;
+        do{
+            p+=6;
+            escFreq-=rar_pU8(p+1);
+            nf=(rar_pU8(p+1)+adder)>>1;
+            rar_heap[p+1]=(byte)nf;
+            summ+=nf;
+            if(rar_pU8(p+1)>rar_pU8(p-6+1)){
+                byte[] t=new byte[6]; System.arraycopy(rar_heap,p,t,0,6);
+                int p1=p;
+                do{ System.arraycopy(rar_heap,p1-6,rar_heap,p1,6); p1-=6; }while(p1!=stats && (t[1]&0xFF)>rar_pU8(p1-6+1));
+                System.arraycopy(t,0,rar_heap,p1,6);
+            }
+        }while(--i!=0);
+        int numStats=oldNS;
+        if(rar_pU8(p+1)==0){
+            i=0;
+            do{ i++; p-=6; }while(rar_pU8(p+1)==0);
+            escFreq+=i;
+            numStats-=i;
+            if(numStats==1){
+                byte[] t=new byte[6]; System.arraycopy(rar_heap,stats,t,0,6);
+                int tf=t[1]&0xFF;
+                do{ tf-=(tf>>1); escFreq>>=1; }while(escFreq>1);
+                t[1]=(byte)tf;
+                rar_ppmFreeUnits(stats,(oldNS+1)>>1);
+                rar_ppmFoundState=ctx+2; // OneState
+                System.arraycopy(t,0,rar_heap,ctx+2,6);
+                rar_cWNS(ctx,1);
+                return;
+            }
+        }
+        rar_cWNS(ctx,numStats);
+        escFreq-=(escFreq>>1);
+        rar_cWSF(ctx,summ+escFreq);
+        int n0=(oldNS+1)>>1, n1=(numStats+1)>>1;
+        if(n0!=n1) rar_cWStats(ctx, rar_ppmShrinkUnits(stats,n0,n1));
+        rar_ppmFoundState=rar_cStats(ctx);
+    }
+
+    private int rar_ppmCreateSuccessors(boolean skip,int p1){
+        int pc=rar_ppmMinCtx, upBranch=rar_pI32(rar_ppmFoundState+2);
+        int[] ps=new int[RAR_PPM_MAXO]; int pps=0;
+        int fsSym=rar_pU8(rar_ppmFoundState);
+        boolean noLoop=false;
+        if(!skip){
+            ps[pps++]=rar_ppmFoundState;
+            if(rar_cSuffix(pc)==0) noLoop=true;
+        }
+        if(!noLoop){
+            int p; boolean entry;
+            if(p1!=0){ p=p1; pc=rar_cSuffix(pc); entry=true; }
+            else { p=0; entry=false; }
+            do{
+                if(!entry){
+                    pc=rar_cSuffix(pc);
+                    if(rar_cNS(pc)!=1){
+                        p=rar_cStats(pc);
+                        if(rar_pU8(p)!=fsSym){ do{ p+=6; }while(rar_pU8(p)!=fsSym); }
+                    } else p=pc+2;
+                }
+                entry=false;
+                if(rar_pI32(p+2)!=upBranch){ pc=rar_pI32(p+2); break; }
+                if(pps>=RAR_PPM_MAXO) return 0;
+                ps[pps++]=p;
+            }while(rar_cSuffix(pc)!=0);
+        }
+        if(pps==0) return pc;
+        int upSym=rar_pU8(upBranch);
+        int upSucc=upBranch+1;
+        int upFreq;
+        if(rar_cNS(pc)!=1){
+            if(pc<=rar_ppmText) return 0;
+            int p=rar_cStats(pc);
+            if(rar_pU8(p)!=upSym){ do{ p+=6; }while(rar_pU8(p)!=upSym); }
+            int cf=rar_pU8(p+1)-1;
+            int s0=rar_cSF(pc)-rar_cNS(pc)-cf;
+            upFreq=1+((2*cf<=s0)?((5*cf>s0)?1:0):((2*cf+3*s0-1)/(2*s0)));
+        } else upFreq=rar_pU8(pc+3); // OneState.Freq
+        do{
+            pc=rar_ppmCreateChild(pc,ps[--pps],upSym,upFreq,upSucc);
+            if(pc==0) return 0;
+        }while(pps!=0);
+        return pc;
+    }
+
+    private void rar_ppmUpdateModel(){
+        int fsSym=rar_pU8(rar_ppmFoundState), fsFreq=rar_pU8(rar_ppmFoundState+1), fsSucc=rar_pI32(rar_ppmFoundState+2);
+        int p=0, pc;
+        if(fsFreq<RAR_PPM_MAXFREQ/4 && (pc=rar_cSuffix(rar_ppmMinCtx))!=0){
+            if(rar_cNS(pc)!=1){
+                p=rar_cStats(pc);
+                if(rar_pU8(p)!=fsSym){
+                    do{ p+=6; }while(rar_pU8(p)!=fsSym);
+                    if(rar_pU8(p+1)>=rar_pU8(p-6+1)){ rar_swap6(p,p-6); p-=6; }
+                }
+                if(rar_pU8(p+1)<RAR_PPM_MAXFREQ-9){ rar_heap[p+1]=(byte)(rar_pU8(p+1)+2); rar_cWSF(pc,rar_cSF(pc)+2); }
+            }else{
+                p=pc+2;
+                if(rar_pU8(p+1)<32) rar_heap[p+1]=(byte)(rar_pU8(p+1)+1);
+            }
+        }
+        if(rar_ppmOrderFall==0){
+            int c=rar_ppmCreateSuccessors(true,p);
+            rar_pW32(rar_ppmFoundState+2,c);
+            rar_ppmMinCtx=rar_ppmMaxCtx=c;
+            if(c==0){ rar_ppmRestartModel(); rar_ppmEscCount=0; }
+            return;
+        }
+        rar_heap[rar_ppmText++]=(byte)fsSym;
+        int successor=rar_ppmText;
+        if(rar_ppmText>=rar_ppmFakeUS){ rar_ppmRestartModel(); rar_ppmEscCount=0; return; }
+        if(fsSucc!=0){
+            if(fsSucc<=rar_ppmText){
+                fsSucc=rar_ppmCreateSuccessors(false,p);
+                if(fsSucc==0){ rar_ppmRestartModel(); rar_ppmEscCount=0; return; }
+            }
+            if(--rar_ppmOrderFall==0){
+                successor=fsSucc;
+                if(rar_ppmMaxCtx!=rar_ppmMinCtx) rar_ppmText--;
+            }
+        }else{
+            rar_pW32(rar_ppmFoundState+2,successor);
+            fsSucc=rar_ppmMinCtx;
+        }
+        int ns=rar_cNS(rar_ppmMinCtx);
+        int s0=rar_cSF(rar_ppmMinCtx)-ns-(fsFreq-1);
+        for(pc=rar_ppmMaxCtx;pc!=rar_ppmMinCtx;pc=rar_cSuffix(pc)){
+            int ns1=rar_cNS(pc);
+            if(ns1!=1){
+                if((ns1&1)==0){
+                    int st=rar_ppmExpandUnits(rar_cStats(pc),ns1>>1);
+                    if(st==0){ rar_ppmRestartModel(); rar_ppmEscCount=0; return; }
+                    rar_cWStats(pc,st);
+                }
+                rar_cWSF(pc, rar_cSF(pc) + ((2*ns1<ns)?1:0) + 2*((((4*ns1<=ns)?1:0)&((rar_cSF(pc)<=8*ns1)?1:0))) );
+            }else{
+                int pst=rar_ppmAllocUnits(1);
+                if(pst==0){ rar_ppmRestartModel(); rar_ppmEscCount=0; return; }
+                System.arraycopy(rar_heap,pc+2,rar_heap,pst,6); // *p=pc->OneState
+                rar_cWStats(pc,pst);
+                int fr=rar_pU8(pst+1);
+                if(fr<RAR_PPM_MAXFREQ/4-1) fr+=fr; else fr=RAR_PPM_MAXFREQ-4;
+                rar_heap[pst+1]=(byte)fr;
+                rar_cWSF(pc, fr+rar_ppmInitEsc+((ns>3)?1:0));
+            }
+            int cf=2*fsFreq*(rar_cSF(pc)+6);
+            int sf=s0+rar_cSF(pc);
+            if(cf<6*sf){
+                cf=1+((cf>sf)?1:0)+((cf>=4*sf)?1:0);
+                rar_cWSF(pc,rar_cSF(pc)+3);
+            }else{
+                cf=4+((cf>=9*sf)?1:0)+((cf>=12*sf)?1:0)+((cf>=15*sf)?1:0);
+                rar_cWSF(pc,rar_cSF(pc)+cf);
+            }
+            int p2=rar_cStats(pc)+6*ns1;
+            rar_pW32(p2+2,successor);
+            rar_heap[p2]=(byte)fsSym; rar_heap[p2+1]=(byte)cf;
+            rar_cWNS(pc,ns1+1);
+        }
+        rar_ppmMaxCtx=rar_ppmMinCtx=fsSucc;
+    }
+
+    private void rar_ppmDecodeBinSymbol(int ctx){
+        int rs=ctx+2; // OneState
+        rar_ppmHiBitsFlag=rar_ppmHB2F[rar_pU8(rar_ppmFoundState)];
+        int freq=rar_pU8(rs+1);
+        int bi=rar_ppmPrevSucc + rar_ppmNS2BSI[rar_cNS(rar_cSuffix(ctx))-1] + rar_ppmHiBitsFlag + 2*rar_ppmHB2F[rar_pU8(rs)] + ((rar_ppmRunLength>>26)&0x20);
+        int bs=rar_ppmBinSumm[freq-1][bi];
+        long cnt=rar_rcGetShiftCount(14)&0xffffffffL;
+        if(cnt<bs){
+            rar_ppmFoundState=rs;
+            if(freq<128) rar_heap[rs+1]=(byte)(freq+1);
+            rar_rcSubLow=0; rar_rcSubHigh=bs;
+            rar_ppmBinSumm[freq-1][bi]=(bs+RAR_PPM_INT-((bs+(1<<(7-2)))>>7))&0xFFFF;
+            rar_ppmPrevSucc=1;
+            rar_ppmRunLength++;
+        }else{
+            rar_rcSubLow=bs;
+            rar_ppmBinSumm[freq-1][bi]=(bs-((bs+(1<<(7-2)))>>7))&0xFFFF;
+            rar_rcSubHigh=RAR_PPM_BIN;
+            rar_ppmInitEsc=RAR_PPM_EXPESC[rar_ppmBinSumm[freq-1][bi]>>10];
+            rar_ppmNumMasked=1;
+            rar_ppmCharMask[rar_pU8(rs)]=rar_ppmEscCount;
+            rar_ppmPrevSucc=0;
+            rar_ppmFoundState=0;
+        }
+    }
+
+    private void rar_ppmUpdate1(int ctx,int p){
+        rar_ppmFoundState=p;
+        rar_heap[p+1]=(byte)(rar_pU8(p+1)+4);
+        rar_cWSF(ctx,rar_cSF(ctx)+4);
+        if(rar_pU8(p+1)>rar_pU8(p-6+1)){
+            rar_swap6(p,p-6);
+            rar_ppmFoundState=p-6;
+            if(rar_pU8(p-6+1)>RAR_PPM_MAXFREQ) rar_ppmRescale(ctx);
+        }
+    }
+
+    private boolean rar_ppmDecodeSymbol1(int ctx){
+        rar_rcSubScale=rar_cSF(ctx);
+        int p=rar_cStats(ctx);
+        int count=rar_rcGetCount();
+        if((count&0xffffffffL)>=(rar_rcSubScale&0xffffffffL)) return false;
+        int hiCnt=rar_pU8(p+1);
+        if(count<hiCnt){
+            rar_rcSubHigh=hiCnt;
+            rar_ppmPrevSucc=(2*hiCnt>rar_rcSubScale)?1:0;
+            rar_ppmRunLength+=rar_ppmPrevSucc;
+            rar_ppmFoundState=p;
+            hiCnt+=4;
+            rar_heap[p+1]=(byte)hiCnt;
+            rar_cWSF(ctx,rar_cSF(ctx)+4);
+            if(hiCnt>RAR_PPM_MAXFREQ) rar_ppmRescale(ctx);
+            rar_rcSubLow=0;
+            return true;
+        }
+        else if(rar_ppmFoundState==0) return false;
+        rar_ppmPrevSucc=0;
+        int i=rar_cNS(ctx)-1;
+        while(true){
+            p+=6;
+            hiCnt+=rar_pU8(p+1);
+            if(hiCnt>count) break;
+            if(--i==0){
+                rar_ppmHiBitsFlag=rar_ppmHB2F[rar_pU8(rar_ppmFoundState)];
+                rar_rcSubLow=hiCnt;
+                rar_ppmCharMask[rar_pU8(p)]=rar_ppmEscCount;
+                rar_ppmNumMasked=rar_cNS(ctx);
+                i=rar_ppmNumMasked-1;
+                rar_ppmFoundState=0;
+                do{ p-=6; rar_ppmCharMask[rar_pU8(p)]=rar_ppmEscCount; }while(--i!=0);
+                rar_rcSubHigh=rar_rcSubScale;
+                return true;
+            }
+        }
+        rar_rcSubHigh=hiCnt;
+        rar_rcSubLow=hiCnt-rar_pU8(p+1);
+        rar_ppmUpdate1(ctx,p);
+        return true;
+    }
+
+    private void rar_ppmUpdate2(int ctx,int p){
+        rar_ppmFoundState=p;
+        rar_heap[p+1]=(byte)(rar_pU8(p+1)+4);
+        rar_cWSF(ctx,rar_cSF(ctx)+4);
+        if(rar_pU8(p+1)>RAR_PPM_MAXFREQ) rar_ppmRescale(ctx);
+        rar_ppmEscCount=(rar_ppmEscCount+1)&0xFF;
+        rar_ppmRunLength=rar_ppmInitRL;
+    }
+
+    private int rar_ppmMakeEscFreq2(int ctx,int diff){
+        int ns=rar_cNS(ctx);
+        if(ns!=256){
+            int x=rar_ppmNS2I[diff-1]*16
+                + ((diff<rar_cNS(rar_cSuffix(ctx))-ns)?1:0)
+                + 2*((rar_cSF(ctx)<11*ns)?1:0)
+                + 4*((rar_ppmNumMasked>diff)?1:0)
+                + rar_ppmHiBitsFlag;
+            rar_rcSubScale=rar_see2Mean(x);
+            return x;
+        }
+        rar_rcSubScale=1;
+        return RAR_SEE2_DUMMY;
+    }
+
+    private boolean rar_ppmDecodeSymbol2(int ctx){
+        int i=rar_cNS(ctx)-rar_ppmNumMasked;
+        int seeIdx=rar_ppmMakeEscFreq2(ctx,i);
+        int[] ps=new int[256]; int pps=0;
+        int p=rar_cStats(ctx)-6;
+        int hiCnt=0;
+        do{
+            do{ p+=6; }while(rar_ppmCharMask[rar_pU8(p)]==rar_ppmEscCount);
+            hiCnt+=rar_pU8(p+1);
+            if(pps>=256) return false;
+            ps[pps++]=p;
+        }while(--i!=0);
+        rar_rcSubScale+=hiCnt;
+        int count=rar_rcGetCount();
+        if((count&0xffffffffL)>=(rar_rcSubScale&0xffffffffL)) return false;
+        int idx=0; p=ps[0];
+        if(count<hiCnt){
+            hiCnt=0;
+            while((hiCnt+=rar_pU8(p+1))<=count){ idx++; p=ps[idx]; }
+            rar_rcSubHigh=hiCnt;
+            rar_rcSubLow=hiCnt-rar_pU8(p+1);
+            rar_see2Update(seeIdx);
+            rar_ppmUpdate2(ctx,p);
+        }else{
+            rar_rcSubLow=hiCnt;
+            rar_rcSubHigh=rar_rcSubScale;
+            i=rar_cNS(ctx)-rar_ppmNumMasked;
+            for(int j=0;j<i;j++) rar_ppmCharMask[rar_pU8(ps[j])]=rar_ppmEscCount;
+            rar_see2Summ[seeIdx]=(rar_see2Summ[seeIdx]+rar_rcSubScale)&0xFFFF;
+            rar_ppmNumMasked=rar_cNS(ctx);
+        }
+        return true;
+    }
+
+    private void rar_ppmClearMask(){
+        rar_ppmEscCount=1;
+        java.util.Arrays.fill(rar_ppmCharMask,0);
+    }
+
+    private boolean rar_ppmDecodeInit(){
+        int maxOrder=rar_ppmGetChar();
+        boolean reset=(maxOrder&0x20)!=0;
+        int maxMB=0;
+        if(reset) maxMB=rar_ppmGetChar();
+        else if(rar_ppmSASize==0) return false;
+        if((maxOrder&0x40)!=0) rar_ppmEscChar=rar_ppmGetChar();
+        rar_rcInitDecoder();
+        if(reset){
+            maxOrder=(maxOrder&0x1f)+1;
+            if(maxOrder>16) maxOrder=16+(maxOrder-16)*3;
+            if(maxOrder==1){ rar_ppmSASize=0; rar_heap=null; return false; }
+            rar_ppmStartSubAlloc(maxMB+1);
+            rar_ppmStartModel(maxOrder);
+        }
+        return rar_ppmMinCtx!=0;
+    }
+
+    private int rar_ppmDecodeChar(){
+        if(rar_ppmMinCtx<=rar_ppmText || rar_ppmMinCtx>rar_ppmHeapEnd) return -1;
+        if(rar_cNS(rar_ppmMinCtx)!=1){
+            int st=rar_cStats(rar_ppmMinCtx);
+            if(st<=rar_ppmText || st>rar_ppmHeapEnd) return -1;
+            if(!rar_ppmDecodeSymbol1(rar_ppmMinCtx)) return -1;
+        }else
+            rar_ppmDecodeBinSymbol(rar_ppmMinCtx);
+        rar_rcDecode();
+        while(rar_ppmFoundState==0){
+            rar_rcNormalize();
+            do{
+                rar_ppmOrderFall++;
+                rar_ppmMinCtx=rar_cSuffix(rar_ppmMinCtx);
+                if(rar_ppmMinCtx<=rar_ppmText || rar_ppmMinCtx>rar_ppmHeapEnd) return -1;
+            }while(rar_cNS(rar_ppmMinCtx)==rar_ppmNumMasked);
+            if(!rar_ppmDecodeSymbol2(rar_ppmMinCtx)) return -1;
+            rar_rcDecode();
+        }
+        int sym=rar_pU8(rar_ppmFoundState);
+        if(rar_ppmOrderFall==0 && rar_pI32(rar_ppmFoundState+2)>rar_ppmText)
+            rar_ppmMinCtx=rar_ppmMaxCtx=rar_pI32(rar_ppmFoundState+2);
+        else{
+            rar_ppmUpdateModel();
+            if(rar_ppmEscCount==0) rar_ppmClearMask();
+        }
+        rar_rcNormalize();
+        return sym;
+    }
+    
+    private String zip7zrar_info(InputStream in, String name_file_zip) throws Exception {
+        byte[] b=new byte[8];
+        int n=0;
+        if ( name_file_zip != null ){
+            java.io.RandomAccessFile raf=new java.io.RandomAccessFile(name_file_zip,"r");
+            int r; while ( n<8 && (r=raf.read(b,n,8-n)) > 0 ) n+=r;
+            raf.close();
+        }else if ( in != null ){
+            in.mark(8);
+            int r; while ( n<8 && (r=in.read(b,n,8-n)) > 0 ) n+=r;
+            in.reset(); // devolve o cursor ao inicio: 'in' segue intacto
+        }
+        if ( n<8 ){ byte[] t=new byte[n]; System.arraycopy(b,0,t,0,n); b=t; }    
+        n = (b == null) ? 0 : b.length;
+        if ( n>=4 && (b[0]&0xFF)==0x50 && (b[1]&0xFF)==0x4B ){
+            int c=b[2]&0xFF, d=b[3]&0xFF;
+            if ( (c==0x03&&d==0x04) || (c==0x05&&d==0x06) || (c==0x07&&d==0x08) )
+                return "Arquivo ZIP";
+        }
+        if ( n>=6 && (b[0]&0xFF)==0x37 && (b[1]&0xFF)==0x7A && (b[2]&0xFF)==0xBC
+                  && (b[3]&0xFF)==0xAF && (b[4]&0xFF)==0x27 && (b[5]&0xFF)==0x1C )
+            return "Arquivo 7z";
+        if ( n>=7 && (b[0]&0xFF)==0x52 && (b[1]&0xFF)==0x61 && (b[2]&0xFF)==0x72
+                  && (b[3]&0xFF)==0x21 && (b[4]&0xFF)==0x1A && (b[5]&0xFF)==0x07 ){
+            if ( (b[6]&0xFF)==0x00 ) return "Arquivo RAR (versao 4 ou anterior)";
+            if ( n>=8 && (b[6]&0xFF)==0x01 && (b[7]&0xFF)==0x00 ) return "Arquivo RAR (versao 5)";
+            return "Arquivo RAR (versao desconhecida)";
+        }
+        return "Formato desconhecido";
+    }    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
     
     public void gzip()
     {
@@ -32334,6 +34747,7 @@ usage:
   [y gettoken]
   [y json]
   [y zip]
+  [y rar]
   [y 7z]
   [y gzip]
   [y gunzip]
@@ -32566,6 +34980,7 @@ Exemplos...
     y zip add pasta1 pasta2 file3 -lvlStore > saida.zip
     y zip add /pasta1/pasta2 -pass a > saida_senha_a.zip
     y zip list arquivo.zip
+    y zip info arquivo.zip
     cat arquivo.zip | y zip list
     y zip extract entrada.zip
     cat entrada.zip | y zip extract
@@ -32581,8 +34996,13 @@ Exemplos...
     obs4: -pass compativel com zip windows
     sudo apt install 7zip-standalone
     7zz x arquivo.7z
-[y 7z]
+[y rar]
     obs: 
+        veja y help zip
+        use os mesmo comandos, mas com rar
+        rar add nao foi implementado, tem direitos autorais que bloqueiam!
+[y 7z]
+    obs:
        veja y help zip
        use os mesmo comandos, mas com 7z
 [y gzip]
