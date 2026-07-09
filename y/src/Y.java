@@ -2282,11 +2282,12 @@ cat buffer.log
         if ( args[0].equals("dotaMutandoAll") ){
             // exemplo
             // y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,eBullet,iusky"
-            Object [] objs=get_parm_sleep_nicks(args);            
+            Object [] objs=get_parm_sleep_nicks_skipsign(args);            
             if ( objs != null ){
                 Integer sleep=(Integer)objs[0];
                 String nicks=(String)objs[1];
-                dotaMutandoAll(sleep, nicks);                
+                Boolean skipsign=(Boolean)objs[2];
+                dotaMutandoAll(sleep, nicks, skipsign);                
                 return;
             }
         }
@@ -9515,8 +9516,7 @@ bind 'set enable-bracketed-paste off'
         return o == data.length ? out : java.util.Arrays.copyOf(out, o);
     }
 
-    public void uncat(String [] args){
-        //////////// 
+    public void uncat(String [] args){         
         Object [] parms_ascii_bin_allbin_out_elem=get_parms_ascii_bin_allbin_out_elem(args);
         Boolean ascii=(Boolean)parms_ascii_bin_allbin_out_elem[0];
         Boolean bin=(Boolean)parms_ascii_bin_allbin_out_elem[1];
@@ -15879,9 +15879,10 @@ while True:
         return new Object []{format_out_, date_from, format_in_, date_from_ntp};
     }        
     
-    private Object [] get_parm_sleep_nicks(String [] args){
+    private Object [] get_parm_sleep_nicks_skipsign(String [] args){
         Integer sleep=null;
         String nicks=null;
+        Boolean skipsign=false;
         
         args=sliceParm(1, args);
         
@@ -15900,8 +15901,8 @@ while True:
             }
             erroFatalParametrosInvalidos();
         }
-        
-        return new Object []{sleep, nicks};
+        skipsign = nicks != null && ( nicks.equals("no_ocr") || nicks.equals("no_sign") );
+        return new Object []{sleep, nicks, skipsign};
     }
         
     // usado para speed e call
@@ -18355,7 +18356,7 @@ while True:
         }
     }
     
-    public void dotaMutandoAll(Integer sleep, String nicks){
+    public void dotaMutandoAll(Integer sleep, String signs, Boolean skipsign){
         if ( sleep != null )
             sleepSeconds(sleep);
         try{
@@ -18421,18 +18422,20 @@ while True:
             sleepMillis(50);
             
             // skynet
-            String [] naoBloquearEssesNomes="ynet,Analista de Sistema,eBullet,iusky,frist,Madald,arhart,aerte".split(",");
-            if ( nicks != null )
-                naoBloquearEssesNomes=nicks.split(",");
+            String [] listaSkipSign="ynet,Analista de Sistema,eBullet,iusky,frist,Madald,arhart,aerte".split(",");
+            if ( signs != null )
+                listaSkipSign=signs.split(",");
             System.out.println("jogadores anti block:");
-            mostra_array(naoBloquearEssesNomes);
+            mostra_array(listaSkipSign);
             
             // get players by OCR
             String [] players=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
-            if ( naoBloquearEssesNomes.length == 1 && naoBloquearEssesNomes[0].equals("no_ocr") ){
+            if ( skipsign ){
                 //pass
-                System.out.println("skip no_ocr!" );                
-            }else{         
+                System.out.println("skip sign! skip no_ocr!" );                
+            }else{
+                /*
+                // OCR
                 players=ocr_getNamesDota();
                 if ( players == null ){
                     System.out.println("warning.. names não detectados!" );                
@@ -18440,6 +18443,30 @@ while True:
                     System.out.println("jogadores reconhecidos:");
                     mostra_array(players);
                 }
+                */
+                // SIGNS
+                // primeiro y com 121 // olhando nick x 180 280 y 103 113
+                ////////////////
+                ///robotSignRGB
+                for ( int i=0;i<10;i++ ){
+                    players[i]="";
+                    _y=121+(70*i)+(i>=5?31:0);
+                    int borda=2;
+                    int x1 = 180+borda;
+                    int x2 = 280-borda;
+                    int saltox = 12;
+                    int y1 = _y - 19 + borda;
+                    int y2 = _y - 9 - borda;
+                    int saltoy = 2;
+                    for ( int xx=x1;xx<x2;xx+=saltox ){
+                        for ( int yy=y1;yy<y2;yy+=saltoy ){
+                            players[i]+=robotSignRGB(xx, yy);
+                        }
+                    }
+                    players[i]=digest_text(players[i], "MD5").substring(0,10);
+                }
+                System.out.println("na tela:");
+                mostra_array(players);
             }
             
             // mutando os jogadores
@@ -18448,11 +18475,11 @@ while True:
                 _x=827+_delta_x;                
                 _y=121+(70*i)+(i>=5?31:0);
                 if ( robotCheckRGB(_x, _y, "63 70 70") ){ // eu mesmo
-                    System.out.println("eu mesmo como jogador  " + i);
+                    System.out.println("jogador [" + i + "] - eu mesmo!");
                     n_eu_mesmo=i;
                     continue;
                 }
-                if ( findParm(new String[]{players[i]}, naoBloquearEssesNomes, false) >= 0 ){
+                if ( findParm(new String[]{players[i]}, listaSkipSign, false) >= 0 ){
                     System.out.println("jogador [" + i + "] - " + players[i] + " não pode ser mutado!");
                 }else{                    
                     if ( robotCheckRGB(_x, _y, "255 73 73") ){ // mutado
@@ -18462,7 +18489,7 @@ while True:
                         sleepMillis(50);
                         robotMouseClickEsq();
                         sleepMillis(50);
-                        System.out.println("mutando o jogador [" + i + "] - " + players[i]);
+                        System.out.println("jogador [" + i + "] - " + players[i] + " mutando agora!");
                     }
                 }
             }            
@@ -18494,7 +18521,7 @@ while True:
                     continue;
                 //_y=113+(57*i)+(i>=5?34:0);
                 _y=121+(70*i)+(i>=5?31:0);
-                if ( findParm(new String[]{players[i]}, naoBloquearEssesNomes, false) >= 0 )
+                if ( findParm(new String[]{players[i]}, listaSkipSign, false) >= 0 )
                     System.out.println("o jogador [" + i + "] - " + players[i] + " não pode ter a ajuda removida!");
                 else{                                        
                     robotMouseMove(_x, _y);
@@ -27997,6 +28024,11 @@ class Util{
         return retorno;
     }
     
+    public String robotSignRGB(int x, int y) throws Exception{
+        Color c=robotGet().getPixelColor(x, y);
+        return c.getRed() + "." + c.getGreen() + "." + c.getBlue() + ".";
+    }
+    
     public void robotMouseMove(int a, int b) throws Exception{
         robotGet().mouseMove(a, b);
     }
@@ -34765,6 +34797,7 @@ Exemplos...
 [y dotaMutandoAll]
     y dotaMutandoAll -sleep 3 -nicks "ynet,Analista de Sistema,neBullet"
     y dotaMutandoAll -sleep 3 -nicks "no_ocr"
+    y dotaMutandoAll -sleep 3 -nicks "no_sign"
 [y audio]
     y audio vol
     y audio mute
