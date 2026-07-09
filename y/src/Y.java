@@ -11594,7 +11594,7 @@ bind 'set enable-bracketed-paste off'
         ArrayList<Boolean> lista_ending=new ArrayList<Boolean>();
         ArrayList<String> lista_txt=new ArrayList<String>();
         
-        ArrayList<String> lista=get_v_i_txt(args);
+        ArrayList<String> lista=get_v_i_txt(args); // v i startgin ending text startgin ending text startgin ending text ...
         if ( lista == null ){
             comando_invalido(args);
             return;
