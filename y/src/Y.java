@@ -18428,6 +18428,19 @@ while True:
             System.out.println("jogadores anti block:");
             mostra_array(listaSkipSign);
             
+            // fotos signs muted
+            String [] signMuted=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
+            int n_eu_mesmo=-1; // 0 até 9            
+            for ( int i=0;i<10;i++ ){
+                _x=827+_delta_x;
+                _y=121+(70*i)+(i>=5?31:0);
+                signMuted[i]=robotSignRGB(_x, _y);
+                if ( signMuted[i].equals("63.70.70.") )
+                    n_eu_mesmo=i;
+            }
+            if ( n_eu_mesmo == -1 )
+                erroFatal("Nao encontrei eu mesmo!");
+            
             // get players by OCR
             String [] players=new String[]{"??", "??", "??", "??", "??", "??", "??", "??", "??", "??"};
             if ( skipsign ){
@@ -18449,6 +18462,14 @@ while True:
                 ////////////////
                 ///robotSignRGB
                 for ( int i=0;i<10;i++ ){
+                    if ( 
+                        (i < 5 && n_eu_mesmo < 5) || (i >= 5 && n_eu_mesmo >= 5)
+                    ){
+                        // skip
+                    }else{
+                        players[i]="sign_ignorado"; // para o processamento ficar mais rapido
+                        continue;
+                    }
                     players[i]="";
                     _y=121+(70*i)+(i>=5?31:0);
                     int borda=2;
@@ -18469,29 +18490,27 @@ while True:
                 mostra_array(players);
             }
             
-            // mutando os jogadores
-            int n_eu_mesmo=0; // 0 até 9
-            for ( int i=0;i<10;i++ ){
-                _x=827+_delta_x;                
-                _y=121+(70*i)+(i>=5?31:0);
-                if ( robotCheckRGB(_x, _y, "63 70 70") ){ // eu mesmo
-                    System.out.println("jogador [" + i + "] - eu mesmo!");
-                    n_eu_mesmo=i;
+            // mutando os jogadores            
+            for ( int i=0;i<10;i++ ){                                             
+                if ( i == n_eu_mesmo ){ // eu mesmo
+                    System.out.println("jogador [" + i + "] - eu mesmo!");                    
                     continue;
                 }
                 if ( findParm(new String[]{players[i]}, listaSkipSign, false) >= 0 ){
                     System.out.println("jogador [" + i + "] - " + players[i] + " não pode ser mutado!");
-                }else{                    
-                    if ( robotCheckRGB(_x, _y, "255 73 73") ){ // mutado
-                        System.out.println("jogador [" + i + "] - " + players[i] + " ja mutado!");                    
-                    }else{                        
-                        robotMouseMove(_x+5, _y);
-                        sleepMillis(50);
-                        robotMouseClickEsq();
-                        sleepMillis(50);
-                        System.out.println("jogador [" + i + "] - " + players[i] + " mutando agora!");
-                    }
+                    continue;
                 }
+                if ( signMuted[i].equals("255.73.73.") ){ // mutado
+                    System.out.println("jogador [" + i + "] - " + players[i] + " ja mutado!");                    
+                    continue;
+                }
+                _x=827+_delta_x;                
+                _y=121+(70*i)+(i>=5?31:0);
+                robotMouseMove(_x+5, _y);
+                sleepMillis(50);
+                robotMouseClickEsq();
+                sleepMillis(50);
+                System.out.println("jogador [" + i + "] - " + players[i] + " mutando agora!");
             }            
 
             // click central para fechar painel
