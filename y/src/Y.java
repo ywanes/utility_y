@@ -3865,63 +3865,53 @@ cat buffer.log
         return new String[]{connIn,fileCSV,connOut,outTable,trunc,app};
     }
         
-    public ArrayList<String> get_v_i_txt(String [] args){
-        String v="N";
-        String i="N";
-        String txt="";
-        ArrayList<String> lista=new ArrayList<String>();
-        
+    public Object [] get_b_a_v_i_txt(String [] args){ // v i startgin ending text startgin ending text startgin ending text ...
+        Object [] retorno=null;
+        Integer b=0;
+        Integer a=0;
+        Boolean v=false;
+        Boolean i=false;
+
         if ( args.length > 0 && args[0].equals("grep") )
             args=sliceParm(1,args);
+
+        if ( args.length > 0 && args[0].startsWith("-B") && args[0].length() > 2 && isNumericDigits(args[0].substring(2)) ){ b=Integer.parseInt(args[0].substring(2)); args=sliceParm(1,args); }
+        if ( args.length > 0 && args[0].startsWith("-A") && args[0].length() > 2 && isNumericDigits(args[0].substring(2)) ){ a=Integer.parseInt(args[0].substring(2)); args=sliceParm(1,args); }
+        if ( args.length > 0 && args[0].equals("-v") && !v ){ v=true; args=sliceParm(1,args); }
+        if ( args.length > 0 && args[0].equals("-i") && !i ){ i=true; args=sliceParm(1,args); }
         
-        // parametros -v -i
-        if ( args.length > 2 && args[0].equals("-v") && args[1].equals("-i") ){
-            v="S";
-            i="S";
-            args=sliceParm(2,args);
-        }else{
-            if ( args.length > 2 && args[0].equals("-i") && args[1].equals("-v") ){
-                i="S";
-                v="S";
-                args=sliceParm(2,args);
-            }else{
-                if ( args.length > 1 && args[0].equals("-v") ){
-                    v="S";
-                    args=sliceParm(1,args);
-                }else{
-                    if ( args.length > 1 && args[0].equals("-i") ){
-                        i="S";
-                        args=sliceParm(1,args);
-                    }
-                }
-            }            
-        }
-
-        lista.add(v);
-        lista.add(i);
-
+        int count=4;
+        retorno=new Object[args.length*3+count];
+        retorno[0]=(Integer)b;
+        retorno[1]=(Integer)a;
+        retorno[2]=(Object)v;
+        retorno[3]=(Object)i;
+        
         while(args.length > 0){
-            String starting="N";
-            String ending="N";
+            Boolean starting=false;
+            Boolean ending=false;
+            String txt="";
             
             txt=args[0];
-            if ( i.equals("S") )
+            if ( i )
                 txt=txt.toUpperCase();
             
             if ( txt.startsWith("^") ){
                 txt=txt.substring(1);
-                starting="S";
+                starting=true;
             }
             if ( txt.endsWith("$") ){
                 txt=txt.substring(0,txt.length()-1);
-                ending="S";
+                ending=true;
             }  
-            lista.add(starting);
-            lista.add(ending);
-            lista.add(txt);
+            retorno[count++]=(Object)starting;
+            retorno[count++]=(Object)ending;
+            retorno[count++]=(String)txt;
             args=sliceParm(1,args);
         }
-        return lista;
+        if ( b < 0 || a < 0 )
+            return null;
+        return retorno;
     }
     
     public Object[] get_csvFile_sqlFile_sqlText_outJson(String[] args) {
@@ -11589,64 +11579,110 @@ bind 'set enable-bracketed-paste off'
         boolean print=false;
         String line_bkp="";
         String line="";
-
-        ArrayList<Boolean> lista_starting=new ArrayList<Boolean>();
-        ArrayList<Boolean> lista_ending=new ArrayList<Boolean>();
-        ArrayList<String> lista_txt=new ArrayList<String>();
+        String temp="";
         
-        ArrayList<String> lista=get_v_i_txt(args); // v i startgin ending text startgin ending text startgin ending text ...
+        Object [] lista=get_b_a_v_i_txt(args); // v i startgin ending text startgin ending text startgin ending text ...
         if ( lista == null ){
             comando_invalido(args);
             return;
+        }        
+        Integer n_before=(Integer)lista[0]; // before
+        Integer n_after=(Integer)lista[1]; // after
+        Boolean v_=(Boolean)lista[2]; // negativa
+        Boolean i_=(Boolean)lista[3]; // no case sensitive
+        Boolean [] startings=new Boolean [(lista.length-4)/3];
+        Boolean [] endings=new Boolean [(lista.length-4)/3];
+        String [] txts=new String [(lista.length-4)/3];
+        ArrayList<String> befores=new ArrayList<String>();
+        ArrayList<String> afters=new ArrayList<String>();
+        int count=0;
+        for ( int i=4;i<lista.length;i+=3 ){
+            startings[count]=(Boolean)lista[i];
+            endings[count]=(Boolean)lista[i+1];
+            txts[count]=(String)lista[i+2];
+            if ( i_ )
+                txts[count]=((String)lista[i+2]).toUpperCase();
+            else
+                txts[count]=(String)lista[i+2];
+            count++;
         }
-        boolean v_=lista.get(0).equals("S");
-        boolean i_=lista.get(1).equals("S");
-        
-        for ( int i=2;i<lista.size();i+=3 ){
-            lista_starting.add(lista.get(i).equals("S"));
-            lista_ending.add(lista.get(i+1).equals("S"));
-            lista_txt.add(lista.get(i+2));
-        }
-        
-        if ( i_ )
-            lista_txt.set(0,lista_txt.get(0).toUpperCase());
         
         try {            
-            while ( (line=line_bkp=readLine()) != null ) {
-                print=false;
+            while ( true ){
+                if ( n_after == 0 ){
+                    line=line_bkp=readLine();
+                    if ( line == null )
+                        break;
+                }else{
+                    // load after
+                    while ( afters.size() < n_after && (temp=readLine()) != null ){
+                        afters.add(temp);
+                    }
+                    if ( afters.size() == 0 )
+                        break;
+                    line=line_bkp=afters.get(0);
+                    afters.remove(0);
+                    // load after
+                    while ( afters.size() < n_after && (temp=readLine()) != null ){
+                        afters.add(temp);
+                    }
+                }
+                print=false;                
                 if ( i_ )
                     line=line.toUpperCase();
-                for ( int i=0;i<lista_txt.size();i++ ){
-                    if ( lista_txt.get(i).equals("") && lista_starting.get(i) && lista_ending.get(i) ){ // ^$
+                for ( int i=0;i<txts.length;i++ ){
+                    // ^$
+                    if ( txts[i].equals("") && startings[i] && endings[i] ){
                         if (line.equals("")){
                             print=true;
                             break;
                         }else
                             continue;
                     }
-                    if ( !lista_starting.get(i) && !lista_ending.get(i) && line.contains(lista_txt.get(i)) ){
+                    if ( !startings[i] && !endings[i] && line.contains(txts[i]) ){
                         print=true;
                         break;
                     }
-                    if ( lista_starting.get(i) && !lista_ending.get(i) && line.startsWith(lista_txt.get(i)) ){
+                    // ^
+                    if ( startings[i] && !endings[i] && line.startsWith(txts[i]) ){
                         print=true;
                         break;
                     }
-                    if ( !lista_starting.get(i) && lista_ending.get(i) && line.endsWith(lista_txt.get(i)) ){
+                    // $
+                    if ( !startings[i] && endings[i] && line.endsWith(txts[i]) ){
                         print=true;
                         break;
                     }
-                    if ( lista_starting.get(i) && lista_ending.get(i) && line.startsWith(lista_txt.get(i)) && line.endsWith(lista_txt.get(i)) ){
+                    // fixo ^...$
+                    if ( startings[i] && endings[i] && line.equals(txts[i]) ){
                         print=true;
                         break;
                     }
                 }
                 
+                // negativa
                 if ( v_ )
                     print=!print;
                 
-                if ( print )
+                // print
+                if ( print ){
+                    // before
+                    for ( int i=0;i<befores.size();i++ )
+                        System.out.println(befores.get(i));
+                    
                     System.out.println(line);
+                    
+                    // after
+                    for ( int i=0;i<afters.size();i++ )
+                        System.out.println(afters.get(i));
+                }
+                
+                // fix befores
+                if ( n_before > 0 ){
+                    befores.add(line);
+                    if ( befores.size() > n_before )
+                        befores.remove(0);
+                }
             }
             closeLine();
         }catch(Exception e){
@@ -34908,8 +34944,10 @@ Exemplos...
 [y grep]
     cat arquivo | y grep ^Texto$
     cat arquivo | y grep AB
-    cat arquivo | y grep -i -v aa bb cc
-    obs: grep -L arquivos-sem-essa-palavra *
+    cat arquivo | y grep -v -i aa bb cc
+    cat arquivo | y grep -B3 -A3 -v -i aa
+    obs: os parametros -B -A -v -i precisam estar nessa ordem
+    linux: grep -L arquivos-sem-essa-palavra *    
 [y wc]
     y wc -l arquivo
     cat arquivo | y wc -l
