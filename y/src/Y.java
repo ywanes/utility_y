@@ -18457,8 +18457,8 @@ while True:
             robotMouseMove(998, 480); 
             sleepMillis(50);
             
-            // skynet
-            String [] listaSkipSign="ynet,Analista de Sistema,eBullet,iusky,frist,Madald,arhart,aerte".split(",");
+            // skynet e2172d5075
+            String [] listaSkipSign="e2172d5075".split(",");
             if ( signs != null )
                 listaSkipSign=signs.split(",");
             System.out.println("jogadores anti block:");
