@@ -18398,7 +18398,8 @@ while True:
         try{
             // variaveis auxiliares
             int _x=0;
-            int _y=0;            
+            int _y=0;   
+            int salto_time=32;
             
             // fechar painel previsoes
             robotMouseMove(188+1400, 768);
@@ -18457,8 +18458,8 @@ while True:
             robotMouseMove(998, 480); 
             sleepMillis(50);
             
-            // skynet e2172d5075
-            String [] listaSkipSign="e2172d5075".split(",");
+            // skynet e2172d5075,5b286a7a18
+            String [] listaSkipSign="e2172d5075,5b286a7a18".split(",");
             if ( signs != null )
                 listaSkipSign=signs.split(",");
             System.out.println("jogadores anti block:");
@@ -18469,7 +18470,7 @@ while True:
             int n_eu_mesmo=-1; // 0 até 9            
             for ( int i=0;i<10;i++ ){
                 _x=827+_delta_x;
-                _y=121+(70*i)+(i>=5?31:0);
+                _y=121+(70*i)+(i>=5?salto_time:0);
                 signMuted[i]=robotSignRGB(_x, _y);
                 if ( signMuted[i].equals("63.70.70.") )
                     n_eu_mesmo=i;
@@ -18507,7 +18508,7 @@ while True:
                         continue;
                     }
                     players[i]="";
-                    _y=121+(70*i)+(i>=5?31:0);
+                    _y=121+(70*i)+(i>=5?salto_time:0);
                     int borda=2;
                     int x1 = 180+borda;
                     int x2 = 280-borda;
@@ -18541,7 +18542,7 @@ while True:
                     continue;
                 }
                 _x=827+_delta_x;                
-                _y=121+(70*i)+(i>=5?31:0);
+                _y=121+(70*i)+(i>=5?salto_time:0);
                 robotMouseMove(_x+5, _y);
                 sleepMillis(50);
                 robotMouseClickEsq();
@@ -18575,7 +18576,7 @@ while True:
                 if ( n_eu_mesmo<5 != i<5 )
                     continue;
                 //_y=113+(57*i)+(i>=5?34:0);
-                _y=121+(70*i)+(i>=5?31:0);
+                _y=121+(70*i)+(i>=5?salto_time:0);
                 if ( findParm(new String[]{players[i]}, listaSkipSign, false) >= 0 )
                     System.out.println("o jogador [" + i + "] - " + players[i] + " não pode ter a ajuda removida!");
                 else{                                        
