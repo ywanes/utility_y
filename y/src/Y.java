@@ -18458,8 +18458,8 @@ while True:
             robotMouseMove(998, 480); 
             sleepMillis(50);
             
-            // skynet e2172d5075,5b286a7a18
-            String [] listaSkipSign="e2172d5075,5b286a7a18".split(",");
+            // skynet e2172d5075,5b286a7a18,69788090e8
+            String [] listaSkipSign="e2172d5075,5b286a7a18,69788090e8".split(",");
             if ( signs != null )
                 listaSkipSign=signs.split(",");
             System.out.println("jogadores anti block:");
