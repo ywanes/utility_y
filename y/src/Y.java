@@ -1318,27 +1318,27 @@ cat buffer.log
             len();
             return;
         }       
-        if ( args[0].equals("head") 
-            && (
-                args.length == 1 
-                || ( args.length == 2 && isNumericDigitsWithHifen(args[1]) && Integer.parseInt(args[1]) != 0 )
-            ) 
-        ){
-            if ( args.length == 2 && !args[1].startsWith("-") )
-                args[1]="-"+args[1];
-            head(args);
-            return;
+        if ( args[0].equals("head") ){
+            Object [] parm_head_tail=get_parm_head_tail(args);
+            Long n=null;
+            String caminho=null;
+            if ( parm_head_tail != null ){
+                n=(Long)parm_head_tail[0];
+                caminho=(String)parm_head_tail[1];
+                head(n, caminho, System.in);
+                return;
+            }
         }
-        if ( args[0].equals("tail") 
-            && (
-                args.length == 1 
-                || ( args.length == 2 && isNumericDigitsWithHifen(args[1]) && Integer.parseInt(args[1]) != 0 )
-            ) 
-        ){
-            if ( args.length == 2 && !args[1].startsWith("-") )
-                args[1]="-"+args[1];
-            tail(args);
-            return;
+        if ( args[0].equals("tail") ){
+            Object [] parm_head_tail=get_parm_head_tail(args);
+            Long n=null;
+            String caminho=null;
+            if ( parm_head_tail != null ){
+                n=(Long)parm_head_tail[0];
+                caminho=(String)parm_head_tail[1];
+                tail(n, caminho, System.in);
+                return;
+            }
         }
         if ( args[0].equals("cut") && args.length == 2 && args[1].startsWith("-c") && args[1].length() > 2 ){
             cut(args);
@@ -13128,23 +13128,16 @@ bind 'set enable-bracketed-paste off'
         }
     }
     
-    public void head(String [] args)
+    public void head(Long p, String caminho, InputStream is)
     {
-        long p;
         String line;
         long count=0;
-        
-        try{
-            if ( args.length == 1 )
-                p=10;
-            else
-                p=Long.parseLong(args[1].substring(1));
-        }catch(Exception e){
-            comando_invalido(args);
-            return;
-        }
-        
+
         try {
+            if ( caminho != null )
+                readLine(caminho, "UTF-8", null);
+            else
+                readLine(is, "UTF-8", null);
             while ( (line=readLine()) != null ) {
                 if ( ++count <= p )
                     System.out.println(line);
@@ -13159,23 +13152,16 @@ bind 'set enable-bracketed-paste off'
         }
     }
             
-    public void tail(String [] args)
+    public void tail(Long p, String caminho, InputStream is)
     {                
-        int p;
         String line;
         ArrayList<String> lista=new ArrayList<String>();
         
-        try{
-            if ( args.length == 1 )
-                p=10;
-            else
-                p=Integer.parseInt(args[1].substring(1));
-        }catch(Exception e){
-            comando_invalido(args);
-            return;
-        }
-        
         try {
+            if ( caminho != null )
+                readLine(caminho, "UTF-8", null);
+            else
+                readLine(is, "UTF-8", null);            
             while ( (line=readLine()) != null ) {
                 lista.add(line);
                 if ( lista.size() > p )
@@ -17586,6 +17572,32 @@ while True:
         return new Object[]{path,acceptSymbolicLink,mtime,type,pre,pos};
     }    
 
+    private Object [] get_parm_head_tail(String [] args){
+        Long n=-1L;
+        String caminho=null;
+        args=sliceParm(1,args);
+        
+        while(args.length > 0){
+            if ( n == -1L && isNumericDigitsWithHifen(args[0]) && (args[0].startsWith("-")?args[0].substring(1):args[0]).length() > 0 ){
+                n=Long.parseLong(args[0].startsWith("-")?args[0].substring(1):args[0]);
+                if ( n <= 0L )
+                    return null;
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( caminho == null ){
+                caminho=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            return null;
+        }
+        if ( n == -1 )
+            n=10L;
+        return new Object[]{n, caminho};
+    }
+    
+    
     private Object [] get_parm_bmp_file_len(String [] args){
         String file=null;
         String len=null;
@@ -36296,10 +36308,12 @@ Exemplos...
     result: 2
             2
 [y head]
+    y head -30 file1
     cat arquivo | y head
     cat arquivo | y head -30
     cat arquivo | y head 30    
 [y tail]
+    y tail -30 file1
     cat arquivo | y tail
     cat arquivo | y tail -30
 [y cut]
