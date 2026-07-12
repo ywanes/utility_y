@@ -10294,6 +10294,1351 @@ bind 'set enable-bracketed-paste off'
         }
         return name.toString();
     }        
+    
+    ///////////////////////////////////
+    public String overflix_busca(String [] args){
+        String s="";
+        if ( args.length == 0 )
+            erroFatal("Erro de parametro no overflix_busca!");
+        String url="https://encontrei.info/pesquisar/?p=" + String.join("+", args);
+        String html=curl_string(url);
+        String [] partes=regex_matcher("<div class=\'videoboxGridview\'>", "</main>", html, true);
+        if ( partes.length != 1 )
+            return "";
+        partes[0]=partes[0].replace("\n","");
+        partes=partes[0].split("<div id=\"collview\">");
+        for ( int i=0;i<partes.length;i++ ){
+            if ( !partes[i].contains("<a href=") )
+                continue;
+            String [] a=regex_matcher("<a href='", "</a>", partes[i], true);
+            String [] b=regex_matcher("<span class=\"capa-info capa-audio\">", "</span>", partes[i], true);
+            String [] c=regex_matcher("<span class=\"capa-info capa-quali\">", "</span>", partes[i], true);
+            String [] d=regex_matcher("<span class=\"y\">", "</span>", partes[i], true);
+            String [] e=regex_matcher("<span class=\"t\">", "</span>", partes[i], true);
+            if ( a.length >= 2 && b.length >= 1 && c.length >= 1 && d.length >= 1 && e.length >= 1 ){
+                String [] f=a[1].split(("'") );
+                if ( f.length == 4){
+                    s+="y overflix " +
+                            lpad(f[0], 92, " ") + " - " +
+                            f[3].substring(1).trim() + " - " +
+                            b[0] + " - " +
+                            c[0] + " - " +
+                            d[0] + " - " +
+                            e[0] +
+                            "\n";
+                }else
+                    erroFatal("Não foi possivel decodigicar::\n" + partes[i]);
+            }else
+                erroFatal("Não foi possivel decodigicar:\n" + partes[i]);
+        }
+        return s;
+    }
+
+    public String superflixapi_busca(String [] args){
+        String s="";
+        if ( args.length == 0 )
+            erroFatal("Erro de parametro!");
+        String search=String.join("%20", args);
+        String separator="<div class=\"item fbox fbox_space_between fbox_align_center\">";
+        String nenhum="Nenhum filme encontrado";
+        for ( int i=1;i<20;i++ ){
+            String html=curl_string("https://superflixapi.dev/filmes/?search="+search+"&sort=&paged="+i);
+            //System.out.println("i: " + i);
+            if ( html.contains(nenhum) ){
+                break;
+            }
+            String [] partes=regex_matcher("<div id=\"contentList\">", "<div class=\"clearfix\"></div>", html, true);
+            if ( partes.length < 1 )
+                break;
+            partes=partes[0].split("<div class=\"poster\">");
+            for ( int j=0;j<partes.length;j++ ){
+                String [] partes_A=regex_matcher("<span class=\"title\">", "</span>", partes[j], true);
+                String [] partes_B=regex_matcher("<span class=\"year\">", "</span>", partes[j], true);
+                String [] partes_C=regex_matcher("href=\"", "\"", partes[j], true);
+                if ( partes_A.length > 0 && partes_B.length > 0 && partes_C.length > 0 ){
+                    if ( partes_C[0].endsWith("/filme/") )
+                        continue;
+                    s+="y overflix " + lpad(partes_C[0],92," ") + " - " + partes_A[0] + " - " + partes_B[0]+"\n";
+                }
+            }
+        }
+        return s;
+    }
+
+    public void superflixapi_buscaOld(String [] args_){
+        String [] args=new String[args_.length];
+        System.arraycopy(args_, 0, args, 0, args_.length);
+        args=sliceParm(2, args);
+        if ( args.length == 0 )
+            erroFatal("Erro de parametro!");
+        String search=String.join("+", args);
+        String separator="<div class=\"item fbox fbox_space_between fbox_align_center\">";
+        String nenhum="Nenhum filme foi encontrado";
+        String s="";
+        for ( int i=1;i<20;i++ ){
+            String html=curl_string("https://superflixapi.dev/filmes/?search="+search+"&sort=&paged="+i);
+            if ( html.contains(nenhum) || !html.contains(separator) )
+                break;
+            String [] partes=html.split(separator);
+            partes=sliceParm(1, partes);
+            for ( int j=0;j<partes.length;j++ ){
+                String [] partes_=regex_matcher("<a href=\"", "</a>", partes[j], true);
+                if ( partes_.length == 0 )
+                    erroFatal("Erro interno 1!" + partes[j]);
+                String [] partes_B=partes_[0].split("\"");
+                if ( partes_B.length == 0 )
+                    erroFatal("Erro interno 2!"+partes[j]);
+                String [] partes_C=partes_[0].split("</span>");
+                if ( partes_B.length < 2 )
+                    erroFatal("Erro interno 3!"+partes[j]);
+                s+="y overflix "+partes_B[0]+" - "+partes_C[1]+"\n";
+            }
+        }
+        if ( !s.equals("") )
+            System.out.print(s);
+    }
+
+    public void superflixapi(String url){
+        // get video id
+        String videoid="";
+        String h="";
+        String disk="";
+        String audio="";
+        String _32A="";
+        String _32B="";
+        String html="";
+        String [] partes=null;
+        String id="";
+        String titulo="";
+        String resolucao="";
+        String tryresolucao="";
+        String dir="D:\\ProgramFiles\\site\\filmes\\";
+        String filme="";
+        // check ffmpeg
+        if ( !isFfmpeg() )
+            erroFatal("Não foi possível encontrar o componente ffempeg.exe");
+
+        // get config
+        html=curl_string(url);
+        if ( curl_response_status == 200 ){
+            partes=regex_matcher("<title>", "</title>", html, true);
+            if ( partes.length > 0 ){
+                titulo=partes[0];
+                if ( titulo.startsWith("SuperFlix API - ") )
+                    titulo=titulo.substring("SuperFlix API - ".length()).trim();
+                if ( titulo.lastIndexOf("(") > 0 )
+                    titulo=titulo.substring(0, titulo.lastIndexOf("(")).trim();
+                titulo=fixNameFile(titulo.trim());
+                filme=dir+titulo+".mp4";
+                if ( new File(filme).exists() ){
+                    System.out.println("skip "+filme);
+                    return;
+                }
+                partes=regex_matcher("data-id=", ">", html, true);
+                if ( partes.length > 0 ){
+                    videoid=partes[0].substring(1, partes[0].length()-1);
+                    html=curl_string("https://superflixapi.dev/api?action=getPlayer&video_id="+videoid);
+                    if ( curl_response_status == 200 ){
+                        partes=regex_matcher("\"video_url\":\"", "\"", html, true);
+                        if ( partes.length > 0 ){
+                            h=partes[0].replace("\\/", "/");
+                            if ( !h.startsWith("https://brbeast.com/video/") )
+                                erroFatal("host não implementado ou quebrado: "+h);
+                            if ( h.startsWith("https://brbeast.com/video/") ){
+                                html=curl_string(h);
+                                if ( curl_response_status == 200 ){
+                                    int p1=html.indexOf("|||");
+                                    if ( p1 > 0 ){
+                                        int p2=html.indexOf("'", p1);
+                                        if ( p2 > 0 ){
+                                            partes=html.substring(p1, p2).split("\\|");
+                                            for ( int i=0;i<partes.length;i++ ){
+                                                if ( disk.equals("") && partes[i].startsWith("disk") ){
+                                                    disk=partes[i];
+                                                    continue;
+                                                }
+                                                if ( _32A.equals("") && partes[i].length() == 32 ){
+                                                    _32A=partes[i];
+                                                    continue;
+                                                }
+                                                if ( _32B.equals("") && partes[i].length() == 32 ){
+                                                    _32B=partes[i];
+                                                    continue;
+                                                }
+                                            }
+                                            String [] _32_versions=new String[]{_32A, _32B};
+                                            String [] audios=new String[]{"por", "und", "eng"};
+                                            for ( int i=0;i<_32_versions.length;i++ ){
+                                                for ( int j=0;j<audios.length;j++ ){
+                                                    if ( !id.equals("") )
+                                                        continue;
+                                                    curl_string("https://gambino10.com/cdn/down/"+disk+"/"+_32_versions[i]+"/Audio/audio_" + audios[j] + "_0.html");
+                                                    if ( curl_response_status == 200 ){
+                                                        id=disk+"/"+_32_versions[i];
+                                                        audio=audios[j];
+                                                    }
+                                                }
+                                            }
+                                            if ( audio.equals("eng") )
+                                                erroFatal("Abortado. Filme somente em inglês.");
+                                            if ( audio.equals("") )
+                                                erroFatal("Erro, audio diferente do implementado... será necessário investigar.");
+                                            String [] videos=new String[]{"720p", "480p", "360p", "1080p"};
+                                            for ( int i=0;i<videos.length;i++ ){
+                                                if ( !resolucao.equals("") )
+                                                    continue;
+                                                curl_string("https://gambino10.com/cdn/down/"+id+"/Video/"+videos[i]+"/"+videos[i]+"_000.html");
+                                                if ( curl_response_status == 200 )
+                                                    resolucao=videos[i];
+
+                                            }
+                                            superflixapi_not_if(9, resolucao);
+                                        }
+                                        superflixapi_not_if(8, resolucao);
+                                    }
+                                    superflixapi_not_if(7, resolucao);
+                                }
+                                superflixapi_not_if(6, resolucao);
+                            }
+                            superflixapi_not_if(5, resolucao);
+                        }
+                        superflixapi_not_if(4, resolucao);
+                    }
+                    superflixapi_not_if(3, resolucao);
+                }
+                superflixapi_not_if(2, resolucao);
+            }
+            superflixapi_not_if(1, resolucao);
+        }
+        if ( !resolucao.equals("") ){
+            preparaPath(filme, true, 0);
+            superflixapi(id, resolucao, audio, titulo, filme);
+        }
+    }
+
+    public void superflixapi(String id, String resolucao, String audio, String titulo, String filme){
+        try{
+            String wav_name=System.getenv("tmp")+"\\"+titulo+".wav";
+            String mp4_name=System.getenv("tmp")+"\\"+titulo+".mp3";
+
+            FileOutputStream fos_audio=new FileOutputStream(wav_name);
+            FileOutputStream fos_video=new FileOutputStream(mp4_name);
+
+            int slots=12;
+            int count_audio=0;
+            int count_audio_request=0;
+            int count_video=0;
+            int count_video_request=0;
+            Boolean [] running=new Boolean[]{true};
+            Boolean [] finish_audio=new Boolean[]{false};
+            Boolean [] finish_video=new Boolean[]{false};
+            Boolean [] types_audio=new Boolean[slots];
+            byte [][] matrix=new byte[slots][1024*1024*10];
+            Integer [] lens=new Integer[slots];
+            Integer [] seqs=new Integer[slots];
+            String [] commands=new String[slots];
+            Integer [] steps=new Integer[slots]; // 0-nada 1-prontoParaTrabalhar 2-pacotePronto
+            Thread [] workers=new Thread[slots];
+
+            //init
+            for ( int i=0;i<slots;i++ ){
+                lens[i]=0;
+                commands[i]="";
+                steps[i]=0;
+                types_audio[i]=false;
+                seqs[i]=0;
+            }
+
+            //worker
+            for ( int i=0;i<slots;i++ ){
+                final int i_=i;
+                workers[i]=new Thread(){
+                    final int n=i_;
+                    final Y y_=new Y();
+                    public void run() {
+                        while(running[0]){
+                            if ( steps[n] == 1 ){
+                                byte [] tmp=y_.curl_bytes(commands[n]);
+                                if ( y_.curl_response_status == 200 ){
+                                    lens[n]=tmp.length;
+                                    System.arraycopy(tmp, 0, matrix[n], 0, tmp.length);
+                                    if ( lens[n] == 0 ){
+                                        //System.err.println("warning.. len 0");
+                                        continue;
+                                    }
+                                    steps[n]=2;
+                                    continue;
+                                }
+                                if ( y_.curl_response_status == 404 ){
+                                    if ( types_audio[n] )
+                                        finish_audio[0]=true;
+                                    else
+                                        finish_video[0]=true;
+                                    lens[n]=0;
+                                    steps[n]=0;
+                                    continue;
+                                }
+                                erroFatal("Ocorreu um erro na leitura da url: " + commands[n] + " - status:"+y_.curl_response_status);
+                            }
+                            sleepMillis(100);
+                        }
+                    }
+                };
+                workers[i].start();
+            }
+
+            long count_bytes_audio=0;
+            long count_bytes_video=0;
+            // manager
+            while(true){
+                // coletando ordens
+                for ( int i=0;i<slots;i++ ){
+                    if ( steps[i] == 2 ){
+                        if ( types_audio[i] && seqs[i] == count_audio_request ){
+                            fos_audio.write(matrix[i], 0, lens[i]);
+                            count_bytes_audio+=lens[i];
+                            System.out.print("\rdownloading.. audio.. "+bytes_to_text(count_bytes_audio)+"                ");
+                            steps[i]=0;
+                            count_audio_request++;
+                            continue;
+                        }
+                        if ( !types_audio[i] && seqs[i] == count_video_request ){
+                            fos_video.write(matrix[i], 0, lens[i]);
+                            count_bytes_video+=lens[i];
+                            System.out.print("\rdownloading.. video.. "+bytes_to_text(count_bytes_video)+"                ");
+                            steps[i]=0;
+                            count_video_request++;
+                            continue;
+                        }
+                    }
+                }
+                // inserindo ordens
+                for ( int i=0;i<slots;i++ ){
+                    // inserindo audio
+                    if ( steps[i] == 0 && !finish_audio[0] ){
+                        commands[i]="https://gambino" + get_gambino_audio_n() + ".com/cdn/down/" + id + "/Audio/audio_" + audio + "_" + count_audio + ".html";
+                        seqs[i]=count_audio;
+                        count_audio++;
+                        types_audio[i]=true;
+                        steps[i]=1;
+                        continue;
+                    }
+                    // inserindo video
+                    if ( steps[i] == 0 && !finish_video[0] ){
+                        commands[i]="https://gambino" + get_gambino_video_n() + ".com/cdn/down/" + id + "/Video/" + resolucao + "/" + resolucao + "_" + lpad(count_video + "", 3, "0") + ".html";
+                        seqs[i]=count_video;
+                        count_video++;
+                        types_audio[i]=false;
+                        steps[i]=1;
+                        continue;
+                    }
+                }
+                // check saida
+                if ( finish_audio[0] && finish_video[0] ){
+                    boolean finish_all=true;
+                    for ( int i=0;i<slots;i++ ){
+                        if ( steps[i] != 0 ){
+                            finish_all=false;
+                            break;
+                        }
+                    }
+                    if ( finish_all )
+                        break;
+                }
+                // sleep
+                sleepMillis(100);
+            }
+
+            running[0]=false;
+            for ( int i=0;i<slots;i++ )
+                workers[i].join();
+
+            fos_audio.flush();
+            fos_video.flush();
+            fos_audio.close();
+            fos_video.close();
+
+            runtimeExec("ffmpeg -i \""+mp4_name+"\" -i \""+wav_name+"\" -c:v copy -c:a aac \"" + filme + "\"", null, null, null, null);
+            new File(mp4_name).delete();
+            new File(wav_name).delete();
+            System.out.print("\r                                                                              ");
+            if ( runtimeExecError.contains("\n[aac ") ){
+                System.out.println("\nFim");
+            }else{
+                System.out.println("Erro: "+ runtimeExecError);
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }
+    }
+
+    public static int gambino_audio_n=13;
+    public int get_gambino_audio_n(){
+        gambino_audio_n++;
+        if ( gambino_audio_n > 13 )
+            gambino_audio_n=1;
+        return gambino_audio_n;
+    }
+
+    public static int gambino_video_n=13;
+    public int get_gambino_video_n(){
+        gambino_video_n++;
+        if ( gambino_video_n > 13 )
+            gambino_video_n=1;
+        return gambino_video_n;
+    }
+
+    public void superflixapi_not_if(int n, String resolucao){
+        if (resolucao.equals(""))
+            System.out.println("unknow "+n);
+    }
+
+    multiCurl overflix_multi=null;
+    public void overflix(String [] args) throws Exception{
+        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(args);
+
+        if ( objs == null )
+            erroFatalParametrosInvalidos();
+        String url=(String)objs[0];
+        Boolean verbose=(Boolean)objs[1];
+        Boolean onlyLink=(Boolean)objs[2];
+        Boolean onlyPreLink=(Boolean)objs[3];
+        Boolean vToken=(Boolean)objs[4];
+        String o_force_out=(String)objs[5];
+        Boolean tags=(Boolean)objs[6];
+        String outPath=(String)objs[7];
+        getScriptRenameBySkip_in=(String)objs[8];
+
+        if ( url.startsWith("https://superflixapi.dev/filme/") ){
+            superflixapi(url);
+            return;
+        }
+        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, null, o_force_out, tags, outPath, null, null);
+
+        if ( overflix_multi != null ){
+            overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);
+            sleepSeconds(2);
+        }
+        if ( !overflix_error.equals("")  )
+            System.out.println(overflix_error);
+        if ( skiping_hide_count > 0  )
+            System.out.println("skips ocultados:"+skiping_hide_count);
+        if ( getScriptRenameBySkip_in != null ){
+            String [] partes=getScriptRenameBySkip_out.split("\n");
+            String [] partes_grupo_serie=getScriptRenameBySkip_in.split(",");
+            int [] partes_grupo_serie_int=new int[partes_grupo_serie.length];
+            for ( int i=0;i<partes_grupo_serie.length;i++ )
+                partes_grupo_serie_int[i]=Integer.parseInt(partes_grupo_serie[i]);
+            int n_episodios=0;
+            for ( int i=0;i<partes_grupo_serie_int.length;i++ )
+                n_episodios+=partes_grupo_serie_int[i];
+            if ( partes.length != n_episodios ){
+                System.err.println("Numero de episodios skip está diferente de numero de episodios informados por parametros. " + partes.length + "/" + n_episodios );
+                System.exit(0);
+            }
+            String [] partes_novos=new String[partes.length];
+            getScriptRenameBySkip_populaPartesNovos(partes, partes_novos, partes_grupo_serie_int);
+            for ( int i=0;i<partes.length;i++ )
+                System.out.println("y mv \""+partes[i]+"\" \""+partes_novos[i]+"\"");
+        }
+        System.exit(0);
+    }
+
+    public String overflix_error="";
+    public boolean skiping_show=true;
+    public int skiping_hide_count=0;
+    public String getScriptRenameBySkip_in=null;
+    public String getScriptRenameBySkip_out="";
+    public boolean overflix_interative=false;
+    //
+    public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken,
+                             String titulo_serie, String titulo_filme, Boolean cam, String o_force_out, Boolean tags, String outPath,
+                             Integer temporada_S, Integer temporada_E) throws Exception{
+        // teste
+        // y overflix "https://encontrei.info/filmes/online/obsessao-dublado-70939/"
+        // y overflix "https://encontrei.info/filmes/online/minions-e-monstros-dublado-71753/"   (CAM)
+        // y overflix "https://encontrei.info/series/online/os-simpsons-dublado-31640/"
+        // y overflix "https://encontrei.info/series/online/os-simpsons-dublado-31640/?temporada=3"
+
+        overflix_verbose(verbose, tags, url);
+
+        String html=overflix_custom_curl(url);
+        if ( curl_response_status != 200 ){
+            overflix_error+="Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html+"\n";
+            return;
+        }
+
+        String [] partes=null;
+
+        // nivel 1 filme / episodio (novo layout: id no fim da url -> playerData ajax -> mixdrop)
+        if ( url.contains("encontrei.info") && ( url.contains("/filmes/") || url.contains("/episodios/") ) ){
+            overflix_verbose(verbose, tags, "TAG:1");
+            if ( html.contains("<div class=\"cam\"") ) // badge <div class="cam" ...>CAM</div>
+                cam=true;
+            if ( titulo_filme == null && titulo_serie == null )
+                titulo_filme=overflix_titulo_og(html);
+            String mix=overflix_playerData_mixdrop(overflix_id_da_url(url));
+            if ( mix == null ){
+                overflix_error+="Não foi possível obter o mixdrop (playerData) de: " + url+"\n";
+                return;
+            }
+            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+            return;
+        }
+
+        // nivel 1 serie (novo layout: pagina ?season=N ja traz os episodios da temporada no html)
+        if ( url.contains("encontrei.info") && url.contains("/series/") ){
+            overflix_verbose(verbose, tags, "TAG:2");
+            if ( titulo_serie == null ){
+                titulo_serie=overflix_titulo_og(html);
+                if ( titulo_serie == null || titulo_serie.contains("\n") ){
+                    overflix_error+="nao foi possivel pegar o titulo serie de " + url + ":\n" + html+"\n";
+                    return;
+                }
+            }
+            String url_base=url.split("\\?")[0];
+            int so_temporada=-1;
+            if ( url.contains("?temporada=") )
+                so_temporada=Integer.parseInt(url.split("=")[1]);
+            String [] seasons=regex_matcher("data-season=\"", "\"", html, true);
+            if ( seasons.length == 0 )
+                seasons=new String[]{"1"};
+            String seasons_feitas=",";
+            for ( int t=0;t<seasons.length;t++ ){
+                int temporada=Integer.parseInt(seasons[t]);
+                if ( seasons_feitas.contains(","+temporada+",") ) // botao pode repetir no html
+                    continue;
+                seasons_feitas+=temporada+",";
+                if ( so_temporada != -1 && temporada != so_temporada )
+                    continue;
+                overflix_verbose(verbose, tags, "TAG:4");
+                String html_temporada=overflix_custom_curl(url_base+"?season="+temporada);
+                if ( curl_response_status != 200 ){
+                    overflix_error+="Erro lendo temporada "+temporada+" de "+url_base+" status:"+curl_response_status+"\n";
+                    continue;
+                }
+                String [] hrefs=regex_matcher("href=\"", "\"", html_temporada, true);
+                String eps_feitos=",";
+                for ( int i=0;i<hrefs.length;i++ ){
+                    if ( !hrefs[i].contains("/episodios/online/") )
+                        continue;
+                    // extrai o episodio do slug: ...os-simpsons-2x13-dublado-31792/
+                    int sx=-1, ex=-1;
+                    String [] toks=hrefs[i].split("-");
+                    for ( int k=0;k<toks.length;k++ ){
+                        int px=toks[k].indexOf("x");
+                        if ( px > 0 && px < toks[k].length()-1 ){
+                            String a_=toks[k].substring(0, px);
+                            String b_=toks[k].substring(px+1);
+                            if ( a_.matches("[0-9]+") && b_.matches("[0-9]+") ){
+                                sx=Integer.parseInt(a_);
+                                ex=Integer.parseInt(b_);
+                            }
+                        }
+                    }
+                    if ( ex == -1 )
+                        continue;
+                    if ( eps_feitos.contains(","+sx+"x"+ex+",") ) // mesmo episodio repostado com outro id
+                        continue;
+                    eps_feitos+=sx+"x"+ex+",";
+                    overflix_verbose(verbose, tags, "TAG:3");
+                    temporada_S=temporada;
+                    temporada_E=ex;
+                    // tentar dar skip rapido nas series para evitar perder tempo lendo pagina
+                    if ( titulo_serie != null ){
+                        String extensao_presumida=".mp4";
+                        String titulo_presumido=titulo_serie + " S" + lpad(temporada_S, 2, "0") + "E" + lpad(temporada_E, 2, "0") + extensao_presumida;
+                        String dir_presumido="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
+                        String out_presumido=dir_presumido+titulo_presumido;
+                        File f_presumido=new File(out_presumido);
+                        boolean needDownload_presumido = !f_presumido.exists() || f_presumido.length() < 1024*1024;
+                        if ( onlyLink || onlyPreLink ){
+                            //
+                        }else{
+                            if ( needDownload_presumido ){
+                                //
+                            }else{
+                                if ( skiping_show ){
+                                    System.out.println("skip " + out_presumido);
+                                    if ( getScriptRenameBySkip_in != null )
+                                        getScriptRenameBySkip_out+=out_presumido+"\n";
+                                }else
+                                    skiping_hide_count++;
+                                continue; // skip rapido nas series para evitar perder tempo lendo pagina
+                            }
+                        }
+                    }
+                    overflix_nav(hrefs[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                }
+            }
+            return;
+        }
+
+        // nivel 2 filme e serie
+        partes=regex_matcher("<a href=\"", "\"", html.replace("'","\""), true);
+        if ( partes.length > 0 && !url.contains("/f/") ){
+            overflix_verbose(verbose, tags, "TAG:5->"+String.join(",", partes));
+
+            if ( titulo_filme == null ){
+                String [] tmp=null;
+                tmp=regex_matcher("<span class=\"titulo\">", "<", html, true);
+                if ( tmp.length > 0 )
+                    titulo_filme=fixNameFile(tmp[0].trim());
+                if ( titulo_filme == null ){
+                    tmp=regex_matcher("<small>", "</small>", html, true);
+                    if ( tmp.length > 0 )
+                        titulo_serie=fixNameFile(tmp[0]);
+                }
+                if ( titulo_filme.contains("\n") ){
+                    overflix_error+="nao foi possivel pegar o titulo filme de " + url + ":\n" + html+"\n";
+                    return;
+                }
+            }
+
+            String prefix=url.substring(0, url.indexOf("/", 9));
+            for ( int i=0;i<partes.length;i++ ){
+                if ( !partes[i].startsWith("/em") && !partes[i].startsWith("https://mixdrop.") && !partes[i].contains("/f/") ){
+                    overflix_verbose(verbose, tags, "TAG:6 - " + partes[i]);
+                    continue;
+                }
+                overflix_verbose(verbose, tags, "TAG:6");
+                if ( partes[i].startsWith("https://mixdrop.") ){
+                    overflix_verbose(verbose, tags, "TAG:601");
+                    partes[i]=partes[i].replaceAll("https://mixdrop.sb/", "https://mixdrop.ps/");
+                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                }else{
+                    if ( partes[i].contains("/f/") ){
+                        overflix_verbose(verbose, tags, "TAG:602");
+                        overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    }else{
+                        overflix_verbose(verbose, tags, "TAG:603");
+                        overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    }
+                }
+                return;
+            }
+            if ( tags )
+                overflix_error+="Não foi possível resolver a url:: " + url+"\nhtml:\n"+html+"\n";
+            else
+                overflix_error+="Não foi possível resolver a url::: " + url+"\n";
+            return;
+        }
+
+        // nivel 3 filme e serie
+        String mix=null;
+        String suffix="?download";
+        if (
+            ( url.startsWith("https://mixdrop.") || url.contains("/f/") )
+            && !url.endsWith("?download")
+        ){
+            mix=url+suffix;
+        }else{
+            partes=regex_matcher("window.location.href=\"", "\"", html, true);
+            if ( partes.length > 0 ){
+                overflix_verbose(verbose, tags, "TAG:7");
+                for ( int i=0;i<partes.length;i++ ){
+                    mix=partes[i]+suffix;
+                    break;
+                }
+                if ( mix == null ){
+                    overflix_error+="Não foi possível resolver a url:::: " + url+"\n";
+                    return;
+                }
+            }
+        }
+
+        // use mix
+        if ( mix != null ){
+            overflix_verbose(verbose, tags, "TAG:8");
+            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+            return;
+        }
+
+        // nivel 4 filme e serie
+        if ( url.contains("/f/") && url.endsWith("?download") ){
+            // pegando titulo
+            overflix_verbose(verbose, tags, "TAG:9");
+            String titulo="?";
+            partes=regex_matcher("<b title=\"", "\"", html, true);
+            if ( html.contains("<h2>WE ARE SORRY</h2>") ){
+                overflix_error+="Arquivo não mais disponível no mixdrop, url: " + url+"\n";
+                if ( getScriptRenameBySkip_in != null )
+                    getScriptRenameBySkip_out+="?"+url+"?\n";
+                return;
+            }
+            if ( partes.length > 0 ){
+                titulo=partes[0].trim().replace("-dublado-www.encontrei.tv", "").replace(".Dublado.", ".");
+                if ( temporada_S != null && temporada_E != null )
+                    titulo=titulo_serie + " S" + lpad(temporada_S, 2, "0") + "E" + lpad(temporada_E, 2, "0") + titulo.substring(titulo.lastIndexOf("."));
+                else{
+                    if ( titulo_filme != null ){
+                        int pos=titulo.lastIndexOf(".");
+                        if ( pos > -1 )
+                            titulo=titulo_filme+titulo.substring(pos);
+                    }
+                }
+            }else{
+                overflix_error+="Erro, titulo não encontrado na url: " + url+"\n";
+                return;
+            }
+            String dir="D:\\ProgramFiles\\site\\filmes\\";
+            if ( cam != null && cam )
+                titulo="cam-"+titulo;
+            if ( titulo_serie != null ){
+                dir="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
+                detect_changed_struct_folder(dir, titulo);
+            }
+            String out=dir+titulo;
+            if ( outPath != null )
+                out=outPath+"\\"+titulo;
+            if ( o_force_out != null )
+                out=o_force_out;
+
+            File f=new File(out);
+            boolean needDownload = !f.exists() || f.length() < 1024*1024;
+            String s=null;
+            if ( onlyPreLink
+                 || ( !onlyPreLink && !onlyLink && !needDownload )
+            ){
+                s="Token";
+            }else{
+                if ( url.equals("") ){
+                    overflix_error+="url vazia!\n";
+                    return;
+                }
+                //s=getTokenIE_old(vToken, url);
+                //s=getTokenTESTCAFE_old(vToken, url);
+                int tentativas=3;
+                if ( overflix_interative && url.endsWith("?download") && url.contains("/f/") )
+                    tentativas=1;
+                for ( int i=1;i<=tentativas;i++ ){
+                    s=getTokenPuppeteer(url);
+                    if ( s != null )
+                        break;
+                }
+                if ( s == null && overflix_interative && url.endsWith("?download") && url.contains("/f/") )
+                    s=capturarTokenDoChrome(url + "&name=interative");
+            }
+            if ( s == null ){
+                if ( runtimeExecError.trim().equals("") ){
+                    overflix_error+="não foi possível solucionar pelo token.. pegue o arquivo pela url: " + url + " file: \"" + out+"\"\n";
+                    return;
+                }else{
+                    overflix_error+="Error script token: " + runtimeExecError+"\n";
+                    return;
+                }
+            }
+            overflix_verbose(verbose, tags, "curl \"" + s + "\" > \"" + out + "\"");
+            if ( onlyLink || onlyPreLink ){
+                System.out.println("curl \"" + s + "\" > \"" + out + "\"");
+            }else{
+                if ( needDownload ){
+                    if ( overflix_multi == null )
+                        overflix_multi=new multiCurl();
+                    overflix_multi.addCurl(s, out, true);
+                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(2);
+                    skiping_show=false;
+                }else{
+                    if ( skiping_show ){
+                        System.out.println("skip " + out);
+                        if ( getScriptRenameBySkip_in != null )
+                            getScriptRenameBySkip_out+=out+"\n";
+                    }else
+                        skiping_hide_count++;
+                }
+            }
+            return;
+        }
+        overflix_error+="Não foi possível resolver a url =>  "+ url;
+        return;
+    }
+
+    public String capturarTokenDoChrome(String url) throws java.io.IOException, java.util.concurrent.ExecutionException, java.lang.InterruptedException {
+        int porta = 222;
+        java.util.concurrent.CompletableFuture<String> resultado = new java.util.concurrent.CompletableFuture<>();
+        com.sun.net.httpserver.HttpServer servidor = com.sun.net.httpserver.HttpServer.create(
+            new java.net.InetSocketAddress(porta), 0
+        );
+        servidor.createContext("/", exchange -> {
+            String query = exchange.getRequestURI().getQuery();
+            byte[] resposta = "Capturado. Retorne ao Java.".getBytes();
+            exchange.sendResponseHeaders(200, resposta.length);
+            java.io.OutputStream os = exchange.getResponseBody();
+            os.write(resposta);
+            os.close();
+            resultado.complete(query);
+        });
+
+        servidor.start();
+        new java.lang.ProcessBuilder("cmd", "/c", "start", "chrome", "\""+url+"\"").start();
+        try {
+            return resultado.get();
+        } finally {
+            servidor.stop(0);
+        }
+    }
+
+    public void detect_changed_struct_folder(String path, String item){
+        File f=new File(path);
+        if ( f.exists() && f.isDirectory() ){
+            File [] lista=f.listFiles();
+            if ( lista.length > 0 ){
+                boolean achou=false;
+                for ( int i=0;i<lista.length;i++ ){
+                    if ( lista[i].getName().contains("S01E01") || lista[i].getName().contains("S01E02") || lista[i].getName().contains("S01E03") || lista[i].getName().contains("S01E04") ){
+                        achou=true;
+                        break;
+                    }
+                }
+                if ( !achou )
+                    erroFatal("Trava de mudança de estrutura!\nA pasta \"" + f.getAbsolutePath() + "\" contém arquivo mas nenhum contém o S1E1!\nFormate a pasta!\nArquivo esperado: \"" + f.getAbsolutePath()+"\\"+item + "\"");
+            }
+        }
+    }
+
+    public String overflix_custom_curl(String url){
+        String html=curl_string_retry(url, 10, 10, new int[]{500, 525});
+        if ( curl_response_status == 301 || curl_response_status == 302 ) // miixdrop.net -> miiiixdrop.net
+            html=curl_string_retry(curl_response_location, 10, 10, new int[]{500, 525});
+        return html;
+    }
+
+    // "Assistir Os Simpsons (1989) Dublado Online" -> "Os Simpsons"
+    public String overflix_titulo_og(String html){
+        String [] tmp=regex_matcher("<meta property=\"og:title\" content=\"", "\"", html, true);
+        if ( tmp.length == 0 )
+            return null;
+        String t=tmp[0].replace("&amp;", "&").replace("&#039;", "'").replace("&quot;", "").trim();
+        if ( t.startsWith("Assistir ") )
+            t=t.substring("Assistir ".length());
+        t=t.replaceAll("\\s+Online$", "");
+        t=t.replaceAll("\\s*\\(\\d{4}\\)", "");
+        t=t.replaceAll("\\s+(Dublado|Legendado)$", "");
+        return fixNameFile(t.trim());
+    }
+
+    // https://encontrei.info/filmes/online/obsessao-dublado-70939/ -> 70939
+    public String overflix_id_da_url(String url){
+        String u=url.split("\\?")[0];
+        while ( u.endsWith("/") )
+            u=u.substring(0, u.length()-1);
+        return u.substring(u.lastIndexOf("-")+1);
+    }
+
+    // playerData -> url de download do mixdrop (ex: https://miixdrop.net/f/el63qqvms1prl8)
+    // o servidor so entrega esse json para requisicao ajax, por isso o x-requested-with via global_header
+    public String overflix_playerData_mixdrop(String id){
+        String global_header_bkp=global_header;
+        global_header+="x-requested-with: XMLHttpRequest\r\n";
+        String json=curl_string_retry("https://encontrei.info/index.php?app=videobox&module=video&controller=view&do=playerData&id="+id, 10, 10, new int[]{500, 525});
+        global_header=global_header_bkp;
+        if ( curl_response_status != 200 )
+            return null;
+        json=json.replace("\\/", "/").replace("&amp;", "&");
+        String [] p=regex_matcher("\"label\":\"MixDrop\"", "}", json, true);
+        if ( p.length == 0 )
+            return null;
+        String [] down=regex_matcher("\"downloadUrl\":\"", "\"", p[0], true);
+        if ( down.length == 0 )
+            return null;
+        String servers="";
+        String [] sv=regex_matcher("\"servers_dub\":\"", "\"", json, true);
+        if ( sv.length > 0 && sv[0].contains("mixdrop=") )
+            servers=sv[0];
+        else{
+            sv=regex_matcher("\"servers_leg\":\"", "\"", json, true);
+            if ( sv.length > 0 && sv[0].contains("mixdrop=") )
+                servers=sv[0];
+        }
+        if ( servers.equals("") )
+            return null;
+        String hash=servers.substring(servers.indexOf("mixdrop=")+"mixdrop=".length()).split("&")[0];
+        return down[0]+hash;
+    }
+
+    public void overflix_verbose(boolean verbose, boolean tags, String a){
+        if ( a.startsWith("TAG") && !tags )
+            return;
+        if ( verbose )
+            System.out.println(a);
+    }
+
+    public String getTokenPuppeteer(String url) throws Exception{
+        String script="""
+                      const puppeteer = require('puppeteer');
+
+                      // Função de delay compatível
+                      function delay(ms) {
+                          return new Promise(resolve => setTimeout(resolve, ms));
+                      }
+
+                      /**
+                       * Executa o processo completo
+                       */
+                      async function getVideoUrl(myUrl) {
+                          let browser = null;
+
+                          try {
+                              // Configuração do Puppeteer
+                              browser = await puppeteer.launch({
+                                  headless: true,
+                                  args: [
+                                      '--no-sandbox',
+                                      '--disable-setuid-sandbox',
+                                      '--disable-web-security',
+                                      '--disable-blink-features=AutomationControlled'
+                                  ]
+                              });
+
+                              const page = await browser.newPage();
+
+                              // Configurações stealth
+                              await page.evaluateOnNewDocument(() => {
+                                  Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+                              });
+
+                              await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                              await page.setViewport({ width: 1920, height: 1080 });
+
+                              // Navega para a URL fornecida (vai seguir redirects automaticamente)
+                              await page.goto(myUrl, {
+                                  waitUntil: 'networkidle2',
+                                  timeout: 60000
+                              });
+
+                              await delay(3000);
+
+                              // Pega o CSRF token da própria página (já após o redirect)
+                              const csrfToken = await page.evaluate(() => {
+                                  const meta = document.querySelector('meta[name="csrf"]');
+                                  return meta ? meta.getAttribute('content') : null;
+                              });
+
+                              if (!csrfToken) {
+                                  throw new Error('CSRF token não encontrado');
+                              }
+
+                              // Verifica se jQuery está disponível, se não, injeta
+                              const hasJquery = await page.evaluate(() => typeof $ !== 'undefined');
+                              if (!hasJquery) {
+                                  await page.addScriptTag({url: 'https://code.jquery.com/jquery-3.6.0.min.js'});
+                                  await delay(1000);
+                              }
+
+                              // Executa o processo reCAPTCHA usando a URL atual (após redirect)
+                              const videoUrl = await page.evaluate(async (csrfToken) => {
+                                  return new Promise((resolve, reject) => {
+                                      // Função loadRecaptcha
+                                      function loadRecaptcha() {
+                                          return new Promise((resolve, reject) => {
+                                              if (window.grecaptcha) {
+                                                  resolve();
+                                                  return;
+                                              }
+
+                                              const script = document.createElement('script');
+                                              script.src = 'https://www.google.com/recaptcha/api.js?render=6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd';
+                                              script.async = true;
+                                              script.defer = true;
+
+                                              script.onload = () => {
+                                                  const checkLoad = setInterval(() => {
+                                                      if (window.grecaptcha) {
+                                                          clearInterval(checkLoad);
+                                                          resolve();
+                                                      }
+                                                  }, 100);
+                                              };
+
+                                              script.onerror = reject;
+                                              document.head.appendChild(script);
+                                          });
+                                      }
+
+                                      loadRecaptcha().then(() => {
+                                          grecaptcha.ready(function() {
+                                              grecaptcha.execute("6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd", {action: "download"})
+                                              .then(function(token) {
+                                                  if (!token) {
+                                                      reject('Token reCAPTCHA vazio');
+                                                      return;
+                                                  }
+
+                                                  // Usa a URL atual da página (após redirect)
+                                                  $.post(window.location.href, {
+                                                      csrf: csrfToken,
+                                                      token: token,
+                                                      a: "genticket"
+                                                  })
+                                                  .done(function(response) {
+                                                      if (response && response.url) {
+                                                          resolve(response.url);
+                                                      } else {
+                                                          reject('Resposta sem URL');
+                                                      }
+                                                  })
+                                                  .fail(reject);
+                                              })
+                                              .catch(reject);
+                                          });
+                                      }).catch(reject);
+                                  });
+                              }, csrfToken);
+
+                              return videoUrl;
+
+                          } catch (error) {
+                              throw error;
+                          } finally {
+                              if (browser) {
+                                  await browser.close();
+                              }
+                          }
+                      }
+
+                      /**
+                       * Função principal
+                       */
+                      async function main() {
+                          // Verifica se a URL foi fornecida
+                          if (process.argv.length < 3) {
+                              process.exit(1);
+                          }
+
+                          const myUrl = process.argv[2];
+
+                          try {
+                              // Executa o processo completo
+                              const videoUrl = await getVideoUrl(myUrl);
+
+                              // Mostra APENAS a URL no output
+                              console.log(videoUrl);
+
+                          } catch (error) {
+                              process.exit(1);
+                          }
+                      }
+
+                      // Executa o script
+                      main();
+        """;
+
+        String alert_puppeteer="puppeteer nao encontrado!, instale ele com npm install puppeteer na pasta C:/npm_puppeteer\nPara instalar o npm: winget install OpenJS.NodeJS.LTS";
+        if ( !new File("C:/npm_puppeteer").exists() )
+            throw new Exception(alert_puppeteer);
+        String s=runtimeExec(null, new String[]{"cmd", "/c", "node", "-", url},new File("C:/npm_puppeteer"), script.getBytes(), null);
+        if ( runtimeExecError != null && !runtimeExecError.equals("") ){
+            if ( runtimeExecError.contains("Cannot find module 'puppeteer") )
+                throw new Exception(alert_puppeteer);
+            throw new Exception("erro: \n" + runtimeExecError);
+        }
+        s=s.trim();
+        if ( s.equals("") )
+            return null;
+        return s;
+    }
+
+    public String getTokenTESTCAFE_old(Boolean enable_visible, String url) throws Exception{
+        String script="import { Selector, ClientFunction } from 'testcafe';\n" +
+        "\n" +
+        "fixture('Executar Script reCAPTCHA')\n" +
+        "    .page('"+url+"'); // Substitua pela URL do seu site\n" +
+        "\n" +
+        "test('Obter token reCAPTCHA e enviar requisição', async t => {\n" +
+        "    // 1. Carregar a API do reCAPTCHA se não estiver presente\n" +
+        "    await t.eval(() => {\n" +
+        "        if (typeof grecaptcha === 'undefined') {\n" +
+        "            const script = document.createElement('script');\n" +
+        "            script.src = 'https://www.google.com/recaptcha/api.js?render=6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd';\n" +
+        "            document.head.appendChild(script);\n" +
+        "        }\n" +
+        "    });\n" +
+        "\n" +
+        "    // 2. Executar o script principal\n" +
+        "    const result = await ClientFunction(() => {\n" +
+        "        return new Promise((resolve) => {\n" +
+        "            // Verifica se o reCAPTCHA está carregado\n" +
+        "            const checkRecaptcha = () => {\n" +
+        "                if (typeof grecaptcha !== 'undefined' && \n" +
+        "                    typeof grecaptcha.ready !== 'undefined' &&\n" +
+        "                    typeof grecaptcha.execute !== 'undefined') {\n" +
+        "                    \n" +
+        "                    grecaptcha.ready(function() {\n" +
+        "                        grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"})\n" +
+        "                            .then(function(token) {\n" +
+        "                                const csrf = document.querySelector('meta[name=\"csrf\"]').content;\n" +
+        "                                \n" +
+        "                                // Usando fetch ao invés de jQuery\n" +
+        "                                fetch(window.location.href, {\n" +
+        "                                    method: 'POST',\n" +
+        "                                    headers: {\n" +
+        "                                        'Content-Type': 'application/x-www-form-urlencoded',\n" +
+        "                                    },\n" +
+        "                                    body: `csrf=${csrf}&token=${token}&a=genticket`\n" +
+        "                                })\n" +
+        "                                .then(response => response.json())\n" +
+        "                                .then(data => resolve(data.url));\n" +
+        "                            });\n" +
+        "                    });\n" +
+        "                } else {\n" +
+        "                    setTimeout(checkRecaptcha, 100);\n" +
+        "                }\n" +
+        "            };\n" +
+        "            \n" +
+        "            checkRecaptcha();\n" +
+        "        });\n" +
+        "    })();\n" +
+        "\n" +
+        "    // 3. Exibir o resultado\n" +
+        "    await t.expect(result).ok('O token foi gerado e a requisição foi enviada com sucesso');\n" +
+        "    console.log('URL obtida:', result);\n" +
+        "});";
+
+        script="import { Selector, ClientFunction } from 'testcafe';\n" +
+        "\n" +
+        "fixture('Executar Script reCAPTCHA')\n" +
+        "    .page('"+url+"');\n" +
+        "\n" +
+        "test('Obter token reCAPTCHA e enviar requisição', async t => {\n" +
+        "    // 1. Carregar a API do reCAPTCHA se não estiver presente\n" +
+        "    await t.eval(() => {\n" +
+        "        if (typeof grecaptcha === 'undefined') {\n" +
+        "            const script = document.createElement('script');\n" +
+        "            script.src = 'https://www.google.com/recaptcha/api.js?render=6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd';\n" +
+        "            document.head.appendChild(script);\n" +
+        "        }\n" +
+        "    });\n" +
+        "\n" +
+        "    // 2. Executar o script principal com 4 tentativas\n" +
+        "    let result = null;\n" +
+        "    let attempts = 0;\n" +
+        "    const maxAttempts = 4;\n" +
+        "\n" +
+        "    while (attempts < maxAttempts && !result) {\n" +
+        "        attempts++;\n" +
+        "        console.log(`Tentativa ${attempts} de ${maxAttempts} para resolver o captcha...`);\n" +
+        "\n" +
+        "        try {\n" +
+        "            result = await ClientFunction(() => {\n" +
+        "                return new Promise((resolve, reject) => {\n" +
+        "                    // Verifica se o reCAPTCHA está carregado\n" +
+        "                    const checkRecaptcha = () => {\n" +
+        "                        if (typeof grecaptcha !== 'undefined' && \n" +
+        "                            typeof grecaptcha.ready !== 'undefined' &&\n" +
+        "                            typeof grecaptcha.execute !== 'undefined') {\n" +
+        "                            \n" +
+        "                            grecaptcha.ready(function() {\n" +
+        "                                grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"})\n" +
+        "                                    .then(function(token) {\n" +
+        "                                        const csrfMeta = document.querySelector('meta[name=\"csrf\"]');\n" +
+        "                                        if (!csrfMeta) {\n" +
+        "                                            reject('Meta tag CSRF não encontrada');\n" +
+        "                                            return;\n" +
+        "                                        }\n" +
+        "                                        \n" +
+        "                                        const csrf = csrfMeta.content;\n" +
+        "                                        \n" +
+        "                                        // Usando fetch ao invés de jQuery\n" +
+        "                                        fetch(window.location.href, {\n" +
+        "                                            method: 'POST',\n" +
+        "                                            headers: {\n" +
+        "                                                'Content-Type': 'application/x-www-form-urlencoded',\n" +
+        "                                            },\n" +
+        "                                            body: `csrf=${csrf}&token=${token}&a=genticket`\n" +
+        "                                        })\n" +
+        "                                        .then(response => {\n" +
+        "                                            if (!response.ok) {\n" +
+        "                                                throw new Error(`HTTP error! status: ${response.status}`);\n" +
+        "                                            }\n" +
+        "                                            return response.json();\n" +
+        "                                        })\n" +
+        "                                        .then(data => {\n" +
+        "                                            if (data && data.url) {\n" +
+        "                                                resolve(data.url);\n" +
+        "                                            } else {\n" +
+        "                                                reject('Resposta não contém URL');\n" +
+        "                                            }\n" +
+        "                                        })\n" +
+        "                                        .catch(error => reject(`Erro na requisição: ${error.message}`));\n" +
+        "                                    })\n" +
+        "                                    .catch(error => reject(`Erro ao executar reCAPTCHA: ${error.message}`));\n" +
+        "                            });\n" +
+        "                        } else {\n" +
+        "                            setTimeout(checkRecaptcha, 500); // Aumentado para 500ms\n" +
+        "                        }\n" +
+        "                    };\n" +
+        "                    \n" +
+        "                    // Timeout para evitar loop infinito\n" +
+        "                    setTimeout(() => reject('Timeout ao carregar reCAPTCHA'), 10000);\n" +
+        "                    checkRecaptcha();\n" +
+        "                });\n" +
+        "            })();\n" +
+        "\n" +
+        "            console.log(`Captcha resolvido na tentativa ${attempts}`);\n" +
+        "            break; // Sai do loop se bem-sucedido\n" +
+        "\n" +
+        "        } catch (error) {\n" +
+        "            console.log(`Tentativa ${attempts} falhou:`, error.message || error);\n" +
+        "            \n" +
+        "            // Aguarda um tempo antes da próxima tentativa (backoff exponencial)\n" +
+        "            const waitTime = Math.pow(2, attempts) * 1000; // 2s, 4s, 8s, etc.\n" +
+        "            console.log(`Aguardando ${waitTime/1000} segundos antes da próxima tentativa...`);\n" +
+        "            await t.wait(waitTime);\n" +
+        "            \n" +
+        "            // Tenta recarregar a página na última tentativa se ainda falhar\n" +
+        "            if (attempts === maxAttempts - 1) {\n" +
+        "                console.log('Recarregando página para última tentativa...');\n" +
+        "                await t.eval(() => location.reload());\n" +
+        "                await t.wait(3000); // Aguarda a página carregar\n" +
+        "            }\n" +
+        "        }\n" +
+        "    }\n" +
+        "\n" +
+        "    // 3. Verifica se obteve resultado\n" +
+        "    if (result) {\n" +
+        "        await t.expect(result).ok('O token foi gerado e a requisição foi enviada com sucesso');\n" +
+        "        console.log('URL obtida:', result);\n" +
+        "    } else {\n" +
+        "        throw new Error(`Falha ao resolver captcha após ${maxAttempts} tentativas`);\n" +
+        "    }\n" +
+        "});";
+
+        File f = File.createTempFile("meu-arquivo-temporario", ".js");
+        String path=f.getAbsolutePath();
+        FileWriter fw=new FileWriter(f);
+        fw.write(script);
+        fw.flush();
+        fw.close();
+        String [] commands=null;
+        String s="";
+
+        String navegador_testcafe="chrome";
+        navegador_testcafe="firefox";
+
+        ////////test
+        //enable_visible=true;
+
+        if ( enable_visible )
+            commands=new String[]{"cmd", "/c", "testcafe", navegador_testcafe, path};
+        else
+            commands=new String[]{"cmd", "/c", "testcafe", navegador_testcafe+":headless", path};
+        s=runtimeExec(null, commands, null, null, null);
+        if ( runtimeExecError != null && !runtimeExecError.equals("") )
+            throw new Exception("erro: programa testcafe não encontrado!\ninstale ele:npm install -g testcafe\n" + runtimeExecError);
+        String [] partes=s.split("\n");
+        int p=findParm(partes, "URL obtida: ", false);
+        if ( p > -1 )
+            return partes[p].substring("URL obtida: ".length());
+        return "";
+    }
+
+    public String getTokenIE_old(Boolean enable_visible, String url){
+        try{
+            String [] result=new String[]{""};
+            Thread t=new Thread(new Runnable() {
+                public void run() {
+                    try{
+                        String s="Token";
+                        String _visible="$false";
+                        String _quit="$ie.Parent.Quit();";
+                        if ( enable_visible ){
+                            _visible="$true";
+                            _quit="";
+                        }
+                        String text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
+                            "$ie.Visible=" + _visible + "\n" +
+                            "$ie.ParsedHtml\n" +
+                            "$ie.Navigate(\"" + url + "\");\n" +
+                            "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
+                            "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +
+                            "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
+                            "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
+                            "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" +
+                            _quit + "\n" +
+                            "";
+                        //taskkill /im iexplore.exe /f
+                        s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes(), null);
+                        if ( s == null )
+                            s="";
+                        int limitLoop=1;
+                        while ( s.trim().length() == 0 && limitLoop-->0 ){
+                            text="$ie = New-Object -ComObject 'internetExplorer.Application'\n" +
+                            "$ie.Visible=" + _visible + "\n" +
+                            "$ie.ParsedHtml\n" +
+                            "$ie.Navigate(\"" + url + "\");\n" +
+                            "while($ie.Busy -eq $true){sleep -Milliseconds 100;}\n"+
+                            "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                            "sleep -Milliseconds 1000;\n" +
+                            "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                            "sleep -Milliseconds 1000;\n" +
+                            "$ie.Document.ParentWindow.ExecScript('document.getElementsByClassName(\"btn btn3 download-btn\")[0].click();', \"javascript\");\n" +
+                            "sleep -Milliseconds 1000;\n" +
+                            "$ie.Document.ParentWindow.ExecScript('s=\"0\"', \"javascript\")\n" +
+                            "$ie.Document.ParentWindow.ExecScript('grecaptcha.ready(function() {grecaptcha.execute(\"6LetXaoUAAAAAB6axgg4WLG9oZ_6QLTsFXZj-5sd\", {action: \"download\"}).then(function(c){n=$(\"meta[name=csrf]\").attr(\"content\");$.post(\"\", {csrf: n,token: c,a: \"genticket\"},function(d){console.log(d.url);s=d.url;})});});', \"javascript\")\n" +
+                            "while($ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null) -eq 0){sleep -Milliseconds 100;}\n" +
+                            "echo $ie.Document.ParentWindow.GetType().InvokeMember(\"s\", 4096, $Null, $IE.Document.parentWindow, $Null);\n" +
+                            _quit + "\n" +
+                            "";
+                            s=runtimeExec(null, new String[]{"powershell", "-noprofile", "-c", "-"}, null, text.getBytes(), null);
+                            sleepSeconds(1);
+                        }
+                        if ( s == null )
+                            s="";
+                        result[0]=s;
+                    }catch(Exception e){
+                        result[0]="";
+                    }
+                }
+            });
+            t.start();
+            for ( int i=0;i<15;i++ ){
+                if ( !t.isAlive() ){
+                    try{
+                        return result[0];
+                    }catch(Exception e){}
+                }
+                sleepSeconds(1);
+            }
+            try{
+                t.interrupt();
+            }catch(Exception e){}
+        }catch(Exception e){}
+        return "";
+    }
+
+    public void getScriptRenameBySkip_populaPartesNovos(String [] partes, String [] partes_novos, int [] partes_grupo_serie_int){
+        int serie=1;
+        int episodio=1;
+        int count=0;
+        while ( partes_grupo_serie_int.length > 0 ){
+            if ( partes_grupo_serie_int[0] == 0 )
+                erroFatal("Erro inesperado 34252");
+            partes_grupo_serie_int[0]--;
+            partes_novos[count++]="S"+serie+"E"+(episodio++);
+            if ( partes_grupo_serie_int[0] == 0 ){
+                partes_grupo_serie_int=sliceParm(1, partes_grupo_serie_int);
+                serie++;
+                episodio=1;
+            }
+        }
+        for ( int i=0;i<partes.length;i++ ){
+            // pega serie name
+            String [] estrutura=partes[i].split("\\\\");
+            if ( partes[i].startsWith("?") ){ // bypass "<h2>WE ARE SORRY</h2>"
+                partes_novos[i]="?";
+                continue;
+            }
+            if ( estrutura.length <= 1 )
+                erroFatal("Caminho incorreto: " + partes[i]);
+            String serie_name=estrutura[estrutura.length-2];
+            String extensao=estrutura[estrutura.length-1].split("\\.")[estrutura[estrutura.length-1].split("\\.").length-1];
+            estrutura[estrutura.length-1]=serie_name+" "+partes_novos[i]+"."+extensao;
+            partes_novos[i]=String.join("\\", estrutura);
+        }
+    }
+    
+/*  
+    // OLD morto temporariamente
     public String overflix_busca(String [] args){
         String s="";
         if ( args.length == 0 )
@@ -10761,12 +12106,6 @@ bind 'set enable-bracketed-paste off'
         overflix_verbose(verbose, tags, url);
             
         String html=overflix_custom_curl(url);
-        /*
-        if ( curl_response_status == 301 ){
-            url=curl_response_location;
-            html=overflix_custom_curl(url);
-        }
-        */        
         if ( curl_response_status != 200 ){
             overflix_error+="Erro:\nURL: " + url+"\nStatus: "+ curl_response_status+"\nText:\n" + html+"\n";
             return;            
@@ -11098,9 +12437,6 @@ bind 'set enable-bracketed-paste off'
                           return new Promise(resolve => setTimeout(resolve, ms));
                       }
                       
-                      /**
-                       * Executa o processo completo
-                       */
                       async function getVideoUrl(myUrl) {
                           let browser = null;
                           
@@ -11222,9 +12558,6 @@ bind 'set enable-bracketed-paste off'
                           }
                       }
                       
-                      /**
-                       * Função principal
-                       */
                       async function main() {
                           // Verifica se a URL foi fornecida
                           if (process.argv.length < 3) {
@@ -11562,6 +12895,7 @@ bind 'set enable-bracketed-paste off'
             partes_novos[i]=String.join("\\", estrutura);
         }
     }
+*/
     
     public int tryConvertNumberPositiveByString(int n_lines_buffer,String value){
         try{
