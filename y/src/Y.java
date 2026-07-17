@@ -15870,7 +15870,7 @@ while True:
         }
         if ( args.length == 3 ){
             try{
-                new DeriveSSHKey().go(new String []{args[1], args[2]}, flag_out);
+                new DeriveSSHKey().generate("ed25519", args[1], args[2], flag_out);
             }catch(Exception e){
                 erroFatal(e);
             }
@@ -35503,203 +35503,491 @@ class TabelaSAC {
         System.out.println("Total pago (empréstimo + juros): R$ " + df.format(valor + totalJuros));
     }
 }
+
 class DeriveSSHKey {
 
     final int ITERATIONS = 400_000;
+    final java.security.SecureRandom RNG = new java.security.SecureRandom();
+    final Ed25519 ed = new Ed25519();
+    final MlDsa mldsa = new MlDsa();
 
-    final java.math.BigInteger P;
-    final java.math.BigInteger D;
-    final java.math.BigInteger SQRT_M1;
-    final java.math.BigInteger[] BASE;
+    final String MLDSA_TYPE = "ssh-mldsa44-ed25519@openssh.com";
+    final String ED_TYPE    = "ssh-ed25519";
+    final byte[] COMPOSITE_PREFIX = "CompositeAlgorithmSignatures2025".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    final byte[] COMPOSITE_LABEL  = "COMPSIG-MLDSA44-Ed25519-SHA512".getBytes(java.nio.charset.StandardCharsets.UTF_8);
 
-    DeriveSSHKey() {
-        P       = java.math.BigInteger.TWO.pow(255)
-                    .subtract(java.math.BigInteger.valueOf(19));
-        D       = modInv(java.math.BigInteger.valueOf(121666))
-                    .multiply(java.math.BigInteger.valueOf(-121665).mod(P)).mod(P);
-        SQRT_M1 = java.math.BigInteger.TWO.modPow(
-                    P.subtract(java.math.BigInteger.ONE)
-                     .divide(java.math.BigInteger.valueOf(4)), P);
-        java.math.BigInteger gy = modInv(java.math.BigInteger.valueOf(5))
-                    .multiply(java.math.BigInteger.valueOf(4)).mod(P);
-        BASE = new java.math.BigInteger[]{ recoverX(gy, 0), gy };
-    }
+    // =====================================================================
+    // MÉTODO PÚBLICO 1 — geração
+    // =====================================================================
+    public String[] generate(String tipo, String passphrase, String nome, boolean flag_output) throws java.lang.Exception {
+        if (nome == null) nome = "";
+        boolean pq = tipo.equals("mldsa44-ed25519") || tipo.equals(MLDSA_TYPE);
+        boolean ec = tipo.equals("ed25519") || tipo.equals(ED_TYPE);
+        if (!pq && !ec) throw new java.lang.IllegalArgumentException("tipo desconhecido: " + tipo);
+        if (!flag_output && nome.isEmpty()) throw new java.lang.IllegalArgumentException("nome obrigatorio para gravar arquivos");
 
-    void go(String[] args, boolean flag_out) throws Exception {
-        if (args.length < 2) {
-            System.err.println("Uso : java DeriveSSHKey <frase-secreta> <nome-da-chave>");
-            System.err.println("Ex  : java DeriveSSHKey \"minha frase secreta\" id_ed25519_note");
-            System.err.println("Os arquivos serao gravados na pasta atual: " + java.nio.file.Path.of("").toAbsolutePath());
-            System.exit(1);
+        String priv, pub;
+        if (pq) {
+            byte[] mldsaSeed, edSeed;
+            if (passphrase == null) { mldsaSeed = rand(32); edSeed = rand(32); }
+            else { mldsaSeed = pbkdf2(passphrase, nome + " mldsa44", 32);
+                   edSeed    = pbkdf2(passphrase, nome + " ed25519", 32); }
+            byte[] mldsaPk = mldsa.keyGenPk(mldsaSeed);
+            byte[] edPk    = ed.publicFromSeed(edSeed);
+            priv = compositePrivatePem(mldsaPk, edPk, mldsaSeed, edSeed, nome);
+            pub  = compositePublicLine(mldsaPk, edPk, nome);
+        } else {
+            byte[] seed = (passphrase == null) ? rand(32) : pbkdf2(passphrase, nome, 32);
+            byte[] edPk = ed.publicFromSeed(seed);
+            priv = ed25519PrivatePem(seed, edPk, nome);
+            pub  = ed25519PublicLine(edPk, nome);
         }
-        String passphrase = args[0];
-        String keyName    = args[1];
 
-        byte[] seed = deriveSeed(passphrase, keyName);
-
-        byte[] h = sha512(seed);
-        h[0]  &= 248;
-        h[31] &= 127;
-        h[31] |= 64;
-
-        java.math.BigInteger scalar  = fromLE(h, 0, 32);
-        byte[]               pubBytes  = encodePoint(scalarMul(BASE, scalar));
-        byte[]               seedBytes = java.util.Arrays.copyOf(seed, 32);
-
-        java.nio.file.Path priv = java.nio.file.Path.of(keyName);
-        java.nio.file.Path pub  = java.nio.file.Path.of(keyName + ".pub");
-        String _pri=buildPrivateKey(seedBytes, pubBytes, keyName);
-        String _pub=buildPublicKey(pubBytes, keyName);
-        if ( flag_out ){
-            System.out.println(_pub);
-        }else{
-            java.nio.file.Files.writeString(priv, _pri);
-            java.nio.file.Files.writeString(pub,  _pub);
+        if (flag_output) {
+            System.out.println(pub.trim());                       // modo saída: só a chave pública
+        } else {
+            java.nio.file.Files.writeString(java.nio.file.Path.of(nome), priv);
+            java.nio.file.Files.writeString(java.nio.file.Path.of(nome + ".pub"), pub);
             System.out.println("Chaves geradas!");
-            System.out.println("  Privada : " + priv.toAbsolutePath());
-            System.out.println("  Publica : " + pub.toAbsolutePath());
+            System.out.println("  Privada : " + java.nio.file.Path.of(nome).toAbsolutePath());
+            System.out.println("  Publica : " + java.nio.file.Path.of(nome + ".pub").toAbsolutePath());
             System.out.println("Linha para authorized_keys:");
-            System.out.println("  " + _pub);
-            System.out.println("No windows com usuario administrador fica aqui: C:\\ProgramData\\ssh\\administrators_authorized_keys");
-            System.out.println("A parte " + keyName + " eh um comentario na linha, totalmente opcional");
+            System.out.println("  " + pub.trim());
+            if (pq) System.out.println("Requer OpenSSH >= 10.4 e habilitar: PubkeyAcceptedAlgorithms +" + MLDSA_TYPE);
+            System.out.println("No windows (admin): C:\\ProgramData\\ssh\\administrators_authorized_keys");
         }
+        return new String[]{ priv, pub };
     }
 
-    byte[] deriveSeed(String pass, String salt) throws Exception {
+    // =====================================================================
+    // MÉTODO PÚBLICO 2 — verificação
+    // =====================================================================
+    public boolean verify(String publicaLine, byte[] mensagem, byte[] assinaturaSSH) throws java.lang.Exception {
+        String[] parts = publicaLine.trim().split("\\s+");
+        if (parts.length < 2) return false;
+        byte[] pubBlob = java.util.Base64.getDecoder().decode(parts[1]);
+
+        Reader pr = new Reader(pubBlob);
+        String ptype = pr.str();
+        Reader sr = new Reader(assinaturaSSH);
+        String stype = sr.str();
+        byte[] sigRaw = sr.bytes();
+        if (!ptype.equals(stype)) return false;
+
+        if (ptype.equals(MLDSA_TYPE)) {
+            byte[] comp = pr.bytes();
+            if (comp.length != 1344 || sigRaw.length != 2484) return false;
+            byte[] mldsaPk  = java.util.Arrays.copyOfRange(comp, 0, 1312);
+            byte[] edPk     = java.util.Arrays.copyOfRange(comp, 1312, 1344);
+            byte[] mldsaSig = java.util.Arrays.copyOfRange(sigRaw, 0, 2420);
+            byte[] edSig    = java.util.Arrays.copyOfRange(sigRaw, 2420, 2484);
+            byte[] mPrime   = constructMPrime(mensagem);
+            return mldsa.verify(mldsaPk, mPrime, COMPOSITE_LABEL, mldsaSig)
+                && ed.verify(edPk, mPrime, edSig);
+        } else if (ptype.equals(ED_TYPE)) {
+            byte[] edPk = pr.bytes();
+            if (edPk.length != 32 || sigRaw.length != 64) return false;
+            return ed.verify(edPk, mensagem, sigRaw);
+        }
+        return false;
+    }
+
+    // =====================================================================
+    // apoio (privado)
+    // =====================================================================
+    byte[] constructMPrime(byte[] msg) throws java.lang.Exception {
+        byte[] h = sha512(msg);
+        java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+        b.write(COMPOSITE_PREFIX); b.write(COMPOSITE_LABEL); b.write(0); b.write(h);
+        return b.toByteArray();
+    }
+    byte[] sha512(byte[] d) throws java.lang.Exception {
+        return java.security.MessageDigest.getInstance("SHA-512").digest(d);
+    }
+    byte[] pbkdf2(String pass, String salt, int nbytes) throws java.lang.Exception {
         javax.crypto.spec.PBEKeySpec spec = new javax.crypto.spec.PBEKeySpec(
-                pass.toCharArray(),
-                salt.getBytes(java.nio.charset.StandardCharsets.UTF_8),
-                ITERATIONS, 256);
-        return javax.crypto.SecretKeyFactory
-                .getInstance("PBKDF2WithHmacSHA512")
+                pass.toCharArray(), salt.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                ITERATIONS, nbytes * 8);
+        return javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512")
                 .generateSecret(spec).getEncoded();
     }
-
-    java.math.BigInteger modInv(java.math.BigInteger x) {
-        return x.modPow(P.subtract(java.math.BigInteger.TWO), P);
+    byte[] rand(int n) { byte[] b = new byte[n]; RNG.nextBytes(b); return b; }
+    byte[] utf8(String s) { return s.getBytes(java.nio.charset.StandardCharsets.UTF_8); }
+    byte[] cat(byte[] a, byte[] b) {
+        byte[] r = new byte[a.length + b.length];
+        System.arraycopy(a, 0, r, 0, a.length); System.arraycopy(b, 0, r, a.length, b.length);
+        return r;
     }
-
-    java.math.BigInteger recoverX(java.math.BigInteger y, int xSign) {
-        java.math.BigInteger y2  = y.multiply(y).mod(P);
-        java.math.BigInteger u   = y2.subtract(java.math.BigInteger.ONE).mod(P);
-        java.math.BigInteger v   = D.multiply(y2).add(java.math.BigInteger.ONE).mod(P);
-        java.math.BigInteger x2  = u.multiply(modInv(v)).mod(P);
-
-        if (x2.equals(java.math.BigInteger.ZERO)) return java.math.BigInteger.ZERO;
-
-        java.math.BigInteger exp = P.add(java.math.BigInteger.valueOf(3))
-                                    .divide(java.math.BigInteger.valueOf(8));
-        java.math.BigInteger x   = x2.modPow(exp, P);
-
-        if (!x.multiply(x).mod(P).equals(x2)) x = x.multiply(SQRT_M1).mod(P);
-        if (x.testBit(0) != (xSign == 1))      x = P.subtract(x);
-        return x;
+    void wu32(java.io.ByteArrayOutputStream os, int v) {
+        os.write((v>>>24)&0xFF); os.write((v>>>16)&0xFF); os.write((v>>>8)&0xFF); os.write(v&0xFF);
     }
+    void wstr(java.io.ByteArrayOutputStream os, byte[] d) throws java.io.IOException { wu32(os, d.length); os.write(d); }
 
-    java.math.BigInteger[] pointAdd(java.math.BigInteger[] A, java.math.BigInteger[] B) {
-        java.math.BigInteger x1 = A[0], y1 = A[1], x2 = B[0], y2 = B[1];
-        java.math.BigInteger dxy = D.multiply(x1).multiply(x2).multiply(y1).multiply(y2).mod(P);
-        java.math.BigInteger x3  = x1.multiply(y2).add(y1.multiply(x2))
-                                     .multiply(modInv(java.math.BigInteger.ONE.add(dxy))).mod(P);
-        java.math.BigInteger y3  = y1.multiply(y2).add(x1.multiply(x2))
-                                     .multiply(modInv(java.math.BigInteger.ONE.subtract(dxy).mod(P))).mod(P);
-        return new java.math.BigInteger[]{ x3, y3 };
-    }
-
-    java.math.BigInteger[] scalarMul(java.math.BigInteger[] point, java.math.BigInteger scalar) {
-        java.math.BigInteger[] result = null;
-        java.math.BigInteger[] cur    = point;
-        while (scalar.signum() > 0) {
-            if (scalar.testBit(0)) result = (result == null) ? cur : pointAdd(result, cur);
-            cur    = pointAdd(cur, cur);
-            scalar = scalar.shiftRight(1);
-        }
-        return result;
-    }
-
-    byte[] encodePoint(java.math.BigInteger[] pt) {
-        byte[] out = toLE32(pt[1]);
-        if (pt[0].testBit(0)) out[31] |= (byte) 0x80;
-        return out;
-    }
-
-    byte[] sha512(byte[] data) throws Exception {
-        return java.security.MessageDigest.getInstance("SHA-512").digest(data);
-    }
-
-    java.math.BigInteger fromLE(byte[] b, int off, int len) {
-        byte[] le = java.util.Arrays.copyOfRange(b, off, off + len);
-        for (int i = 0, j = le.length - 1; i < j; i++, j--) {
-            byte t = le[i]; le[i] = le[j]; le[j] = t;
-        }
-        return new java.math.BigInteger(1, le);
-    }
-
-    byte[] toLE32(java.math.BigInteger n) {
-        byte[] be  = n.toByteArray();
-        int    off = (be.length > 32 && be[0] == 0) ? 1 : 0;
-        int    len = be.length - off;
-        byte[] out = new byte[32];
-        for (int i = 0; i < len && i < 32; i++) out[i] = be[off + len - 1 - i];
-        return out;
-    }
-
-    String buildPublicKey(byte[] pub, String comment) throws java.io.IOException {
+    String compositePublicLine(byte[] mldsaPk, byte[] edPk, String comment) throws java.io.IOException {
         java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
-        writeBlob(buf, "ssh-ed25519".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        writeBlob(buf, pub);
-        return "ssh-ed25519 "
-                + java.util.Base64.getEncoder().encodeToString(buf.toByteArray())
-                + " " + comment + "\n";
+        wstr(buf, utf8(MLDSA_TYPE)); wstr(buf, cat(mldsaPk, edPk));
+        return MLDSA_TYPE + " " + java.util.Base64.getEncoder().encodeToString(buf.toByteArray())
+                + (comment.isEmpty() ? "" : " " + comment) + "\n";
     }
-
-    String buildPrivateKey(byte[] seed, byte[] pub, String comment) throws java.io.IOException {
-        byte[] priv64 = new byte[64];
-        System.arraycopy(seed, 0, priv64,  0, 32);
-        System.arraycopy(pub,  0, priv64, 32, 32);
-
+    String ed25519PublicLine(byte[] edPk, String comment) throws java.io.IOException {
+        java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+        wstr(buf, utf8(ED_TYPE)); wstr(buf, edPk);
+        return ED_TYPE + " " + java.util.Base64.getEncoder().encodeToString(buf.toByteArray())
+                + (comment.isEmpty() ? "" : " " + comment) + "\n";
+    }
+    String compositePrivatePem(byte[] mldsaPk, byte[] edPk, byte[] mldsaSeed, byte[] edSeed, String comment) throws java.io.IOException {
+        byte[] compPub = cat(mldsaPk, edPk), compPriv = cat(mldsaSeed, edSeed);
         java.io.ByteArrayOutputStream pubBlob = new java.io.ByteArrayOutputStream();
-        writeBlob(pubBlob, "ssh-ed25519".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        writeBlob(pubBlob, pub);
-
+        wstr(pubBlob, utf8(MLDSA_TYPE)); wstr(pubBlob, compPub);
         java.io.ByteArrayOutputStream block = new java.io.ByteArrayOutputStream();
-        writeInt32(block, 0x12345678);
-        writeInt32(block, 0x12345678);
-        writeBlob(block, "ssh-ed25519".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        writeBlob(block, pub);
-        writeBlob(block, priv64);
-        writeBlob(block, comment.getBytes(java.nio.charset.StandardCharsets.UTF_8));
-
-        byte[] raw    = block.toByteArray();
-        int    padLen = (8 - (raw.length % 8)) % 8;
-        byte[] padded = java.util.Arrays.copyOf(raw, raw.length + padLen);
-        for (int i = 0; i < padLen; i++) padded[raw.length + i] = (byte)(i + 1);
-
+        wu32(block, 0x12345678); wu32(block, 0x12345678);
+        wstr(block, utf8(MLDSA_TYPE)); wstr(block, compPub); wstr(block, compPriv); wstr(block, utf8(comment));
+        return wrapOpenssh(pubBlob.toByteArray(), block.toByteArray());
+    }
+    String ed25519PrivatePem(byte[] seed, byte[] edPk, String comment) throws java.io.IOException {
+        byte[] priv64 = cat(seed, edPk);
+        java.io.ByteArrayOutputStream pubBlob = new java.io.ByteArrayOutputStream();
+        wstr(pubBlob, utf8(ED_TYPE)); wstr(pubBlob, edPk);
+        java.io.ByteArrayOutputStream block = new java.io.ByteArrayOutputStream();
+        wu32(block, 0x12345678); wu32(block, 0x12345678);
+        wstr(block, utf8(ED_TYPE)); wstr(block, edPk); wstr(block, priv64); wstr(block, utf8(comment));
+        return wrapOpenssh(pubBlob.toByteArray(), block.toByteArray());
+    }
+    String wrapOpenssh(byte[] pubBlob, byte[] block) throws java.io.IOException {
+        int padLen = (8 - (block.length % 8)) % 8;
+        byte[] padded = java.util.Arrays.copyOf(block, block.length + padLen);
+        for (int i = 0; i < padLen; i++) padded[block.length + i] = (byte)(i + 1);
         java.io.ByteArrayOutputStream outer = new java.io.ByteArrayOutputStream();
         outer.write("openssh-key-v1\0".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        writeBlob(outer, "none".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        writeBlob(outer, "none".getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        writeBlob(outer, new byte[0]);
-        writeInt32(outer, 1);
-        writeBlob(outer, pubBlob.toByteArray());
-        writeBlob(outer, padded);
-
-        String b64 = java.util.Base64.getMimeEncoder(70, new byte[]{'\n'})
-                                     .encodeToString(outer.toByteArray());
-        return "-----BEGIN OPENSSH PRIVATE KEY-----\n" + b64
-                + "\n-----END OPENSSH PRIVATE KEY-----\n";
+        wstr(outer, utf8("none")); wstr(outer, utf8("none")); wstr(outer, new byte[0]);
+        wu32(outer, 1); wstr(outer, pubBlob); wstr(outer, padded);
+        String b64 = java.util.Base64.getMimeEncoder(70, new byte[]{'\n'}).encodeToString(outer.toByteArray());
+        return "-----BEGIN OPENSSH PRIVATE KEY-----\n" + b64 + "\n-----END OPENSSH PRIVATE KEY-----\n";
     }
 
-    void writeBlob(java.io.ByteArrayOutputStream os, byte[] data) throws java.io.IOException {
-        writeInt32(os, data.length);
-        os.write(data);
+    // =====================================================================
+    // classe interna: leitor de campos SSH (uint32-len ‖ bytes)
+    // =====================================================================
+    private class Reader {
+        final byte[] b; int p;
+        Reader(byte[] b) { this.b = b; this.p = 0; }
+        int u32() { int v = ((b[p]&0xFF)<<24)|((b[p+1]&0xFF)<<16)|((b[p+2]&0xFF)<<8)|(b[p+3]&0xFF); p += 4; return v; }
+        byte[] bytes() { int n = u32(); byte[] r = java.util.Arrays.copyOfRange(b, p, p + n); p += n; return r; }
+        String str() { return new String(bytes(), java.nio.charset.StandardCharsets.UTF_8); }
     }
 
-    void writeInt32(java.io.ByteArrayOutputStream os, int v) {
-        os.write((v >>> 24) & 0xFF);
-        os.write((v >>> 16) & 0xFF);
-        os.write((v >>>  8) & 0xFF);
-        os.write( v         & 0xFF);
+    // =====================================================================
+    // classe interna: Keccak-f[1600] + SHAKE-128/256 (XOF) com squeeze incremental
+    // =====================================================================
+    private class Shake {
+        final long[] RC = {
+            0x0000000000000001L,0x0000000000008082L,0x800000000000808aL,0x8000000080008000L,
+            0x000000000000808bL,0x0000000080000001L,0x8000000080008081L,0x8000000000008009L,
+            0x000000000000008aL,0x0000000000000088L,0x0000000080008009L,0x000000008000000aL,
+            0x000000008000808bL,0x800000000000008bL,0x8000000000008089L,0x8000000000008003L,
+            0x8000000000008002L,0x8000000000000080L,0x000000000000800aL,0x800000008000000aL,
+            0x8000000080008081L,0x8000000000008080L,0x0000000080000001L,0x8000000080008008L };
+        final int[] ROTC = {1,3,6,10,15,21,28,36,45,55,2,14,27,41,56,8,25,43,62,18,39,61,20,44};
+        final int[] PILN = {10,7,11,17,18,3,5,16,8,21,24,4,15,23,19,13,12,2,20,14,22,9,6,1};
+        final long[] s = new long[25];
+        final int rate;
+        final byte[] queued; int qlen;
+        boolean squeezing;
+        final byte[] block; int blkPos;
+
+        Shake(int bits) { rate = (bits == 128) ? 168 : 136; queued = new byte[rate]; block = new byte[rate]; }
+
+        Shake update(byte[] in) { return update(in, 0, in.length); }
+        Shake update(byte[] in, int off, int len) {
+            for (int i = 0; i < len; i++) { queued[qlen++] = in[off + i]; if (qlen == rate) { absorb(queued); qlen = 0; } }
+            return this;
+        }
+        void absorb(byte[] blk) { for (int i = 0; i < rate/8; i++) s[i] ^= le64(blk, 8*i); keccak(); }
+        void finishAbsorb() {
+            byte[] pad = new byte[rate];
+            System.arraycopy(queued, 0, pad, 0, qlen);
+            pad[qlen] ^= 0x1F; pad[rate-1] ^= (byte)0x80;
+            for (int i = 0; i < rate/8; i++) s[i] ^= le64(pad, 8*i);
+            keccak(); squeezing = true; fill();
+        }
+        void fill() { for (int i = 0; i < rate/8; i++) putLe64(block, 8*i, s[i]); blkPos = 0; }
+        byte[] squeeze(int n) {
+            if (!squeezing) finishAbsorb();
+            byte[] out = new byte[n];
+            for (int i = 0; i < n; i++) { if (blkPos == rate) { keccak(); fill(); } out[i] = block[blkPos++]; }
+            return out;
+        }
+        void keccak() {
+            long[] a = s, bc = new long[5];
+            for (int r = 0; r < 24; r++) {
+                for (int i = 0; i < 5; i++) bc[i] = a[i]^a[i+5]^a[i+10]^a[i+15]^a[i+20];
+                for (int i = 0; i < 5; i++) { long t = bc[(i+4)%5] ^ java.lang.Long.rotateLeft(bc[(i+1)%5],1); for (int j = 0; j < 25; j += 5) a[j+i] ^= t; }
+                long t = a[1];
+                for (int i = 0; i < 24; i++) { int j = PILN[i]; long tmp = a[j]; a[j] = java.lang.Long.rotateLeft(t, ROTC[i]); t = tmp; }
+                for (int j = 0; j < 25; j += 5) { for (int i = 0; i < 5; i++) bc[i] = a[j+i]; for (int i = 0; i < 5; i++) a[j+i] ^= (~bc[(i+1)%5]) & bc[(i+2)%5]; }
+                a[0] ^= RC[r];
+            }
+        }
+        long le64(byte[] b, int o) { long r = 0; for (int i = 0; i < 8; i++) r |= (b[o+i]&0xFFL) << (8*i); return r; }
+        void putLe64(byte[] b, int o, long v) { for (int i = 0; i < 8; i++) b[o+i] = (byte)(v >>> (8*i)); }
+    }
+
+    // =====================================================================
+    // classe interna: ML-DSA-44 (FIPS 204) — KeyGen (pública) + Verify
+    // =====================================================================
+    private class MlDsa {
+        final int Q = 8380417, N = 256, D = 13, K = 4, L = 4, ETA = 2, TAU = 39, BETA = 78, OMEGA = 80;
+        final int GAMMA1 = 1 << 17;
+        final int GAMMA2 = (Q - 1) / 88;
+        final int CTILDE = 32, SIGLEN = 2420, PKLEN = 1312;
+        final int[] zetas = new int[N];
+        final long NINV;
+
+        MlDsa() { for (int i = 0; i < N; i++) zetas[i] = (int) modpow(1753, brv8(i), Q); NINV = modpow(N, Q - 2, Q); }
+
+        long modpow(long b, long e, long m) { long r = 1; b %= m; while (e > 0) { if ((e&1)==1) r = r*b%m; b = b*b%m; e >>= 1; } return r; }
+        int brv8(int x) { int r = 0; for (int i = 0; i < 8; i++) r = (r<<1)|((x>>i)&1); return r; }
+        int modq(int x) { x %= Q; if (x < 0) x += Q; return x; }
+        int[] toModQ(int[] c) { int[] r = new int[N]; for (int i = 0; i < N; i++) r[i] = modq(c[i]); return r; }
+
+        void ntt(int[] a) {
+            int k = 0;
+            for (int len = 128; len > 0; len >>= 1)
+                for (int start = 0; start < N; start += 2*len) {
+                    long z = zetas[++k];
+                    for (int j = start; j < start+len; j++) {
+                        long t = (z * a[j+len]) % Q; int u = a[j];
+                        a[j+len] = (int)(((u - t) % Q + Q) % Q); a[j] = (int)((u + t) % Q);
+                    }
+                }
+        }
+        void invntt(int[] a) {
+            int k = N;
+            for (int len = 1; len < N; len <<= 1)
+                for (int start = 0; start < N; start += 2*len) {
+                    long z = Q - zetas[--k];
+                    for (int j = start; j < start+len; j++) {
+                        int u = a[j], v = a[j+len];
+                        a[j] = (int)(((long)u + v) % Q);
+                        int diff = (int)(((u - v) % Q + Q) % Q);
+                        a[j+len] = (int)((z * diff) % Q);
+                    }
+                }
+            for (int j = 0; j < N; j++) a[j] = (int)((NINV * a[j]) % Q);
+        }
+        int[] pointwise(int[] a, int[] b) { int[] c = new int[N]; for (int i = 0; i < N; i++) c[i] = (int)(((long)a[i]*b[i]) % Q); return c; }
+
+        byte[] shake(int bits, int outLen, byte[]... parts) { Shake s = new Shake(bits); for (byte[] p : parts) s.update(p); return s.squeeze(outLen); }
+
+        int[][][] expandA(byte[] rho) {
+            int[][][] A = new int[K][L][];
+            for (int r = 0; r < K; r++) for (int c = 0; c < L; c++) {
+                Shake x = new Shake(128); x.update(rho); x.update(new byte[]{ (byte)c, (byte)r });
+                int[] a = new int[N]; int ctr = 0;
+                while (ctr < N) { byte[] b = x.squeeze(3); int d = (b[0]&0xFF)|((b[1]&0xFF)<<8)|((b[2]&0x7F)<<16); if (d < Q) a[ctr++] = d; }
+                A[r][c] = a;
+            }
+            return A;
+        }
+        int[] rejBounded(byte[] rhoprime, int nonce) {
+            Shake x = new Shake(256); x.update(rhoprime); x.update(new byte[]{ (byte)(nonce&0xFF), (byte)((nonce>>8)&0xFF) });
+            int[] a = new int[N]; int ctr = 0;
+            while (ctr < N) { int b = x.squeeze(1)[0]&0xFF; int z0 = b&0x0F, z1 = b>>4;
+                if (z0 < 15) { a[ctr++] = 2 - (z0 % 5); if (ctr == N) break; }
+                if (z1 < 15) { a[ctr++] = 2 - (z1 % 5); } }
+            return a;
+        }
+
+        /** KeyGen_internal(ξ) → apenas a chave pública. */
+        byte[] keyGenPk(byte[] xi) {
+            byte[] H = shake(256, 128, xi, new byte[]{ (byte)K }, new byte[]{ (byte)L });
+            byte[] rho = java.util.Arrays.copyOfRange(H, 0, 32);
+            byte[] rhoprime = java.util.Arrays.copyOfRange(H, 32, 96);
+            int[][][] A = expandA(rho);
+            int[][] s1 = new int[L][], s2 = new int[K][];
+            for (int i = 0; i < L; i++) s1[i] = rejBounded(rhoprime, i);
+            for (int i = 0; i < K; i++) s2[i] = rejBounded(rhoprime, L + i);
+            int[][] s1hat = new int[L][]; for (int i = 0; i < L; i++) { s1hat[i] = toModQ(s1[i]); ntt(s1hat[i]); }
+            int[][] t1 = new int[K][N];
+            for (int r = 0; r < K; r++) {
+                int[] acc = new int[N];
+                for (int c = 0; c < L; c++) { int[] p = pointwise(A[r][c], s1hat[c]); for (int j = 0; j < N; j++) acc[j] = (int)(((long)acc[j]+p[j])%Q); }
+                invntt(acc);
+                for (int j = 0; j < N; j++) { int v = modq(acc[j] + s2[r][j]); int a1 = (v + (1<<(D-1)) - 1) >> D; t1[r][j] = a1; }
+            }
+            byte[] pk = new byte[PKLEN];
+            System.arraycopy(rho, 0, pk, 0, 32);
+            for (int r = 0; r < K; r++) pack(pk, 32 + r*(N*10/8), t1[r], 10);
+            return pk;
+        }
+
+        boolean verify(byte[] pk, byte[] msg, byte[] ctx, byte[] sig) {
+            if (sig.length != SIGLEN || pk.length != PKLEN) return false;
+            byte[] rho = java.util.Arrays.copyOfRange(pk, 0, 32);
+            int[][] t1 = new int[K][];
+            for (int r = 0; r < K; r++) t1[r] = unpack(pk, 32 + r*(N*10/8), 10);
+
+            byte[] ctilde = java.util.Arrays.copyOfRange(sig, 0, CTILDE);
+            int[][] z = new int[L][];
+            for (int i = 0; i < L; i++) { int[] v = unpack(sig, CTILDE + i*(N*18/8), 18); int[] zi = new int[N]; for (int j = 0; j < N; j++) zi[j] = GAMMA1 - v[j]; z[i] = zi; }
+            int[][] h = hintUnpack(sig, CTILDE + L*(N*18/8));
+            if (h == null) return false;
+            for (int i = 0; i < L; i++) for (int j = 0; j < N; j++) { int a = z[i][j]; if (a < 0) a = -a; if (a >= GAMMA1 - BETA) return false; }
+
+            int[][][] A = expandA(rho);
+            byte[] tr = shake(256, 64, pk);
+            Shake sm = new Shake(256); sm.update(tr); sm.update(new byte[]{ 0, (byte)ctx.length }); sm.update(ctx); sm.update(msg);
+            byte[] mu = sm.squeeze(64);
+
+            int[] chat = toModQ(sampleInBall(ctilde)); ntt(chat);
+            int[][] zhat = new int[L][]; for (int i = 0; i < L; i++) { zhat[i] = toModQ(z[i]); ntt(zhat[i]); }
+
+            int[][] w1 = new int[K][N];
+            for (int r = 0; r < K; r++) {
+                int[] acc = new int[N];
+                for (int c = 0; c < L; c++) { int[] p = pointwise(A[r][c], zhat[c]); for (int j = 0; j < N; j++) acc[j] = (int)(((long)acc[j]+p[j])%Q); }
+                int[] t1x = new int[N]; for (int j = 0; j < N; j++) t1x[j] = (int)(((long)t1[r][j] << D) % Q); ntt(t1x);
+                int[] ct1 = pointwise(chat, t1x);
+                for (int j = 0; j < N; j++) { int v = (int)(((long)acc[j] - ct1[j]) % Q); if (v < 0) v += Q; acc[j] = v; }
+                invntt(acc);
+                for (int j = 0; j < N; j++) w1[r][j] = useHint(h[r][j], acc[j]);
+            }
+            byte[] w1enc = new byte[K*(N*6/8)];
+            for (int r = 0; r < K; r++) pack(w1enc, r*(N*6/8), w1[r], 6);
+            byte[] ct2 = shake(256, CTILDE, mu, w1enc);
+            return java.util.Arrays.equals(ctilde, ct2);
+        }
+
+        int[] sampleInBall(byte[] ctilde) {
+            Shake s = new Shake(256); s.update(ctilde);
+            byte[] buf = s.squeeze(8);
+            long signs = 0; for (int i = 0; i < 8; i++) signs |= (buf[i]&0xFFL) << (8*i);
+            int[] c = new int[N];
+            for (int i = N - TAU; i < N; i++) {
+                int j; do { j = s.squeeze(1)[0] & 0xFF; } while (j > i);
+                c[i] = c[j]; c[j] = 1 - 2*(int)(signs & 1); signs >>= 1;
+            }
+            return c;
+        }
+        int[] decompose(int r) {
+            r = modq(r);
+            int r0 = r % (2*GAMMA2); if (r0 > GAMMA2) r0 -= 2*GAMMA2;
+            int r1;
+            if (r - r0 == Q - 1) { r1 = 0; r0 = r0 - 1; } else r1 = (r - r0) / (2*GAMMA2);
+            return new int[]{ r1, r0 };
+        }
+        int useHint(int hbit, int r) {
+            int m = (Q - 1) / (2*GAMMA2);
+            int[] d = decompose(r); int r1 = d[0], r0 = d[1];
+            if (hbit == 1) { if (r0 > 0) r1 = (r1 + 1) % m; else { r1 = (r1 - 1) % m; if (r1 < 0) r1 += m; } }
+            return r1;
+        }
+        int[][] hintUnpack(byte[] sig, int off) {
+            int[][] h = new int[K][N]; int idx = 0;
+            for (int i = 0; i < K; i++) {
+                int cnt = sig[off + OMEGA + i] & 0xFF;
+                if (cnt < idx || cnt > OMEGA) return null;
+                int first = idx;
+                while (idx < cnt) {
+                    int pos = sig[off + idx] & 0xFF;
+                    if (idx > first) { int prev = sig[off + idx - 1] & 0xFF; if (prev >= pos) return null; }
+                    h[i][pos] = 1; idx++;
+                }
+            }
+            for (int i = idx; i < OMEGA; i++) if (sig[off + i] != 0) return null;
+            return h;
+        }
+        void pack(byte[] out, int off, int[] vals, int bits) {
+            int acc = 0, nb = 0, o = off, mask = (1<<bits)-1;
+            for (int i = 0; i < N; i++) { acc |= (vals[i]&mask) << nb; nb += bits; while (nb >= 8) { out[o++] = (byte)acc; acc >>>= 8; nb -= 8; } }
+        }
+        int[] unpack(byte[] in, int off, int bits) {
+            int[] out = new int[N]; int acc = 0, nb = 0, o = off, mask = (1<<bits)-1;
+            for (int i = 0; i < N; i++) { while (nb < bits) { acc |= (in[o++]&0xFF) << nb; nb += 8; } out[i] = acc & mask; acc >>>= bits; nb -= bits; }
+            return out;
+        }
+    }
+
+    // =====================================================================
+    // classe interna: Ed25519 — pública a partir da seed + verificação
+    // =====================================================================
+    private class Ed25519 {
+        final java.math.BigInteger P, D, SQRT_M1, ORDER;
+        final java.math.BigInteger[] BASE;
+
+        Ed25519() {
+            P = java.math.BigInteger.TWO.pow(255).subtract(java.math.BigInteger.valueOf(19));
+            D = modInv(java.math.BigInteger.valueOf(121666)).multiply(java.math.BigInteger.valueOf(-121665).mod(P)).mod(P);
+            SQRT_M1 = java.math.BigInteger.TWO.modPow(P.subtract(java.math.BigInteger.ONE).divide(java.math.BigInteger.valueOf(4)), P);
+            java.math.BigInteger gy = modInv(java.math.BigInteger.valueOf(5)).multiply(java.math.BigInteger.valueOf(4)).mod(P);
+            BASE = new java.math.BigInteger[]{ recoverX(gy, 0), gy };
+            ORDER = java.math.BigInteger.TWO.pow(252).add(new java.math.BigInteger("27742317777372353535851937790883648493"));
+        }
+
+        byte[] publicFromSeed(byte[] seed) throws java.lang.Exception {
+            byte[] h = sha512(seed); h[0] &= 248; h[31] &= 127; h[31] |= 64;
+            return encodePoint(scalarMul(BASE, fromLE(h, 0, 32)));
+        }
+        boolean verify(byte[] pk, byte[] msg, byte[] sig) throws java.lang.Exception {
+            if (pk.length != 32 || sig.length != 64) return false;
+            java.math.BigInteger[] A = decodePoint(pk); if (A == null) return false;
+            java.math.BigInteger[] R = decodePoint(java.util.Arrays.copyOfRange(sig, 0, 32)); if (R == null) return false;
+            java.math.BigInteger S = fromLE(sig, 32, 32); if (S.compareTo(ORDER) >= 0) return false;
+            byte[] rab = new byte[32 + 32 + msg.length];
+            System.arraycopy(sig, 0, rab, 0, 32); System.arraycopy(pk, 0, rab, 32, 32); System.arraycopy(msg, 0, rab, 64, msg.length);
+            java.math.BigInteger k = fromLE(sha512(rab), 0, 64).mod(ORDER);
+            java.math.BigInteger[] lhs = scalarMulId(BASE, S);
+            java.math.BigInteger[] rhs = pointAdd(R, scalarMulId(A, k));
+            return java.util.Arrays.equals(encodePoint(lhs), encodePoint(rhs));
+        }
+        java.math.BigInteger[] decodePoint(byte[] e) {
+            byte[] le = e.clone(); int sign = (le[31] >> 7) & 1; le[31] &= 0x7f;
+            java.math.BigInteger y = fromLE(le, 0, 32); if (y.compareTo(P) >= 0) return null;
+            return new java.math.BigInteger[]{ recoverX(y, sign), y };
+        }
+        java.math.BigInteger modInv(java.math.BigInteger x) { return x.modPow(P.subtract(java.math.BigInteger.TWO), P); }
+        java.math.BigInteger recoverX(java.math.BigInteger y, int xSign) {
+            java.math.BigInteger y2 = y.multiply(y).mod(P);
+            java.math.BigInteger u = y2.subtract(java.math.BigInteger.ONE).mod(P);
+            java.math.BigInteger v = D.multiply(y2).add(java.math.BigInteger.ONE).mod(P);
+            java.math.BigInteger x2 = u.multiply(modInv(v)).mod(P);
+            if (x2.equals(java.math.BigInteger.ZERO)) return java.math.BigInteger.ZERO;
+            java.math.BigInteger exp = P.add(java.math.BigInteger.valueOf(3)).divide(java.math.BigInteger.valueOf(8));
+            java.math.BigInteger x = x2.modPow(exp, P);
+            if (!x.multiply(x).mod(P).equals(x2)) x = x.multiply(SQRT_M1).mod(P);
+            if (x.testBit(0) != (xSign == 1)) x = P.subtract(x);
+            return x;
+        }
+        java.math.BigInteger[] pointAdd(java.math.BigInteger[] A, java.math.BigInteger[] B) {
+            java.math.BigInteger x1 = A[0], y1 = A[1], x2 = B[0], y2 = B[1];
+            java.math.BigInteger dxy = D.multiply(x1).multiply(x2).multiply(y1).multiply(y2).mod(P);
+            java.math.BigInteger x3 = x1.multiply(y2).add(y1.multiply(x2)).multiply(modInv(java.math.BigInteger.ONE.add(dxy))).mod(P);
+            java.math.BigInteger y3 = y1.multiply(y2).add(x1.multiply(x2)).multiply(modInv(java.math.BigInteger.ONE.subtract(dxy).mod(P))).mod(P);
+            return new java.math.BigInteger[]{ x3, y3 };
+        }
+        java.math.BigInteger[] scalarMul(java.math.BigInteger[] point, java.math.BigInteger scalar) {
+            java.math.BigInteger[] result = null, cur = point;
+            while (scalar.signum() > 0) {
+                if (scalar.testBit(0)) result = (result == null) ? cur : pointAdd(result, cur);
+                cur = pointAdd(cur, cur); scalar = scalar.shiftRight(1);
+            }
+            return result;
+        }
+        java.math.BigInteger[] scalarMulId(java.math.BigInteger[] point, java.math.BigInteger scalar) {
+            java.math.BigInteger[] r = scalarMul(point, scalar);
+            return (r == null) ? new java.math.BigInteger[]{ java.math.BigInteger.ZERO, java.math.BigInteger.ONE } : r;
+        }
+        byte[] encodePoint(java.math.BigInteger[] pt) { byte[] out = toLE32(pt[1]); if (pt[0].testBit(0)) out[31] |= (byte)0x80; return out; }
+        byte[] sha512(byte[] d) throws java.lang.Exception { return java.security.MessageDigest.getInstance("SHA-512").digest(d); }
+        java.math.BigInteger fromLE(byte[] b, int off, int len) {
+            byte[] le = java.util.Arrays.copyOfRange(b, off, off + len);
+            for (int i = 0, j = le.length - 1; i < j; i++, j--) { byte t = le[i]; le[i] = le[j]; le[j] = t; }
+            return new java.math.BigInteger(1, le);
+        }
+        byte[] toLE32(java.math.BigInteger n) {
+            byte[] be = n.toByteArray(); int off = (be.length > 32 && be[0] == 0) ? 1 : 0; int len = be.length - off;
+            byte[] out = new byte[32]; for (int i = 0; i < len && i < 32; i++) out[i] = be[off + len - 1 - i]; return out;
+        }
     }
 }
 
@@ -36530,6 +36818,7 @@ Exemplos...
     conectando: ssh -i id_ed25519_pc user2@host2
     outro exemplo: ssh -i id_ed25519_pc -p 2222 base@127.0.0.1    
     criando chave randomica: ssh-keygen -t ed25519 -C "comentario1" -f C:\\Users\\usuario1\\.ssh\\id_ed25519_pc
+	obs3: No windows (admin): C:\\ProgramData\\ssh\\administrators_authorized_keys
 [y sftp]
     y sftp user,pass@servidor
     y sftp user,pass@servidor 22
