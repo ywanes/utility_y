@@ -341,7 +341,10 @@ function load(a){
               <a href="javascript:void(0);" class="orange" onclick="load('Musicas')">Musicas</a>
               <a href="javascript:void(0);" class="red" onclick="load('Dota')">Dota</a>
               <a href="javascript:void(0);" class="red" onclick="load('DotaNoOCR')">DotaNoOCR</a>
-              <a href="/idle.html" class="pink"">idle</a>
+              <a href="/idle.html" class="pink">idle</a>
+              <a href="/merge.html" class="pink">merge</a>
+              <a href="" class="pink"></a>
+              <a href="" class="pink"></a>
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 2')">printScreen 2</a>
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 99')">printScreen 99</a>
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 0')">printScreen 0</a>
@@ -728,17 +731,23 @@ function renderLogin() {
 	container.appendChild(btn);
 	document.body.appendChild(container);
 	document.getElementById('body').setAttribute('style', 'display: -');
-		
-	// Hyperlink Opcional
-	const linkJogar = document.createElement('a');
-	linkJogar.href = "/idle.html";
-	linkJogar.innerText = "jogar";
-	linkJogar.style.cssText = "text-align: center; color: #007bff; text-decoration: none; font-size: 14px; margin-top: 5px;";
 
 	container.appendChild(label);
 	container.appendChild(input);
 	container.appendChild(btn);
-	container.appendChild(linkJogar);
+	
+	// linkJogarIdle
+	const linkJogarIdle = document.createElement('a');
+	linkJogarIdle.href = "/idle.html";
+	linkJogarIdle.innerText = "jogar idle";
+	linkJogarIdle.style.cssText = "text-align: center; color: #007bff; text-decoration: none; font-size: 14px; margin-top: 5px;";
+	container.appendChild(linkJogarIdle);
+	// linkJogarMerge
+	const linkJogarMerge = document.createElement('a');
+	linkJogarMerge.href = "/merge.html";
+	linkJogarMerge.innerText = "jogar merge";
+	linkJogarMerge.style.cssText = "text-align: center; color: #007bff; text-decoration: none; font-size: 14px; margin-top: 5px;";
+	container.appendChild(linkJogarMerge);
 	
 	document.body.appendChild(container);
 	document.body.style.display = "block";	
