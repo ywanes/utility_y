@@ -753,10 +753,13 @@ function aplica_relogio() {
   async function sync() {
     try {
       const t0 = Date.now();
-      const r  = await fetch('https://timeapi.io/api/Time/current/zone?timeZone=UTC', { cache: 'no-store' });
+      const r  = await fetch(
+        `https://time.now/developer/api/timezone/UTC?x=${Math.floor(Math.random() * 1e6)}`,
+        { cache: 'no-store' }
+      );
       const j  = await r.json();
       const t1 = Date.now();
-      offset = new Date(j.dateTime + 'Z').getTime() + (t1 - t0)/2 - t1;
+      offset = new Date(j.utc_datetime).getTime() + (t1 - t0) / 2 - t1;
     } catch {}
   }
 
