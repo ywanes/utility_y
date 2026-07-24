@@ -151,7 +151,9 @@ $QEMU_ARGS += "-accel", "hax"
 $QEMU_ARGS += "-cpu", "core2duo"
 
 # Disco Principal usando interface Virtio para melhor performance de E/S
-$QEMU_ARGS += "-drive", "file=$DISK,if=virtio"
+# ,discard=unmap aqui ajuda, e dentro no linux rode "sudo fstrim -av" de tempos em tempos, isso ajuda a informar espaços livres/free
+$QEMU_ARGS += "-drive", "file=$DISK,if=virtio,discard=unmap"
+
 
 # Placa de Vídeo / Interface Gráfica
 if ($GUI_ENABLE) {
