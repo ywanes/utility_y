@@ -27010,7 +27010,7 @@ class Util{
                 }
             }                            
         }catch(Exception e){
-            System.err.println("Erro fatal 44556 " + e.toString());
+            System.err.println("Erro fatal 44556 " + e.toString() + "\nverifique se vc esta com o wmic na maquina!");
         }
     }
       
