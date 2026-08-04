@@ -5506,7 +5506,7 @@ cat buffer.log
     private ArrayList<String> zip_elementos=null;
     private ArrayList<Long> zip_elementos_lastModified=null;
     private String virtual_name;
-    private void zip_add(String [] paths, String pre_line_print_on, Boolean flag_aceita_falha) throws Exception { // <<< NOVO parametro
+    private void zip_add(String [] paths, String pre_line_print_on, Boolean flag_aceita_falha) throws Exception {
         int len;
         java.util.zip.ZipEntry e=null;
         if ( paths.length == 0 ){
@@ -5523,19 +5523,19 @@ cat buffer.log
             for ( int i_=0; i_<paths.length;i_++ ){
                 File elem=new File(paths[i_]);
                 if ( elem.isFile() ){
-                    if ( !elem.canRead() ){                                                          // <<< NOVO
-                        System.err.println("Aviso, sem permissao de leitura: "+elem.getPath());      // <<< NOVO
-                        if ( !flag_aceita_falha ) System.exit(1);                                    // <<< NOVO
-                        continue;                                                                    // <<< NOVO
-                    }                                                                                // <<< NOVO
-                    try {                                                                            // <<< NOVO
-                        readBytes(elem);                                                             // <<< movido para antes da entry
-                    } catch ( Exception ex ) {                                                       // <<< NOVO
-                        System.err.println("Aviso, falha ao abrir "+elem.getPath()+": "+ex);          // <<< NOVO
-                        closeBytes();                                                                // <<< NOVO
-                        if ( !flag_aceita_falha ) System.exit(1);                                    // <<< NOVO
-                        continue;                                                                    // <<< NOVO
-                    }                                                                                // <<< NOVO
+                    if ( !elem.canRead() ){
+                        System.err.println("Aviso, sem permissao de leitura: "+elem.getPath());
+                        if ( !flag_aceita_falha ) System.exit(1);
+                        continue;
+                    }
+                    try {
+                        readBytes(elem);
+                    } catch ( Exception ex ) {
+                        System.err.println("Aviso, falha ao abrir "+elem.getPath()+": "+ex);
+                        closeBytes();
+                        if ( !flag_aceita_falha ) System.exit(1);
+                        continue;
+                    }
                     e=new java.util.zip.ZipEntry(elem.getName());
                     e.setTime(elem.lastModified());
                     zip_output.putNextEntry(e);
@@ -5543,7 +5543,7 @@ cat buffer.log
                     long size_alert=-1;
                     long size=0;
                     size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
-                    try {                                                                            // <<< NOVO
+                    try {
                         while ((len = readBytes(buf)) > -1){
                             zip_output.write(buf, 0, len);
                             if ( pre_line_print_on != null )
@@ -5554,49 +5554,59 @@ cat buffer.log
                                 System.exit(1);
                             }
                         }
-                    } catch ( Exception ex ) {                                                       // <<< NOVO
-                        System.err.println("Aviso, falha de leitura em "+elem.getPath()+": "+ex);     // <<< NOVO
-                        if ( !flag_aceita_falha ) System.exit(1);                                    // <<< NOVO
-                    }                                                                                // <<< NOVO
+                    } catch ( Exception ex ) {
+                        System.err.println("Aviso, falha de leitura em "+elem.getPath()+": "+ex);
+                        if ( !flag_aceita_falha ) System.exit(1);
+                    }
                     closeBytes();
                 }else{
                     zip_elementos=new ArrayList<String>();
                     zip_elementos_lastModified=new ArrayList<Long>();
                     if ( !paths[i_].startsWith("/") && !paths[i_].contains(":") ) // verifica se é relative path
-                        zip_navega(elem,paths[i_]+"/",flag_aceita_falha);                             // <<< NOVO argumento
+                        zip_navega(elem,paths[i_]+"/",flag_aceita_falha);
                     else
-                        zip_navega(elem,"",flag_aceita_falha);                                        // <<< NOVO argumento
+                        zip_navega(elem,"",flag_aceita_falha);
                     int len_cache=zip_elementos.size();
                     for ( int i=0;i<len_cache;i++ ){
-                        File tmp = new File(zip_elementos.get(i));                                    // <<< movido para antes da entry
-                        if ( ! zip_elementos.get(i).endsWith("/") && !tmp.canRead() ){                // <<< NOVO
-                            System.err.println("Aviso, sem permissao de leitura: "+tmp.getPath());     // <<< NOVO
-                            if ( !flag_aceita_falha ) System.exit(1);                                 // <<< NOVO
-                            continue;                                                                 // <<< NOVO
-                        }                                                                             // <<< NOVO
+                        File tmp = new File(zip_elementos.get(i));
+                        long size_alert=0;
+                        long size=0;
+                        if ( ! zip_elementos.get(i).endsWith("/") ){
+                            if ( !tmp.canRead() ){
+                                System.err.println("Aviso, sem permissao de leitura: "+tmp.getPath());
+                                if ( !flag_aceita_falha ) System.exit(1);
+                                continue;
+                            }
+                            try {
+                                readBytes(tmp);
+                            } catch ( Exception ex ) {
+                                System.err.println("Aviso, falha ao abrir "+tmp.getPath()+": "+ex);
+                                closeBytes();
+                                if ( !flag_aceita_falha ) System.exit(1);
+                                continue;
+                            }
+                            size_alert=tmp.length() + 1024*1024*100; // acima de 100MB do planejado
+                        }
                         e=new java.util.zip.ZipEntry( zip_elementos.get(i) );
                         e.setTime(zip_elementos_lastModified.get(i));
                         zip_output.putNextEntry(e);
                         if ( ! zip_elementos.get(i).endsWith("/") ){
-                            long size_alert=tmp.length() + 1024*1024*100; // acima de 100MB do planejado
-                            long size=0;
-                            readBytes(tmp);
                             byte[] buf = new byte[BUFFER_SIZE];
-                            try {                                                                     // <<< NOVO
+                            try {
                                 while ((len = readBytes(buf)) > -1){
                                     zip_output.write(buf, 0, len);
                                     if ( pre_line_print_on != null )
                                         print_cursor_speed(len, pre_line_print_on, null, true, null);
                                     size+=len;
-                                    if ( elem != null && size > size_alert ){
+                                    if ( size > size_alert ){
                                         System.err.println("Erro, sistema anti loop ativado!!");
                                         System.exit(1);
                                     }
                                 }
-                            } catch ( Exception ex ) {                                                // <<< NOVO
-                                System.err.println("Aviso, falha de leitura em "+tmp.getPath()+": "+ex); // <<< NOVO
-                                if ( !flag_aceita_falha ) System.exit(1);                             // <<< NOVO
-                            }                                                                         // <<< NOVO
+                            } catch ( Exception ex ) {
+                                System.err.println("Aviso, falha de leitura em "+tmp.getPath()+": "+ex);
+                                if ( !flag_aceita_falha ) System.exit(1);
+                            }
                             closeBytes();
                         }
                     }
@@ -5605,9 +5615,9 @@ cat buffer.log
         }
     }
 
-    private void zip_navega(File a, String caminho, Boolean flag_aceita_falha) {                       // <<< NOVO parametro
+    private void zip_navega(File a, String caminho, Boolean flag_aceita_falha) {
         java.io.File[] filhos=a.listFiles();
-        if ( filhos == null ){                                                                        // <<< NOVO bloco
+        if ( filhos == null ){
             System.err.println("Aviso, nao foi possivel listar o diretorio (permissao?): "+a.getPath());
             if ( !flag_aceita_falha ) System.exit(1);
             return;
@@ -5620,7 +5630,7 @@ cat buffer.log
             if ( filhos[i].isDirectory() && !filhos[i].getName().equals(".") && !filhos[i].getName().equals("..") ){
                 zip_elementos.add(caminho+filhos[i].getName()+"/");
                 zip_elementos_lastModified.add(filhos[i].lastModified());
-                zip_navega(filhos[i],caminho+filhos[i].getName()+"/",flag_aceita_falha);              // <<< NOVO argumento
+                zip_navega(filhos[i],caminho+filhos[i].getName()+"/",flag_aceita_falha);
             }
         }
     }
