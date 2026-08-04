@@ -693,7 +693,8 @@ cat buffer.log
                         String [] paths=(String [])objs[0];
                         String virtualname=(String)objs[1];
                         Integer lvlCompress=(Integer)objs[2];
-                        zip_add_router(paths, virtualname, lvlCompress, System.out, null, senha);
+                        Boolean flag_aceita_falha=true;
+                        zip_add_router(paths, virtualname, lvlCompress, System.out, null, senha, flag_aceita_falha);
                         return;
                     }
                 }
@@ -3583,7 +3584,8 @@ cat buffer.log
                 step1=new Thread(new Runnable() {
                     public void run() {
                         try{
-                            zip_add_router(paths, "", 0, pos1, "enviando - ", null);
+                            Boolean flag_aceita_falha=false;
+                            zip_add_router(paths, "", 0, pos1, "enviando - ", null, flag_aceita_falha);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -5472,7 +5474,7 @@ cat buffer.log
         return null;
     }
     
-    private void zip_add_router(String [] paths, String virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on, String senha) throws Exception {
+    private void zip_add_router(String [] paths, String virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on, String senha, Boolean flag_aceita_falha) throws Exception {
         this.virtual_name = virtual_name;
         if ( senha == null )
             zip_output = new java.util.zip.ZipOutputStream(out);
@@ -5486,7 +5488,7 @@ cat buffer.log
         }
 
         valida_paths(paths);
-        zip_add(paths, pre_line_print_on);
+        zip_add(paths, pre_line_print_on, flag_aceita_falha);
         zip_output.closeEntry();
         zip_output.flush();
         zip_output.close();
@@ -5504,7 +5506,7 @@ cat buffer.log
     private ArrayList<String> zip_elementos=null;
     private ArrayList<Long> zip_elementos_lastModified=null;
     private String virtual_name;
-    private void zip_add(String [] paths, String pre_line_print_on) throws Exception {
+    private void zip_add(String [] paths, String pre_line_print_on, Boolean flag_aceita_falha) throws Exception { // <<< NOVO parametro
         int len;
         java.util.zip.ZipEntry e=null;
         if ( paths.length == 0 ){
@@ -5521,53 +5523,80 @@ cat buffer.log
             for ( int i_=0; i_<paths.length;i_++ ){
                 File elem=new File(paths[i_]);
                 if ( elem.isFile() ){
+                    if ( !elem.canRead() ){                                                          // <<< NOVO
+                        System.err.println("Aviso, sem permissao de leitura: "+elem.getPath());      // <<< NOVO
+                        if ( !flag_aceita_falha ) System.exit(1);                                    // <<< NOVO
+                        continue;                                                                    // <<< NOVO
+                    }                                                                                // <<< NOVO
+                    try {                                                                            // <<< NOVO
+                        readBytes(elem);                                                             // <<< movido para antes da entry
+                    } catch ( Exception ex ) {                                                       // <<< NOVO
+                        System.err.println("Aviso, falha ao abrir "+elem.getPath()+": "+ex);          // <<< NOVO
+                        closeBytes();                                                                // <<< NOVO
+                        if ( !flag_aceita_falha ) System.exit(1);                                    // <<< NOVO
+                        continue;                                                                    // <<< NOVO
+                    }                                                                                // <<< NOVO
                     e=new java.util.zip.ZipEntry(elem.getName());
                     e.setTime(elem.lastModified());
                     zip_output.putNextEntry(e);
-                    readBytes(elem);
                     byte[] buf = new byte[BUFFER_SIZE];
                     long size_alert=-1;
                     long size=0;
                     size_alert = elem.length() + 1024*1024*100; // acima de 100MB do planejado
-                    while ((len = readBytes(buf)) > -1){
-                        zip_output.write(buf, 0, len);
-                        if ( pre_line_print_on != null )
-                            print_cursor_speed(len, pre_line_print_on, null, true, null);
-                        size+=len;
-                        if ( elem != null && size > size_alert ){
-                            System.err.println("Erro, sistema anti loop ativado!");
-                            System.exit(1);
+                    try {                                                                            // <<< NOVO
+                        while ((len = readBytes(buf)) > -1){
+                            zip_output.write(buf, 0, len);
+                            if ( pre_line_print_on != null )
+                                print_cursor_speed(len, pre_line_print_on, null, true, null);
+                            size+=len;
+                            if ( elem != null && size > size_alert ){
+                                System.err.println("Erro, sistema anti loop ativado!");
+                                System.exit(1);
+                            }
                         }
-                    }
+                    } catch ( Exception ex ) {                                                       // <<< NOVO
+                        System.err.println("Aviso, falha de leitura em "+elem.getPath()+": "+ex);     // <<< NOVO
+                        if ( !flag_aceita_falha ) System.exit(1);                                    // <<< NOVO
+                    }                                                                                // <<< NOVO
                     closeBytes();
                 }else{
                     zip_elementos=new ArrayList<String>();
                     zip_elementos_lastModified=new ArrayList<Long>();
                     if ( !paths[i_].startsWith("/") && !paths[i_].contains(":") ) // verifica se é relative path
-                        zip_navega(elem,paths[i_]+"/");
+                        zip_navega(elem,paths[i_]+"/",flag_aceita_falha);                             // <<< NOVO argumento
                     else
-                        zip_navega(elem,"");
+                        zip_navega(elem,"",flag_aceita_falha);                                        // <<< NOVO argumento
                     int len_cache=zip_elementos.size();
                     for ( int i=0;i<len_cache;i++ ){
+                        File tmp = new File(zip_elementos.get(i));                                    // <<< movido para antes da entry
+                        if ( ! zip_elementos.get(i).endsWith("/") && !tmp.canRead() ){                // <<< NOVO
+                            System.err.println("Aviso, sem permissao de leitura: "+tmp.getPath());     // <<< NOVO
+                            if ( !flag_aceita_falha ) System.exit(1);                                 // <<< NOVO
+                            continue;                                                                 // <<< NOVO
+                        }                                                                             // <<< NOVO
                         e=new java.util.zip.ZipEntry( zip_elementos.get(i) );
                         e.setTime(zip_elementos_lastModified.get(i));
                         zip_output.putNextEntry(e);
                         if ( ! zip_elementos.get(i).endsWith("/") ){
-                            File tmp = new File(zip_elementos.get(i));
                             long size_alert=tmp.length() + 1024*1024*100; // acima de 100MB do planejado
                             long size=0;
                             readBytes(tmp);
                             byte[] buf = new byte[BUFFER_SIZE];
-                            while ((len = readBytes(buf)) > -1){
-                                zip_output.write(buf, 0, len);
-                                if ( pre_line_print_on != null )
-                                    print_cursor_speed(len, pre_line_print_on, null, true, null);
-                                size+=len;
-                                if ( elem != null && size > size_alert ){
-                                    System.err.println("Erro, sistema anti loop ativado!!");
-                                    System.exit(1);
+                            try {                                                                     // <<< NOVO
+                                while ((len = readBytes(buf)) > -1){
+                                    zip_output.write(buf, 0, len);
+                                    if ( pre_line_print_on != null )
+                                        print_cursor_speed(len, pre_line_print_on, null, true, null);
+                                    size+=len;
+                                    if ( elem != null && size > size_alert ){
+                                        System.err.println("Erro, sistema anti loop ativado!!");
+                                        System.exit(1);
+                                    }
                                 }
-                            }
+                            } catch ( Exception ex ) {                                                // <<< NOVO
+                                System.err.println("Aviso, falha de leitura em "+tmp.getPath()+": "+ex); // <<< NOVO
+                                if ( !flag_aceita_falha ) System.exit(1);                             // <<< NOVO
+                            }                                                                         // <<< NOVO
                             closeBytes();
                         }
                     }
@@ -5576,9 +5605,13 @@ cat buffer.log
         }
     }
 
-    private void zip_navega(File a, String caminho) {
+    private void zip_navega(File a, String caminho, Boolean flag_aceita_falha) {                       // <<< NOVO parametro
         java.io.File[] filhos=a.listFiles();
-        if ( filhos == null ) return;
+        if ( filhos == null ){                                                                        // <<< NOVO bloco
+            System.err.println("Aviso, nao foi possivel listar o diretorio (permissao?): "+a.getPath());
+            if ( !flag_aceita_falha ) System.exit(1);
+            return;
+        }
         for ( int i=0;i<filhos.length;i++ ){
             if ( filhos[i].isFile() ){
                 zip_elementos.add(caminho+filhos[i].getName());
@@ -5587,11 +5620,11 @@ cat buffer.log
             if ( filhos[i].isDirectory() && !filhos[i].getName().equals(".") && !filhos[i].getName().equals("..") ){
                 zip_elementos.add(caminho+filhos[i].getName()+"/");
                 zip_elementos_lastModified.add(filhos[i].lastModified());
-                zip_navega(filhos[i],caminho+filhos[i].getName()+"/");
+                zip_navega(filhos[i],caminho+filhos[i].getName()+"/",flag_aceita_falha);              // <<< NOVO argumento
             }
         }
     }
-
+    
     private void zip_list(String a, String senha) throws Exception {
         if ( senha != null ){ // zip com senha nao abre no ZipFile do java, vai pelo ZipSenhaFile
             if ( a != null )
