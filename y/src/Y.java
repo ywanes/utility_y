@@ -37198,6 +37198,7 @@ Exemplos...
     y printScreen 2
     y printScreen 99 -> uma unica imagem completa com todos os monitores
     obs: pasta padrão: d:/ProgramFiles/screens
+    alternativa: SnippingTool.exe
 [y ocr]
     y ocr D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp
     y cat D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp | y ocr
