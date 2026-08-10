@@ -4,7 +4,9 @@
 # versao limpando cache:
 # $headers = @{"Cache-Control"="no-cache"; "Pragma"="no-cache"}
 # irm -Uri "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.ps1" -Headers $headers | iex
-
+#
+# ultimo graalvm -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
+#                   https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 $validaAdm=$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)

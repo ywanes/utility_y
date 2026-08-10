@@ -6,6 +6,9 @@
 # curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
 # docker stop test
 # docker rm test
+#
+# ultimo graalvm -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
+#                   https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
 
 if [ `whoami` != "root" ]
 then
