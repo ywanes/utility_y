@@ -10737,8 +10737,9 @@ bind 'set enable-bracketed-paste off'
     }
 
     multiCurl overflix_multi=null;
+    ////////////////////
     public void overflix(String [] args) throws Exception{
-        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(args);
+        Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn_paralelo(args);
 
         if ( objs == null )
             erroFatalParametrosInvalidos();
@@ -10751,12 +10752,13 @@ bind 'set enable-bracketed-paste off'
         Boolean tags=(Boolean)objs[6];
         String outPath=(String)objs[7];
         getScriptRenameBySkip_in=(String)objs[8];
+        Integer n_paralelo=(Integer)objs[9];
 
         if ( url.startsWith("https://superflixapi.dev/filme/") ){
             superflixapi(url);
             return;
         }
-        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, null, o_force_out, tags, outPath, null, null);
+        overflix_nav(url, verbose, onlyLink, onlyPreLink, vToken, null, null, null, o_force_out, tags, outPath, null, null, n_paralelo);
 
         if ( overflix_multi != null ){
             overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(0);
@@ -10796,7 +10798,7 @@ bind 'set enable-bracketed-paste off'
     //
     public void overflix_nav(String url, Boolean verbose, Boolean onlyLink, Boolean onlyPreLink, Boolean vToken,
                              String titulo_serie, String titulo_filme, Boolean cam, String o_force_out, Boolean tags, String outPath,
-                             Integer temporada_S, Integer temporada_E) throws Exception{
+                             Integer temporada_S, Integer temporada_E, Integer n_paralelo) throws Exception{
         // teste
         // y overflix "https://encontrei.info/filmes/online/obsessao-dublado-70939/"
         // y overflix "https://encontrei.info/filmes/online/minions-e-monstros-dublado-71753/"   (CAM)
@@ -10825,7 +10827,7 @@ bind 'set enable-bracketed-paste off'
                 overflix_error+="Não foi possível obter o mixdrop (playerData) de: " + url+"\n";
                 return;
             }
-            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E, n_paralelo);
             return;
         }
 
@@ -10911,7 +10913,7 @@ bind 'set enable-bracketed-paste off'
                             }
                         }
                     }
-                    overflix_nav(hrefs[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    overflix_nav(hrefs[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E, n_paralelo);
                 }
             }
             return;
@@ -10948,14 +10950,14 @@ bind 'set enable-bracketed-paste off'
                 if ( partes[i].startsWith("https://mixdrop.") ){
                     overflix_verbose(verbose, tags, "TAG:601");
                     partes[i]=partes[i].replaceAll("https://mixdrop.sb/", "https://mixdrop.ps/");
-                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                    overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E, n_paralelo);
                 }else{
                     if ( partes[i].contains("/f/") ){
                         overflix_verbose(verbose, tags, "TAG:602");
-                        overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                        overflix_nav(partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E, n_paralelo);
                     }else{
                         overflix_verbose(verbose, tags, "TAG:603");
-                        overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+                        overflix_nav(prefix+partes[i], verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E, n_paralelo);
                     }
                 }
                 return;
@@ -10993,7 +10995,7 @@ bind 'set enable-bracketed-paste off'
         // use mix
         if ( mix != null ){
             overflix_verbose(verbose, tags, "TAG:8");
-            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E);
+            overflix_nav(mix, verbose, onlyLink, onlyPreLink, vToken, titulo_serie, titulo_filme, cam, o_force_out, tags, outPath, temporada_S, temporada_E, n_paralelo);
             return;
         }
 
@@ -11079,7 +11081,7 @@ bind 'set enable-bracketed-paste off'
                     if ( overflix_multi == null )
                         overflix_multi=new multiCurl();
                     overflix_multi.addCurl(s, out, true);
-                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(2);
+                    overflix_multi.wait_numeroDeTrabalhoIgualOuMenor(n_paralelo-1);
                     skiping_show=false;
                 }else{
                     if ( skiping_show ){
@@ -16603,7 +16605,7 @@ while True:
         return new Object []{msg, lang, list, copy, tts, stt, modeB};
     }        
         
-    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn(String [] args){
+    private Object [] get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn_paralelo(String [] args){
         String url=null;
         Boolean verbose=false;
         Boolean onlyLink=false;
@@ -16613,6 +16615,7 @@ while True:
         Boolean tags=false;
         String outPath=null;
         String getScriptRenameBySkipIn=null;
+        Integer n_paralelo=3;
         
         Boolean aux_p=false;
         String [] extras=new String[0];
@@ -16652,6 +16655,12 @@ while True:
                 args=sliceParm(1, args);
                 continue;
             }
+            if ( args.length > 1 && args[0].equals("-paralelo") ){
+                args=sliceParm(1, args);
+                n_paralelo=Integer.parseInt(args[0]);
+                args=sliceParm(1, args);
+                continue;
+            }            
             if ( args.length > 0 && args[0].equals("-v") ){
                 args=sliceParm(1, args);
                 verbose=true;
@@ -16703,7 +16712,7 @@ while True:
             System.out.println("erro: onlyLink && onlyPreLink");
             return null;
         }
-        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath, getScriptRenameBySkipIn};
+        return new Object []{url, verbose, onlyLink, onlyPreLink, vToken, o, tags, outPath, getScriptRenameBySkipIn, n_paralelo};
     }        
            
     public Object [] get_parms_vol_mute_setvol_setmute_program_mutingWhileProgramInPrincipalMonitor(String [] args){
@@ -37001,6 +37010,8 @@ Exemplos...
 [y pid]
     y pid 222
     Obs: onde 222 é o processId encontrado em y pss
+    powershell:
+    Get-NetTCPConnection | Where-Object LocalPort -eq 3004 | Format-List LocalAddress,LocalPort,State,OwningProcess
 [y date]
     y date
     y date "+%s" # epoch
@@ -37300,6 +37311,7 @@ Exemplos...
          -o => force out path
          -tags => verbose profundo
          -i => libera token pelo chrome
+         -paralelo => por padrao é 3
 [y connGui]
     connGui
     obs: teste de conexao(server e client)
