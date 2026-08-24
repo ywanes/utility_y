@@ -24372,6 +24372,8 @@ class Util{
                 }catch(Exception e){}                
                 return;
             }
+            if ( !(os_print instanceof BufferedOutputStream) )
+                os_print = new BufferedOutputStream(os_print, 2*1024*1024); // 2 MB
             String protocol="HTTP";
             int len=0;
             int port = 80;  
@@ -24400,7 +24402,7 @@ class Util{
                 socket.connect(new InetSocketAddress(host, port));
             }
             
-            byte[] buffer = new byte[2048];
+            byte[] buffer = new byte[64*1024];
             InputStream is=socket.getInputStream();
             OutputStream os=socket.getOutputStream(); 
             StringBuilder sb = new StringBuilder();
