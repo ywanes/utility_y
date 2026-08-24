@@ -18134,7 +18134,7 @@ while True:
             if ( server )
                 print_after="# cliente command:\n# y call -client -ip " + ip + " -port " + port;            
             try{
-                int len_buffer=BUFFER_SIZE*1024;
+                int len_buffer=BUFFER_SIZE*4;
                 byte [] buffer=new byte[len_buffer];
                 int len=0;
                 Socket s = null;
@@ -18425,7 +18425,13 @@ while True:
         boolean server=(Boolean)objs[2];
         boolean send=(Boolean)objs[3];
         String print_after=null;
-        
+
+        // Buffer TCP do SO. É a JANELA do TCP: quanto maior, mais dados cabem
+        // "voando" no link antes de precisar de ACK. Pra medir a velocidade
+        // maxima e ter throughput MACIO (sem oscilar), tem que cobrir o
+        // bandwidth-delay product do link. 4 MB cobre links rapidos com RTT alto.
+        final int SOCK_BUF = 4 * 1024 * 1024; // 4 MB
+
         if ( server )
             ip=get_ip();        
         if ( ip == null ){
@@ -18441,14 +18447,19 @@ while True:
                 print_after="# cliente command:\n# y speed -client -ip " + ip + " -port " + port;
         try{        
             try{
-                int len_buffer=BUFFER_SIZE*1024;
+                int len_buffer=BUFFER_SIZE*4;   // 256 KB de buffer da aplicacao
                 byte [] buffer=new byte[len_buffer];
                 int len=0;
                 if ( server ){
                     Socket s = null;
                     ServerSocket ss=null;
                     try{
-                        ss=new ServerSocket(port, 1,InetAddress.getByName(ip));
+                        // Sem bind no construtor: setReceiveBufferSize tem que vir
+                        // ANTES do bind pra ser herdado pelo socket do accept() e
+                        // pro window scaling ser negociado no handshake.
+                        ss=new ServerSocket();
+                        ss.setReceiveBufferSize(SOCK_BUF);
+                        ss.bind(new InetSocketAddress(InetAddress.getByName(ip), port), 1);
                     }catch(Exception ee){
                         if ( ee.toString().equals("java.net.BindException: Address already in use (Bind failed)") ){
                             String aux="";
@@ -18461,35 +18472,51 @@ while True:
                     }
                     System.out.println(print_after);
                     s = ss.accept();
+                    s.setSendBufferSize(SOCK_BUF);
+                    s.setTcpNoDelay(true);
+                    System.err.println("# TCP bufs (SO aceitou): snd=" + s.getSendBufferSize()
+                            + " rcv=" + s.getReceiveBufferSize() + " | app buffer=" + len_buffer);
                     OutputStream os = s.getOutputStream();
                     InputStream is = s.getInputStream();
-                    if ( send ){
-                        while( true ){
-                            os.write(buffer, 0, len_buffer);
-                            print_cursor_speed(len_buffer, null, null, false, null);
+                    try{
+                        if ( send ){
+                            while( true ){
+                                os.write(buffer, 0, len_buffer);
+                                print_cursor_speed(len_buffer, null, null, false, null);
+                            }
+                        }else{
+                            while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
+                                print_cursor_speed(len, null, null, false, null);
+                            }
                         }
-                    }else{
-                        while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
-                            print_cursor_speed(len, null, null, false, null);
-                        }
+                    }finally{
+                        try{ s.close(); }catch(Exception e){}
+                        try{ ss.close(); }catch(Exception e){}
                     }
-                    s.close();
-                    ss.close();
                 }else{
-                    Socket s = new Socket(InetAddress.getByName(ip), port);                        
+                    Socket s = new Socket();
+                    s.setReceiveBufferSize(SOCK_BUF);   // antes do connect
+                    s.connect(new InetSocketAddress(InetAddress.getByName(ip), port));
+                    s.setSendBufferSize(SOCK_BUF);
+                    s.setTcpNoDelay(true);
+                    System.err.println("# TCP bufs (SO aceitou): snd=" + s.getSendBufferSize()
+                            + " rcv=" + s.getReceiveBufferSize() + " | app buffer=" + len_buffer);
                     OutputStream os = s.getOutputStream();
                     InputStream is = s.getInputStream();
-                    if ( send ){
-                        while( true ){
-                            os.write(buffer, 0, len_buffer);
-                            print_cursor_speed(len_buffer, null, null, false, null);
+                    try{
+                        if ( send ){
+                            while( true ){
+                                os.write(buffer, 0, len_buffer);
+                                print_cursor_speed(len_buffer, null, null, false, null);
+                            }
+                        }else{
+                            while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
+                                print_cursor_speed(len, null, null, false, null);
+                            }
                         }
-                    }else{
-                        while( (len=is.read(buffer, 0, len_buffer)) > 0 ){
-                            print_cursor_speed(len, null, null, false, null);
-                        }
+                    }finally{
+                        try{ s.close(); }catch(Exception e){}
                     }
-                    s.close();
                 }
             }catch(Exception e){
                 if ( !copiaByStream_count_print_on ){
@@ -18504,7 +18531,7 @@ while True:
         
         return true;
     }
-
+    
     public void monitor(boolean oneLine){
         while(true){
             String s=runtimeExec("wmic cpu get loadpercentage", null, null, null, null);
@@ -26653,7 +26680,7 @@ class Util{
             erroFatal(404);
         }
     }
-    public final static int BUFFER_SIZE=1024;
+    public final static int BUFFER_SIZE=64*1024;
     
     public static String separadorCSVCache=null;
     public static String getSeparadorCSV(){
