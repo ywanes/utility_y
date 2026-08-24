@@ -15355,7 +15355,7 @@ while True:
         Boolean tags=false;
         String outPath=null;
         String getScriptRenameBySkipIn=null;
-        Integer n_paralelo=2;
+        Integer n_paralelo=3;
         
         Boolean aux_p=false;
         String [] extras=new String[0];
@@ -36059,7 +36059,7 @@ Exemplos...
          -tags => verbose profundo
          -i => interative => libera token pelo chrome(por padrao, ja esta com interative!)
          -ni => not interative => nao libera token pelo chrome
-         -paralelo => por padrao é 2
+         -paralelo => por padrao é 3
 [y connGui]
     connGui
     obs: teste de conexao(server e client)
