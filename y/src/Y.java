@@ -18432,7 +18432,7 @@ while True:
         // bandwidth-delay product do link. 4 MB cobre links rapidos com RTT alto.
         final int SOCK_BUF = 4 * 1024 * 1024; // 4 MB
 
-        if ( server )
+        if ( server && ip == null )
             ip=get_ip();        
         if ( ip == null ){
             System.err.println("Nenhum ip foi encontrado!");
@@ -18474,8 +18474,6 @@ while True:
                     s = ss.accept();
                     s.setSendBufferSize(SOCK_BUF);
                     s.setTcpNoDelay(true);
-                    System.err.println("# TCP bufs (SO aceitou): snd=" + s.getSendBufferSize()
-                            + " rcv=" + s.getReceiveBufferSize() + " | app buffer=" + len_buffer);
                     OutputStream os = s.getOutputStream();
                     InputStream is = s.getInputStream();
                     try{
@@ -18499,8 +18497,6 @@ while True:
                     s.connect(new InetSocketAddress(InetAddress.getByName(ip), port));
                     s.setSendBufferSize(SOCK_BUF);
                     s.setTcpNoDelay(true);
-                    System.err.println("# TCP bufs (SO aceitou): snd=" + s.getSendBufferSize()
-                            + " rcv=" + s.getReceiveBufferSize() + " | app buffer=" + len_buffer);
                     OutputStream os = s.getOutputStream();
                     InputStream is = s.getInputStream();
                     try{
