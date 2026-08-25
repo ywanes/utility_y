@@ -2440,6 +2440,10 @@ cat buffer.log
             sign(args);
             return;
         }
+        if ( args[0].equals("winget") ){
+            winget(args);
+            return;
+        }
         if ( args[0].equals("update") || args[0].equals("u") ){
             update();
             return;
@@ -9378,6 +9382,91 @@ cat buffer.log
         return "puzzle " + puzzle_n + " random " + r.toString(16) + " inicio " + i.toString(16) + " fim " + f.toString(16) + " key " + sorte_puzzle_n_keys_c.split(",")[puzzle_n-1];
     }
     
+
+    public String get_winget_winget() throws Exception {
+        String script = """
+            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+            $excluir = 'VCRedist|VCLibs|UI\\.Xaml|WindowsAppRuntime|DotNet\\.Native|DirectX|GameInput|AppInstaller|EdgeWebView|WindowsInstallationAssistant'
+            winget export -o "$env:TEMP\\w.json" | Out-Null
+            (Get-Content "$env:TEMP\\w.json" | ConvertFrom-Json).Sources.Packages.PackageIdentifier |
+              Where-Object { $_ -like 'Microsoft.*' -and $_ -notmatch $excluir } |
+              ForEach-Object { "winget install --id $_ -e --accept-package-agreements" }
+            $store = @{ 'Microsoft.Paint'='9PCFS5B6T72H|mspaint'; 'Microsoft.ScreenSketch'='9MZ95KL8MR0L|snippingtool'; 'Microsoft.WindowsCalculator'='9WZDNCRFHVN5|calc'; 'Microsoft.Windows.Photos'='9WZDNCRFJBH4|ms-photos:'; 'Microsoft.WindowsNotepad'='9MSMLRH6LZF3|notepad'; 'Microsoft.WindowsTerminal'='9N0DX20HK701|wt' }
+            Get-AppxPackage | Where-Object { $store[$_.Name] } | ForEach-Object { $id,$n = ($store[$_.Name] -split '\\|'); "winget install --id $id --accept-package-agreements  # $n" }
+            """;
+        return get_winget_powershell(script);
+    }
+
+    public String get_winget_all() throws Exception {
+        String script = """
+            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+            $alias = @{ '9PCFS5B6T72H'='mspaint'; '9MZ95KL8MR0L'='snippingtool'; '9WZDNCRFHVN5'='calc'; '9WZDNCRFJBH4'='ms-photos:'; '9MSMLRH6LZF3'='notepad'; '9N0DX20HK701'='wt' }
+            $out = winget list --accept-source-agreements | Where-Object { $_ -and $_ -notmatch '^[\\s\\-\\\\|/]*$' }
+            $hdr = $out | Select-String '^(Nome|Name)\\s' | Select-Object -First 1
+            $h = $hdr.Line
+            $iId  = $h.IndexOf('Id', [System.StringComparison]::OrdinalIgnoreCase)
+            $iVer = $h.IndexOf('Vers', [System.StringComparison]::OrdinalIgnoreCase)
+            $iSrc = $h.IndexOf('Origem', [System.StringComparison]::OrdinalIgnoreCase); if ($iSrc -lt 0) { $iSrc = $h.IndexOf('Source', [System.StringComparison]::OrdinalIgnoreCase) }
+            $out | Select-Object -Skip $hdr.LineNumber | ForEach-Object {
+              if ($_.Length -le $iVer) { return }
+              $nome = $_.Substring(0, $iId).Trim()
+              $id   = $_.Substring($iId, $iVer - $iId).Trim()
+              if ($alias[$id]) { $nome = $alias[$id] }
+              $src  = if ($iSrc -ge 0 -and $_.Length -gt $iSrc) { $_.Substring($iSrc).Trim() } else { '' }
+              if ($src -eq 'winget' -and $id -notmatch [char]0x2026) {
+                "winget install --id $id -e --accept-package-agreements  # $nome"
+              } elseif ($src -eq 'msstore' -and $id -notmatch [char]0x2026) {
+                "winget install --id $id --accept-package-agreements  # $nome"
+              }
+            } | Select-Object -Unique
+            """;
+        return get_winget_powershell(script);
+    }
+
+    public String get_winget_delete() throws Exception {
+        String script = """
+            [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+            $alias = @{ '9PCFS5B6T72H'='mspaint'; '9MZ95KL8MR0L'='snippingtool'; '9WZDNCRFHVN5'='calc'; '9WZDNCRFJBH4'='ms-photos:'; '9MSMLRH6LZF3'='notepad'; '9N0DX20HK701'='wt' }
+            $out = winget list --accept-source-agreements | Where-Object { $_ -and $_ -notmatch '^[\\s\\-\\\\|/]*$' }
+            $hdr = $out | Select-String '^(Nome|Name)\\s' | Select-Object -First 1
+            $h = $hdr.Line
+            $iId  = $h.IndexOf('Id', [System.StringComparison]::OrdinalIgnoreCase)
+            $iVer = $h.IndexOf('Vers', [System.StringComparison]::OrdinalIgnoreCase)
+            $out | Select-Object -Skip $hdr.LineNumber | ForEach-Object {
+              if ($_.Length -le $iVer) { return }
+              $nome = $_.Substring(0, $iId).Trim()
+              $id   = $_.Substring($iId, $iVer - $iId).Trim()
+              if ($alias[$id]) { $nome = $alias[$id] }
+              if ($id -and $id -notmatch [char]0x2026) {
+                "winget uninstall --id `"$id`"  # $nome"
+              } else {
+                "# id truncado, desinstale pelo nome: winget uninstall `"$nome`""
+              }
+            }
+            """;
+        return get_winget_powershell(script);
+    }
+
+    public String get_winget_download() throws Exception {
+        System.out.println("baixando winget.msixbundle");
+        java.nio.file.Path destino = java.nio.file.Path.of(".", "winget.msixbundle");
+        try (java.io.InputStream in = java.net.URI.create("https://aka.ms/getwinget").toURL().openStream()) {
+            java.nio.file.Files.copy(in, destino, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+        return destino.toString();
+    }
+
+    public String get_winget_powershell(String script) throws Exception {
+        String b64 = java.util.Base64.getEncoder()
+            .encodeToString(("$ProgressPreference='SilentlyContinue'\n" + script).getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        Process p = new ProcessBuilder("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-EncodedCommand", b64)
+            .redirectError(ProcessBuilder.Redirect.DISCARD)
+            .start();
+        String saida = new String(p.getInputStream().readAllBytes(), java.nio.charset.Charset.forName("utf-8"));
+        p.waitFor();
+        return saida;
+    }
+    
     public void cat(String [] args)
     {
         try{
@@ -12230,6 +12319,40 @@ while True:
         }catch(Exception e){
             erroFatal(e);
         }                    
+    }
+    
+    public void winget(String [] args){
+        args=removeParm(0, args);
+        try{
+            if ( !isWindows() )
+                erroFatal("implementado somente para windows!");
+            if ( args.length == 0 ){
+                System.out.print(get_winget_winget());
+                return;
+            }
+            if ( args.length != 1 ){
+                erroFatalParametrosInvalidos();
+                return;
+            }
+            if ( args[0].equals("winget") ){
+                System.out.println(get_winget_winget());
+                return;
+            }
+            if ( args[0].equals("all") ){
+                System.out.println(get_winget_all());
+                return;
+            }
+            if ( args[0].equals("download") ){
+                System.out.println(get_winget_download());
+                return;
+            }
+            if ( args[0].equals("delete") ){
+                System.out.println(get_winget_delete());
+                return;
+            }
+        }catch(Exception e){
+            erroFatal(e);
+        }
     }
     
     public void sign(String [] args){
@@ -35145,6 +35268,7 @@ usage:
   [y connGui]
   [y var]
   [y cotacao]
+  [y winget]
   [y [update|u]]
   [y help]
 
@@ -36175,6 +36299,31 @@ Exemplos...
     obs: y cotacao BTC_BRL fica mostrando a cada 1 min
     obs2: veja também y help awk
     fonte: BTCBRL https://api.binance.com/api/v3/ticker/price
+[y winget]
+    y winget # mostra os principais
+    y winget winget
+    y winget all # mostra todos
+    y winget download # faz o download do instaladow winget
+    y winget delete # mostra comandos para delete
+    obs: as vezes mostra que nao deletou mas deletou
+        winget uninstall --id "Microsoft.OneDrive"
+        Encontrado Microsoft OneDrive [Microsoft.OneDrive]
+        Iniciando a desinstalação do pacote...
+        Falha na desinstalação com o código de saída: 2147747483
+    principais:
+        winget install --id Google.Chrome -e --accept-package-agreements  # Google Chrome
+        winget install --id Microsoft.WindowsTerminal -e --accept-package-agreements  # Terminal do Windows
+        winget install --id Notepad++.Notepad++ -e --accept-package-agreements  # Notepad++ (64-bit x64)
+        winget install --id 9MZ95KL8MR0L --accept-package-agreements  # snippingtool
+        winget install --id 9PCFS5B6T72H --accept-package-agreements  # mspaint
+        winget install --id Python.Python.3.13 -e --accept-package-agreements  # Python 3.13.12 (64-bit)
+        winget install --id Python.Launcher -e --accept-package-agreements  # Python Launcher
+        winget install --id Git.Git -e --accept-package-agreements  # Git
+        winget install --id VideoLAN.VLC -e --accept-package-agreements
+        winget install --id Microsoft.RemoteDesktopClient -e --accept-package-agreements
+        winget install --id Anthropic.Claude -e --accept-package-agreements  # Claude
+        # ultimo graalvm windows -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
+        # ultimo graalvm linux -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
 [y help]
     y help <command>
     y help router
