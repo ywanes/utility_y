@@ -688,13 +688,15 @@ cat buffer.log
                     }
                 }
                 if ( args.length >= 3 && args[1].equals("add") ){
-                    Object [] objs = get_parms_paths_virtualname_lvlCompress(args);
+                    Object [] objs = get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate(args);
                     if ( objs != null ){
                         String [] paths=(String [])objs[0];
                         String virtualname=(String)objs[1];
                         Integer lvlCompress=(Integer)objs[2];
                         Boolean flag_aceita_falha=true;
-                        zip_add_router(paths, virtualname, lvlCompress, System.out, null, senha, flag_aceita_falha);
+                        String out=(String)objs[3];
+                        OutputStream os=out==null?System.out:new FileOutputStream(out);
+                        zip_add_router(paths, virtualname, lvlCompress, os, null, senha, flag_aceita_falha);
                         return;
                     }
                 }
@@ -819,12 +821,14 @@ cat buffer.log
                     }
                 }
                 if ( args.length >= 3 && args[1].equals("add") ){
-                    Object [] objs = get_parms_paths_virtualname_lvlCompress(args);
+                    Object [] objs = get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate(args);
                     if ( objs != null ){
                         String [] paths=(String [])objs[0];
                         String virtualname=(String)objs[1];
                         Integer lvlCompress=(Integer)objs[2];
-                        s7_add_router(paths, virtualname, lvlCompress, System.out, null, senha);
+                        String out=(String)objs[3];
+                        OutputStream os=out==null?System.out:new FileOutputStream(out);                        
+                        s7_add_router(paths, virtualname, lvlCompress, os, null, senha);
                         return;
                     }
                 }
@@ -1434,7 +1438,11 @@ cat buffer.log
         }        
         if ( args[0].equals("sed") || args[0].equals("tr") ){
             if ( args.length == 3 ){
-                sed(args);
+                try{
+                    sed(args);
+                }catch(Exception e){
+                    erroFatal(e);
+                }
                 return;
             }
             if ( args.length%2 == 1 ){
@@ -5473,25 +5481,36 @@ cat buffer.log
         }
         return null;
     }
-    
-    private void zip_add_router(String [] paths, String virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on, String senha, Boolean flag_aceita_falha) throws Exception {
-        this.virtual_name = virtual_name;
-        if ( senha == null )
-            zip_output = new java.util.zip.ZipOutputStream(out);
-        else
-            zip_output = new ZipSenhaOutputStream(out, senha); // senha estilo windows (ZipCrypto)
-        if ( lvlCompress == 0 )
-            zip_output.setLevel(ZipOutputStream.STORED);
-        else{
-            if ( lvlCompress == 9 )
-                zip_output.setLevel(Deflater.BEST_COMPRESSION);
-        }
 
-        valida_paths(paths);
-        zip_add(paths, pre_line_print_on, flag_aceita_falha);
-        zip_output.closeEntry();
-        zip_output.flush();
-        zip_output.close();
+    private void zip_add_router(String[] paths, String virtual_name, int lvlCompress,
+                                OutputStream out, String pre_line_print_on,
+                                String senha, Boolean flag_aceita_falha) throws Exception {
+        this.virtual_name = virtual_name;
+
+        zip_output = (senha == null)
+            ? new java.util.zip.ZipOutputStream(out)
+            : new ZipSenhaOutputStream(out, senha);
+
+        if (lvlCompress == 0)
+            zip_output.setLevel(Deflater.NO_COMPRESSION);
+        else if (lvlCompress == 9)
+            zip_output.setLevel(Deflater.BEST_COMPRESSION);
+        else
+            zip_output.setLevel(lvlCompress);
+
+        boolean ok = false;
+        try {
+            valida_paths(paths);
+            zip_add(paths, pre_line_print_on, flag_aceita_falha);
+            zip_output.finish();   // grava central directory + EOCD
+            ok = true;
+        } finally {
+            try {
+                zip_output.close();
+            } catch (IOException e) {
+                if (ok) throw e;   // se já falhou antes, não mascara a causa original
+            }
+        }
     }
 
     private void valida_paths(String [] paths){
@@ -5524,14 +5543,14 @@ cat buffer.log
                 File elem=new File(paths[i_]);
                 if ( elem.isFile() ){
                     if ( !elem.canRead() ){
-                        System.err.println("Aviso, sem permissao de leitura: "+elem.getPath());
+                        System.err.println("warning, sem permissao de leitura: "+elem.getPath());
                         if ( !flag_aceita_falha ) System.exit(1);
                         continue;
                     }
                     try {
                         readBytes(elem);
                     } catch ( Exception ex ) {
-                        System.err.println("Aviso, falha ao abrir "+elem.getPath()+": "+ex);
+                        System.err.println("warning, falha ao abrir "+elem.getPath()+": "+ex);
                         closeBytes();
                         if ( !flag_aceita_falha ) System.exit(1);
                         continue;
@@ -5555,7 +5574,7 @@ cat buffer.log
                             }
                         }
                     } catch ( Exception ex ) {
-                        System.err.println("Aviso, falha de leitura em "+elem.getPath()+": "+ex);
+                        System.err.println("warning, falha de leitura em "+elem.getPath()+": "+ex);
                         if ( !flag_aceita_falha ) System.exit(1);
                     }
                     closeBytes();
@@ -5573,14 +5592,14 @@ cat buffer.log
                         long size=0;
                         if ( ! zip_elementos.get(i).endsWith("/") ){
                             if ( !tmp.canRead() ){
-                                System.err.println("Aviso, sem permissao de leitura: "+tmp.getPath());
+                                System.err.println("warning, sem permissao de leitura: "+tmp.getPath());
                                 if ( !flag_aceita_falha ) System.exit(1);
                                 continue;
                             }
                             try {
                                 readBytes(tmp);
                             } catch ( Exception ex ) {
-                                System.err.println("Aviso, falha ao abrir "+tmp.getPath()+": "+ex);
+                                System.err.println("warning, falha ao abrir "+tmp.getPath()+": "+ex);
                                 closeBytes();
                                 if ( !flag_aceita_falha ) System.exit(1);
                                 continue;
@@ -5604,7 +5623,8 @@ cat buffer.log
                                     }
                                 }
                             } catch ( Exception ex ) {
-                                System.err.println("Aviso, falha de leitura em "+tmp.getPath()+": "+ex);
+                                System.err.println("warning, falha de leitura em "+tmp.getPath());
+                                //System.err.println("Aviso, falha de leitura em "+tmp.getPath()+": "+ex);
                                 if ( !flag_aceita_falha ) System.exit(1);
                             }
                             closeBytes();
@@ -10337,8 +10357,7 @@ bind 'set enable-bracketed-paste off'
         }
         return name.toString();
     }        
-    
-    ///////////////////////////////////
+        
     public String overflix_busca(String [] args){
         String s="";
         if ( args.length == 0 )
@@ -10736,8 +10755,7 @@ bind 'set enable-bracketed-paste off'
             System.out.println("unknow "+n);
     }
 
-    multiCurl overflix_multi=null;
-    ////////////////////
+    multiCurl overflix_multi=null;    
     public void overflix(String [] args) throws Exception{
         Object [] objs = get_parms_url_verbose_onlyLink_onlyPreLink_vToken_o_tags_outPath_getScriptRenameBySkipIn_paralelo(args);
 
@@ -12569,8 +12587,7 @@ while True:
     int sed_agulha2_count=0;
     ArrayList<Byte> sed_agulha3=new ArrayList<Byte>(); // substituir out
     int sed_agulha3_count=0;
-    public void sed(String [] args)
-    {     
+    public void sed(String [] args) throws Exception{     
         byte [] in_=args[1].getBytes();
         for ( int i=0;i<in_.length;i++ )
             sed_agulha2.add(in_[i]);   
@@ -16451,11 +16468,15 @@ while True:
         return new Object[]{path,acceptSymbolicLink,bkmg};
     }    
     
-    private Object [] get_parms_paths_virtualname_lvlCompress(String [] args){
+    private Object [] get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate(String [] args) throws Exception{
+        //////////////////
         String [] paths=new String[]{};
         String virtualname="";
         Integer lvlCompress=1;
         ArrayList<String> tmp=new ArrayList<String>();
+        String out=null;
+        Boolean prefixdate=false;
+        Boolean sufixdate=false;
         
         args=sliceParm(2,args);
         while(args.length > 0){
@@ -16474,6 +16495,22 @@ while True:
                 args=sliceParm(2,args);
                 continue;
             }
+            if ( args.length > 1 && out == null && args[0].equals("-out") ){
+                args=sliceParm(1,args);
+                out=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args.length > 0 && prefixdate == false && ( args[0].equals("-prefixdate") || args[0].equals("-prefixdata") ) ){
+                args=sliceParm(1,args);
+                prefixdate=true;
+                continue;
+            }
+            if ( args.length > 0 && sufixdate == false && ( args[0].equals("-sufixdate") || args[0].equals("-sufixdata") ) ){
+                args=sliceParm(1,args);
+                sufixdate=true;
+                continue;
+            }
             if ( args.length > 0 ){
                 tmp.add(args[0]);
                 args=sliceParm(1,args);
@@ -16489,10 +16526,50 @@ while True:
             paths=new String[tmp.size()];
             for ( int i=0;i<tmp.size();i++ )
                 paths[i]=tmp.get(i);
+        }        
+        if ( prefixdate || sufixdate ){
+            if ( prefixdate && sufixdate )
+                return null;
+            String extensao="";
+            if ( out == null ){
+                out="";
+                extensao=".zip";
+            }else{
+                if ( out.endsWith(".zip") ){
+                    extensao=".zip";                
+                }else{
+                    if ( out.endsWith(".7z") ){
+                        extensao=".7z";      
+                    }else{
+                        return null;
+                    }
+                }
+                out=out.substring(0, out.length()-extensao.length());
+            }
+            String prepath="";
+            if ( out.contains("\\") ){
+                prepath=out.substring(0, out.lastIndexOf("\\")+1);
+                out=out.substring(prepath.length(), out.length());
+            }
+            if ( out.contains("/") ){
+                prepath=out.substring(0, out.lastIndexOf("/")+1);
+                out=out.substring(prepath.length(), out.length());
+            }            
+            String d=date_("+%Y%m%d_%H%M%S", null, null, null);
+            if ( prefixdate ){
+                if ( out.length() == 0 )
+                    out=prepath+d+extensao;
+                else
+                    out=prepath+d+"_"+out+extensao;
+            }else{
+                if ( out.length() == 0 )
+                    out=prepath+d+extensao;
+                else
+                    out=prepath+out+"_"+d+extensao;
+            }
         }
-        return new Object[]{paths, virtualname, lvlCompress};
+        return new Object[]{paths, virtualname, lvlCompress, out};
     }
-            
             
     private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, 
             String pos, boolean format_lss, String format_du, OutputStream out){
@@ -26852,7 +26929,7 @@ class Util{
         inputStream_pipe=new FileInputStream(file);
     }
     
-    public int readBytes(byte[] buf){
+    public int readBytes(byte[] buf) throws Exception{
         return readBytes(buf,0,BUFFER_SIZE);
     }
     
@@ -26863,25 +26940,19 @@ class Util{
         read1Byte_len=-1;
     }
     
-    public int readBytes(byte[] buf,int off,int len){
-        try{
-            if ( inputStream_pipe == null ){
-                readBytesInit();
-                inputStream_pipe=System.in;
-            }
-            int retorno=-1;
-            while( (retorno=inputStream_pipe.read(buf,off,len)) == 0 ){
-            }
-            return retorno;
-        }catch(Exception e){
-            System.err.println("Erro, "+e.toString());
-            System.exit(1);
+    public int readBytes(byte[] buf,int off,int len) throws Exception{
+        if ( inputStream_pipe == null ){
+            readBytesInit();
+            inputStream_pipe=System.in;
         }
-        return -1;
+        int retorno=-1;
+        while( (retorno=inputStream_pipe.read(buf,off,len)) == 0 ){
+        }
+        return retorno;
     }
     
     byte[] read1ByteBuff = new byte[BUFFER_SIZE];
-    public boolean read1Byte(byte [] b){
+    public boolean read1Byte(byte [] b) throws Exception{
         if ( inputStream_pipe == null ){
             readBytesInit();
             inputStream_pipe=System.in;
@@ -26898,7 +26969,7 @@ class Util{
         return false;
     }
     
-    public byte[] readAllBytes(){
+    public byte[] readAllBytes() throws Exception{
         byte[] tmp = new byte[BUFFER_SIZE];
         int len=0;
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
@@ -35175,6 +35246,9 @@ Exemplos...
     y zip add pasta2 -lvlBestCompress > saida.zip
     y zip add pasta1 pasta2 file3 -lvlStore > saida.zip
     y zip add /pasta1/pasta2 -pass a > saida_senha_a.zip
+    y zip add /pasta1/pasta2 -pass a -out saida_senha_a.zip -prefixdata
+    y zip add /pasta1/pasta2 -pass a -out saida_senha_a.zip -sufixdata
+    y zip add x.txt -out .zip -prefixdata # ficará com 20260824_210933.zip
     y zip list arquivo.zip
     y zip info arquivo.zip
     cat arquivo.zip | y zip list
