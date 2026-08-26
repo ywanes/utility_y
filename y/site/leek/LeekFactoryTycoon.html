@@ -172,14 +172,24 @@
 <span style="font-family:monospace; font-size:12px; color:#555;">parm5 alvo:</span>
 <input type="number" id="alvo_input" min="1" max="12" value="8" style="width:52px;" title="numero do produto alvo (#N)">
 <input type="button" value="gerar //N" onclick="gerarAlvo()" title="balanceia (algebra linear exata) e gera o plano do alvo, com o & correto; cria um botao e aplica na tela">
+<input type="button" value="exportar plano" onclick="exportarPlano()" title="le a grade da tela e mostra o texto //N (prompt) p/ copiar/depurar">
 <span id="botoes_gerados" style="display:inline-flex; flex-wrap:wrap; gap:4px;"></span>
+</div>
+
+<div style="display: flex; justify-content: center;">
+<input onclick="click_plan(this)" title="carregar plano de jogo (LIMPO nos 6 alertas)" type="button" value="//7
+#5-> -
+#3<- #4<-
+[#1↓ #2↓ #3↓ #4↓ #6↓]
+#6-> #2->
+#7-> #1<-" style="text-align: left;">
 </div>
 
 
 
 <br>
 <div style="display: flex; justify-content: center;">
-<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//3 - simple - nao recomendado(melhor fazer o #6)
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//3
 - &3->
 #1-> #2<-
 [#3↓ #2↓ #1↓]
@@ -211,7 +221,7 @@ config leek
 
 <br>
 <div style="display: flex; justify-content: center;">
-<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//6 - muito bom
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//6
 [#4↑]
 #2-> &4->
 #4-> -
@@ -253,7 +263,7 @@ transfer 84
 
 <br>
 <div style="display: flex; justify-content: center;">
-<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//7 - bom
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//7
 #5-> &5->
 #3<- #1<-
 [#1↓ #2↓ #3↓ #4↓ #6↓ #7↓]
@@ -296,7 +306,7 @@ transfer 84
 
 <br>
 <div style="display: flex; justify-content: center;">
-<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//7 - maquina muito grande
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//7
 #5-> -
 #5-> -
 [#4↓ #5↓]
@@ -322,7 +332,7 @@ transfer 84
 
 <br>
 <div style="display: flex; justify-content: center;">
-<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//10 - muito instavel
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//10
 #1<- #1<-
 #1<- #1<-
 []
@@ -409,6 +419,65 @@ transfer 84
 </div>
 
 
+
+
+
+
+<br>
+<div style="display: flex; justify-content: center;">
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//9 IA
+- -
+#5-> &6->
+[#9↑]
+#8-> #1<-
+#7<- #4<-
+[#1↓ #2↓ #3↓ #4↓ #6↓ #7↓ #8↓ #9↑]
+#3<- #9->
+#2-> #6->
+" style="text-align: left;">
+</div>
+
+
+
+
+
+<br>
+<div style="display: flex; justify-content: center;">
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//10 IA
+- -
+#5-> -
+[#1↑ #3↓ #4↓ #6↑ #8↓]
+#4-> #9->
+- -
+[#1↓ #2↓ #4↓ #6↓ #7↓ #8↓ #9↓ #10↑]
+#3-> #10->
+#8-> #2->
+[#1↓ #2↓ #3↓ #4↓ #6↓ #8↑ #9↓ #10↑]
+#1-> #7->
+#6<- -
+" style="text-align: left;">
+</div>
+
+
+
+
+
+<br>
+<div style="display: flex; justify-content: center;">
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//11 IA
+- -
+#5-> -
+[#1↓ #8↓ #9↓ #10↓]
+#4-> #11<-
+#1-> #7->
+[#1↓ #2↓ #3↓ #4↓ #6↓ #7↓ #9↓ #10↓]
+#6-> #3->
+#2<- #10->
+[#1↓ #3↓ #4↓ #6↑ #7↓ #8↓ #9↑]
+#8-> #9->
+- -
+" style="text-align: left;">
+</div>
 
 
 
@@ -622,7 +691,9 @@ function reset_pilha(){
 }
 
 function empilha(txt){
-	document.getElementById('tablebase').innerHTML=txt+document.getElementById('tablebase').innerHTML;
+	// insertAdjacentHTML('afterbegin') = prepend SEM reparsear o resto (O(1) por linha, vs O(n) do
+	// innerHTML=txt+innerHTML). Preserva os elementos ja criados (e os .value do set_transfer).
+	document.getElementById('tablebase').insertAdjacentHTML('afterbegin', txt);
 }
 
 function load_plan(text){
@@ -630,8 +701,11 @@ function load_plan(text){
 	count_id_transfer=0;
 	count_id_transfers=0;
 	texts=text.split('\n');
-	if ( texts.length > 0 && texts[0].indexOf('//') == 0 )
+	window._alvoPlano=null;                              // alvo do plano (para a validacao "sem residuo")
+	if ( texts.length > 0 && texts[0].indexOf('//') == 0 ){
+		let mm=texts[0].match(/\/\/\s*(\d+)/); window._alvoPlano=mm?+mm[1]:null;
 		texts=texts.slice(1);
+	}
 	let lvl=0;
 	let s='';
 	let count_item=0;
@@ -736,11 +810,12 @@ function _fabricasAtuais(){
 }
 // loop = o produto entra num CAMINHO SEM FIM: nao consegue alcancar nenhum
 // consumidor nem compressor por caminho nenhum (to sempre; to2/passagem se marcado).
-function checarLoop(){
-	const el=document.getElementById('painel_alertas'); if(!el) return;
-	const tb=document.getElementById('tablebase');
+// LEITOR+AVALIADOR puro (DOM -> problemas). Nao renderiza. checarLoop() e a busca
+// combinatoria (_searchLayout) chamam este mesmo avaliador -> zero divergencia de regra.
+function _analisar(){
+	const tb=document.getElementById('tablebase'); if(!tb) return null;
 	const facs=[...tb.querySelectorAll('a[id^="transfer_"]')];
-	if(!facs.length){ el.innerHTML=''; return; }
+	if(!facs.length) return null;
 	const consumesOf=_parseDependencias();
 	// & pula os ESTRATEGICOS #4,#5,#8: &N compressa o N-esimo produto de [1,2,3,6,7,9,10,11,12].
 	// (ver 2o painel). Ex.: &4 = compressor do #6.
@@ -769,6 +844,10 @@ function checarLoop(){
 	// '->' / '>' : saida = piso da direita (Rp), entrada = piso da esquerda (Lp)
 	// '<-' / '<' : saida = piso da esquerda (Lp), entrada = piso da direita (Rp)
 	// LISTAS por piso: 2 fabricas podem pegar/soltar no MESMO piso (uma vira '->', outra '<-').
+	// normaliza o nome da celula: numero PURO ("8") vira produto "#8"; "&12"/"#8" ficam iguais.
+	// (presets/mapas do jogo escrevem fabricas SEM '#' — sem isto o validador as ignorava e
+	// sub-reportava residuo/loop.)
+	const _fnorm=s=>{ s=(s||'').trim(); if(!s) return ''; if(s[0]==='&') return '&'+s.replace(/\D/g,''); return '#'+s.replace(/\D/g,''); };
 	const outAt={}, inAt={}; // piso -> [nomes de fabrica ('#N'/'&N')]
 	facs.forEach(a=>{
 		const td=a.parentElement; let Lp=null,Rp=null,seen=false;
@@ -778,7 +857,7 @@ function checarLoop(){
 		let outP,inP;
 		if(lv==='<-'||lv==='<'){ outP=Lp; inP=Rp; }          // vira p/ esquerda
 		else { outP=Rp; inP=Lp; }                             // '->' / '>' / sem facing: direita (default)
-		const fac=a.innerText.trim(); if(!fac) return;
+		const fac=_fnorm(a.innerText.trim()); if(!fac) return;
 		if(outP!=null){ (outAt[outP]=outAt[outP]||[]).push(fac); }
 		if(inP!=null){ (inAt[inP]=inAt[inP]||[]).push(fac); }
 	});
@@ -814,20 +893,30 @@ function checarLoop(){
 	// LEEK (#5): entra tambem pela CABECA (fazendas). Vale a MESMA regra dos demais: alcancar
 	// UM consumidor de #5 / &5 / borda ja tira do loop. Se tem #1 suficiente pra dar conta do
 	// leek infinito e CAPACIDADE (balanco), nao e anti-loop -> isso e trabalho do balanceador.
+	// sink NO piso p? (compressor &prod OU fabrica que consome prod, com INPUT aqui)
+	function sinkAt(prod, p){ const arr=inAt[p]; if(!arr) return false;
+		for(const f of arr){
+			if(f[0]==='&'){ if(AMP_TO_PROD[+f.slice(1)]===+prod) return true; }
+			else if(f[0]==='#'){ const fn=+f.slice(1); if(fn!==+prod && consumesOf[fn] && consumesOf[fn].includes(+prod)) return true; }
+		}
+		return false;
+	}
+	// O produto alcanca um SINK de forma SUSTENTAVEL? O caminho (to + teleporte forcado) e deterministico:
+	// ou SAI pela borda (ok) ou entra num CICLO. Passar por um consumidor SO NA CAUDA (uma vez) NAO conta:
+	// o excedente nao capturado (captura nao garantida) volta pro ciclo e ACUMULA pra sempre. Entao so e
+	// "ok" se o sink estiver DENTRO do ciclo permanente (ai todo laco reoferece o produto) ou se sair na borda.
 	function reachesFrom(prod, start){
-		const vis=new Set(); const st=[start];
-		while(st.length){
-			const cur=st.pop(); if(vis.has(cur))continue; vis.add(cur);
-			const arr=inAt[cur]; // captura pelo(s) consumidor(es)/compressor no piso de ENTRADA
-			if(arr){ for(const f of arr){
-				if(f[0]==='&'){ if(AMP_TO_PROD[+f.slice(1)]===+prod) return true; } // compressor do produto real
-				else if(f[0]==='#'){ const fn=+f.slice(1);
-					if(fn!==+prod && consumesOf[fn] && consumesOf[fn].includes(+prod)) return true;
-				}
-			} }
+		const idx=new Map(); const order=[]; let cur=start;
+		while(cur!=null){
+			if(idx.has(cur)){                                  // entrou em ciclo -> so vale se o CICLO tem sink
+				const cyc=order.slice(idx.get(cur));
+				return cyc.some(p=>sinkAt(prod,p));
+			}
+			idx.set(cur, order.length); order.push(cur);
 			const forced=forcedAt(prod,cur);
-			if(forced!=null){ if(P[forced]) st.push(forced); else return true; } // ponte p/ borda = sai
-			else if(P[cur] && P[cur].to){ if(P[P[cur].to]) st.push(P[cur].to); else return true; } // borda = sai
+			if(forced!=null){ if(P[forced]) cur=forced; else return true; }          // ponte p/ borda = sai (ok)
+			else if(P[cur] && P[cur].to){ if(P[P[cur].to]) cur=P[cur].to; else return true; }  // borda = sai (ok)
+			else return sinkAt(prod,cur);                      // beco sem saida: so ok se ha sink aqui
 		}
 		return false;
 	}
@@ -838,7 +927,7 @@ function checarLoop(){
 		if(!starts.length) return true;
 		return starts.every(s=>reachesFrom(prod,s));
 	}
-	const prods=[...new Set(facs.map(a=>a.innerText.trim()).filter(x=>x[0]==='#').map(x=>x.slice(1)))];
+	const prods=[...new Set(facs.map(a=>_fnorm(a.innerText.trim())).filter(x=>x[0]==='#').map(x=>x.slice(1)))];
 	if(!prods.includes('5')) prods.push('5'); // o leek (#5) e a entrada principal, sempre checado
 	const bad=prods.filter(p=>reaches(p)!==true).map(p=>'#'+p);
 	// ORDEM (nobreza / pull-JIT): a sequencia de consumidores que o produto encontra na esteira
@@ -869,6 +958,75 @@ function checarLoop(){
 	// (nunca entra ali). O leek #5 e excecao (vem das fazendas). Vale mesmo que nada passe.
 	const produzidos=new Set(); Object.values(outAt).forEach(arr=>arr.forEach(f=>{ if(f[0]==='#') produzidos.add(f.slice(1)); }));
 	const proibidas=[...marcados].filter(m=>m!=='5' && !produzidos.has(m)).sort((a,b)=>a-b).map(m=>'#'+m);
+	// SEM RESIDUO: a SAIDA FINAL pela borda deve ser SO o ALVO (o produto que a fabrica faz) e o
+	// leek #5 (feedstock infinito). Captura NAO e garantida (a fabrica pode estar ocupada/esperando
+	// outro elemento), entao o pacote SEGUE na esteira mesmo passando por um consumidor. Logo
+	// QUALQUER outro produto (inclusive o #4 barril) que alcance a borda e SOBRA/desperdicio; tem
+	// que ficar CONTIDO: recircular num ciclo (ser capturado ali dentro / pelo seu &).
+	// escapa() segue o caminho (to natural + teleporte forcado) SEM parar em consumidor;
+	// true = alcanca a borda. (Referencia //7-bom: tudo CICLO menos o #5.)
+	function escapa(prod, start){
+		const vis=new Set(); let cur=start;
+		while(cur!=null && !vis.has(cur)){ vis.add(cur);
+			const forced=forcedAt(prod,cur);
+			if(forced!=null){ if(P[forced]) cur=forced; else return true; }
+			else if(P[cur] && P[cur].to){ if(P[P[cur].to]) cur=P[cur].to; else return true; }
+			else return false;                              // beco sem saida DENTRO da grade = contido
+		}
+		return false;                                       // revisitou piso = ciclo = contido
+	}
+	const _alvo=window._alvoPlano;                                  // leek #5 e o ALVO podem sair no final
+	const residuo=[...produzidos].filter(p=>+p!==5 && +p!==_alvo).filter(p=>{
+		const starts=Object.keys(outAt).filter(x=>(outAt[x]||[]).includes('#'+p));
+		return starts.some(s=>escapa(p,s));
+	}).sort((a,b)=>a-b).map(p=>'#'+p);
+	// ENTRADAS: toda fabrica tem que RECEBER cada insumo da sua receita. Se o fluxo de um insumo
+	// nunca passa pelo piso de ENTRADA de nenhuma instancia daquela fabrica, ela nunca produz
+	// (ex.: #3 precisa de #2 e o #2 nunca chega ao #3). Isso passa nos outros alertas e quebra igual.
+	// coveredPisos(prod) = todos os pisos por onde o fluxo do produto passa (captura nao garantida,
+	// entao ele segue e "esta presente" em cada piso do caminho, ate sair/ciclar).
+	const _cov={};
+	function coveredPisos(prod){ if(_cov[prod]) return _cov[prod]; const cov=new Set();
+		let starts=Object.keys(outAt).filter(q=>(outAt[q]||[]).includes('#'+prod));
+		if(prod==='5') starts=starts.concat(beltHeads);
+		starts.forEach(start=>{ const vis=new Set(); let cur=start;
+			while(cur!=null && !vis.has(cur)){ vis.add(cur); cov.add(cur);
+				const forced=forcedAt(prod,cur);
+				if(forced!=null){ if(P[forced]) cur=forced; else break; }
+				else if(P[cur] && P[cur].to){ if(P[P[cur].to]) cur=P[cur].to; else break; }
+				else break;
+			} });
+		return _cov[prod]=cov; }
+	const semEntrada=[];
+	[...produzidos].forEach(n=>{ const nn=+n; if(nn===5) return;   // #5 = leek (vem das fazendas), nao consome
+		const ins=(consumesOf[nn]||[]).filter(ip=>ip!==nn);
+		const inPisos=Object.keys(inAt).filter(q=>(inAt[q]||[]).includes('#'+n));
+		ins.forEach(ip=>{ const c=coveredPisos(''+ip);
+			if(!inPisos.some(q=>c.has(q))) semEntrada.push('#'+n+' nao recebe #'+ip); });
+	});
+	// CONFLITO DE INTERESSE: 2+ fabricas no MESMO piso de entrada disputando o MESMO insumo que
+	// chega ali. Fica exposto pra ambas ao mesmo tempo -> a maquina decide arbitrariamente quem pega
+	// (ex.: #3 e #6 no mesmo piso disputando #2). A 'ordem' nao pega: as duas estao na mesma posicao.
+	// #5 (leek, infinito das fazendas) nao gera conflito.
+	const _cfSet=new Set();
+	Object.keys(inAt).forEach(q=>{
+		const consumers=(inAt[q]||[]).filter(f=>f[0]==='#').map(f=>+f.slice(1));
+		if(consumers.length<2) return;
+		const porInsumo={};                                          // insumo -> Set de fabricas que o querem aqui
+		consumers.forEach(fn=>{ (consumesOf[fn]||[]).forEach(ip=>{ if(ip!==fn && ip!==5){ (porInsumo[ip]=porInsumo[ip]||new Set()).add(fn); } }); });
+		Object.keys(porInsumo).forEach(ip=>{ if(porInsumo[ip].size>=2 && coveredPisos(''+ip).has(q)){
+			const fs=[...porInsumo[ip]].sort((a,b)=>b-a);
+			_cfSet.add(fs.map(f=>'#'+f).join(' e ')+' disputam #'+ip);
+		}});
+	});
+	const conflito=[..._cfSet];
+	return {bad, problemasOrdem, proibidas, residuo, semEntrada, conflito};
+}
+function checarLoop(){
+	const el=document.getElementById('painel_alertas'); if(!el) return;
+	const r=_analisar();
+	if(!r){ el.innerHTML=''; return; }
+	const {bad, problemasOrdem, proibidas, residuo, semEntrada, conflito}=r;
 	let html='';
 	const cor=bad.length?'#c00':'#0a0';
 	const txt=bad.length?'anti loop - '+bad.join(', ')+' fica em caminho sem fim':'anti loop - ok';
@@ -879,6 +1037,24 @@ function checarLoop(){
 		problemasOrdem.forEach((p,i)=>{ html+='<div style="color:#c00;font-weight:bold;">'+(i===0?'ordem - ':'')+p+'</div>'; });
 	if(proibidas.length)
 		html+='<div style="color:#c60;font-weight:bold;">seta proibida - '+proibidas.join(', ')+' sem produtor (teleporte sem proposito)</div>';
+	if(residuo!=null){
+		if(!residuo.length)
+			html+='<div style="color:#0a0;font-weight:bold;">sem residuo - ok</div>';
+		else
+			html+='<div style="color:#c00;font-weight:bold;">sem residuo - '+residuo.join(', ')+' escapa pra borda (so o alvo e o leek #5 podem; o resto deve ficar contido)</div>';
+	}
+	if(semEntrada!=null){
+		if(!semEntrada.length)
+			html+='<div style="color:#0a0;font-weight:bold;">entradas - ok</div>';
+		else
+			html+='<div style="color:#c00;font-weight:bold;">entradas - '+semEntrada.join('; ')+' (insumo nunca chega na fabrica)</div>';
+	}
+	if(conflito!=null){
+		if(!conflito.length)
+			html+='<div style="color:#0a0;font-weight:bold;">nao concorrencia - ok</div>';
+		else
+			html+='<div style="color:#c00;font-weight:bold;">nao concorrencia - '+conflito.join('; ')+' (mesmo piso, a maquina decide quem pega)</div>';
+	}
 	el.innerHTML=html;
 }
 // tooltip: ao passar o mouse num #N, mostra a receita (linha das dependencias)
@@ -887,20 +1063,31 @@ function setTooltips(){
 	const recipeOf={};
 	lines.forEach(l=>{ const p=l.split('->'); if(p.length<2) return;
 		[...p[1].matchAll(/#(\d+)/g)].map(x=>+x[1]).forEach(o=>{ if(!recipeOf[o]) recipeOf[o]=l.trim(); }); });
+	// & PULA os estrategicos (#4,#5,#8): &N compressa o N-esimo produto de [1,2,3,6,7,9,10,11,12].
+	// (mesmo AMP_TO_PROD do _analisar). Para uma celula &N o tooltip tem que mostrar a receita do
+	// PRODUTO compresso, nao a do numero N cru (&5 = compressor do #7, nao do #5).
+	const AMP_TO_PROD={1:1,2:2,3:3,4:6,5:7,6:9,7:10,8:11,9:12};
 	document.querySelectorAll('#tablebase a[id^="transfer_"]').forEach(a=>{
-		const n=a.innerText.trim().replace(/[#&]/g,''); if(recipeOf[n]) a.title=recipeOf[n];
+		const raw=a.innerText.trim(); if(!raw) return;
+		if(raw[0]==='&'){
+			const amp=+raw.replace(/\D/g,''); const prod=AMP_TO_PROD[amp]||amp;   // &1..&9 pela tabela; &10..&12 = produto direto
+			a.title='&'+amp+' = compressor do #'+prod+(recipeOf[prod]?'  |  '+recipeOf[prod]:'');
+		}else{
+			const n=raw.replace(/[#&]/g,''); if(recipeOf[n]) a.title=recipeOf[n];
+		}
 	});
 	document.querySelectorAll('table[title="transfers"] a').forEach(a=>{
 		const m=a.innerText.trim().match(/^#(\d+)$/); if(m && recipeOf[m[1]]) a.title=recipeOf[m[1]];
 	});
 }
+window._obs=null;                               // handle p/ pausar durante a busca (perf)
 (function(){
 	let _t=null;
 	const run=()=>{ clearTimeout(_t); _t=setTimeout(()=>{ try{ checarLoop(); setTooltips(); }catch(e){} }, 60); };
 	window.addEventListener('load', ()=>{
 		const tb=document.getElementById('tablebase');
 		if(tb){
-			new MutationObserver(run).observe(tb,{childList:true,subtree:true,characterData:true});
+			window._obs=new MutationObserver(run); window._obs.observe(tb,{childList:true,subtree:true,characterData:true});
 			tb.addEventListener('click', run);   // revalida a cada clique (facing ->/<-, passagem, etc)
 		}
 		const dep=document.getElementById('dependencias');
@@ -970,9 +1157,106 @@ function _balance(target,recs){
 	const outs=new Set(), insS=new Set();
 	for(const p of prods){ bp[p].outputs.forEach(o=>outs.add(o.id)); bp[p].inputs.forEach(i=>insS.add(i.id)); }
 	const leak=[...outs].filter(o=>o!==target && o!==BASE && !insS.has(o)).sort((a,b)=>a-b);
-	const bad=prods.filter(p=>ints[p]<=0n);
+	// #4 = BARRIL reversivel: rate negativo = desempacotar o excedente (1 #4 -> 10K #5), o que
+	// e VALIDO (nao e falta). Ex.: #9/#10 devolvem #4 como subproduto -> #4 fica negativo.
+	const BARREL=4;
+	const sobraBarril = (ints[BARREL]!==undefined && ints[BARREL]<0n) ? (-ints[BARREL]) : 0n;
+	const bad=prods.filter(p=>p!==BARREL && ints[p]<=0n);
 	const verdict = leak.length?'VAZA':(bad.length?'FALTA':'OK');
-	return {verdict, prods, rates:ints, leek, leak};
+	return {verdict, prods, rates:ints, leek, leak, sobraBarril};
+}
+// ===== BUSCA DE LAYOUT (usa o avaliador EXATO _analisar) =====
+// Objetivo: layout 100% LIMPO nos 4 alertas (anti-loop, ordem, seta-proibida, SEM RESIDUO) com o
+// MENOS linhas possivel. Como a captura NAO e garantida, todo produto (menos o leek #5) precisa
+// ficar CONTIDO (ciclo) — o que exige o & do alvo + teleportes que recirculam. Esse espaco e
+// grande, entao a busca e ALEATORIA sobre: permutacao das fabricas + facings (->/<-) + marcas
+// (↓/↑ por passagem) + header com/sem &alvo. Comeca no mais compacto (extra=0 = menos linhas) e
+// so espalha (slots vagos) se nao achar. Ordem NUNCA e forcada ascendente: a permutacao aleatoria
+// e julgada pelo alerta 'ordem' (que reprova o que entope). Retorna o 1o layout limpo; senao o melhor.
+// DUROS (nunca aceitos, nem na repescagem): loop, ordem, seta, entradas, concorrencia.
+// SOFT (repescavel = pode ficar nao-ok): so o RESIDUO. Residuo pesa MUITO menos -> a busca prefere
+// GASTAR residuo a violar um duro (politica do usuario: residuo nao-ok ok; ordem/loop/etc nao).
+function _hard(r){ return r.bad.length + r.problemasOrdem.length + r.proibidas.length + (r.semEntrada?r.semEntrada.length:0) + (r.conflito?r.conflito.length:0); }
+function _score(r){ if(!r) return 1e9; return _hard(r)*1000 + (r.residuo?r.residuo.length:0); }
+function _limpo(r){ return !!r && !_hard(r) && (!r.residuo || !r.residuo.length); }   // 100% (6 alertas)
+function _repescavel(r){ return !!r && !_hard(r); }                                    // duros ok; residuo pode faltar
+function _evalText(text){ load_plan(text); return _analisar(); }
+function _passStr(list){ return '['+(list||[]).join(' ')+']'; }
+function _passCount(R){ let n=0; for(let i=0;i<R;i++){ if(i%2===1 && i!==R-1) n++; } return n; }
+// monta o texto //N: header (com/sem &), celulas (numero ou null=vago) com facing por #N, e marcas
+// por passagem. Espelha a intercalacao de passagens (a cada 2 linhas de fabrica contadas DE BAIXO).
+function _renderBusca(target, header, cells, facingByNum, marksPerPass){
+	const cs=c=> (c==null?'-':('#'+c+(facingByNum[c]||'->')));
+	const frows=[header];
+	for(let k=0;k<cells.length;k+=2){ const l=cs(cells[k]); const r=(k+1<cells.length)?cs(cells[k+1]):'-'; frows.push(l+' '+r); }
+	const rev=frows.slice().reverse(); const body=[]; let pass=0;
+	for(let i=0;i<rev.length;i++){ body.push(rev[i]); if(i%2===1 && i!==rev.length-1){ body.push(_passStr(marksPerPass[pass]||[])); pass++; } }
+	return [`//${target}`].concat(body.reverse()).join('\n');
+}
+function _shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=a[i];a[i]=a[j];a[j]=t; } return a; }
+// BUSCA LOCAL (hill-climbing + restarts): aleatorio uniforme e fraco demais. Aqui parte de um
+// candidato aleatorio e vai aceitando o 1o vizinho que MELHORA o score (flip de facing, troca de
+// marca ↓/↑/nenhuma, swap de 2 celulas, alternar header com/sem &); em minimo local, faz restart.
+// deepening por 'extra' (slots vagos) so se o compacto nao fechar. Pausa o MutationObserver p/ perf.
+async function _searchLayout(target, prodsAll){                       // ASYNC: cede a UI (nao trava a pagina)
+	const facs=prodsAll.slice().filter(p=>p!==BASE);                    // fabricas (sem o leek #5)
+	const F=facs.length; const amp=PROD_TO_AMP[target]; const dirs=['','↓','↑'];
+	const headers = amp ? ['#5-> &'+amp+'->','#5-> -'] : ['#5-> -'];    // com ou sem o & do alvo
+	const T=Math.min(16000, 6000+F*1200); const t0=performance.now(); let iters=0; let globalBest=null;
+	// espalhar (slots vagos) ajuda concorrencia/entradas/anti-loop, MAS grade maior = avaliacao mais lenta.
+	// Entao vou ate extra=min(F,4) e dou MAIS tempo aos niveis baixos (rapidos e mais provaveis).
+	const maxE=Math.min(F,4); const share=[0.35,0.25,0.2,0.12,0.08];
+	const clone=s=>({cells:s.cells.slice(), facing:Object.assign({},s.facing), header:s.header, marks:s.marks.map(m=>Object.assign({},m))});
+	function randState(extra){
+		const cells=_shuffle(facs); for(let e=0;e<extra;e++){ const pos=Math.floor(Math.random()*(cells.length+1)); cells.splice(pos,0,null); }
+		const facing={}; facs.forEach(p=>facing[p]=Math.random()<0.5?'<-':'->');
+		const R=1+Math.ceil(cells.length/2), nPass=_passCount(R);
+		const marks=[]; for(let q=0;q<nPass;q++){ const m={}; facs.forEach(p=>m[p]=dirs[Math.floor(Math.random()*3)]); marks.push(m); }
+		return {cells,facing,header:headers[Math.floor(Math.random()*headers.length)],marks};
+	}
+	function toText(s){ const mpp=s.marks.map(m=>{ const arr=[]; facs.forEach(p=>{ if(m[p]) arr.push('#'+p+m[p]); }); return arr; });
+		return _renderBusca(target,s.header,s.cells,s.facing,mpp); }
+	function evalS(s){ iters++; return _score(_evalText(toText(s))); }
+	function vizinhos(s){ const out=[];
+		facs.forEach(p=>{ const c=clone(s); c.facing[p]=c.facing[p]==='<-'?'->':'<-'; out.push(c); });        // flip facing
+		s.marks.forEach((m,qi)=>facs.forEach(p=>dirs.forEach(d=>{ if(d!==m[p]){ const c=clone(s); c.marks[qi][p]=d; out.push(c); } }))); // marca
+		for(let i=0;i<s.cells.length;i++)for(let j=i+1;j<s.cells.length;j++){ const c=clone(s); const t=c.cells[i];c.cells[i]=c.cells[j];c.cells[j]=t; out.push(c); } // swap
+		if(headers.length>1){ const c=clone(s); c.header=(s.header===headers[0]?headers[1]:headers[0]); out.push(c); }  // header
+		return out; }
+	if(window._obs) try{ window._obs.disconnect(); }catch(e){}
+	const _tb=document.getElementById('tablebase'); const _opPrev=_tb?_tb.style.opacity:'';
+	if(_tb) _tb.style.opacity='0';                                     // esconde flicker (opacity NAO zera innerText)
+	let _ly=performance.now();                                         // cede a UI a cada ~60ms de trabalho
+	const breathe=async()=>{ if(performance.now()-_ly>60){ await new Promise(r=>setTimeout(r)); _ly=performance.now(); } };
+	let result=null; let acc=0;
+	try{
+		for(let extra=0; extra<=maxE && !result; extra++){
+			acc += (share[extra]||0.05)*T; const deadline=acc;       // mais tempo p/ niveis baixos (rapidos)
+			while(performance.now()-t0<deadline && !result){
+				await breathe();
+				let s=randState(extra), sc=evalS(s);
+				if(sc===0){ result={text:toText(s),clean:true,extra,iters}; break; }
+				if(!globalBest||sc<globalBest.score) globalBest={text:toText(s),score:sc};
+				// hill-climb com passos de PLATO (aceita score igual as vezes p/ atravessar o plato) +
+				// restart quando trava. So estrita empaca com 1 residuo/loop faltando (minimo local).
+				let semMelhora=0;
+				while(performance.now()-t0<deadline && semMelhora<50){
+					const nb=_shuffle(vizinhos(s)); let aceitou=false;
+					for(const c of nb){ if(performance.now()-t0>=deadline) break;
+						const csc=evalS(c);
+						if((iters&63)===0) await breathe();
+						if(csc===0){ result={text:toText(c),clean:true,extra,iters}; aceitou=true; break; }
+						if(csc<sc){ s=c; sc=csc; aceitou=true; semMelhora=0; if(csc<globalBest.score) globalBest={text:toText(c),score:csc}; break; }
+						if(csc===sc && Math.random()<0.4){ s=c; aceitou=true; semMelhora++; break; }   // plato
+					}
+					if(result || !aceitou) break;                          // minimo local estrito -> restart
+				}
+			}
+		}
+	} finally { if(_tb) _tb.style.opacity=_opPrev;
+		if(window._obs){ const tb=document.getElementById('tablebase'); try{ window._obs.observe(tb,{childList:true,subtree:true,characterData:true}); }catch(e){} } }
+	if(result) return result;
+	return {text:(globalBest?globalBest.text:''), clean:false, iters, score:globalBest?globalBest.score:1e9};
 }
 // plano no formato //N (nobreza desc). Header usa o & PERTINENTE (mapeamento).
 function _genPlan(target,prods){
@@ -984,31 +1268,76 @@ function _genPlan(target,prods){
 	const trans='['+[...prods].sort((a,b)=>a-b).filter(p=>p!==target).map(p=>`#${p}↓`).join(' ')+']';
 	// SEM & no plano gerado: o alvo sai pela borda; o & pertinente entra a mao (ver 2o painel).
 	const header=`#${BASE}-> -`;
-	const frows=[header].concat(pairs.map(rowpair));
-	const chunks=[]; for(let k=0;k<frows.length;k+=2) chunks.push(frows.slice(k,k+2));
-	const out=[`//${target} - gerada (nobreza)`];
-	chunks.forEach((chunk,c)=>{ out.push(...chunk); if(c!==chunks.length-1) out.push(trans); });
-	return out.join('\n');
+	const frows=[header].concat(pairs.map(rowpair));   // linhas de fabrica (topo->baixo)
+	// load_plan le de BAIXO p/ cima em triplas [fabrica, fabrica, passagem]. Para alinhar
+	// (inclusive com nº impar de linhas), insere a passagem apos cada 2 linhas CONTADAS DE BAIXO.
+	const rev=frows.slice().reverse();                 // baixo->topo
+	const body=[];
+	for(let i=0;i<rev.length;i++){ body.push(rev[i]); if(i%2===1 && i!==rev.length-1) body.push(trans); }
+	const finalRows=body.reverse();                    // topo->baixo
+	return [`//${target} - gerada (nobreza)`].concat(finalRows).join('\n');
 }
-function gerarAlvo(){
+// exporta o mapa que esta na tela como texto //N (le a grade: facings + marcas), p/ copiar/depurar.
+function exportarPlano(){
+	const tb=document.getElementById('tablebase'); const linhas=[];
+	[...tb.querySelectorAll('tr')].forEach(tr=>{
+		const tdT=tr.querySelector('td[id^="transfers_"]');
+		if(tdT){ const m=[]; tdT.querySelectorAll('a').forEach(a=>{ const t=a.innerText.trim(); if(t.endsWith('↓')||t.endsWith('↑')) m.push(t); }); linhas.push('['+m.join(' ')+']'); return; }
+		const cells=[...tr.querySelectorAll('a[id^="transfer_"]')];
+		if(cells.length){ const parts=cells.map(a=>{ const td=a.parentElement;
+			const li=td.previousElementSibling&&td.previousElementSibling.querySelector('input');
+			const ri=td.nextElementSibling&&td.nextElementSibling.querySelector('input');
+			const lv=li?li.value.trim():''; const rv=ri?ri.value.trim():''; const nm=a.innerText.trim();
+			if(!nm) return '-'; return nm+((lv==='<-'||lv==='<')?'<-':((rv==='->'||rv==='>')?'->':'->')); });
+			linhas.push(parts.join(' ')); }
+	});
+	const txt='//'+(window._alvoPlano!=null?window._alvoPlano:'?')+'\n'+linhas.join('\n');
+	console.log(txt); try{ window.prompt('plano atual (Ctrl+C para copiar):', txt); }catch(e){}
+	return txt;
+}
+async function gerarAlvo(){                            // ASYNC: a busca cede a UI (nao trava a pagina)
 	const target=parseInt(document.getElementById('alvo_input').value);
 	if(!target){ alert('digite o alvo (#N)'); return; }
+	if(window._buscando){ return; }                    // evita busca concorrente (clique duplo)
 	const res=_balance(target,_parseRecs());
 	if(res.verdict==='SEM_RECEITA'){ alert('#'+target+': sem receita'); return; }
 	if(res.verdict==='INFEASIVEL'){ alert('#'+target+': balanco infeasivel (singular)'); return; }
-	const plan=_genPlan(target,res.prods);
-	const cont=document.getElementById('botoes_gerados');
-	const btn=document.createElement('input'); btn.type='button'; btn.value='//'+target;
 	const amp=PROD_TO_AMP[target];
-	btn.title='#'+target+' gerado | &'+(amp||'?')+'=#'+target+' | veredito '+res.verdict
-		+' | leek '+res.leek+(res.leak.length?' | VAZA: '+res.leak.map(x=>'#'+x).join(','):'');
-	btn.onclick=function(){ load_plan(plan); setTimeout(function(){ try{checarLoop();}catch(e){} }, 80); };
-	if(cont){ // evita duplicar botao do mesmo alvo
-		[...cont.querySelectorAll('input')].filter(x=>x.value==='//'+target).forEach(x=>x.remove());
-		cont.appendChild(btn);
-	}
+	const meta='&'+(amp?amp+'=#'+target:'sem (estrategico)')+' | veredito '+res.verdict
+		+' | leek '+res.leek+(res.leak.length?' | VAZA: '+res.leak.map(x=>'#'+x).join(','):'')
+		+(res.sobraBarril>0n?' | sobra '+res.sobraBarril+'x #4 (barril)':'');
+	const pel=document.getElementById('painel_alertas');
+	if(pel) pel.innerHTML='<div style="color:#06c;font-weight:bold;">buscando layout do #'+target+'... (alguns segundos)</div>';
+	window._buscando=true; let busca;
+	try{ busca=await _searchLayout(target,res.prods); } finally { window._buscando=false; }
+	const plan=busca.text;
 	load_plan(plan);                                   // aplica ja na tela
 	setTimeout(function(){ try{checarLoop();}catch(e){} }, 80);
+	const rr=_analisar();
+	function _addBtn(cor, title){                      // cria botao-preset (sem duplicar o mesmo plano)
+		const cont=document.getElementById('botoes_gerados'); if(!cont) return;
+		if([...cont.querySelectorAll('input')].some(x=>x.value.trim()===plan.trim())) return;
+		const btn=document.createElement('input'); btn.type='button'; btn.value=plan;
+		btn.setAttribute('onclick','click_plan(this)');
+		btn.style.textAlign='left'; btn.style.display='block'; btn.style.margin='4px auto'; btn.style.whiteSpace='pre'; if(cor) btn.style.color=cor;
+		btn.title=title; cont.appendChild(btn);
+	}
+	if(busca.clean){                                   // 100% (6 alertas) -> botao VERDE
+		_addBtn('', '#'+target+' LIMPO 100% (achado em '+busca.iters+' tentativas) | '+meta);
+	}else if(_repescavel(rr)){                          // REPESCAGEM: duros OK, so RESIDUO pendente -> LARANJA
+		_addBtn('#c60', '#'+target+' REPESCAGEM (duros OK; residuo pendente: '+rr.residuo.join(',')+') | '+meta);
+		alert('#'+target+': repescagem OK — todos os alertas DUROS verdes, so falta conter o RESIDUO ('+rr.residuo.join(',')+'). Aplicado + botao laranja. Reclique pra tentar 100%, ou ajuste a mao.');
+	}else{                                              // ainda tem alerta DURO -> NAO aceita (sem botao)
+		const probs=[];
+		if(rr){
+			if(rr.bad.length) probs.push('loop '+rr.bad.join(','));
+			if(rr.problemasOrdem.length) probs.push('ordem: '+rr.problemasOrdem.join('; '));
+			if(rr.proibidas.length) probs.push('seta '+rr.proibidas.join(','));
+			if(rr.semEntrada.length) probs.push('entradas: '+rr.semEntrada.join('; '));
+			if(rr.conflito.length) probs.push('concorrencia: '+rr.conflito.join('; '));
+		}
+		alert('#'+target+': nem repescagem — ainda tem alerta DURO (nao aceito): '+probs.join(' | ')+'. Clique em "gerar //N" de novo pra outra tentativa.');
+	}
 }
 </script>
 
