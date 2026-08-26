@@ -171,7 +171,8 @@
 <div style="display: flex; justify-content: center; align-items:center; flex-wrap:wrap; gap:6px; margin:8px 0;">
 <span style="font-family:monospace; font-size:12px; color:#555;">parm5 alvo:</span>
 <input type="number" id="alvo_input" min="1" max="12" value="8" style="width:52px;" title="numero do produto alvo (#N)">
-<input type="button" value="gerar //N" onclick="gerarAlvo()" title="balanceia (algebra linear exata) e gera o plano do alvo, com o & correto; cria um botao e aplica na tela">
+<input type="button" value="gerar //N" onclick="gerarAlvo()" title="busca combinatoria (combina TUDO: posicao do #5, facings, marcas, vazios); roda ate achar ou ate voce clicar PARAR">
+<input type="button" value="PARAR" onclick="window._pararBusca=true" title="para a busca e usa o melhor layout achado ate agora" style="color:#c00;font-weight:bold;">
 <input type="button" value="exportar plano" onclick="exportarPlano()" title="le a grade da tela e mostra o texto //N (prompt) p/ copiar/depurar">
 <span id="botoes_gerados" style="display:inline-flex; flex-wrap:wrap; gap:4px;"></span>
 </div>
@@ -478,6 +479,50 @@ transfer 84
 - -
 " style="text-align: left;">
 </div>
+
+
+
+<br>
+<div style="display: flex; justify-content: center;">
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//11 B IA
+#5-> #9->
+&8<- #4->
+[#1↓ #2↓ #3↓ #4↓ #7↓ #8↓ #9↓]
+#6-> #3->
+#8<- #2<-
+[#1↑ #2↓ #3↓ #4↓ #6↓ #9↓ #10↓]
+#7-> #11->
+#10-> #1<-
+" style="text-align: left;">
+</div>
+
+
+
+
+<br>
+<div style="display: flex; justify-content: center;">
+<input onclick="click_plan(this)" title="carregar plano de jogo" type="button" value="//12 IA
+- &9->
+#2-> -
+[#1↓ #2↓ #3↓ #4↓ #8↓ #9↓]
+- #10<-
+#9<- #6->
+[#2↓ #3↑ #4↑ #6↓ #7↓ #9↓ #10↓ #11↓]
+#3-> #12->
+#4-> #11->
+[#2↓ #3↓ #4↓ #6↓ #10↓]
+#7<- #1<-
+#8<- -
+" style="text-align: left;">
+</div>
+
+
+
+
+
+
+
+
 
 
 
@@ -1020,14 +1065,25 @@ function _analisar(){
 		}});
 	});
 	const conflito=[..._cfSet];
-	return {bad, problemasOrdem, proibidas, residuo, semEntrada, conflito};
+	// ESTEIRA CONEXA: as bolinhas tem que formar UMA esteira so. Se ha mais de uma "cabeca" (piso sem
+	// entrada) ou algum piso inalcancavel a partir da cabeca, a serpentina esta em PEDACOS -> geometria
+	// invalida ("as bolinhas nao podem fazer isso"). Padding de linhas (extra) fecha a esteira.
+	let esteiraQuebrada=true;
+	if(beltHeads.length===1){ const vis=new Set(), st=[beltHeads[0]];
+		while(st.length){ const c=st.pop(); if(vis.has(c))continue; vis.add(c); const q=P[c];
+			if(q){ if(q.to&&P[q.to])st.push(q.to); if(q.to2&&P[q.to2])st.push(q.to2); } }
+		esteiraQuebrada = vis.size!==Object.keys(P).length;
+	}
+	return {bad, problemasOrdem, proibidas, residuo, semEntrada, conflito, esteiraQuebrada};
 }
 function checarLoop(){
 	const el=document.getElementById('painel_alertas'); if(!el) return;
 	const r=_analisar();
 	if(!r){ el.innerHTML=''; return; }
-	const {bad, problemasOrdem, proibidas, residuo, semEntrada, conflito}=r;
+	const {bad, problemasOrdem, proibidas, residuo, semEntrada, conflito, esteiraQuebrada}=r;
 	let html='';
+	if(esteiraQuebrada) html+='<div style="color:#c00;font-weight:bold;">esteira - em pedacos (bolinhas desconexas; falta fechar a serpentina)</div>';
+	else html+='<div style="color:#0a0;font-weight:bold;">esteira - ok</div>';
 	const cor=bad.length?'#c00':'#0a0';
 	const txt=bad.length?'anti loop - '+bad.join(', ')+' fica em caminho sem fim':'anti loop - ok';
 	html+='<div style="color:'+cor+';font-weight:bold;">'+txt+'</div>';
@@ -1176,7 +1232,7 @@ function _balance(target,recs){
 // DUROS (nunca aceitos, nem na repescagem): loop, ordem, seta, entradas, concorrencia.
 // SOFT (repescavel = pode ficar nao-ok): so o RESIDUO. Residuo pesa MUITO menos -> a busca prefere
 // GASTAR residuo a violar um duro (politica do usuario: residuo nao-ok ok; ordem/loop/etc nao).
-function _hard(r){ return r.bad.length + r.problemasOrdem.length + r.proibidas.length + (r.semEntrada?r.semEntrada.length:0) + (r.conflito?r.conflito.length:0); }
+function _hard(r){ return r.bad.length + r.problemasOrdem.length + r.proibidas.length + (r.semEntrada?r.semEntrada.length:0) + (r.conflito?r.conflito.length:0) + (r.esteiraQuebrada?1:0); }
 function _score(r){ if(!r) return 1e9; return _hard(r)*1000 + (r.residuo?r.residuo.length:0); }
 function _limpo(r){ return !!r && !_hard(r) && (!r.residuo || !r.residuo.length); }   // 100% (6 alertas)
 function _repescavel(r){ return !!r && !_hard(r); }                                    // duros ok; residuo pode faltar
@@ -1185,9 +1241,11 @@ function _passStr(list){ return '['+(list||[]).join(' ')+']'; }
 function _passCount(R){ let n=0; for(let i=0;i<R;i++){ if(i%2===1 && i!==R-1) n++; } return n; }
 // monta o texto //N: header (com/sem &), celulas (numero ou null=vago) com facing por #N, e marcas
 // por passagem. Espelha a intercalacao de passagens (a cada 2 linhas de fabrica contadas DE BAIXO).
-function _renderBusca(target, header, cells, facingByNum, marksPerPass){
-	const cs=c=> (c==null?'-':('#'+c+(facingByNum[c]||'->')));
-	const frows=[header];
+// SEM header hardcoded: cada celula (numero=#N, 5=#5/leek, '&N'=compressor, null=vazio) tem posicao e
+// facing livres. A analise combinatoria posiciona o #5 onde quiser (inclusive nao na 1a linha).
+function _renderBusca(target, cells, facingByNum, marksPerPass){
+	const cs=c=> (c==null?'-' : (typeof c==='string'&&c[0]==='&') ? (c+(facingByNum[c]||'->')) : ('#'+c+(facingByNum[c]||'->')));
+	const frows=[];
 	for(let k=0;k<cells.length;k+=2){ const l=cs(cells[k]); const r=(k+1<cells.length)?cs(cells[k+1]):'-'; frows.push(l+' '+r); }
 	const rev=frows.slice().reverse(); const body=[]; let pass=0;
 	for(let i=0;i<rev.length;i++){ body.push(rev[i]); if(i%2===1 && i!==rev.length-1){ body.push(_passStr(marksPerPass[pass]||[])); pass++; } }
@@ -1201,62 +1259,102 @@ function _shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.f
 async function _searchLayout(target, prodsAll){                       // ASYNC: cede a UI (nao trava a pagina)
 	const facs=prodsAll.slice().filter(p=>p!==BASE);                    // fabricas (sem o leek #5)
 	const F=facs.length; const amp=PROD_TO_AMP[target]; const dirs=['','↓','↑'];
-	const headers = amp ? ['#5-> &'+amp+'->','#5-> -'] : ['#5-> -'];    // com ou sem o & do alvo
 	const T=Math.min(16000, 6000+F*1200); const t0=performance.now(); let iters=0; let globalBest=null;
-	// espalhar (slots vagos) ajuda concorrencia/entradas/anti-loop, MAS grade maior = avaliacao mais lenta.
-	// Entao vou ate extra=min(F,4) e dou MAIS tempo aos niveis baixos (rapidos e mais provaveis).
-	const maxE=Math.min(F,4); const share=[0.35,0.25,0.2,0.12,0.08];
-	const clone=s=>({cells:s.cells.slice(), facing:Object.assign({},s.facing), header:s.header, marks:s.marks.map(m=>Object.assign({},m))});
+	// SEM hardcode: o pool de celulas inclui o #5 (leek) e opcionalmente o &alvo; a busca decide POSICAO
+	// e facing de TODAS (inclusive do #5) + slots vagos (null) em qualquer lugar. Nada de header fixo.
+	const maxE=Math.min(F+1,5); const share=[0.3,0.25,0.2,0.15,0.1,0.05];
+	const clone=s=>({cells:s.cells.slice(), facing:Object.assign({},s.facing), marks:s.marks.map(m=>Object.assign({},m)), base:s.base});
 	function randState(extra){
-		const cells=_shuffle(facs); for(let e=0;e<extra;e++){ const pos=Math.floor(Math.random()*(cells.length+1)); cells.splice(pos,0,null); }
-		const facing={}; facs.forEach(p=>facing[p]=Math.random()<0.5?'<-':'->');
-		const R=1+Math.ceil(cells.length/2), nPass=_passCount(R);
+		const base = (amp && Math.random()<0.5) ? [5,...facs,'&'+amp] : [5,...facs];   // #5 sempre; & as vezes
+		const cells=_shuffle(base.concat(Array.from({length:extra},()=>null)));         // #5, fabricas, & e vazios embaralhados
+		const facing={}; base.forEach(c=>facing[c]=Math.random()<0.5?'<-':'->');        // facing por celula (inclui #5 e &)
+		const nPass=_passCount(Math.ceil(cells.length/2));
 		const marks=[]; for(let q=0;q<nPass;q++){ const m={}; facs.forEach(p=>m[p]=dirs[Math.floor(Math.random()*3)]); marks.push(m); }
-		return {cells,facing,header:headers[Math.floor(Math.random()*headers.length)],marks};
+		return {cells,facing,marks,base};
 	}
 	function toText(s){ const mpp=s.marks.map(m=>{ const arr=[]; facs.forEach(p=>{ if(m[p]) arr.push('#'+p+m[p]); }); return arr; });
-		return _renderBusca(target,s.header,s.cells,s.facing,mpp); }
+		return _renderBusca(target,s.cells,s.facing,mpp); }
 	function evalS(s){ iters++; return _score(_evalText(toText(s))); }
 	function vizinhos(s){ const out=[];
-		facs.forEach(p=>{ const c=clone(s); c.facing[p]=c.facing[p]==='<-'?'->':'<-'; out.push(c); });        // flip facing
-		s.marks.forEach((m,qi)=>facs.forEach(p=>dirs.forEach(d=>{ if(d!==m[p]){ const c=clone(s); c.marks[qi][p]=d; out.push(c); } }))); // marca
-		for(let i=0;i<s.cells.length;i++)for(let j=i+1;j<s.cells.length;j++){ const c=clone(s); const t=c.cells[i];c.cells[i]=c.cells[j];c.cells[j]=t; out.push(c); } // swap
-		if(headers.length>1){ const c=clone(s); c.header=(s.header===headers[0]?headers[1]:headers[0]); out.push(c); }  // header
+		s.base.forEach(c=>{ const n=clone(s); n.facing[c]=n.facing[c]==='<-'?'->':'<-'; out.push(n); });    // flip facing (inclui #5 e &)
+		s.marks.forEach((m,qi)=>facs.forEach(p=>dirs.forEach(d=>{ if(d!==m[p]){ const n=clone(s); n.marks[qi][p]=d; out.push(n); } }))); // marca
+		for(let i=0;i<s.cells.length;i++)for(let j=i+1;j<s.cells.length;j++){ const n=clone(s); const t=n.cells[i];n.cells[i]=n.cells[j];n.cells[j]=t; out.push(n); } // troca posicao (inclui #5/&/vazio)
 		return out; }
 	if(window._obs) try{ window._obs.disconnect(); }catch(e){}
 	const _tb=document.getElementById('tablebase'); const _opPrev=_tb?_tb.style.opacity:'';
 	if(_tb) _tb.style.opacity='0';                                     // esconde flicker (opacity NAO zera innerText)
-	let _ly=performance.now();                                         // cede a UI a cada ~60ms de trabalho
-	const breathe=async()=>{ if(performance.now()-_ly>60){ await new Promise(r=>setTimeout(r)); _ly=performance.now(); } };
-	let result=null; let acc=0;
+	// cede a UI via MessageChannel (setTimeout e ESTRANGULADO ~1s em aba de fundo -> comia o orcamento).
+	// MessageChannel nao sofre throttle; cedo so a cada ~150ms de trabalho pra minimizar overhead.
+	let _ly=performance.now();
+	const _mc=(typeof MessageChannel!=='undefined')?new MessageChannel():null; let _yres=null;
+	if(_mc) _mc.port1.onmessage=()=>{ const r=_yres; _yres=null; if(r) r(); };
+	const breathe=async()=>{ if(performance.now()-_ly<150) return; _ly=performance.now();
+		if(_mc) await new Promise(res=>{ _yres=res; _mc.port2.postMessage(0); });
+		else await new Promise(r=>setTimeout(r)); };
+	// RODA ATE ACHAR (ou o usuario mandar PARAR, ou cap de 10min). Cada restart sorteia um 'extra'
+	// (qtd de vazios) e faz simulated annealing. Progresso vai pro painel; window._pararBusca interrompe.
+	let result=null; const CAP=(window._buscaMaxMs||600000);
+	const info=()=>{ const pel=document.getElementById('painel_alertas'); if(!pel) return;
+		const gb=globalBest?globalBest.score:1e9;
+		const pend = gb>=1e9?'?' : gb>=1000?(Math.floor(gb/1000)+' duro(s) + '+(gb%1000)+' residuo') : (gb+' residuo');
+		pel.innerHTML='<div style="color:#06c;font-weight:bold;">buscando #'+target+'... tentativas='+iters+' | melhor pendencia: '+pend+'</div>'
+			+'<div style="color:#c60;font-size:12px;">(clique PARAR pra usar o melhor ate agora)</div>'; };
 	try{
-		for(let extra=0; extra<=maxE && !result; extra++){
-			acc += (share[extra]||0.05)*T; const deadline=acc;       // mais tempo p/ niveis baixos (rapidos)
-			while(performance.now()-t0<deadline && !result){
-				await breathe();
-				let s=randState(extra), sc=evalS(s);
-				if(sc===0){ result={text:toText(s),clean:true,extra,iters}; break; }
-				if(!globalBest||sc<globalBest.score) globalBest={text:toText(s),score:sc};
-				// hill-climb com passos de PLATO (aceita score igual as vezes p/ atravessar o plato) +
-				// restart quando trava. So estrita empaca com 1 residuo/loop faltando (minimo local).
-				let semMelhora=0;
-				while(performance.now()-t0<deadline && semMelhora<50){
-					const nb=_shuffle(vizinhos(s)); let aceitou=false;
-					for(const c of nb){ if(performance.now()-t0>=deadline) break;
-						const csc=evalS(c);
-						if((iters&63)===0) await breathe();
-						if(csc===0){ result={text:toText(c),clean:true,extra,iters}; aceitou=true; break; }
-						if(csc<sc){ s=c; sc=csc; aceitou=true; semMelhora=0; if(csc<globalBest.score) globalBest={text:toText(c),score:csc}; break; }
-						if(csc===sc && Math.random()<0.4){ s=c; aceitou=true; semMelhora++; break; }   // plato
+		while(!result && !window._pararBusca && performance.now()-t0<CAP){
+			await breathe(); info();
+			const extra=Math.floor(Math.random()*(maxE+1));            // qtd de vazios aleatoria por restart
+			// ILS: 60% recomeca PERTURBANDO o melhor (intensifica perto dele); senao totalmente aleatorio.
+			let s;
+			if(globalBest && globalBest.state && Math.random()<0.6){ s=clone(globalBest.state);
+				const K=2+Math.floor(Math.random()*4); for(let k=0;k<K;k++){ const nb=vizinhos(s); s=nb[Math.floor(Math.random()*nb.length)]; } }
+			else s=randState(extra);
+			let sc=evalS(s);
+			if(sc===0){ result={text:toText(s),clean:true,extra,iters}; break; }
+			if(!globalBest||sc<globalBest.score) globalBest={text:toText(s),score:sc,state:clone(s)};
+			// SIMULATED ANNEALING: aceita PIORAS pequenas com prob exp(-delta/temp). Como duro=1000 e
+			// residuo=1, com temp~4 navega o RESIDUO de graca mas quase nunca piora um DURO.
+			let temp=4, semMelhora=0;
+			while(!result && !window._pararBusca && semMelhora<120){
+				const nb=_shuffle(vizinhos(s)); let aceitou=false;
+				for(const c of nb){
+					const csc=evalS(c);
+					if((iters&127)===0){ await breathe(); info(); if(window._pararBusca||performance.now()-t0>=CAP) break; }
+					if(csc===0){ result={text:toText(c),clean:true,extra,iters}; aceitou=true; break; }
+					const d=csc-sc;
+					if(d<=0 || Math.random()<Math.exp(-d/temp)){
+						if(csc<sc) semMelhora=0; else semMelhora++;
+						s=c; sc=csc; aceitou=true; if(csc<globalBest.score) globalBest={text:toText(c),score:csc,state:clone(c)}; break;
 					}
-					if(result || !aceitou) break;                          // minimo local estrito -> restart
 				}
+				temp*=0.997;
+				if(!aceitou) break;                                       // minimo local -> restart
 			}
 		}
 	} finally { if(_tb) _tb.style.opacity=_opPrev;
 		if(window._obs){ const tb=document.getElementById('tablebase'); try{ window._obs.observe(tb,{childList:true,subtree:true,characterData:true}); }catch(e){} } }
 	if(result) return result;
 	return {text:(globalBest?globalBest.text:''), clean:false, iters, score:globalBest?globalBest.score:1e9};
+}
+// MINIMIZA MARCAS: tira do plano toda seta (↓/↑) que pode sair sem PIORAR o score (greedy, re-avaliando).
+// Deixa a passagem so com o teleporte realmente necessario. Ex.: [#2↓ #3↑ #4↑ #6↓ ...] pode virar [#2↓ #6↓].
+function _minimizarMarcas(text){
+	if(!text) return text;
+	let lines=text.split('\n');
+	let base=_score(_evalText(text));                     // score de referencia (nao pode piorar)
+	let mudou=true;
+	while(mudou){ mudou=false;
+		for(let li=0; li<lines.length; li++){
+			const m=lines[li].match(/^\[(.*)\]$/); if(!m) continue;
+			let toks=m[1].split(' ').filter(Boolean);
+			for(let ti=0; ti<toks.length; ti++){
+				const trial=toks.slice(0,ti).concat(toks.slice(ti+1));
+				const saved=lines[li]; lines[li]='['+trial.join(' ')+']';
+				if(_score(_evalText(lines.join('\n')))<=base){ toks=trial; ti--; mudou=true; }  // removeu OK
+				else lines[li]=saved;                                                            // reverte
+			}
+		}
+	}
+	return lines.join('\n');
 }
 // plano no formato //N (nobreza desc). Header usa o & PERTINENTE (mapeamento).
 function _genPlan(target,prods){
@@ -1307,10 +1405,10 @@ async function gerarAlvo(){                            // ASYNC: a busca cede a 
 		+' | leek '+res.leek+(res.leak.length?' | VAZA: '+res.leak.map(x=>'#'+x).join(','):'')
 		+(res.sobraBarril>0n?' | sobra '+res.sobraBarril+'x #4 (barril)':'');
 	const pel=document.getElementById('painel_alertas');
-	if(pel) pel.innerHTML='<div style="color:#06c;font-weight:bold;">buscando layout do #'+target+'... (alguns segundos)</div>';
-	window._buscando=true; let busca;
+	if(pel) pel.innerHTML='<div style="color:#06c;font-weight:bold;">buscando layout do #'+target+'...</div>';
+	window._buscando=true; window._pararBusca=false; let busca;   // roda ate achar ou ate clicar PARAR
 	try{ busca=await _searchLayout(target,res.prods); } finally { window._buscando=false; }
-	const plan=busca.text;
+	const plan=_minimizarMarcas(busca.text);           // tira setas de ponte desnecessarias (enxuga o mapa)
 	load_plan(plan);                                   // aplica ja na tela
 	setTimeout(function(){ try{checarLoop();}catch(e){} }, 80);
 	const rr=_analisar();
