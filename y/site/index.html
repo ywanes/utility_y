@@ -241,6 +241,7 @@ function load_history_nick(){
         else{
             history_nick={};
             let tmp=a.trim().split('\n');
+			// carregamento - aqui nao considera elements(catalogo completo)
             for ( let i=0;i<tmp.length;i++ ){
                 if ( tmp[i].indexOf(' ') > 0 ){				
                     let tmp0=tmp[i].substring(tmp[i].indexOf(' ')+1);
@@ -264,8 +265,10 @@ function load_history_nick(){
                 }
             }
             let keys=Object.keys(history_nick);
+			// trata tail
             for ( let i=0;i<keys.length;i++ ){
                 history_nick[keys[i]]['tail']=true;
+				history_nick[keys[i]]['wait_new_episode']=false;
                 if ( history_nick[keys[i]]['series'] ){
                     let max_epoch=history_nick[keys[i]]['epochMili'];
                     for ( let j=0;j<keys.length;j++ ){
@@ -279,10 +282,12 @@ function load_history_nick(){
                     if ( history_nick[keys[i]]['epochMili'] < max_epoch )
                         history_nick[keys[i]]['tail']=false;
                 }else{
+					// finalizando, faltando menos de 59 segundos
                     if ( (history_nick[keys[i]]['currentTime'] + 59) >= history_nick[keys[i]]['duration'] )
                         history_nick[keys[i]]['tail']=false;
                 }
             }
+			// atualiza tail pelo untail
 			for ( let i=0;i<keys.length;i++ ){
 				if ( history_nick[keys[i]]['untail'] )
 					history_nick[keys[i]]['tail']=false;
@@ -967,13 +972,36 @@ function f_continue(){
     let elements=elementos;
     let lista=[];
     let tags=['/series/', '/filmes/'];
+	
+	// carregamento de lista pai para o tratamento waiting
+	let lista_pai_key_elements=[];
+	for ( let i=0;i<elements.length;i++ ){
+		let key=encodeURI(elements[i]);
+		lista_pai_key_elements.push( key.substring(0, key.lastIndexOf('/')+1) );
+	}
+	
+	// carrega auxiliar com join (elementos e history_nick) de (serie e filmes)
     for ( let k=0;k<tags.length;k++ ){
         let lista_aux=[];
         for ( let i=0;i<elements.length;i++ ){
             let key=encodeURI(elements[i]);
             let obj=history_nick[key];
-            if ( key.indexOf(tags[k]) == 0 && typeof obj != 'undefined' && obj['tail'] )
-                lista_aux.push({"element": elements[i], "epochMili": obj['epochMili']});        
+            if ( key.indexOf(tags[k]) == 0 && typeof obj != 'undefined' && obj['tail'] ){
+				// tratando waiting series - usuario esperando chegar novos episodios
+				let waiting=false;
+				if ( tags[k] == '/series/' 
+					&& ( 
+						( (i+1) < elements.length && lista_pai_key_elements[i] != lista_pai_key_elements[i+1] )
+						|| ( (i+1) == elements.length )
+					)
+					&& (obj['currentTime']/obj['duration']) > 0.9 
+				)
+					waiting=true;
+				// tratando waiting filmes - usuario esperando chegar novos episodios
+				if ( tags[k] == '/filmes/' && (obj['currentTime']/obj['duration']) > 0.94 )
+					waiting=true;
+                lista_aux.push({"element": elements[i], "epochMili": obj['epochMili'], "waiting": waiting});
+			}				
         }
         lista_aux.sort((a, b) => b['epochMili'] - a['epochMili']);    
         lista=lista.concat(lista_aux);
@@ -981,15 +1009,19 @@ function f_continue(){
     let s='<input id="search" type="text" class="search-input" placeholder="Digite sua pesquisa..." onkeyup="search_pressing(this, event,\'screen_continue\')">' +
 	      '<table id="tablebase" class="bordered" style="font-family:Verdana,sans-serif;font-size:10px;border-spacing: 0;">\n';
 	
-    let type='movie';
+    let type='movie'; // tipo de load_playlist
     for ( let i=0;i<lista.length;i++ ){
-        s+="<tr>";        
-		s+="<td style=\"padding: 0; cursor: pointer;\" onclick=\"remove_playing(this)\" ><svg width=\"40px\" height=\"40px\" viewBox=\"0 0 1024 1024\" class=\"icon\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#008000\" d=\"M745.344 361.344a32 32 0 0145.312 45.312l-288 288a32 32 0 01-45.312 0l-160-160a32 32 0 1145.312-45.312L480 626.752l265.344-265.408z\"></path></svg></td>";
+        s+="<tr>";        		
 		let txt='';
+		let cor='#008000';// verde
         if ( format_name(lista[i]['element']).indexOf('/Series/') != 0 )
             txt='FILME -> ' + format_name(lista[i]['element']);
-		else
+		else{
 			txt='SERIE -> ' + format_name(lista[i]['element']);
+			if ( lista[i]['waiting'] )
+				cor='#D6D08A'; // amarelo
+		}
+		s+="<td style=\"padding: 0; cursor: pointer;\" onclick=\"remove_playing(this)\" ><svg width=\"40px\" height=\"40px\" viewBox=\"0 0 1024 1024\" class=\"icon\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\""+cor+"\" d=\"M745.344 361.344a32 32 0 0145.312 45.312l-288 288a32 32 0 01-45.312 0l-160-160a32 32 0 1145.312-45.312L480 626.752l265.344-265.408z\"></path></svg></td>";
         s+="<td style=\"width: 1570px; display: inline-block; cursor: pointer; color: white; font-size: 24px; font-family: Franklin Gothic Medium;\" onclick=\"load_playlist(" + "['" + lista[i]['element'].substring(1).split('/').join("','") + "']" + ", true, '" + type + "')\">" + txt + "</td>";
         s+="</tr>";
     }
@@ -997,7 +1029,6 @@ function f_continue(){
     if ( lista.length > 0 ){
         prepara_principal();
         document.getElementById('nav').innerHTML='<h1 style="color: #007BFF; font-size: 34px; font-family: Franklin Gothic Medium;">&nbsp;Continue:</h1>';
-							   
         document.getElementById('principal').innerHTML=s;
 		document.getElementById('search').focus();
     }else{
