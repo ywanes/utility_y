@@ -60,22 +60,31 @@ alias y='java -Dfile.encoding=UTF-8 -cp /opt/y:/opt/y/ojdbc6.jar:/opt/y/sqljdbc4
 rm -f /opt/.u_flag
 alias u='/opt/.u'
 alias uu='/opt/.u_c'
-# old #if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep "not upgraded" | grep -v "and 0 not upgraded" | wc -l` -eq 1 ]
-if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep "Not Upgrading:" | wc -l` -eq 1 ]
-then  
-  echo "" > /opt/.u_c
+echo "" > /opt/.u_c
+if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep -e "Not Upgrading:" -e "não são mais requeridos" | wc -l` -eq 1 ]
+then
   apt list --upgradable -a 2>/dev/null | while read linha 
   do
-    if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
+    if [ "$linha" != "" ] && [ `echo "$linha" | grep "apt autoremove" | wc -l` -eq 1 ]
     then
-      p1=`echo $linha | awk ' { print $1 } '`
-	  echo $p1
-    fi    
+      echo 'apt autoremove'
+    else
+      if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listando..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
+      then
+        p1=`echo $linha | awk ' { print $1 } '`
+        echo "apt-get install --only-upgrade $p1"
+      else
+        echo ''
+      fi
+    fi
   done | head -1 | while read linha
   do
-    echo "apt-get install --only-upgrade $linha" > /opt/.u_c
-	chmod 777 /opt/.u_c
-	echo digite uu # esse script só carrega quando entrar em root, se precisar entre em root varias vezes
+    echo "$linha" > /opt/.u_c
+    chmod 777 /opt/.u_c
+    if [ `printf "$linha" | wc -c` -ne 0 ]
+    then
+      echo digite uu # esse script só carrega quando entrar em root, se precisar entre em root varias vezes
+    fi
   done
 fi
 if [ "1" == "1" ] # verify new ubuntu and LTS

@@ -1125,15 +1125,6 @@ cat buffer.log
             System.out.println(getUsers());
             return;
         }
-        if ( args[0].equals("disconnect") ){
-            if ( !isWindows() )
-                erroFatal("comando suportado somente para windows");
-            if ( args.length > 1 && args[1].equals("seAtivoDesconectaLoop1Segundo"))
-                disconnect(true);
-            else
-                disconnect(false);
-            return;
-        }
         if ( args.length > 1 && (args[0].equals("dns") || args[0].equals("host")) ){
             String name=args[1];
             String source_dns=null;
@@ -2247,8 +2238,42 @@ cat buffer.log
                 return;
         }
         if ( args[0].equals("lock") ){
-            args=removeParm(0, args);
-            new lock().go(args);
+            try{
+                if ( !isWindows() )
+                    erroFatal("implementado somente para windows!");
+                
+                Boolean enableParcialClick=true;
+                
+                // lock lock lock
+                if ( args.length == 3 ){                    
+                    enableParcialClick=false;
+                    new lock().go(new String[]{"lock"}, enableParcialClick);
+                    new LockSession(new String[]{"lock", "lock"});
+                    return;
+                }
+                
+                // remove o primeiro parametro => lock
+                args=removeParm(0, args);
+                
+                // lock de sessao
+                if ( args.length > 0 ){
+                    if ( 
+                        args[0].equals("lock")
+                        || args[0].equals("logoff")
+                        || args[0].equals("disconnect")
+                        || args[0].equals("shutdown")
+                        || args[0].equals("list")
+                    ){
+                        new LockSession(args);
+                        return;
+                    }
+                }
+
+                // lock de tela preta fake lock            
+                new lock().go(args, enableParcialClick);
+            }catch(Exception e){
+                erroFatal(e);
+            }
             return;
         }
         if ( args[0].equals("monitor") ){
@@ -10249,21 +10274,6 @@ bind 'set enable-bracketed-paste off'
             //            ifconfig.me
             curl_string("https://checkip.amazonaws.com/").trim()
         );
-    }
-    public void disconnect(boolean seAtivoDesconectaLoop1Segundo){
-        if ( seAtivoDesconectaLoop1Segundo ){
-            while(true){
-                String id=getUserAtivo(getUsers());
-                if ( id != null )
-                    runtimeExec(null, new String[]{"tsdiscon", id}, null, null, null);
-                sleepSeconds(2);                
-            }
-        }else{
-            String id=getUserAtivo(getUsers());
-            if ( id != null )
-                runtimeExec(null, new String[]{"tsdiscon", id}, null, null, null);
-            System.out.println("disconnected!!");
-        }
     }
     public String dns(String domain, String dnsServer){
         // System.out.print(dns("example.com", "8.8.8.8"));
@@ -20144,8 +20154,8 @@ class YDB{
     }
 }
 
-class lock {
-    public static void go(String[] args) {
+class lock{
+    public static void go(String[] args, boolean enableParcialClick) {
         try {
             String pid = java.lang.management.ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
             String selfJar = new java.io.File(lock.class.getProtectionDomain().getCodeSource().getLocation().toURI()).getName();
@@ -20198,8 +20208,13 @@ class lock {
         final java.awt.Color selectedColor = white ? java.awt.Color.WHITE : java.awt.Color.BLACK;
         final int targetMonitor = monitorIndex;
         final boolean monitorWasRequested = monitorRequested;
+        final boolean allowPartial = enableParcialClick;
         final java.util.List<javax.swing.JFrame> frames = new java.util.ArrayList<>();
+        // guarda TODOS os timers de TODOS os frames, para conseguir parar todos ao liberar tudo
+        final java.util.List<javax.swing.Timer> allTimers = new java.util.ArrayList<>();
         final boolean[] exiting = {false};
+        // trinco: go() so retorna quando tudo estiver liberado
+        final java.util.concurrent.CountDownLatch done = new java.util.concurrent.CountDownLatch(1);
         javax.swing.SwingUtilities.invokeLater(() -> {
             java.awt.GraphicsDevice[] all = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices();
             java.awt.GraphicsDevice primary = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
@@ -20209,6 +20224,16 @@ class lock {
             } else {
                 screens = all;
             }
+            // libera TUDO: para todos os timers, dispoe todos os frames, solta o latch
+            final Runnable releaseEverything = () -> {
+                if (exiting[0]) return;
+                exiting[0] = true;
+                for (javax.swing.Timer t : allTimers) t.stop();
+                allTimers.clear();
+                for (javax.swing.JFrame f : new java.util.ArrayList<>(frames)) f.dispose();
+                frames.clear();
+                done.countDown();
+            };
             for (java.awt.GraphicsDevice screen : screens) {
                 java.awt.Rectangle bounds = screen.getDefaultConfiguration().getBounds();
                 boolean isPrimary = (screens.length == 1) || (screen == primary);
@@ -20243,6 +20268,8 @@ class lock {
                     if (!frame.getBounds().equals(frameBounds)) frame.setBounds(frameBounds);
                 });
                 focusTimer.start();
+                allTimers.add(focusTimer);
+                allTimers.add(mouseTimer);
                 frame.addWindowListener(new java.awt.event.WindowAdapter() {
                     @Override public void windowOpened(java.awt.event.WindowEvent e) {
                         frame.setCursor(blankCursor);
@@ -20252,13 +20279,7 @@ class lock {
                         frame.setExtendedState(javax.swing.JFrame.NORMAL);
                     }
                     @Override public void windowClosing(java.awt.event.WindowEvent e) {
-                        focusTimer.stop();
-                        mouseTimer.stop();
-                        if (isPrimary && !exiting[0]) {
-                            exiting[0] = true;
-                            for (javax.swing.JFrame f : frames) f.dispose();
-                            Runtime.getRuntime().halt(0);
-                        }
+                        if (isPrimary) releaseEverything.run();
                     }
                 });
                 frame.addWindowStateListener(e -> {
@@ -20286,21 +20307,25 @@ class lock {
                         pressedHere[0] = false;
                         e.consume();
                         if (javax.swing.SwingUtilities.isLeftMouseButton(e)) {
-                            if (!exiting[0]) {
-                                exiting[0] = true;
+                            // clique esquerdo: libera tudo, sempre
+                            releaseEverything.run();
+                        } else if (javax.swing.SwingUtilities.isRightMouseButton(e)) {
+                            if (allowPartial) {
+                                // liberar aos poucos: fecha so este painel
                                 focusTimer.stop();
                                 mouseTimer.stop();
-                                for (javax.swing.JFrame f : frames) f.dispose();
-                                Runtime.getRuntime().halt(0);
-                            }
-                        } else if (javax.swing.SwingUtilities.isRightMouseButton(e)) {
-                            focusTimer.stop();
-                            mouseTimer.stop();
-                            frame.dispose();
-                            frames.remove(frame);
-                            if (frames.isEmpty() && !exiting[0]) {
-                                exiting[0] = true;
-                                Runtime.getRuntime().halt(0);
+                                allTimers.remove(focusTimer);
+                                allTimers.remove(mouseTimer);
+                                frame.dispose();
+                                frames.remove(frame);
+                                if (frames.isEmpty() && !exiting[0]) {
+                                    // ultimo painel saiu -> tudo liberado
+                                    exiting[0] = true;
+                                    done.countDown();
+                                }
+                            } else {
+                                // parcial nao permitido -> libera tudo
+                                releaseEverything.run();
                             }
                         }
                     }
@@ -20309,6 +20334,8 @@ class lock {
                 frame.setVisible(true);
             }
         });
+        // go() para aqui e so retorna quando tudo estiver liberado
+        try { done.await(); } catch (InterruptedException e) {}
     }
 }
 
@@ -32339,174 +32366,386 @@ class Texto_longo extends Util{
     }
 }
 
-/* 
-//WASAPI C#
-// install dotnet windows
-winget install Microsoft.DotNet.SDK.8
+class TelaBloqueio {
+    private static final String PASTA_BASE = "C:\\ProgramData\\TelaBloqueioMinima";
+    private static final String ARQ_IMAGEM = PASTA_BASE + "\\preto.png";
+    private static final int LARGURA = 3840;
+    private static final int ALTURA  = 2160;
+    private static final String CSP =
+        "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PersonalizationCSP";
+    private static final String PERS =
+        "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\Personalization";
+    private static final String SYS =
+        "HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\System";
+    private static final String POL_SYS =
+        "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System";
+    private static final String CDM =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\ContentDeliveryManager";
+    private static final String CLOUD =
+        "HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent";
+    private static final String NOTIF =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings";
+    private static final String LOCK11 =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Lock Screen";
+    public enum Modo { MINIMO, PADRAO }
+    private TelaBloqueio() { }
+    public static void main(String[] args) {
+        if (args.length != 1) {
+            uso();
+            System.exit(2);
+        }
 
-y mkdir wasapi
-cd wasapi
-dotnet new console
+        Modo modo;
+        try {
+            modo = Modo.valueOf(args[0].toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            System.err.println("Modo desconhecido: " + args[0]);
+            uso();
+            System.exit(2);
+            return;
+        }
 
-dotnet add package NAudio.Wasapi --version 2.2.1
-
-inclua a linha abaixo depois de TagetFramework em wasapi.csproj:
-<PublishSingleFile>true</PublishSingleFile>
-
-// roda
-dotnet run > file.wav
-// ouvindo mic em tempo real, delay 1 segundo
-wasapi only_mic | "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe" -I null --play-and-exit -
-
-// publishs
-dotnet publish
-dotnet publish -c Release -r ubuntu.16.10-x64
-dotnet publish -c Release -r win10-x64
-dotnet publish -c Release -r osx.10.11-x64
-
-
-salve o conteudo abaixo em Program.cs:
-using NAudio.CoreAudioApi;
-using NAudio.Wave;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-
-namespace LoopbackWithMic
-{
-    class Program
-    {
-        static void Main(string[] args)
-        {
-            bool flag_system=true;
-            bool flag_mic=true;
-            if ( args.Length > 0 )
-            {
-                if ( args[0] == "only_system" )
-                {
-                    flag_mic=false;
-                }
-                else
-                {
-                    if ( args[0] == "only_mic" )
-                    {
-                        flag_system=false;
-                    }
-                    else
-                    {
-                        Console.WriteLine("\nParametro incorreto, veja as opções:\nwasapi > file.wav\nwasapi only_mic > file.wav\nwasapi only_system > file.wav\nObs: only_system só envia dados enquanto houve som sendo propagado");
-                        return;
-                    }
-                }
-            }           
-            var enumerator = new MMDeviceEnumerator();
-            var output = enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
-            var output_false = enumerator.EnumerateAudioEndPoints(DataFlow.Render, DeviceState.Active).Where(x => x != output).FirstOrDefault();
-            var input=enumerator.GetDefaultAudioEndpoint(DataFlow.Capture, Role.Console);
-            List<IWaveProvider> pp = new List<IWaveProvider>();
-            List<WasapiCapture> capture = new List<WasapiCapture>();
-
-            if ( flag_system )
-                capture.Add(new WasapiLoopbackCapture(output));           
-            if ( flag_mic )
-                capture.Add(new WasapiCapture(input));
-            List<BufferedWaveProvider> provider = new List<BufferedWaveProvider>();
-            for ( var i=0;i<capture.Count;i++ )
-            {
-                provider.Add(new BufferedWaveProvider(capture.ElementAt(i).WaveFormat));
-                if(capture.ElementAt(i).WaveFormat.Channels > 1)
-                {
-                    var mon = new NAudio.Wave.SampleProviders.StereoToMonoSampleProvider(provider.ElementAt(i).ToSampleProvider());
-                    pp.Add(mon.ToWaveProvider());
-                }
-                else
-                {
-                    pp.Add(provider.ElementAt(i));
-                }
-            }
-            MixingWaveProvider32 mix = new MixingWaveProvider32(pp);                       
-            MemoryStream ms=new MemoryStream();
-            WaveRecorderMemory record = new WaveRecorderMemory(mix, ms);
-            var speaker = new WasapiOut(output_false, AudioClientShareMode.Shared, true, 15);           
-            speaker.Init(record);
-            List<byte> bytes = new List<byte>();
-            for ( var i=0;i<capture.Count;i++ )
-            {
-                var tmp=provider.ElementAt(i);
-                capture.ElementAt(i).DataAvailable += (s, a) =>
-                {
-                    tmp.AddSamples(a.Buffer, 0, a.BytesRecorded);
-                };
-                capture.ElementAt(i).StartRecording();
-            }
-            speaker.Play();
-            bool first=true;
-            Stream stream_=Console.OpenStandardOutput();
-            Byte [] buff;
-            while(true)
-            {
-                if ( first )
-                {
-                    if ( ms.Length >= 1920*10 )
-                    {
-                        buff = ms.ToArray();                       
-                        ms.SetLength(0);
-                        stream_.Write(buff, 0, buff.Length);
-                        stream_.Flush();
-                        first=false;
-                    }
-                }
-                else
-                {
-                    if ( ms.Length >= 1920*4 )
-                    {
-                        buff = ms.ToArray();                       
-                        ms.SetLength(0);
-                        stream_.Write(buff, 0, buff.Length);   
-                        stream_.Flush();
-                    }
-                }
-                Thread.Sleep(1);
-            }           
+        try {
+            aplicar(modo);
+        } catch (IllegalStateException e) {
+            System.err.println();
+            System.err.println(e.getMessage());
+            System.exit(1);
+        } catch (java.io.IOException e) {
+            System.err.println();
+            System.err.println("Falha de E/S: " + e.getMessage());
+            System.exit(1);
         }
     }
-   
-    class WaveRecorderMemory : IWaveProvider, IDisposable
-    {
-        private WaveFileWriter writer;
-        private IWaveProvider source;
+    private static void uso() {
+        System.out.println("Uso: java TelaBloqueio.java <minimo|padrao>");
+        System.out.println();
+        System.out.println("  minimo   deixa a tela de bloqueio com o minimo visivel");
+        System.out.println("  padrao   devolve o comportamento de fabrica do Windows");
+    }
+    public static void aplicar(Modo modo) throws java.io.IOException {
+        exigirWindows();
+        exigirAdministrador();
+        System.out.println();
+        System.out.println("Modo: " + modo);
+        System.out.println("=========================================");
+        if (modo == Modo.MINIMO) {
+            aplicarMinimo();
+        } else {
+            aplicarPadrao();
+        }
+        System.out.println();
+        System.out.println("=========================================");
+        System.out.println("Concluido. Faca logoff ou reinicie.");
+    }
+    private static void aplicarMinimo() throws java.io.IOException {
+        System.out.println();
+        System.out.println("[1/6] Gerando imagem preta...");
+        gerarImagemPreta();
+        System.out.println();
+        System.out.println("[2/6] Definindo o fundo da tela de bloqueio...");
+        definirTexto(CSP, "LockScreenImagePath", ARQ_IMAGEM);
+        definirTexto(CSP, "LockScreenImageUrl",  ARQ_IMAGEM);
+        definirDword(CSP, "LockScreenImageStatus", 1);
+        definirTexto(PERS, "LockScreenImage", ARQ_IMAGEM);
+        // 0 mantem o mesmo fundo preto na tela de senha
+        definirDword(SYS, "DisableLogonBackgroundImage", 0);
+        System.out.println();
+        System.out.println("[3/6] Desativando Spotlight, dicas e curiosidades...");
+        definirDword(CDM, "RotatingLockScreenEnabled", 0);
+        definirDword(CDM, "RotatingLockScreenOverlayEnabled", 0);
+        definirDword(CDM, "SubscribedContent-338387Enabled", 0);
+        definirDword(CLOUD, "DisableWindowsSpotlightFeatures", 1);
+        System.out.println();
+        System.out.println("[4/6] Removendo notificacoes e widgets...");
+        definirDword(SYS, "DisableLockScreenAppNotifications", 1);
+        definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 0);
+        definirDword(LOCK11, "LockScreenWidgetsEnabled", 0);
+        System.out.println();
+        System.out.println("[5/6] Ocultando as informacoes do usuario...");
+        definirDword(POL_SYS, "dontdisplaylastusername", 1);
+        definirDword(POL_SYS, "DontDisplayLockedUserId", 3);
 
-        public WaveRecorderMemory(IWaveProvider source, Stream out_)
-        {           
-            this.source = source;
-            this.writer = new WaveFileWriter(out_, source.WaveFormat);           
+        System.out.println();
+        System.out.println("[6/6] Removendo o relogio...");
+        definirDword(PERS, "NoLockScreen", 1);
+        System.out.println();
+        System.out.println("ATENCAO: com dontdisplaylastusername ativo voce precisara");
+        System.out.println("digitar o NOME DE USUARIO alem da senha ao entrar.");
+        System.out.println();
+        System.out.println("Continuam visiveis, e nao podem ser removidos: o campo de");
+        System.out.println("senha e os icones de rede, acessibilidade e energia.");
+    }
+    private static void aplicarPadrao() throws java.io.IOException {
+        System.out.println();
+        System.out.println("[1/5] Liberando o fundo da tela de bloqueio...");
+        remover(CSP, "LockScreenImagePath");
+        remover(CSP, "LockScreenImageUrl");
+        remover(CSP, "LockScreenImageStatus");
+        remover(PERS, "LockScreenImage");
+        remover(SYS,  "DisableLogonBackgroundImage");
+        System.out.println();
+        System.out.println("[2/5] Reativando a tela de bloqueio (relogio e data)...");
+        remover(PERS, "NoLockScreen");
+        System.out.println();
+        System.out.println("[3/5] Reativando o Windows Spotlight...");
+        remover(CLOUD, "DisableWindowsSpotlightFeatures");
+        definirDword(CDM, "RotatingLockScreenEnabled", 1);
+        definirDword(CDM, "RotatingLockScreenOverlayEnabled", 1);
+        definirDword(CDM, "SubscribedContent-338387Enabled", 1);
+        System.out.println();
+        System.out.println("[4/5] Reativando notificacoes e widgets...");
+        remover(SYS, "DisableLockScreenAppNotifications");
+        definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 1);
+        remover(LOCK11, "LockScreenWidgetsEnabled");
+        System.out.println();
+        System.out.println("[5/5] Exibindo o nome do usuario novamente...");
+        definirDword(POL_SYS, "dontdisplaylastusername", 0);
+        definirDword(POL_SYS, "DontDisplayLockedUserId", 0);
+        apagarPasta();
+        System.out.println();
+        System.out.println("O Spotlight pode levar um logon e alguns minutos de internet");
+        System.out.println("para baixar a primeira imagem.");
+    }
+    private static void exigirWindows() {
+        String so = System.getProperty("os.name", "");
+        if (!so.toLowerCase(java.util.Locale.ROOT).contains("win")) {
+            throw new IllegalStateException(
+                "Esta classe so funciona no Windows. Sistema detectado: " + so);
+        }
+    }
+
+    private static void exigirAdministrador() {
+        // HKU\S-1-5-19 (conta LocalService) so e legivel com elevacao
+        java.util.List<String> cmd =
+            java.util.Arrays.asList("reg", "query", "HKU\\S-1-5-19");
+
+        int codigo;
+        try {
+            codigo = executarSilencioso(cmd);
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(
+                "Nao foi possivel verificar privilegios: " + e.getMessage());
         }
 
-        public int Read(byte[] buffer, int offset, int count)
-        {
-            int bytesRead = source.Read(buffer, offset, count);
-            writer.Write(buffer, offset, bytesRead);
-            return bytesRead;
+        if (codigo != 0) {
+            throw new IllegalStateException(
+                "Execute como Administrador.\n"
+              + "Abra o Prompt ou o PowerShell com 'Executar como administrador'\n"
+              + "e rode o comando novamente.");
+        }
+    }
+    private static void gerarImagemPreta() throws java.io.IOException {
+        java.nio.file.Path pasta = java.nio.file.Paths.get(PASTA_BASE);
+        java.nio.file.Files.createDirectories(pasta);
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(
+            LARGURA, ALTURA, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = img.createGraphics();
+        try {
+            g.setColor(java.awt.Color.BLACK);
+            g.fillRect(0, 0, LARGURA, ALTURA);
+        } finally {
+            g.dispose();
+        }
+        java.io.File destino = new java.io.File(ARQ_IMAGEM);
+        if (!javax.imageio.ImageIO.write(img, "png", destino)) {
+            throw new java.io.IOException("Nenhum codificador PNG disponivel.");
+        }
+        System.out.println("  [ok] " + ARQ_IMAGEM + "  (" + LARGURA + "x" + ALTURA + ")");
+    }
+
+    private static void apagarPasta() {
+        java.nio.file.Path pasta = java.nio.file.Paths.get(PASTA_BASE);
+        if (!java.nio.file.Files.exists(pasta)) {
+            return;
         }
 
-        public WaveFormat WaveFormat
-        {
-            get { return source.WaveFormat; }
-        }
+        try (java.util.stream.Stream<java.nio.file.Path> caminhos =
+                 java.nio.file.Files.walk(pasta)) {
 
-        public void Dispose()
-        {
-            if (writer != null)
-            {
-                writer.Dispose();
+            caminhos.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    java.nio.file.Files.deleteIfExists(p);
+                } catch (java.io.IOException ignorado) {
+                    // arquivo em uso pelo Windows; sai no proximo boot
+                }
+            });
+
+            System.out.println();
+            System.out.println("  [ok] Pasta removida: " + PASTA_BASE);
+
+        } catch (java.io.IOException e) {
+            System.out.println();
+            System.out.println("  [aviso] Nao foi possivel remover " + PASTA_BASE
+                             + ": " + e.getMessage());
+        }
+    }
+    private static void definirDword(String chave, String nome, int valor)
+            throws java.io.IOException {
+        java.util.List<String> cmd = java.util.Arrays.asList(
+            "reg", "add", chave, "/v", nome,
+            "/t", "REG_DWORD", "/d", Integer.toString(valor), "/f");
+        if (executarSilencioso(cmd) == 0) {
+            System.out.println("  [ok]     " + curto(chave) + "\\" + nome + " = " + valor);
+        } else {
+            System.out.println("  [falhou] " + curto(chave) + "\\" + nome);
+        }
+    }
+
+    private static void definirTexto(String chave, String nome, String valor)
+            throws java.io.IOException {
+        java.util.List<String> cmd = java.util.Arrays.asList(
+            "reg", "add", chave, "/v", nome,
+            "/t", "REG_SZ", "/d", valor, "/f");
+        if (executarSilencioso(cmd) == 0) {
+            System.out.println("  [ok]     " + curto(chave) + "\\" + nome);
+        } else {
+            System.out.println("  [falhou] " + curto(chave) + "\\" + nome);
+        }
+    }
+
+    /** Remove um valor. Ausencia previa nao e tratada como erro. */
+    private static void remover(String chave, String nome) throws java.io.IOException {
+        java.util.List<String> cmd =
+            java.util.Arrays.asList("reg", "delete", chave, "/v", nome, "/f");
+
+        int codigo = executarSilencioso(cmd);
+        String status = (codigo == 0) ? "[limpo]  " : "[ausente]";
+        System.out.println("  " + status + " " + curto(chave) + "\\" + nome);
+    }
+
+    private static String curto(String chave) {
+        int i = chave.lastIndexOf('\\');
+        return (i < 0) ? chave : chave.substring(i + 1);
+    }
+
+    // ---------------------------------------------------------------- processo
+
+    /** Executa o comando, descarta a saida e devolve o codigo de retorno. */
+    private static int executarSilencioso(java.util.List<String> comando)
+            throws java.io.IOException {
+
+        ProcessBuilder pb = new ProcessBuilder(comando);
+        pb.redirectErrorStream(true);
+
+        Process p = pb.start();
+
+        // drenar a saida evita que o processo trave com o buffer cheio
+        try (java.io.BufferedReader r = new java.io.BufferedReader(
+                new java.io.InputStreamReader(
+                    p.getInputStream(), java.nio.charset.Charset.defaultCharset()))) {
+
+            while (r.readLine() != null) {
+                // descartado de proposito
             }
         }
-    }   
-}
-*/
 
+        try {
+            return p.waitFor();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new java.io.IOException("Execucao interrompida.", e);
+        }
+    }
+}
+
+class LockSession{
+    LockSession(String[] args) throws Exception {
+        String acao = args.length > 0 ? args[0].toLowerCase(java.util.Locale.ROOT) : "";
+        String alvo = args.length > 1 ? args[1] : null;
+        switch (acao) {
+            case "lock":     lock();          break;
+            case "list":     list();          break;
+            case "logoff":   logoff(alvo);    break;
+            case "disconnect":
+                if (alvo == null)                                                disconnect(false);
+                else if (alvo.equalsIgnoreCase("seAtivoDesconectaLoop1Segundo")) disconnect(true);
+                else                                                             disconnect(alvo);
+                break;
+            case "shutdown": shutdown();       break;
+            default:         help();
+        }
+    }
+    void lock() throws Exception {
+        runtimeExec(null, new String[]{"rundll32.exe", "user32.dll,LockWorkStation"}, null, null, null);
+    }
+    void list() throws Exception {
+        System.out.print(getUsers());
+    }
+    void logoff(String usuario) throws Exception {
+        if (usuario == null) {
+            runtimeExec(null, new String[]{"shutdown", "/l"}, null, null, null);
+        } else {
+            String id = getUserId(usuario);
+            if (id != null) runtimeExec(null, new String[]{"logoff", id}, null, null, null);
+        }
+    }
+
+    public void disconnect(boolean seAtivoDesconectaLoop1Segundo) throws Exception {
+        if (seAtivoDesconectaLoop1Segundo) {
+            while (true) {
+                String id = getUserAtivo(getUsers());
+                if (id != null)
+                    runtimeExec(null, new String[]{"tsdiscon", id}, null, null, null);
+                sleepSeconds(2);
+            }
+        } else {
+            String id = getUserAtivo(getUsers());
+            if (id != null)
+                runtimeExec(null, new String[]{"tsdiscon", id}, null, null, null);
+            System.out.println("disconnected!!");
+        }
+    }
+
+    public void disconnect(String usuario) throws Exception {
+        String id = getUserId(usuario);
+        if (id != null)
+            runtimeExec(null, new String[]{"tsdiscon", id}, null, null, null);
+        System.out.println("disconnected!!");
+    }
+
+    void shutdown() throws Exception {
+        runtimeExec(null, new String[]{"shutdown", "-s", "-t", "1"}, null, null, null);
+    }
+    void help() {
+        System.out.println("Uso: <lock|list|logoff|disconnect|shutdown> [alvo]");
+    }
+    String getUsers() throws Exception {
+        return runtimeExec(null, new String[]{"query", "user"}, null, null, null);
+    }
+    String getUserAtivo(String users) {
+        for (String linha : users.split("\\R")) {
+            String[] c = linha.trim().split("\\s+");
+            for (int i = 1; i < c.length; i++)
+                if ((c[i].equals("Active") || c[i].equals("Ativo")) && c[i - 1].matches("\\d+"))
+                    return c[i - 1];
+        }
+        return null;
+    }
+    String getUserId(String usuario) throws Exception {
+        for (String linha : runtimeExec(null, new String[]{"query", "user", usuario}, null, null, null).split("\\R"))
+            for (String c : linha.trim().split("\\s+"))
+                if (c.matches("\\d+")) return c;
+        return null;
+    }
+
+    void sleepSeconds(int segundos) throws Exception {
+        Thread.sleep(segundos * 1000L);
+    }
+
+    String runtimeExec(String entrada, String[] comando, String[] ambiente,
+                       java.io.File dir, java.nio.charset.Charset charset) throws Exception {
+        if (charset == null) charset = java.nio.charset.Charset.defaultCharset();
+        Process p = Runtime.getRuntime().exec(comando, ambiente, dir);
+        if (entrada != null) {
+            p.getOutputStream().write(entrada.getBytes(charset));
+            p.getOutputStream().close();
+        }
+        String saida = new String(p.getInputStream().readAllBytes(), charset);
+        p.waitFor();
+        return saida;
+    }
+}
 
 /* class AES */ // echo TXT | openssl aes-256-cbc -base64 -pass pass:SENHA -md md5 -e
 /* class AES */ // y echo PPP | openssl aes-256-cbc -md md5 -k SENHA -e | y base64
@@ -35225,7 +35464,6 @@ usage:
   [y devices]
   [y cep]
   [y users]
-  [y disconnect]
   [y dns|host]
   [y lower]
   [y upper]
@@ -35595,9 +35833,6 @@ Exemplos...
     y cep 13083750
 [y users]
     y users
-[y disconnect]
-    y disconnect
-    y disconnect seAtivoDesconectaLoop1Segundo
 [y dns|host]
     y host examplo.com
     y dns example.com
@@ -36226,6 +36461,15 @@ Exemplos...
     y lock w
     y lock -1 -> desliga lock
     y lock 0 -> somente o primeiro monitor
+    abaixo lock de sessao:
+    y lock lock # windows L
+    y lock logoff # shutdown /l # comando estranho mesmo
+    y lock logoff userA # logoff userA    
+    y lock disconnect # tsdiscon
+    y lock disconnect userA
+    y lock disconnect seAtivoDesconectaLoop1Segundo # pode ser usado com ssh
+    y lock shutdown # shutdown -s -t 1
+    y lock lock lock # lock fake seguido de lock real # esse lock fake nao permite click direito
     obs: gera black screen
     obs2: y lock w -> white screen
 [y monitor]
