@@ -2243,19 +2243,27 @@ cat buffer.log
                     erroFatal("implementado somente para windows!");
                 
                 Boolean enableParcialClick=true;
+
+                // remove o primeiro parametro => lock
+                args=removeParm(0, args);
                 
-                // lock lock lock
-                if ( args.length == 3 ){                    
+                // lock lock lock // lock fake + real // um lock ja foi removido entao verifica os proximos 2 locks
+                if ( args.length == 2 && args[0].equals("lock") && args[1].equals("lock") ){
                     enableParcialClick=false;
                     new lock().go(new String[]{"lock"}, enableParcialClick);
                     new LockSession(new String[]{"lock", "lock"});
                     return;
                 }
                 
-                // remove o primeiro parametro => lock
-                args=removeParm(0, args);
+                // lock configuracoes de windows L
+                if ( args.length == 1 && ( args[0].equals("minimo") || args[0].equals("padrao") ) ){
+                    if ( !isWindowsAdm() )
+                        erroFatal("Erro,\nexigencia: cmd admin!");
+                    new TelaBloqueio(args);
+                    return;
+                }
                 
-                // lock de sessao
+                // lock de sessao // lock real
                 if ( args.length > 0 ){
                     if ( 
                         args[0].equals("lock")
@@ -2269,7 +2277,7 @@ cat buffer.log
                     }
                 }
 
-                // lock de tela preta fake lock            
+                // fake lock // tela preta ou branca
                 new lock().go(args, enableParcialClick);
             }catch(Exception e){
                 erroFatal(e);
@@ -27558,9 +27566,9 @@ class Util{
         return s;
     }
     
-    
     public boolean isWindowsAdm(){
-        return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null, null, null) != null;
+        //return os(true).equals("Windows") && runtimeExec("reg add HKEY_CLASSES_ROOT\\tmp\\y -f", null, null, null, null) != null;
+        return os(true).equals("Windows") && runtimeExec("reg query HKU\\S-1-5-19", null, null, null, null) != null;        
     }
     
     public boolean isLinux(){
@@ -32387,63 +32395,32 @@ class TelaBloqueio {
         "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings";
     private static final String LOCK11 =
         "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Lock Screen";
-    public enum Modo { MINIMO, PADRAO }
-    private TelaBloqueio() { }
-    public static void main(String[] args) {
-        if (args.length != 1) {
-            uso();
-            System.exit(2);
-        }
-
-        Modo modo;
-        try {
-            modo = Modo.valueOf(args[0].toUpperCase(java.util.Locale.ROOT));
-        } catch (IllegalArgumentException e) {
-            System.err.println("Modo desconhecido: " + args[0]);
-            uso();
-            System.exit(2);
-            return;
-        }
-
-        try {
-            aplicar(modo);
-        } catch (IllegalStateException e) {
-            System.err.println();
+    public enum Modo { MINIMO, PADRAO }    
+    public TelaBloqueio(String[] args){        
+        try{
+            if (args[0].equals("minimo")){
+                aplicarMinimo();
+                return;
+            }
+            if (args[0].equals("padrao")){
+                aplicarPadrao();
+                return;
+            }
+            System.out.println("Uso: java TelaBloqueio.java <minimo|padrao>");
+            System.out.println();
+            System.out.println("  minimo   deixa a tela de bloqueio com o minimo visivel");
+            System.out.println("  padrao   devolve o comportamento de fabrica do Windows");
+        } catch (Exception e) {
             System.err.println(e.getMessage());
             System.exit(1);
-        } catch (java.io.IOException e) {
-            System.err.println();
-            System.err.println("Falha de E/S: " + e.getMessage());
-            System.exit(1);
         }
-    }
-    private static void uso() {
-        System.out.println("Uso: java TelaBloqueio.java <minimo|padrao>");
-        System.out.println();
-        System.out.println("  minimo   deixa a tela de bloqueio com o minimo visivel");
-        System.out.println("  padrao   devolve o comportamento de fabrica do Windows");
-    }
-    public static void aplicar(Modo modo) throws java.io.IOException {
-        exigirWindows();
-        exigirAdministrador();
-        System.out.println();
-        System.out.println("Modo: " + modo);
-        System.out.println("=========================================");
-        if (modo == Modo.MINIMO) {
-            aplicarMinimo();
-        } else {
-            aplicarPadrao();
-        }
-        System.out.println();
-        System.out.println("=========================================");
-        System.out.println("Concluido. Faca logoff ou reinicie.");
     }
     private static void aplicarMinimo() throws java.io.IOException {
         System.out.println();
-        System.out.println("[1/6] Gerando imagem preta...");
+        System.out.println("[1/5] Gerando imagem preta...");
         gerarImagemPreta();
         System.out.println();
-        System.out.println("[2/6] Definindo o fundo da tela de bloqueio...");
+        System.out.println("[2/5] Definindo o fundo da tela de bloqueio...");
         definirTexto(CSP, "LockScreenImagePath", ARQ_IMAGEM);
         definirTexto(CSP, "LockScreenImageUrl",  ARQ_IMAGEM);
         definirDword(CSP, "LockScreenImageStatus", 1);
@@ -32451,89 +32428,54 @@ class TelaBloqueio {
         // 0 mantem o mesmo fundo preto na tela de senha
         definirDword(SYS, "DisableLogonBackgroundImage", 0);
         System.out.println();
-        System.out.println("[3/6] Desativando Spotlight, dicas e curiosidades...");
+        System.out.println("[3/5] Desativando Spotlight, dicas e curiosidades...");
         definirDword(CDM, "RotatingLockScreenEnabled", 0);
         definirDword(CDM, "RotatingLockScreenOverlayEnabled", 0);
         definirDword(CDM, "SubscribedContent-338387Enabled", 0);
         definirDword(CLOUD, "DisableWindowsSpotlightFeatures", 1);
         System.out.println();
-        System.out.println("[4/6] Removendo notificacoes e widgets...");
+        System.out.println("[4/5] Removendo notificacoes e widgets...");
         definirDword(SYS, "DisableLockScreenAppNotifications", 1);
         definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 0);
         definirDword(LOCK11, "LockScreenWidgetsEnabled", 0);
         System.out.println();
-        System.out.println("[5/6] Ocultando as informacoes do usuario...");
-        definirDword(POL_SYS, "dontdisplaylastusername", 1);
-        definirDword(POL_SYS, "DontDisplayLockedUserId", 3);
-
-        System.out.println();
-        System.out.println("[6/6] Removendo o relogio...");
+        System.out.println("[5/5] Removendo o relogio...");
         definirDword(PERS, "NoLockScreen", 1);
-        System.out.println();
-        System.out.println("ATENCAO: com dontdisplaylastusername ativo voce precisara");
-        System.out.println("digitar o NOME DE USUARIO alem da senha ao entrar.");
-        System.out.println();
-        System.out.println("Continuam visiveis, e nao podem ser removidos: o campo de");
-        System.out.println("senha e os icones de rede, acessibilidade e energia.");
+        //System.out.println();
+        //System.out.println("[6/6] Ocultando as informacoes do usuario...");
+        //definirDword(POL_SYS, "dontdisplaylastusername", 1);
+        //definirDword(POL_SYS, "DontDisplayLockedUserId", 3);
     }
     private static void aplicarPadrao() throws java.io.IOException {
         System.out.println();
-        System.out.println("[1/5] Liberando o fundo da tela de bloqueio...");
+        System.out.println("[1/4] Liberando o fundo da tela de bloqueio...");
         remover(CSP, "LockScreenImagePath");
         remover(CSP, "LockScreenImageUrl");
         remover(CSP, "LockScreenImageStatus");
         remover(PERS, "LockScreenImage");
         remover(SYS,  "DisableLogonBackgroundImage");
         System.out.println();
-        System.out.println("[2/5] Reativando a tela de bloqueio (relogio e data)...");
+        System.out.println("[2/4] Reativando a tela de bloqueio (relogio e data)...");
         remover(PERS, "NoLockScreen");
         System.out.println();
-        System.out.println("[3/5] Reativando o Windows Spotlight...");
+        System.out.println("[3/4] Reativando o Windows Spotlight...");
         remover(CLOUD, "DisableWindowsSpotlightFeatures");
         definirDword(CDM, "RotatingLockScreenEnabled", 1);
         definirDword(CDM, "RotatingLockScreenOverlayEnabled", 1);
         definirDword(CDM, "SubscribedContent-338387Enabled", 1);
         System.out.println();
-        System.out.println("[4/5] Reativando notificacoes e widgets...");
+        System.out.println("[4/4] Reativando notificacoes e widgets...");
         remover(SYS, "DisableLockScreenAppNotifications");
         definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 1);
         remover(LOCK11, "LockScreenWidgetsEnabled");
-        System.out.println();
-        System.out.println("[5/5] Exibindo o nome do usuario novamente...");
-        definirDword(POL_SYS, "dontdisplaylastusername", 0);
-        definirDword(POL_SYS, "DontDisplayLockedUserId", 0);
+        //System.out.println();
+        //System.out.println("[5/5] Exibindo o nome do usuario novamente...");
+        //definirDword(POL_SYS, "dontdisplaylastusername", 0);
+        //definirDword(POL_SYS, "DontDisplayLockedUserId", 0);
         apagarPasta();
         System.out.println();
         System.out.println("O Spotlight pode levar um logon e alguns minutos de internet");
         System.out.println("para baixar a primeira imagem.");
-    }
-    private static void exigirWindows() {
-        String so = System.getProperty("os.name", "");
-        if (!so.toLowerCase(java.util.Locale.ROOT).contains("win")) {
-            throw new IllegalStateException(
-                "Esta classe so funciona no Windows. Sistema detectado: " + so);
-        }
-    }
-
-    private static void exigirAdministrador() {
-        // HKU\S-1-5-19 (conta LocalService) so e legivel com elevacao
-        java.util.List<String> cmd =
-            java.util.Arrays.asList("reg", "query", "HKU\\S-1-5-19");
-
-        int codigo;
-        try {
-            codigo = executarSilencioso(cmd);
-        } catch (java.io.IOException e) {
-            throw new IllegalStateException(
-                "Nao foi possivel verificar privilegios: " + e.getMessage());
-        }
-
-        if (codigo != 0) {
-            throw new IllegalStateException(
-                "Execute como Administrador.\n"
-              + "Abra o Prompt ou o PowerShell com 'Executar como administrador'\n"
-              + "e rode o comando novamente.");
-        }
     }
     private static void gerarImagemPreta() throws java.io.IOException {
         java.nio.file.Path pasta = java.nio.file.Paths.get(PASTA_BASE);
@@ -32553,16 +32495,13 @@ class TelaBloqueio {
         }
         System.out.println("  [ok] " + ARQ_IMAGEM + "  (" + LARGURA + "x" + ALTURA + ")");
     }
-
     private static void apagarPasta() {
         java.nio.file.Path pasta = java.nio.file.Paths.get(PASTA_BASE);
         if (!java.nio.file.Files.exists(pasta)) {
             return;
         }
-
         try (java.util.stream.Stream<java.nio.file.Path> caminhos =
                  java.nio.file.Files.walk(pasta)) {
-
             caminhos.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
                 try {
                     java.nio.file.Files.deleteIfExists(p);
@@ -32570,14 +32509,11 @@ class TelaBloqueio {
                     // arquivo em uso pelo Windows; sai no proximo boot
                 }
             });
-
             System.out.println();
             System.out.println("  [ok] Pasta removida: " + PASTA_BASE);
-
         } catch (java.io.IOException e) {
             System.out.println();
-            System.out.println("  [aviso] Nao foi possivel remover " + PASTA_BASE
-                             + ": " + e.getMessage());
+            System.out.println("  [aviso] Nao foi possivel remover " + PASTA_BASE + ": " + e.getMessage());
         }
     }
     private static void definirDword(String chave, String nome, int valor)
@@ -32603,43 +32539,29 @@ class TelaBloqueio {
             System.out.println("  [falhou] " + curto(chave) + "\\" + nome);
         }
     }
-
-    /** Remove um valor. Ausencia previa nao e tratada como erro. */
     private static void remover(String chave, String nome) throws java.io.IOException {
         java.util.List<String> cmd =
             java.util.Arrays.asList("reg", "delete", chave, "/v", nome, "/f");
-
         int codigo = executarSilencioso(cmd);
         String status = (codigo == 0) ? "[limpo]  " : "[ausente]";
         System.out.println("  " + status + " " + curto(chave) + "\\" + nome);
     }
-
     private static String curto(String chave) {
         int i = chave.lastIndexOf('\\');
         return (i < 0) ? chave : chave.substring(i + 1);
     }
-
-    // ---------------------------------------------------------------- processo
-
-    /** Executa o comando, descarta a saida e devolve o codigo de retorno. */
     private static int executarSilencioso(java.util.List<String> comando)
             throws java.io.IOException {
-
         ProcessBuilder pb = new ProcessBuilder(comando);
         pb.redirectErrorStream(true);
-
         Process p = pb.start();
-
-        // drenar a saida evita que o processo trave com o buffer cheio
-        try (java.io.BufferedReader r = new java.io.BufferedReader(
-                new java.io.InputStreamReader(
-                    p.getInputStream(), java.nio.charset.Charset.defaultCharset()))) {
-
-            while (r.readLine() != null) {
-                // descartado de proposito
-            }
+        try(
+            java.io.BufferedReader r = new java.io.BufferedReader(
+                new java.io.InputStreamReader(p.getInputStream(), java.nio.charset.Charset.defaultCharset())
+            )
+        ){
+            while (r.readLine() != null){}
         }
-
         try {
             return p.waitFor();
         } catch (InterruptedException e) {
@@ -36457,21 +36379,25 @@ Exemplos...
     y speed -ip 192.168.0.100
     Obs: -ip -port -server -client -send -receive|-r
 [y lock]
-    y lock
-    y lock w
-    y lock -1 -> desliga lock
-    y lock 0 -> somente o primeiro monitor
-    abaixo lock de sessao:
-    y lock lock # windows L
-    y lock logoff # shutdown /l # comando estranho mesmo
-    y lock logoff userA # logoff userA    
-    y lock disconnect # tsdiscon
-    y lock disconnect userA
-    y lock disconnect seAtivoDesconectaLoop1Segundo # pode ser usado com ssh
-    y lock shutdown # shutdown -s -t 1
-    y lock lock lock # lock fake seguido de lock real # esse lock fake nao permite click direito
-    obs: gera black screen
-    obs2: y lock w -> white screen
+    lock fake:
+        y lock # tela preta
+        y lock w # tela branca
+        y lock -1 -> desliga lock
+        y lock 0 -> somente o primeiro monitor
+        y lock 0 w
+    lock real:
+        y lock lock # windows L
+        y lock logoff # shutdown /l # comando estranho mesmo
+        y lock logoff userA # logoff userA    
+        y lock disconnect # tsdiscon
+        y lock disconnect userA
+        y lock disconnect seAtivoDesconectaLoop1Segundo # pode ser usado com ssh
+        y lock shutdown # shutdown -s -t 1
+    lock fake + real:
+        y lock lock lock # lock fake seguido de lock real # esse lock fake nao permite click direito
+    altera aparencia lock real(exige cmd admin):
+        y lock minimo # deixa as configuracoes de windows L com aparencias mais simples e escura
+        y lock padrao # volta de fabrica a aparencia do windows L
 [y monitor]
     y monitor cpu
     y monitor cpu oneLine
