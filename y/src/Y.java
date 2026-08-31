@@ -14773,6 +14773,8 @@ while True:
     private void ssh(String[] args) {        
         // créditos
         // https://github.com/is/jsch/tree/master/examples
+/////////////        
+//mostra_array(args);
         int port=22;
         if ( args.length != 2 && args.length != 3 )
         {
@@ -36979,21 +36981,22 @@ Exemplos...
     y dev_in | y banco buffer -n_lines 4000 -log buffer.log > /dev/null
     obs: ref. a dd if e dd of
 [y scp]
-    y scp file1 user,pass@servidor:file2
-    y scp file1 user,pass@servidor:file2 22
-    y scp user,pass@servidor:file1 file2
-    y scp user,pass@servidor:file1 file2 22
+    y scp file1 "user,pass@servidor:file2"
+    y scp file1 "user,pass@servidor:file2" 22
+    y scp "user,pass@servidor:file1" file2
+    y scp "user,pass@servidor:file1" file2 22
     comando windows:
-    y scp user,pass@servidor:c:/tmp file2 22
-    obs: user,pass ou user
+    y scp "user,pass@servidor:c:/tmp" file2 22
+    obs: "user,pass" ou user
 [y execSsh]
-    y execSsh user,pass@servidor command
-    y execSsh user,pass@servidor command 22
-    obs: user,pass ou user
+    y execSsh "user,pass@servidor" command
+    y execSsh "user,pass@servidor" command 22
+    obs: "user,pass" ou user
 [y ssh]
-    y ssh user,pass@servidor
-    y ssh user,pass@servidor 22
-    obs: user,pass ou user(dependendo da origem e destino windows buga)
+    y ssh "user,pass@servidor"
+    y ssh "user,pass@servidor" 22
+    obs: "user,pass" ou user(dependendo da origem e destino windows buga porque ainda usa JSch, a nova versao ainda nao esta pronta!)
+    obs2: esse parametro sem aspas no windows bug tudo -> "user,pass@servidor". o problema fica no y.bat com %1 ao inves do instavel %*(nao lembro porque tirei isso)
 [y sshinfo]
     y sshinfo
     y sshinfo 192.168.0.100
