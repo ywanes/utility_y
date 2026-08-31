@@ -37533,6 +37533,7 @@ Exemplos...
         NT AUTHORITY\\NetworkService  baixo local; na rede autentica como a maquina
         NT AUTHORITY\\LocalService    baixo local; na rede vai anonimo (sem credencial)
         menos privilegio primeiro: LocalService < NetworkService < LocalSystem
+    alternativas: nssm.exe e services.msc
 [y help]
     y help <command>
     y help router
