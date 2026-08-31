@@ -1474,10 +1474,10 @@ function load_movie(parm, table_click, streamURL){
         let volume=document.getElementById('video').volume;
         let epochMili=getEpochMili();
         if ( sign_first ){
-          redis_sign(get_nick_session(), 'Y', get_nick_name() + this.playlistmovie_v + digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest, 'epochMili': epochMili}));
+          redis_sign(get_nick_session(), 'Y', get_nick_name() + this.playlistmovie_v + digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest, 'epochMili': epochMili, 'ip_origem': '[IP_ORIGEM]'}));
           sign_first=false;
         }else{
-          r=redis_sign(get_nick_session(), 'N', get_nick_name() + this.playlistmovie_v + digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest, 'epochMili': epochMili}));
+          r=redis_sign(get_nick_session(), 'N', get_nick_name() + this.playlistmovie_v + digest, JSON.stringify({'currentTime': currentTime, 'duration': duration, 'digest': digest, 'epochMili': epochMili, 'ip_origem': '[IP_ORIGEM]'}));
           if ( r == '+NOK' ){
             document.getElementById('principal').innerHTML='';
             document.getElementById('resume').innerHTML='<a style="color: white; font-size: 25px; font-family: Franklin Gothic Medium;" href="/"><br><br>&nbsp;&nbsp;&nbsp;ESSE TITULO JA ESTA SENDO VISUALIZADO EM OUTRO TERMINAL!<br><br>&nbsp;&nbsp;&nbsp;' + digest + '</a>';

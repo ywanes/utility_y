@@ -33998,7 +33998,7 @@ class HttpServer extends Util{
                     continue;
                 }else
                     System.out.println("Conexao de origem: " + ip_origem + ", data:" + (new Date()));
-                new ClientThread(mode, socket, titulo_url, titulo, dir, endsWiths, host_display, cfg, titulo_url_opcional);
+                new ClientThread(mode, socket, titulo_url, titulo, dir, endsWiths, host_display, cfg, titulo_url_opcional, ip_origem);
             } catch (Exception e) {
                 System.out.println("Erro ao executar servidor:" + e.toString());
             }
@@ -34021,8 +34021,9 @@ class ClientThread extends Util{
     BufferedInputStream bis = null;
     String host_display=null;
     Boolean titulo_url_opcional=false;
+    String ip_origem=null;
     Y y=new Y();
-    public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg, Boolean titulo_url_opcional) {
+    public ClientThread(String mode, final Socket socket, String titulo_url, String titulo, String dir, String endsWiths, String host_display, String cfg, Boolean titulo_url_opcional, String ip_origem) {
         this.titulo_url = titulo_url;
         this.titulo = titulo;
         this.dir = dir;
@@ -34031,6 +34032,7 @@ class ClientThread extends Util{
         this.host_display = host_display;
         this.cfg = cfg;
         this.titulo_url_opcional = titulo_url_opcional;
+        this.ip_origem=ip_origem;
         new Thread() {
             public void run() {
                 try {
@@ -34153,8 +34155,11 @@ class ClientThread extends Util{
                   this.header_redis_sign = line.substring(12);
                 if (line.startsWith("Redis-KEY: ") )
                   this.header_redis_key = line.substring(11);
-                if (line.startsWith("Redis-VALUE: ") )
+                if (line.startsWith("Redis-VALUE: ") ){
                   this.header_redis_value = line.substring(13);
+                  if ( this.header_redis_value.contains("[IP_ORIGEM]") )
+                      this.header_redis_value=this.header_redis_value.replaceAll("\\[IP_ORIGEM\\]", ip_origem);
+                }
                 if (line.startsWith("Redis-DEL: ") )
                   this.header_redis_del = line.substring(11);
                 lineNumber++;
