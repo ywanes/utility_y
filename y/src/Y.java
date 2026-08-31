@@ -2490,6 +2490,12 @@ cat buffer.log
             winget(args);
             return;
         }
+        if ( args[0].equals("services") ){
+            args=removeParm(0, args);
+            new Service(args);
+            //winget(args);
+            return;
+        }
         if ( args[0].equals("update") || args[0].equals("u") ){
             update();
             return;
@@ -22586,6 +22592,943 @@ class terminal_linux {
 	}
 }
 
+class Service{
+    static final String JNA_URL =
+        "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/jna-5.14.0.jar";
+    static final long   JNA_SIZE     = 1_878_533L;
+    static final String JNA_FILENAME = "jna-5.14.0.jar";
+    static final java.io.File JNA_DIR = new java.io.File("c:\\y_lib");
+    static final boolean SVC_LOG = false;
+    Jna jna;
+    Scm scm;
+    String[] argv = new String[0];
+    boolean svcMode;
+    public Service(String[] args) {
+        try {
+            argv = args;
+            svcMode = args.length > 0 && "service".equalsIgnoreCase(args[0]);
+            boot();
+            dispatch();
+        } catch (Throwable t) {
+            Erro e = asErro(t);
+            if (e != null){
+                System.err.println(e.getMessage());
+                System.exit(1);
+            }
+            Throwable c = (t instanceof java.lang.reflect.InvocationTargetException
+                           && t.getCause() != null) ? t.getCause() : t;
+            System.err.println("erro inesperado: " + c);
+            if (debug()) c.printStackTrace();
+            else System.err.println("  (defina SERVICE_DEBUG=1 para ver o stack trace)");
+            System.exit(2);
+        }
+    }
+    static final class Erro extends RuntimeException {
+        Erro(String msg) { super(msg); }
+    }
+    static Erro asErro(Throwable t) {
+        for (Throwable c = t; c != null && c != c.getCause(); c = c.getCause())
+            if (c instanceof Erro) return (Erro) c;
+        return null;
+    }
+
+    static boolean debug() {
+        String v = System.getenv("SERVICE_DEBUG");
+        return v != null && !v.isEmpty() && !"0".equals(v);
+    }
+
+    /** Descricao curta dos codigos de erro do Windows mais comuns aqui. */
+    static String errHint(int e) {
+        switch (e) {
+            case 5:    return "acesso negado - rode como Administrador";
+            case 1053: return "o servico nao respondeu a tempo (janela de 30s do SCM)";
+            case 1056: return "o servico ja esta em execucao";
+            case 1060: return "o servico nao esta instalado";
+            case 1062: return "o servico nao esta em execucao";
+            case 1063: return "o processo nao foi iniciado pelo Gerenciador de Servicos";
+            case 1072: return "o servico esta marcado para exclusao";
+            case 1073: return "o servico ja existe";
+            default:   return null;
+        }
+    }
+
+    /** " (err N)" ou " (err N - descricao)". */
+    static String errSuffix(int e) {
+        String h = errHint(e);
+        return h == null ? " (err " + e + ")" : " (err " + e + " - " + h + ")";
+    }
+
+    /** Texto do modo de inicio -> dwStartType. */
+    static int parseStartType(String s) {
+        switch (s.toLowerCase()) {
+            case "auto": case "automatico":              return Scm.START_AUTO;
+            case "manual": case "demand":                return Scm.START_DEMAND;
+            case "desabilitado": case "disabled": case "off": return Scm.START_DISABLED;
+            default: throw new Erro("modo invalido: '" + s
+                + "'. Use: auto | manual | desabilitado");
+        }
+    }
+
+    void boot() throws Exception {
+        java.security.Security.setProperty("jdk.tls.disabledAlgorithms", "");
+        java.security.Security.setProperty("jdk.certpath.disabledAlgorithms", "");
+        System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
+        javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance("TLS");
+        ctx.init(null, null, null);
+        javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(ctx.getSocketFactory());
+
+        java.io.File jar = ensureJna();
+        java.net.URLClassLoader cl = new java.net.URLClassLoader(
+            new java.net.URL[]{ jar.toURI().toURL() },
+            Service.class.getClassLoader());
+        Thread.currentThread().setContextClassLoader(cl);
+
+        jna = new Jna();
+        jna.init(cl);
+        scm = new Scm();
+    }
+
+    java.io.File ensureJna() throws Exception {
+        java.io.File cache = new java.io.File(JNA_DIR, JNA_FILENAME);
+        if (cache.isFile() && cache.length() == JNA_SIZE) return cache;
+        if (svcMode) throw new Erro(
+            "Cache do JNA ausente em " + cache.getPath() + ".\n"
+          + "  dica: rode uma vez  java Service.java status <nome>  antes de instalar o servico.");
+
+        JNA_DIR.mkdirs();
+        java.net.HttpURLConnection con = (java.net.HttpURLConnection)
+            java.net.URI.create(JNA_URL).toURL().openConnection();
+        con.setConnectTimeout(15000);
+        con.setReadTimeout(120000);
+        java.io.File tmp = new java.io.File(cache.getPath() + ".part");
+        try (java.io.InputStream in = con.getInputStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(tmp)) {
+            byte[] b = new byte[16384];
+            int n;
+            while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        }
+        if (tmp.length() != JNA_SIZE) {
+            long got = tmp.length();
+            tmp.delete();
+            throw new Erro("Download do JNA invalido: esperado " + JNA_SIZE
+                + " bytes, veio " + got + ". Rede/proxy? Tente de novo.");
+        }
+        java.nio.file.Files.move(tmp.toPath(), cache.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return cache;
+    }
+
+    void dispatch() throws Exception {
+        if (argv.length == 0) { usage(); System.exit(1); return; }
+        String cmd = argv[0].toLowerCase();
+        switch (cmd) {
+            case "install":
+                need(2, "install <nome> <script.bat>");
+                scm.install(argv[1], argv[2]);
+                System.out.println("ok: servico '" + argv[1] + "' instalado (auto-start).");
+                System.out.println("   inicie com  java Service.java start " + argv[1]);
+                break;
+            case "start":
+                need(1, "start <nome>");
+                scm.start(argv[1]);
+                System.out.println("ok: servico '" + argv[1] + "' iniciado.");
+                break;
+            case "stop":
+                need(1, "stop <nome>");
+                scm.stop(argv[1]);
+                System.out.println("ok: servico '" + argv[1] + "' parado.");
+                break;
+            case "restart":
+                need(1, "restart <nome>");
+                scm.stop(argv[1]);
+                scm.waitState(argv[1], Scm.SERVICE_STOPPED, 30000);
+                scm.start(argv[1]);
+                System.out.println("ok: servico '" + argv[1] + "' reiniciado.");
+                break;
+            case "status":
+                need(1, "status <nome>");
+                System.out.println(argv[1] + ": " + scm.statusName(argv[1]));
+                break;
+            case "setmode":
+                need(2, "setMode <nome> <auto|manual|desabilitado>");
+                int st = parseStartType(argv[2]);
+                scm.setStartType(argv[1], st);
+                System.out.println("ok: inicio de '" + argv[1] + "' agora e " + scm.startLabel(st) + ".");
+                break;
+            case "list":
+                scm.list(argv.length > 1 ? argv[1] : null);   // filtro opcional por nome
+                break;
+            case "remove":
+                need(1, "remove <nome>");
+                scm.remove(argv[1]);
+                System.out.println("ok: servico '" + argv[1] + "' removido.");
+                break;
+            case "service":
+                need(2, "service <nome> <script.bat>");
+                new Svc().run(argv[1], argv[2]);
+                System.exit(0);
+                break;
+            default:
+                usage();
+                System.exit(1);
+        }
+    }
+
+    void need(int n, String form) {
+        if (argv.length < n + 1) throw new Erro("uso: java Service.java " + form);
+    }
+
+    void usage() {
+        System.out.println(
+            "Service - wrapper de servico do Windows\n\n" +
+            "  install <nome> <script.bat>   registra (auto-start, LocalSystem)\n" +
+            "  start   <nome>                inicia\n" +
+            "  stop    <nome>                para\n" +
+            "  restart <nome>                para e inicia\n" +
+            "  status  <nome>                estado, tipo de inicio e conta\n" +
+            "  setMode <nome> <auto|manual|desabilitado>   muda o tipo de inicio\n" +
+            "  list    [filtro]              lista os servicos (filtro por nome)\n" +
+            "  remove  <nome>                para e desregistra\n\n" +
+            "install/start/stop/restart/setMode/remove precisam de prompt elevado.\n" +
+            "status/list rodam sem admin. O modo 'service' e usado apenas pelo SCM.\n\n" +
+            "Contas internas (coluna CONTA; sem senha, geridas pelo SCM):\n" +
+            "  LocalSystem                  privilegio MAXIMO; na rede age como a maquina\n" +
+            "  NT AUTHORITY\\NetworkService  baixo local; na rede autentica como a maquina\n" +
+            "  NT AUTHORITY\\LocalService    baixo local; na rede vai anonimo (sem credencial)\n" +
+            "  menos privilegio primeiro: LocalService < NetworkService < LocalSystem");
+    }
+
+    // =================================================================
+    //  Jna  -  ponte por reflexao, nenhuma classe do jna em compilacao
+    // =================================================================
+
+    class Jna {
+        int POINTER_SIZE, WCHAR_SIZE, ALT_CONVENTION;
+        ClassLoader loader;
+
+        Class<?> C_Pointer, C_Memory, C_Native, C_NativeLibrary, C_Function,
+                 C_Callback, C_CallbackProxy, C_AltCC, C_CallbackRef;
+
+        java.lang.reflect.Constructor<?> CT_Memory, CT_Pointer;
+
+        java.lang.reflect.Method M_libOpts, M_func,
+            M_invokeInt, M_invokeVoid, M_invokePointer,
+            M_setInt, M_setPointer, M_setWideString,
+            M_getInt, M_getPointer, M_getWideString, M_clear, M_lastError, M_getFnPtr;
+
+        /* Referencias fortes. Sem isto o GC coleta os proxies e a Memory,
+           e o processo morre com crash nativo na primeira chamada do SCM. */
+        final java.util.List<Object> pinned =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<Object>());
+
+        void init(ClassLoader cl) throws Exception {
+            loader          = cl;
+            C_Pointer       = cl.loadClass("com.sun.jna.Pointer");
+            C_Memory        = cl.loadClass("com.sun.jna.Memory");
+            C_Native        = cl.loadClass("com.sun.jna.Native");
+            C_NativeLibrary = cl.loadClass("com.sun.jna.NativeLibrary");
+            C_Function      = cl.loadClass("com.sun.jna.Function");
+            C_Callback      = cl.loadClass("com.sun.jna.Callback");
+            C_CallbackProxy = cl.loadClass("com.sun.jna.CallbackProxy");
+            C_AltCC         = cl.loadClass("com.sun.jna.AltCallingConvention");
+            C_CallbackRef   = cl.loadClass("com.sun.jna.CallbackReference");
+
+            POINTER_SIZE   = C_Native.getField("POINTER_SIZE").getInt(null);
+            WCHAR_SIZE     = C_Native.getField("WCHAR_SIZE").getInt(null);
+            ALT_CONVENTION = C_Function.getField("ALT_CONVENTION").getInt(null);
+
+            CT_Memory  = C_Memory.getConstructor(long.class);
+            CT_Pointer = C_Pointer.getConstructor(long.class);
+
+            M_libOpts       = C_NativeLibrary.getMethod("getInstance", String.class, java.util.Map.class);
+            M_func          = C_NativeLibrary.getMethod("getFunction", String.class);
+            M_invokeInt     = C_Function.getMethod("invokeInt",     Object[].class);
+            M_invokeVoid    = C_Function.getMethod("invokeVoid",    Object[].class);
+            M_invokePointer = C_Function.getMethod("invokePointer", Object[].class);
+
+            M_setInt        = C_Pointer.getMethod("setInt",        long.class, int.class);
+            M_setPointer    = C_Pointer.getMethod("setPointer",    long.class, C_Pointer);
+            M_setWideString = C_Pointer.getMethod("setWideString", long.class, String.class);
+            M_getInt        = C_Pointer.getMethod("getInt",     long.class);
+            M_getPointer    = C_Pointer.getMethod("getPointer", long.class);
+            M_getWideString = C_Pointer.getMethod("getWideString", long.class);
+            M_clear         = C_Memory.getMethod("clear");
+
+            M_lastError = C_Native.getMethod("getLastError");
+            M_getFnPtr  = C_CallbackRef.getMethod("getFunctionPointer", C_Callback);
+        }
+
+        Object stdLib(String name) {
+            java.util.HashMap<String, Object> opts = new java.util.HashMap<>();
+            opts.put("calling-convention", ALT_CONVENTION);
+            return inv(M_libOpts, null, name, opts);
+        }
+
+        Object func(Object lib, String name) { return inv(M_func, lib, name); }
+
+        int     callInt (Object f, Object... a) { return (int) inv(M_invokeInt,     f, (Object) a); }
+        void    callVoid(Object f, Object... a) {            inv(M_invokeVoid,     f, (Object) a); }
+        Object  callPtr (Object f, Object... a) { return      inv(M_invokePointer,  f, (Object) a); }
+        boolean callBool(Object f, Object... a) { return callInt(f, a) != 0; }
+
+        Object mem(long size) { Object m = ctor(CT_Memory, size); inv(M_clear, m); pinned.add(m); return m; }
+        Object ptr(long addr) { return ctor(CT_Pointer, addr); }
+
+        void setInt    (Object p, long off, int v)    { inv(M_setInt,     p, off, v); }
+        void setPointer(Object p, long off, Object v) { inv(M_setPointer, p, off, v); }
+        int  getInt    (Object p, long off) { return (int) inv(M_getInt,     p, off); }
+        Object getPointer(Object p, long off) { return    inv(M_getPointer, p, off); }
+        String getWideString(Object p, long off) {
+            Object s = inv(M_getWideString, p, off);
+            return s == null ? null : (String) s;
+        }
+
+        int lastError() { return (int) inv(M_lastError, null); }
+
+        /** Memory com wide string, para as funcoes ...W do Windows. */
+        Object wstr(String s) {
+            Object m = mem((long) (s.length() + 1) * WCHAR_SIZE);
+            inv(M_setWideString, m, 0L, s);
+            return m;
+        }
+
+        /**
+         * Devolve um PONTEIRO DE FUNCAO nativo apontando para codigo Java.
+         *
+         * Nao ha interface de callback declarada: ela teria que estender
+         * com.sun.jna.Callback, inexistente em tempo de compilacao. Em vez
+         * disso usa-se com.sun.jna.CallbackProxy, fornecida pelo proprio
+         * jna: um Proxy dinamico a implementa e declara a assinatura
+         * nativa via getParameterTypes()/getReturnType().
+         */
+        Object fnPtr(Class<?> ret, Class<?>[] params,
+                     java.util.function.Function<Object[], Object> body) {
+            Object cb = java.lang.reflect.Proxy.newProxyInstance(
+                loader,
+                new Class<?>[]{ C_CallbackProxy, C_AltCC },
+                (proxy, m, a) -> {
+                    switch (m.getName()) {
+                        case "callback":          return body.apply((Object[]) a[0]);
+                        case "getParameterTypes": return params;
+                        case "getReturnType":     return ret;
+                        case "toString":          return "CallbackProxy";
+                        case "hashCode":          return System.identityHashCode(proxy);
+                        case "equals":            return proxy == a[0];
+                        default:                  return null;
+                    }
+                });
+            pinned.add(cb);
+            Object fp = inv(M_getFnPtr, null, cb);
+            pinned.add(fp);
+            return fp;
+        }
+
+        private Object inv(java.lang.reflect.Method m, Object target, Object... args) {
+            try { return m.invoke(target, args); }
+            catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable c = e.getCause();
+                if (c instanceof RuntimeException) throw (RuntimeException) c;
+                throw new RuntimeException(c);
+            } catch (Exception e) { throw new RuntimeException(e); }
+        }
+
+        private Object ctor(java.lang.reflect.Constructor<?> c, Object... args) {
+            try { return c.newInstance(args); }
+            catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cs = e.getCause();
+                if (cs instanceof RuntimeException) throw (RuntimeException) cs;
+                throw new RuntimeException(cs);
+            } catch (Exception e) { throw new RuntimeException(e); }
+        }
+    }
+
+    // =================================================================
+    //  Scm  -  advapi32, lado do gerenciamento
+    // =================================================================
+
+    class Scm {
+        static final int SC_MANAGER_ALL_ACCESS        = 0xF003F;
+        static final int SC_MANAGER_CONNECT           = 0x0001;   // read-only, nao exige admin
+        static final int SC_MANAGER_ENUMERATE_SERVICE = 0x0004;
+        static final int SERVICE_ALL_ACCESS    = 0xF01FF;
+        static final int SERVICE_QUERY_STATUS  = 0x0004;
+        static final int SERVICE_QUERY_CONFIG  = 0x0001;
+        static final int SERVICE_CHANGE_CONFIG = 0x0002;
+        static final int SERVICE_NO_CHANGE     = 0xFFFFFFFF;   // -1: nao altera o campo
+
+        // dwStartType (QueryServiceConfigW)
+        static final int START_BOOT     = 0;
+        static final int START_SYSTEM   = 1;
+        static final int START_AUTO     = 2;
+        static final int START_DEMAND   = 3;   // "manual"
+        static final int START_DISABLED = 4;
+
+        // EnumServicesStatusExW
+        static final int SC_ENUM_PROCESS_INFO = 0;
+        static final int SERVICE_WIN32        = 0x00000030;   // own + share
+        static final int SERVICE_STATE_ALL    = 0x00000003;
+        static final int ERROR_MORE_DATA      = 234;
+        static final int SERVICE_START         = 0x0010;
+        static final int SERVICE_STOP          = 0x0020;
+        static final int DELETE                = 0x00010000;
+
+        static final int SERVICE_WIN32_OWN_PROCESS = 0x00000010;
+        static final int SERVICE_AUTO_START        = 0x00000002;
+        static final int SERVICE_ERROR_NORMAL      = 0x00000001;
+
+        static final int SERVICE_STOPPED          = 1;
+        static final int SERVICE_START_PENDING    = 2;
+        static final int SERVICE_STOP_PENDING     = 3;
+        static final int SERVICE_RUNNING          = 4;
+        static final int SERVICE_CONTINUE_PENDING = 5;
+        static final int SERVICE_PAUSE_PENDING    = 6;
+        static final int SERVICE_PAUSED           = 7;
+
+        static final int SERVICE_ACCEPT_STOP     = 0x00000001;
+        static final int SERVICE_ACCEPT_SHUTDOWN = 0x00000004;
+
+        static final int SERVICE_CONTROL_STOP        = 0x00000001;
+        static final int SERVICE_CONTROL_INTERROGATE = 0x00000004;
+        static final int SERVICE_CONTROL_SHUTDOWN    = 0x00000005;
+
+        static final int SC_STATUS_PROCESS_INFO = 0;
+
+        static final int ERR_SERVICE_EXISTS   = 1073;
+        static final int ERR_SERVICE_NOT_EXIST= 1060;
+        static final int ERR_ALREADY_RUNNING  = 1056;
+        static final int ERR_NOT_ACTIVE       = 1062;
+
+        /* SERVICE_STATUS         = 7 DWORDs = 28 bytes, sem padding
+           SERVICE_STATUS_PROCESS = 9 DWORDs = 36 bytes, sem padding
+           SERVICE_TABLE_ENTRY    = 2 ponteiros                        */
+        static final int SZ_STATUS      = 28;
+        static final int SZ_STATUS_PROC = 36;
+
+        Object lib;
+        Object OpenSCManagerW, OpenServiceW, CreateServiceW, DeleteService,
+               StartServiceW, ControlService, QueryServiceStatusEx, CloseServiceHandle,
+               StartServiceCtrlDispatcherW, RegisterServiceCtrlHandlerExW, SetServiceStatus,
+               EnumServicesStatusExW, QueryServiceConfigW, ChangeServiceConfigW;
+
+        Scm() {
+            lib = jna.stdLib("advapi32");
+            OpenSCManagerW                = jna.func(lib, "OpenSCManagerW");
+            OpenServiceW                  = jna.func(lib, "OpenServiceW");
+            CreateServiceW                = jna.func(lib, "CreateServiceW");
+            DeleteService                 = jna.func(lib, "DeleteService");
+            StartServiceW                 = jna.func(lib, "StartServiceW");
+            ControlService                = jna.func(lib, "ControlService");
+            QueryServiceStatusEx          = jna.func(lib, "QueryServiceStatusEx");
+            CloseServiceHandle            = jna.func(lib, "CloseServiceHandle");
+            StartServiceCtrlDispatcherW   = jna.func(lib, "StartServiceCtrlDispatcherW");
+            RegisterServiceCtrlHandlerExW = jna.func(lib, "RegisterServiceCtrlHandlerExW");
+            SetServiceStatus              = jna.func(lib, "SetServiceStatus");
+            EnumServicesStatusExW         = jna.func(lib, "EnumServicesStatusExW");
+            QueryServiceConfigW           = jna.func(lib, "QueryServiceConfigW");
+            ChangeServiceConfigW          = jna.func(lib, "ChangeServiceConfigW");
+        }
+
+        Object openScm(int access) {
+            Object h = jna.callPtr(OpenSCManagerW, null, null, access);
+            if (h == null) {
+                int e = jna.lastError();
+                throw new Erro(e == 5
+                    ? "Acesso negado ao Gerenciador de Servicos.\n"
+                      + "  dica: abra o cmd como Administrador."
+                    : "Nao foi possivel abrir o Gerenciador de Servicos" + errSuffix(e));
+            }
+            return h;
+        }
+
+        Object openSvc(Object scmH, String name, int access) {
+            Object h = jna.callPtr(OpenServiceW, scmH, jna.wstr(name), access);
+            if (h == null) {
+                int e = jna.lastError();
+                if (e != ERR_SERVICE_NOT_EXIST)
+                    throw new Erro("Nao foi possivel abrir o servico '" + name + "'" + errSuffix(e));
+                String low = name.toLowerCase();
+                String dica;
+                if (low.endsWith(".bat") || low.endsWith(".cmd") || low.endsWith(".exe")) {
+                    String base = name.substring(0, name.lastIndexOf('.'));
+                    dica = "\n  dica: o nome do servico nao leva extensao - voce quis dizer '"
+                         + base + "'?";
+                } else {
+                    dica = "\n  dica: registre com  java Service.java install " + name
+                         + " <script.bat>";
+                }
+                throw new Erro("O servico '" + name + "' nao esta instalado." + dica);
+            }
+            return h;
+        }
+
+        void close(Object h) { if (h != null) jna.callBool(CloseServiceHandle, h); }
+
+        /** Linha de comando que o SCM vai executar. */
+        String binPath(String name, String script) throws Exception {
+            String javaExe = new java.io.File(System.getProperty("java.home"),
+                                              "bin\\java.exe").getPath();
+            String scriptAbs = new java.io.File(script).getAbsolutePath();
+
+            // Modo source-launch (java Service.java ...): jdk.launcher.sourcefile
+            // aponta para o .java em execucao. Registramos o mesmo modo, sem .class.
+            String src = System.getProperty("jdk.launcher.sourcefile");
+            if (src != null) {
+                String srcAbs = new java.io.File(src).getAbsolutePath();
+                return "\"" + javaExe + "\""
+                     + " -Djava.awt.headless=true"
+                     + " \"" + srcAbs + "\""
+                     + " service " + name
+                     + " \"" + scriptAbs + "\"";
+            }
+
+            // Modo compilado (javac Service.java): roda por classpath.
+            java.io.File cp = new java.io.File(Service.class.getProtectionDomain()
+                                  .getCodeSource().getLocation().toURI());
+            return "\"" + javaExe + "\""
+                 + " -Djava.awt.headless=true"
+                 + " -cp \"" + cp.getPath() + "\""
+                 + " Service service " + name
+                 + " \"" + scriptAbs + "\"";
+        }
+
+        void install(String name, String script) throws Exception {
+            java.io.File f = new java.io.File(script);
+            if (!f.isFile()) throw new Erro(
+                "Script nao encontrado:\n  " + f.getAbsolutePath());
+
+            Object scmH = openScm(SC_MANAGER_ALL_ACCESS);
+            Object svc  = null;
+            try {
+                svc = jna.callPtr(CreateServiceW, scmH,
+                    jna.wstr(name),                      // lpServiceName
+                    jna.wstr(name),                      // lpDisplayName
+                    SERVICE_ALL_ACCESS,
+                    SERVICE_WIN32_OWN_PROCESS,
+                    SERVICE_AUTO_START,
+                    SERVICE_ERROR_NORMAL,
+                    jna.wstr(binPath(name, script)),     // lpBinaryPathName
+                    null,                                // lpLoadOrderGroup
+                    null,                                // lpdwTagId
+                    null,                                // lpDependencies
+                    null,                                // lpServiceStartName -> LocalSystem
+                    null);                               // lpPassword
+                if (svc == null) {
+                    int e = jna.lastError();
+                    throw new Erro(e == ERR_SERVICE_EXISTS
+                        ? "O servico '" + name + "' ja existe.\n"
+                          + "  dica: use  remove " + name + "  antes, ou  start " + name
+                        : "Nao foi possivel criar o servico '" + name + "'" + errSuffix(e));
+                }
+            } finally { close(svc); close(scmH); }
+        }
+
+        void start(String name) {
+            Object scmH = openScm(SC_MANAGER_ALL_ACCESS);
+            Object svc  = null;
+            try {
+                svc = openSvc(scmH, name, SERVICE_START | SERVICE_QUERY_STATUS);
+                if (!jna.callBool(StartServiceW, svc, 0, null)) {
+                    int e = jna.lastError();
+                    if (e != ERR_ALREADY_RUNNING)
+                        throw new Erro("Nao foi possivel iniciar '" + name + "'" + errSuffix(e));
+                }
+            } finally { close(svc); close(scmH); }
+        }
+
+        void stop(String name) {
+            Object scmH = openScm(SC_MANAGER_ALL_ACCESS);
+            Object svc  = null;
+            try {
+                svc = openSvc(scmH, name, SERVICE_STOP | SERVICE_QUERY_STATUS);
+                Object st = jna.mem(SZ_STATUS);
+                if (!jna.callBool(ControlService, svc, SERVICE_CONTROL_STOP, st)) {
+                    int e = jna.lastError();
+                    if (e != ERR_NOT_ACTIVE)
+                        throw new Erro("Nao foi possivel parar '" + name + "'" + errSuffix(e));
+                }
+            } finally { close(svc); close(scmH); }
+        }
+
+        /** Estado de um servico ja aberto (SERVICE_QUERY_STATUS). */
+        int queryState(Object svc) {
+            Object buf  = jna.mem(SZ_STATUS_PROC + 8);
+            Object nRef = jna.mem(4);
+            if (!jna.callBool(QueryServiceStatusEx, svc, SC_STATUS_PROCESS_INFO,
+                              buf, SZ_STATUS_PROC, nRef))
+                throw new Erro("Nao foi possivel consultar o estado" + errSuffix(jna.lastError()));
+            return jna.getInt(buf, 4);        // dwCurrentState
+        }
+
+        int state(String name) {
+            Object scmH = openScm(SC_MANAGER_CONNECT);
+            Object svc  = null;
+            try {
+                svc = openSvc(scmH, name, SERVICE_QUERY_STATUS);
+                return queryState(svc);
+            } finally { close(svc); close(scmH); }
+        }
+
+        /** {label do inicio, conta} de um servico aberto com SERVICE_QUERY_CONFIG.
+            QUERY_SERVICE_CONFIGW cabe em 8K. Offsets x64: dwStartType=4,
+            lpServiceStartName=48. {"?","?"} se a consulta falhar. */
+        String[] configInfo(Object svc) {
+            Object buf    = jna.mem(8192);
+            Object needed = jna.mem(4);
+            if (!jna.callBool(QueryServiceConfigW, svc, buf, 8192, needed))
+                return new String[]{ "?", "?" };
+            String modo  = startLabel(jna.getInt(buf, 4));
+            Object acct  = jna.getPointer(buf, 48);
+            String conta = acct == null ? "?" : jna.getWideString(acct, 0);
+            return new String[]{ modo, conta };
+        }
+
+        String startLabel(int t) {
+            switch (t) {
+                case START_BOOT:     return "boot";
+                case START_SYSTEM:   return "system";
+                case START_AUTO:     return "auto";
+                case START_DEMAND:   return "manual";
+                case START_DISABLED: return "desabilitado";
+                default:             return "?";
+            }
+        }
+
+        /** Estado + tipo de inicio + conta que roda. Read-only, nao exige admin.
+            Offsets de QUERY_SERVICE_CONFIGW (x64): dwStartType em 4, lpServiceStartName em 48. */
+        String statusName(String name) {
+            Object scmH = openScm(SC_MANAGER_CONNECT);
+            Object svc  = null;
+            try {
+                svc = openSvc(scmH, name, SERVICE_QUERY_STATUS | SERVICE_QUERY_CONFIG);
+                int s = queryState(svc);
+                String[] ci = configInfo(svc);   // {inicio, conta}
+                return friendlyState(s) + ", inicio: " + ci[0] + ", conta: " + ci[1];
+            } finally { close(svc); close(scmH); }
+        }
+
+        /** Enumera os servicos do Windows (nome + estado). Filtro opcional por
+            substring do nome (case-insensitive). Read-only, nao exige admin. */
+        void list(String filtro) {
+            // ENUM_SERVICE_STATUS_PROCESSW (x64): 2 ponteiros + SERVICE_STATUS_PROCESS,
+            // com o struct alinhado ao ponteiro. dwCurrentState fica em 2*ptr + 4.
+            final int P    = jna.POINTER_SIZE;
+            final int ENTRY = 2 * P + ((SZ_STATUS_PROC + P - 1) / P) * P;   // 56 no x64
+            final String f  = filtro == null ? null : filtro.toLowerCase();
+
+            Object scmH = openScm(SC_MANAGER_CONNECT | SC_MANAGER_ENUMERATE_SERVICE);
+            java.util.List<String[]> linhas = new java.util.ArrayList<>();
+            try {
+                int cb = 64 * 1024;
+                Object buf    = jna.mem(cb);
+                Object resume = jna.mem(4);                  // in/out, comeca em 0
+                while (true) {
+                    Object needed   = jna.mem(4);
+                    Object retornou = jna.mem(4);
+                    boolean ok = jna.callBool(EnumServicesStatusExW, scmH,
+                        SC_ENUM_PROCESS_INFO, SERVICE_WIN32, SERVICE_STATE_ALL,
+                        buf, cb, needed, retornou, resume, null);
+                    int n = jna.getInt(retornou, 0);
+                    for (int i = 0; i < n; i++) {
+                        long base   = (long) i * ENTRY;
+                        Object nmPtr = jna.getPointer(buf, base);
+                        String nome  = nmPtr == null ? "" : jna.getWideString(nmPtr, 0);
+                        int estado   = jna.getInt(buf, base + 2L * P + 4);
+                        if (f != null && !nome.toLowerCase().contains(f)) continue;
+                        String modo = "?", conta = "?";     // 1 consulta de config por servico
+                        Object svc = jna.callPtr(OpenServiceW, scmH, jna.wstr(nome),
+                                                 SERVICE_QUERY_CONFIG);
+                        if (svc != null) {
+                            try { String[] ci = configInfo(svc); modo = ci[0]; conta = ci[1]; }
+                            finally { close(svc); }
+                        }
+                        linhas.add(new String[]{ nome, friendlyState(estado), modo, conta });
+                    }
+                    if (ok) break;                          // acabou
+                    int e = jna.lastError();
+                    if (e == ERROR_MORE_DATA) continue;     // resume avancou, relê
+                    throw new Erro("Nao foi possivel enumerar os servicos" + errSuffix(e));
+                }
+            } finally { close(scmH); }
+
+            linhas.sort((a, b) -> a[0].compareToIgnoreCase(b[0]));
+            if (linhas.isEmpty()) {
+                System.out.println(filtro == null
+                    ? "nenhum servico encontrado."
+                    : "nenhum servico com '" + filtro + "' no nome.");
+                return;
+            }
+            System.out.printf("  %-34s %-14s %-9s %s%n", "SERVICO", "ESTADO", "INICIO", "CONTA");
+            for (String[] l : linhas)
+                System.out.printf("  %-34s %-14s %-9s %s%n", l[0], l[1], l[2], l[3]);
+            System.out.println("  --");
+            System.out.println("  " + linhas.size() + " servico(s)"
+                + (filtro == null ? "" : " com '" + filtro + "'"));
+        }
+
+        String friendlyState(int s) {
+            switch (s) {
+                case SERVICE_STOPPED:          return "parado";
+                case SERVICE_START_PENDING:    return "iniciando";
+                case SERVICE_STOP_PENDING:     return "parando";
+                case SERVICE_RUNNING:          return "em execucao";
+                case SERVICE_CONTINUE_PENDING: return "retomando";
+                case SERVICE_PAUSE_PENDING:    return "pausando";
+                case SERVICE_PAUSED:           return "pausado";
+                default:                       return "estado desconhecido";
+            }
+        }
+
+        void waitState(String name, int want, long timeoutMs) {
+            long t0 = System.currentTimeMillis();
+            while (System.currentTimeMillis() - t0 < timeoutMs) {
+                if (state(name) == want) return;
+                try { Thread.sleep(300); } catch (InterruptedException e) { return; }
+            }
+            throw new Erro("Tempo esgotado esperando '" + name + "' chegar em '"
+                + friendlyState(want) + "' (" + (timeoutMs / 1000) + "s).");
+        }
+
+        void remove(String name) {
+            try { stop(name); waitState(name, SERVICE_STOPPED, 30000); }
+            catch (Exception ignored) { }
+            Object scmH = openScm(SC_MANAGER_ALL_ACCESS);
+            Object svc  = null;
+            try {
+                svc = openSvc(scmH, name, DELETE);
+                if (!jna.callBool(DeleteService, svc))
+                    throw new Erro("Nao foi possivel remover '" + name + "'"
+                        + errSuffix(jna.lastError()));
+            } finally { close(svc); close(scmH); }
+        }
+
+        /** Muda o tipo de inicio (auto/manual/desabilitado). Exige admin. */
+        void setStartType(String name, int startType) {
+            Object scmH = openScm(SC_MANAGER_CONNECT);
+            Object svc  = null;
+            try {
+                svc = openSvc(scmH, name, SERVICE_CHANGE_CONFIG);
+                boolean ok = jna.callBool(ChangeServiceConfigW, svc,
+                    SERVICE_NO_CHANGE,   // dwServiceType   - nao altera
+                    startType,           // dwStartType     - o unico que muda
+                    SERVICE_NO_CHANGE,   // dwErrorControl  - nao altera
+                    null, null, null, null, null, null, null);  // strings/tag - nao altera
+                if (!ok) throw new Erro("Nao foi possivel mudar o inicio de '" + name + "'"
+                    + errSuffix(jna.lastError()));
+            } finally { close(svc); close(scmH); }
+        }
+    }
+
+    // =================================================================
+    //  Svc  -  o host: fala com o SCM e supervisiona o .bat
+    // =================================================================
+
+    class Svc {
+        String name, script;
+        java.io.File logFile;
+        Object statusHandle, statusMem, table;
+        volatile Process child;
+        volatile boolean stopping;
+        int checkPoint;
+
+        /* Job Object: matar a arvore inteira de forma garantida, inclusive netos
+           desanexados por 'start /b' (que o descendants()/destroy() do Java perde). */
+        Object k32, CreateJobObjectW, SetInformationJobObject, AssignProcessToJobObject,
+               TerminateJobObject, OpenProcess, CloseHandle;
+        volatile Object hJob;
+
+        static final int JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
+        static final int JobObjectExtendedLimitInformation  = 9;
+        static final int SZ_EXT_LIMIT_INFO                  = 144;   // x64
+        static final int PROCESS_TERMINATE                  = 0x0001;
+        static final int PROCESS_SET_QUOTA                  = 0x0100;
+
+        /** Bloqueia ate o servico terminar. So funciona lancado pelo SCM. */
+        void run(String name, String script) {
+            this.name   = name;
+            this.script = script;
+
+            java.io.File f   = new java.io.File(script);
+            java.io.File dir = f.getParentFile() != null ? f.getParentFile()
+                                                         : new java.io.File(".");
+            if (SVC_LOG) logFile = new java.io.File(dir, name + ".log");
+            log("host iniciando, script=" + f.getAbsolutePath());
+
+            statusMem = jna.mem(Scm.SZ_STATUS);
+
+            Object pMain = jna.fnPtr(void.class,
+                new Class<?>[]{ int.class, jna.C_Pointer },
+                a -> { serviceMain(); return null; });
+
+            /* SERVICE_TABLE_ENTRY[2] - a segunda entrada fica zerada
+               (jna.mem ja limpa) para marcar o fim da tabela. */
+            table = jna.mem(4L * jna.POINTER_SIZE);
+            jna.setPointer(table, 0, jna.wstr(name));
+            jna.setPointer(table, jna.POINTER_SIZE, pMain);
+
+            if (!jna.callBool(scm.StartServiceCtrlDispatcherW, table)) {
+                int e = jna.lastError();
+                log("StartServiceCtrlDispatcher falhou: err " + e);
+                throw new Erro(e == 1063
+                    ? "O modo 'service' e usado apenas pelo Gerenciador de Servicos (SCM).\n"
+                      + "  Para operar manualmente use:  install / start / stop / status / remove."
+                    : "StartServiceCtrlDispatcher falhou" + errSuffix(e));
+            }
+            log("host encerrado");
+        }
+
+        void serviceMain() {
+            try {
+                Object pHandler = jna.fnPtr(int.class,
+                    new Class<?>[]{ int.class, int.class, jna.C_Pointer, jna.C_Pointer },
+                    a -> Integer.valueOf(onControl(((Integer) a[0]).intValue())));
+
+                statusHandle = jna.callPtr(scm.RegisterServiceCtrlHandlerExW,
+                                           jna.wstr(name), pHandler, null);
+                if (statusHandle == null) {
+                    log("RegisterServiceCtrlHandlerEx falhou: err " + jna.lastError());
+                    return;
+                }
+                report(Scm.SERVICE_START_PENDING, 15000);
+                report(Scm.SERVICE_RUNNING, 0);
+                log("RUNNING");
+                supervise();
+            } catch (Throwable t) {
+                log("erro no serviceMain: " + t);
+            } finally {
+                try { report(Scm.SERVICE_STOPPED, 0); } catch (Throwable ignored) { }
+            }
+        }
+
+        /* Roda numa thread do SCM e TEM que voltar rapido: o kill vai
+           para uma thread separada. */
+        int onControl(int ctrl) {
+            try {
+                if (ctrl == Scm.SERVICE_CONTROL_STOP || ctrl == Scm.SERVICE_CONTROL_SHUTDOWN) {
+                    log("recebeu STOP");
+                    stopping = true;
+                    report(Scm.SERVICE_STOP_PENDING, 25000);
+                    Thread t = new Thread(this::killChild, "svc-stop");
+                    t.setDaemon(true);
+                    t.start();
+                } else if (ctrl == Scm.SERVICE_CONTROL_INTERROGATE) {
+                    report(jna.getInt(statusMem, 4), 0);
+                }
+            } catch (Throwable t) { log("erro no handler: " + t); }
+            return 0;   // NO_ERROR
+        }
+
+        void report(int state, int waitHint) {
+            jna.setInt(statusMem,  0, Scm.SERVICE_WIN32_OWN_PROCESS);
+            jna.setInt(statusMem,  4, state);
+            jna.setInt(statusMem,  8, state == Scm.SERVICE_START_PENDING
+                                      ? 0
+                                      : (Scm.SERVICE_ACCEPT_STOP | Scm.SERVICE_ACCEPT_SHUTDOWN));
+            jna.setInt(statusMem, 12, 0);       // dwWin32ExitCode
+            jna.setInt(statusMem, 16, 0);       // dwServiceSpecificExitCode
+            jna.setInt(statusMem, 20, (state == Scm.SERVICE_RUNNING
+                                    || state == Scm.SERVICE_STOPPED) ? 0 : ++checkPoint);
+            jna.setInt(statusMem, 24, waitHint);
+            jna.callBool(scm.SetServiceStatus, statusHandle, statusMem);
+        }
+
+        /** O laco de supervisao: o que o nssm faz de util. */
+        void supervise() {
+            java.io.File f   = new java.io.File(script);
+            java.io.File dir = f.getParentFile() != null ? f.getParentFile()
+                                                         : new java.io.File(".");
+            initJob();                    // Job pronto ANTES de qualquer filho
+            while (!stopping) {
+                try {
+                    ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", f.getAbsolutePath());
+                    pb.directory(dir);
+                    pb.redirectInput(ProcessBuilder.Redirect.from(new java.io.File("NUL")));
+                    pb.redirectErrorStream(true);
+                    pb.redirectOutput(SVC_LOG && logFile != null
+                        ? ProcessBuilder.Redirect.appendTo(logFile)
+                        : ProcessBuilder.Redirect.DISCARD);   // descarta stdout/stderr do filho
+                    child = pb.start();
+                    assignToJob(child.pid());     // filho e futuros netos entram no Job
+                    log("filho pid=" + child.pid());
+                    int rc = child.waitFor();
+                    log("filho saiu, codigo=" + rc);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Throwable ex) {
+                    log("falha ao iniciar o filho: " + ex);
+                }
+                if (stopping) break;
+                log("reiniciando em 5s");
+                try { Thread.sleep(5000); } catch (InterruptedException ie) { break; }
+            }
+        }
+
+        /** Liga o kernel32 e cria o Job (kill-on-close). Melhor-esforco:
+            se falhar, cai no kill por descendants() no killChild. */
+        void initJob() {
+            try {
+                k32 = jna.stdLib("kernel32");
+                CreateJobObjectW         = jna.func(k32, "CreateJobObjectW");
+                SetInformationJobObject  = jna.func(k32, "SetInformationJobObject");
+                AssignProcessToJobObject = jna.func(k32, "AssignProcessToJobObject");
+                TerminateJobObject       = jna.func(k32, "TerminateJobObject");
+                OpenProcess              = jna.func(k32, "OpenProcess");
+                CloseHandle              = jna.func(k32, "CloseHandle");
+
+                hJob = jna.callPtr(CreateJobObjectW, null, null);
+                if (hJob != null) {
+                    Object info = jna.mem(SZ_EXT_LIMIT_INFO);              // zerado
+                    jna.setInt(info, 16, JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE); // LimitFlags
+                    jna.callBool(SetInformationJobObject, hJob,
+                        JobObjectExtendedLimitInformation, info, SZ_EXT_LIMIT_INFO);
+                    log("job criado (kill-on-close)");
+                } else {
+                    log("CreateJobObject falhou: err " + jna.lastError());
+                }
+            } catch (Throwable t) { hJob = null; log("initJob falhou: " + t); }
+        }
+
+        /** Anexa um processo (e, por heranca, seus futuros filhos) ao Job. */
+        void assignToJob(long pid) {
+            if (hJob == null) return;
+            try {
+                Object hProc = jna.callPtr(OpenProcess,
+                    PROCESS_TERMINATE | PROCESS_SET_QUOTA, 0, (int) pid);
+                if (hProc == null) { log("OpenProcess falhou: err " + jna.lastError()); return; }
+                try {
+                    if (!jna.callBool(AssignProcessToJobObject, hJob, hProc))
+                        log("AssignProcessToJobObject falhou: err " + jna.lastError());
+                } finally { jna.callBool(CloseHandle, hProc); }
+            } catch (Throwable t) { log("assignToJob falhou: " + t); }
+        }
+
+        /* Mata a arvore inteira. O Job (kill-on-close) leva junto os netos
+           desanexados por 'start /b'; o descendants() fica como reforco. */
+        void killChild() {
+            try {
+                if (hJob != null) jna.callBool(TerminateJobObject, hJob, 1);
+            } catch (Throwable t) { log("erro no TerminateJobObject: " + t); }
+            Process p = child;
+            if (p == null) return;
+            try {
+                java.util.List<ProcessHandle> kids =
+                    p.descendants().collect(java.util.stream.Collectors.toList());
+                p.destroy();
+                if (!p.waitFor(10, java.util.concurrent.TimeUnit.SECONDS)) p.destroyForcibly();
+                for (ProcessHandle h : kids) h.destroyForcibly();
+            } catch (Throwable t) { log("erro no kill: " + t); }
+        }
+
+        void log(String msg) {
+            if (!SVC_LOG || logFile == null) return;   // logs desligados por padrao
+            try (java.io.PrintWriter w = new java.io.PrintWriter(
+                    new java.io.FileWriter(logFile, true))) {
+                w.println("[" + java.time.LocalDateTime.now() + "] [host] " + msg);
+            } catch (Exception ignored) { }
+        }
+    }
+}
+
 @SuppressWarnings({"unchecked", "deprecation"})
 class Tests extends Util{
     public Tests(String [] args, boolean flag_test) throws Exception{
@@ -35497,6 +36440,7 @@ usage:
   [y cotacao]
   [y pdf]
   [y winget]
+  [y services]
   [y [update|u]]
   [y help]
 
@@ -36573,6 +37517,22 @@ Exemplos...
         winget install --id Anthropic.Claude -e --accept-package-agreements  # Claude
         # ultimo graalvm windows -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
         # ultimo graalvm linux -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
+[y services]
+    y services install yd yd.bat # registra (auto-start, LocalSystem)
+    y services start   yd # inicia
+    y services stop    yd # para
+    y services restart yd # reinicia
+    y services status  yd # status
+    y services setMode yd auto # seta seta modo de inicializacao # opcoes  <auto|manual|desabilitado>
+    y services list    [filtro] # lista os servicos (filtro por nome)
+    y services remove  yd # remove
+    obs: status e list nao precisam de cmd admin, o resto sim!
+    obs2:
+        Contas internas (coluna CONTA; sem senha, geridas pelo SCM):
+        LocalSystem                  privilegio MAXIMO; na rede age como a maquina
+        NT AUTHORITY\\NetworkService  baixo local; na rede autentica como a maquina
+        NT AUTHORITY\\LocalService    baixo local; na rede vai anonimo (sem credencial)
+        menos privilegio primeiro: LocalService < NetworkService < LocalSystem
 [y help]
     y help <command>
     y help router
