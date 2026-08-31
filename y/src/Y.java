@@ -2255,6 +2255,14 @@ cat buffer.log
                     return;
                 }
                 
+                // lock w lock lock // lock fake + real // um lock ja foi removido entao verifica os proximos 2 locks
+                if ( args.length == 3 && args[0].equals("w") && args[1].equals("lock") && args[2].equals("lock") ){
+                    enableParcialClick=false;
+                    new lock().go(new String[]{"lock", "w"}, enableParcialClick);
+                    new LockSession(new String[]{"lock", "lock"});
+                    return;
+                }
+                
                 // lock configuracoes de windows L
                 if ( args.length == 1 && ( args[0].equals("minimo") || args[0].equals("padrao") ) ){
                     if ( !isWindowsAdm() )
@@ -36395,6 +36403,7 @@ Exemplos...
         y lock shutdown # shutdown -s -t 1
     lock fake + real:
         y lock lock lock # lock fake seguido de lock real # esse lock fake nao permite click direito
+        y lock w lock lock # a mesma coisa mas com branco(white)
     altera aparencia lock real(exige cmd admin):
         y lock minimo # deixa as configuracoes de windows L com aparencias mais simples e escura
         y lock padrao # volta de fabrica a aparencia do windows L
