@@ -1104,6 +1104,16 @@ cat buffer.log
             System.out.println(isWindowsAdm()?"sim":"nao");
             return;
         }
+        if ( args[0].equals("make_cmdw") ){
+            if ( !isWindows() )
+                erroFatal("só implementado para windows");
+            if ( !isWindowsGraalvm() )
+                erroFatal("cmd sem graalvm!");
+            if ( !isWindowsCPlusPlus() )
+                erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+            new MakeCMDW().make();
+            return;
+        }
         //isWindowsAdm
         if ( args[0].equals("devices") ){
             if ( !isWindows() )
@@ -9459,7 +9469,7 @@ cat buffer.log
             $iId  = $h.IndexOf('Id', [System.StringComparison]::OrdinalIgnoreCase)
             $iVer = $h.IndexOf('Vers', [System.StringComparison]::OrdinalIgnoreCase)
             $iSrc = $h.IndexOf('Origem', [System.StringComparison]::OrdinalIgnoreCase); if ($iSrc -lt 0) { $iSrc = $h.IndexOf('Source', [System.StringComparison]::OrdinalIgnoreCase) }
-            $out | Select-Object -Skip $hdr.LineNumber | ForEach-Object {
+            $lines = $out | Select-Object -Skip $hdr.LineNumber | ForEach-Object {
               if ($_.Length -le $iVer) { return }
               $nome = $_.Substring(0, $iId).Trim()
               $id   = $_.Substring($iId, $iVer - $iId).Trim()
@@ -9470,7 +9480,19 @@ cat buffer.log
               } elseif ($src -eq 'msstore' -and $id -notmatch [char]0x2026) {
                 "winget install --id $id --accept-package-agreements  # $nome"
               }
-            } | Select-Object -Unique
+            }
+            $vsw = "${env:ProgramFiles(x86)}\\Microsoft Visual Studio\\Installer\\vswhere.exe"
+            if (Test-Path $vsw) {
+              $known = 'Microsoft.VisualStudio.Workload.VCTools','Microsoft.VisualStudio.Workload.NativeDesktop','Microsoft.VisualStudio.Workload.ManagedDesktop','Microsoft.VisualStudio.Workload.NetWeb','Microsoft.VisualStudio.Workload.NetCoreTools','Microsoft.VisualStudio.Workload.Node','Microsoft.VisualStudio.Workload.Python','Microsoft.VisualStudio.Workload.Universal','Microsoft.VisualStudio.Workload.Azure','Microsoft.VisualStudio.Workload.Data'
+              $vs = foreach ($i in (& $vsw -products * -format json | ConvertFrom-Json)) {
+                $edition = ($i.productId -split '\\.')[-1]; $year = $i.catalog.productLineVersion; $sid = "Microsoft.VisualStudio.$year.$edition"
+                $adds = foreach ($w in $known) { $paths = & $vsw -products * -requires $w -property installationPath; if (@($paths) -contains $i.installationPath) { "--add $w" } }
+                $ov = (@('--quiet','--wait') + @($adds) + @('--includeRecommended')) -join ' '
+                "winget install --id $sid -e --accept-package-agreements --override ""$ov""  # $($i.displayName)"
+              }
+              $lines = @($lines) + @($vs)
+            }
+            $lines | Select-Object -Unique
             """;
         return get_winget_powershell(script);
     }
@@ -9484,17 +9506,26 @@ cat buffer.log
             $h = $hdr.Line
             $iId  = $h.IndexOf('Id', [System.StringComparison]::OrdinalIgnoreCase)
             $iVer = $h.IndexOf('Vers', [System.StringComparison]::OrdinalIgnoreCase)
-            $out | Select-Object -Skip $hdr.LineNumber | ForEach-Object {
+            $iSrc = $h.IndexOf('Origem', [System.StringComparison]::OrdinalIgnoreCase); if ($iSrc -lt 0) { $iSrc = $h.IndexOf('Source', [System.StringComparison]::OrdinalIgnoreCase) }
+            $rows = $out | Select-Object -Skip $hdr.LineNumber | ForEach-Object {
               if ($_.Length -le $iVer) { return }
               $nome = $_.Substring(0, $iId).Trim()
               $id   = $_.Substring($iId, $iVer - $iId).Trim()
               if ($alias[$id]) { $nome = $alias[$id] }
-              if ($id -and $id -notmatch [char]0x2026) {
-                "winget uninstall --id `"$id`"  # $nome"
-              } else {
-                "# id truncado, desinstale pelo nome: winget uninstall `"$nome`""
-              }
+              $end = $_.Length; if ($iSrc -gt $iVer -and $iSrc -le $_.Length) { $end = $iSrc }
+              $ver = $_.Substring($iVer, $end - $iVer).Trim()
+              [PSCustomObject]@{ nome=$nome; id=$id; ver=$ver }
             }
+            $vers = @{}
+            foreach ($r in $rows) { if (-not $vers.ContainsKey($r.id)) { $vers[$r.id] = [System.Collections.Generic.HashSet[string]]::new() }; $null = $vers[$r.id].Add($r.ver) }
+            $rows | ForEach-Object {
+              if ($_.id -and $_.id -notmatch [char]0x2026) {
+                $v = if ($vers[$_.id].Count -gt 1 -and $_.ver) { " --version `"$($_.ver)`"" } else { "" }
+                "winget uninstall --id `"$($_.id)`"$v  # $($_.nome)"
+              } else {
+                "# id truncado, desinstale pelo nome: winget uninstall `"$($_.nome)`""
+              }
+            } | Select-Object -Unique
             """;
         return get_winget_powershell(script);
     }
@@ -25363,6 +25394,178 @@ class PokerCalculator{
     }
 }
 
+class MakeCMDW {
+
+    // Fonte do runner cmdw (Cmdw.java) embutido em Base64 - self-contained.
+    private static final String CMDW_SOURCE_B64 = "cHVibGljIGNsYXNzIENtZHcgewoKICAgIC8vIC0tLSBjb25maWd1cmF0aW9uIChkZWZhdWx0cyBtaXJyb3IgdGhlIG9yaWdpbmFsIFNldHRpbmdzLnNldHRpbmdzKSAtLS0KICAgIHByaXZhdGUgYm9vbGVhbiBsb2dBcHBlbmQgPSBmYWxzZTsKICAgIHByaXZhdGUgU3RyaW5nIGxvZ0ZpbGVQYXRoID0gIiV0ZW1wJVxcU2lsZW50Q01ELmxvZyI7CiAgICBwcml2YXRlIGxvbmcgbWF4TG9nU2l6ZSA9IDA7CiAgICBwcml2YXRlIFN0cmluZyBiYXRjaEZpbGVQYXRoID0gIiI7CiAgICBwcml2YXRlIGZpbmFsIGphdmEudXRpbC5MaXN0PFN0cmluZz4gYmF0Y2hGaWxlQXJndW1lbnRzID0gbmV3IGphdmEudXRpbC5BcnJheUxpc3Q8PigpOwogICAgcHJpdmF0ZSBsb25nIGRlbGF5TWlsbGlzID0gMDsKICAgIHByaXZhdGUgYm9vbGVhbiBzaG93SGVscCA9IGZhbHNlOwogICAgcHJpdmF0ZSBib29sZWFuIGxvZ0V4cGxpY2l0bHlTZXQgPSBmYWxzZTsgLy8gdHJ1ZSB3aGVuIC1sb2cvLWxvZysvTE9HL0xPRysgd2FzIGdpdmVuCgogICAgLy8gLS0tIGxvZy13cml0ZXIgc3RhdGUgLS0tCiAgICBwcml2YXRlIFN0cmluZyBsb2dGdWxsUGF0aDsKICAgIHByaXZhdGUgamF2YS5pby5CdWZmZXJlZFdyaXRlciB3cml0ZXI7CgogICAgLy8gLS0tIG1lc3NhZ2VzIChmcm9tIFJlc291cmNlcy5yZXN4KSAtLS0KICAgIHByaXZhdGUgZmluYWwgU3RyaW5nIHByb2dyYW1UaXRsZSA9ICJTaWxlbnRDTUQiOwogICAgcHJpdmF0ZSBmaW5hbCBTdHJpbmcgbXNnRXJyb3IgPSAiRXJyb3I6ICVzIjsKICAgIHByaXZhdGUgZmluYWwgU3RyaW5nIG1zZ1N0YXJ0aW5nID0gIlN0YXJ0ZWQgXCIlc1wiIChQSUQgJXMpIjsKICAgIHByaXZhdGUgZmluYWwgU3RyaW5nIG1zZ0ZpbmlzaGVkID0gIkZpbmlzaGVkIFwiJXNcIiI7CiAgICBwcml2YXRlIGZpbmFsIFN0cmluZyBtc2dEZWxheSA9ICJEZWxheWluZyBleGVjdXRpb24gYnkgJXMgc2Vjb25kcyI7CiAgICBwcml2YXRlIGZpbmFsIFN0cmluZyB1c2VyTWFudWFsID0KICAgICAgICAgICAgImNtZHcgW09wdGlvbnNdIEJhdGNoRmlsZSBbQmF0Y2hBcmd1bWVudHNdXG5cbiIKICAgICAgICAgICAgKyAiT3B0aW9uczpcbiIKICAgICAgICAgICAgKyAiLz8gOjogU2hvdyBoZWxwXG4iCiAgICAgICAgICAgICsgIi1sb2cgZmlsZSA6OiBPdXRwdXQgc3RhdHVzIHRvIGxvZyBmaWxlIChvdmVyd3JpdGUgZXhpc3RpbmcgbG9nKS5cbiIKICAgICAgICAgICAgKyAiLWxvZysgZmlsZSA6OiBPdXRwdXQgc3RhdHVzIHRvIGxvZyBmaWxlIChhcHBlbmQgdG8gZXhpc3RpbmcgbG9nKS5cbiIKICAgICAgICAgICAgKyAiL0xPR1NJWkU6Ynl0ZXMgOjogTWF4aW11bSBsb2cgZmlsZSBzaXplIGFmdGVyIHdoaWNoIGl0IGlzIHRydW5jYXRlZFxuIgogICAgICAgICAgICArICIvREVMQVk6c2Vjb25kcyA6OiBEZWxheSB0aGUgZXhlY3V0aW9uIG9mIGJhdGNoIGZpbGUgYnkgeCBzZWNvbmRzXG5cbiIKICAgICAgICAgICAgKyAiRXhhbXBsZXNcbiIKICAgICAgICAgICAgKyAiY21kdyBjOlxcRG9Tb21ldGhpbmcuYmF0XG4iCiAgICAgICAgICAgICsgImNtZHcgLWxvZyBjOlxcTXlMb2cudHh0IGM6XFxNeUJhdGNoLmNtZCBNeVBhcmFtMVxuIgogICAgICAgICAgICArICJjbWR3IC1sb2crIGM6XFxNeUxvZy50eHQgL0xPR1NJWkU6MTAwMDAwMCBjOlxcTXlCYXRjaC5jbWRcbiIKICAgICAgICAgICAgKyAiY21kdyAvREVMQVk6MzYwMCBjOlxcTXlCYXRjaC5jbWRcblxuIgogICAgICAgICAgICArICJWZXJzaW9uIDIuMCAoSmF2YSBwb3J0KVxuIgogICAgICAgICAgICArICJGcmVlIHNvZnR3YXJlIHVuZGVyIE1JVCBsaWNlbnNlIjsKCiAgICBwcml2YXRlIGZpbmFsIGphdmEudGltZS5mb3JtYXQuRGF0ZVRpbWVGb3JtYXR0ZXIgdGltZXN0YW1wRm9ybWF0ID0KICAgICAgICAgICAgamF2YS50aW1lLmZvcm1hdC5EYXRlVGltZUZvcm1hdHRlci5vZlBhdHRlcm4oInl5eXktTU0tZGQgSEg6bW06c3MuU1NTIik7CgogICAgcHVibGljIHN0YXRpYyB2b2lkIG1haW4oU3RyaW5nW10gYXJncykgewogICAgICAgIFN5c3RlbS5leGl0KG5ldyBDbWR3KCkuZXhlY3V0ZShhcmdzKSk7CiAgICB9CgogICAgLyoqIEV4ZWN1dGVzIHRoZSBiYXRjaCBmaWxlIGRlZmluZWQgaW4gdGhlIGFyZ3VtZW50cy4gUmV0dXJucyBpdHMgZXhpdCBjb2RlLiAqLwogICAgaW50IGV4ZWN1dGUoU3RyaW5nW10gYXJncykgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIHBhcnNlQXJndW1lbnRzKGFyZ3MpOwogICAgICAgICAgICBpbml0TG9nKCk7CgogICAgICAgICAgICBpZiAoc2hvd0hlbHApIHsKICAgICAgICAgICAgICAgIHNob3dIZWxwKCk7CiAgICAgICAgICAgICAgICByZXR1cm4gMDsKICAgICAgICAgICAgfQoKICAgICAgICAgICAgZGVsYXlJZk5lY2Vzc2FyeSgpOwogICAgICAgICAgICByZXNvbHZlQmF0Y2hGaWxlUGF0aCgpOwoKICAgICAgICAgICAgUHJvY2Vzc0J1aWxkZXIgYnVpbGRlciA9IG5ldyBQcm9jZXNzQnVpbGRlcihidWlsZENvbW1hbmQoKSk7CiAgICAgICAgICAgIGJ1aWxkZXIucmVkaXJlY3RFcnJvclN0cmVhbShmYWxzZSk7IC8vIGtlZXAgc3RkZXJyIGFwYXJ0IHNvIHdlIGNhbiBkZXRlY3QgZXJyb3JzCgogICAgICAgICAgICBQcm9jZXNzIHByb2Nlc3MgPSBidWlsZGVyLnN0YXJ0KCk7CiAgICAgICAgICAgIHdyaXRlTGluZShtc2dTdGFydGluZywgYmF0Y2hGaWxlUGF0aCwgcHJvY2Vzcy5waWQoKSk7CgogICAgICAgICAgICAvLyBDb2xsZWN0IHRoZSBiYXRjaCdzIHN0ZGVyciBvbiBpdHMgb3duIHRocmVhZDsgc3Rkb3V0IGdvZXMgdG8gdGhlIGxvZy4KICAgICAgICAgICAgZmluYWwgamF2YS51dGlsLkxpc3Q8U3RyaW5nPiBlcnJMaW5lcyA9CiAgICAgICAgICAgICAgICAgICAgamF2YS51dGlsLkNvbGxlY3Rpb25zLnN5bmNocm9uaXplZExpc3QobmV3IGphdmEudXRpbC5BcnJheUxpc3Q8U3RyaW5nPigpKTsKICAgICAgICAgICAgZmluYWwgUHJvY2VzcyBwID0gcHJvY2VzczsKICAgICAgICAgICAgVGhyZWFkIGVyclRocmVhZCA9IG5ldyBUaHJlYWQoKCkgLT4gewogICAgICAgICAgICAgICAgdHJ5IChqYXZhLmlvLkJ1ZmZlcmVkUmVhZGVyIGVyID0gbmV3IGphdmEuaW8uQnVmZmVyZWRSZWFkZXIoCiAgICAgICAgICAgICAgICAgICAgICAgIG5ldyBqYXZhLmlvLklucHV0U3RyZWFtUmVhZGVyKHAuZ2V0RXJyb3JTdHJlYW0oKSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBqYXZhLm5pby5jaGFyc2V0LkNoYXJzZXQuZGVmYXVsdENoYXJzZXQoKSkpKSB7CiAgICAgICAgICAgICAgICAgICAgU3RyaW5nIGw7CiAgICAgICAgICAgICAgICAgICAgd2hpbGUgKChsID0gZXIucmVhZExpbmUoKSkgIT0gbnVsbCkgewogICAgICAgICAgICAgICAgICAgICAgICBlcnJMaW5lcy5hZGQobCk7CiAgICAgICAgICAgICAgICAgICAgICAgIHdyaXRlTGluZShsKTsgLy8gLWxvZyByZWNvcmRzIHN0ZG91dCArIHN0ZGVyciB0b2dldGhlcgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBpZ25vcmUpIHsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfSk7CiAgICAgICAgICAgIGVyclRocmVhZC5zZXREYWVtb24odHJ1ZSk7CiAgICAgICAgICAgIGVyclRocmVhZC5zdGFydCgpOwoKICAgICAgICAgICAgamF2YS5pby5CdWZmZXJlZFJlYWRlciByZWFkZXIgPSBuZXcgamF2YS5pby5CdWZmZXJlZFJlYWRlcigKICAgICAgICAgICAgICAgICAgICBuZXcgamF2YS5pby5JbnB1dFN0cmVhbVJlYWRlcihwcm9jZXNzLmdldElucHV0U3RyZWFtKCksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBqYXZhLm5pby5jaGFyc2V0LkNoYXJzZXQuZGVmYXVsdENoYXJzZXQoKSkpOwogICAgICAgICAgICB0cnkgewogICAgICAgICAgICAgICAgU3RyaW5nIGxpbmU7CiAgICAgICAgICAgICAgICB3aGlsZSAoKGxpbmUgPSByZWFkZXIucmVhZExpbmUoKSkgIT0gbnVsbCkgewogICAgICAgICAgICAgICAgICAgIHdyaXRlTGluZShsaW5lKTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfSBmaW5hbGx5IHsKICAgICAgICAgICAgICAgIHJlYWRlci5jbG9zZSgpOwogICAgICAgICAgICB9CgogICAgICAgICAgICBlcnJUaHJlYWQuam9pbigpOwogICAgICAgICAgICBpbnQgY29kZSA9IHByb2Nlc3Mud2FpdEZvcigpOwoKICAgICAgICAgICAgLy8gc3Rkb3V0ICsgc3RkZXJyIGJvdGggYWxyZWFkeSB3ZW50IHRvIHRoZSBsb2cgKG1lcmdlZCwgbGl2ZSkuIFBvcCBhIHdpbmRvdyB3aXRoCiAgICAgICAgICAgIC8vIHRoZSBlcnJvcnMgT05MWSB3aGVuIHRoZXJlIHdhcyBzdGRlcnIgQU5EIG5vIGV4cGxpY2l0IC1sb2cvLUxPRyB3YXMgZ2l2ZW46CiAgICAgICAgICAgIC8vICAgLSBjbGVhbiBydW4gICAgICAgICAgICAtPiBzaWxlbnQsIHdpbmRvd2xlc3MKICAgICAgICAgICAgLy8gICAtIGVycm9yLCBubyAtbG9nICAgICAgIC0+IHNtYWxsIHdpbmRvdyBzaG93cyB0aGUgZXJyb3JzIChib3RoIHdvcmxkcykKICAgICAgICAgICAgLy8gICAtIC1sb2cgZ2l2ZW4gICAgICAgICAgIC0+IG5ldmVyIHBvcHMgKGV2ZXJ5dGhpbmcgaXMgaW4gdGhlIGxvZyBmaWxlKQogICAgICAgICAgICBpZiAoIWVyckxpbmVzLmlzRW1wdHkoKSAmJiAhbG9nRXhwbGljaXRseVNldCkgewogICAgICAgICAgICAgICAgc2hvd1N0ZGVycldpbmRvdyhlcnJMaW5lcyk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgcmV0dXJuIGNvZGU7CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgd3JpdGVMaW5lKG1zZ0Vycm9yLCBlLmdldE1lc3NhZ2UoKSk7CiAgICAgICAgICAgIHJldHVybiAxOwogICAgICAgIH0gZmluYWxseSB7CiAgICAgICAgICAgIHdyaXRlTGluZShtc2dGaW5pc2hlZCwgYmF0Y2hGaWxlUGF0aCk7CiAgICAgICAgICAgIGNsb3NlTG9nKCk7CiAgICAgICAgfQogICAgfQoKICAgIC8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSBhcmdzCgogICAgcHJpdmF0ZSB2b2lkIHBhcnNlQXJndW1lbnRzKFN0cmluZ1tdIGFyZ3MpIHsKICAgICAgICBib29sZWFuIGJhdGNoRmlsZVBhdGhXYXNSZWFkID0gZmFsc2U7CgogICAgICAgIGZvciAoaW50IGlkeCA9IDA7IGlkeCA8IGFyZ3MubGVuZ3RoOyBpZHgrKykgewogICAgICAgICAgICBTdHJpbmcgYXJnID0gYXJnc1tpZHhdOwogICAgICAgICAgICBTdHJpbmcgdmFsdWU7CgogICAgICAgICAgICAvLyAiLWxvZyBmaWxlIiAvICItbG9nKyBmaWxlIjogdGhlIGxvZyBwYXRoIGlzIHRoZSBORVhUIGFyZ3VtZW50LgogICAgICAgICAgICBpZiAoIWJhdGNoRmlsZVBhdGhXYXNSZWFkICYmIGFyZy5lcXVhbHNJZ25vcmVDYXNlKCItbG9nKyIpKSB7CiAgICAgICAgICAgICAgICBsb2dBcHBlbmQgPSB0cnVlOwogICAgICAgICAgICAgICAgbG9nRXhwbGljaXRseVNldCA9IHRydWU7CiAgICAgICAgICAgICAgICBpZiAoaWR4ICsgMSA8IGFyZ3MubGVuZ3RoKSB7CiAgICAgICAgICAgICAgICAgICAgbG9nRmlsZVBhdGggPSBhcmdzWysraWR4XTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGNvbnRpbnVlOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGlmICghYmF0Y2hGaWxlUGF0aFdhc1JlYWQgJiYgYXJnLmVxdWFsc0lnbm9yZUNhc2UoIi1sb2ciKSkgewogICAgICAgICAgICAgICAgbG9nQXBwZW5kID0gZmFsc2U7CiAgICAgICAgICAgICAgICBsb2dFeHBsaWNpdGx5U2V0ID0gdHJ1ZTsKICAgICAgICAgICAgICAgIGlmIChpZHggKyAxIDwgYXJncy5sZW5ndGgpIHsKICAgICAgICAgICAgICAgICAgICBsb2dGaWxlUGF0aCA9IGFyZ3NbKytpZHhdOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgY29udGludWU7CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIHZhbHVlID0gdHJ5R2V0VmFsdWUoYXJnLCAiL0xPR1NJWkUiKTsKICAgICAgICAgICAgaWYgKHZhbHVlICE9IG51bGwpIHsKICAgICAgICAgICAgICAgIG1heExvZ1NpemUgPSBMb25nLnBhcnNlTG9uZyh2YWx1ZS50cmltKCkpOwogICAgICAgICAgICAgICAgY29udGludWU7CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIHZhbHVlID0gdHJ5R2V0VmFsdWUoYXJnLCAiL0RFTEFZIik7CiAgICAgICAgICAgIGlmICh2YWx1ZSAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICBkZWxheU1pbGxpcyA9IChsb25nKSAoRG91YmxlLnBhcnNlRG91YmxlKHZhbHVlLnRyaW0oKSkgKiAxMDAwKTsKICAgICAgICAgICAgICAgIGNvbnRpbnVlOwogICAgICAgICAgICB9CgogICAgICAgICAgICBpZiAoaXNOYW1lKGFyZywgIi8/IikpIHsKICAgICAgICAgICAgICAgIHNob3dIZWxwID0gdHJ1ZTsKICAgICAgICAgICAgfQoKICAgICAgICAgICAgaWYgKCFiYXRjaEZpbGVQYXRoV2FzUmVhZCkgewogICAgICAgICAgICAgICAgYmF0Y2hGaWxlUGF0aCA9IGFyZzsKICAgICAgICAgICAgICAgIGJhdGNoRmlsZVBhdGhXYXNSZWFkID0gdHJ1ZTsKICAgICAgICAgICAgICAgIGNvbnRpbnVlOwogICAgICAgICAgICB9CgogICAgICAgICAgICBiYXRjaEZpbGVBcmd1bWVudHMuYWRkKGFyZyk7CiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgYm9vbGVhbiBpc05hbWUoU3RyaW5nIGFyZywgU3RyaW5nIG5hbWUpIHsKICAgICAgICBpZiAoYXJnID09IG51bGwgfHwgYXJnLmxlbmd0aCgpIDwgbmFtZS5sZW5ndGgoKSkgewogICAgICAgICAgICByZXR1cm4gZmFsc2U7CiAgICAgICAgfQogICAgICAgIGlmICghYXJnLnJlZ2lvbk1hdGNoZXModHJ1ZSwgMCwgbmFtZSwgMCwgbmFtZS5sZW5ndGgoKSkpIHsKICAgICAgICAgICAgcmV0dXJuIGZhbHNlOwogICAgICAgIH0KICAgICAgICByZXR1cm4gbmFtZS5sZW5ndGgoKSA9PSBhcmcubGVuZ3RoKCkgfHwgYXJnLmNoYXJBdChuYW1lLmxlbmd0aCgpKSA9PSAnOic7CiAgICB9CgogICAgcHJpdmF0ZSBTdHJpbmcgdHJ5R2V0VmFsdWUoU3RyaW5nIGFyZywgU3RyaW5nIG5hbWUpIHsKICAgICAgICBpZiAoaXNOYW1lKGFyZywgbmFtZSkpIHsKICAgICAgICAgICAgaW50IHN0YXJ0ID0gbmFtZS5sZW5ndGgoKSArIDE7IC8vICsxIGZvciB0aGUgY29sb24gc2VwYXJhdG9yCiAgICAgICAgICAgIFN0cmluZyB2YWx1ZSA9IHN0YXJ0IDw9IGFyZy5sZW5ndGgoKSA/IGFyZy5zdWJzdHJpbmcoc3RhcnQpIDogIiI7CiAgICAgICAgICAgIGludCBhID0gMDsKICAgICAgICAgICAgaW50IGIgPSB2YWx1ZS5sZW5ndGgoKTsKICAgICAgICAgICAgd2hpbGUgKGEgPCBiICYmIHZhbHVlLmNoYXJBdChhKSA9PSAnIicpIHsKICAgICAgICAgICAgICAgIGErKzsKICAgICAgICAgICAgfQogICAgICAgICAgICB3aGlsZSAoYiA+IGEgJiYgdmFsdWUuY2hhckF0KGIgLSAxKSA9PSAnIicpIHsKICAgICAgICAgICAgICAgIGItLTsKICAgICAgICAgICAgfQogICAgICAgICAgICByZXR1cm4gdmFsdWUuc3Vic3RyaW5nKGEsIGIpOwogICAgICAgIH0KICAgICAgICByZXR1cm4gbnVsbDsKICAgIH0KCiAgICAvLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSBleGVjdXRpb24KCiAgICBwcml2YXRlIGphdmEudXRpbC5MaXN0PFN0cmluZz4gYnVpbGRDb21tYW5kKCkgewogICAgICAgIGphdmEudXRpbC5MaXN0PFN0cmluZz4gY29tbWFuZCA9IG5ldyBqYXZhLnV0aWwuQXJyYXlMaXN0PD4oKTsKICAgICAgICBib29sZWFuIHdpbmRvd3MgPSBTeXN0ZW0uZ2V0UHJvcGVydHkoIm9zLm5hbWUiLCAiIikudG9Mb3dlckNhc2UoKS5jb250YWlucygid2luIik7CgogICAgICAgIGlmICh3aW5kb3dzKSB7CiAgICAgICAgICAgIFN0cmluZyBjb21TcGVjID0gU3lzdGVtLmdldGVudigiQ09NU1BFQyIpOwogICAgICAgICAgICBpZiAoY29tU3BlYyA9PSBudWxsIHx8IGNvbVNwZWMuaXNFbXB0eSgpKSB7CiAgICAgICAgICAgICAgICBjb21TcGVjID0gImNtZC5leGUiOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGNvbW1hbmQuYWRkKGNvbVNwZWMpOwogICAgICAgICAgICBjb21tYW5kLmFkZCgiL2MiKTsKICAgICAgICAgICAgY29tbWFuZC5hZGQoYmF0Y2hGaWxlUGF0aCk7CiAgICAgICAgICAgIGNvbW1hbmQuYWRkQWxsKGJhdGNoRmlsZUFyZ3VtZW50cyk7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgLy8gRmFsbGJhY2sgc28gdGhlIHRvb2wgY2FuIGJlIGRldmVsb3BlZC90ZXN0ZWQgb2ZmIFdpbmRvd3MuCiAgICAgICAgICAgIFN0cmluZ0J1aWxkZXIgc2NyaXB0ID0gbmV3IFN0cmluZ0J1aWxkZXIoc2hlbGxRdW90ZShiYXRjaEZpbGVQYXRoKSk7CiAgICAgICAgICAgIGZvciAoU3RyaW5nIGFyZyA6IGJhdGNoRmlsZUFyZ3VtZW50cykgewogICAgICAgICAgICAgICAgc2NyaXB0LmFwcGVuZCgnICcpLmFwcGVuZChzaGVsbFF1b3RlKGFyZykpOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGNvbW1hbmQuYWRkKCIvYmluL3NoIik7CiAgICAgICAgICAgIGNvbW1hbmQuYWRkKCItYyIpOwogICAgICAgICAgICBjb21tYW5kLmFkZChzY3JpcHQudG9TdHJpbmcoKSk7CiAgICAgICAgfQogICAgICAgIHJldHVybiBjb21tYW5kOwogICAgfQoKICAgIHByaXZhdGUgU3RyaW5nIHNoZWxsUXVvdGUoU3RyaW5nIHMpIHsKICAgICAgICBib29sZWFuIG5lZWRzID0gcy5pc0VtcHR5KCk7CiAgICAgICAgZm9yIChpbnQgaSA9IDA7IGkgPCBzLmxlbmd0aCgpICYmICFuZWVkczsgaSsrKSB7CiAgICAgICAgICAgIGNoYXIgYyA9IHMuY2hhckF0KGkpOwogICAgICAgICAgICBuZWVkcyA9IGMgPT0gJyAnIHx8IGMgPT0gJyInIHx8IGMgPT0gJ1wnJzsKICAgICAgICB9CiAgICAgICAgcmV0dXJuIG5lZWRzID8gIlwiIiArIHMucmVwbGFjZSgiXCIiLCAiXFxcIiIpICsgIlwiIiA6IHM7CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIGRlbGF5SWZOZWNlc3NhcnkoKSB0aHJvd3MgSW50ZXJydXB0ZWRFeGNlcHRpb24gewogICAgICAgIGlmIChkZWxheU1pbGxpcyA8PSAwKSB7CiAgICAgICAgICAgIHJldHVybjsKICAgICAgICB9CiAgICAgICAgZG91YmxlIHNlY29uZHMgPSBkZWxheU1pbGxpcyAvIDEwMDAuMDsKICAgICAgICBTdHJpbmcgc2hvd24gPSBzZWNvbmRzID09IE1hdGguZmxvb3Ioc2Vjb25kcykKICAgICAgICAgICAgICAgID8gTG9uZy50b1N0cmluZygobG9uZykgc2Vjb25kcykKICAgICAgICAgICAgICAgIDogRG91YmxlLnRvU3RyaW5nKHNlY29uZHMpOwogICAgICAgIHdyaXRlTGluZShtc2dEZWxheSwgc2hvd24pOwogICAgICAgIFRocmVhZC5zbGVlcChkZWxheU1pbGxpcyk7CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIHNob3dIZWxwKCkgewogICAgICAgIC8vIENvbnNvbGUgdG9vbDogcHJpbnQgdG8gc3Rkb3V0LiAoQXZvaWRpbmcgU3dpbmcvQVdUIGhlcmUga2VlcHMgdGhlIG5hdGl2ZQogICAgICAgIC8vIGltYWdlIGEgc2luZ2xlIHNtYWxsIC5leGUgd2l0aCBubyBhd3QuZGxsICYgZnJpZW5kcyBkcmFnZ2VkIGluLikKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4odXNlck1hbnVhbCk7CiAgICB9CgogICAgLyoqCiAgICAgKiBQb3BzIGEgc21hbGwgY29uc29sZSB3aW5kb3cgc2hvd2luZyB0aGUgYmF0Y2gncyBzdGRlcnIuIENhbGxlZCBvbmx5IHdoZW4gdGhlcmUgd2FzCiAgICAgKiBzdGRlcnIgYW5kIG5vIGV4cGxpY2l0IGxvZyB3YXMgcmVxdWVzdGVkLiBVc2VzICJzdGFydCIgc28gYSB3aW5kb3dsZXNzIGNtZHcgY2FuIHN0aWxsCiAgICAgKiBicmluZyB1cCBhIHZpc2libGUgY29uc29sZTsgdGhlIHdpbmRvdyBzdGF5cyBvcGVuIChwYXVzZSkgc28gdGhlIGVycm9ycyBjYW4gYmUgcmVhZC4KICAgICAqLwogICAgcHJpdmF0ZSB2b2lkIHNob3dTdGRlcnJXaW5kb3coamF2YS51dGlsLkxpc3Q8U3RyaW5nPiBlcnJMaW5lcykgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIGphdmEuaW8uRmlsZSB0eHQgPSBqYXZhLmlvLkZpbGUuY3JlYXRlVGVtcEZpbGUoImNtZHctc3RkZXJyLSIsICIudHh0Iik7CiAgICAgICAgICAgIHRyeSAoamF2YS5pby5Xcml0ZXIgdyA9IG5ldyBqYXZhLmlvLk91dHB1dFN0cmVhbVdyaXRlcigKICAgICAgICAgICAgICAgICAgICBuZXcgamF2YS5pby5GaWxlT3V0cHV0U3RyZWFtKHR4dCksIGphdmEubmlvLmNoYXJzZXQuQ2hhcnNldC5kZWZhdWx0Q2hhcnNldCgpKSkgewogICAgICAgICAgICAgICAgdy53cml0ZSgiW2NtZHddIHN0ZGVyciBkZTogIiArIGJhdGNoRmlsZVBhdGggKyBTeXN0ZW0ubGluZVNlcGFyYXRvcigpKTsKICAgICAgICAgICAgICAgIHcud3JpdGUoU3lzdGVtLmxpbmVTZXBhcmF0b3IoKSk7CiAgICAgICAgICAgICAgICBmb3IgKFN0cmluZyBsIDogZXJyTGluZXMpIHsKICAgICAgICAgICAgICAgICAgICB3LndyaXRlKGwpOwogICAgICAgICAgICAgICAgICAgIHcud3JpdGUoU3lzdGVtLmxpbmVTZXBhcmF0b3IoKSk7CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgamF2YS5pby5GaWxlIGJhdCA9IGphdmEuaW8uRmlsZS5jcmVhdGVUZW1wRmlsZSgiY21kdy1zdGRlcnItIiwgIi5iYXQiKTsKICAgICAgICAgICAgdHJ5IChqYXZhLmlvLldyaXRlciB3ID0gbmV3IGphdmEuaW8uT3V0cHV0U3RyZWFtV3JpdGVyKAogICAgICAgICAgICAgICAgICAgIG5ldyBqYXZhLmlvLkZpbGVPdXRwdXRTdHJlYW0oYmF0KSwgamF2YS5uaW8uY2hhcnNldC5DaGFyc2V0LmRlZmF1bHRDaGFyc2V0KCkpKSB7CiAgICAgICAgICAgICAgICB3LndyaXRlKCJAZWNobyBvZmYiICsgU3lzdGVtLmxpbmVTZXBhcmF0b3IoKSk7CiAgICAgICAgICAgICAgICB3LndyaXRlKCJ0eXBlIFwiIiArIHR4dC5nZXRBYnNvbHV0ZVBhdGgoKSArICJcIiIgKyBTeXN0ZW0ubGluZVNlcGFyYXRvcigpKTsKICAgICAgICAgICAgICAgIHcud3JpdGUoImVjaG8uIiArIFN5c3RlbS5saW5lU2VwYXJhdG9yKCkpOwogICAgICAgICAgICAgICAgdy53cml0ZSgicGF1c2UiICsgU3lzdGVtLmxpbmVTZXBhcmF0b3IoKSk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgLy8gInN0YXJ0IDx0aXRsZT4gPGZpbGU+IiBvcGVucyB0aGUgLmJhdCBpbiBhIE5FVyB2aXNpYmxlIGNvbnNvbGUgd2luZG93LgogICAgICAgICAgICBuZXcgUHJvY2Vzc0J1aWxkZXIoImNtZC5leGUiLCAiL2MiLCAic3RhcnQiLCAiY21kdyBzdGRlcnIiLCBiYXQuZ2V0QWJzb2x1dGVQYXRoKCkpCiAgICAgICAgICAgICAgICAgICAgLnN0YXJ0KCk7CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGlnbm9yZSkgewogICAgICAgICAgICAvLyBiZXN0LWVmZm9ydDogaWYgd2UgY2Fubm90IHNob3cgdGhlIHdpbmRvdywgdGhlIGxvZyBzdGlsbCBoYXMgdGhlIGVycm9ycwogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIHZvaWQgcmVzb2x2ZUJhdGNoRmlsZVBhdGgoKSB7CiAgICAgICAgaWYgKGJhdGNoRmlsZVBhdGggPT0gbnVsbCB8fCBiYXRjaEZpbGVQYXRoLmlzRW1wdHkoKSkgewogICAgICAgICAgICByZXR1cm47CiAgICAgICAgfQogICAgICAgIGlmIChiYXRjaEZpbGVQYXRoLmluZGV4T2YoJy8nKSA+PSAwIHx8IGJhdGNoRmlsZVBhdGguaW5kZXhPZignXFwnKSA+PSAwKSB7CiAgICAgICAgICAgIHJldHVybjsgLy8gYSBkaXJlY3Rvcnkgd2FzIGdpdmVuLCB1c2UgYXMtaXMKICAgICAgICB9CgogICAgICAgIFN0cmluZyBuYW1lID0gYmF0Y2hGaWxlUGF0aDsKICAgICAgICBpbnQgZG90ID0gbmFtZS5sYXN0SW5kZXhPZignLicpOwogICAgICAgIGJvb2xlYW4gaGFzRXh0ZW5zaW9uID0gZG90ID49IDA7CgogICAgICAgIGlmICghaGFzRXh0ZW5zaW9uKSB7CiAgICAgICAgICAgIGlmIChmaW5kUGF0aChiYXRjaEZpbGVQYXRoICsgIi5iYXQiKSkgewogICAgICAgICAgICAgICAgcmV0dXJuOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGZpbmRQYXRoKGJhdGNoRmlsZVBhdGggKyAiLmNtZCIpOwogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIGZpbmRQYXRoKGJhdGNoRmlsZVBhdGgpOwogICAgICAgIH0KICAgIH0KCiAgICAvKiogVHJ1ZSBpZiBmb3VuZDsgYSBoaXQgcmV3cml0ZXMgYmF0Y2hGaWxlUGF0aCB0byB0aGUgZnVsbCBwYXRoLiAqLwogICAgcHJpdmF0ZSBib29sZWFuIGZpbmRQYXRoKFN0cmluZyBmaWxlbmFtZSkgewogICAgICAgIGphdmEuaW8uRmlsZSBjdXJyZW50ID0gbmV3IGphdmEuaW8uRmlsZShTeXN0ZW0uZ2V0UHJvcGVydHkoInVzZXIuZGlyIiksIGZpbGVuYW1lKTsKICAgICAgICBpZiAoY3VycmVudC5leGlzdHMoKSkgewogICAgICAgICAgICAvLyBSZXdyaXRlIHRvIHRoZSByZXNvbHZlZCBwYXRoOiBzb21lIFdpbmRvd3Mgc2V0dXBzIChlLmcuCiAgICAgICAgICAgIC8vIE5vRGVmYXVsdEN1cnJlbnREaXJlY3RvcnlJbkV4ZVBhdGgpIG1ha2UgY21kIE5PVCBzZWFyY2ggdGhlIGN1cnJlbnQKICAgICAgICAgICAgLy8gZGlyZWN0b3J5LCBzbyBhIGJhcmUgbmFtZSB3b3VsZCBmYWlsIGV2ZW4gdGhvdWdoIHRoZSBmaWxlIGlzIHJpZ2h0IGhlcmUuCiAgICAgICAgICAgIGJhdGNoRmlsZVBhdGggPSBjdXJyZW50LmdldFBhdGgoKTsKICAgICAgICAgICAgcmV0dXJuIHRydWU7CiAgICAgICAgfQoKICAgICAgICBTdHJpbmcgZW52aXJvbm1lbnRQYXRoID0gU3lzdGVtLmdldGVudigiUEFUSCIpOwogICAgICAgIGlmIChlbnZpcm9ubWVudFBhdGggPT0gbnVsbCB8fCBlbnZpcm9ubWVudFBhdGguaXNFbXB0eSgpKSB7CiAgICAgICAgICAgIHJldHVybiBmYWxzZTsKICAgICAgICB9CgogICAgICAgIGZvciAoU3RyaW5nIGRpciA6IGVudmlyb25tZW50UGF0aC5zcGxpdChqYXZhLnV0aWwucmVnZXguUGF0dGVybi5xdW90ZShqYXZhLmlvLkZpbGUucGF0aFNlcGFyYXRvcikpKSB7CiAgICAgICAgICAgIGlmIChkaXIuaXNFbXB0eSgpKSB7CiAgICAgICAgICAgICAgICBjb250aW51ZTsKICAgICAgICAgICAgfQogICAgICAgICAgICBqYXZhLmlvLkZpbGUgY2FuZGlkYXRlID0gbmV3IGphdmEuaW8uRmlsZShkaXIsIGZpbGVuYW1lKTsKICAgICAgICAgICAgaWYgKGNhbmRpZGF0ZS5leGlzdHMoKSkgewogICAgICAgICAgICAgICAgYmF0Y2hGaWxlUGF0aCA9IGNhbmRpZGF0ZS5nZXRQYXRoKCk7CiAgICAgICAgICAgICAgICByZXR1cm4gdHJ1ZTsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgICAgICByZXR1cm4gZmFsc2U7CiAgICB9CgogICAgLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0gbG9nZ2luZwoKICAgIHByaXZhdGUgdm9pZCBpbml0TG9nKCkgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIGlmIChsb2dGaWxlUGF0aCA9PSBudWxsIHx8IGxvZ0ZpbGVQYXRoLmlzRW1wdHkoKSkgewogICAgICAgICAgICAgICAgcmV0dXJuOyAvLyBubyBsb2dnaW5nIGlmIG5vIHBhdGgKICAgICAgICAgICAgfQogICAgICAgICAgICBsb2dGdWxsUGF0aCA9IGV4cGFuZEVudihsb2dGaWxlUGF0aCk7CiAgICAgICAgICAgIGNsb3NlTG9nKCk7CiAgICAgICAgICAgIHdyaXRlciA9IG5ldyBqYXZhLmlvLkJ1ZmZlcmVkV3JpdGVyKG5ldyBqYXZhLmlvLkZpbGVXcml0ZXIobG9nRnVsbFBhdGgsIGxvZ0FwcGVuZCkpOwogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIFN5c3RlbS5lcnIucHJpbnRsbihlKTsKICAgICAgICB9CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIHJvdGF0ZUxvZygpIHsKICAgICAgICB0cnkgewogICAgICAgICAgICBpZiAobWF4TG9nU2l6ZSA8PSAwIHx8IHdyaXRlciA9PSBudWxsKSB7CiAgICAgICAgICAgICAgICByZXR1cm47CiAgICAgICAgICAgIH0KICAgICAgICAgICAgamF2YS5pby5GaWxlIGZpbGUgPSBuZXcgamF2YS5pby5GaWxlKGxvZ0Z1bGxQYXRoKTsKICAgICAgICAgICAgaWYgKGZpbGUuZXhpc3RzKCkgJiYgZmlsZS5sZW5ndGgoKSA+IG1heExvZ1NpemUpIHsKICAgICAgICAgICAgICAgIHdyaXRlci5jbG9zZSgpOwogICAgICAgICAgICAgICAgamF2YS5uaW8uZmlsZS5GaWxlcy5jb3B5KGZpbGUudG9QYXRoKCksCiAgICAgICAgICAgICAgICAgICAgICAgIGphdmEubmlvLmZpbGUuUGF0aC5vZihsb2dGdWxsUGF0aCArICIub2xkIiksCiAgICAgICAgICAgICAgICAgICAgICAgIGphdmEubmlvLmZpbGUuU3RhbmRhcmRDb3B5T3B0aW9uLlJFUExBQ0VfRVhJU1RJTkcpOwogICAgICAgICAgICAgICAgamF2YS5uaW8uZmlsZS5GaWxlcy5kZWxldGVJZkV4aXN0cyhmaWxlLnRvUGF0aCgpKTsKICAgICAgICAgICAgICAgIHdyaXRlciA9IG5ldyBqYXZhLmlvLkJ1ZmZlcmVkV3JpdGVyKG5ldyBqYXZhLmlvLkZpbGVXcml0ZXIobG9nRnVsbFBhdGgsIGxvZ0FwcGVuZCkpOwogICAgICAgICAgICB9CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgU3lzdGVtLmVyci5wcmludGxuKGUpOwogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIHN5bmNocm9uaXplZCB2b2lkIHdyaXRlTGluZShTdHJpbmcgZm9ybWF0LCBPYmplY3QuLi4gYXJncykgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIHJvdGF0ZUxvZygpOwogICAgICAgICAgICBpZiAod3JpdGVyICE9IG51bGwgJiYgZm9ybWF0ICE9IG51bGwpIHsKICAgICAgICAgICAgICAgIC8vIE5vIGFyZ3MgLT4gd3JpdGUgdmVyYmF0aW0sIHNvIGxpbmVzIGNvbnRhaW5pbmcgJyUnIGFyZSBzYWZlLgogICAgICAgICAgICAgICAgU3RyaW5nIG1lc3NhZ2UgPSAoYXJncyA9PSBudWxsIHx8IGFyZ3MubGVuZ3RoID09IDApCiAgICAgICAgICAgICAgICAgICAgICAgID8gZm9ybWF0CiAgICAgICAgICAgICAgICAgICAgICAgIDogU3RyaW5nLmZvcm1hdChmb3JtYXQsIGFyZ3MpOwogICAgICAgICAgICAgICAgd3JpdGVyLndyaXRlKGphdmEudGltZS5Mb2NhbERhdGVUaW1lLm5vdygpLmZvcm1hdCh0aW1lc3RhbXBGb3JtYXQpICsgIiAtICIgKyBtZXNzYWdlKTsKICAgICAgICAgICAgICAgIHdyaXRlci5uZXdMaW5lKCk7CiAgICAgICAgICAgICAgICB3cml0ZXIuZmx1c2goKTsKICAgICAgICAgICAgfQogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIFN5c3RlbS5lcnIucHJpbnRsbihlKTsKICAgICAgICB9CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIGNsb3NlTG9nKCkgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIGlmICh3cml0ZXIgIT0gbnVsbCkgewogICAgICAgICAgICAgICAgd3JpdGVyLmNsb3NlKCk7CiAgICAgICAgICAgICAgICB3cml0ZXIgPSBudWxsOwogICAgICAgICAgICB9CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgU3lzdGVtLmVyci5wcmludGxuKGUpOwogICAgICAgIH0KICAgIH0KCiAgICAvLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSAlVkFSJSBleHBhbnNpb24KCiAgICBwcml2YXRlIFN0cmluZyBleHBhbmRFbnYoU3RyaW5nIGlucHV0KSB7CiAgICAgICAgaWYgKGlucHV0ID09IG51bGwgfHwgaW5wdXQuaXNFbXB0eSgpKSB7CiAgICAgICAgICAgIHJldHVybiBpbnB1dDsKICAgICAgICB9CiAgICAgICAgU3RyaW5nQnVpbGRlciBzYiA9IG5ldyBTdHJpbmdCdWlsZGVyKCk7CiAgICAgICAgaW50IGkgPSAwOwogICAgICAgIHdoaWxlIChpIDwgaW5wdXQubGVuZ3RoKCkpIHsKICAgICAgICAgICAgY2hhciBjID0gaW5wdXQuY2hhckF0KGkpOwogICAgICAgICAgICBpZiAoYyA9PSAnJScpIHsKICAgICAgICAgICAgICAgIGludCBlbmQgPSBpbnB1dC5pbmRleE9mKCclJywgaSArIDEpOwogICAgICAgICAgICAgICAgaWYgKGVuZCA+IGkpIHsKICAgICAgICAgICAgICAgICAgICBTdHJpbmcgbmFtZSA9IGlucHV0LnN1YnN0cmluZyhpICsgMSwgZW5kKTsKICAgICAgICAgICAgICAgICAgICBTdHJpbmcgdmFsdWUgPSByZXNvbHZlRW52KG5hbWUpOwogICAgICAgICAgICAgICAgICAgIHNiLmFwcGVuZCh2YWx1ZSAhPSBudWxsID8gdmFsdWUgOiAiJSIgKyBuYW1lICsgIiUiKTsKICAgICAgICAgICAgICAgICAgICBpID0gZW5kICsgMTsKICAgICAgICAgICAgICAgICAgICBjb250aW51ZTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgICAgICBzYi5hcHBlbmQoYyk7CiAgICAgICAgICAgIGkrKzsKICAgICAgICB9CiAgICAgICAgcmV0dXJuIHNiLnRvU3RyaW5nKCk7CiAgICB9CgogICAgcHJpdmF0ZSBTdHJpbmcgcmVzb2x2ZUVudihTdHJpbmcgbmFtZSkgewogICAgICAgIFN0cmluZyB2YWx1ZSA9IFN5c3RlbS5nZXRlbnYobmFtZSk7CiAgICAgICAgaWYgKHZhbHVlICE9IG51bGwpIHsKICAgICAgICAgICAgcmV0dXJuIHZhbHVlOwogICAgICAgIH0KICAgICAgICBmb3IgKGphdmEudXRpbC5NYXAuRW50cnk8U3RyaW5nLCBTdHJpbmc+IGUgOiBTeXN0ZW0uZ2V0ZW52KCkuZW50cnlTZXQoKSkgewogICAgICAgICAgICBpZiAoZS5nZXRLZXkoKS5lcXVhbHNJZ25vcmVDYXNlKG5hbWUpKSB7CiAgICAgICAgICAgICAgICByZXR1cm4gZS5nZXRWYWx1ZSgpOwogICAgICAgICAgICB9CiAgICAgICAgfQogICAgICAgIGlmIChuYW1lLmVxdWFsc0lnbm9yZUNhc2UoInRlbXAiKSB8fCBuYW1lLmVxdWFsc0lnbm9yZUNhc2UoInRtcCIpKSB7CiAgICAgICAgICAgIFN0cmluZyB0bXAgPSBTeXN0ZW0uZ2V0UHJvcGVydHkoImphdmEuaW8udG1wZGlyIik7CiAgICAgICAgICAgIGlmICh0bXAgIT0gbnVsbCAmJiB0bXAubGVuZ3RoKCkgPiAxICYmIHRtcC5lbmRzV2l0aChqYXZhLmlvLkZpbGUuc2VwYXJhdG9yKSkgewogICAgICAgICAgICAgICAgdG1wID0gdG1wLnN1YnN0cmluZygwLCB0bXAubGVuZ3RoKCkgLSAxKTsKICAgICAgICAgICAgfQogICAgICAgICAgICByZXR1cm4gdG1wOwogICAgICAgIH0KICAgICAgICByZXR1cm4gbnVsbDsKICAgIH0KfQo=";
+
+    /** Gera cmdw.exe no diretorio atual. Retorna 0 em sucesso. */
+    public int make() {
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        java.nio.file.Path buildDir = null;
+        try {
+            String javac = findTool("javac");
+            String nativeImage = findTool("native-image");
+            java.nio.file.Path outDir = java.nio.file.Path.of(System.getProperty("user.dir"));
+            java.nio.file.Path output = outDir.resolve(windows ? "cmdw.exe" : "cmdw");
+
+            buildDir = java.nio.file.Files.createTempDirectory("cmdw-build");
+            java.nio.file.Path srcCopy = buildDir.resolve("Cmdw.java");
+            java.nio.file.Files.write(srcCopy,
+                    java.util.Base64.getDecoder().decode(CMDW_SOURCE_B64));
+            java.nio.file.Path classesDir = buildDir.resolve("classes");
+            java.nio.file.Files.createDirectories(classesDir);
+
+            System.out.println("MakeCMDW -> cmdw.exe (GraalVM native-image)");
+            System.out.println("  build  : " + buildDir);
+            System.out.println("  output : " + output);
+            System.out.println();
+
+            // 1. Compila o fonte embutido para .class na pasta temporaria.
+            run(buildDir, javac, "-d", classesDir.toString(), srcCopy.toString());
+
+            // 2. native-image gera "cmdw(.exe)" windowless dentro da pasta temporaria.
+            StringBuilder niLog = new StringBuilder();
+            int niCode = runCaptured(buildDir, niLog, nativeImage, "--no-fallback",
+                    // Windowless (GUI-subsystem): cmdw nunca abre janela de console;
+                    // /ENTRY mantem o ponto de entrada main() normal.
+                    "-H:NativeLinkerOption=/SUBSYSTEM:windows",
+                    "-H:NativeLinkerOption=/ENTRY:mainCRTStartup",
+                    "-cp", classesDir.toString(), "-o", "cmdw", "Cmdw");
+            if (niCode != 0) {
+                // Exit code 20 / mensagem "vcvarsall.bat" => falta o MSVC.
+                String log = niLog.toString().toLowerCase();
+                if (niCode == 20 || log.contains("vcvarsall") || log.contains("visual studio")) {
+                    printMsvcHelp();
+                }
+                return niCode;
+            }
+
+            // 3. Move o executavel final para o diretorio atual.
+            java.nio.file.Path built = buildDir.resolve(windows ? "cmdw.exe" : "cmdw");
+            if (!java.nio.file.Files.exists(built)) {
+                throw new java.io.FileNotFoundException(
+                        "native-image nao produziu " + built.getFileName());
+            }
+            java.nio.file.Files.copy(built, output,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+            System.out.println();
+            System.out.println("Done: " + output);
+            return 0;
+        } catch (Exception e) {
+            System.err.println("make failed: " + e.getMessage());
+            return 1;
+        } finally {
+            deleteRecursively(buildDir);
+        }
+    }
+
+    /** Resolve uma ferramenta do JDK/GraalVM (javac, native-image) por JAVA_HOME/GRAALVM_HOME ou PATH. */
+    private static String findTool(String tool) {
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        String[] exts = windows ? new String[] {".cmd", ".exe", ".bat", ""} : new String[] {""};
+
+        java.util.List<String> homes = new java.util.ArrayList<>();
+        String javaHome = System.getProperty("java.home");
+        if (javaHome != null) {
+            homes.add(javaHome);
+        }
+        for (String env : new String[] {"GRAALVM_HOME", "JAVA_HOME"}) {
+            String v = System.getenv(env);
+            if (v != null && !v.isEmpty()) {
+                homes.add(v);
+            }
+        }
+        for (String home : homes) {
+            for (String ext : exts) {
+                java.io.File f = new java.io.File(new java.io.File(home, "bin"), tool + ext);
+                if (f.isFile()) {
+                    return f.getPath();
+                }
+            }
+        }
+        // Ultimo recurso: deixa o SO resolver pelo PATH.
+        return windows && tool.equals("native-image") ? tool + ".cmd" : tool;
+    }
+
+    /** Roda um comando com stdio herdado; lanca excecao em codigo != 0. */
+    private static void run(java.nio.file.Path dir, String... command) throws Exception {
+        System.out.println("> " + String.join(" ", command));
+        ProcessBuilder builder = new ProcessBuilder(command);
+        builder.directory(dir.toFile());
+        builder.inheritIO();
+        int code = builder.start().waitFor();
+        if (code != 0) {
+            throw new RuntimeException(command[0] + " exited with code " + code);
+        }
+    }
+
+    /** Roda um comando ecoando a saida ao vivo e tambem coletando em {@code sink}. */
+    private static int runCaptured(java.nio.file.Path dir, StringBuilder sink, String... command)
+            throws Exception {
+        System.out.println("> " + String.join(" ", command));
+        ProcessBuilder builder = new ProcessBuilder(command);
+        builder.directory(dir.toFile());
+        builder.redirectErrorStream(true);
+        Process process = builder.start();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(process.getInputStream(),
+                        java.nio.charset.Charset.defaultCharset()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+                sink.append(line).append('\n');
+            }
+        }
+        return process.waitFor();
+    }
+
+    /** Mostra como instalar o toolchain C++ (MSVC) que o native-image precisa no Windows. */
+    private static void printMsvcHelp() {
+        String nl = System.lineSeparator();
+        System.out.println(nl
+            + "==================================================================" + nl
+            + " cmdw.exe NAO foi gerado: falta o compilador C da Microsoft (MSVC)." + nl
+            + nl
+            + " O GraalVM native-image gera o codigo nativo, mas a etapa final de" + nl
+            + " linkar o .exe no Windows usa o cl.exe/link.exe do MSVC - que NAO" + nl
+            + " vem junto com o GraalVM e nao esta instalado nesta maquina." + nl
+            + nl
+            + " Instale uma vez (NAO precisa do \"x64 Native Tools Command Prompt\";" + nl
+            + " o GraalVM 21 acha o MSVC sozinho depois):" + nl
+            + nl
+            + "   A) winget (recomendado):" + nl
+            + "      winget install --id Microsoft.VisualStudio.2022.BuildTools \\" + nl
+            + "        --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"" + nl
+            + nl
+            + "   B) Instalador manual:" + nl
+            + "      https://visualstudio.microsoft.com/downloads/" + nl
+            + "      (Build Tools > \"Desenvolvimento para desktop com C++\")" + nl
+            + nl
+            + " Depois rode a build de novo." + nl
+            + "==================================================================");
+    }
+
+    /** Apaga recursivamente a pasta temporaria de build (best-effort). */
+    private static void deleteRecursively(java.nio.file.Path root) {
+        if (root == null) {
+            return;
+        }
+        try (java.util.stream.Stream<java.nio.file.Path> walk = java.nio.file.Files.walk(root)) {
+            walk.sorted(java.util.Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    java.nio.file.Files.deleteIfExists(p);
+                } catch (Exception ignore) {
+                    // sobras de temp sao inofensivas
+                }
+            });
+        } catch (Exception ignore) {
+            // nada para limpar ou ja removido
+        }
+    }
+}
+
 @SuppressWarnings({"unchecked", "deprecation"})
 class Util{    
     public String erroSequenciaIlegal="Erro, sequencia ilegal!";
@@ -28395,6 +28598,89 @@ class Util{
     
     public boolean isWindows(){
         return os(true).equals("Windows");
+    }
+
+    public boolean isWindowsGraalvm() {
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        String[] exts = windows ? new String[] {".cmd", ".exe", ""} : new String[] {""};
+        String[] homes = {
+            System.getProperty("java.home"),
+            System.getenv("GRAALVM_HOME"),
+            System.getenv("JAVA_HOME"),
+        };
+        for (String home : homes) {
+            if (home == null || home.isEmpty()) {
+                continue;
+            }
+            for (String ext : exts) {
+                if (new java.io.File(new java.io.File(home, "bin"), "native-image" + ext).isFile()) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public boolean isWindowsCPlusPlus() {
+        // install c++ para graalvm compilar para exe
+        // winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+        String pf86 = System.getenv("ProgramFiles(x86)");
+        if (pf86 == null || pf86.isEmpty()) {
+            pf86 = "C:\\Program Files (x86)";
+        }
+        // 1) vswhere ships with any modern VS / Build Tools installer.
+        java.io.File vswhere =
+                new java.io.File(pf86, "Microsoft Visual Studio\\Installer\\vswhere.exe");
+        if (vswhere.isFile()) {
+            try {
+                Process p = new ProcessBuilder(vswhere.getPath(),
+                        "-latest", "-products", "*",
+                        "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64",
+                        "-property", "installationPath").redirectErrorStream(true).start();
+                StringBuilder out = new StringBuilder();
+                java.io.BufferedReader reader = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(p.getInputStream(),
+                                java.nio.charset.Charset.defaultCharset()));
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    out.append(line).append('\n');
+                }
+                reader.close();
+                p.waitFor();
+                for (String path : out.toString().split("\\r?\\n")) {
+                    path = path.trim();
+                    if (!path.isEmpty() && new java.io.File(path,
+                            "VC\\Auxiliary\\Build\\vcvarsall.bat").isFile()) {
+                        return true;
+                    }
+                }
+            } catch (Exception ignore) {
+                // fall through to the filesystem scan
+            }
+        }
+        // 2) Fallback: scan the usual roots for VC\Auxiliary\Build\vcvarsall.bat.
+        for (String root : new String[] {System.getenv("ProgramFiles"), pf86}) {
+            if (root == null || root.isEmpty()) {
+                continue;
+            }
+            java.io.File[] years = new java.io.File(root, "Microsoft Visual Studio").listFiles();
+            if (years == null) {
+                continue;
+            }
+            for (java.io.File year : years) {
+                java.io.File[] editions = year.listFiles();
+                if (editions == null) {
+                    continue;
+                }
+                for (java.io.File edition : editions) {
+                    if (new java.io.File(edition,
+                            "VC\\Auxiliary\\Build\\vcvarsall.bat").isFile()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     public boolean isFfmpeg(){
@@ -36341,6 +36627,7 @@ usage:
   [y audio]
   [y vol]
   [y isWindowsAdm]
+  [y make_cmdw]
   [y devices]
   [y cep]
   [y users]
@@ -36701,6 +36988,13 @@ Exemplos...
     y vol # procure por y audio vol
 [y isWindowsAdm]
     y isWindowsAdm
+[y make_cmdw]
+    y make_cmdw
+    obs: cria o cmdw.exe
+    usando o cmdw.exe:
+    cmdw.exe a.bat
+    cmdw.exe -log a.log a.bat
+    obs2: se .bat chama .bat entao pode haver problemas, exemplo dentro do .bat tem um y que é um .bat, isso pode dar problema. isso da problema porque o windows espera call para .bat
 [y devices]
     y devices
     y devices "-classe" "AudioEndpoint" "-classe" "Net"
@@ -37523,7 +37817,7 @@ Exemplos...
         winget install --id VideoLAN.VLC -e --accept-package-agreements
         winget install --id Microsoft.RemoteDesktopClient -e --accept-package-agreements
         winget install --id Anthropic.Claude -e --accept-package-agreements  # Claude
-        winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" # ajuda graalvm a montar exe
+        winget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" # ajuda graalvm a montar exe
         # ultimo graalvm windows -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
         # ultimo graalvm linux -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
 [y services]
