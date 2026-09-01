@@ -37523,6 +37523,7 @@ Exemplos...
         winget install --id VideoLAN.VLC -e --accept-package-agreements
         winget install --id Microsoft.RemoteDesktopClient -e --accept-package-agreements
         winget install --id Anthropic.Claude -e --accept-package-agreements  # Claude
+        winget install --id Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" # ajuda graalvm a montar exe
         # ultimo graalvm windows -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
         # ultimo graalvm linux -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
 [y services]
