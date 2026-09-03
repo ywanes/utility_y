@@ -58,6 +58,7 @@ curl.exe -L "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.j
 c:\programFiles\java\jdk-21\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;." Y.java
 
 Set-Content c:/windows/y.bat '@echo off
+setlocal enabledelayedexpansion
 (set \n=^^^
 
 ^
@@ -69,6 +70,12 @@ echo %* | y trataEcho -ignore "Se Vc esta lendo esta msg, significa que ocorreu 
 if "%1" equ "printf" (
 echo %* | y trataPrintf -ignore "Se Vc esta lendo esta msg, significa que ocorreu o bug de " na quantidade impar"
 ) else (
+set argc=0
+for %%x in (%*) do set /a argc+=1
+if !argc! geq 10 (
+echo ALERTA: quantidade de parametros ^(!argc!^) atingiu ou passou de 10
+exit /b 1
+)
 java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\postgresql-42.7.5.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
 )
 )
