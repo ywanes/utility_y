@@ -25419,7 +25419,7 @@ class PokerCalculator{
 }
 
 class Portal {
-    final String VERSION  = "1.1.2";
+    final String VERSION  = "1.2.2";
     final int    MAXFRAME = 64 << 20;
     final Crypto crypto = new Crypto();
 
@@ -25434,6 +25434,7 @@ class Portal {
         String ip;
         int port = -1;
         String pass;
+        String pin;   // cliente: fingerprint Ed25519 esperado do servidor (-fp), anti-MITM sem disco
     }
 
     Config parse(String[] a) {
@@ -25445,6 +25446,7 @@ class Portal {
                 case "-j":      if (i + 1 < a.length) c.room = a[++i]; break;
                 case "-ip":     if (i + 1 < a.length) c.ip = a[++i]; break;
                 case "-pass":   if (i + 1 < a.length) c.pass = a[++i]; break;
+                case "-fp":     if (i + 1 < a.length) c.pin = a[++i]; break;
                 case "-porta":
                     if (i + 1 < a.length) {
                         try { c.port = Integer.parseInt(a[++i]); }
@@ -25461,11 +25463,12 @@ class Portal {
 
     void usage() {
         System.out.println("portal " + VERSION);
-        System.out.println("uso:");
-        System.out.println("  server : set var=\"portal\" \"-server\" \"-ip\" \"192.168.0.100\" \"-porta\" \"2323\" \"-pass\" \"senha\" && y var");
-        System.out.println("  cliente: set var=\"portal\" \"-j\" \"sala1\" \"-ip\" \"192.168.0.100\" \"-porta\" \"2323\" \"-pass\" \"senha\" \"-user\" \"user1\" && y var");
-        System.out.println();
-        System.out.println("comandos no chat: /j <sala>  /list  /kick <nick|sessao>  /help  /exit");
+        System.out.println("uso:\n" +
+        "    server : set var=\"portal\" \"-server\" \"-ip\" \"192.168.0.100\" \"-porta\" \"2323\" \"-pass\" \"senha\" && y var\n" +
+        "    cliente: set var=\"portal\" \"-j\" \"sala1\" \"-ip\" \"192.168.0.100\" \"-porta\" \"2323\" \"-pass\" \"senha\" \"-user\" \"user1\" && y var\n" +
+        "comandos no chat: /j <sala>  /list  /kick <nick|sessao>  /help  /exit\n" +
+        "descrição do portal:\n" +
+        "    chat TCP com salas privadas, sempre cifrado cliente↔servidor (X25519/AES-256-CTR/HMAC), servidor assina com Ed25519; senha (PBKDF2) opcional");
     }
 
     void run(String[] args) throws Exception {
@@ -25562,10 +25565,35 @@ class Portal {
 
         final Link link;
         try {
-            link = (master == null) ? new Link(sock).plain() : new Link(sock).secure(master, false);
+            link = new Link(sock).secure(master, false, null);
         } catch (Exception e) {
             System.out.println("! handshake/senha falhou: " + e.getMessage());
             try { sock.close(); } catch (java.io.IOException ignored) {}
+            return;
+        }
+
+        // autenticacao da identidade Ed25519 do servidor -- sem nada em disco
+        try {
+            String fp = fingerprint(link.peerIdPub);
+            if (c.pin != null && !c.pin.isEmpty()) {
+                if (!pinMatches(c.pin, link.peerIdPub)) {
+                    System.out.println("! identidade do servidor NAO confere com -fp");
+                    System.out.println("!   esperado: " + c.pin);
+                    System.out.println("!   recebido: " + fp);
+                    System.out.println("!   possivel ataque MITM -- conexao abortada");
+                    link.close();
+                    return;
+                }
+                System.out.println("* servidor autenticado (fingerprint confere)  " + fp);
+            } else if (master != null) {
+                System.out.println("* servidor  " + fp + "  (autenticado pela senha)");
+            } else {
+                System.out.println("* servidor  " + fp);
+                System.out.println("* AVISO: identidade NAO verificada; use -pass ou -fp " + fp + " p/ travar contra MITM");
+            }
+        } catch (Exception e) {
+            System.out.println("! erro verificando identidade do servidor: " + e.getMessage());
+            link.close();
             return;
         }
 
@@ -25585,8 +25613,8 @@ class Portal {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> bracketedPaste(false)));
         tx(link, "HELLO " + VERSION + " " + c.user + " " + c.room);
 
-        System.out.println("* conectado como " + c.user + " | sala '" + c.room
-                + "'" + (master != null ? " | cifrado" : "") + "  (/help pra comandos)");
+        System.out.println("* conectado como " + c.user + " | sala '" + c.room + "' | cifrado"
+                + (master != null ? " + senha" : "") + "  (/help pra comandos)");
 
         try {
             java.io.BufferedReader console = new java.io.BufferedReader(new java.io.InputStreamReader(System.in, "UTF-8"));
@@ -25737,22 +25765,38 @@ class Portal {
         return true;
     }
 
+    String fingerprint(byte[] edPubX509) throws Exception {
+        return "SHA256:" + java.util.Base64.getEncoder().withoutPadding()
+                .encodeToString(crypto.sha256(edPubX509));
+    }
+
+    // compara o -fp informado (com ou sem prefixo "SHA256:") com a identidade recebida
+    boolean pinMatches(String expected, byte[] pubX509) throws Exception {
+        String want = expected.trim();
+        if (want.startsWith("SHA256:")) want = want.substring(7);
+        String got = fingerprint(pubX509).substring(7); // fingerprint() sempre poe "SHA256:"
+        return java.security.MessageDigest.isEqual(
+                want.getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+                got.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+    }
+
     void runServer(Config c) throws Exception {
         byte[] master = deriveOrNull(c.pass);
         if (master != null) System.out.println("* chave derivada (pbkdf2 400k) em RAM");
+        java.security.KeyPair serverId = crypto.edGenerate(); // identidade so em RAM; muda a cada restart
         String bind = (c.ip == null) ? "0.0.0.0" : c.ip;
         java.net.ServerSocket ss = new java.net.ServerSocket();
         ss.bind(new java.net.InetSocketAddress(bind, c.port));
         System.out.println("* portal " + VERSION + " ouvindo em " + bind + ":" + c.port
-                + (master != null ? " (cifrado)" : ""));
-        serveLoop(ss, master);
+                + (master != null ? " | cifrado + senha" : " | cifrado (X25519, sem senha)"));
+        serveLoop(ss, master, serverId);
     }
 
-    void serveLoop(java.net.ServerSocket ss, byte[] master) {
+    void serveLoop(java.net.ServerSocket ss, byte[] master, java.security.KeyPair serverId) {
         while (true) {
             try {
                 java.net.Socket s = ss.accept();
-                Thread t = new Thread(new Client(s, master));
+                Thread t = new Thread(new Client(s, master, serverId));
                 t.setDaemon(true);
                 t.start();
             } catch (java.io.IOException e) { break; }
@@ -25768,22 +25812,27 @@ class Portal {
     final class Client implements Runnable {
         final java.net.Socket sock;
         final byte[] master;
+        final java.security.KeyPair serverId;
         final String sid;
         Link link;
         String user;
         String room;
 
-        Client(java.net.Socket s, byte[] master) { this.sock = s; this.master = master; this.sid = newSessionId(); }
+        Client(java.net.Socket s, byte[] master, java.security.KeyPair serverId) {
+            this.sock = s; this.master = master; this.serverId = serverId; this.sid = newSessionId();
+        }
 
         public void run() {
             try {
-                link = (master == null) ? new Link(sock).plain() : new Link(sock).secure(master, true);
+                link = new Link(sock).secure(master, true, serverId);
             } catch (Exception e) {
                 System.out.println("* handshake falhou de " + sock.getRemoteSocketAddress() + ": " + e.getMessage());
                 try { sock.close(); } catch (java.io.IOException ignored) {}
                 return;
             }
             ALL.add(this);
+            System.out.println("* sessao " + sid + " de " + sock.getRemoteSocketAddress()
+                    + " [" + link.fingerprint + "]" + (master == null ? " (sem senha)" : ""));
             try {
                 String first = link.readLine();
                 if (first == null) return;
@@ -25884,48 +25933,80 @@ class Portal {
         private final java.net.Socket sock;
         private final Object wlock = new Object();
 
-        private java.io.BufferedReader tin;
-        private java.io.BufferedWriter tout;
-
-        private boolean enc;
         private java.io.InputStream rin;
         private java.io.OutputStream rout;
         private javax.crypto.Cipher encC, decC;
         private javax.crypto.Mac macS, macR;
         private long seqS, seqR;
+        byte[] peerIdPub;          // cliente: chave publica Ed25519 do servidor (X.509)
+        String fingerprint = "?";  // SAS curto da sessao (deriva de master)
 
         Link(java.net.Socket s) { this.sock = s; }
 
-        Link plain() throws java.io.IOException {
-            tin  = new java.io.BufferedReader(new java.io.InputStreamReader(sock.getInputStream(),  "UTF-8"));
-            tout = new java.io.BufferedWriter(new java.io.OutputStreamWriter(sock.getOutputStream(), "UTF-8"));
-            return this;
-        }
-
-        Link secure(byte[] master, boolean serverRole) throws Exception {
-            enc = true;
+        Link secure(byte[] psk, boolean serverRole, java.security.KeyPair serverId) throws Exception {
             rin  = new java.io.BufferedInputStream(sock.getInputStream());
             rout = new java.io.BufferedOutputStream(sock.getOutputStream());
-            handshake(master, serverRole);
+            handshake(psk, serverRole, serverId);
             return this;
         }
 
-        private final byte[] MAGIC = "PQPORTL1".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        private final byte[] MAGIC = "PQPORTL2".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
 
-        private void handshake(byte[] master, boolean serverRole) throws Exception {
+        private void handshake(byte[] psk, boolean serverRole, java.security.KeyPair serverId) throws Exception {
+            java.security.KeyPair eph = crypto.newEphemeral();
+            byte[] myEph   = eph.getPublic().getEncoded();
             byte[] myNonce = crypto.random(32);
-            rout.write(MAGIC);
-            rout.write(myNonce);
-            rout.flush();
 
-            byte[] peerMagic = readN(8);
-            if (peerMagic == null || !java.util.Arrays.equals(peerMagic, MAGIC))
-                throw new java.io.IOException("peer nao fala o protocolo (magic)");
-            byte[] peerNonce = readN(32);
-            if (peerNonce == null) throw new java.io.IOException("handshake truncado");
+            byte[] cNonce, sNonce, cEph, sEph, peerEph, idPub;
 
-            byte[] cNonce = serverRole ? peerNonce : myNonce;
-            byte[] sNonce = serverRole ? myNonce   : peerNonce;
+            if (!serverRole) {
+                // cliente fala primeiro: MAGIC | nonce | ephPub
+                rout.write(MAGIC);
+                rout.write(myNonce);
+                writeBlob(myEph);
+                rout.flush();
+
+                byte[] pm = readN(8);
+                if (pm == null || !java.util.Arrays.equals(pm, MAGIC))
+                    throw new java.io.IOException("peer nao fala o protocolo (magic)");
+                sNonce = readN(32);
+                if (sNonce == null) throw new java.io.IOException("handshake truncado");
+                sEph  = readBlob(512);
+                idPub = readBlob(1024);
+                byte[] sig = readBlob(1024);
+
+                cNonce = myNonce; cEph = myEph; peerEph = sEph;
+
+                byte[] tr = concat(MAGIC, cNonce, sNonce, cEph, sEph, idPub);
+                if (!crypto.edVerify(idPub, sig, tr))
+                    throw new java.io.IOException("assinatura do servidor invalida (MITM?)");
+                this.peerIdPub = idPub;
+            } else {
+                // servidor: le o cliente, responde assinando o transcript com Ed25519
+                byte[] pm = readN(8);
+                if (pm == null || !java.util.Arrays.equals(pm, MAGIC))
+                    throw new java.io.IOException("peer nao fala o protocolo (magic)");
+                cNonce = readN(32);
+                if (cNonce == null) throw new java.io.IOException("handshake truncado");
+                cEph = readBlob(512);
+
+                sNonce = myNonce; sEph = myEph; peerEph = cEph;
+                idPub = serverId.getPublic().getEncoded();
+
+                byte[] tr  = concat(MAGIC, cNonce, sNonce, cEph, sEph, idPub);
+                byte[] sig = crypto.edSign(serverId.getPrivate(), tr);
+
+                rout.write(MAGIC);
+                rout.write(sNonce);
+                writeBlob(sEph);
+                writeBlob(idPub);
+                writeBlob(sig);
+                rout.flush();
+            }
+
+            byte[] z        = crypto.ecdh(eph, peerEph);
+            byte[] pskBytes = (psk != null) ? psk : new byte[32];
+            byte[] master   = crypto.mix(z, pskBytes, cNonce, sNonce);
 
             byte[] encC2S = crypto.prf(master, cNonce, sNonce, "enc-c2s");
             byte[] macC2S = crypto.prf(master, cNonce, sNonce, "mac-c2s");
@@ -25946,18 +26027,22 @@ class Portal {
                 macR = crypto.hmac(macS2C);
             }
 
+            // confirmacao de chave (e da senha, se houver): ambos derivam o mesmo valor
             byte[] kc = crypto.prf(master, cNonce, sNonce, "confirm");
-            byte[] transcript = concat(MAGIC, cNonce, sNonce);
+            byte[] transcript = concat(MAGIC, cNonce, sNonce, cEph, sEph, idPub);
             byte[] myConfirm = crypto.hmacOf(kc, transcript);
             rout.write(myConfirm);
             rout.flush();
             byte[] peerConfirm = readN(32);
             if (peerConfirm == null || !java.security.MessageDigest.isEqual(peerConfirm, myConfirm))
-                throw new java.io.IOException("senha incorreta (ou peer incompativel)");
+                throw new java.io.IOException(psk != null
+                        ? "senha incorreta (ou peer incompativel)"
+                        : "confirmacao de chave falhou (peer incompativel)");
+
+            this.fingerprint = hex4(crypto.prf(master, cNonce, sNonce, "sas"));
         }
 
         String readLine() throws java.io.IOException {
-            if (!enc) return tin.readLine();
             byte[] lenb = readN(4);
             if (lenb == null) return null;
             int len = ((lenb[0] & 0xff) << 24) | ((lenb[1] & 0xff) << 16)
@@ -25978,10 +26063,6 @@ class Portal {
         }
 
         void writeLine(String s) throws java.io.IOException {
-            if (!enc) {
-                synchronized (wlock) { tout.write(s); tout.write('\n'); tout.flush(); }
-                return;
-            }
             byte[] pt = s.getBytes("UTF-8");
             synchronized (wlock) {
                 byte[] ct = encC.update(pt);
@@ -26016,6 +26097,30 @@ class Portal {
         private byte[] first16(byte[] x) { return java.util.Arrays.copyOf(x, 16); }
         private byte[] intBytes(int v) {
             return new byte[]{ (byte)(v >>> 24), (byte)(v >>> 16), (byte)(v >>> 8), (byte) v };
+        }
+        private byte[] intBytes2(int v) { return new byte[]{ (byte)(v >>> 8), (byte) v }; }
+
+        private void writeBlob(byte[] b) throws java.io.IOException {
+            rout.write(intBytes2(b.length));
+            rout.write(b);
+        }
+        private byte[] readBlob(int max) throws java.io.IOException {
+            byte[] lb = readN(2);
+            if (lb == null) throw new java.io.IOException("handshake truncado");
+            int n = ((lb[0] & 0xff) << 8) | (lb[1] & 0xff);
+            if (n <= 0 || n > max) throw new java.io.IOException("handshake invalido (tamanho " + n + ")");
+            byte[] b = readN(n);
+            if (b == null) throw new java.io.IOException("handshake truncado");
+            return b;
+        }
+        private String hex4(byte[] b) {
+            final char[] H = "0123456789abcdef".toCharArray();
+            StringBuilder s = new StringBuilder(9);
+            for (int i = 0; i < 4 && i < b.length; i++) {
+                s.append(H[(b[i] >> 4) & 0xf]).append(H[b[i] & 0xf]);
+                if (i == 1) s.append('-');
+            }
+            return s.toString();
         }
         private byte[] longBytes(long v) {
             byte[] o = new byte[8];
@@ -26068,6 +26173,46 @@ class Portal {
             c.init(mode, new javax.crypto.spec.SecretKeySpec(key, "AES"), new javax.crypto.spec.IvParameterSpec(iv));
             return c;
         }
+
+        // troca de chaves efemera X25519 (forward secrecy)
+        java.security.KeyPair newEphemeral() throws Exception {
+            return java.security.KeyPairGenerator.getInstance("X25519").generateKeyPair();
+        }
+        byte[] ecdh(java.security.KeyPair kp, byte[] peerPubX509) throws Exception {
+            java.security.PublicKey peer = java.security.KeyFactory.getInstance("X25519")
+                    .generatePublic(new java.security.spec.X509EncodedKeySpec(peerPubX509));
+            javax.crypto.KeyAgreement ka = javax.crypto.KeyAgreement.getInstance("X25519");
+            ka.init(kp.getPrivate());
+            ka.doPhase(peer, true);
+            return ka.generateSecret();
+        }
+        // master = HMAC(z; psk || cNonce || sNonce): mistura ECDH com a senha (se houver)
+        byte[] mix(byte[] z, byte[] psk, byte[] cN, byte[] sN) throws Exception {
+            javax.crypto.Mac m = javax.crypto.Mac.getInstance("HmacSHA256");
+            m.init(new javax.crypto.spec.SecretKeySpec(z, "HmacSHA256"));
+            m.update(psk); m.update(cN); m.update(sN);
+            return m.doFinal();
+        }
+
+        // identidade de longo prazo do servidor: Ed25519
+        java.security.KeyPair edGenerate() throws Exception {
+            return java.security.KeyPairGenerator.getInstance("Ed25519").generateKeyPair();
+        }
+        byte[] edSign(java.security.PrivateKey priv, byte[] data) throws Exception {
+            java.security.Signature s = java.security.Signature.getInstance("Ed25519");
+            s.initSign(priv); s.update(data); return s.sign();
+        }
+        boolean edVerify(byte[] pubX509, byte[] sig, byte[] data) {
+            try {
+                java.security.PublicKey pub = java.security.KeyFactory.getInstance("Ed25519")
+                        .generatePublic(new java.security.spec.X509EncodedKeySpec(pubX509));
+                java.security.Signature s = java.security.Signature.getInstance("Ed25519");
+                s.initVerify(pub); s.update(data); return s.verify(sig);
+            } catch (Exception e) { return false; }
+        }
+        byte[] sha256(byte[] b) throws Exception {
+            return java.security.MessageDigest.getInstance("SHA-256").digest(b);
+        }
     }
 
     final class Probe {
@@ -26098,7 +26243,7 @@ class Portal {
     Probe connectProbe(int port, String pass, String version, String user, String room) throws Exception {
         java.net.Socket s = new java.net.Socket();
         s.connect(new java.net.InetSocketAddress("127.0.0.1", port), 4000);
-        Link l = (pass == null) ? new Link(s).plain() : new Link(s).secure(crypto.pbkdf2(pass), false);
+        Link l = new Link(s).secure(pass == null ? null : crypto.pbkdf2(pass), false, null);
         Probe p = new Probe(l);
         p.send("HELLO " + version + " " + user + " " + room);
         return p;
@@ -26134,24 +26279,39 @@ class Portal {
         System.setOut(indentingStream(System.out));
         System.out.println("== portal " + VERSION + " auto-teste ==");
 
+        java.security.KeyPair id1 = crypto.edGenerate();
         java.net.ServerSocket p1 = new java.net.ServerSocket(); p1.bind(new java.net.InetSocketAddress("127.0.0.1", 0));
         int P = p1.getLocalPort();
-        Thread t1 = new Thread(() -> serveLoop(p1, null)); t1.setDaemon(true); t1.start();
+        Thread t1 = new Thread(() -> serveLoop(p1, null, id1)); t1.setDaemon(true); t1.start();
 
         byte[] key = crypto.pbkdf2("segredo");
+        java.security.KeyPair id2 = crypto.edGenerate();
         java.net.ServerSocket p2 = new java.net.ServerSocket(); p2.bind(new java.net.InetSocketAddress("127.0.0.1", 0));
         int PE = p2.getLocalPort();
-        Thread t2 = new Thread(() -> serveLoop(p2, key)); t2.setDaemon(true); t2.start();
+        Thread t2 = new Thread(() -> serveLoop(p2, key, id2)); t2.setDaemon(true); t2.start();
+
+        byte[] id1pub = id1.getPublic().getEncoded();
+        check(pinMatches(fingerprint(id1pub), id1pub), "-fp confere identidade correta (com prefixo)");
+        check(pinMatches(fingerprint(id1pub).substring(7), id1pub), "-fp confere identidade correta (sem prefixo)");
+        check(!pinMatches(fingerprint(id2.getPublic().getEncoded()), id1pub), "-fp rejeita identidade de outro servidor");
 
         try {
             Probe a = connectProbe(P, null, VERSION, "alice", "r1");
             Probe b = connectProbe(P, null, VERSION, "bob", "r1");
+            check(a.link.peerIdPub != null
+                    && java.util.Arrays.equals(a.link.peerIdPub, id1.getPublic().getEncoded()),
+                    "identidade Ed25519 do servidor verificada (sem senha)");
+            check(!a.link.fingerprint.equals("?"), "handshake X25519 sem senha (fingerprint da sessao)");
             b.await("INFO alice entrou", 2000);
             a.send("MSG " + encode("ola bob"));
             check(b.await("MSG alice ola bob", 2000) != null, "broadcast A->B");
 
             a.send("LIST");
-            String u = a.await("USERS ", 2000);
+            String u = null; // ignora o snapshot antigo (do proprio join) e pega a resposta do LIST
+            for (int tries = 0; tries < 5; tries++) {
+                u = a.await("USERS ", 2000);
+                if (u != null && u.contains("bob#")) break;
+            }
             check(u != null && u.contains("alice#") && u.contains("bob#"), "/list com nick#sessao");
 
             String multi = "linha1\nlinha2\nfim";
@@ -26163,7 +26323,7 @@ class Portal {
             a.send("KICK bob");
             check(b.await("BYE", 2000) != null, "/kick <nick> derruba a sessao");
         } catch (Exception e) {
-            check(false, "suite plaintext (excecao: " + e + ")");
+            check(false, "suite sem senha (excecao: " + e + ")");
         }
 
         try {
@@ -26217,803 +26377,11 @@ class MakePORTAL{
         new Make().make(
             "portal",
             "Portal"
-            ,
-// versao 1.1.2
-"""
-public class Portal {
-    final String VERSION  = "1.1.2";
-    final int    MAXFRAME = 64 << 20;
-    final Crypto crypto = new Crypto();
-
-    public static void main(String[] args) throws Exception {
-        new Portal().run(args);
-    }
-
-    final class Config {
-        boolean server;
-        String user;
-        String room = "geral";
-        String ip;
-        int port = -1;
-        String pass;
-    }
-
-    Config parse(String[] a) {
-        Config c = new Config();
-        for (int i = 0; i < a.length; i++) {
-            switch (a[i]) {
-                case "-server": c.server = true; break;
-                case "-user":   if (i + 1 < a.length) c.user = a[++i]; break;
-                case "-j":      if (i + 1 < a.length) c.room = a[++i]; break;
-                case "-ip":     if (i + 1 < a.length) c.ip = a[++i]; break;
-                case "-pass":   if (i + 1 < a.length) c.pass = a[++i]; break;
-                case "-porta":
-                    if (i + 1 < a.length) {
-                        try { c.port = Integer.parseInt(a[++i]); }
-                        catch (NumberFormatException e) { return null; }
-                    }
-                    break;
-                default: break;
-            }
-        }
-        if (c.port < 0) return null;
-        if (!c.server && c.ip == null) return null;
-        return c;
-    }
-
-    void usage() {
-        System.out.println("portal " + VERSION);
-        System.out.println("uso:");
-        System.out.println("  server : set var=\"portal\" \"-server\" \"-ip\" \"192.168.0.100\" \"-porta\" \"2323\" \"-pass\" \"senha\" && y var");
-        System.out.println("  cliente: set var=\"portal\" \"-j\" \"sala1\" \"-ip\" \"192.168.0.100\" \"-porta\" \"2323\" \"-pass\" \"senha\" \"-user\" \"user1\" && y var");
-        System.out.println();
-        System.out.println("comandos no chat: /j <sala>  /list  /kick <nick|sessao>  /help  /exit");
-    }
-
-    void run(String[] args) throws Exception {
-        for (String a : args) if (a.equals("-test")) { System.exit(runTests()); return; }
-        Config c = parse(args);
-        if (c == null) { usage(); System.exit(2); return; }
-        if (c.server) runServer(c);
-        else runClient(c);
-    }
-
-    String[] split2(String s) {
-        int i = s.indexOf(' ');
-        if (i < 0) return new String[]{ s, "" };
-        return new String[]{ s.substring(0, i), s.substring(i + 1) };
-    }
-
-    String[] split3(String s) {
-        String[] r = { "", "", "" };
-        String[] x = split2(s); r[0] = x[0];
-        String[] y = split2(x[1]); r[1] = y[0]; r[2] = y[1];
-        return r;
-    }
-
-    void tx(Link l, String line) {
-        try { l.writeLine(line); } catch (java.io.IOException ignored) {}
-    }
-
-    final String ESC      = String.valueOf((char) 27);
-    final String PB_START = ESC + "[200~";
-    final String PB_END   = ESC + "[201~";
-    final java.util.concurrent.atomic.AtomicBoolean PASTING = new java.util.concurrent.atomic.AtomicBoolean(false);
-    final StringBuilder PBUF = new StringBuilder();
-
-    void bracketedPaste(boolean on) {
-        System.out.print(on ? ESC + "[?2004h" : ESC + "[?2004l");
-        System.out.flush();
-    }
-
-    void sendMsg(Link out, String text) {
-        tx(out, "MSG " + encode(text));
-    }
-
-    String encode(String s) {
-        StringBuilder b = new StringBuilder(s.length() + 8);
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '\\') b.append("\\\\");
-            else if (c == '\n') b.append("\\n");
-            else if (c == '\r') b.append("\\r");
-            else b.append(c);
-        }
-        return b.toString();
-    }
-
-    String decode(String s) {
-        StringBuilder b = new StringBuilder(s.length());
-        for (int i = 0; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '\\' && i + 1 < s.length()) {
-                char n = s.charAt(++i);
-                if (n == 'n') b.append('\n');
-                else if (n == 'r') b.append('\r');
-                else if (n == '\\') b.append('\\');
-                else b.append('\\').append(n);
-            } else b.append(c);
-        }
-        return b.toString();
-    }
-
-    byte[] deriveOrNull(String pass) throws Exception {
-        if (pass == null || pass.isEmpty()) return null;
-        return crypto.pbkdf2(pass);
-    }
-
-    volatile String SRV_VERSION = "?";
-
-    void runClient(Config c) {
-        if (c.user == null || c.user.isEmpty())
-            c.user = "usuario" + (10000 + new java.security.SecureRandom().nextInt(90000));
-
-        byte[] master;
-        try { master = deriveOrNull(c.pass); }
-        catch (Exception e) { System.out.println("! erro derivando chave: " + e.getMessage()); return; }
-        if (master != null) System.out.println("* derivando chave (pbkdf2 400k)...");
-
-        java.net.Socket sock;
-        try {
-            sock = new java.net.Socket();
-            sock.connect(new java.net.InetSocketAddress(c.ip, c.port), 8000);
-        } catch (java.io.IOException e) {
-            System.out.println("! nao conectou em " + c.ip + ":" + c.port + " (" + e.getMessage() + ")");
-            return;
-        }
-
-        final Link link;
-        try {
-            link = (master == null) ? new Link(sock).plain() : new Link(sock).secure(master, false);
-        } catch (Exception e) {
-            System.out.println("! handshake/senha falhou: " + e.getMessage());
-            try { sock.close(); } catch (java.io.IOException ignored) {}
-            return;
-        }
-
-        Thread recv = new Thread(() -> {
-            try {
-                String line;
-                while ((line = link.readLine()) != null) display(line);
-            } catch (java.io.IOException ignored) {}
-            System.out.println("\n* conexao encerrada");
-            System.exit(0);
-        });
-        recv.setDaemon(true);
-        recv.start();
-
-        installCtrlC();
-        bracketedPaste(true);
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> bracketedPaste(false)));
-        tx(link, "HELLO " + VERSION + " " + c.user + " " + c.room);
-
-        System.out.println("* conectado como " + c.user + " | sala '" + c.room
-                + "'" + (master != null ? " | cifrado" : "") + "  (/help pra comandos)");
-
-        try {
-            java.io.BufferedReader console = new java.io.BufferedReader(new java.io.InputStreamReader(System.in, "UTF-8"));
-            String line;
-            while ((line = console.readLine()) != null) {
-
-                if (PASTING.get()) {
-                    int e = line.indexOf(PB_END);
-                    if (e >= 0) {
-                        String msg;
-                        synchronized (PBUF) {
-                            PBUF.append('\n').append(line, 0, e);
-                            msg = PBUF.toString();
-                            PBUF.setLength(0);
-                        }
-                        PASTING.set(false);
-                        sendMsg(link, msg);
-                    } else {
-                        synchronized (PBUF) { PBUF.append('\n').append(line); }
-                    }
-                    continue;
-                }
-                int st = line.indexOf(PB_START);
-                if (st >= 0) {
-                    String after = line.substring(st + PB_START.length());
-                    int e = after.indexOf(PB_END);
-                    if (e >= 0) {
-                        sendMsg(link, after.substring(0, e));
-                    } else {
-                        PASTING.set(true);
-                        synchronized (PBUF) { PBUF.setLength(0); PBUF.append(after); }
-                    }
-                    continue;
-                }
-                if (line.indexOf(PB_END) >= 0) line = line.replace(PB_END, "");
-
-                if (line.startsWith("/")) {
-                    if (line.equals("/exit")) {
-                        break;
-                    } else if (line.equals("/help")) {
-                        printHelp();
-                    } else if (line.equals("/list")) {
-                        tx(link, "LIST");
-                    } else if (line.startsWith("/kick ")) {
-                        String arg = line.substring(6).trim();
-                        if (arg.isEmpty()) System.out.println("! uso: /kick <nick|sessao>");
-                        else tx(link, "KICK " + arg);
-                    } else if (line.equals("/kick")) {
-                        System.out.println("! uso: /kick <nick|sessao>");
-                    } else if (line.startsWith("/j ")) {
-                        String sala = line.substring(3).trim();
-                        if (sala.isEmpty()) System.out.println("! uso: /j nome_da_sala");
-                        else { c.room = sala; tx(link, "JOIN " + c.user + " " + sala); }
-                    } else if (line.equals("/j")) {
-                        System.out.println("! uso: /j nome_da_sala");
-                    } else {
-                        System.out.println("! comando desconhecido: " + line + "  (/help)");
-                    }
-                } else {
-                    sendMsg(link, line);
-                }
-            }
-        } catch (java.io.IOException e) {
-            System.out.println("! erro lendo teclado: " + e.getMessage());
-        }
-
-        bracketedPaste(false);
-        link.close();
-        System.out.println("* saindo");
-    }
-
-    void printHelp() {
-        System.out.println("comandos:");
-        System.out.println("  /j <sala>            entra numa sala");
-        System.out.println("  /list                lista usuarios (nick#sessao)");
-        System.out.println("  /kick <nick|sessao>  desconecta um nick (todas as sessoes) ou uma sessao");
-        System.out.println("  /help                esta ajuda");
-        System.out.println("  /exit                sair");
-        System.out.println("build local: " + VERSION + "   |   build servidor: " + SRV_VERSION);
-    }
-
-    void display(String line) {
-        String[] p = split2(line);
-        switch (p[0]) {
-            case "MSG": {
-                String[] q = split2(p[1]);
-                System.out.println(q[0] + "> " + decode(q[1]));
-                break;
-            }
-            case "USERS": {
-                String[] ru = split2(p[1]);
-                System.out.println("* sala '" + ru[0] + "' | usuarios: " + ru[1]);
-                break;
-            }
-            case "INFO":  System.out.println("* " + p[1]); break;
-            case "ERR":   System.out.println("! " + p[1]); break;
-            case "SRV":   SRV_VERSION = p[1]; System.out.println("* servidor build " + p[1]); break;
-            case "BYE":   System.out.println("* desconectado: " + p[1]); System.exit(0); break;
-            default:      System.out.println(line);
-        }
-    }
-
-    void installCtrlC() {
-        try {
-            Class<?> sig = Class.forName("sun.misc.Signal");
-            Class<?> handlerType = Class.forName("sun.misc.SignalHandler");
-            Object intSig = sig.getConstructor(String.class).newInstance("INT");
-            Object handler = java.lang.reflect.Proxy.newProxyInstance(
-                handlerType.getClassLoader(), new Class<?>[]{ handlerType },
-                (proxy, method, margs) -> {
-                    switch (method.getName()) {
-                        case "handle":
-                            if (PASTING.getAndSet(false)) {
-                                synchronized (PBUF) { PBUF.setLength(0); }
-                            }
-                            System.out.print('\n');
-                            System.out.flush();
-                            return null;
-                        case "toString": return "ctrlc";
-                        case "hashCode": return System.identityHashCode(proxy);
-                        case "equals":   return proxy == margs[0];
-                        default:         return null;
-                    }
-                });
-            sig.getMethod("handle", sig, handlerType).invoke(null, intSig, handler);
-        } catch (Throwable t) {
-        }
-    }
-
-    final java.util.concurrent.ConcurrentHashMap<String, java.util.Set<Client>> ROOMS = new java.util.concurrent.ConcurrentHashMap<>();
-    final java.util.Set<Client> ALL = java.util.concurrent.ConcurrentHashMap.newKeySet();
-    final java.security.SecureRandom SIDRNG = new java.security.SecureRandom();
-
-    String newSessionId() {
-        while (true) {
-            StringBuilder b = new StringBuilder("session_");
-            for (int i = 0; i < 10; i++) b.append((char) ('0' + SIDRNG.nextInt(10)));
-            String id = b.toString();
-            boolean dup = false;
-            for (Client x : ALL) if (id.equals(x.sid)) { dup = true; break; }
-            if (!dup) return id;
-        }
-    }
-
-    boolean isAllDigits(String s) {
-        if (s.isEmpty()) return false;
-        for (int i = 0; i < s.length(); i++) if (!Character.isDigit(s.charAt(i))) return false;
-        return true;
-    }
-
-    void runServer(Config c) throws Exception {
-        byte[] master = deriveOrNull(c.pass);
-        if (master != null) System.out.println("* chave derivada (pbkdf2 400k) em RAM");
-        String bind = (c.ip == null) ? "0.0.0.0" : c.ip;
-        java.net.ServerSocket ss = new java.net.ServerSocket();
-        ss.bind(new java.net.InetSocketAddress(bind, c.port));
-        System.out.println("* portal " + VERSION + " ouvindo em " + bind + ":" + c.port
-                + (master != null ? " (cifrado)" : ""));
-        serveLoop(ss, master);
-    }
-
-    void serveLoop(java.net.ServerSocket ss, byte[] master) {
-        while (true) {
-            try {
-                java.net.Socket s = ss.accept();
-                Thread t = new Thread(new Client(s, master));
-                t.setDaemon(true);
-                t.start();
-            } catch (java.io.IOException e) { break; }
-        }
-    }
-
-    void broadcast(String room, String line, Client except) {
-        java.util.Set<Client> set = ROOMS.get(room);
-        if (set == null) return;
-        for (Client h : set) if (h != except) h.send(line);
-    }
-
-    final class Client implements Runnable {
-        final java.net.Socket sock;
-        final byte[] master;
-        final String sid;
-        Link link;
-        String user;
-        String room;
-
-        Client(java.net.Socket s, byte[] master) { this.sock = s; this.master = master; this.sid = newSessionId(); }
-
-        public void run() {
-            try {
-                link = (master == null) ? new Link(sock).plain() : new Link(sock).secure(master, true);
-            } catch (Exception e) {
-                System.out.println("* handshake falhou de " + sock.getRemoteSocketAddress() + ": " + e.getMessage());
-                try { sock.close(); } catch (java.io.IOException ignored) {}
-                return;
-            }
-            ALL.add(this);
-            try {
-                String first = link.readLine();
-                if (first == null) return;
-                String[] fp = split2(first);
-                if (!fp[0].equals("HELLO")) { send("ERR handshake invalido (esperava HELLO)"); return; }
-                String[] h = split3(fp[1]);
-                String cver = h[0].isEmpty() ? "?" : h[0];
-                if (!VERSION.equals(cver)) {
-                    send("ERR versoes incompativeis (servidor=" + VERSION + " local=" + cver + ")");
-                    return;
-                }
-                send("SRV " + VERSION);
-                join(h[1], h[2]);
-
-                String line;
-                while ((line = link.readLine()) != null) {
-                    String[] p = split2(line);
-                    switch (p[0]) {
-                        case "JOIN": { String[] q = split2(p[1]); join(q[0], q[1]); break; }
-                        case "MSG":  if (room != null) broadcast(room, "MSG " + user + " " + p[1], null); break;
-                        case "LIST": sendUsers(); break;
-                        case "KICK": doKick(p[1]); break;
-                        default: break;
-                    }
-                }
-            } catch (java.io.IOException ignored) {
-            } finally {
-                ALL.remove(this);
-                leave();
-                link.close();
-            }
-        }
-
-        void join(String u, String r) {
-            leave();
-            this.user = (u == null || u.isEmpty()) ? "usuario?" : u;
-            this.room = (r == null || r.isEmpty()) ? "geral" : r;
-            ROOMS.computeIfAbsent(this.room, k -> new java.util.concurrent.CopyOnWriteArraySet<>()).add(this);
-            System.out.println("* " + user + "#" + sid + " entrou em '" + room + "'");
-            send("INFO voce entrou na sala '" + room + "' como " + user + "#" + sid);
-            broadcast(room, "INFO " + user + " entrou na sala", this);
-            sendUsers();
-        }
-
-        void leave() {
-            if (room == null) return;
-            java.util.Set<Client> set = ROOMS.get(room);
-            if (set != null) {
-                set.remove(this);
-                broadcast(room, "INFO " + user + " saiu da sala", this);
-                if (set.isEmpty()) ROOMS.remove(room, set);
-            }
-            room = null;
-        }
-
-        void sendUsers() {
-            if (room == null) return;
-            java.util.Set<Client> set = ROOMS.get(room);
-            StringBuilder sb = new StringBuilder();
-            if (set != null) {
-                boolean first = true;
-                for (Client x : set) {
-                    if (!first) sb.append(", ");
-                    sb.append(x.user).append('#').append(x.sid);
-                    if (x == this) sb.append(" (voce)");
-                    first = false;
-                }
-            }
-            send("USERS " + room + " " + sb);
-        }
-
-        void doKick(String arg) {
-            arg = arg.trim();
-            if (arg.isEmpty()) { send("ERR uso: /kick <nick|sessao>"); return; }
-            String body = null;
-            if (arg.startsWith("session_")) body = arg.substring(8);
-            else if (isAllDigits(arg)) body = arg;
-
-            int n = 0;
-            if (body != null && isAllDigits(body)) {
-                String full = "session_" + body;
-                for (Client x : ALL) if (full.equals(x.sid)) { x.kick("kick (" + full + ")"); n++; }
-            } else {
-                for (Client x : ALL) if (arg.equals(x.user)) { x.kick("kick (nick " + arg + ")"); n++; }
-            }
-            send(n > 0 ? "INFO kikados: " + n : "ERR nada encontrado para: " + arg);
-        }
-
-        void kick(String reason) {
-            send("BYE " + reason);
-            link.close();
-        }
-
-        void send(String line) { tx(link, line); }
-    }
-
-    final class Link {
-        private final java.net.Socket sock;
-        private final Object wlock = new Object();
-
-        private java.io.BufferedReader tin;
-        private java.io.BufferedWriter tout;
-
-        private boolean enc;
-        private java.io.InputStream rin;
-        private java.io.OutputStream rout;
-        private javax.crypto.Cipher encC, decC;
-        private javax.crypto.Mac macS, macR;
-        private long seqS, seqR;
-
-        Link(java.net.Socket s) { this.sock = s; }
-
-        Link plain() throws java.io.IOException {
-            tin  = new java.io.BufferedReader(new java.io.InputStreamReader(sock.getInputStream(),  "UTF-8"));
-            tout = new java.io.BufferedWriter(new java.io.OutputStreamWriter(sock.getOutputStream(), "UTF-8"));
-            return this;
-        }
-
-        Link secure(byte[] master, boolean serverRole) throws Exception {
-            enc = true;
-            rin  = new java.io.BufferedInputStream(sock.getInputStream());
-            rout = new java.io.BufferedOutputStream(sock.getOutputStream());
-            handshake(master, serverRole);
-            return this;
-        }
-
-        private final byte[] MAGIC = "PQPORTL1".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
-
-        private void handshake(byte[] master, boolean serverRole) throws Exception {
-            byte[] myNonce = crypto.random(32);
-            rout.write(MAGIC);
-            rout.write(myNonce);
-            rout.flush();
-
-            byte[] peerMagic = readN(8);
-            if (peerMagic == null || !java.util.Arrays.equals(peerMagic, MAGIC))
-                throw new java.io.IOException("peer nao fala o protocolo (magic)");
-            byte[] peerNonce = readN(32);
-            if (peerNonce == null) throw new java.io.IOException("handshake truncado");
-
-            byte[] cNonce = serverRole ? peerNonce : myNonce;
-            byte[] sNonce = serverRole ? myNonce   : peerNonce;
-
-            byte[] encC2S = crypto.prf(master, cNonce, sNonce, "enc-c2s");
-            byte[] macC2S = crypto.prf(master, cNonce, sNonce, "mac-c2s");
-            byte[] ivC2S  = first16(crypto.prf(master, cNonce, sNonce, "iv-c2s"));
-            byte[] encS2C = crypto.prf(master, cNonce, sNonce, "enc-s2c");
-            byte[] macS2C = crypto.prf(master, cNonce, sNonce, "mac-s2c");
-            byte[] ivS2C  = first16(crypto.prf(master, cNonce, sNonce, "iv-s2c"));
-
-            if (serverRole) {
-                encC = crypto.aes(encS2C, ivS2C, javax.crypto.Cipher.ENCRYPT_MODE);
-                decC = crypto.aes(encC2S, ivC2S, javax.crypto.Cipher.DECRYPT_MODE);
-                macS = crypto.hmac(macS2C);
-                macR = crypto.hmac(macC2S);
-            } else {
-                encC = crypto.aes(encC2S, ivC2S, javax.crypto.Cipher.ENCRYPT_MODE);
-                decC = crypto.aes(encS2C, ivS2C, javax.crypto.Cipher.DECRYPT_MODE);
-                macS = crypto.hmac(macC2S);
-                macR = crypto.hmac(macS2C);
-            }
-
-            byte[] kc = crypto.prf(master, cNonce, sNonce, "confirm");
-            byte[] transcript = concat(MAGIC, cNonce, sNonce);
-            byte[] myConfirm = crypto.hmacOf(kc, transcript);
-            rout.write(myConfirm);
-            rout.flush();
-            byte[] peerConfirm = readN(32);
-            if (peerConfirm == null || !java.security.MessageDigest.isEqual(peerConfirm, myConfirm))
-                throw new java.io.IOException("senha incorreta (ou peer incompativel)");
-        }
-
-        String readLine() throws java.io.IOException {
-            if (!enc) return tin.readLine();
-            byte[] lenb = readN(4);
-            if (lenb == null) return null;
-            int len = ((lenb[0] & 0xff) << 24) | ((lenb[1] & 0xff) << 16)
-                    | ((lenb[2] & 0xff) << 8) | (lenb[3] & 0xff);
-            if (len < 0 || len > MAXFRAME) throw new java.io.IOException("frame invalido: " + len);
-            byte[] ct  = readN(len);
-            byte[] mac = readN(32);
-            if (ct == null || mac == null) throw new java.io.EOFException("frame truncado");
-            macR.update(longBytes(seqR));
-            macR.update(lenb);
-            macR.update(ct);
-            byte[] expect = macR.doFinal();
-            if (!java.security.MessageDigest.isEqual(expect, mac)) throw new java.io.IOException("MAC invalido (dados adulterados?)");
-            seqR++;
-            byte[] pt = decC.update(ct);
-            if (pt == null) pt = new byte[0];
-            return new String(pt, "UTF-8");
-        }
-
-        void writeLine(String s) throws java.io.IOException {
-            if (!enc) {
-                synchronized (wlock) { tout.write(s); tout.write('\n'); tout.flush(); }
-                return;
-            }
-            byte[] pt = s.getBytes("UTF-8");
-            synchronized (wlock) {
-                byte[] ct = encC.update(pt);
-                if (ct == null) ct = new byte[0];
-                byte[] lenb = intBytes(ct.length);
-                macS.update(longBytes(seqS));
-                macS.update(lenb);
-                macS.update(ct);
-                byte[] mac = macS.doFinal();
-                seqS++;
-                rout.write(lenb);
-                rout.write(ct);
-                rout.write(mac);
-                rout.flush();
-            }
-        }
-
-        void close() { try { sock.close(); } catch (java.io.IOException ignored) {} }
-
-        private byte[] readN(int n) throws java.io.IOException {
-            if (n == 0) return new byte[0];
-            byte[] b = new byte[n];
-            int off = 0;
-            while (off < n) {
-                int r = rin.read(b, off, n - off);
-                if (r < 0) { if (off == 0) return null; throw new java.io.EOFException("fluxo truncado"); }
-                off += r;
-            }
-            return b;
-        }
-
-        private byte[] first16(byte[] x) { return java.util.Arrays.copyOf(x, 16); }
-        private byte[] intBytes(int v) {
-            return new byte[]{ (byte)(v >>> 24), (byte)(v >>> 16), (byte)(v >>> 8), (byte) v };
-        }
-        private byte[] longBytes(long v) {
-            byte[] o = new byte[8];
-            for (int i = 7; i >= 0; i--) { o[i] = (byte)(v & 0xff); v >>>= 8; }
-            return o;
-        }
-        private byte[] concat(byte[]... parts) {
-            int n = 0; for (byte[] p : parts) n += p.length;
-            byte[] o = new byte[n]; int off = 0;
-            for (byte[] p : parts) { System.arraycopy(p, 0, o, off, p.length); off += p.length; }
-            return o;
-        }
-    }
-
-    final class Crypto {
-        final byte[] SALT = "portal-pq-v1".getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        final int ITERATIONS = 400_000;
-        private final java.security.SecureRandom RNG = new java.security.SecureRandom();
-
-        byte[] pbkdf2(String pass) throws Exception {
-            javax.crypto.spec.PBEKeySpec spec = new javax.crypto.spec.PBEKeySpec(pass.toCharArray(), SALT, ITERATIONS, 256);
-            return javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA512").generateSecret(spec).getEncoded();
-        }
-
-        byte[] random(int n) { byte[] b = new byte[n]; RNG.nextBytes(b); return b; }
-
-        byte[] prf(byte[] master, byte[] cN, byte[] sN, String label) throws Exception {
-            javax.crypto.Mac m = javax.crypto.Mac.getInstance("HmacSHA256");
-            m.init(new javax.crypto.spec.SecretKeySpec(master, "HmacSHA256"));
-            m.update(cN);
-            m.update(sN);
-            m.update(label.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
-            return m.doFinal();
-        }
-
-        byte[] hmacOf(byte[] key, byte[] data) throws Exception {
-            javax.crypto.Mac m = javax.crypto.Mac.getInstance("HmacSHA256");
-            m.init(new javax.crypto.spec.SecretKeySpec(key, "HmacSHA256"));
-            return m.doFinal(data);
-        }
-
-        javax.crypto.Mac hmac(byte[] key) throws Exception {
-            javax.crypto.Mac m = javax.crypto.Mac.getInstance("HmacSHA256");
-            m.init(new javax.crypto.spec.SecretKeySpec(key, "HmacSHA256"));
-            return m;
-        }
-
-        javax.crypto.Cipher aes(byte[] key, byte[] iv, int mode) throws Exception {
-            javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("AES/CTR/NoPadding");
-            c.init(mode, new javax.crypto.spec.SecretKeySpec(key, "AES"), new javax.crypto.spec.IvParameterSpec(iv));
-            return c;
-        }
-    }
-
-    final class Probe {
-        final Link link;
-        final java.util.concurrent.BlockingQueue<String> inbox = new java.util.concurrent.LinkedBlockingQueue<>();
-        Probe(Link l) {
-            this.link = l;
-            Thread t = new Thread(() -> {
-                try { String s; while ((s = l.readLine()) != null) inbox.add(s); }
-                catch (java.io.IOException ignored) {}
-                inbox.add("~EOF");
-            });
-            t.setDaemon(true); t.start();
-        }
-        void send(String s) { tx(link, s); }
-        String await(String needle, long ms) throws InterruptedException {
-            long deadline = System.nanoTime() + ms * 1_000_000L;
-            while (true) {
-                long left = (deadline - System.nanoTime()) / 1_000_000L;
-                if (left <= 0) return null;
-                String s = inbox.poll(left, java.util.concurrent.TimeUnit.MILLISECONDS);
-                if (s == null) return null;
-                if (s.contains(needle)) return s;
-            }
-        }
-    }
-
-    Probe connectProbe(int port, String pass, String version, String user, String room) throws Exception {
-        java.net.Socket s = new java.net.Socket();
-        s.connect(new java.net.InetSocketAddress("127.0.0.1", port), 4000);
-        Link l = (pass == null) ? new Link(s).plain() : new Link(s).secure(crypto.pbkdf2(pass), false);
-        Probe p = new Probe(l);
-        p.send("HELLO " + version + " " + user + " " + room);
-        return p;
-    }
-
-    int TESTS_OK = 0, TESTS_TOTAL = 0;
-    void check(boolean cond, String name) {
-        TESTS_TOTAL++;
-        if (cond) { TESTS_OK++; System.out.println("[OK]    " + name); }
-        else System.out.println("[FALHA] " + name);
-    }
-
-    java.io.PrintStream indentingStream(final java.io.PrintStream target) {
-        final java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
-        return new java.io.PrintStream(new java.io.OutputStream() {
-            public void write(int b) {
-                if (b == '\n') {
-                    String s;
-                    try { s = buf.toString("UTF-8"); } catch (Exception e) { s = buf.toString(); }
-                    buf.reset();
-                    if (s.endsWith("\r")) s = s.substring(0, s.length() - 1);
-                    if (s.startsWith("[OK]") || s.startsWith("[FALHA]")) target.println(s);
-                    else target.println("\t" + s);
-                } else {
-                    buf.write(b);
-                }
-            }
-            public void flush() { target.flush(); }
-        }, true);
-    }
-
-    int runTests() throws Exception {
-        System.setOut(indentingStream(System.out));
-        System.out.println("== portal " + VERSION + " auto-teste ==");
-
-        java.net.ServerSocket p1 = new java.net.ServerSocket(); p1.bind(new java.net.InetSocketAddress("127.0.0.1", 0));
-        int P = p1.getLocalPort();
-        Thread t1 = new Thread(() -> serveLoop(p1, null)); t1.setDaemon(true); t1.start();
-
-        byte[] key = crypto.pbkdf2("segredo");
-        java.net.ServerSocket p2 = new java.net.ServerSocket(); p2.bind(new java.net.InetSocketAddress("127.0.0.1", 0));
-        int PE = p2.getLocalPort();
-        Thread t2 = new Thread(() -> serveLoop(p2, key)); t2.setDaemon(true); t2.start();
-
-        try {
-            Probe a = connectProbe(P, null, VERSION, "alice", "r1");
-            Probe b = connectProbe(P, null, VERSION, "bob", "r1");
-            b.await("INFO alice entrou", 2000);
-            a.send("MSG " + encode("ola bob"));
-            check(b.await("MSG alice ola bob", 2000) != null, "broadcast A->B");
-
-            a.send("LIST");
-            String u = a.await("USERS ", 2000);
-            check(u != null && u.contains("alice#") && u.contains("bob#"), "/list com nick#sessao");
-
-            String multi = "linha1\nlinha2\nfim";
-            a.send("MSG " + encode(multi));
-            String m = b.await("MSG alice ", 2000);
-            String dec = (m == null) ? null : decode(split2(split2(m)[1])[1]);
-            check(multi.equals(dec), "mensagem multi-linha (paste)");
-
-            a.send("KICK bob");
-            check(b.await("BYE", 2000) != null, "/kick <nick> derruba a sessao");
-        } catch (Exception e) {
-            check(false, "suite plaintext (excecao: " + e + ")");
-        }
-
-        try {
-            Probe ea = connectProbe(PE, "segredo", VERSION, "eve", "sec");
-            Probe eb = connectProbe(PE, "segredo", VERSION, "ebo", "sec");
-            eb.await("INFO eve entrou", 3000);
-            ea.send("MSG " + encode("cifrado ok"));
-            check(eb.await("MSG eve cifrado ok", 3000) != null, "transporte cifrado (-pass) A->B");
-        } catch (Exception e) {
-            check(false, "transporte cifrado (excecao: " + e + ")");
-        }
-
-        boolean rejected = false;
-        try { connectProbe(PE, "ERRADA", VERSION, "mal", "sec"); }
-        catch (Exception e) { rejected = true; }
-        check(rejected, "senha errada rejeitada");
-
-        try {
-            Probe v = connectProbe(P, null, "9.9.9", "old", "r2");
-            check(v.await("ERR versoes incompativeis", 2000) != null, "versao incompativel rejeitada");
-        } catch (Exception e) {
-            check(false, "versao incompativel (excecao: " + e + ")");
-        }
-
-        try {
-            Probe ka = connectProbe(P, null, VERSION, "boss", "rk");
-            Probe kb = connectProbe(P, null, VERSION, "victim", "rk");
-            ka.await("INFO victim entrou", 2000);
-            ka.send("LIST");
-            String users = ka.await("victim#", 2000);
-            String vsid = null;
-            if (users != null) {
-                for (String tok : users.substring(6).split(",")) {
-                    tok = tok.trim();
-                    if (tok.startsWith("victim#")) vsid = tok.substring(tok.indexOf('#') + 1);
-                }
-            }
-            if (vsid != null) ka.send("KICK " + vsid);
-            check(vsid != null && kb.await("BYE", 2000) != null, "/kick <sessao> derruba aquela sessao");
-        } catch (Exception e) {
-            check(false, "/kick <sessao> (excecao: " + e + ")");
-        }
-
-        System.out.println("== resultado: " + TESTS_OK + "/" + TESTS_TOTAL + " ==");
-        return (TESTS_OK == TESTS_TOTAL) ? 0 : 1;
-    }
-}
-""".getBytes()
+            // versao 1.2.2
+            ,java.util.Base64.getDecoder().decode(
+                "cHVibGljIGNsYXNzIFBvcnRhbCB7CiAgICBmaW5hbCBTdHJpbmcgVkVSU0lPTiAgPSAiMS4yLjIiOwogICAgZmluYWwgaW50ICAgIE1BWEZSQU1FID0gNjQgPDwgMjA7CiAgICBmaW5hbCBDcnlwdG8gY3J5cHRvID0gbmV3IENyeXB0bygpOwoKICAgIHB1YmxpYyBzdGF0aWMgdm9pZCBtYWluKFN0cmluZ1tdIGFyZ3MpIHRocm93cyBFeGNlcHRpb24gewogICAgICAgIG5ldyBQb3J0YWwoKS5ydW4oYXJncyk7CiAgICB9CgogICAgZmluYWwgY2xhc3MgQ29uZmlnIHsKICAgICAgICBib29sZWFuIHNlcnZlcjsKICAgICAgICBTdHJpbmcgdXNlcjsKICAgICAgICBTdHJpbmcgcm9vbSA9ICJnZXJhbCI7CiAgICAgICAgU3RyaW5nIGlwOwogICAgICAgIGludCBwb3J0ID0gLTE7CiAgICAgICAgU3RyaW5nIHBhc3M7CiAgICAgICAgU3RyaW5nIHBpbjsgICAvLyBjbGllbnRlOiBmaW5nZXJwcmludCBFZDI1NTE5IGVzcGVyYWRvIGRvIHNlcnZpZG9yICgtZnApLCBhbnRpLU1JVE0gc2VtIGRpc2NvCiAgICB9CgogICAgQ29uZmlnIHBhcnNlKFN0cmluZ1tdIGEpIHsKICAgICAgICBDb25maWcgYyA9IG5ldyBDb25maWcoKTsKICAgICAgICBmb3IgKGludCBpID0gMDsgaSA8IGEubGVuZ3RoOyBpKyspIHsKICAgICAgICAgICAgc3dpdGNoIChhW2ldKSB7CiAgICAgICAgICAgICAgICBjYXNlICItc2VydmVyIjogYy5zZXJ2ZXIgPSB0cnVlOyBicmVhazsKICAgICAgICAgICAgICAgIGNhc2UgIi11c2VyIjogICBpZiAoaSArIDEgPCBhLmxlbmd0aCkgYy51c2VyID0gYVsrK2ldOyBicmVhazsKICAgICAgICAgICAgICAgIGNhc2UgIi1qIjogICAgICBpZiAoaSArIDEgPCBhLmxlbmd0aCkgYy5yb29tID0gYVsrK2ldOyBicmVhazsKICAgICAgICAgICAgICAgIGNhc2UgIi1pcCI6ICAgICBpZiAoaSArIDEgPCBhLmxlbmd0aCkgYy5pcCA9IGFbKytpXTsgYnJlYWs7CiAgICAgICAgICAgICAgICBjYXNlICItcGFzcyI6ICAgaWYgKGkgKyAxIDwgYS5sZW5ndGgpIGMucGFzcyA9IGFbKytpXTsgYnJlYWs7CiAgICAgICAgICAgICAgICBjYXNlICItZnAiOiAgICAgaWYgKGkgKyAxIDwgYS5sZW5ndGgpIGMucGluID0gYVsrK2ldOyBicmVhazsKICAgICAgICAgICAgICAgIGNhc2UgIi1wb3J0YSI6CiAgICAgICAgICAgICAgICAgICAgaWYgKGkgKyAxIDwgYS5sZW5ndGgpIHsKICAgICAgICAgICAgICAgICAgICAgICAgdHJ5IHsgYy5wb3J0ID0gSW50ZWdlci5wYXJzZUludChhWysraV0pOyB9CiAgICAgICAgICAgICAgICAgICAgICAgIGNhdGNoIChOdW1iZXJGb3JtYXRFeGNlcHRpb24gZSkgeyByZXR1cm4gbnVsbDsgfQogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICAgICBicmVhazsKICAgICAgICAgICAgICAgIGRlZmF1bHQ6IGJyZWFrOwogICAgICAgICAgICB9CiAgICAgICAgfQogICAgICAgIGlmIChjLnBvcnQgPCAwKSByZXR1cm4gbnVsbDsKICAgICAgICBpZiAoIWMuc2VydmVyICYmIGMuaXAgPT0gbnVsbCkgcmV0dXJuIG51bGw7CiAgICAgICAgcmV0dXJuIGM7CiAgICB9CgogICAgdm9pZCB1c2FnZSgpIHsKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oInBvcnRhbCAiICsgVkVSU0lPTik7CiAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCJ1c286XG4iICsKICAgICAgICAiICAgIHNlcnZlciA6IHNldCB2YXI9XCJwb3J0YWxcIiBcIi1zZXJ2ZXJcIiBcIi1pcFwiIFwiMTkyLjE2OC4wLjEwMFwiIFwiLXBvcnRhXCIgXCIyMzIzXCIgXCItcGFzc1wiIFwic2VuaGFcIiAmJiB5IHZhclxuIiArCiAgICAgICAgIiAgICBjbGllbnRlOiBzZXQgdmFyPVwicG9ydGFsXCIgXCItalwiIFwic2FsYTFcIiBcIi1pcFwiIFwiMTkyLjE2OC4wLjEwMFwiIFwiLXBvcnRhXCIgXCIyMzIzXCIgXCItcGFzc1wiIFwic2VuaGFcIiBcIi11c2VyXCIgXCJ1c2VyMVwiICYmIHkgdmFyXG4iICsKICAgICAgICAiY29tYW5kb3Mgbm8gY2hhdDogL2ogPHNhbGE+ICAvbGlzdCAgL2tpY2sgPG5pY2t8c2Vzc2FvPiAgL2hlbHAgIC9leGl0XG4iICsKICAgICAgICAiZGVzY3Jpw6fDo28gZG8gcG9ydGFsOlxuIiArCiAgICAgICAgIiAgICBjaGF0IFRDUCBjb20gc2FsYXMgcHJpdmFkYXMsIHNlbXByZSBjaWZyYWRvIGNsaWVudGXihpRzZXJ2aWRvciAoWDI1NTE5L0FFUy0yNTYtQ1RSL0hNQUMpLCBzZXJ2aWRvciBhc3NpbmEgY29tIEVkMjU1MTk7IHNlbmhhIChQQktERjIpIG9wY2lvbmFsIik7CiAgICB9CgogICAgdm9pZCBydW4oU3RyaW5nW10gYXJncykgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgZm9yIChTdHJpbmcgYSA6IGFyZ3MpIGlmIChhLmVxdWFscygiLXRlc3QiKSkgeyBTeXN0ZW0uZXhpdChydW5UZXN0cygpKTsgcmV0dXJuOyB9CiAgICAgICAgQ29uZmlnIGMgPSBwYXJzZShhcmdzKTsKICAgICAgICBpZiAoYyA9PSBudWxsKSB7IHVzYWdlKCk7IFN5c3RlbS5leGl0KDIpOyByZXR1cm47IH0KICAgICAgICBpZiAoYy5zZXJ2ZXIpIHJ1blNlcnZlcihjKTsKICAgICAgICBlbHNlIHJ1bkNsaWVudChjKTsKICAgIH0KCiAgICBTdHJpbmdbXSBzcGxpdDIoU3RyaW5nIHMpIHsKICAgICAgICBpbnQgaSA9IHMuaW5kZXhPZignICcpOwogICAgICAgIGlmIChpIDwgMCkgcmV0dXJuIG5ldyBTdHJpbmdbXXsgcywgIiIgfTsKICAgICAgICByZXR1cm4gbmV3IFN0cmluZ1tdeyBzLnN1YnN0cmluZygwLCBpKSwgcy5zdWJzdHJpbmcoaSArIDEpIH07CiAgICB9CgogICAgU3RyaW5nW10gc3BsaXQzKFN0cmluZyBzKSB7CiAgICAgICAgU3RyaW5nW10gciA9IHsgIiIsICIiLCAiIiB9OwogICAgICAgIFN0cmluZ1tdIHggPSBzcGxpdDIocyk7IHJbMF0gPSB4WzBdOwogICAgICAgIFN0cmluZ1tdIHkgPSBzcGxpdDIoeFsxXSk7IHJbMV0gPSB5WzBdOyByWzJdID0geVsxXTsKICAgICAgICByZXR1cm4gcjsKICAgIH0KCiAgICB2b2lkIHR4KExpbmsgbCwgU3RyaW5nIGxpbmUpIHsKICAgICAgICB0cnkgeyBsLndyaXRlTGluZShsaW5lKTsgfSBjYXRjaCAoamF2YS5pby5JT0V4Y2VwdGlvbiBpZ25vcmVkKSB7fQogICAgfQoKICAgIGZpbmFsIFN0cmluZyBFU0MgICAgICA9IFN0cmluZy52YWx1ZU9mKChjaGFyKSAyNyk7CiAgICBmaW5hbCBTdHJpbmcgUEJfU1RBUlQgPSBFU0MgKyAiWzIwMH4iOwogICAgZmluYWwgU3RyaW5nIFBCX0VORCAgID0gRVNDICsgIlsyMDF+IjsKICAgIGZpbmFsIGphdmEudXRpbC5jb25jdXJyZW50LmF0b21pYy5BdG9taWNCb29sZWFuIFBBU1RJTkcgPSBuZXcgamF2YS51dGlsLmNvbmN1cnJlbnQuYXRvbWljLkF0b21pY0Jvb2xlYW4oZmFsc2UpOwogICAgZmluYWwgU3RyaW5nQnVpbGRlciBQQlVGID0gbmV3IFN0cmluZ0J1aWxkZXIoKTsKCiAgICB2b2lkIGJyYWNrZXRlZFBhc3RlKGJvb2xlYW4gb24pIHsKICAgICAgICBTeXN0ZW0ub3V0LnByaW50KG9uID8gRVNDICsgIls/MjAwNGgiIDogRVNDICsgIls/MjAwNGwiKTsKICAgICAgICBTeXN0ZW0ub3V0LmZsdXNoKCk7CiAgICB9CgogICAgdm9pZCBzZW5kTXNnKExpbmsgb3V0LCBTdHJpbmcgdGV4dCkgewogICAgICAgIHR4KG91dCwgIk1TRyAiICsgZW5jb2RlKHRleHQpKTsKICAgIH0KCiAgICBTdHJpbmcgZW5jb2RlKFN0cmluZyBzKSB7CiAgICAgICAgU3RyaW5nQnVpbGRlciBiID0gbmV3IFN0cmluZ0J1aWxkZXIocy5sZW5ndGgoKSArIDgpOwogICAgICAgIGZvciAoaW50IGkgPSAwOyBpIDwgcy5sZW5ndGgoKTsgaSsrKSB7CiAgICAgICAgICAgIGNoYXIgYyA9IHMuY2hhckF0KGkpOwogICAgICAgICAgICBpZiAoYyA9PSAnXFwnKSBiLmFwcGVuZCgiXFxcXCIpOwogICAgICAgICAgICBlbHNlIGlmIChjID09ICdcbicpIGIuYXBwZW5kKCJcXG4iKTsKICAgICAgICAgICAgZWxzZSBpZiAoYyA9PSAnXHInKSBiLmFwcGVuZCgiXFxyIik7CiAgICAgICAgICAgIGVsc2UgYi5hcHBlbmQoYyk7CiAgICAgICAgfQogICAgICAgIHJldHVybiBiLnRvU3RyaW5nKCk7CiAgICB9CgogICAgU3RyaW5nIGRlY29kZShTdHJpbmcgcykgewogICAgICAgIFN0cmluZ0J1aWxkZXIgYiA9IG5ldyBTdHJpbmdCdWlsZGVyKHMubGVuZ3RoKCkpOwogICAgICAgIGZvciAoaW50IGkgPSAwOyBpIDwgcy5sZW5ndGgoKTsgaSsrKSB7CiAgICAgICAgICAgIGNoYXIgYyA9IHMuY2hhckF0KGkpOwogICAgICAgICAgICBpZiAoYyA9PSAnXFwnICYmIGkgKyAxIDwgcy5sZW5ndGgoKSkgewogICAgICAgICAgICAgICAgY2hhciBuID0gcy5jaGFyQXQoKytpKTsKICAgICAgICAgICAgICAgIGlmIChuID09ICduJykgYi5hcHBlbmQoJ1xuJyk7CiAgICAgICAgICAgICAgICBlbHNlIGlmIChuID09ICdyJykgYi5hcHBlbmQoJ1xyJyk7CiAgICAgICAgICAgICAgICBlbHNlIGlmIChuID09ICdcXCcpIGIuYXBwZW5kKCdcXCcpOwogICAgICAgICAgICAgICAgZWxzZSBiLmFwcGVuZCgnXFwnKS5hcHBlbmQobik7CiAgICAgICAgICAgIH0gZWxzZSBiLmFwcGVuZChjKTsKICAgICAgICB9CiAgICAgICAgcmV0dXJuIGIudG9TdHJpbmcoKTsKICAgIH0KCiAgICBieXRlW10gZGVyaXZlT3JOdWxsKFN0cmluZyBwYXNzKSB0aHJvd3MgRXhjZXB0aW9uIHsKICAgICAgICBpZiAocGFzcyA9PSBudWxsIHx8IHBhc3MuaXNFbXB0eSgpKSByZXR1cm4gbnVsbDsKICAgICAgICByZXR1cm4gY3J5cHRvLnBia2RmMihwYXNzKTsKICAgIH0KCiAgICB2b2xhdGlsZSBTdHJpbmcgU1JWX1ZFUlNJT04gPSAiPyI7CgogICAgdm9pZCBydW5DbGllbnQoQ29uZmlnIGMpIHsKICAgICAgICBpZiAoYy51c2VyID09IG51bGwgfHwgYy51c2VyLmlzRW1wdHkoKSkKICAgICAgICAgICAgYy51c2VyID0gInVzdWFyaW8iICsgKDEwMDAwICsgbmV3IGphdmEuc2VjdXJpdHkuU2VjdXJlUmFuZG9tKCkubmV4dEludCg5MDAwMCkpOwoKICAgICAgICBieXRlW10gbWFzdGVyOwogICAgICAgIHRyeSB7IG1hc3RlciA9IGRlcml2ZU9yTnVsbChjLnBhc3MpOyB9CiAgICAgICAgY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7IFN5c3RlbS5vdXQucHJpbnRsbigiISBlcnJvIGRlcml2YW5kbyBjaGF2ZTogIiArIGUuZ2V0TWVzc2FnZSgpKTsgcmV0dXJuOyB9CiAgICAgICAgaWYgKG1hc3RlciAhPSBudWxsKSBTeXN0ZW0ub3V0LnByaW50bG4oIiogZGVyaXZhbmRvIGNoYXZlIChwYmtkZjIgNDAwaykuLi4iKTsKCiAgICAgICAgamF2YS5uZXQuU29ja2V0IHNvY2s7CiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgc29jayA9IG5ldyBqYXZhLm5ldC5Tb2NrZXQoKTsKICAgICAgICAgICAgc29jay5jb25uZWN0KG5ldyBqYXZhLm5ldC5JbmV0U29ja2V0QWRkcmVzcyhjLmlwLCBjLnBvcnQpLCA4MDAwKTsKICAgICAgICB9IGNhdGNoIChqYXZhLmlvLklPRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCIhIG5hbyBjb25lY3RvdSBlbSAiICsgYy5pcCArICI6IiArIGMucG9ydCArICIgKCIgKyBlLmdldE1lc3NhZ2UoKSArICIpIik7CiAgICAgICAgICAgIHJldHVybjsKICAgICAgICB9CgogICAgICAgIGZpbmFsIExpbmsgbGluazsKICAgICAgICB0cnkgewogICAgICAgICAgICBsaW5rID0gbmV3IExpbmsoc29jaykuc2VjdXJlKG1hc3RlciwgZmFsc2UsIG51bGwpOwogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiISBoYW5kc2hha2Uvc2VuaGEgZmFsaG91OiAiICsgZS5nZXRNZXNzYWdlKCkpOwogICAgICAgICAgICB0cnkgeyBzb2NrLmNsb3NlKCk7IH0gY2F0Y2ggKGphdmEuaW8uSU9FeGNlcHRpb24gaWdub3JlZCkge30KICAgICAgICAgICAgcmV0dXJuOwogICAgICAgIH0KCiAgICAgICAgLy8gYXV0ZW50aWNhY2FvIGRhIGlkZW50aWRhZGUgRWQyNTUxOSBkbyBzZXJ2aWRvciAtLSBzZW0gbmFkYSBlbSBkaXNjbwogICAgICAgIHRyeSB7CiAgICAgICAgICAgIFN0cmluZyBmcCA9IGZpbmdlcnByaW50KGxpbmsucGVlcklkUHViKTsKICAgICAgICAgICAgaWYgKGMucGluICE9IG51bGwgJiYgIWMucGluLmlzRW1wdHkoKSkgewogICAgICAgICAgICAgICAgaWYgKCFwaW5NYXRjaGVzKGMucGluLCBsaW5rLnBlZXJJZFB1YikpIHsKICAgICAgICAgICAgICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIiEgaWRlbnRpZGFkZSBkbyBzZXJ2aWRvciBOQU8gY29uZmVyZSBjb20gLWZwIik7CiAgICAgICAgICAgICAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCIhICAgZXNwZXJhZG86ICIgKyBjLnBpbik7CiAgICAgICAgICAgICAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCIhICAgcmVjZWJpZG86ICIgKyBmcCk7CiAgICAgICAgICAgICAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCIhICAgcG9zc2l2ZWwgYXRhcXVlIE1JVE0gLS0gY29uZXhhbyBhYm9ydGFkYSIpOwogICAgICAgICAgICAgICAgICAgIGxpbmsuY2xvc2UoKTsKICAgICAgICAgICAgICAgICAgICByZXR1cm47CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIiogc2Vydmlkb3IgYXV0ZW50aWNhZG8gKGZpbmdlcnByaW50IGNvbmZlcmUpICAiICsgZnApOwogICAgICAgICAgICB9IGVsc2UgaWYgKG1hc3RlciAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIiogc2Vydmlkb3IgICIgKyBmcCArICIgIChhdXRlbnRpY2FkbyBwZWxhIHNlbmhhKSIpOwogICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCIqIHNlcnZpZG9yICAiICsgZnApOwogICAgICAgICAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCIqIEFWSVNPOiBpZGVudGlkYWRlIE5BTyB2ZXJpZmljYWRhOyB1c2UgLXBhc3Mgb3UgLWZwICIgKyBmcCArICIgcC8gdHJhdmFyIGNvbnRyYSBNSVRNIik7CiAgICAgICAgICAgIH0KICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZSkgewogICAgICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIiEgZXJybyB2ZXJpZmljYW5kbyBpZGVudGlkYWRlIGRvIHNlcnZpZG9yOiAiICsgZS5nZXRNZXNzYWdlKCkpOwogICAgICAgICAgICBsaW5rLmNsb3NlKCk7CiAgICAgICAgICAgIHJldHVybjsKICAgICAgICB9CgogICAgICAgIFRocmVhZCByZWN2ID0gbmV3IFRocmVhZCgoKSAtPiB7CiAgICAgICAgICAgIHRyeSB7CiAgICAgICAgICAgICAgICBTdHJpbmcgbGluZTsKICAgICAgICAgICAgICAgIHdoaWxlICgobGluZSA9IGxpbmsucmVhZExpbmUoKSkgIT0gbnVsbCkgZGlzcGxheShsaW5lKTsKICAgICAgICAgICAgfSBjYXRjaCAoamF2YS5pby5JT0V4Y2VwdGlvbiBpZ25vcmVkKSB7fQogICAgICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIlxuKiBjb25leGFvIGVuY2VycmFkYSIpOwogICAgICAgICAgICBTeXN0ZW0uZXhpdCgwKTsKICAgICAgICB9KTsKICAgICAgICByZWN2LnNldERhZW1vbih0cnVlKTsKICAgICAgICByZWN2LnN0YXJ0KCk7CgogICAgICAgIGluc3RhbGxDdHJsQygpOwogICAgICAgIGJyYWNrZXRlZFBhc3RlKHRydWUpOwogICAgICAgIFJ1bnRpbWUuZ2V0UnVudGltZSgpLmFkZFNodXRkb3duSG9vayhuZXcgVGhyZWFkKCgpIC0+IGJyYWNrZXRlZFBhc3RlKGZhbHNlKSkpOwogICAgICAgIHR4KGxpbmssICJIRUxMTyAiICsgVkVSU0lPTiArICIgIiArIGMudXNlciArICIgIiArIGMucm9vbSk7CgogICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiKiBjb25lY3RhZG8gY29tbyAiICsgYy51c2VyICsgIiB8IHNhbGEgJyIgKyBjLnJvb20gKyAiJyB8IGNpZnJhZG8iCiAgICAgICAgICAgICAgICArIChtYXN0ZXIgIT0gbnVsbCA/ICIgKyBzZW5oYSIgOiAiIikgKyAiICAoL2hlbHAgcHJhIGNvbWFuZG9zKSIpOwoKICAgICAgICB0cnkgewogICAgICAgICAgICBqYXZhLmlvLkJ1ZmZlcmVkUmVhZGVyIGNvbnNvbGUgPSBuZXcgamF2YS5pby5CdWZmZXJlZFJlYWRlcihuZXcgamF2YS5pby5JbnB1dFN0cmVhbVJlYWRlcihTeXN0ZW0uaW4sICJVVEYtOCIpKTsKICAgICAgICAgICAgU3RyaW5nIGxpbmU7CiAgICAgICAgICAgIHdoaWxlICgobGluZSA9IGNvbnNvbGUucmVhZExpbmUoKSkgIT0gbnVsbCkgewoKICAgICAgICAgICAgICAgIGlmIChQQVNUSU5HLmdldCgpKSB7CiAgICAgICAgICAgICAgICAgICAgaW50IGUgPSBsaW5lLmluZGV4T2YoUEJfRU5EKTsKICAgICAgICAgICAgICAgICAgICBpZiAoZSA+PSAwKSB7CiAgICAgICAgICAgICAgICAgICAgICAgIFN0cmluZyBtc2c7CiAgICAgICAgICAgICAgICAgICAgICAgIHN5bmNocm9uaXplZCAoUEJVRikgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgUEJVRi5hcHBlbmQoJ1xuJykuYXBwZW5kKGxpbmUsIDAsIGUpOwogICAgICAgICAgICAgICAgICAgICAgICAgICAgbXNnID0gUEJVRi50b1N0cmluZygpOwogICAgICAgICAgICAgICAgICAgICAgICAgICAgUEJVRi5zZXRMZW5ndGgoMCk7CiAgICAgICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICAgICAgICAgUEFTVElORy5zZXQoZmFsc2UpOwogICAgICAgICAgICAgICAgICAgICAgICBzZW5kTXNnKGxpbmssIG1zZyk7CiAgICAgICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICAgICAgc3luY2hyb25pemVkIChQQlVGKSB7IFBCVUYuYXBwZW5kKCdcbicpLmFwcGVuZChsaW5lKTsgfQogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICAgICBjb250aW51ZTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGludCBzdCA9IGxpbmUuaW5kZXhPZihQQl9TVEFSVCk7CiAgICAgICAgICAgICAgICBpZiAoc3QgPj0gMCkgewogICAgICAgICAgICAgICAgICAgIFN0cmluZyBhZnRlciA9IGxpbmUuc3Vic3RyaW5nKHN0ICsgUEJfU1RBUlQubGVuZ3RoKCkpOwogICAgICAgICAgICAgICAgICAgIGludCBlID0gYWZ0ZXIuaW5kZXhPZihQQl9FTkQpOwogICAgICAgICAgICAgICAgICAgIGlmIChlID49IDApIHsKICAgICAgICAgICAgICAgICAgICAgICAgc2VuZE1zZyhsaW5rLCBhZnRlci5zdWJzdHJpbmcoMCwgZSkpOwogICAgICAgICAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICAgICAgICAgIFBBU1RJTkcuc2V0KHRydWUpOwogICAgICAgICAgICAgICAgICAgICAgICBzeW5jaHJvbml6ZWQgKFBCVUYpIHsgUEJVRi5zZXRMZW5ndGgoMCk7IFBCVUYuYXBwZW5kKGFmdGVyKTsgfQogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgICAgICBjb250aW51ZTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGlmIChsaW5lLmluZGV4T2YoUEJfRU5EKSA+PSAwKSBsaW5lID0gbGluZS5yZXBsYWNlKFBCX0VORCwgIiIpOwoKICAgICAgICAgICAgICAgIGlmIChsaW5lLnN0YXJ0c1dpdGgoIi8iKSkgewogICAgICAgICAgICAgICAgICAgIGlmIChsaW5lLmVxdWFscygiL2V4aXQiKSkgewogICAgICAgICAgICAgICAgICAgICAgICBicmVhazsKICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYgKGxpbmUuZXF1YWxzKCIvaGVscCIpKSB7CiAgICAgICAgICAgICAgICAgICAgICAgIHByaW50SGVscCgpOwogICAgICAgICAgICAgICAgICAgIH0gZWxzZSBpZiAobGluZS5lcXVhbHMoIi9saXN0IikpIHsKICAgICAgICAgICAgICAgICAgICAgICAgdHgobGluaywgIkxJU1QiKTsKICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYgKGxpbmUuc3RhcnRzV2l0aCgiL2tpY2sgIikpIHsKICAgICAgICAgICAgICAgICAgICAgICAgU3RyaW5nIGFyZyA9IGxpbmUuc3Vic3RyaW5nKDYpLnRyaW0oKTsKICAgICAgICAgICAgICAgICAgICAgICAgaWYgKGFyZy5pc0VtcHR5KCkpIFN5c3RlbS5vdXQucHJpbnRsbigiISB1c286IC9raWNrIDxuaWNrfHNlc3Nhbz4iKTsKICAgICAgICAgICAgICAgICAgICAgICAgZWxzZSB0eChsaW5rLCAiS0lDSyAiICsgYXJnKTsKICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYgKGxpbmUuZXF1YWxzKCIva2ljayIpKSB7CiAgICAgICAgICAgICAgICAgICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiISB1c286IC9raWNrIDxuaWNrfHNlc3Nhbz4iKTsKICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYgKGxpbmUuc3RhcnRzV2l0aCgiL2ogIikpIHsKICAgICAgICAgICAgICAgICAgICAgICAgU3RyaW5nIHNhbGEgPSBsaW5lLnN1YnN0cmluZygzKS50cmltKCk7CiAgICAgICAgICAgICAgICAgICAgICAgIGlmIChzYWxhLmlzRW1wdHkoKSkgU3lzdGVtLm91dC5wcmludGxuKCIhIHVzbzogL2ogbm9tZV9kYV9zYWxhIik7CiAgICAgICAgICAgICAgICAgICAgICAgIGVsc2UgeyBjLnJvb20gPSBzYWxhOyB0eChsaW5rLCAiSk9JTiAiICsgYy51c2VyICsgIiAiICsgc2FsYSk7IH0KICAgICAgICAgICAgICAgICAgICB9IGVsc2UgaWYgKGxpbmUuZXF1YWxzKCIvaiIpKSB7CiAgICAgICAgICAgICAgICAgICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiISB1c286IC9qIG5vbWVfZGFfc2FsYSIpOwogICAgICAgICAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICAgICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiISBjb21hbmRvIGRlc2NvbmhlY2lkbzogIiArIGxpbmUgKyAiICAoL2hlbHApIik7CiAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICBzZW5kTXNnKGxpbmssIGxpbmUpOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgfSBjYXRjaCAoamF2YS5pby5JT0V4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiISBlcnJvIGxlbmRvIHRlY2xhZG86ICIgKyBlLmdldE1lc3NhZ2UoKSk7CiAgICAgICAgfQoKICAgICAgICBicmFja2V0ZWRQYXN0ZShmYWxzZSk7CiAgICAgICAgbGluay5jbG9zZSgpOwogICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiKiBzYWluZG8iKTsKICAgIH0KCiAgICB2b2lkIHByaW50SGVscCgpIHsKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oImNvbWFuZG9zOiIpOwogICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiICAvaiA8c2FsYT4gICAgICAgICAgICBlbnRyYSBudW1hIHNhbGEiKTsKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIiAgL2xpc3QgICAgICAgICAgICAgICAgbGlzdGEgdXN1YXJpb3MgKG5pY2sjc2Vzc2FvKSIpOwogICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiICAva2ljayA8bmlja3xzZXNzYW8+ICBkZXNjb25lY3RhIHVtIG5pY2sgKHRvZGFzIGFzIHNlc3NvZXMpIG91IHVtYSBzZXNzYW8iKTsKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIiAgL2hlbHAgICAgICAgICAgICAgICAgZXN0YSBhanVkYSIpOwogICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiICAvZXhpdCAgICAgICAgICAgICAgICBzYWlyIik7CiAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCJidWlsZCBsb2NhbDogIiArIFZFUlNJT04gKyAiICAgfCAgIGJ1aWxkIHNlcnZpZG9yOiAiICsgU1JWX1ZFUlNJT04pOwogICAgfQoKICAgIHZvaWQgZGlzcGxheShTdHJpbmcgbGluZSkgewogICAgICAgIFN0cmluZ1tdIHAgPSBzcGxpdDIobGluZSk7CiAgICAgICAgc3dpdGNoIChwWzBdKSB7CiAgICAgICAgICAgIGNhc2UgIk1TRyI6IHsKICAgICAgICAgICAgICAgIFN0cmluZ1tdIHEgPSBzcGxpdDIocFsxXSk7CiAgICAgICAgICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4ocVswXSArICI+ICIgKyBkZWNvZGUocVsxXSkpOwogICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgY2FzZSAiVVNFUlMiOiB7CiAgICAgICAgICAgICAgICBTdHJpbmdbXSBydSA9IHNwbGl0MihwWzFdKTsKICAgICAgICAgICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiKiBzYWxhICciICsgcnVbMF0gKyAiJyB8IHVzdWFyaW9zOiAiICsgcnVbMV0pOwogICAgICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgY2FzZSAiSU5GTyI6ICBTeXN0ZW0ub3V0LnByaW50bG4oIiogIiArIHBbMV0pOyBicmVhazsKICAgICAgICAgICAgY2FzZSAiRVJSIjogICBTeXN0ZW0ub3V0LnByaW50bG4oIiEgIiArIHBbMV0pOyBicmVhazsKICAgICAgICAgICAgY2FzZSAiU1JWIjogICBTUlZfVkVSU0lPTiA9IHBbMV07IFN5c3RlbS5vdXQucHJpbnRsbigiKiBzZXJ2aWRvciBidWlsZCAiICsgcFsxXSk7IGJyZWFrOwogICAgICAgICAgICBjYXNlICJCWUUiOiAgIFN5c3RlbS5vdXQucHJpbnRsbigiKiBkZXNjb25lY3RhZG86ICIgKyBwWzFdKTsgU3lzdGVtLmV4aXQoMCk7IGJyZWFrOwogICAgICAgICAgICBkZWZhdWx0OiAgICAgIFN5c3RlbS5vdXQucHJpbnRsbihsaW5lKTsKICAgICAgICB9CiAgICB9CgogICAgdm9pZCBpbnN0YWxsQ3RybEMoKSB7CiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgQ2xhc3M8Pz4gc2lnID0gQ2xhc3MuZm9yTmFtZSgic3VuLm1pc2MuU2lnbmFsIik7CiAgICAgICAgICAgIENsYXNzPD8+IGhhbmRsZXJUeXBlID0gQ2xhc3MuZm9yTmFtZSgic3VuLm1pc2MuU2lnbmFsSGFuZGxlciIpOwogICAgICAgICAgICBPYmplY3QgaW50U2lnID0gc2lnLmdldENvbnN0cnVjdG9yKFN0cmluZy5jbGFzcykubmV3SW5zdGFuY2UoIklOVCIpOwogICAgICAgICAgICBPYmplY3QgaGFuZGxlciA9IGphdmEubGFuZy5yZWZsZWN0LlByb3h5Lm5ld1Byb3h5SW5zdGFuY2UoCiAgICAgICAgICAgICAgICBoYW5kbGVyVHlwZS5nZXRDbGFzc0xvYWRlcigpLCBuZXcgQ2xhc3M8Pz5bXXsgaGFuZGxlclR5cGUgfSwKICAgICAgICAgICAgICAgIChwcm94eSwgbWV0aG9kLCBtYXJncykgLT4gewogICAgICAgICAgICAgICAgICAgIHN3aXRjaCAobWV0aG9kLmdldE5hbWUoKSkgewogICAgICAgICAgICAgICAgICAgICAgICBjYXNlICJoYW5kbGUiOgogICAgICAgICAgICAgICAgICAgICAgICAgICAgaWYgKFBBU1RJTkcuZ2V0QW5kU2V0KGZhbHNlKSkgewogICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIHN5bmNocm9uaXplZCAoUEJVRikgeyBQQlVGLnNldExlbmd0aCgwKTsgfQogICAgICAgICAgICAgICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgICAgICAgICAgICAgU3lzdGVtLm91dC5wcmludCgnXG4nKTsKICAgICAgICAgICAgICAgICAgICAgICAgICAgIFN5c3RlbS5vdXQuZmx1c2goKTsKICAgICAgICAgICAgICAgICAgICAgICAgICAgIHJldHVybiBudWxsOwogICAgICAgICAgICAgICAgICAgICAgICBjYXNlICJ0b1N0cmluZyI6IHJldHVybiAiY3RybGMiOwogICAgICAgICAgICAgICAgICAgICAgICBjYXNlICJoYXNoQ29kZSI6IHJldHVybiBTeXN0ZW0uaWRlbnRpdHlIYXNoQ29kZShwcm94eSk7CiAgICAgICAgICAgICAgICAgICAgICAgIGNhc2UgImVxdWFscyI6ICAgcmV0dXJuIHByb3h5ID09IG1hcmdzWzBdOwogICAgICAgICAgICAgICAgICAgICAgICBkZWZhdWx0OiAgICAgICAgIHJldHVybiBudWxsOwogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0pOwogICAgICAgICAgICBzaWcuZ2V0TWV0aG9kKCJoYW5kbGUiLCBzaWcsIGhhbmRsZXJUeXBlKS5pbnZva2UobnVsbCwgaW50U2lnLCBoYW5kbGVyKTsKICAgICAgICB9IGNhdGNoIChUaHJvd2FibGUgdCkgewogICAgICAgIH0KICAgIH0KCiAgICBmaW5hbCBqYXZhLnV0aWwuY29uY3VycmVudC5Db25jdXJyZW50SGFzaE1hcDxTdHJpbmcsIGphdmEudXRpbC5TZXQ8Q2xpZW50Pj4gUk9PTVMgPSBuZXcgamF2YS51dGlsLmNvbmN1cnJlbnQuQ29uY3VycmVudEhhc2hNYXA8PigpOwogICAgZmluYWwgamF2YS51dGlsLlNldDxDbGllbnQ+IEFMTCA9IGphdmEudXRpbC5jb25jdXJyZW50LkNvbmN1cnJlbnRIYXNoTWFwLm5ld0tleVNldCgpOwogICAgZmluYWwgamF2YS5zZWN1cml0eS5TZWN1cmVSYW5kb20gU0lEUk5HID0gbmV3IGphdmEuc2VjdXJpdHkuU2VjdXJlUmFuZG9tKCk7CgogICAgU3RyaW5nIG5ld1Nlc3Npb25JZCgpIHsKICAgICAgICB3aGlsZSAodHJ1ZSkgewogICAgICAgICAgICBTdHJpbmdCdWlsZGVyIGIgPSBuZXcgU3RyaW5nQnVpbGRlcigic2Vzc2lvbl8iKTsKICAgICAgICAgICAgZm9yIChpbnQgaSA9IDA7IGkgPCAxMDsgaSsrKSBiLmFwcGVuZCgoY2hhcikgKCcwJyArIFNJRFJORy5uZXh0SW50KDEwKSkpOwogICAgICAgICAgICBTdHJpbmcgaWQgPSBiLnRvU3RyaW5nKCk7CiAgICAgICAgICAgIGJvb2xlYW4gZHVwID0gZmFsc2U7CiAgICAgICAgICAgIGZvciAoQ2xpZW50IHggOiBBTEwpIGlmIChpZC5lcXVhbHMoeC5zaWQpKSB7IGR1cCA9IHRydWU7IGJyZWFrOyB9CiAgICAgICAgICAgIGlmICghZHVwKSByZXR1cm4gaWQ7CiAgICAgICAgfQogICAgfQoKICAgIGJvb2xlYW4gaXNBbGxEaWdpdHMoU3RyaW5nIHMpIHsKICAgICAgICBpZiAocy5pc0VtcHR5KCkpIHJldHVybiBmYWxzZTsKICAgICAgICBmb3IgKGludCBpID0gMDsgaSA8IHMubGVuZ3RoKCk7IGkrKykgaWYgKCFDaGFyYWN0ZXIuaXNEaWdpdChzLmNoYXJBdChpKSkpIHJldHVybiBmYWxzZTsKICAgICAgICByZXR1cm4gdHJ1ZTsKICAgIH0KCiAgICBTdHJpbmcgZmluZ2VycHJpbnQoYnl0ZVtdIGVkUHViWDUwOSkgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgcmV0dXJuICJTSEEyNTY6IiArIGphdmEudXRpbC5CYXNlNjQuZ2V0RW5jb2RlcigpLndpdGhvdXRQYWRkaW5nKCkKICAgICAgICAgICAgICAgIC5lbmNvZGVUb1N0cmluZyhjcnlwdG8uc2hhMjU2KGVkUHViWDUwOSkpOwogICAgfQoKICAgIC8vIGNvbXBhcmEgbyAtZnAgaW5mb3JtYWRvIChjb20gb3Ugc2VtIHByZWZpeG8gIlNIQTI1NjoiKSBjb20gYSBpZGVudGlkYWRlIHJlY2ViaWRhCiAgICBib29sZWFuIHBpbk1hdGNoZXMoU3RyaW5nIGV4cGVjdGVkLCBieXRlW10gcHViWDUwOSkgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgU3RyaW5nIHdhbnQgPSBleHBlY3RlZC50cmltKCk7CiAgICAgICAgaWYgKHdhbnQuc3RhcnRzV2l0aCgiU0hBMjU2OiIpKSB3YW50ID0gd2FudC5zdWJzdHJpbmcoNyk7CiAgICAgICAgU3RyaW5nIGdvdCA9IGZpbmdlcnByaW50KHB1Ylg1MDkpLnN1YnN0cmluZyg3KTsgLy8gZmluZ2VycHJpbnQoKSBzZW1wcmUgcG9lICJTSEEyNTY6IgogICAgICAgIHJldHVybiBqYXZhLnNlY3VyaXR5Lk1lc3NhZ2VEaWdlc3QuaXNFcXVhbCgKICAgICAgICAgICAgICAgIHdhbnQuZ2V0Qnl0ZXMoamF2YS5uaW8uY2hhcnNldC5TdGFuZGFyZENoYXJzZXRzLlVTX0FTQ0lJKSwKICAgICAgICAgICAgICAgIGdvdC5nZXRCeXRlcyhqYXZhLm5pby5jaGFyc2V0LlN0YW5kYXJkQ2hhcnNldHMuVVNfQVNDSUkpKTsKICAgIH0KCiAgICB2b2lkIHJ1blNlcnZlcihDb25maWcgYykgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgYnl0ZVtdIG1hc3RlciA9IGRlcml2ZU9yTnVsbChjLnBhc3MpOwogICAgICAgIGlmIChtYXN0ZXIgIT0gbnVsbCkgU3lzdGVtLm91dC5wcmludGxuKCIqIGNoYXZlIGRlcml2YWRhIChwYmtkZjIgNDAwaykgZW0gUkFNIik7CiAgICAgICAgamF2YS5zZWN1cml0eS5LZXlQYWlyIHNlcnZlcklkID0gY3J5cHRvLmVkR2VuZXJhdGUoKTsgLy8gaWRlbnRpZGFkZSBzbyBlbSBSQU07IG11ZGEgYSBjYWRhIHJlc3RhcnQKICAgICAgICBTdHJpbmcgYmluZCA9IChjLmlwID09IG51bGwpID8gIjAuMC4wLjAiIDogYy5pcDsKICAgICAgICBqYXZhLm5ldC5TZXJ2ZXJTb2NrZXQgc3MgPSBuZXcgamF2YS5uZXQuU2VydmVyU29ja2V0KCk7CiAgICAgICAgc3MuYmluZChuZXcgamF2YS5uZXQuSW5ldFNvY2tldEFkZHJlc3MoYmluZCwgYy5wb3J0KSk7CiAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCIqIHBvcnRhbCAiICsgVkVSU0lPTiArICIgb3V2aW5kbyBlbSAiICsgYmluZCArICI6IiArIGMucG9ydAogICAgICAgICAgICAgICAgKyAobWFzdGVyICE9IG51bGwgPyAiIHwgY2lmcmFkbyArIHNlbmhhIiA6ICIgfCBjaWZyYWRvIChYMjU1MTksIHNlbSBzZW5oYSkiKSk7CiAgICAgICAgc2VydmVMb29wKHNzLCBtYXN0ZXIsIHNlcnZlcklkKTsKICAgIH0KCiAgICB2b2lkIHNlcnZlTG9vcChqYXZhLm5ldC5TZXJ2ZXJTb2NrZXQgc3MsIGJ5dGVbXSBtYXN0ZXIsIGphdmEuc2VjdXJpdHkuS2V5UGFpciBzZXJ2ZXJJZCkgewogICAgICAgIHdoaWxlICh0cnVlKSB7CiAgICAgICAgICAgIHRyeSB7CiAgICAgICAgICAgICAgICBqYXZhLm5ldC5Tb2NrZXQgcyA9IHNzLmFjY2VwdCgpOwogICAgICAgICAgICAgICAgVGhyZWFkIHQgPSBuZXcgVGhyZWFkKG5ldyBDbGllbnQocywgbWFzdGVyLCBzZXJ2ZXJJZCkpOwogICAgICAgICAgICAgICAgdC5zZXREYWVtb24odHJ1ZSk7CiAgICAgICAgICAgICAgICB0LnN0YXJ0KCk7CiAgICAgICAgICAgIH0gY2F0Y2ggKGphdmEuaW8uSU9FeGNlcHRpb24gZSkgeyBicmVhazsgfQogICAgICAgIH0KICAgIH0KCiAgICB2b2lkIGJyb2FkY2FzdChTdHJpbmcgcm9vbSwgU3RyaW5nIGxpbmUsIENsaWVudCBleGNlcHQpIHsKICAgICAgICBqYXZhLnV0aWwuU2V0PENsaWVudD4gc2V0ID0gUk9PTVMuZ2V0KHJvb20pOwogICAgICAgIGlmIChzZXQgPT0gbnVsbCkgcmV0dXJuOwogICAgICAgIGZvciAoQ2xpZW50IGggOiBzZXQpIGlmIChoICE9IGV4Y2VwdCkgaC5zZW5kKGxpbmUpOwogICAgfQoKICAgIGZpbmFsIGNsYXNzIENsaWVudCBpbXBsZW1lbnRzIFJ1bm5hYmxlIHsKICAgICAgICBmaW5hbCBqYXZhLm5ldC5Tb2NrZXQgc29jazsKICAgICAgICBmaW5hbCBieXRlW10gbWFzdGVyOwogICAgICAgIGZpbmFsIGphdmEuc2VjdXJpdHkuS2V5UGFpciBzZXJ2ZXJJZDsKICAgICAgICBmaW5hbCBTdHJpbmcgc2lkOwogICAgICAgIExpbmsgbGluazsKICAgICAgICBTdHJpbmcgdXNlcjsKICAgICAgICBTdHJpbmcgcm9vbTsKCiAgICAgICAgQ2xpZW50KGphdmEubmV0LlNvY2tldCBzLCBieXRlW10gbWFzdGVyLCBqYXZhLnNlY3VyaXR5LktleVBhaXIgc2VydmVySWQpIHsKICAgICAgICAgICAgdGhpcy5zb2NrID0gczsgdGhpcy5tYXN0ZXIgPSBtYXN0ZXI7IHRoaXMuc2VydmVySWQgPSBzZXJ2ZXJJZDsgdGhpcy5zaWQgPSBuZXdTZXNzaW9uSWQoKTsKICAgICAgICB9CgogICAgICAgIHB1YmxpYyB2b2lkIHJ1bigpIHsKICAgICAgICAgICAgdHJ5IHsKICAgICAgICAgICAgICAgIGxpbmsgPSBuZXcgTGluayhzb2NrKS5zZWN1cmUobWFzdGVyLCB0cnVlLCBzZXJ2ZXJJZCk7CiAgICAgICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIiogaGFuZHNoYWtlIGZhbGhvdSBkZSAiICsgc29jay5nZXRSZW1vdGVTb2NrZXRBZGRyZXNzKCkgKyAiOiAiICsgZS5nZXRNZXNzYWdlKCkpOwogICAgICAgICAgICAgICAgdHJ5IHsgc29jay5jbG9zZSgpOyB9IGNhdGNoIChqYXZhLmlvLklPRXhjZXB0aW9uIGlnbm9yZWQpIHt9CiAgICAgICAgICAgICAgICByZXR1cm47CiAgICAgICAgICAgIH0KICAgICAgICAgICAgQUxMLmFkZCh0aGlzKTsKICAgICAgICAgICAgU3lzdGVtLm91dC5wcmludGxuKCIqIHNlc3NhbyAiICsgc2lkICsgIiBkZSAiICsgc29jay5nZXRSZW1vdGVTb2NrZXRBZGRyZXNzKCkKICAgICAgICAgICAgICAgICAgICArICIgWyIgKyBsaW5rLmZpbmdlcnByaW50ICsgIl0iICsgKG1hc3RlciA9PSBudWxsID8gIiAoc2VtIHNlbmhhKSIgOiAiIikpOwogICAgICAgICAgICB0cnkgewogICAgICAgICAgICAgICAgU3RyaW5nIGZpcnN0ID0gbGluay5yZWFkTGluZSgpOwogICAgICAgICAgICAgICAgaWYgKGZpcnN0ID09IG51bGwpIHJldHVybjsKICAgICAgICAgICAgICAgIFN0cmluZ1tdIGZwID0gc3BsaXQyKGZpcnN0KTsKICAgICAgICAgICAgICAgIGlmICghZnBbMF0uZXF1YWxzKCJIRUxMTyIpKSB7IHNlbmQoIkVSUiBoYW5kc2hha2UgaW52YWxpZG8gKGVzcGVyYXZhIEhFTExPKSIpOyByZXR1cm47IH0KICAgICAgICAgICAgICAgIFN0cmluZ1tdIGggPSBzcGxpdDMoZnBbMV0pOwogICAgICAgICAgICAgICAgU3RyaW5nIGN2ZXIgPSBoWzBdLmlzRW1wdHkoKSA/ICI/IiA6IGhbMF07CiAgICAgICAgICAgICAgICBpZiAoIVZFUlNJT04uZXF1YWxzKGN2ZXIpKSB7CiAgICAgICAgICAgICAgICAgICAgc2VuZCgiRVJSIHZlcnNvZXMgaW5jb21wYXRpdmVpcyAoc2Vydmlkb3I9IiArIFZFUlNJT04gKyAiIGxvY2FsPSIgKyBjdmVyICsgIikiKTsKICAgICAgICAgICAgICAgICAgICByZXR1cm47CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgICAgICBzZW5kKCJTUlYgIiArIFZFUlNJT04pOwogICAgICAgICAgICAgICAgam9pbihoWzFdLCBoWzJdKTsKCiAgICAgICAgICAgICAgICBTdHJpbmcgbGluZTsKICAgICAgICAgICAgICAgIHdoaWxlICgobGluZSA9IGxpbmsucmVhZExpbmUoKSkgIT0gbnVsbCkgewogICAgICAgICAgICAgICAgICAgIFN0cmluZ1tdIHAgPSBzcGxpdDIobGluZSk7CiAgICAgICAgICAgICAgICAgICAgc3dpdGNoIChwWzBdKSB7CiAgICAgICAgICAgICAgICAgICAgICAgIGNhc2UgIkpPSU4iOiB7IFN0cmluZ1tdIHEgPSBzcGxpdDIocFsxXSk7IGpvaW4ocVswXSwgcVsxXSk7IGJyZWFrOyB9CiAgICAgICAgICAgICAgICAgICAgICAgIGNhc2UgIk1TRyI6ICBpZiAocm9vbSAhPSBudWxsKSBicm9hZGNhc3Qocm9vbSwgIk1TRyAiICsgdXNlciArICIgIiArIHBbMV0sIG51bGwpOyBicmVhazsKICAgICAgICAgICAgICAgICAgICAgICAgY2FzZSAiTElTVCI6IHNlbmRVc2VycygpOyBicmVhazsKICAgICAgICAgICAgICAgICAgICAgICAgY2FzZSAiS0lDSyI6IGRvS2ljayhwWzFdKTsgYnJlYWs7CiAgICAgICAgICAgICAgICAgICAgICAgIGRlZmF1bHQ6IGJyZWFrOwogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfSBjYXRjaCAoamF2YS5pby5JT0V4Y2VwdGlvbiBpZ25vcmVkKSB7CiAgICAgICAgICAgIH0gZmluYWxseSB7CiAgICAgICAgICAgICAgICBBTEwucmVtb3ZlKHRoaXMpOwogICAgICAgICAgICAgICAgbGVhdmUoKTsKICAgICAgICAgICAgICAgIGxpbmsuY2xvc2UoKTsKICAgICAgICAgICAgfQogICAgICAgIH0KCiAgICAgICAgdm9pZCBqb2luKFN0cmluZyB1LCBTdHJpbmcgcikgewogICAgICAgICAgICBsZWF2ZSgpOwogICAgICAgICAgICB0aGlzLnVzZXIgPSAodSA9PSBudWxsIHx8IHUuaXNFbXB0eSgpKSA/ICJ1c3VhcmlvPyIgOiB1OwogICAgICAgICAgICB0aGlzLnJvb20gPSAociA9PSBudWxsIHx8IHIuaXNFbXB0eSgpKSA/ICJnZXJhbCIgOiByOwogICAgICAgICAgICBST09NUy5jb21wdXRlSWZBYnNlbnQodGhpcy5yb29tLCBrIC0+IG5ldyBqYXZhLnV0aWwuY29uY3VycmVudC5Db3B5T25Xcml0ZUFycmF5U2V0PD4oKSkuYWRkKHRoaXMpOwogICAgICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIiogIiArIHVzZXIgKyAiIyIgKyBzaWQgKyAiIGVudHJvdSBlbSAnIiArIHJvb20gKyAiJyIpOwogICAgICAgICAgICBzZW5kKCJJTkZPIHZvY2UgZW50cm91IG5hIHNhbGEgJyIgKyByb29tICsgIicgY29tbyAiICsgdXNlciArICIjIiArIHNpZCk7CiAgICAgICAgICAgIGJyb2FkY2FzdChyb29tLCAiSU5GTyAiICsgdXNlciArICIgZW50cm91IG5hIHNhbGEiLCB0aGlzKTsKICAgICAgICAgICAgc2VuZFVzZXJzKCk7CiAgICAgICAgfQoKICAgICAgICB2b2lkIGxlYXZlKCkgewogICAgICAgICAgICBpZiAocm9vbSA9PSBudWxsKSByZXR1cm47CiAgICAgICAgICAgIGphdmEudXRpbC5TZXQ8Q2xpZW50PiBzZXQgPSBST09NUy5nZXQocm9vbSk7CiAgICAgICAgICAgIGlmIChzZXQgIT0gbnVsbCkgewogICAgICAgICAgICAgICAgc2V0LnJlbW92ZSh0aGlzKTsKICAgICAgICAgICAgICAgIGJyb2FkY2FzdChyb29tLCAiSU5GTyAiICsgdXNlciArICIgc2FpdSBkYSBzYWxhIiwgdGhpcyk7CiAgICAgICAgICAgICAgICBpZiAoc2V0LmlzRW1wdHkoKSkgUk9PTVMucmVtb3ZlKHJvb20sIHNldCk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgcm9vbSA9IG51bGw7CiAgICAgICAgfQoKICAgICAgICB2b2lkIHNlbmRVc2VycygpIHsKICAgICAgICAgICAgaWYgKHJvb20gPT0gbnVsbCkgcmV0dXJuOwogICAgICAgICAgICBqYXZhLnV0aWwuU2V0PENsaWVudD4gc2V0ID0gUk9PTVMuZ2V0KHJvb20pOwogICAgICAgICAgICBTdHJpbmdCdWlsZGVyIHNiID0gbmV3IFN0cmluZ0J1aWxkZXIoKTsKICAgICAgICAgICAgaWYgKHNldCAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICBib29sZWFuIGZpcnN0ID0gdHJ1ZTsKICAgICAgICAgICAgICAgIGZvciAoQ2xpZW50IHggOiBzZXQpIHsKICAgICAgICAgICAgICAgICAgICBpZiAoIWZpcnN0KSBzYi5hcHBlbmQoIiwgIik7CiAgICAgICAgICAgICAgICAgICAgc2IuYXBwZW5kKHgudXNlcikuYXBwZW5kKCcjJykuYXBwZW5kKHguc2lkKTsKICAgICAgICAgICAgICAgICAgICBpZiAoeCA9PSB0aGlzKSBzYi5hcHBlbmQoIiAodm9jZSkiKTsKICAgICAgICAgICAgICAgICAgICBmaXJzdCA9IGZhbHNlOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgICAgIHNlbmQoIlVTRVJTICIgKyByb29tICsgIiAiICsgc2IpOwogICAgICAgIH0KCiAgICAgICAgdm9pZCBkb0tpY2soU3RyaW5nIGFyZykgewogICAgICAgICAgICBhcmcgPSBhcmcudHJpbSgpOwogICAgICAgICAgICBpZiAoYXJnLmlzRW1wdHkoKSkgeyBzZW5kKCJFUlIgdXNvOiAva2ljayA8bmlja3xzZXNzYW8+Iik7IHJldHVybjsgfQogICAgICAgICAgICBTdHJpbmcgYm9keSA9IG51bGw7CiAgICAgICAgICAgIGlmIChhcmcuc3RhcnRzV2l0aCgic2Vzc2lvbl8iKSkgYm9keSA9IGFyZy5zdWJzdHJpbmcoOCk7CiAgICAgICAgICAgIGVsc2UgaWYgKGlzQWxsRGlnaXRzKGFyZykpIGJvZHkgPSBhcmc7CgogICAgICAgICAgICBpbnQgbiA9IDA7CiAgICAgICAgICAgIGlmIChib2R5ICE9IG51bGwgJiYgaXNBbGxEaWdpdHMoYm9keSkpIHsKICAgICAgICAgICAgICAgIFN0cmluZyBmdWxsID0gInNlc3Npb25fIiArIGJvZHk7CiAgICAgICAgICAgICAgICBmb3IgKENsaWVudCB4IDogQUxMKSBpZiAoZnVsbC5lcXVhbHMoeC5zaWQpKSB7IHgua2ljaygia2ljayAoIiArIGZ1bGwgKyAiKSIpOyBuKys7IH0KICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgIGZvciAoQ2xpZW50IHggOiBBTEwpIGlmIChhcmcuZXF1YWxzKHgudXNlcikpIHsgeC5raWNrKCJraWNrIChuaWNrICIgKyBhcmcgKyAiKSIpOyBuKys7IH0KICAgICAgICAgICAgfQogICAgICAgICAgICBzZW5kKG4gPiAwID8gIklORk8ga2lrYWRvczogIiArIG4gOiAiRVJSIG5hZGEgZW5jb250cmFkbyBwYXJhOiAiICsgYXJnKTsKICAgICAgICB9CgogICAgICAgIHZvaWQga2ljayhTdHJpbmcgcmVhc29uKSB7CiAgICAgICAgICAgIHNlbmQoIkJZRSAiICsgcmVhc29uKTsKICAgICAgICAgICAgbGluay5jbG9zZSgpOwogICAgICAgIH0KCiAgICAgICAgdm9pZCBzZW5kKFN0cmluZyBsaW5lKSB7IHR4KGxpbmssIGxpbmUpOyB9CiAgICB9CgogICAgZmluYWwgY2xhc3MgTGluayB7CiAgICAgICAgcHJpdmF0ZSBmaW5hbCBqYXZhLm5ldC5Tb2NrZXQgc29jazsKICAgICAgICBwcml2YXRlIGZpbmFsIE9iamVjdCB3bG9jayA9IG5ldyBPYmplY3QoKTsKCiAgICAgICAgcHJpdmF0ZSBqYXZhLmlvLklucHV0U3RyZWFtIHJpbjsKICAgICAgICBwcml2YXRlIGphdmEuaW8uT3V0cHV0U3RyZWFtIHJvdXQ7CiAgICAgICAgcHJpdmF0ZSBqYXZheC5jcnlwdG8uQ2lwaGVyIGVuY0MsIGRlY0M7CiAgICAgICAgcHJpdmF0ZSBqYXZheC5jcnlwdG8uTWFjIG1hY1MsIG1hY1I7CiAgICAgICAgcHJpdmF0ZSBsb25nIHNlcVMsIHNlcVI7CiAgICAgICAgYnl0ZVtdIHBlZXJJZFB1YjsgICAgICAgICAgLy8gY2xpZW50ZTogY2hhdmUgcHVibGljYSBFZDI1NTE5IGRvIHNlcnZpZG9yIChYLjUwOSkKICAgICAgICBTdHJpbmcgZmluZ2VycHJpbnQgPSAiPyI7ICAvLyBTQVMgY3VydG8gZGEgc2Vzc2FvIChkZXJpdmEgZGUgbWFzdGVyKQoKICAgICAgICBMaW5rKGphdmEubmV0LlNvY2tldCBzKSB7IHRoaXMuc29jayA9IHM7IH0KCiAgICAgICAgTGluayBzZWN1cmUoYnl0ZVtdIHBzaywgYm9vbGVhbiBzZXJ2ZXJSb2xlLCBqYXZhLnNlY3VyaXR5LktleVBhaXIgc2VydmVySWQpIHRocm93cyBFeGNlcHRpb24gewogICAgICAgICAgICByaW4gID0gbmV3IGphdmEuaW8uQnVmZmVyZWRJbnB1dFN0cmVhbShzb2NrLmdldElucHV0U3RyZWFtKCkpOwogICAgICAgICAgICByb3V0ID0gbmV3IGphdmEuaW8uQnVmZmVyZWRPdXRwdXRTdHJlYW0oc29jay5nZXRPdXRwdXRTdHJlYW0oKSk7CiAgICAgICAgICAgIGhhbmRzaGFrZShwc2ssIHNlcnZlclJvbGUsIHNlcnZlcklkKTsKICAgICAgICAgICAgcmV0dXJuIHRoaXM7CiAgICAgICAgfQoKICAgICAgICBwcml2YXRlIGZpbmFsIGJ5dGVbXSBNQUdJQyA9ICJQUVBPUlRMMiIuZ2V0Qnl0ZXMoamF2YS5uaW8uY2hhcnNldC5TdGFuZGFyZENoYXJzZXRzLlVTX0FTQ0lJKTsKCiAgICAgICAgcHJpdmF0ZSB2b2lkIGhhbmRzaGFrZShieXRlW10gcHNrLCBib29sZWFuIHNlcnZlclJvbGUsIGphdmEuc2VjdXJpdHkuS2V5UGFpciBzZXJ2ZXJJZCkgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgICAgIGphdmEuc2VjdXJpdHkuS2V5UGFpciBlcGggPSBjcnlwdG8ubmV3RXBoZW1lcmFsKCk7CiAgICAgICAgICAgIGJ5dGVbXSBteUVwaCAgID0gZXBoLmdldFB1YmxpYygpLmdldEVuY29kZWQoKTsKICAgICAgICAgICAgYnl0ZVtdIG15Tm9uY2UgPSBjcnlwdG8ucmFuZG9tKDMyKTsKCiAgICAgICAgICAgIGJ5dGVbXSBjTm9uY2UsIHNOb25jZSwgY0VwaCwgc0VwaCwgcGVlckVwaCwgaWRQdWI7CgogICAgICAgICAgICBpZiAoIXNlcnZlclJvbGUpIHsKICAgICAgICAgICAgICAgIC8vIGNsaWVudGUgZmFsYSBwcmltZWlybzogTUFHSUMgfCBub25jZSB8IGVwaFB1YgogICAgICAgICAgICAgICAgcm91dC53cml0ZShNQUdJQyk7CiAgICAgICAgICAgICAgICByb3V0LndyaXRlKG15Tm9uY2UpOwogICAgICAgICAgICAgICAgd3JpdGVCbG9iKG15RXBoKTsKICAgICAgICAgICAgICAgIHJvdXQuZmx1c2goKTsKCiAgICAgICAgICAgICAgICBieXRlW10gcG0gPSByZWFkTig4KTsKICAgICAgICAgICAgICAgIGlmIChwbSA9PSBudWxsIHx8ICFqYXZhLnV0aWwuQXJyYXlzLmVxdWFscyhwbSwgTUFHSUMpKQogICAgICAgICAgICAgICAgICAgIHRocm93IG5ldyBqYXZhLmlvLklPRXhjZXB0aW9uKCJwZWVyIG5hbyBmYWxhIG8gcHJvdG9jb2xvIChtYWdpYykiKTsKICAgICAgICAgICAgICAgIHNOb25jZSA9IHJlYWROKDMyKTsKICAgICAgICAgICAgICAgIGlmIChzTm9uY2UgPT0gbnVsbCkgdGhyb3cgbmV3IGphdmEuaW8uSU9FeGNlcHRpb24oImhhbmRzaGFrZSB0cnVuY2FkbyIpOwogICAgICAgICAgICAgICAgc0VwaCAgPSByZWFkQmxvYig1MTIpOwogICAgICAgICAgICAgICAgaWRQdWIgPSByZWFkQmxvYigxMDI0KTsKICAgICAgICAgICAgICAgIGJ5dGVbXSBzaWcgPSByZWFkQmxvYigxMDI0KTsKCiAgICAgICAgICAgICAgICBjTm9uY2UgPSBteU5vbmNlOyBjRXBoID0gbXlFcGg7IHBlZXJFcGggPSBzRXBoOwoKICAgICAgICAgICAgICAgIGJ5dGVbXSB0ciA9IGNvbmNhdChNQUdJQywgY05vbmNlLCBzTm9uY2UsIGNFcGgsIHNFcGgsIGlkUHViKTsKICAgICAgICAgICAgICAgIGlmICghY3J5cHRvLmVkVmVyaWZ5KGlkUHViLCBzaWcsIHRyKSkKICAgICAgICAgICAgICAgICAgICB0aHJvdyBuZXcgamF2YS5pby5JT0V4Y2VwdGlvbigiYXNzaW5hdHVyYSBkbyBzZXJ2aWRvciBpbnZhbGlkYSAoTUlUTT8pIik7CiAgICAgICAgICAgICAgICB0aGlzLnBlZXJJZFB1YiA9IGlkUHViOwogICAgICAgICAgICB9IGVsc2UgewogICAgICAgICAgICAgICAgLy8gc2Vydmlkb3I6IGxlIG8gY2xpZW50ZSwgcmVzcG9uZGUgYXNzaW5hbmRvIG8gdHJhbnNjcmlwdCBjb20gRWQyNTUxOQogICAgICAgICAgICAgICAgYnl0ZVtdIHBtID0gcmVhZE4oOCk7CiAgICAgICAgICAgICAgICBpZiAocG0gPT0gbnVsbCB8fCAhamF2YS51dGlsLkFycmF5cy5lcXVhbHMocG0sIE1BR0lDKSkKICAgICAgICAgICAgICAgICAgICB0aHJvdyBuZXcgamF2YS5pby5JT0V4Y2VwdGlvbigicGVlciBuYW8gZmFsYSBvIHByb3RvY29sbyAobWFnaWMpIik7CiAgICAgICAgICAgICAgICBjTm9uY2UgPSByZWFkTigzMik7CiAgICAgICAgICAgICAgICBpZiAoY05vbmNlID09IG51bGwpIHRocm93IG5ldyBqYXZhLmlvLklPRXhjZXB0aW9uKCJoYW5kc2hha2UgdHJ1bmNhZG8iKTsKICAgICAgICAgICAgICAgIGNFcGggPSByZWFkQmxvYig1MTIpOwoKICAgICAgICAgICAgICAgIHNOb25jZSA9IG15Tm9uY2U7IHNFcGggPSBteUVwaDsgcGVlckVwaCA9IGNFcGg7CiAgICAgICAgICAgICAgICBpZFB1YiA9IHNlcnZlcklkLmdldFB1YmxpYygpLmdldEVuY29kZWQoKTsKCiAgICAgICAgICAgICAgICBieXRlW10gdHIgID0gY29uY2F0KE1BR0lDLCBjTm9uY2UsIHNOb25jZSwgY0VwaCwgc0VwaCwgaWRQdWIpOwogICAgICAgICAgICAgICAgYnl0ZVtdIHNpZyA9IGNyeXB0by5lZFNpZ24oc2VydmVySWQuZ2V0UHJpdmF0ZSgpLCB0cik7CgogICAgICAgICAgICAgICAgcm91dC53cml0ZShNQUdJQyk7CiAgICAgICAgICAgICAgICByb3V0LndyaXRlKHNOb25jZSk7CiAgICAgICAgICAgICAgICB3cml0ZUJsb2Ioc0VwaCk7CiAgICAgICAgICAgICAgICB3cml0ZUJsb2IoaWRQdWIpOwogICAgICAgICAgICAgICAgd3JpdGVCbG9iKHNpZyk7CiAgICAgICAgICAgICAgICByb3V0LmZsdXNoKCk7CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIGJ5dGVbXSB6ICAgICAgICA9IGNyeXB0by5lY2RoKGVwaCwgcGVlckVwaCk7CiAgICAgICAgICAgIGJ5dGVbXSBwc2tCeXRlcyA9IChwc2sgIT0gbnVsbCkgPyBwc2sgOiBuZXcgYnl0ZVszMl07CiAgICAgICAgICAgIGJ5dGVbXSBtYXN0ZXIgICA9IGNyeXB0by5taXgoeiwgcHNrQnl0ZXMsIGNOb25jZSwgc05vbmNlKTsKCiAgICAgICAgICAgIGJ5dGVbXSBlbmNDMlMgPSBjcnlwdG8ucHJmKG1hc3RlciwgY05vbmNlLCBzTm9uY2UsICJlbmMtYzJzIik7CiAgICAgICAgICAgIGJ5dGVbXSBtYWNDMlMgPSBjcnlwdG8ucHJmKG1hc3RlciwgY05vbmNlLCBzTm9uY2UsICJtYWMtYzJzIik7CiAgICAgICAgICAgIGJ5dGVbXSBpdkMyUyAgPSBmaXJzdDE2KGNyeXB0by5wcmYobWFzdGVyLCBjTm9uY2UsIHNOb25jZSwgIml2LWMycyIpKTsKICAgICAgICAgICAgYnl0ZVtdIGVuY1MyQyA9IGNyeXB0by5wcmYobWFzdGVyLCBjTm9uY2UsIHNOb25jZSwgImVuYy1zMmMiKTsKICAgICAgICAgICAgYnl0ZVtdIG1hY1MyQyA9IGNyeXB0by5wcmYobWFzdGVyLCBjTm9uY2UsIHNOb25jZSwgIm1hYy1zMmMiKTsKICAgICAgICAgICAgYnl0ZVtdIGl2UzJDICA9IGZpcnN0MTYoY3J5cHRvLnByZihtYXN0ZXIsIGNOb25jZSwgc05vbmNlLCAiaXYtczJjIikpOwoKICAgICAgICAgICAgaWYgKHNlcnZlclJvbGUpIHsKICAgICAgICAgICAgICAgIGVuY0MgPSBjcnlwdG8uYWVzKGVuY1MyQywgaXZTMkMsIGphdmF4LmNyeXB0by5DaXBoZXIuRU5DUllQVF9NT0RFKTsKICAgICAgICAgICAgICAgIGRlY0MgPSBjcnlwdG8uYWVzKGVuY0MyUywgaXZDMlMsIGphdmF4LmNyeXB0by5DaXBoZXIuREVDUllQVF9NT0RFKTsKICAgICAgICAgICAgICAgIG1hY1MgPSBjcnlwdG8uaG1hYyhtYWNTMkMpOwogICAgICAgICAgICAgICAgbWFjUiA9IGNyeXB0by5obWFjKG1hY0MyUyk7CiAgICAgICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgICAgICBlbmNDID0gY3J5cHRvLmFlcyhlbmNDMlMsIGl2QzJTLCBqYXZheC5jcnlwdG8uQ2lwaGVyLkVOQ1JZUFRfTU9ERSk7CiAgICAgICAgICAgICAgICBkZWNDID0gY3J5cHRvLmFlcyhlbmNTMkMsIGl2UzJDLCBqYXZheC5jcnlwdG8uQ2lwaGVyLkRFQ1JZUFRfTU9ERSk7CiAgICAgICAgICAgICAgICBtYWNTID0gY3J5cHRvLmhtYWMobWFjQzJTKTsKICAgICAgICAgICAgICAgIG1hY1IgPSBjcnlwdG8uaG1hYyhtYWNTMkMpOwogICAgICAgICAgICB9CgogICAgICAgICAgICAvLyBjb25maXJtYWNhbyBkZSBjaGF2ZSAoZSBkYSBzZW5oYSwgc2UgaG91dmVyKTogYW1ib3MgZGVyaXZhbSBvIG1lc21vIHZhbG9yCiAgICAgICAgICAgIGJ5dGVbXSBrYyA9IGNyeXB0by5wcmYobWFzdGVyLCBjTm9uY2UsIHNOb25jZSwgImNvbmZpcm0iKTsKICAgICAgICAgICAgYnl0ZVtdIHRyYW5zY3JpcHQgPSBjb25jYXQoTUFHSUMsIGNOb25jZSwgc05vbmNlLCBjRXBoLCBzRXBoLCBpZFB1Yik7CiAgICAgICAgICAgIGJ5dGVbXSBteUNvbmZpcm0gPSBjcnlwdG8uaG1hY09mKGtjLCB0cmFuc2NyaXB0KTsKICAgICAgICAgICAgcm91dC53cml0ZShteUNvbmZpcm0pOwogICAgICAgICAgICByb3V0LmZsdXNoKCk7CiAgICAgICAgICAgIGJ5dGVbXSBwZWVyQ29uZmlybSA9IHJlYWROKDMyKTsKICAgICAgICAgICAgaWYgKHBlZXJDb25maXJtID09IG51bGwgfHwgIWphdmEuc2VjdXJpdHkuTWVzc2FnZURpZ2VzdC5pc0VxdWFsKHBlZXJDb25maXJtLCBteUNvbmZpcm0pKQogICAgICAgICAgICAgICAgdGhyb3cgbmV3IGphdmEuaW8uSU9FeGNlcHRpb24ocHNrICE9IG51bGwKICAgICAgICAgICAgICAgICAgICAgICAgPyAic2VuaGEgaW5jb3JyZXRhIChvdSBwZWVyIGluY29tcGF0aXZlbCkiCiAgICAgICAgICAgICAgICAgICAgICAgIDogImNvbmZpcm1hY2FvIGRlIGNoYXZlIGZhbGhvdSAocGVlciBpbmNvbXBhdGl2ZWwpIik7CgogICAgICAgICAgICB0aGlzLmZpbmdlcnByaW50ID0gaGV4NChjcnlwdG8ucHJmKG1hc3RlciwgY05vbmNlLCBzTm9uY2UsICJzYXMiKSk7CiAgICAgICAgfQoKICAgICAgICBTdHJpbmcgcmVhZExpbmUoKSB0aHJvd3MgamF2YS5pby5JT0V4Y2VwdGlvbiB7CiAgICAgICAgICAgIGJ5dGVbXSBsZW5iID0gcmVhZE4oNCk7CiAgICAgICAgICAgIGlmIChsZW5iID09IG51bGwpIHJldHVybiBudWxsOwogICAgICAgICAgICBpbnQgbGVuID0gKChsZW5iWzBdICYgMHhmZikgPDwgMjQpIHwgKChsZW5iWzFdICYgMHhmZikgPDwgMTYpCiAgICAgICAgICAgICAgICAgICAgfCAoKGxlbmJbMl0gJiAweGZmKSA8PCA4KSB8IChsZW5iWzNdICYgMHhmZik7CiAgICAgICAgICAgIGlmIChsZW4gPCAwIHx8IGxlbiA+IE1BWEZSQU1FKSB0aHJvdyBuZXcgamF2YS5pby5JT0V4Y2VwdGlvbigiZnJhbWUgaW52YWxpZG86ICIgKyBsZW4pOwogICAgICAgICAgICBieXRlW10gY3QgID0gcmVhZE4obGVuKTsKICAgICAgICAgICAgYnl0ZVtdIG1hYyA9IHJlYWROKDMyKTsKICAgICAgICAgICAgaWYgKGN0ID09IG51bGwgfHwgbWFjID09IG51bGwpIHRocm93IG5ldyBqYXZhLmlvLkVPRkV4Y2VwdGlvbigiZnJhbWUgdHJ1bmNhZG8iKTsKICAgICAgICAgICAgbWFjUi51cGRhdGUobG9uZ0J5dGVzKHNlcVIpKTsKICAgICAgICAgICAgbWFjUi51cGRhdGUobGVuYik7CiAgICAgICAgICAgIG1hY1IudXBkYXRlKGN0KTsKICAgICAgICAgICAgYnl0ZVtdIGV4cGVjdCA9IG1hY1IuZG9GaW5hbCgpOwogICAgICAgICAgICBpZiAoIWphdmEuc2VjdXJpdHkuTWVzc2FnZURpZ2VzdC5pc0VxdWFsKGV4cGVjdCwgbWFjKSkgdGhyb3cgbmV3IGphdmEuaW8uSU9FeGNlcHRpb24oIk1BQyBpbnZhbGlkbyAoZGFkb3MgYWR1bHRlcmFkb3M/KSIpOwogICAgICAgICAgICBzZXFSKys7CiAgICAgICAgICAgIGJ5dGVbXSBwdCA9IGRlY0MudXBkYXRlKGN0KTsKICAgICAgICAgICAgaWYgKHB0ID09IG51bGwpIHB0ID0gbmV3IGJ5dGVbMF07CiAgICAgICAgICAgIHJldHVybiBuZXcgU3RyaW5nKHB0LCAiVVRGLTgiKTsKICAgICAgICB9CgogICAgICAgIHZvaWQgd3JpdGVMaW5lKFN0cmluZyBzKSB0aHJvd3MgamF2YS5pby5JT0V4Y2VwdGlvbiB7CiAgICAgICAgICAgIGJ5dGVbXSBwdCA9IHMuZ2V0Qnl0ZXMoIlVURi04Iik7CiAgICAgICAgICAgIHN5bmNocm9uaXplZCAod2xvY2spIHsKICAgICAgICAgICAgICAgIGJ5dGVbXSBjdCA9IGVuY0MudXBkYXRlKHB0KTsKICAgICAgICAgICAgICAgIGlmIChjdCA9PSBudWxsKSBjdCA9IG5ldyBieXRlWzBdOwogICAgICAgICAgICAgICAgYnl0ZVtdIGxlbmIgPSBpbnRCeXRlcyhjdC5sZW5ndGgpOwogICAgICAgICAgICAgICAgbWFjUy51cGRhdGUobG9uZ0J5dGVzKHNlcVMpKTsKICAgICAgICAgICAgICAgIG1hY1MudXBkYXRlKGxlbmIpOwogICAgICAgICAgICAgICAgbWFjUy51cGRhdGUoY3QpOwogICAgICAgICAgICAgICAgYnl0ZVtdIG1hYyA9IG1hY1MuZG9GaW5hbCgpOwogICAgICAgICAgICAgICAgc2VxUysrOwogICAgICAgICAgICAgICAgcm91dC53cml0ZShsZW5iKTsKICAgICAgICAgICAgICAgIHJvdXQud3JpdGUoY3QpOwogICAgICAgICAgICAgICAgcm91dC53cml0ZShtYWMpOwogICAgICAgICAgICAgICAgcm91dC5mbHVzaCgpOwogICAgICAgICAgICB9CiAgICAgICAgfQoKICAgICAgICB2b2lkIGNsb3NlKCkgeyB0cnkgeyBzb2NrLmNsb3NlKCk7IH0gY2F0Y2ggKGphdmEuaW8uSU9FeGNlcHRpb24gaWdub3JlZCkge30gfQoKICAgICAgICBwcml2YXRlIGJ5dGVbXSByZWFkTihpbnQgbikgdGhyb3dzIGphdmEuaW8uSU9FeGNlcHRpb24gewogICAgICAgICAgICBpZiAobiA9PSAwKSByZXR1cm4gbmV3IGJ5dGVbMF07CiAgICAgICAgICAgIGJ5dGVbXSBiID0gbmV3IGJ5dGVbbl07CiAgICAgICAgICAgIGludCBvZmYgPSAwOwogICAgICAgICAgICB3aGlsZSAob2ZmIDwgbikgewogICAgICAgICAgICAgICAgaW50IHIgPSByaW4ucmVhZChiLCBvZmYsIG4gLSBvZmYpOwogICAgICAgICAgICAgICAgaWYgKHIgPCAwKSB7IGlmIChvZmYgPT0gMCkgcmV0dXJuIG51bGw7IHRocm93IG5ldyBqYXZhLmlvLkVPRkV4Y2VwdGlvbigiZmx1eG8gdHJ1bmNhZG8iKTsgfQogICAgICAgICAgICAgICAgb2ZmICs9IHI7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgcmV0dXJuIGI7CiAgICAgICAgfQoKICAgICAgICBwcml2YXRlIGJ5dGVbXSBmaXJzdDE2KGJ5dGVbXSB4KSB7IHJldHVybiBqYXZhLnV0aWwuQXJyYXlzLmNvcHlPZih4LCAxNik7IH0KICAgICAgICBwcml2YXRlIGJ5dGVbXSBpbnRCeXRlcyhpbnQgdikgewogICAgICAgICAgICByZXR1cm4gbmV3IGJ5dGVbXXsgKGJ5dGUpKHYgPj4+IDI0KSwgKGJ5dGUpKHYgPj4+IDE2KSwgKGJ5dGUpKHYgPj4+IDgpLCAoYnl0ZSkgdiB9OwogICAgICAgIH0KICAgICAgICBwcml2YXRlIGJ5dGVbXSBpbnRCeXRlczIoaW50IHYpIHsgcmV0dXJuIG5ldyBieXRlW117IChieXRlKSh2ID4+PiA4KSwgKGJ5dGUpIHYgfTsgfQoKICAgICAgICBwcml2YXRlIHZvaWQgd3JpdGVCbG9iKGJ5dGVbXSBiKSB0aHJvd3MgamF2YS5pby5JT0V4Y2VwdGlvbiB7CiAgICAgICAgICAgIHJvdXQud3JpdGUoaW50Qnl0ZXMyKGIubGVuZ3RoKSk7CiAgICAgICAgICAgIHJvdXQud3JpdGUoYik7CiAgICAgICAgfQogICAgICAgIHByaXZhdGUgYnl0ZVtdIHJlYWRCbG9iKGludCBtYXgpIHRocm93cyBqYXZhLmlvLklPRXhjZXB0aW9uIHsKICAgICAgICAgICAgYnl0ZVtdIGxiID0gcmVhZE4oMik7CiAgICAgICAgICAgIGlmIChsYiA9PSBudWxsKSB0aHJvdyBuZXcgamF2YS5pby5JT0V4Y2VwdGlvbigiaGFuZHNoYWtlIHRydW5jYWRvIik7CiAgICAgICAgICAgIGludCBuID0gKChsYlswXSAmIDB4ZmYpIDw8IDgpIHwgKGxiWzFdICYgMHhmZik7CiAgICAgICAgICAgIGlmIChuIDw9IDAgfHwgbiA+IG1heCkgdGhyb3cgbmV3IGphdmEuaW8uSU9FeGNlcHRpb24oImhhbmRzaGFrZSBpbnZhbGlkbyAodGFtYW5obyAiICsgbiArICIpIik7CiAgICAgICAgICAgIGJ5dGVbXSBiID0gcmVhZE4obik7CiAgICAgICAgICAgIGlmIChiID09IG51bGwpIHRocm93IG5ldyBqYXZhLmlvLklPRXhjZXB0aW9uKCJoYW5kc2hha2UgdHJ1bmNhZG8iKTsKICAgICAgICAgICAgcmV0dXJuIGI7CiAgICAgICAgfQogICAgICAgIHByaXZhdGUgU3RyaW5nIGhleDQoYnl0ZVtdIGIpIHsKICAgICAgICAgICAgZmluYWwgY2hhcltdIEggPSAiMDEyMzQ1Njc4OWFiY2RlZiIudG9DaGFyQXJyYXkoKTsKICAgICAgICAgICAgU3RyaW5nQnVpbGRlciBzID0gbmV3IFN0cmluZ0J1aWxkZXIoOSk7CiAgICAgICAgICAgIGZvciAoaW50IGkgPSAwOyBpIDwgNCAmJiBpIDwgYi5sZW5ndGg7IGkrKykgewogICAgICAgICAgICAgICAgcy5hcHBlbmQoSFsoYltpXSA+PiA0KSAmIDB4Zl0pLmFwcGVuZChIW2JbaV0gJiAweGZdKTsKICAgICAgICAgICAgICAgIGlmIChpID09IDEpIHMuYXBwZW5kKCctJyk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgcmV0dXJuIHMudG9TdHJpbmcoKTsKICAgICAgICB9CiAgICAgICAgcHJpdmF0ZSBieXRlW10gbG9uZ0J5dGVzKGxvbmcgdikgewogICAgICAgICAgICBieXRlW10gbyA9IG5ldyBieXRlWzhdOwogICAgICAgICAgICBmb3IgKGludCBpID0gNzsgaSA+PSAwOyBpLS0pIHsgb1tpXSA9IChieXRlKSh2ICYgMHhmZik7IHYgPj4+PSA4OyB9CiAgICAgICAgICAgIHJldHVybiBvOwogICAgICAgIH0KICAgICAgICBwcml2YXRlIGJ5dGVbXSBjb25jYXQoYnl0ZVtdLi4uIHBhcnRzKSB7CiAgICAgICAgICAgIGludCBuID0gMDsgZm9yIChieXRlW10gcCA6IHBhcnRzKSBuICs9IHAubGVuZ3RoOwogICAgICAgICAgICBieXRlW10gbyA9IG5ldyBieXRlW25dOyBpbnQgb2ZmID0gMDsKICAgICAgICAgICAgZm9yIChieXRlW10gcCA6IHBhcnRzKSB7IFN5c3RlbS5hcnJheWNvcHkocCwgMCwgbywgb2ZmLCBwLmxlbmd0aCk7IG9mZiArPSBwLmxlbmd0aDsgfQogICAgICAgICAgICByZXR1cm4gbzsKICAgICAgICB9CiAgICB9CgogICAgZmluYWwgY2xhc3MgQ3J5cHRvIHsKICAgICAgICBmaW5hbCBieXRlW10gU0FMVCA9ICJwb3J0YWwtcHEtdjEiLmdldEJ5dGVzKGphdmEubmlvLmNoYXJzZXQuU3RhbmRhcmRDaGFyc2V0cy5VVEZfOCk7CiAgICAgICAgZmluYWwgaW50IElURVJBVElPTlMgPSA0MDBfMDAwOwogICAgICAgIHByaXZhdGUgZmluYWwgamF2YS5zZWN1cml0eS5TZWN1cmVSYW5kb20gUk5HID0gbmV3IGphdmEuc2VjdXJpdHkuU2VjdXJlUmFuZG9tKCk7CgogICAgICAgIGJ5dGVbXSBwYmtkZjIoU3RyaW5nIHBhc3MpIHRocm93cyBFeGNlcHRpb24gewogICAgICAgICAgICBqYXZheC5jcnlwdG8uc3BlYy5QQkVLZXlTcGVjIHNwZWMgPSBuZXcgamF2YXguY3J5cHRvLnNwZWMuUEJFS2V5U3BlYyhwYXNzLnRvQ2hhckFycmF5KCksIFNBTFQsIElURVJBVElPTlMsIDI1Nik7CiAgICAgICAgICAgIHJldHVybiBqYXZheC5jcnlwdG8uU2VjcmV0S2V5RmFjdG9yeS5nZXRJbnN0YW5jZSgiUEJLREYyV2l0aEhtYWNTSEE1MTIiKS5nZW5lcmF0ZVNlY3JldChzcGVjKS5nZXRFbmNvZGVkKCk7CiAgICAgICAgfQoKICAgICAgICBieXRlW10gcmFuZG9tKGludCBuKSB7IGJ5dGVbXSBiID0gbmV3IGJ5dGVbbl07IFJORy5uZXh0Qnl0ZXMoYik7IHJldHVybiBiOyB9CgogICAgICAgIGJ5dGVbXSBwcmYoYnl0ZVtdIG1hc3RlciwgYnl0ZVtdIGNOLCBieXRlW10gc04sIFN0cmluZyBsYWJlbCkgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgICAgIGphdmF4LmNyeXB0by5NYWMgbSA9IGphdmF4LmNyeXB0by5NYWMuZ2V0SW5zdGFuY2UoIkhtYWNTSEEyNTYiKTsKICAgICAgICAgICAgbS5pbml0KG5ldyBqYXZheC5jcnlwdG8uc3BlYy5TZWNyZXRLZXlTcGVjKG1hc3RlciwgIkhtYWNTSEEyNTYiKSk7CiAgICAgICAgICAgIG0udXBkYXRlKGNOKTsKICAgICAgICAgICAgbS51cGRhdGUoc04pOwogICAgICAgICAgICBtLnVwZGF0ZShsYWJlbC5nZXRCeXRlcyhqYXZhLm5pby5jaGFyc2V0LlN0YW5kYXJkQ2hhcnNldHMuVVNfQVNDSUkpKTsKICAgICAgICAgICAgcmV0dXJuIG0uZG9GaW5hbCgpOwogICAgICAgIH0KCiAgICAgICAgYnl0ZVtdIGhtYWNPZihieXRlW10ga2V5LCBieXRlW10gZGF0YSkgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgICAgIGphdmF4LmNyeXB0by5NYWMgbSA9IGphdmF4LmNyeXB0by5NYWMuZ2V0SW5zdGFuY2UoIkhtYWNTSEEyNTYiKTsKICAgICAgICAgICAgbS5pbml0KG5ldyBqYXZheC5jcnlwdG8uc3BlYy5TZWNyZXRLZXlTcGVjKGtleSwgIkhtYWNTSEEyNTYiKSk7CiAgICAgICAgICAgIHJldHVybiBtLmRvRmluYWwoZGF0YSk7CiAgICAgICAgfQoKICAgICAgICBqYXZheC5jcnlwdG8uTWFjIGhtYWMoYnl0ZVtdIGtleSkgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgICAgIGphdmF4LmNyeXB0by5NYWMgbSA9IGphdmF4LmNyeXB0by5NYWMuZ2V0SW5zdGFuY2UoIkhtYWNTSEEyNTYiKTsKICAgICAgICAgICAgbS5pbml0KG5ldyBqYXZheC5jcnlwdG8uc3BlYy5TZWNyZXRLZXlTcGVjKGtleSwgIkhtYWNTSEEyNTYiKSk7CiAgICAgICAgICAgIHJldHVybiBtOwogICAgICAgIH0KCiAgICAgICAgamF2YXguY3J5cHRvLkNpcGhlciBhZXMoYnl0ZVtdIGtleSwgYnl0ZVtdIGl2LCBpbnQgbW9kZSkgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgICAgIGphdmF4LmNyeXB0by5DaXBoZXIgYyA9IGphdmF4LmNyeXB0by5DaXBoZXIuZ2V0SW5zdGFuY2UoIkFFUy9DVFIvTm9QYWRkaW5nIik7CiAgICAgICAgICAgIGMuaW5pdChtb2RlLCBuZXcgamF2YXguY3J5cHRvLnNwZWMuU2VjcmV0S2V5U3BlYyhrZXksICJBRVMiKSwgbmV3IGphdmF4LmNyeXB0by5zcGVjLkl2UGFyYW1ldGVyU3BlYyhpdikpOwogICAgICAgICAgICByZXR1cm4gYzsKICAgICAgICB9CgogICAgICAgIC8vIHRyb2NhIGRlIGNoYXZlcyBlZmVtZXJhIFgyNTUxOSAoZm9yd2FyZCBzZWNyZWN5KQogICAgICAgIGphdmEuc2VjdXJpdHkuS2V5UGFpciBuZXdFcGhlbWVyYWwoKSB0aHJvd3MgRXhjZXB0aW9uIHsKICAgICAgICAgICAgcmV0dXJuIGphdmEuc2VjdXJpdHkuS2V5UGFpckdlbmVyYXRvci5nZXRJbnN0YW5jZSgiWDI1NTE5IikuZ2VuZXJhdGVLZXlQYWlyKCk7CiAgICAgICAgfQogICAgICAgIGJ5dGVbXSBlY2RoKGphdmEuc2VjdXJpdHkuS2V5UGFpciBrcCwgYnl0ZVtdIHBlZXJQdWJYNTA5KSB0aHJvd3MgRXhjZXB0aW9uIHsKICAgICAgICAgICAgamF2YS5zZWN1cml0eS5QdWJsaWNLZXkgcGVlciA9IGphdmEuc2VjdXJpdHkuS2V5RmFjdG9yeS5nZXRJbnN0YW5jZSgiWDI1NTE5IikKICAgICAgICAgICAgICAgICAgICAuZ2VuZXJhdGVQdWJsaWMobmV3IGphdmEuc2VjdXJpdHkuc3BlYy5YNTA5RW5jb2RlZEtleVNwZWMocGVlclB1Ylg1MDkpKTsKICAgICAgICAgICAgamF2YXguY3J5cHRvLktleUFncmVlbWVudCBrYSA9IGphdmF4LmNyeXB0by5LZXlBZ3JlZW1lbnQuZ2V0SW5zdGFuY2UoIlgyNTUxOSIpOwogICAgICAgICAgICBrYS5pbml0KGtwLmdldFByaXZhdGUoKSk7CiAgICAgICAgICAgIGthLmRvUGhhc2UocGVlciwgdHJ1ZSk7CiAgICAgICAgICAgIHJldHVybiBrYS5nZW5lcmF0ZVNlY3JldCgpOwogICAgICAgIH0KICAgICAgICAvLyBtYXN0ZXIgPSBITUFDKHo7IHBzayB8fCBjTm9uY2UgfHwgc05vbmNlKTogbWlzdHVyYSBFQ0RIIGNvbSBhIHNlbmhhIChzZSBob3V2ZXIpCiAgICAgICAgYnl0ZVtdIG1peChieXRlW10geiwgYnl0ZVtdIHBzaywgYnl0ZVtdIGNOLCBieXRlW10gc04pIHRocm93cyBFeGNlcHRpb24gewogICAgICAgICAgICBqYXZheC5jcnlwdG8uTWFjIG0gPSBqYXZheC5jcnlwdG8uTWFjLmdldEluc3RhbmNlKCJIbWFjU0hBMjU2Iik7CiAgICAgICAgICAgIG0uaW5pdChuZXcgamF2YXguY3J5cHRvLnNwZWMuU2VjcmV0S2V5U3BlYyh6LCAiSG1hY1NIQTI1NiIpKTsKICAgICAgICAgICAgbS51cGRhdGUocHNrKTsgbS51cGRhdGUoY04pOyBtLnVwZGF0ZShzTik7CiAgICAgICAgICAgIHJldHVybiBtLmRvRmluYWwoKTsKICAgICAgICB9CgogICAgICAgIC8vIGlkZW50aWRhZGUgZGUgbG9uZ28gcHJhem8gZG8gc2Vydmlkb3I6IEVkMjU1MTkKICAgICAgICBqYXZhLnNlY3VyaXR5LktleVBhaXIgZWRHZW5lcmF0ZSgpIHRocm93cyBFeGNlcHRpb24gewogICAgICAgICAgICByZXR1cm4gamF2YS5zZWN1cml0eS5LZXlQYWlyR2VuZXJhdG9yLmdldEluc3RhbmNlKCJFZDI1NTE5IikuZ2VuZXJhdGVLZXlQYWlyKCk7CiAgICAgICAgfQogICAgICAgIGJ5dGVbXSBlZFNpZ24oamF2YS5zZWN1cml0eS5Qcml2YXRlS2V5IHByaXYsIGJ5dGVbXSBkYXRhKSB0aHJvd3MgRXhjZXB0aW9uIHsKICAgICAgICAgICAgamF2YS5zZWN1cml0eS5TaWduYXR1cmUgcyA9IGphdmEuc2VjdXJpdHkuU2lnbmF0dXJlLmdldEluc3RhbmNlKCJFZDI1NTE5Iik7CiAgICAgICAgICAgIHMuaW5pdFNpZ24ocHJpdik7IHMudXBkYXRlKGRhdGEpOyByZXR1cm4gcy5zaWduKCk7CiAgICAgICAgfQogICAgICAgIGJvb2xlYW4gZWRWZXJpZnkoYnl0ZVtdIHB1Ylg1MDksIGJ5dGVbXSBzaWcsIGJ5dGVbXSBkYXRhKSB7CiAgICAgICAgICAgIHRyeSB7CiAgICAgICAgICAgICAgICBqYXZhLnNlY3VyaXR5LlB1YmxpY0tleSBwdWIgPSBqYXZhLnNlY3VyaXR5LktleUZhY3RvcnkuZ2V0SW5zdGFuY2UoIkVkMjU1MTkiKQogICAgICAgICAgICAgICAgICAgICAgICAuZ2VuZXJhdGVQdWJsaWMobmV3IGphdmEuc2VjdXJpdHkuc3BlYy5YNTA5RW5jb2RlZEtleVNwZWMocHViWDUwOSkpOwogICAgICAgICAgICAgICAgamF2YS5zZWN1cml0eS5TaWduYXR1cmUgcyA9IGphdmEuc2VjdXJpdHkuU2lnbmF0dXJlLmdldEluc3RhbmNlKCJFZDI1NTE5Iik7CiAgICAgICAgICAgICAgICBzLmluaXRWZXJpZnkocHViKTsgcy51cGRhdGUoZGF0YSk7IHJldHVybiBzLnZlcmlmeShzaWcpOwogICAgICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZSkgeyByZXR1cm4gZmFsc2U7IH0KICAgICAgICB9CiAgICAgICAgYnl0ZVtdIHNoYTI1NihieXRlW10gYikgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgICAgIHJldHVybiBqYXZhLnNlY3VyaXR5Lk1lc3NhZ2VEaWdlc3QuZ2V0SW5zdGFuY2UoIlNIQS0yNTYiKS5kaWdlc3QoYik7CiAgICAgICAgfQogICAgfQoKICAgIGZpbmFsIGNsYXNzIFByb2JlIHsKICAgICAgICBmaW5hbCBMaW5rIGxpbms7CiAgICAgICAgZmluYWwgamF2YS51dGlsLmNvbmN1cnJlbnQuQmxvY2tpbmdRdWV1ZTxTdHJpbmc+IGluYm94ID0gbmV3IGphdmEudXRpbC5jb25jdXJyZW50LkxpbmtlZEJsb2NraW5nUXVldWU8PigpOwogICAgICAgIFByb2JlKExpbmsgbCkgewogICAgICAgICAgICB0aGlzLmxpbmsgPSBsOwogICAgICAgICAgICBUaHJlYWQgdCA9IG5ldyBUaHJlYWQoKCkgLT4gewogICAgICAgICAgICAgICAgdHJ5IHsgU3RyaW5nIHM7IHdoaWxlICgocyA9IGwucmVhZExpbmUoKSkgIT0gbnVsbCkgaW5ib3guYWRkKHMpOyB9CiAgICAgICAgICAgICAgICBjYXRjaCAoamF2YS5pby5JT0V4Y2VwdGlvbiBpZ25vcmVkKSB7fQogICAgICAgICAgICAgICAgaW5ib3guYWRkKCJ+RU9GIik7CiAgICAgICAgICAgIH0pOwogICAgICAgICAgICB0LnNldERhZW1vbih0cnVlKTsgdC5zdGFydCgpOwogICAgICAgIH0KICAgICAgICB2b2lkIHNlbmQoU3RyaW5nIHMpIHsgdHgobGluaywgcyk7IH0KICAgICAgICBTdHJpbmcgYXdhaXQoU3RyaW5nIG5lZWRsZSwgbG9uZyBtcykgdGhyb3dzIEludGVycnVwdGVkRXhjZXB0aW9uIHsKICAgICAgICAgICAgbG9uZyBkZWFkbGluZSA9IFN5c3RlbS5uYW5vVGltZSgpICsgbXMgKiAxXzAwMF8wMDBMOwogICAgICAgICAgICB3aGlsZSAodHJ1ZSkgewogICAgICAgICAgICAgICAgbG9uZyBsZWZ0ID0gKGRlYWRsaW5lIC0gU3lzdGVtLm5hbm9UaW1lKCkpIC8gMV8wMDBfMDAwTDsKICAgICAgICAgICAgICAgIGlmIChsZWZ0IDw9IDApIHJldHVybiBudWxsOwogICAgICAgICAgICAgICAgU3RyaW5nIHMgPSBpbmJveC5wb2xsKGxlZnQsIGphdmEudXRpbC5jb25jdXJyZW50LlRpbWVVbml0Lk1JTExJU0VDT05EUyk7CiAgICAgICAgICAgICAgICBpZiAocyA9PSBudWxsKSByZXR1cm4gbnVsbDsKICAgICAgICAgICAgICAgIGlmIChzLmNvbnRhaW5zKG5lZWRsZSkpIHJldHVybiBzOwogICAgICAgICAgICB9CiAgICAgICAgfQogICAgfQoKICAgIFByb2JlIGNvbm5lY3RQcm9iZShpbnQgcG9ydCwgU3RyaW5nIHBhc3MsIFN0cmluZyB2ZXJzaW9uLCBTdHJpbmcgdXNlciwgU3RyaW5nIHJvb20pIHRocm93cyBFeGNlcHRpb24gewogICAgICAgIGphdmEubmV0LlNvY2tldCBzID0gbmV3IGphdmEubmV0LlNvY2tldCgpOwogICAgICAgIHMuY29ubmVjdChuZXcgamF2YS5uZXQuSW5ldFNvY2tldEFkZHJlc3MoIjEyNy4wLjAuMSIsIHBvcnQpLCA0MDAwKTsKICAgICAgICBMaW5rIGwgPSBuZXcgTGluayhzKS5zZWN1cmUocGFzcyA9PSBudWxsID8gbnVsbCA6IGNyeXB0by5wYmtkZjIocGFzcyksIGZhbHNlLCBudWxsKTsKICAgICAgICBQcm9iZSBwID0gbmV3IFByb2JlKGwpOwogICAgICAgIHAuc2VuZCgiSEVMTE8gIiArIHZlcnNpb24gKyAiICIgKyB1c2VyICsgIiAiICsgcm9vbSk7CiAgICAgICAgcmV0dXJuIHA7CiAgICB9CgogICAgaW50IFRFU1RTX09LID0gMCwgVEVTVFNfVE9UQUwgPSAwOwogICAgdm9pZCBjaGVjayhib29sZWFuIGNvbmQsIFN0cmluZyBuYW1lKSB7CiAgICAgICAgVEVTVFNfVE9UQUwrKzsKICAgICAgICBpZiAoY29uZCkgeyBURVNUU19PSysrOyBTeXN0ZW0ub3V0LnByaW50bG4oIltPS10gICAgIiArIG5hbWUpOyB9CiAgICAgICAgZWxzZSBTeXN0ZW0ub3V0LnByaW50bG4oIltGQUxIQV0gIiArIG5hbWUpOwogICAgfQoKICAgIGphdmEuaW8uUHJpbnRTdHJlYW0gaW5kZW50aW5nU3RyZWFtKGZpbmFsIGphdmEuaW8uUHJpbnRTdHJlYW0gdGFyZ2V0KSB7CiAgICAgICAgZmluYWwgamF2YS5pby5CeXRlQXJyYXlPdXRwdXRTdHJlYW0gYnVmID0gbmV3IGphdmEuaW8uQnl0ZUFycmF5T3V0cHV0U3RyZWFtKCk7CiAgICAgICAgcmV0dXJuIG5ldyBqYXZhLmlvLlByaW50U3RyZWFtKG5ldyBqYXZhLmlvLk91dHB1dFN0cmVhbSgpIHsKICAgICAgICAgICAgcHVibGljIHZvaWQgd3JpdGUoaW50IGIpIHsKICAgICAgICAgICAgICAgIGlmIChiID09ICdcbicpIHsKICAgICAgICAgICAgICAgICAgICBTdHJpbmcgczsKICAgICAgICAgICAgICAgICAgICB0cnkgeyBzID0gYnVmLnRvU3RyaW5nKCJVVEYtOCIpOyB9IGNhdGNoIChFeGNlcHRpb24gZSkgeyBzID0gYnVmLnRvU3RyaW5nKCk7IH0KICAgICAgICAgICAgICAgICAgICBidWYucmVzZXQoKTsKICAgICAgICAgICAgICAgICAgICBpZiAocy5lbmRzV2l0aCgiXHIiKSkgcyA9IHMuc3Vic3RyaW5nKDAsIHMubGVuZ3RoKCkgLSAxKTsKICAgICAgICAgICAgICAgICAgICBpZiAocy5zdGFydHNXaXRoKCJbT0tdIikgfHwgcy5zdGFydHNXaXRoKCJbRkFMSEFdIikpIHRhcmdldC5wcmludGxuKHMpOwogICAgICAgICAgICAgICAgICAgIGVsc2UgdGFyZ2V0LnByaW50bG4oIlx0IiArIHMpOwogICAgICAgICAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgICAgICAgICBidWYud3JpdGUoYik7CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgcHVibGljIHZvaWQgZmx1c2goKSB7IHRhcmdldC5mbHVzaCgpOyB9CiAgICAgICAgfSwgdHJ1ZSk7CiAgICB9CgogICAgaW50IHJ1blRlc3RzKCkgdGhyb3dzIEV4Y2VwdGlvbiB7CiAgICAgICAgU3lzdGVtLnNldE91dChpbmRlbnRpbmdTdHJlYW0oU3lzdGVtLm91dCkpOwogICAgICAgIFN5c3RlbS5vdXQucHJpbnRsbigiPT0gcG9ydGFsICIgKyBWRVJTSU9OICsgIiBhdXRvLXRlc3RlID09Iik7CgogICAgICAgIGphdmEuc2VjdXJpdHkuS2V5UGFpciBpZDEgPSBjcnlwdG8uZWRHZW5lcmF0ZSgpOwogICAgICAgIGphdmEubmV0LlNlcnZlclNvY2tldCBwMSA9IG5ldyBqYXZhLm5ldC5TZXJ2ZXJTb2NrZXQoKTsgcDEuYmluZChuZXcgamF2YS5uZXQuSW5ldFNvY2tldEFkZHJlc3MoIjEyNy4wLjAuMSIsIDApKTsKICAgICAgICBpbnQgUCA9IHAxLmdldExvY2FsUG9ydCgpOwogICAgICAgIFRocmVhZCB0MSA9IG5ldyBUaHJlYWQoKCkgLT4gc2VydmVMb29wKHAxLCBudWxsLCBpZDEpKTsgdDEuc2V0RGFlbW9uKHRydWUpOyB0MS5zdGFydCgpOwoKICAgICAgICBieXRlW10ga2V5ID0gY3J5cHRvLnBia2RmMigic2VncmVkbyIpOwogICAgICAgIGphdmEuc2VjdXJpdHkuS2V5UGFpciBpZDIgPSBjcnlwdG8uZWRHZW5lcmF0ZSgpOwogICAgICAgIGphdmEubmV0LlNlcnZlclNvY2tldCBwMiA9IG5ldyBqYXZhLm5ldC5TZXJ2ZXJTb2NrZXQoKTsgcDIuYmluZChuZXcgamF2YS5uZXQuSW5ldFNvY2tldEFkZHJlc3MoIjEyNy4wLjAuMSIsIDApKTsKICAgICAgICBpbnQgUEUgPSBwMi5nZXRMb2NhbFBvcnQoKTsKICAgICAgICBUaHJlYWQgdDIgPSBuZXcgVGhyZWFkKCgpIC0+IHNlcnZlTG9vcChwMiwga2V5LCBpZDIpKTsgdDIuc2V0RGFlbW9uKHRydWUpOyB0Mi5zdGFydCgpOwoKICAgICAgICBieXRlW10gaWQxcHViID0gaWQxLmdldFB1YmxpYygpLmdldEVuY29kZWQoKTsKICAgICAgICBjaGVjayhwaW5NYXRjaGVzKGZpbmdlcnByaW50KGlkMXB1YiksIGlkMXB1YiksICItZnAgY29uZmVyZSBpZGVudGlkYWRlIGNvcnJldGEgKGNvbSBwcmVmaXhvKSIpOwogICAgICAgIGNoZWNrKHBpbk1hdGNoZXMoZmluZ2VycHJpbnQoaWQxcHViKS5zdWJzdHJpbmcoNyksIGlkMXB1YiksICItZnAgY29uZmVyZSBpZGVudGlkYWRlIGNvcnJldGEgKHNlbSBwcmVmaXhvKSIpOwogICAgICAgIGNoZWNrKCFwaW5NYXRjaGVzKGZpbmdlcnByaW50KGlkMi5nZXRQdWJsaWMoKS5nZXRFbmNvZGVkKCkpLCBpZDFwdWIpLCAiLWZwIHJlamVpdGEgaWRlbnRpZGFkZSBkZSBvdXRybyBzZXJ2aWRvciIpOwoKICAgICAgICB0cnkgewogICAgICAgICAgICBQcm9iZSBhID0gY29ubmVjdFByb2JlKFAsIG51bGwsIFZFUlNJT04sICJhbGljZSIsICJyMSIpOwogICAgICAgICAgICBQcm9iZSBiID0gY29ubmVjdFByb2JlKFAsIG51bGwsIFZFUlNJT04sICJib2IiLCAicjEiKTsKICAgICAgICAgICAgY2hlY2soYS5saW5rLnBlZXJJZFB1YiAhPSBudWxsCiAgICAgICAgICAgICAgICAgICAgJiYgamF2YS51dGlsLkFycmF5cy5lcXVhbHMoYS5saW5rLnBlZXJJZFB1YiwgaWQxLmdldFB1YmxpYygpLmdldEVuY29kZWQoKSksCiAgICAgICAgICAgICAgICAgICAgImlkZW50aWRhZGUgRWQyNTUxOSBkbyBzZXJ2aWRvciB2ZXJpZmljYWRhIChzZW0gc2VuaGEpIik7CiAgICAgICAgICAgIGNoZWNrKCFhLmxpbmsuZmluZ2VycHJpbnQuZXF1YWxzKCI/IiksICJoYW5kc2hha2UgWDI1NTE5IHNlbSBzZW5oYSAoZmluZ2VycHJpbnQgZGEgc2Vzc2FvKSIpOwogICAgICAgICAgICBiLmF3YWl0KCJJTkZPIGFsaWNlIGVudHJvdSIsIDIwMDApOwogICAgICAgICAgICBhLnNlbmQoIk1TRyAiICsgZW5jb2RlKCJvbGEgYm9iIikpOwogICAgICAgICAgICBjaGVjayhiLmF3YWl0KCJNU0cgYWxpY2Ugb2xhIGJvYiIsIDIwMDApICE9IG51bGwsICJicm9hZGNhc3QgQS0+QiIpOwoKICAgICAgICAgICAgYS5zZW5kKCJMSVNUIik7CiAgICAgICAgICAgIFN0cmluZyB1ID0gbnVsbDsgLy8gaWdub3JhIG8gc25hcHNob3QgYW50aWdvIChkbyBwcm9wcmlvIGpvaW4pIGUgcGVnYSBhIHJlc3Bvc3RhIGRvIExJU1QKICAgICAgICAgICAgZm9yIChpbnQgdHJpZXMgPSAwOyB0cmllcyA8IDU7IHRyaWVzKyspIHsKICAgICAgICAgICAgICAgIHUgPSBhLmF3YWl0KCJVU0VSUyAiLCAyMDAwKTsKICAgICAgICAgICAgICAgIGlmICh1ICE9IG51bGwgJiYgdS5jb250YWlucygiYm9iIyIpKSBicmVhazsKICAgICAgICAgICAgfQogICAgICAgICAgICBjaGVjayh1ICE9IG51bGwgJiYgdS5jb250YWlucygiYWxpY2UjIikgJiYgdS5jb250YWlucygiYm9iIyIpLCAiL2xpc3QgY29tIG5pY2sjc2Vzc2FvIik7CgogICAgICAgICAgICBTdHJpbmcgbXVsdGkgPSAibGluaGExXG5saW5oYTJcbmZpbSI7CiAgICAgICAgICAgIGEuc2VuZCgiTVNHICIgKyBlbmNvZGUobXVsdGkpKTsKICAgICAgICAgICAgU3RyaW5nIG0gPSBiLmF3YWl0KCJNU0cgYWxpY2UgIiwgMjAwMCk7CiAgICAgICAgICAgIFN0cmluZyBkZWMgPSAobSA9PSBudWxsKSA/IG51bGwgOiBkZWNvZGUoc3BsaXQyKHNwbGl0MihtKVsxXSlbMV0pOwogICAgICAgICAgICBjaGVjayhtdWx0aS5lcXVhbHMoZGVjKSwgIm1lbnNhZ2VtIG11bHRpLWxpbmhhIChwYXN0ZSkiKTsKCiAgICAgICAgICAgIGEuc2VuZCgiS0lDSyBib2IiKTsKICAgICAgICAgICAgY2hlY2soYi5hd2FpdCgiQllFIiwgMjAwMCkgIT0gbnVsbCwgIi9raWNrIDxuaWNrPiBkZXJydWJhIGEgc2Vzc2FvIik7CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgY2hlY2soZmFsc2UsICJzdWl0ZSBzZW0gc2VuaGEgKGV4Y2VjYW86ICIgKyBlICsgIikiKTsKICAgICAgICB9CgogICAgICAgIHRyeSB7CiAgICAgICAgICAgIFByb2JlIGVhID0gY29ubmVjdFByb2JlKFBFLCAic2VncmVkbyIsIFZFUlNJT04sICJldmUiLCAic2VjIik7CiAgICAgICAgICAgIFByb2JlIGViID0gY29ubmVjdFByb2JlKFBFLCAic2VncmVkbyIsIFZFUlNJT04sICJlYm8iLCAic2VjIik7CiAgICAgICAgICAgIGViLmF3YWl0KCJJTkZPIGV2ZSBlbnRyb3UiLCAzMDAwKTsKICAgICAgICAgICAgZWEuc2VuZCgiTVNHICIgKyBlbmNvZGUoImNpZnJhZG8gb2siKSk7CiAgICAgICAgICAgIGNoZWNrKGViLmF3YWl0KCJNU0cgZXZlIGNpZnJhZG8gb2siLCAzMDAwKSAhPSBudWxsLCAidHJhbnNwb3J0ZSBjaWZyYWRvICgtcGFzcykgQS0+QiIpOwogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIGNoZWNrKGZhbHNlLCAidHJhbnNwb3J0ZSBjaWZyYWRvIChleGNlY2FvOiAiICsgZSArICIpIik7CiAgICAgICAgfQoKICAgICAgICBib29sZWFuIHJlamVjdGVkID0gZmFsc2U7CiAgICAgICAgdHJ5IHsgY29ubmVjdFByb2JlKFBFLCAiRVJSQURBIiwgVkVSU0lPTiwgIm1hbCIsICJzZWMiKTsgfQogICAgICAgIGNhdGNoIChFeGNlcHRpb24gZSkgeyByZWplY3RlZCA9IHRydWU7IH0KICAgICAgICBjaGVjayhyZWplY3RlZCwgInNlbmhhIGVycmFkYSByZWplaXRhZGEiKTsKCiAgICAgICAgdHJ5IHsKICAgICAgICAgICAgUHJvYmUgdiA9IGNvbm5lY3RQcm9iZShQLCBudWxsLCAiOS45LjkiLCAib2xkIiwgInIyIik7CiAgICAgICAgICAgIGNoZWNrKHYuYXdhaXQoIkVSUiB2ZXJzb2VzIGluY29tcGF0aXZlaXMiLCAyMDAwKSAhPSBudWxsLCAidmVyc2FvIGluY29tcGF0aXZlbCByZWplaXRhZGEiKTsKICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZSkgewogICAgICAgICAgICBjaGVjayhmYWxzZSwgInZlcnNhbyBpbmNvbXBhdGl2ZWwgKGV4Y2VjYW86ICIgKyBlICsgIikiKTsKICAgICAgICB9CgogICAgICAgIHRyeSB7CiAgICAgICAgICAgIFByb2JlIGthID0gY29ubmVjdFByb2JlKFAsIG51bGwsIFZFUlNJT04sICJib3NzIiwgInJrIik7CiAgICAgICAgICAgIFByb2JlIGtiID0gY29ubmVjdFByb2JlKFAsIG51bGwsIFZFUlNJT04sICJ2aWN0aW0iLCAicmsiKTsKICAgICAgICAgICAga2EuYXdhaXQoIklORk8gdmljdGltIGVudHJvdSIsIDIwMDApOwogICAgICAgICAgICBrYS5zZW5kKCJMSVNUIik7CiAgICAgICAgICAgIFN0cmluZyB1c2VycyA9IGthLmF3YWl0KCJ2aWN0aW0jIiwgMjAwMCk7CiAgICAgICAgICAgIFN0cmluZyB2c2lkID0gbnVsbDsKICAgICAgICAgICAgaWYgKHVzZXJzICE9IG51bGwpIHsKICAgICAgICAgICAgICAgIGZvciAoU3RyaW5nIHRvayA6IHVzZXJzLnN1YnN0cmluZyg2KS5zcGxpdCgiLCIpKSB7CiAgICAgICAgICAgICAgICAgICAgdG9rID0gdG9rLnRyaW0oKTsKICAgICAgICAgICAgICAgICAgICBpZiAodG9rLnN0YXJ0c1dpdGgoInZpY3RpbSMiKSkgdnNpZCA9IHRvay5zdWJzdHJpbmcodG9rLmluZGV4T2YoJyMnKSArIDEpOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgICAgIGlmICh2c2lkICE9IG51bGwpIGthLnNlbmQoIktJQ0sgIiArIHZzaWQpOwogICAgICAgICAgICBjaGVjayh2c2lkICE9IG51bGwgJiYga2IuYXdhaXQoIkJZRSIsIDIwMDApICE9IG51bGwsICIva2ljayA8c2Vzc2FvPiBkZXJydWJhIGFxdWVsYSBzZXNzYW8iKTsKICAgICAgICB9IGNhdGNoIChFeGNlcHRpb24gZSkgewogICAgICAgICAgICBjaGVjayhmYWxzZSwgIi9raWNrIDxzZXNzYW8+IChleGNlY2FvOiAiICsgZSArICIpIik7CiAgICAgICAgfQoKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4oIj09IHJlc3VsdGFkbzogIiArIFRFU1RTX09LICsgIi8iICsgVEVTVFNfVE9UQUwgKyAiID09Iik7CiAgICAgICAgcmV0dXJuIChURVNUU19PSyA9PSBURVNUU19UT1RBTCkgPyAwIDogMTsKICAgIH0KfQoK"
+            ),
+            false
         );
     }
 }
@@ -27025,14 +26393,15 @@ class MakeCMDW{
             "Cmdw"
             ,java.util.Base64.getDecoder().decode(
                 "cHVibGljIGNsYXNzIENtZHcgewoKICAgIC8vIC0tLSBjb25maWd1cmF0aW9uIChkZWZhdWx0cyBtaXJyb3IgdGhlIG9yaWdpbmFsIFNldHRpbmdzLnNldHRpbmdzKSAtLS0KICAgIHByaXZhdGUgYm9vbGVhbiBsb2dBcHBlbmQgPSBmYWxzZTsKICAgIHByaXZhdGUgU3RyaW5nIGxvZ0ZpbGVQYXRoID0gIiV0ZW1wJVxcU2lsZW50Q01ELmxvZyI7CiAgICBwcml2YXRlIGxvbmcgbWF4TG9nU2l6ZSA9IDA7CiAgICBwcml2YXRlIFN0cmluZyBiYXRjaEZpbGVQYXRoID0gIiI7CiAgICBwcml2YXRlIGZpbmFsIGphdmEudXRpbC5MaXN0PFN0cmluZz4gYmF0Y2hGaWxlQXJndW1lbnRzID0gbmV3IGphdmEudXRpbC5BcnJheUxpc3Q8PigpOwogICAgcHJpdmF0ZSBsb25nIGRlbGF5TWlsbGlzID0gMDsKICAgIHByaXZhdGUgYm9vbGVhbiBzaG93SGVscCA9IGZhbHNlOwogICAgcHJpdmF0ZSBib29sZWFuIGxvZ0V4cGxpY2l0bHlTZXQgPSBmYWxzZTsgLy8gdHJ1ZSB3aGVuIC1sb2cvLWxvZysvTE9HL0xPRysgd2FzIGdpdmVuCgogICAgLy8gLS0tIGxvZy13cml0ZXIgc3RhdGUgLS0tCiAgICBwcml2YXRlIFN0cmluZyBsb2dGdWxsUGF0aDsKICAgIHByaXZhdGUgamF2YS5pby5CdWZmZXJlZFdyaXRlciB3cml0ZXI7CgogICAgLy8gLS0tIG1lc3NhZ2VzIChmcm9tIFJlc291cmNlcy5yZXN4KSAtLS0KICAgIHByaXZhdGUgZmluYWwgU3RyaW5nIHByb2dyYW1UaXRsZSA9ICJTaWxlbnRDTUQiOwogICAgcHJpdmF0ZSBmaW5hbCBTdHJpbmcgbXNnRXJyb3IgPSAiRXJyb3I6ICVzIjsKICAgIHByaXZhdGUgZmluYWwgU3RyaW5nIG1zZ1N0YXJ0aW5nID0gIlN0YXJ0ZWQgXCIlc1wiIChQSUQgJXMpIjsKICAgIHByaXZhdGUgZmluYWwgU3RyaW5nIG1zZ0ZpbmlzaGVkID0gIkZpbmlzaGVkIFwiJXNcIiI7CiAgICBwcml2YXRlIGZpbmFsIFN0cmluZyBtc2dEZWxheSA9ICJEZWxheWluZyBleGVjdXRpb24gYnkgJXMgc2Vjb25kcyI7CiAgICBwcml2YXRlIGZpbmFsIFN0cmluZyB1c2VyTWFudWFsID0KICAgICAgICAgICAgImNtZHcgW09wdGlvbnNdIEJhdGNoRmlsZSBbQmF0Y2hBcmd1bWVudHNdXG5cbiIKICAgICAgICAgICAgKyAiT3B0aW9uczpcbiIKICAgICAgICAgICAgKyAiLz8gOjogU2hvdyBoZWxwXG4iCiAgICAgICAgICAgICsgIi1sb2cgZmlsZSA6OiBPdXRwdXQgc3RhdHVzIHRvIGxvZyBmaWxlIChvdmVyd3JpdGUgZXhpc3RpbmcgbG9nKS5cbiIKICAgICAgICAgICAgKyAiLWxvZysgZmlsZSA6OiBPdXRwdXQgc3RhdHVzIHRvIGxvZyBmaWxlIChhcHBlbmQgdG8gZXhpc3RpbmcgbG9nKS5cbiIKICAgICAgICAgICAgKyAiL0xPR1NJWkU6Ynl0ZXMgOjogTWF4aW11bSBsb2cgZmlsZSBzaXplIGFmdGVyIHdoaWNoIGl0IGlzIHRydW5jYXRlZFxuIgogICAgICAgICAgICArICIvREVMQVk6c2Vjb25kcyA6OiBEZWxheSB0aGUgZXhlY3V0aW9uIG9mIGJhdGNoIGZpbGUgYnkgeCBzZWNvbmRzXG5cbiIKICAgICAgICAgICAgKyAiRXhhbXBsZXNcbiIKICAgICAgICAgICAgKyAiY21kdyBjOlxcRG9Tb21ldGhpbmcuYmF0XG4iCiAgICAgICAgICAgICsgImNtZHcgLWxvZyBjOlxcTXlMb2cudHh0IGM6XFxNeUJhdGNoLmNtZCBNeVBhcmFtMVxuIgogICAgICAgICAgICArICJjbWR3IC1sb2crIGM6XFxNeUxvZy50eHQgL0xPR1NJWkU6MTAwMDAwMCBjOlxcTXlCYXRjaC5jbWRcbiIKICAgICAgICAgICAgKyAiY21kdyAvREVMQVk6MzYwMCBjOlxcTXlCYXRjaC5jbWRcblxuIgogICAgICAgICAgICArICJWZXJzaW9uIDIuMCAoSmF2YSBwb3J0KVxuIgogICAgICAgICAgICArICJGcmVlIHNvZnR3YXJlIHVuZGVyIE1JVCBsaWNlbnNlIjsKCiAgICBwcml2YXRlIGZpbmFsIGphdmEudGltZS5mb3JtYXQuRGF0ZVRpbWVGb3JtYXR0ZXIgdGltZXN0YW1wRm9ybWF0ID0KICAgICAgICAgICAgamF2YS50aW1lLmZvcm1hdC5EYXRlVGltZUZvcm1hdHRlci5vZlBhdHRlcm4oInl5eXktTU0tZGQgSEg6bW06c3MuU1NTIik7CgogICAgcHVibGljIHN0YXRpYyB2b2lkIG1haW4oU3RyaW5nW10gYXJncykgewogICAgICAgIFN5c3RlbS5leGl0KG5ldyBDbWR3KCkuZXhlY3V0ZShhcmdzKSk7CiAgICB9CgogICAgLyoqIEV4ZWN1dGVzIHRoZSBiYXRjaCBmaWxlIGRlZmluZWQgaW4gdGhlIGFyZ3VtZW50cy4gUmV0dXJucyBpdHMgZXhpdCBjb2RlLiAqLwogICAgaW50IGV4ZWN1dGUoU3RyaW5nW10gYXJncykgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIHBhcnNlQXJndW1lbnRzKGFyZ3MpOwogICAgICAgICAgICBpbml0TG9nKCk7CgogICAgICAgICAgICBpZiAoc2hvd0hlbHApIHsKICAgICAgICAgICAgICAgIHNob3dIZWxwKCk7CiAgICAgICAgICAgICAgICByZXR1cm4gMDsKICAgICAgICAgICAgfQoKICAgICAgICAgICAgZGVsYXlJZk5lY2Vzc2FyeSgpOwogICAgICAgICAgICByZXNvbHZlQmF0Y2hGaWxlUGF0aCgpOwoKICAgICAgICAgICAgUHJvY2Vzc0J1aWxkZXIgYnVpbGRlciA9IG5ldyBQcm9jZXNzQnVpbGRlcihidWlsZENvbW1hbmQoKSk7CiAgICAgICAgICAgIGJ1aWxkZXIucmVkaXJlY3RFcnJvclN0cmVhbShmYWxzZSk7IC8vIGtlZXAgc3RkZXJyIGFwYXJ0IHNvIHdlIGNhbiBkZXRlY3QgZXJyb3JzCgogICAgICAgICAgICBQcm9jZXNzIHByb2Nlc3MgPSBidWlsZGVyLnN0YXJ0KCk7CiAgICAgICAgICAgIHdyaXRlTGluZShtc2dTdGFydGluZywgYmF0Y2hGaWxlUGF0aCwgcHJvY2Vzcy5waWQoKSk7CgogICAgICAgICAgICAvLyBDb2xsZWN0IHRoZSBiYXRjaCdzIHN0ZGVyciBvbiBpdHMgb3duIHRocmVhZDsgc3Rkb3V0IGdvZXMgdG8gdGhlIGxvZy4KICAgICAgICAgICAgZmluYWwgamF2YS51dGlsLkxpc3Q8U3RyaW5nPiBlcnJMaW5lcyA9CiAgICAgICAgICAgICAgICAgICAgamF2YS51dGlsLkNvbGxlY3Rpb25zLnN5bmNocm9uaXplZExpc3QobmV3IGphdmEudXRpbC5BcnJheUxpc3Q8U3RyaW5nPigpKTsKICAgICAgICAgICAgZmluYWwgUHJvY2VzcyBwID0gcHJvY2VzczsKICAgICAgICAgICAgVGhyZWFkIGVyclRocmVhZCA9IG5ldyBUaHJlYWQoKCkgLT4gewogICAgICAgICAgICAgICAgdHJ5IChqYXZhLmlvLkJ1ZmZlcmVkUmVhZGVyIGVyID0gbmV3IGphdmEuaW8uQnVmZmVyZWRSZWFkZXIoCiAgICAgICAgICAgICAgICAgICAgICAgIG5ldyBqYXZhLmlvLklucHV0U3RyZWFtUmVhZGVyKHAuZ2V0RXJyb3JTdHJlYW0oKSwKICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICBqYXZhLm5pby5jaGFyc2V0LkNoYXJzZXQuZGVmYXVsdENoYXJzZXQoKSkpKSB7CiAgICAgICAgICAgICAgICAgICAgU3RyaW5nIGw7CiAgICAgICAgICAgICAgICAgICAgd2hpbGUgKChsID0gZXIucmVhZExpbmUoKSkgIT0gbnVsbCkgewogICAgICAgICAgICAgICAgICAgICAgICBlcnJMaW5lcy5hZGQobCk7CiAgICAgICAgICAgICAgICAgICAgICAgIHdyaXRlTGluZShsKTsgLy8gLWxvZyByZWNvcmRzIHN0ZG91dCArIHN0ZGVyciB0b2dldGhlcgogICAgICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBpZ25vcmUpIHsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfSk7CiAgICAgICAgICAgIGVyclRocmVhZC5zZXREYWVtb24odHJ1ZSk7CiAgICAgICAgICAgIGVyclRocmVhZC5zdGFydCgpOwoKICAgICAgICAgICAgamF2YS5pby5CdWZmZXJlZFJlYWRlciByZWFkZXIgPSBuZXcgamF2YS5pby5CdWZmZXJlZFJlYWRlcigKICAgICAgICAgICAgICAgICAgICBuZXcgamF2YS5pby5JbnB1dFN0cmVhbVJlYWRlcihwcm9jZXNzLmdldElucHV0U3RyZWFtKCksCiAgICAgICAgICAgICAgICAgICAgICAgICAgICBqYXZhLm5pby5jaGFyc2V0LkNoYXJzZXQuZGVmYXVsdENoYXJzZXQoKSkpOwogICAgICAgICAgICB0cnkgewogICAgICAgICAgICAgICAgU3RyaW5nIGxpbmU7CiAgICAgICAgICAgICAgICB3aGlsZSAoKGxpbmUgPSByZWFkZXIucmVhZExpbmUoKSkgIT0gbnVsbCkgewogICAgICAgICAgICAgICAgICAgIHdyaXRlTGluZShsaW5lKTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfSBmaW5hbGx5IHsKICAgICAgICAgICAgICAgIHJlYWRlci5jbG9zZSgpOwogICAgICAgICAgICB9CgogICAgICAgICAgICBlcnJUaHJlYWQuam9pbigpOwogICAgICAgICAgICBpbnQgY29kZSA9IHByb2Nlc3Mud2FpdEZvcigpOwoKICAgICAgICAgICAgLy8gc3Rkb3V0ICsgc3RkZXJyIGJvdGggYWxyZWFkeSB3ZW50IHRvIHRoZSBsb2cgKG1lcmdlZCwgbGl2ZSkuIFBvcCBhIHdpbmRvdyB3aXRoCiAgICAgICAgICAgIC8vIHRoZSBlcnJvcnMgT05MWSB3aGVuIHRoZXJlIHdhcyBzdGRlcnIgQU5EIG5vIGV4cGxpY2l0IC1sb2cvLUxPRyB3YXMgZ2l2ZW46CiAgICAgICAgICAgIC8vICAgLSBjbGVhbiBydW4gICAgICAgICAgICAtPiBzaWxlbnQsIHdpbmRvd2xlc3MKICAgICAgICAgICAgLy8gICAtIGVycm9yLCBubyAtbG9nICAgICAgIC0+IHNtYWxsIHdpbmRvdyBzaG93cyB0aGUgZXJyb3JzIChib3RoIHdvcmxkcykKICAgICAgICAgICAgLy8gICAtIC1sb2cgZ2l2ZW4gICAgICAgICAgIC0+IG5ldmVyIHBvcHMgKGV2ZXJ5dGhpbmcgaXMgaW4gdGhlIGxvZyBmaWxlKQogICAgICAgICAgICBpZiAoIWVyckxpbmVzLmlzRW1wdHkoKSAmJiAhbG9nRXhwbGljaXRseVNldCkgewogICAgICAgICAgICAgICAgc2hvd1N0ZGVycldpbmRvdyhlcnJMaW5lcyk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgcmV0dXJuIGNvZGU7CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgd3JpdGVMaW5lKG1zZ0Vycm9yLCBlLmdldE1lc3NhZ2UoKSk7CiAgICAgICAgICAgIHJldHVybiAxOwogICAgICAgIH0gZmluYWxseSB7CiAgICAgICAgICAgIHdyaXRlTGluZShtc2dGaW5pc2hlZCwgYmF0Y2hGaWxlUGF0aCk7CiAgICAgICAgICAgIGNsb3NlTG9nKCk7CiAgICAgICAgfQogICAgfQoKICAgIC8vIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSBhcmdzCgogICAgcHJpdmF0ZSB2b2lkIHBhcnNlQXJndW1lbnRzKFN0cmluZ1tdIGFyZ3MpIHsKICAgICAgICBib29sZWFuIGJhdGNoRmlsZVBhdGhXYXNSZWFkID0gZmFsc2U7CgogICAgICAgIGZvciAoaW50IGlkeCA9IDA7IGlkeCA8IGFyZ3MubGVuZ3RoOyBpZHgrKykgewogICAgICAgICAgICBTdHJpbmcgYXJnID0gYXJnc1tpZHhdOwogICAgICAgICAgICBTdHJpbmcgdmFsdWU7CgogICAgICAgICAgICAvLyAiLWxvZyBmaWxlIiAvICItbG9nKyBmaWxlIjogdGhlIGxvZyBwYXRoIGlzIHRoZSBORVhUIGFyZ3VtZW50LgogICAgICAgICAgICBpZiAoIWJhdGNoRmlsZVBhdGhXYXNSZWFkICYmIGFyZy5lcXVhbHNJZ25vcmVDYXNlKCItbG9nKyIpKSB7CiAgICAgICAgICAgICAgICBsb2dBcHBlbmQgPSB0cnVlOwogICAgICAgICAgICAgICAgbG9nRXhwbGljaXRseVNldCA9IHRydWU7CiAgICAgICAgICAgICAgICBpZiAoaWR4ICsgMSA8IGFyZ3MubGVuZ3RoKSB7CiAgICAgICAgICAgICAgICAgICAgbG9nRmlsZVBhdGggPSBhcmdzWysraWR4XTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgICAgIGNvbnRpbnVlOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGlmICghYmF0Y2hGaWxlUGF0aFdhc1JlYWQgJiYgYXJnLmVxdWFsc0lnbm9yZUNhc2UoIi1sb2ciKSkgewogICAgICAgICAgICAgICAgbG9nQXBwZW5kID0gZmFsc2U7CiAgICAgICAgICAgICAgICBsb2dFeHBsaWNpdGx5U2V0ID0gdHJ1ZTsKICAgICAgICAgICAgICAgIGlmIChpZHggKyAxIDwgYXJncy5sZW5ndGgpIHsKICAgICAgICAgICAgICAgICAgICBsb2dGaWxlUGF0aCA9IGFyZ3NbKytpZHhdOwogICAgICAgICAgICAgICAgfQogICAgICAgICAgICAgICAgY29udGludWU7CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIHZhbHVlID0gdHJ5R2V0VmFsdWUoYXJnLCAiL0xPR1NJWkUiKTsKICAgICAgICAgICAgaWYgKHZhbHVlICE9IG51bGwpIHsKICAgICAgICAgICAgICAgIG1heExvZ1NpemUgPSBMb25nLnBhcnNlTG9uZyh2YWx1ZS50cmltKCkpOwogICAgICAgICAgICAgICAgY29udGludWU7CiAgICAgICAgICAgIH0KCiAgICAgICAgICAgIHZhbHVlID0gdHJ5R2V0VmFsdWUoYXJnLCAiL0RFTEFZIik7CiAgICAgICAgICAgIGlmICh2YWx1ZSAhPSBudWxsKSB7CiAgICAgICAgICAgICAgICBkZWxheU1pbGxpcyA9IChsb25nKSAoRG91YmxlLnBhcnNlRG91YmxlKHZhbHVlLnRyaW0oKSkgKiAxMDAwKTsKICAgICAgICAgICAgICAgIGNvbnRpbnVlOwogICAgICAgICAgICB9CgogICAgICAgICAgICBpZiAoaXNOYW1lKGFyZywgIi8/IikpIHsKICAgICAgICAgICAgICAgIHNob3dIZWxwID0gdHJ1ZTsKICAgICAgICAgICAgfQoKICAgICAgICAgICAgaWYgKCFiYXRjaEZpbGVQYXRoV2FzUmVhZCkgewogICAgICAgICAgICAgICAgYmF0Y2hGaWxlUGF0aCA9IGFyZzsKICAgICAgICAgICAgICAgIGJhdGNoRmlsZVBhdGhXYXNSZWFkID0gdHJ1ZTsKICAgICAgICAgICAgICAgIGNvbnRpbnVlOwogICAgICAgICAgICB9CgogICAgICAgICAgICBiYXRjaEZpbGVBcmd1bWVudHMuYWRkKGFyZyk7CiAgICAgICAgfQogICAgfQoKICAgIHByaXZhdGUgYm9vbGVhbiBpc05hbWUoU3RyaW5nIGFyZywgU3RyaW5nIG5hbWUpIHsKICAgICAgICBpZiAoYXJnID09IG51bGwgfHwgYXJnLmxlbmd0aCgpIDwgbmFtZS5sZW5ndGgoKSkgewogICAgICAgICAgICByZXR1cm4gZmFsc2U7CiAgICAgICAgfQogICAgICAgIGlmICghYXJnLnJlZ2lvbk1hdGNoZXModHJ1ZSwgMCwgbmFtZSwgMCwgbmFtZS5sZW5ndGgoKSkpIHsKICAgICAgICAgICAgcmV0dXJuIGZhbHNlOwogICAgICAgIH0KICAgICAgICByZXR1cm4gbmFtZS5sZW5ndGgoKSA9PSBhcmcubGVuZ3RoKCkgfHwgYXJnLmNoYXJBdChuYW1lLmxlbmd0aCgpKSA9PSAnOic7CiAgICB9CgogICAgcHJpdmF0ZSBTdHJpbmcgdHJ5R2V0VmFsdWUoU3RyaW5nIGFyZywgU3RyaW5nIG5hbWUpIHsKICAgICAgICBpZiAoaXNOYW1lKGFyZywgbmFtZSkpIHsKICAgICAgICAgICAgaW50IHN0YXJ0ID0gbmFtZS5sZW5ndGgoKSArIDE7IC8vICsxIGZvciB0aGUgY29sb24gc2VwYXJhdG9yCiAgICAgICAgICAgIFN0cmluZyB2YWx1ZSA9IHN0YXJ0IDw9IGFyZy5sZW5ndGgoKSA/IGFyZy5zdWJzdHJpbmcoc3RhcnQpIDogIiI7CiAgICAgICAgICAgIGludCBhID0gMDsKICAgICAgICAgICAgaW50IGIgPSB2YWx1ZS5sZW5ndGgoKTsKICAgICAgICAgICAgd2hpbGUgKGEgPCBiICYmIHZhbHVlLmNoYXJBdChhKSA9PSAnIicpIHsKICAgICAgICAgICAgICAgIGErKzsKICAgICAgICAgICAgfQogICAgICAgICAgICB3aGlsZSAoYiA+IGEgJiYgdmFsdWUuY2hhckF0KGIgLSAxKSA9PSAnIicpIHsKICAgICAgICAgICAgICAgIGItLTsKICAgICAgICAgICAgfQogICAgICAgICAgICByZXR1cm4gdmFsdWUuc3Vic3RyaW5nKGEsIGIpOwogICAgICAgIH0KICAgICAgICByZXR1cm4gbnVsbDsKICAgIH0KCiAgICAvLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSBleGVjdXRpb24KCiAgICBwcml2YXRlIGphdmEudXRpbC5MaXN0PFN0cmluZz4gYnVpbGRDb21tYW5kKCkgewogICAgICAgIGphdmEudXRpbC5MaXN0PFN0cmluZz4gY29tbWFuZCA9IG5ldyBqYXZhLnV0aWwuQXJyYXlMaXN0PD4oKTsKICAgICAgICBib29sZWFuIHdpbmRvd3MgPSBTeXN0ZW0uZ2V0UHJvcGVydHkoIm9zLm5hbWUiLCAiIikudG9Mb3dlckNhc2UoKS5jb250YWlucygid2luIik7CgogICAgICAgIGlmICh3aW5kb3dzKSB7CiAgICAgICAgICAgIFN0cmluZyBjb21TcGVjID0gU3lzdGVtLmdldGVudigiQ09NU1BFQyIpOwogICAgICAgICAgICBpZiAoY29tU3BlYyA9PSBudWxsIHx8IGNvbVNwZWMuaXNFbXB0eSgpKSB7CiAgICAgICAgICAgICAgICBjb21TcGVjID0gImNtZC5leGUiOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGNvbW1hbmQuYWRkKGNvbVNwZWMpOwogICAgICAgICAgICBjb21tYW5kLmFkZCgiL2MiKTsKICAgICAgICAgICAgY29tbWFuZC5hZGQoYmF0Y2hGaWxlUGF0aCk7CiAgICAgICAgICAgIGNvbW1hbmQuYWRkQWxsKGJhdGNoRmlsZUFyZ3VtZW50cyk7CiAgICAgICAgfSBlbHNlIHsKICAgICAgICAgICAgLy8gRmFsbGJhY2sgc28gdGhlIHRvb2wgY2FuIGJlIGRldmVsb3BlZC90ZXN0ZWQgb2ZmIFdpbmRvd3MuCiAgICAgICAgICAgIFN0cmluZ0J1aWxkZXIgc2NyaXB0ID0gbmV3IFN0cmluZ0J1aWxkZXIoc2hlbGxRdW90ZShiYXRjaEZpbGVQYXRoKSk7CiAgICAgICAgICAgIGZvciAoU3RyaW5nIGFyZyA6IGJhdGNoRmlsZUFyZ3VtZW50cykgewogICAgICAgICAgICAgICAgc2NyaXB0LmFwcGVuZCgnICcpLmFwcGVuZChzaGVsbFF1b3RlKGFyZykpOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGNvbW1hbmQuYWRkKCIvYmluL3NoIik7CiAgICAgICAgICAgIGNvbW1hbmQuYWRkKCItYyIpOwogICAgICAgICAgICBjb21tYW5kLmFkZChzY3JpcHQudG9TdHJpbmcoKSk7CiAgICAgICAgfQogICAgICAgIHJldHVybiBjb21tYW5kOwogICAgfQoKICAgIHByaXZhdGUgU3RyaW5nIHNoZWxsUXVvdGUoU3RyaW5nIHMpIHsKICAgICAgICBib29sZWFuIG5lZWRzID0gcy5pc0VtcHR5KCk7CiAgICAgICAgZm9yIChpbnQgaSA9IDA7IGkgPCBzLmxlbmd0aCgpICYmICFuZWVkczsgaSsrKSB7CiAgICAgICAgICAgIGNoYXIgYyA9IHMuY2hhckF0KGkpOwogICAgICAgICAgICBuZWVkcyA9IGMgPT0gJyAnIHx8IGMgPT0gJyInIHx8IGMgPT0gJ1wnJzsKICAgICAgICB9CiAgICAgICAgcmV0dXJuIG5lZWRzID8gIlwiIiArIHMucmVwbGFjZSgiXCIiLCAiXFxcIiIpICsgIlwiIiA6IHM7CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIGRlbGF5SWZOZWNlc3NhcnkoKSB0aHJvd3MgSW50ZXJydXB0ZWRFeGNlcHRpb24gewogICAgICAgIGlmIChkZWxheU1pbGxpcyA8PSAwKSB7CiAgICAgICAgICAgIHJldHVybjsKICAgICAgICB9CiAgICAgICAgZG91YmxlIHNlY29uZHMgPSBkZWxheU1pbGxpcyAvIDEwMDAuMDsKICAgICAgICBTdHJpbmcgc2hvd24gPSBzZWNvbmRzID09IE1hdGguZmxvb3Ioc2Vjb25kcykKICAgICAgICAgICAgICAgID8gTG9uZy50b1N0cmluZygobG9uZykgc2Vjb25kcykKICAgICAgICAgICAgICAgIDogRG91YmxlLnRvU3RyaW5nKHNlY29uZHMpOwogICAgICAgIHdyaXRlTGluZShtc2dEZWxheSwgc2hvd24pOwogICAgICAgIFRocmVhZC5zbGVlcChkZWxheU1pbGxpcyk7CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIHNob3dIZWxwKCkgewogICAgICAgIC8vIENvbnNvbGUgdG9vbDogcHJpbnQgdG8gc3Rkb3V0LiAoQXZvaWRpbmcgU3dpbmcvQVdUIGhlcmUga2VlcHMgdGhlIG5hdGl2ZQogICAgICAgIC8vIGltYWdlIGEgc2luZ2xlIHNtYWxsIC5leGUgd2l0aCBubyBhd3QuZGxsICYgZnJpZW5kcyBkcmFnZ2VkIGluLikKICAgICAgICBTeXN0ZW0ub3V0LnByaW50bG4odXNlck1hbnVhbCk7CiAgICB9CgogICAgLyoqCiAgICAgKiBQb3BzIGEgc21hbGwgY29uc29sZSB3aW5kb3cgc2hvd2luZyB0aGUgYmF0Y2gncyBzdGRlcnIuIENhbGxlZCBvbmx5IHdoZW4gdGhlcmUgd2FzCiAgICAgKiBzdGRlcnIgYW5kIG5vIGV4cGxpY2l0IGxvZyB3YXMgcmVxdWVzdGVkLiBVc2VzICJzdGFydCIgc28gYSB3aW5kb3dsZXNzIGNtZHcgY2FuIHN0aWxsCiAgICAgKiBicmluZyB1cCBhIHZpc2libGUgY29uc29sZTsgdGhlIHdpbmRvdyBzdGF5cyBvcGVuIChwYXVzZSkgc28gdGhlIGVycm9ycyBjYW4gYmUgcmVhZC4KICAgICAqLwogICAgcHJpdmF0ZSB2b2lkIHNob3dTdGRlcnJXaW5kb3coamF2YS51dGlsLkxpc3Q8U3RyaW5nPiBlcnJMaW5lcykgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIGphdmEuaW8uRmlsZSB0eHQgPSBqYXZhLmlvLkZpbGUuY3JlYXRlVGVtcEZpbGUoImNtZHctc3RkZXJyLSIsICIudHh0Iik7CiAgICAgICAgICAgIHRyeSAoamF2YS5pby5Xcml0ZXIgdyA9IG5ldyBqYXZhLmlvLk91dHB1dFN0cmVhbVdyaXRlcigKICAgICAgICAgICAgICAgICAgICBuZXcgamF2YS5pby5GaWxlT3V0cHV0U3RyZWFtKHR4dCksIGphdmEubmlvLmNoYXJzZXQuQ2hhcnNldC5kZWZhdWx0Q2hhcnNldCgpKSkgewogICAgICAgICAgICAgICAgdy53cml0ZSgiW2NtZHddIHN0ZGVyciBkZTogIiArIGJhdGNoRmlsZVBhdGggKyBTeXN0ZW0ubGluZVNlcGFyYXRvcigpKTsKICAgICAgICAgICAgICAgIHcud3JpdGUoU3lzdGVtLmxpbmVTZXBhcmF0b3IoKSk7CiAgICAgICAgICAgICAgICBmb3IgKFN0cmluZyBsIDogZXJyTGluZXMpIHsKICAgICAgICAgICAgICAgICAgICB3LndyaXRlKGwpOwogICAgICAgICAgICAgICAgICAgIHcud3JpdGUoU3lzdGVtLmxpbmVTZXBhcmF0b3IoKSk7CiAgICAgICAgICAgICAgICB9CiAgICAgICAgICAgIH0KICAgICAgICAgICAgamF2YS5pby5GaWxlIGJhdCA9IGphdmEuaW8uRmlsZS5jcmVhdGVUZW1wRmlsZSgiY21kdy1zdGRlcnItIiwgIi5iYXQiKTsKICAgICAgICAgICAgdHJ5IChqYXZhLmlvLldyaXRlciB3ID0gbmV3IGphdmEuaW8uT3V0cHV0U3RyZWFtV3JpdGVyKAogICAgICAgICAgICAgICAgICAgIG5ldyBqYXZhLmlvLkZpbGVPdXRwdXRTdHJlYW0oYmF0KSwgamF2YS5uaW8uY2hhcnNldC5DaGFyc2V0LmRlZmF1bHRDaGFyc2V0KCkpKSB7CiAgICAgICAgICAgICAgICB3LndyaXRlKCJAZWNobyBvZmYiICsgU3lzdGVtLmxpbmVTZXBhcmF0b3IoKSk7CiAgICAgICAgICAgICAgICB3LndyaXRlKCJ0eXBlIFwiIiArIHR4dC5nZXRBYnNvbHV0ZVBhdGgoKSArICJcIiIgKyBTeXN0ZW0ubGluZVNlcGFyYXRvcigpKTsKICAgICAgICAgICAgICAgIHcud3JpdGUoImVjaG8uIiArIFN5c3RlbS5saW5lU2VwYXJhdG9yKCkpOwogICAgICAgICAgICAgICAgdy53cml0ZSgicGF1c2UiICsgU3lzdGVtLmxpbmVTZXBhcmF0b3IoKSk7CiAgICAgICAgICAgIH0KICAgICAgICAgICAgLy8gInN0YXJ0IDx0aXRsZT4gPGZpbGU+IiBvcGVucyB0aGUgLmJhdCBpbiBhIE5FVyB2aXNpYmxlIGNvbnNvbGUgd2luZG93LgogICAgICAgICAgICBuZXcgUHJvY2Vzc0J1aWxkZXIoImNtZC5leGUiLCAiL2MiLCAic3RhcnQiLCAiY21kdyBzdGRlcnIiLCBiYXQuZ2V0QWJzb2x1dGVQYXRoKCkpCiAgICAgICAgICAgICAgICAgICAgLnN0YXJ0KCk7CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGlnbm9yZSkgewogICAgICAgICAgICAvLyBiZXN0LWVmZm9ydDogaWYgd2UgY2Fubm90IHNob3cgdGhlIHdpbmRvdywgdGhlIGxvZyBzdGlsbCBoYXMgdGhlIGVycm9ycwogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIHZvaWQgcmVzb2x2ZUJhdGNoRmlsZVBhdGgoKSB7CiAgICAgICAgaWYgKGJhdGNoRmlsZVBhdGggPT0gbnVsbCB8fCBiYXRjaEZpbGVQYXRoLmlzRW1wdHkoKSkgewogICAgICAgICAgICByZXR1cm47CiAgICAgICAgfQogICAgICAgIGlmIChiYXRjaEZpbGVQYXRoLmluZGV4T2YoJy8nKSA+PSAwIHx8IGJhdGNoRmlsZVBhdGguaW5kZXhPZignXFwnKSA+PSAwKSB7CiAgICAgICAgICAgIHJldHVybjsgLy8gYSBkaXJlY3Rvcnkgd2FzIGdpdmVuLCB1c2UgYXMtaXMKICAgICAgICB9CgogICAgICAgIFN0cmluZyBuYW1lID0gYmF0Y2hGaWxlUGF0aDsKICAgICAgICBpbnQgZG90ID0gbmFtZS5sYXN0SW5kZXhPZignLicpOwogICAgICAgIGJvb2xlYW4gaGFzRXh0ZW5zaW9uID0gZG90ID49IDA7CgogICAgICAgIGlmICghaGFzRXh0ZW5zaW9uKSB7CiAgICAgICAgICAgIGlmIChmaW5kUGF0aChiYXRjaEZpbGVQYXRoICsgIi5iYXQiKSkgewogICAgICAgICAgICAgICAgcmV0dXJuOwogICAgICAgICAgICB9CiAgICAgICAgICAgIGZpbmRQYXRoKGJhdGNoRmlsZVBhdGggKyAiLmNtZCIpOwogICAgICAgIH0gZWxzZSB7CiAgICAgICAgICAgIGZpbmRQYXRoKGJhdGNoRmlsZVBhdGgpOwogICAgICAgIH0KICAgIH0KCiAgICAvKiogVHJ1ZSBpZiBmb3VuZDsgYSBoaXQgcmV3cml0ZXMgYmF0Y2hGaWxlUGF0aCB0byB0aGUgZnVsbCBwYXRoLiAqLwogICAgcHJpdmF0ZSBib29sZWFuIGZpbmRQYXRoKFN0cmluZyBmaWxlbmFtZSkgewogICAgICAgIGphdmEuaW8uRmlsZSBjdXJyZW50ID0gbmV3IGphdmEuaW8uRmlsZShTeXN0ZW0uZ2V0UHJvcGVydHkoInVzZXIuZGlyIiksIGZpbGVuYW1lKTsKICAgICAgICBpZiAoY3VycmVudC5leGlzdHMoKSkgewogICAgICAgICAgICAvLyBSZXdyaXRlIHRvIHRoZSByZXNvbHZlZCBwYXRoOiBzb21lIFdpbmRvd3Mgc2V0dXBzIChlLmcuCiAgICAgICAgICAgIC8vIE5vRGVmYXVsdEN1cnJlbnREaXJlY3RvcnlJbkV4ZVBhdGgpIG1ha2UgY21kIE5PVCBzZWFyY2ggdGhlIGN1cnJlbnQKICAgICAgICAgICAgLy8gZGlyZWN0b3J5LCBzbyBhIGJhcmUgbmFtZSB3b3VsZCBmYWlsIGV2ZW4gdGhvdWdoIHRoZSBmaWxlIGlzIHJpZ2h0IGhlcmUuCiAgICAgICAgICAgIGJhdGNoRmlsZVBhdGggPSBjdXJyZW50LmdldFBhdGgoKTsKICAgICAgICAgICAgcmV0dXJuIHRydWU7CiAgICAgICAgfQoKICAgICAgICBTdHJpbmcgZW52aXJvbm1lbnRQYXRoID0gU3lzdGVtLmdldGVudigiUEFUSCIpOwogICAgICAgIGlmIChlbnZpcm9ubWVudFBhdGggPT0gbnVsbCB8fCBlbnZpcm9ubWVudFBhdGguaXNFbXB0eSgpKSB7CiAgICAgICAgICAgIHJldHVybiBmYWxzZTsKICAgICAgICB9CgogICAgICAgIGZvciAoU3RyaW5nIGRpciA6IGVudmlyb25tZW50UGF0aC5zcGxpdChqYXZhLnV0aWwucmVnZXguUGF0dGVybi5xdW90ZShqYXZhLmlvLkZpbGUucGF0aFNlcGFyYXRvcikpKSB7CiAgICAgICAgICAgIGlmIChkaXIuaXNFbXB0eSgpKSB7CiAgICAgICAgICAgICAgICBjb250aW51ZTsKICAgICAgICAgICAgfQogICAgICAgICAgICBqYXZhLmlvLkZpbGUgY2FuZGlkYXRlID0gbmV3IGphdmEuaW8uRmlsZShkaXIsIGZpbGVuYW1lKTsKICAgICAgICAgICAgaWYgKGNhbmRpZGF0ZS5leGlzdHMoKSkgewogICAgICAgICAgICAgICAgYmF0Y2hGaWxlUGF0aCA9IGNhbmRpZGF0ZS5nZXRQYXRoKCk7CiAgICAgICAgICAgICAgICByZXR1cm4gdHJ1ZTsKICAgICAgICAgICAgfQogICAgICAgIH0KICAgICAgICByZXR1cm4gZmFsc2U7CiAgICB9CgogICAgLy8gLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0gbG9nZ2luZwoKICAgIHByaXZhdGUgdm9pZCBpbml0TG9nKCkgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIGlmIChsb2dGaWxlUGF0aCA9PSBudWxsIHx8IGxvZ0ZpbGVQYXRoLmlzRW1wdHkoKSkgewogICAgICAgICAgICAgICAgcmV0dXJuOyAvLyBubyBsb2dnaW5nIGlmIG5vIHBhdGgKICAgICAgICAgICAgfQogICAgICAgICAgICBsb2dGdWxsUGF0aCA9IGV4cGFuZEVudihsb2dGaWxlUGF0aCk7CiAgICAgICAgICAgIGNsb3NlTG9nKCk7CiAgICAgICAgICAgIHdyaXRlciA9IG5ldyBqYXZhLmlvLkJ1ZmZlcmVkV3JpdGVyKG5ldyBqYXZhLmlvLkZpbGVXcml0ZXIobG9nRnVsbFBhdGgsIGxvZ0FwcGVuZCkpOwogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIFN5c3RlbS5lcnIucHJpbnRsbihlKTsKICAgICAgICB9CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIHJvdGF0ZUxvZygpIHsKICAgICAgICB0cnkgewogICAgICAgICAgICBpZiAobWF4TG9nU2l6ZSA8PSAwIHx8IHdyaXRlciA9PSBudWxsKSB7CiAgICAgICAgICAgICAgICByZXR1cm47CiAgICAgICAgICAgIH0KICAgICAgICAgICAgamF2YS5pby5GaWxlIGZpbGUgPSBuZXcgamF2YS5pby5GaWxlKGxvZ0Z1bGxQYXRoKTsKICAgICAgICAgICAgaWYgKGZpbGUuZXhpc3RzKCkgJiYgZmlsZS5sZW5ndGgoKSA+IG1heExvZ1NpemUpIHsKICAgICAgICAgICAgICAgIHdyaXRlci5jbG9zZSgpOwogICAgICAgICAgICAgICAgamF2YS5uaW8uZmlsZS5GaWxlcy5jb3B5KGZpbGUudG9QYXRoKCksCiAgICAgICAgICAgICAgICAgICAgICAgIGphdmEubmlvLmZpbGUuUGF0aC5vZihsb2dGdWxsUGF0aCArICIub2xkIiksCiAgICAgICAgICAgICAgICAgICAgICAgIGphdmEubmlvLmZpbGUuU3RhbmRhcmRDb3B5T3B0aW9uLlJFUExBQ0VfRVhJU1RJTkcpOwogICAgICAgICAgICAgICAgamF2YS5uaW8uZmlsZS5GaWxlcy5kZWxldGVJZkV4aXN0cyhmaWxlLnRvUGF0aCgpKTsKICAgICAgICAgICAgICAgIHdyaXRlciA9IG5ldyBqYXZhLmlvLkJ1ZmZlcmVkV3JpdGVyKG5ldyBqYXZhLmlvLkZpbGVXcml0ZXIobG9nRnVsbFBhdGgsIGxvZ0FwcGVuZCkpOwogICAgICAgICAgICB9CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgU3lzdGVtLmVyci5wcmludGxuKGUpOwogICAgICAgIH0KICAgIH0KCiAgICBwcml2YXRlIHN5bmNocm9uaXplZCB2b2lkIHdyaXRlTGluZShTdHJpbmcgZm9ybWF0LCBPYmplY3QuLi4gYXJncykgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIHJvdGF0ZUxvZygpOwogICAgICAgICAgICBpZiAod3JpdGVyICE9IG51bGwgJiYgZm9ybWF0ICE9IG51bGwpIHsKICAgICAgICAgICAgICAgIC8vIE5vIGFyZ3MgLT4gd3JpdGUgdmVyYmF0aW0sIHNvIGxpbmVzIGNvbnRhaW5pbmcgJyUnIGFyZSBzYWZlLgogICAgICAgICAgICAgICAgU3RyaW5nIG1lc3NhZ2UgPSAoYXJncyA9PSBudWxsIHx8IGFyZ3MubGVuZ3RoID09IDApCiAgICAgICAgICAgICAgICAgICAgICAgID8gZm9ybWF0CiAgICAgICAgICAgICAgICAgICAgICAgIDogU3RyaW5nLmZvcm1hdChmb3JtYXQsIGFyZ3MpOwogICAgICAgICAgICAgICAgd3JpdGVyLndyaXRlKGphdmEudGltZS5Mb2NhbERhdGVUaW1lLm5vdygpLmZvcm1hdCh0aW1lc3RhbXBGb3JtYXQpICsgIiAtICIgKyBtZXNzYWdlKTsKICAgICAgICAgICAgICAgIHdyaXRlci5uZXdMaW5lKCk7CiAgICAgICAgICAgICAgICB3cml0ZXIuZmx1c2goKTsKICAgICAgICAgICAgfQogICAgICAgIH0gY2F0Y2ggKEV4Y2VwdGlvbiBlKSB7CiAgICAgICAgICAgIFN5c3RlbS5lcnIucHJpbnRsbihlKTsKICAgICAgICB9CiAgICB9CgogICAgcHJpdmF0ZSB2b2lkIGNsb3NlTG9nKCkgewogICAgICAgIHRyeSB7CiAgICAgICAgICAgIGlmICh3cml0ZXIgIT0gbnVsbCkgewogICAgICAgICAgICAgICAgd3JpdGVyLmNsb3NlKCk7CiAgICAgICAgICAgICAgICB3cml0ZXIgPSBudWxsOwogICAgICAgICAgICB9CiAgICAgICAgfSBjYXRjaCAoRXhjZXB0aW9uIGUpIHsKICAgICAgICAgICAgU3lzdGVtLmVyci5wcmludGxuKGUpOwogICAgICAgIH0KICAgIH0KCiAgICAvLyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLSAlVkFSJSBleHBhbnNpb24KCiAgICBwcml2YXRlIFN0cmluZyBleHBhbmRFbnYoU3RyaW5nIGlucHV0KSB7CiAgICAgICAgaWYgKGlucHV0ID09IG51bGwgfHwgaW5wdXQuaXNFbXB0eSgpKSB7CiAgICAgICAgICAgIHJldHVybiBpbnB1dDsKICAgICAgICB9CiAgICAgICAgU3RyaW5nQnVpbGRlciBzYiA9IG5ldyBTdHJpbmdCdWlsZGVyKCk7CiAgICAgICAgaW50IGkgPSAwOwogICAgICAgIHdoaWxlIChpIDwgaW5wdXQubGVuZ3RoKCkpIHsKICAgICAgICAgICAgY2hhciBjID0gaW5wdXQuY2hhckF0KGkpOwogICAgICAgICAgICBpZiAoYyA9PSAnJScpIHsKICAgICAgICAgICAgICAgIGludCBlbmQgPSBpbnB1dC5pbmRleE9mKCclJywgaSArIDEpOwogICAgICAgICAgICAgICAgaWYgKGVuZCA+IGkpIHsKICAgICAgICAgICAgICAgICAgICBTdHJpbmcgbmFtZSA9IGlucHV0LnN1YnN0cmluZyhpICsgMSwgZW5kKTsKICAgICAgICAgICAgICAgICAgICBTdHJpbmcgdmFsdWUgPSByZXNvbHZlRW52KG5hbWUpOwogICAgICAgICAgICAgICAgICAgIHNiLmFwcGVuZCh2YWx1ZSAhPSBudWxsID8gdmFsdWUgOiAiJSIgKyBuYW1lICsgIiUiKTsKICAgICAgICAgICAgICAgICAgICBpID0gZW5kICsgMTsKICAgICAgICAgICAgICAgICAgICBjb250aW51ZTsKICAgICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQogICAgICAgICAgICBzYi5hcHBlbmQoYyk7CiAgICAgICAgICAgIGkrKzsKICAgICAgICB9CiAgICAgICAgcmV0dXJuIHNiLnRvU3RyaW5nKCk7CiAgICB9CgogICAgcHJpdmF0ZSBTdHJpbmcgcmVzb2x2ZUVudihTdHJpbmcgbmFtZSkgewogICAgICAgIFN0cmluZyB2YWx1ZSA9IFN5c3RlbS5nZXRlbnYobmFtZSk7CiAgICAgICAgaWYgKHZhbHVlICE9IG51bGwpIHsKICAgICAgICAgICAgcmV0dXJuIHZhbHVlOwogICAgICAgIH0KICAgICAgICBmb3IgKGphdmEudXRpbC5NYXAuRW50cnk8U3RyaW5nLCBTdHJpbmc+IGUgOiBTeXN0ZW0uZ2V0ZW52KCkuZW50cnlTZXQoKSkgewogICAgICAgICAgICBpZiAoZS5nZXRLZXkoKS5lcXVhbHNJZ25vcmVDYXNlKG5hbWUpKSB7CiAgICAgICAgICAgICAgICByZXR1cm4gZS5nZXRWYWx1ZSgpOwogICAgICAgICAgICB9CiAgICAgICAgfQogICAgICAgIGlmIChuYW1lLmVxdWFsc0lnbm9yZUNhc2UoInRlbXAiKSB8fCBuYW1lLmVxdWFsc0lnbm9yZUNhc2UoInRtcCIpKSB7CiAgICAgICAgICAgIFN0cmluZyB0bXAgPSBTeXN0ZW0uZ2V0UHJvcGVydHkoImphdmEuaW8udG1wZGlyIik7CiAgICAgICAgICAgIGlmICh0bXAgIT0gbnVsbCAmJiB0bXAubGVuZ3RoKCkgPiAxICYmIHRtcC5lbmRzV2l0aChqYXZhLmlvLkZpbGUuc2VwYXJhdG9yKSkgewogICAgICAgICAgICAgICAgdG1wID0gdG1wLnN1YnN0cmluZygwLCB0bXAubGVuZ3RoKCkgLSAxKTsKICAgICAgICAgICAgfQogICAgICAgICAgICByZXR1cm4gdG1wOwogICAgICAgIH0KICAgICAgICByZXR1cm4gbnVsbDsKICAgIH0KfQo="
-            )
+            ),
+            true
         );
     }
 }
 
 class Make{
     public Make(){}
-    public int make(String name_out, String name_class, byte [] bytes_class){
+    public int make(String name_out, String name_class, byte [] bytes_class, boolean windowless){
         boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
         java.nio.file.Path buildDir = null;
         try {
@@ -27048,13 +26417,22 @@ class Make{
             System.out.println("(GraalVM native-image)");
             System.out.println("  build  : " + buildDir);
             System.out.println("  output : " + output);
+            System.out.println("  modo   : " + (windowless ? "sem janela (GUI subsystem)" : "console"));
             System.out.println();
             run(buildDir, javac, "-d", classesDir.toString(), srcCopy.toString());
+
+            java.util.List<String> ni = new java.util.ArrayList<>();
+            java.util.Collections.addAll(ni, nativeImage, "--no-fallback");
+            if (windowless) {
+                // app sem console (ex.: cmdw/SilentCMD): roda janela-menos
+                ni.add("-H:NativeLinkerOption=/SUBSYSTEM:windows");
+                ni.add("-H:NativeLinkerOption=/ENTRY:mainCRTStartup");
+            }
+            // console = default do native-image: exe anexa ao terminal (stdin/stdout ok) -> necessario pro Portal
+            java.util.Collections.addAll(ni, "-cp", classesDir.toString(), "-o", name_out, name_class);
+
             StringBuilder niLog = new StringBuilder();
-            int niCode = runCaptured(buildDir, niLog, nativeImage, "--no-fallback",
-                    "-H:NativeLinkerOption=/SUBSYSTEM:windows",
-                    "-H:NativeLinkerOption=/ENTRY:mainCRTStartup",
-                    "-cp", classesDir.toString(), "-o", name_out, name_class);
+            int niCode = runCaptured(buildDir, niLog, ni.toArray(new String[0]));
             if (niCode != 0) {
                 String log = niLog.toString().toLowerCase();
                 if (niCode == 20 || log.contains("vcvarsall") || log.contains("visual studio")){
@@ -38626,10 +38004,13 @@ Exemplos...
     y make_portal
     obs: cria o portal.exe
 [y portal]
+portal 1.2.2
     uso:
         server : set var="portal" "-server" "-ip" "192.168.0.100" "-porta" "2323" "-pass" "senha" && y var
         cliente: set var="portal" "-j" "sala1" "-ip" "192.168.0.100" "-porta" "2323" "-pass" "senha" "-user" "user1" && y var
     comandos no chat: /j <sala>  /list  /kick <nick|sessao>  /help  /exit
+    descrição do portal:
+        chat TCP com salas privadas, sempre cifrado cliente↔servidor (X25519/AES-256-CTR/HMAC), servidor assina com Ed25519; senha (PBKDF2) opcional
 [y devices]
     y devices
     y devices "-classe" "AudioEndpoint" "-classe" "Net"
