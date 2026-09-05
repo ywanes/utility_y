@@ -9239,7 +9239,11 @@ cat buffer.log
     }
     
     public void trataEcho() throws Exception{ // pode bugar o UTF-8, ex usando caracter chines 一
-        String [] args = bind_asterisk(new String[]{"echo", readString().substring(5).trim()});
+        String tmp=readString();
+        if ( tmp.length() >= 5 )
+            tmp=tmp.substring(5);
+        tmp=tmp.trim();
+        String [] args = bind_asterisk(new String[]{"echo", tmp});
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
         printf(args, baos);
         String result=baos.toString();
@@ -9251,15 +9255,13 @@ cat buffer.log
         else
             System.out.println(result);
     }
-            
-    public void echo(String [] args) throws Exception{
-        args = bind_asterisk(args);        
-        printf(args, System.out);
-        System.out.write("\n".getBytes());
-    }
-
+       
     public void trataPrintf() throws Exception{
-        String [] args = bind_asterisk(new String[]{"printf", readString().substring(7).trim()});
+        String tmp=readString();
+        if ( tmp.length() >= 7 )
+            tmp=tmp.substring(7);
+        tmp=tmp.trim();
+        String [] args = bind_asterisk(new String[]{"printf", tmp});
         ByteArrayOutputStream baos=new ByteArrayOutputStream();
         printf(args, baos);
         String result=baos.toString();
@@ -9270,6 +9272,12 @@ cat buffer.log
             System.out.print(result.substring(1, result.length()-1));
         else
             System.out.print(result);        
+    }
+    
+    public void echo(String [] args) throws Exception{
+        args = bind_asterisk(args);        
+        printf(args, System.out);
+        System.out.write("\n".getBytes());
     }
             
     public static String [] printf_cor_name=      new String[]{"VERDE", "VERMELHO", "AZUL", "BRANCO"};

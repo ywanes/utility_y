@@ -65,14 +65,14 @@ setlocal enabledelayedexpansion
 
 )
 if "%1" equ "echo" (
-echo %* | y trataEcho -ignore "Se Vc esta lendo esta msg, significa que ocorreu o bug de " na quantidade impar"
+echo %* | y trataEcho -ignore "bug de "" na quantidade impar"
 ) else (
 if "%1" equ "printf" (
-echo %* | y trataPrintf -ignore "Se Vc esta lendo esta msg, significa que ocorreu o bug de " na quantidade impar"
+echo %* | y trataPrintf -ignore "bug de "" na quantidade impar"
 ) else (
 set argc=0
 for %%x in (%*) do set /a argc+=1
-if !argc! geq 10 (
+if !argc! geq 11 (
 echo ALERTA: quantidade de parametros ^(!argc!^) atingiu ou passou de 10
 exit /b 1
 )
