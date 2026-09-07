@@ -718,10 +718,11 @@ INJ_EOF
   # was not specified"). Acontece fácil com wim2esd=0 + Chrome/winget enxertados.
   # A flag só afeta o registro ISO9660 (que já está com --hide "*"); o UDF — que é o
   # que o Windows lê — mantém o tamanho real. Idempotente: só adiciona se faltar.
-  # Só mexe em linhas onde 'genisoimage' é seguido de opção (-...), p/ não tocar em
-  # 'command -v genisoimage' nem em textos de echo.
-  sed -i -E '/-allow-limited-size/! s/(^|[^[:alnum:]_-])genisoimage (-)/\1genisoimage -allow-limited-size \2/' "$cs"
-  grep -qE 'genisoimage -allow-limited-size' "$cs" \
+  # Só mexe em linhas onde a chamada é seguida de opção (-...), p/ não tocar em
+  # 'command -v genisoimage' nem em textos de echo. O convert.sh chama pela
+  # variável: "$genisoimage" -b ... (2 chamadas: EFI-only e BIOS+EFI).
+  sed -i -E '/-allow-limited-size/! s/("\$genisoimage"|(^|[^[:alnum:]_$-])genisoimage) (-)/\1 -allow-limited-size \3/' "$cs"
+  grep -qE 'genisoimage"? -allow-limited-size' "$cs" \
     && echo ">> convert.sh: genisoimage com -allow-limited-size (install.wim pode passar de 4GiB)." \
     || echo ">> AVISO: não achei a chamada do genisoimage no convert.sh p/ adicionar -allow-limited-size."
   chmod +x "$cs"
