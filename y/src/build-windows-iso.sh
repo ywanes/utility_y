@@ -6,9 +6,9 @@
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-windows-iso.sh) list'
 #   ou
 #   chmod +x build-windows-iso.sh
-#   sudo ./build-windows-iso.sh                 # canal oficial (24H2 estável), Pro pt-BR
-#   sudo ./build-windows-iso.sh RC              # canal Release Preview (25H2)
-#   sudo ./build-windows-iso.sh DEV             # canal Dev/Insider (build mais novo, 26H1+)
+#   sudo ./build-windows-iso.sh                 # canal oficial (Retail, estável), Pro pt-BR
+#   sudo ./build-windows-iso.sh RC              # canal Release Preview
+#   sudo ./build-windows-iso.sh DEV             # canal Dev/Insider (build mais novo)
 #   sudo ./build-windows-iso.sh list            # só mostra o build do canal e sai
 #   sudo ./build-windows-iso.sh <uuid>          # força um id específico do uupdump
 #
@@ -19,7 +19,9 @@
 # NÃO baixa uma ISO pronta: o uupdump entrega um PACOTE DE SCRIPTS que puxa os
 # pacotes UUP direto dos servidores da Microsoft e CONVERTE em ISO localmente
 # (aria2c + wimlib + cabextract + chntpw + genisoimage). Este script é um wrapper:
-#   1) descobre o build mais novo via API do uupdump (igual o discover_suite faz no Ubuntu)
+#   1) descobre o build mais novo do CANAL via API do uupdump (listid.php): lê quais
+#      versões (24H2/25H2/26H2...) EXISTEM na lista e decide a partir disso — nada de
+#      versão fixa no código
 #   2) baixa o pacote de conversão daquele build, já filtrado p/ Pro + pt-BR
 #   3) instala as dependências de conversão no host
 #   4) dispara o conversor oficial e coleta a ISO
@@ -28,6 +30,8 @@
 #            APPS=0|1 (1 = inclui apps da Store; 0 = sem apps, ISO menor)
 #            CHROME=0|1 (1 = Google Chrome instala no 1º boot, padrão 1)
 #            WINGET=0|1 (1 = winget/App Installer provisionado no 1º boot, padrão 1)
+#            VERSION_OFICIAL=25H2 / VERSION_RC=26H2 (forçam a versão; vazio = automático)
+#            IGNORE_VERSIONS="26H1" (versões a pular na escolha automática)
 #            WORK=/caminho   OUT=/caminho.iso
 #
 # Chrome + winget entram OFFLINE dentro da install.wim e são instalados no PRIMEIRO
@@ -42,6 +46,12 @@
 #   - uupdump.net/get.php?...&autodl=2: testado, devolve o ZIP de conversão
 #   - uup_download_linux.sh em si (download MS + conversão p/ ISO): NÃO testado
 #     ponta a ponta — depende da rede do host de build (servidores da Microsoft)
+# status de validação (2026-09):
+#   - api.uupdump.net fetchupd.php (ring=Retail/ReleasePreview/Dev): TESTADO e DESCARTADO.
+#     Instável (WU_REQUEST_FAILED, USER_RATE_LIMITED/429) e, pior, com build base ele
+#     devolve o update que o WU INSTALARIA naquele build (KB4023057, Autopilot...), não
+#     a versão mais nova do Windows. Não serve p/ descobrir "o build do canal".
+#   - listid.php + escolha de versão pela própria lista: rápido e determinístico.
 set -euo pipefail
 
 # Diretório de invocação ANTES de qualquer cd — usado p/ resolver OUT no final.
@@ -58,11 +68,20 @@ CHROME="${CHROME:-1}"                  # 1 = inclui Google Chrome (MSI enterpris
 WINGET="${WINGET:-1}"                  # 1 = inclui winget/App Installer (provisionado via DISM)
 WINGET_REPO="${WINGET_REPO:-microsoft/winget-cli}"   # release de onde sai o App Installer
 CHROME_URL="${CHROME_URL:-https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi}"
-# Canal: oficial (24H2 estável) | RC (25H2 Release Preview) | DEV (Insider, build mais novo).
+# Canal: oficial (Retail, estável) | RC (Release Preview) | DEV (Insider Dev, build mais novo).
 # Via argumento posicional (RC/DEV) ou env CHANNEL=. Compat: RC=1 / DEV=1 também funcionam.
 CHANNEL="${CHANNEL:-oficial}"
 [ "${RC:-0}"  = "1" ] && CHANNEL="RC"
 [ "${DEV:-0}" = "1" ] && CHANNEL="DEV"
+# Escolha da VERSÃO por canal é automática (ver "descoberta do build"): entre as
+# versões "Windows 11, version NNHN" presentes na lista do uupdump p/ esta arch,
+# a MAIS NOVA vira RC e a SEGUNDA mais nova vira oficial. Overrides:
+VERSION_OFICIAL="${VERSION_OFICIAL:-}"   # ex: 25H2 (vazio = automático)
+VERSION_RC="${VERSION_RC:-}"             # ex: 26H2 (vazio = automático)
+# Versões a IGNORAR na escolha automática, separadas por espaço (escape manual;
+# lançamentos especiais como o 26H1/Snapdragon já são descartados sozinhos pela
+# regra da linha de manutenção — ver "descoberta do build"). Vazio = nenhuma.
+IGNORE_VERSIONS="${IGNORE_VERSIONS:-}"
 # WORK_BASE é a base; o WORK real vira WORK_BASE/<uuid> (1 pasta por build).
 # Assim cada canal/build fica isolado e o download de cada build persiste na sua
 # própria pasta (é o "cache" do download — re-rodar reaproveita).
@@ -115,29 +134,88 @@ fi
 # ----------------------------- descoberta do build --------------------------
 # Mesmo espírito do discover_suite do builder Ubuntu: pergunta à API qual é o
 # build 11 amd64 mais novo e pega o uuid. (Seu alvo, parametrizado.)
-# Mapeia canal -> prefixo de título p/ filtrar a API. DEV usa o prefixo genérico
-# -> max_by(build) pega o Insider mais novo (hoje 26H1/28000.x); oficial e RC
-# fixam a série estável. (Ao mudar de ano, ajuste 24H2/25H2 aqui.)
-prefix_for_channel() {
-  case "$1" in
-    RC)  echo "Windows 11, version 25H2" ;;
-    DEV) echo "Windows 11, version " ;;
-    *)   echo "Windows 11, version 24H2" ;;
-  esac
+# Fonte: listid.php (banco do uupdump, alimentado por quem clica "Fetch latest"
+# no site — sempre perto do atual, instantâneo, sem rate-limit).
+# Como NÃO ter versão fixa no código:
+#   - DEV     -> maior build entre títulos "Windows 11 Insider Preview ..." (Dev/Canary
+#                aparecem assim; o filtro antigo "Windows 11, version" nunca pegava).
+#   - RC      -> maior build da versão MAIS NOVA presente ("Windows 11, version NNHN").
+#   - oficial -> maior build da SEGUNDA versão mais nova (a que já está em varejo).
+#   Versões fora da linha de manutenção principal (lançamentos especiais de
+#   hardware) são descartadas automaticamente — ver versions_table.
+# Se ainda assim errar, use IGNORE_VERSIONS="NNHN" ou force VERSION_OFICIAL/VERSION_RC.
+fetch_listid() {
+  curl -fsSL -m 30 "$API/listid.php?search=windows%2011" 2>/dev/null || true
 }
-# Normaliza o canal atual e define prefixo + rótulo do build em andamento.
+# Tabela das versões NNHN presentes p/ $ARCH: v<TAB>minor<TAB>in|out
+#   minor = parte depois do ponto do MAIOR build daquela versão.
+#   Versões "normais" do Win11 compartilham a mesma linha de manutenção (mesmo
+#   minor: 26100.9278 / 26200.9278 / 26300.9278 — é o mesmo código + enablement
+#   package). Um lançamento especial de hardware (ex: 26H1 = 28000.2804, só
+#   Snapdragon) fica em OUTRA linha. Regra: a linha com MAIS versões é a principal
+#   ("in"); quem está fora dela é "out" e não entra na escolha automática. Assim
+#   nenhum "26H1" precisa existir no código — o próximo especial cai fora sozinho.
+#   Empate no número de versões: vence a linha que contém a versão mais nova.
+versions_table() { # $1 = json do listid
+  printf '%s' "$1" \
+    | jq -r --arg arch "$ARCH" '
+        [ .response.builds[]
+          | select(.arch==$arch)
+          | (.title | capture("^Windows 11, version (?<v>[0-9]{2}H[0-9])")) as $c
+          | {v: $c.v, b: (.build | split(".") | map(tonumber))} ]
+        | group_by(.v) | map({v: .[0].v, minor: (map(.b) | max | .[1])})
+        | ( group_by(.minor)
+            | map({minor: .[0].minor, n: length, newest: (map(.v) | max)})
+            | max_by([.n, .newest]) | .minor ) as $ml
+        | .[] | "\(.v)\t\(.minor)\t\(if .minor == $ml then "in" else "out" end)"' 2>/dev/null \
+    || true
+}
+# Versões elegíveis, da mais nova p/ a mais antiga (ordem lexical funciona:
+# "24H2" < "25H2" < "26H1" < "26H2"): só as da linha principal ("in") e fora
+# das IGNORE_VERSIONS.
+list_versions() { # $1 = json do listid
+  versions_table "$1" \
+    | awk -F'\t' -v ign=" $IGNORE_VERSIONS " '$3=="in" && index(ign, " " $1 " ")==0 { print $1 }' \
+    | sort -ur \
+    || true
+}
+# Versões descartadas automaticamente (fora da linha principal) — só p/ mostrar no 'list'.
+outlier_versions() { # $1 = json
+  versions_table "$1" | awk -F'\t' '$3=="out" { print $1 " (" $2 ")" }' | sort -ur | paste -sd' ' - || true
+}
+version_for_channel() { # $1 = canal  $2 = json
+  local v=""
+  case "$1" in
+    RC)  v="$VERSION_RC";      [ -n "$v" ] || v="$(list_versions "$2" | sed -n 1p)" ;;
+    DEV) return 0 ;;
+    *)   v="$VERSION_OFICIAL"; [ -n "$v" ] || v="$(list_versions "$2" | sed -n 2p)"
+         # só existe UMA versão na lista? então ela é a oficial também.
+         [ -n "$v" ] || v="$(list_versions "$2" | sed -n 1p)" ;;
+  esac
+  printf '%s' "$v"
+}
+# Normaliza o canal atual e define o rótulo do build em andamento.
 case "$CHANNEL" in RC) canal="RC" ;; DEV) canal="DEV" ;; *) canal="oficial"; CHANNEL="oficial" ;; esac
-TITLE_PREFIX="$(prefix_for_channel "$CHANNEL")"
 
-# Acha o build mais novo de um prefixo. Arg opcional = prefixo (default: do canal).
+# Acha o build mais novo do canal. Arg1 opcional = canal (default: $CHANNEL).
 # Pode receber o JSON já baixado em $2 p/ evitar baixar de novo (usado no 'list').
+# Saída: uuid<TAB>title<TAB>build: N.N  (vazio se a API falhar / nada casar).
 discover_uuid() {
-  local pfx="${1:-$TITLE_PREFIX}" json="${2:-}"
-  [ -n "$json" ] || json="$(curl -fsSL -m 30 "$API/listid.php?search=windows%2011" 2>/dev/null || true)"
+  local ch="${1:-$CHANNEL}" json="${2:-}" v=""
+  [ -n "$json" ] || json="$(fetch_listid)"
+  [ -n "$json" ] || return 0
+  if [ "$ch" != "DEV" ]; then
+    v="$(version_for_channel "$ch" "$json")"
+    [ -n "$v" ] || return 0
+  fi
   printf '%s' "$json" \
-    | jq -r --arg pfx "$pfx" --arg arch "$ARCH" '.response.builds
-        | map(select(.arch==$arch and (.title | startswith($pfx))))
+    | jq -r --arg arch "$ARCH" --arg ch "$ch" --arg v "$v" '
+        [ .response.builds[]
+          | select(.arch==$arch and
+              (if $ch=="DEV" then (.title | contains("Insider Preview"))
+               else (.title | startswith("Windows 11, version " + $v)) end)) ]
         | max_by(.build | split(".") | map(tonumber))
+        | select(. != null)
         | "\(.uuid)\t\(.title)\tbuild: \(.build)"' 2>/dev/null \
     || true
 }
@@ -146,10 +224,18 @@ case "${1:-}" in
   list|-l|--list)
     echo ">> Builds mais novos por canal ($ARCH) no uupdump:"
     echo
-    _json="$(curl -fsSL -m 30 "$API/listid.php?search=windows%2011" 2>/dev/null || true)"
+    _json="$(fetch_listid)"
     [ -n "$_json" ] || { echo "ERRO: API não respondeu (sem rede para $API?)."; exit 1; }
+    _vers="$(list_versions "$_json" | paste -sd' ' -)"
+    _out="$(outlier_versions "$_json")"
+    echo "   versões na linha principal (mais nova primeiro): ${_vers:-nenhuma}"
+    [ -n "$_out" ] && echo "   fora da linha de manutenção, descartadas: $_out"
+    [ -n "$IGNORE_VERSIONS" ] && echo "   ignoradas por IGNORE_VERSIONS: $IGNORE_VERSIONS"
+    echo "   regra: RC = mais nova, oficial = segunda mais nova, DEV = Insider Preview"
+    echo "   (errou? use IGNORE_VERSIONS=\"NNHN\" ou VERSION_OFICIAL=/VERSION_RC=)"
+    echo
     for _ch in oficial RC DEV; do
-      _info="$(discover_uuid "$(prefix_for_channel "$_ch")" "$_json" || true)"
+      _info="$(discover_uuid "$_ch" "$_json" || true)"
       _cmd="sudo ./build-windows-iso.sh"; [ "$_ch" != "oficial" ] && _cmd="$_cmd $_ch"
       if [ -n "$_info" ] && [ "$_info" != "null" ]; then
         printf '  %-9s %s\n            %s\n            uuid:  %s\n            build: %s\n\n' \
@@ -171,9 +257,9 @@ if [ -n "${1:-}" ]; then
   UUID="$1"
   echo ">> Usando uuid informado: $UUID"
 else
-  echo ">> Descobrindo o build 11 ($ARCH) no uupdump (canal: $canal — filtro '$TITLE_PREFIX')..."
+  echo ">> Descobrindo o build 11 ($ARCH) no uupdump (canal: $canal)..."
   info="$(discover_uuid || true)"          # validado contra a API
-  [ -n "$info" ] || { echo "ERRO: API não respondeu (sem rede para $API?)."; exit 1; }
+  [ -n "$info" ] || { echo "ERRO: API não respondeu ou nenhum build casou p/ o canal '$canal' (rode '$0 list')."; exit 1; }
   UUID="$(printf '%s' "$info" | cut -f1)"
   BUILD="$(printf '%s' "$info" | cut -f3 | sed 's/^build: //')"
   echo ">> Alvo: $(printf '%s' "$info" | cut -f2-)"
