@@ -44314,6 +44314,8 @@ portal 1.2.2
     y winget winget
     y winget all # mostra todos
     y winget download # faz o download do instaladow winget
+        dependencias: Invoke-WebRequest -Uri https://github.com/microsoft/winget-cli/releases/latest/download/DesktopAppInstaller_Dependencies.zip -OutFile deps.zip; Expand-Archive .\\deps.zip -DestinationPath .\\deps -Force; Get-ChildItem .\\deps\\x64\\*.appx | ForEach-Object { Add-AppxPackage -Path $_.FullName }; Add-AppxPackage -Path .\\winget_offline.msixbundle
+        obs: depois da msg de erro, mas digitando winget da para ver se ficou instalado.
     y winget delete # mostra comandos para delete
     obs: as vezes mostra que nao deletou mas deletou
         winget uninstall --id "Microsoft.OneDrive"
