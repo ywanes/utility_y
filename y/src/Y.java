@@ -9571,10 +9571,41 @@ cat buffer.log
     }
 
     public String get_winget_download() throws Exception {
+        String url = "https://aka.ms/getwinget";
         System.out.println("baixando winget.msixbundle");
         java.nio.file.Path destino = java.nio.file.Path.of(".", "winget.msixbundle");
-        try (java.io.InputStream in = java.net.URI.create("https://aka.ms/getwinget").toURL().openStream()) {
-            java.nio.file.Files.copy(in, destino, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+
+        // Força TLS 1.2/1.3 (corrige "No appropriate protocol")
+        System.setProperty("https.protocols", "TLSv1.2,TLSv1.3");
+        System.setProperty("jdk.tls.client.protocols", "TLSv1.2,TLSv1.3");
+
+        javax.net.ssl.SSLContext ssl = javax.net.ssl.SSLContext.getInstance("TLSv1.2");
+        ssl.init(null, null, null);
+        javax.net.ssl.SSLParameters params = new javax.net.ssl.SSLParameters();
+        params.setProtocols(new String[]{"TLSv1.3", "TLSv1.2"});
+
+        java.net.http.HttpClient client = java.net.http.HttpClient.newBuilder()
+                .sslContext(ssl)
+                .sslParameters(params)
+                .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+                .build();
+
+        java.net.http.HttpRequest request = java.net.http.HttpRequest.newBuilder()
+                .uri(java.net.URI.create(url))
+                .header("User-Agent", "Mozilla/5.0")
+                .GET()
+                .build();
+
+        try {
+            java.net.http.HttpResponse<java.nio.file.Path> resp = client.send(request,
+                    java.net.http.HttpResponse.BodyHandlers.ofFile(destino));
+            if (resp.statusCode() != 200) {
+                throw new RuntimeException("HTTP " + resp.statusCode() + " em " + resp.uri());
+            }
+            System.out.println("baixado de: " + resp.uri());
+        } catch (Exception e) {
+            System.err.println("falha ao baixar " + url + " -> " + e);
+            throw e;
         }
         return destino.toString();
     }
