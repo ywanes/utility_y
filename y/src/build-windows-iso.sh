@@ -698,6 +698,28 @@ if [ -f "$__wim" ] && [ -f "$__EX/SetupComplete.cmd" ] \
 else
   echo "  [extra] (sem payloads para install.$type — Chrome/winget pulados)"
 fi
+
+# (3) install.wim > 4GiB-1 não cabe no ISO9660. O -allow-limited-size faz o
+#     genisoimage aceitar, mas grava tamanho TRUNCADO no lado ISO9660 — e se a
+#     mídia for lida por ISO9660 (Ventoy/USB, várias BIOS) o Setup não abre a WIM e
+#     cai na tela "Escolha uma opção" (recuperação) em vez de instalar. Solução
+#     limpa: dividir em install.swm + install2.swm (pedaços de 3800 MB). O Setup lê
+#     .swm nativamente, sem configurar nada. Roda DEPOIS do enxerto (2), p/ o
+#     payload já estar dentro.
+if [ "$type" = "wim" ] && [ -f "$__wim" ]; then
+  __sz="$(stat -c %s "$__wim" 2>/dev/null || echo 0)"
+  if [ "$__sz" -ge 4294967295 ]; then
+    echo "  [extra] install.wim tem $__sz bytes (>4GiB): dividindo em .swm de 3800MB..."
+    rm -f ISODIR/sources/install*.swm
+    if wimlib-imagex split "$__wim" "ISODIR/sources/install.swm" 3800 >/dev/null 2>&1; then
+      rm -f "$__wim"
+      echo "  [extra] OK: $(ls ISODIR/sources/install*.swm 2>/dev/null | xargs -n1 basename | paste -sd' ' -)"
+    else
+      rm -f ISODIR/sources/install*.swm
+      echo "  [extra] AVISO: split falhou; mantendo install.wim (ISO vai depender do -allow-limited-size)"
+    fi
+  fi
+fi
 true
 INJ_EOF
   # Resolve os placeholders p/ caminhos absolutos (# como delim: paths têm /).
@@ -715,9 +737,10 @@ INJ_EOF
   ' "$cs" > "$cs.new" && mv "$cs.new" "$cs"
 
   # install.wim > 4GiB: o genisoimage aborta ("larger than 4GiB-1 ... -allow-limited-size
-  # was not specified"). Acontece fácil com wim2esd=0 + Chrome/winget enxertados.
-  # A flag só afeta o registro ISO9660 (que já está com --hide "*"); o UDF — que é o
-  # que o Windows lê — mantém o tamanho real. Idempotente: só adiciona se faltar.
+  # was not specified"). A solução PRINCIPAL é o split em .swm no buildiso_inject.sh
+  # (passo 3). A flag fica só como rede de segurança se o split falhar — CUIDADO: com
+  # ela o ISO9660 grava tamanho truncado; se a mídia for lida por ISO9660 (Ventoy/USB)
+  # o Setup não abre a WIM e cai na tela de recuperação. Idempotente: só adiciona se faltar.
   # Só mexe em linhas onde a chamada é seguida de opção (-...), p/ não tocar em
   # 'command -v genisoimage' nem em textos de echo. O convert.sh chama pela
   # variável: "$genisoimage" -b ... (2 chamadas: EFI-only e BIOS+EFI).
