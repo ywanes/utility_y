@@ -3,12 +3,14 @@
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-windows-iso.sh)'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-windows-iso.sh) RC'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-windows-iso.sh) DEV'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-windows-iso.sh) CANARY'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-windows-iso.sh) list'
 #   ou
 #   chmod +x build-windows-iso.sh
 #   sudo ./build-windows-iso.sh                 # canal oficial (Retail, estável), Pro pt-BR
 #   sudo ./build-windows-iso.sh RC              # canal Release Preview
-#   sudo ./build-windows-iso.sh DEV             # canal Dev/Insider (build mais novo)
+#   sudo ./build-windows-iso.sh DEV             # canal Dev (Insider na MESMA base do RC, ex: 26340.x)
+#   sudo ./build-windows-iso.sh CANARY          # Experimental/vNext (rs_prerelease, ex: 29xxx) — ver aviso
 #   sudo ./build-windows-iso.sh list            # só mostra o build do canal e sai
 #   sudo ./build-windows-iso.sh <uuid>          # força um id específico do uupdump
 #
@@ -32,6 +34,8 @@
 #            WINGET=0|1 (1 = winget/App Installer provisionado no 1º boot, padrão 1)
 #            VERSION_OFICIAL=25H2 / VERSION_RC=26H2 (forçam a versão; vazio = automático)
 #            IGNORE_VERSIONS="26H1" (versões a pular na escolha automática)
+#            BOOTWIM_ALL_SOURCES=auto|1|0 (completa o Setup do boot.wim com tudo de sources/;
+#              auto = só no CANARY — contorna a lista fixa de arquivos do convert.sh)
 #            WORK=/caminho   OUT=/caminho.iso
 #
 # Chrome + winget entram OFFLINE dentro da install.wim e são instalados no PRIMEIRO
@@ -68,8 +72,15 @@ CHROME="${CHROME:-1}"                  # 1 = inclui Google Chrome (MSI enterpris
 WINGET="${WINGET:-1}"                  # 1 = inclui winget/App Installer (provisionado via DISM)
 WINGET_REPO="${WINGET_REPO:-microsoft/winget-cli}"   # release de onde sai o App Installer
 CHROME_URL="${CHROME_URL:-https://dl.google.com/dl/chrome/install/googlechromestandaloneenterprise64.msi}"
-# Canal: oficial (Retail, estável) | RC (Release Preview) | DEV (Insider Dev, build mais novo).
-# Via argumento posicional (RC/DEV) ou env CHANNEL=. Compat: RC=1 / DEV=1 também funcionam.
+# Canal: oficial (Retail, estável) | RC (Release Preview) | DEV (Insider Dev, mesma base
+# do RC) | CANARY (Experimental/vNext, rs_prerelease — build mais alto de todos).
+# NOTA CANARY (2026-09, build 29648): sem correção, a ISO gerada pelo convert.sh (Linux)
+# cai na tela de recuperação "Escolha uma opção" em vez de abrir o Setup. Causa raiz
+# (achada comparando os hives do boot.wim Linux vs Windows): o WinRE do vNext lança a
+# recuperação pela chave SOFTWARE\...\WinPE\CustomShell=RecEnv.exe, que o convert.sh
+# não remove (ele só apaga o winpeshl.ini). O injetor deste script remove a chave — ver
+# passo (0b) em inject_extras_into_convert. Vale reportar à uupdump (uup-dump/converter).
+# Via argumento posicional (RC/DEV/CANARY) ou env CHANNEL=. Compat: RC=1 / DEV=1 também funcionam.
 CHANNEL="${CHANNEL:-oficial}"
 [ "${RC:-0}"  = "1" ] && CHANNEL="RC"
 [ "${DEV:-0}" = "1" ] && CHANNEL="DEV"
@@ -82,6 +93,14 @@ VERSION_RC="${VERSION_RC:-}"             # ex: 26H2 (vazio = automático)
 # lançamentos especiais como o 26H1/Snapdragon já são descartados sozinhos pela
 # regra da linha de manutenção — ver "descoberta do build"). Vazio = nenhuma.
 IGNORE_VERSIONS="${IGNORE_VERSIONS:-}"
+# boot.wim completo: o convert.sh (v0.7.3, 2024) monta o índice 2 do boot.wim (o Setup)
+# a partir de uma LISTA FIXA de ~150 arquivos de sources/ (bootSourcesList). Ramos novos
+# (vNext 29xxx) podem exigir DLLs que não estão nela -> setup.exe não carrega e o WinPE
+# cai na tela de recuperação "Escolha uma opção". Com 1, depois do convert.sh montar o
+# índice 2, o injetor adiciona TUDO de ISODIR/sources/ que ainda não está no boot.wim
+# (exceto boot.wim/install.*/.swm/.esd) e imprime a lista do que faltava. auto = liga só
+# no CANARY (é onde o problema apareceu); 1 = sempre; 0 = nunca.
+BOOTWIM_ALL_SOURCES="${BOOTWIM_ALL_SOURCES:-auto}"
 # WORK_BASE é a base; o WORK real vira WORK_BASE/<uuid> (1 pasta por build).
 # Assim cada canal/build fica isolado e o download de cada build persiste na sua
 # própria pasta (é o "cache" do download — re-rodar reaproveita).
@@ -103,8 +122,9 @@ fi
 _args=()
 for _a in "$@"; do
   case "$_a" in
-    RC|rc)   CHANNEL="RC" ;;
-    DEV|dev) CHANNEL="DEV" ;;
+    RC|rc)         CHANNEL="RC" ;;
+    DEV|dev)       CHANNEL="DEV" ;;
+    CANARY|canary) CHANNEL="CANARY" ;;
     *)       _args+=("$_a") ;;
   esac
 done
@@ -137,18 +157,23 @@ fi
 # Fonte: listid.php (banco do uupdump, alimentado por quem clica "Fetch latest"
 # no site — sempre perto do atual, instantâneo, sem rate-limit).
 # Como NÃO ter versão fixa no código:
-#   - DEV     -> maior build entre títulos "Windows 11 Insider Preview ..." (Dev/Canary
-#                aparecem assim; o filtro antigo "Windows 11, version" nunca pegava).
 #   - RC      -> maior build da versão MAIS NOVA presente ("Windows 11, version NNHN").
 #   - oficial -> maior build da SEGUNDA versão mais nova (a que já está em varejo).
+#   - DEV     -> Insider ("Windows 11 Insider Preview ...") do ramo IMEDIATAMENTE acima
+#                da linha principal: entre os Insider com major > major do RC, o MENOR
+#                major, e nele o maior build. O Dev channel é sempre "base + 40"
+#                (26100->26120, 26200->26220, 26300->26340); o Experimental salta longe
+#                (28xxx, 29xxx). Prefere "Feature Update" a "Quality Update" (a Quality
+#                é só o cumulativo; a Feature tem o conjunto completo). Ignora "Server".
+#   - CANARY  -> maior build Insider de todos (rs_prerelease / vNext). Ver AVISO na config.
 #   Versões fora da linha de manutenção principal (lançamentos especiais de
 #   hardware) são descartadas automaticamente — ver versions_table.
 # Se ainda assim errar, use IGNORE_VERSIONS="NNHN" ou force VERSION_OFICIAL/VERSION_RC.
 fetch_listid() {
   curl -fsSL -m 30 "$API/listid.php?search=windows%2011" 2>/dev/null || true
 }
-# Tabela das versões NNHN presentes p/ $ARCH: v<TAB>minor<TAB>in|out
-#   minor = parte depois do ponto do MAIOR build daquela versão.
+# Tabela das versões NNHN presentes p/ $ARCH: v<TAB>minor<TAB>in|out<TAB>major
+#   minor = parte depois do ponto do MAIOR build daquela versão; major = antes do ponto.
 #   Versões "normais" do Win11 compartilham a mesma linha de manutenção (mesmo
 #   minor: 26100.9278 / 26200.9278 / 26300.9278 — é o mesmo código + enablement
 #   package). Um lançamento especial de hardware (ex: 26H1 = 28000.2804, só
@@ -163,11 +188,11 @@ versions_table() { # $1 = json do listid
           | select(.arch==$arch)
           | (.title | capture("^Windows 11, version (?<v>[0-9]{2}H[0-9])")) as $c
           | {v: $c.v, b: (.build | split(".") | map(tonumber))} ]
-        | group_by(.v) | map({v: .[0].v, minor: (map(.b) | max | .[1])})
+        | group_by(.v) | map({v: .[0].v, minor: (map(.b) | max | .[1]), major: (map(.b) | max | .[0])})
         | ( group_by(.minor)
             | map({minor: .[0].minor, n: length, newest: (map(.v) | max)})
             | max_by([.n, .newest]) | .minor ) as $ml
-        | .[] | "\(.v)\t\(.minor)\t\(if .minor == $ml then "in" else "out" end)"' 2>/dev/null \
+        | .[] | "\(.v)\t\(.minor)\t\(if .minor == $ml then "in" else "out" end)\t\(.major)"' 2>/dev/null \
     || true
 }
 # Versões elegíveis, da mais nova p/ a mais antiga (ordem lexical funciona:
@@ -183,11 +208,17 @@ list_versions() { # $1 = json do listid
 outlier_versions() { # $1 = json
   versions_table "$1" | awk -F'\t' '$3=="out" { print $1 " (" $2 ")" }' | sort -ur | paste -sd' ' - || true
 }
+# major (antes do ponto) da versão RC — base p/ localizar o ramo Dev logo acima.
+rc_major() { # $1 = json
+  local v; v="$(version_for_channel RC "$1")"
+  [ -n "$v" ] || return 0
+  versions_table "$1" | awk -F'\t' -v v="$v" '$1==v { print $4 }' | head -1
+}
 version_for_channel() { # $1 = canal  $2 = json
   local v=""
   case "$1" in
     RC)  v="$VERSION_RC";      [ -n "$v" ] || v="$(list_versions "$2" | sed -n 1p)" ;;
-    DEV) return 0 ;;
+    DEV|CANARY) return 0 ;;
     *)   v="$VERSION_OFICIAL"; [ -n "$v" ] || v="$(list_versions "$2" | sed -n 2p)"
          # só existe UMA versão na lista? então ela é a oficial também.
          [ -n "$v" ] || v="$(list_versions "$2" | sed -n 1p)" ;;
@@ -195,26 +226,37 @@ version_for_channel() { # $1 = canal  $2 = json
   printf '%s' "$v"
 }
 # Normaliza o canal atual e define o rótulo do build em andamento.
-case "$CHANNEL" in RC) canal="RC" ;; DEV) canal="DEV" ;; *) canal="oficial"; CHANNEL="oficial" ;; esac
+case "$CHANNEL" in RC) canal="RC" ;; DEV) canal="DEV" ;; CANARY) canal="CANARY" ;; *) canal="oficial"; CHANNEL="oficial" ;; esac
 
 # Acha o build mais novo do canal. Arg1 opcional = canal (default: $CHANNEL).
 # Pode receber o JSON já baixado em $2 p/ evitar baixar de novo (usado no 'list').
 # Saída: uuid<TAB>title<TAB>build: N.N  (vazio se a API falhar / nada casar).
 discover_uuid() {
-  local ch="${1:-$CHANNEL}" json="${2:-}" v=""
+  local ch="${1:-$CHANNEL}" json="${2:-}" v="" rcm=0
   [ -n "$json" ] || json="$(fetch_listid)"
   [ -n "$json" ] || return 0
-  if [ "$ch" != "DEV" ]; then
-    v="$(version_for_channel "$ch" "$json")"
-    [ -n "$v" ] || return 0
-  fi
+  case "$ch" in
+    DEV)    rcm="$(rc_major "$json")"; [ -n "$rcm" ] || return 0 ;;
+    CANARY) ;;
+    *)      v="$(version_for_channel "$ch" "$json")"; [ -n "$v" ] || return 0 ;;
+  esac
+  # Insider: exclui Server e prefere Feature Update (Quality só como último recurso).
+  # DEV: menor major acima do RC; CANARY: sem filtro de major (pega o mais alto).
   printf '%s' "$json" \
-    | jq -r --arg arch "$ARCH" --arg ch "$ch" --arg v "$v" '
+    | jq -r --arg arch "$ARCH" --arg ch "$ch" --arg v "$v" --argjson rcm "${rcm:-0}" '
         [ .response.builds[]
-          | select(.arch==$arch and
-              (if $ch=="DEV" then (.title | contains("Insider Preview"))
-               else (.title | startswith("Windows 11, version " + $v)) end)) ]
-        | max_by(.build | split(".") | map(tonumber))
+          | select(.arch==$arch)
+          | . + {bn: (.build | split(".") | map(tonumber))}
+          | select(
+              if ($ch=="DEV" or $ch=="CANARY") then
+                (.title | contains("Insider Preview"))
+                and (.title | contains("Server") | not)
+                and (if $ch=="DEV" then .bn[0] > $rcm else true end)
+              else (.title | startswith("Windows 11, version " + $v)) end) ]
+        | if $ch=="DEV" and length > 0 then (map(.bn[0]) | min) as $dm | map(select(.bn[0]==$dm)) else . end
+        | if ($ch=="DEV" or $ch=="CANARY") and any(.title | contains("Quality Update") | not)
+            then map(select(.title | contains("Quality Update") | not)) else . end
+        | max_by(.bn)
         | select(. != null)
         | "\(.uuid)\t\(.title)\tbuild: \(.build)"' 2>/dev/null \
     || true
@@ -231,10 +273,11 @@ case "${1:-}" in
     echo "   versões na linha principal (mais nova primeiro): ${_vers:-nenhuma}"
     [ -n "$_out" ] && echo "   fora da linha de manutenção, descartadas: $_out"
     [ -n "$IGNORE_VERSIONS" ] && echo "   ignoradas por IGNORE_VERSIONS: $IGNORE_VERSIONS"
-    echo "   regra: RC = mais nova, oficial = segunda mais nova, DEV = Insider Preview"
+    echo "   regra: RC = mais nova, oficial = segunda mais nova, DEV = Insider do ramo logo acima do RC,"
+    echo "          CANARY = Insider mais alto (vNext/rs_prerelease — converta no WINDOWS; o conversor Linux não boota)"
     echo "   (errou? use IGNORE_VERSIONS=\"NNHN\" ou VERSION_OFICIAL=/VERSION_RC=)"
     echo
-    for _ch in oficial RC DEV; do
+    for _ch in oficial RC DEV CANARY; do
       _info="$(discover_uuid "$_ch" "$_json" || true)"
       _cmd="sudo ./build-windows-iso.sh"; [ "$_ch" != "oficial" ] && _cmd="$_cmd $_ch"
       if [ -n "$_info" ] && [ "$_info" != "null" ]; then
@@ -662,6 +705,67 @@ inject_extras_into_convert() {
 # extras do build-windows-iso.sh — rodado via 'source' pelo convert.sh
 __EX="@@EXTRAS@@"
 __PL="@@PAYLOAD@@"
+__ALLSRC="@@ALLSRC@@"
+
+# (0) boot.wim índice 2 (Setup) completo — ver BOOTWIM_ALL_SOURCES na config.
+#     Roda ANTES de tudo: o boot.wim já está pronto aqui (convert.sh o monta antes do
+#     install.wim) e ainda não foi para a ISO.
+if [ "$__ALLSRC" = "1" ] && [ -f ISODIR/sources/boot.wim ]; then
+  __have="${tempDir:-/tmp}/buildiso_boot2_have.txt"
+  __add="${tempDir:-/tmp}/buildiso_boot2_add.txt"
+  # o que já existe no índice 2 (caminhos em minúsculas p/ comparar sem case)
+  wimlib-imagex dir ISODIR/sources/boot.wim 2 2>/dev/null | tr '\\' '/' | tr '[:upper:]' '[:lower:]' | sort -u > "$__have"
+  : > "$__add"
+  while IFS= read -r __f; do
+    __rel="${__f#ISODIR/}"
+    case "$__rel" in
+      sources/boot.wim|sources/install.*|*.swm|*.esd) continue ;;
+    esac
+    __low="$(printf '/%s' "$__rel" | tr '[:upper:]' '[:lower:]')"
+    grep -qxF "$__low" "$__have" || printf 'add "%s" "/%s"\n' "$__f" "$__rel" >> "$__add"
+  done < <(find ISODIR/sources -type f)
+  __n="$(wc -l < "$__add")"
+  if [ "$__n" -gt 0 ]; then
+    if wimlib-imagex update ISODIR/sources/boot.wim 2 < "$__add" >/dev/null 2>&1; then
+      echo "  [extra] boot.wim índice 2 (Setup): +$__n arquivos de sources/ que a lista fixa do convert.sh não incluía:"
+      sed -n 's/^add "ISODIR\/\([^"]*\)".*/     \1/p' "$__add" | head -60
+      [ "$__n" -gt 60 ] && echo "     ... (+$((__n - 60)))" || true
+    else
+      echo "  [extra] AVISO: falhou adicionar arquivos extras ao boot.wim índice 2 (seguindo assim mesmo)"
+    fi
+  else
+    echo "  [extra] boot.wim índice 2 já contém tudo de sources/ (nada a adicionar)"
+  fi
+fi
+
+# (0b) CAUSA RAIZ do CANARY (vNext 29648) cair no menu de recuperação, achada em 2026-09
+#      comparando os hives do boot.wim gerado no Linux vs no Windows:
+#        SOFTWARE\Microsoft\Windows NT\CurrentVersion\WinPE\CustomShell = X:\sources\recovery\RecEnv.exe
+#      RecEnv.exe É a tela "Escolha uma opção". No WinRE do vNext a recuperação é lançada
+#      por essa chave, não mais só pelo winpeshl.ini. O convert.sh apaga o .ini e pronto ->
+#      o RecEnv sobe antes do setup.exe. O conversor Windows remove a chave; fazemos igual,
+#      nos 2 índices, com o mesmo chntpw -e que o convert.sh já usa. Só age se a chave
+#      existir (no 25H2 não existe -> no-op), por isso vale p/ todos os canais.
+if [ -f ISODIR/sources/boot.wim ] && command -v hivexget >/dev/null 2>&1 && command -v chntpw >/dev/null 2>&1; then
+  __idx=1
+  while [ "$__idx" -le 2 ]; do
+    __hd="${tempDir:-/tmp}/buildiso_hive_$__idx"; rm -rf "$__hd"; mkdir -p "$__hd"
+    __cs=""
+    if wimlib-imagex extract ISODIR/sources/boot.wim "$__idx" /Windows/System32/config/SOFTWARE --dest-dir="$__hd" --no-acls >/dev/null 2>&1; then
+      __cs="$(hivexget "$__hd/SOFTWARE" 'Microsoft\Windows NT\CurrentVersion\WinPE' CustomShell 2>/dev/null || true)"
+    fi
+    if [ -n "$__cs" ]; then
+      printf 'cd Microsoft\\Windows NT\\CurrentVersion\\WinPE\ndv CustomShell\nq\ny\n' | chntpw -e "$__hd/SOFTWARE" >/dev/null 2>&1 || true
+      if [ -z "$(hivexget "$__hd/SOFTWARE" 'Microsoft\Windows NT\CurrentVersion\WinPE' CustomShell 2>/dev/null || true)" ] \
+         && wimlib-imagex update ISODIR/sources/boot.wim "$__idx" --command "add $__hd/SOFTWARE /Windows/System32/config/SOFTWARE" >/dev/null 2>&1; then
+        echo "  [extra] boot.wim índice $__idx: removido WinPE\\CustomShell ($__cs) -> o WinRE não sequestra mais o boot; setup.exe roda"
+      else
+        echo "  [extra] AVISO: não consegui remover WinPE\\CustomShell do índice $__idx (ISO pode cair na recuperação)"
+      fi
+    fi
+    __idx=$((__idx + 1))
+  done
+fi
 
 # (1) .bat na raiz da ISO (gravados no UDF pelo genisoimage logo a seguir)
 cp -f "$__EX/notpm.bat" "$__EX/refs_formata_automatico.bat" "$__EX/add_user.bat" ISODIR/ 2>/dev/null \
@@ -723,7 +827,11 @@ fi
 true
 INJ_EOF
   # Resolve os placeholders p/ caminhos absolutos (# como delim: paths têm /).
-  sed -i -e "s#@@EXTRAS@@#$EXTRAS_DIR#g" -e "s#@@PAYLOAD@@#$PAYLOAD_DIR#g" "$inj"
+  # BOOTWIM_ALL_SOURCES: auto -> 1 só no CANARY.
+  local allsrc="$BOOTWIM_ALL_SOURCES"
+  [ "$allsrc" = "auto" ] && { [ "$canal" = "CANARY" ] && allsrc=1 || allsrc=0; }
+  sed -i -e "s#@@EXTRAS@@#$EXTRAS_DIR#g" -e "s#@@PAYLOAD@@#$PAYLOAD_DIR#g" -e "s#@@ALLSRC@@#$allsrc#g" "$inj"
+  [ "$allsrc" = "1" ] && echo ">> boot.wim: índice 2 (Setup) será completado com TUDO de sources/ (BOOTWIM_ALL_SOURCES=$BOOTWIM_ALL_SOURCES, canal $canal)."
 
   # Injeta UMA linha de 'source' antes de "Creating ISO image", entre sentinelas.
   awk -v inj="$inj" '
