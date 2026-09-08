@@ -42107,14 +42107,8 @@ System.out.println(endsWith_OK(nav, endsWiths));
                             output.write( ("HTTP/1.1 200 OK\r\n\r\nsenha incorreta!").getBytes());
                             return;
                         }else{
-                            /* substituto ainda nao testado
-                                y cmdUser
-                                no lugado do cmd_user.bat
-                                y cmdUser "notepad C:\tmp\x.txt"
-                                y cat a.bat | y cmdUser -c_bat
-                            */
                             if ( partes.length == 2 && !partes[1].contains(" ") ){
-                                String s_=runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", partes[1]}));
+                                String s_=runtimeExec((new String[]{"cmd", "/c", "y", "cmdUser", partes[1]}));                                
                                 if ( s_ == null )
                                     s_="";
                                 output.write( ("HTTP/1.1 200 OK\r\n\r\nOK "+s_).getBytes());
@@ -42122,7 +42116,7 @@ System.out.println(endsWith_OK(nav, endsWiths));
                             }else{
                                 partes=removeParm(0, partes);
                                 if ( salvando_file("@echo off\n" + array_to_string(partes), new File("D:\\daemon\\scripts_geral\\cmd_user\\script.cmd")) ){
-                                    String s_=runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", "D:\\daemon\\scripts_geral\\cmd_user\\script.cmd"}));
+                                    String s_=runtimeExec((new String[]{"cmd", "/c", "y", "cmdUser", "D:\\daemon\\scripts_geral\\cmd_user\\script.cmd"}));
                                     if ( s_ == null )
                                         s_="";
                                     output.write( ("HTTP/1.1 200 OK\r\n\r\nOK "+s_.trim()+runtimeExecError).getBytes());
