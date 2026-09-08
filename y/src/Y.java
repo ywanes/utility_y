@@ -1078,13 +1078,20 @@ cat buffer.log
         if ( args[0].equals("juros") || args[0].equals("emprestimo") ){
             juros(args);
             return;
-        }
+        }        
         if ( args[0].equals("terminal") ){
             args=removeParm(0, args);
             if ( isWindows() )
                 new terminal_windows().main(args);
             else
                 new terminal_linux().main(args);
+            return;
+        }
+        if ( args[0].equals("cmdUser") ){
+            args=removeParm(0, args);
+            if ( !isWindows() )
+                erroFatal("implementado só para windows!");
+            new CmdUser(args);
             return;
         }
         if ( args[0].equals("dnsDoHServer") && args.length == 4 ){
@@ -22679,6 +22686,347 @@ class terminal_linux {
 	}
 }
 
+// Roda como servico SYSTEM e dispara um comando na sessao do usuario logado, localizando o token pelo explorer da sessao CONECTADA (console) e usando CreateProcessAsUser; captura o stdout/stderr; JNA e carregado dinamicamente em runtime (sem imports/dependencia de compilacao). Se a sessao conectada estiver sem explorer ativo, e tratado como nenhum usuario logado.
+// Elevacao e automatica e so acontece quando ha SeTcbPrivilege (na pratica, SYSTEM) E o usuario logado e admin (existe linked token): ai abre elevado/High sem UAC; caso contrario (chamador sem privilegio, ou usuario padrao) cai no token base e abre com os privilegios normais do usuario.
+class CmdUser {
+    static final String JNA_URL =
+        "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/jna-5.14.0.jar";
+    static final long   JNA_SIZE     = 1_878_533L;
+    static final String JNA_FILENAME = "jna-5.14.0.jar";
+    static final java.io.File JNA_CACHE_DIR = new java.io.File("c:\\y_lib");
+    Jna jna;
+    Win win;
+    public static void main(String[] args) {
+        new CmdUser(args);
+    }
+    public CmdUser(String[] args) {
+        try {
+            boot();
+            if (args.length == 0) { usage(); return; }
+            if (args.length == 1 && "-c_bat".equalsIgnoreCase(args[0])) {
+                java.io.File bat = writeStdinToTempBat();
+                try {
+                    win.launchGuiAsUser("cmd.exe /c \"" + bat.getAbsolutePath() + "\"");
+                } finally {
+                    bat.delete();
+                }
+            } else if (args.length == 1) {
+                win.launchGuiAsUser("cmd.exe /c " + args[0]);
+            } else {
+                usage();
+            }
+        } catch (Throwable t) {
+            System.err.println("error: " + t);
+        }
+    }
+    void usage() {
+        System.out.println("""
+            CmdUser - dispara um comando na sessao do usuario logado (chamado como servico SYSTEM).
+            uso:
+              y cmdUser calc
+              y cmdUser "notepad C:\\tmp\\x.txt"
+              y cat a.bat | y cmdUser -c_bat
+            obs: o programa localiza o token pelo explorer da sessao CONECTADA (console);
+                 se essa sessao estiver sem explorer ativo, e tratado como nenhum usuario logado.
+                 eleva (High/admin, sem UAC) so quando roda como SYSTEM e o usuario logado e admin;
+                 caso contrario abre com os privilegios normais do usuario.
+        """);
+    }
+    java.io.File writeStdinToTempBat() throws Exception {
+        java.io.ByteArrayOutputStream b = new java.io.ByteArrayOutputStream();
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = System.in.read(buf)) > 0) b.write(buf, 0, n);
+        String pub = System.getenv("PUBLIC");
+        java.io.File dir = (pub != null && !pub.isEmpty())
+            ? new java.io.File(pub)
+            : new java.io.File(System.getProperty("java.io.tmpdir"));
+        java.io.File bat = java.io.File.createTempFile("cmduser_", ".bat", dir);
+        try (java.io.FileOutputStream out = new java.io.FileOutputStream(bat)) {
+            out.write(b.toByteArray());
+        }
+        return bat;
+    }
+    void boot() throws Exception {
+        java.io.File jar = ensureJna();
+        java.net.URLClassLoader cl = new java.net.URLClassLoader(
+            new java.net.URL[]{ jar.toURI().toURL() },
+            CmdUser.class.getClassLoader());
+        Thread.currentThread().setContextClassLoader(cl);
+        jna = new Jna();
+        jna.init(cl);
+        win = new Win();
+    }
+    RuntimeException fail(String fn) {
+        return new RuntimeException(fn + " falhou (err " + jna.lastError() + ")");
+    }
+    java.io.File ensureJna() throws Exception {
+        for (java.io.File d : candidateDirs()) {
+            java.io.File f = new java.io.File(d, JNA_FILENAME);
+            if (f.isFile()) return f;
+        }
+        java.io.File cache = new java.io.File(JNA_CACHE_DIR, JNA_FILENAME);
+        if (cache.isFile() && cache.length() == JNA_SIZE) return cache;
+        return download(cache);
+    }
+    java.util.List<java.io.File> candidateDirs() {
+        java.util.LinkedHashSet<java.io.File> dirs = new java.util.LinkedHashSet<>();
+        try {
+            String src = System.getProperty("jdk.launcher.sourcefile");
+            if (src != null) {
+                java.io.File p = new java.io.File(src).getAbsoluteFile().getParentFile();
+                if (p != null) dirs.add(p);
+            }
+        } catch (Throwable ignored) {}
+        try {
+            java.io.File cp = new java.io.File(CmdUser.class.getProtectionDomain()
+                                  .getCodeSource().getLocation().toURI());
+            java.io.File d = cp.isDirectory() ? cp : cp.getParentFile();
+            if (d != null) dirs.add(d);
+        } catch (Throwable ignored) {}
+        try { dirs.add(new java.io.File(System.getProperty("user.dir"))); }
+        catch (Throwable ignored) {}
+        return new java.util.ArrayList<>(dirs);
+    }
+    java.io.File download(java.io.File cache) throws Exception {
+        java.security.Security.setProperty("jdk.tls.disabledAlgorithms", "");
+        java.security.Security.setProperty("jdk.certpath.disabledAlgorithms", "");
+        System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
+        javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance("TLS");
+        ctx.init(null, null, null);
+        javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(ctx.getSocketFactory());
+        JNA_CACHE_DIR.mkdirs();
+        java.net.HttpURLConnection con = (java.net.HttpURLConnection)
+            java.net.URI.create(JNA_URL).toURL().openConnection();
+        con.setConnectTimeout(15000);
+        con.setReadTimeout(120000);
+        java.io.File tmp = new java.io.File(cache.getPath() + ".part");
+        try (java.io.InputStream in = con.getInputStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(tmp)) {
+            byte[] b = new byte[16384];
+            int n;
+            while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        }
+        if (tmp.length() != JNA_SIZE) {
+            long got = tmp.length();
+            tmp.delete();
+            throw new RuntimeException("Download do JNA invalido: esperado " + JNA_SIZE
+                + " bytes, veio " + got + ".");
+        }
+        java.nio.file.Files.move(tmp.toPath(), cache.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return cache;
+    }
+    class Jna {
+        int POINTER_SIZE, WCHAR_SIZE, ALT_CONVENTION;
+        Class<?> C_Pointer, C_Memory, C_Native, C_NativeLibrary, C_Function;
+        java.lang.reflect.Constructor<?> CT_Memory;
+        java.lang.reflect.Method M_libOpts, M_func, M_invokeInt, M_invokePointer,
+            M_setInt, M_setPointer, M_setWideString,
+            M_getInt, M_getPointer, M_getWideString, M_getByteArray, M_clear, M_lastError;
+        final java.util.List<Object> pinned =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<Object>());
+        void init(ClassLoader cl) throws Exception {
+            C_Pointer       = cl.loadClass("com.sun.jna.Pointer");
+            C_Memory        = cl.loadClass("com.sun.jna.Memory");
+            C_Native        = cl.loadClass("com.sun.jna.Native");
+            C_NativeLibrary = cl.loadClass("com.sun.jna.NativeLibrary");
+            C_Function      = cl.loadClass("com.sun.jna.Function");
+            POINTER_SIZE   = C_Native.getField("POINTER_SIZE").getInt(null);
+            WCHAR_SIZE     = C_Native.getField("WCHAR_SIZE").getInt(null);
+            ALT_CONVENTION = C_Function.getField("ALT_CONVENTION").getInt(null);
+            CT_Memory = C_Memory.getConstructor(long.class);
+            M_libOpts       = C_NativeLibrary.getMethod("getInstance", String.class, java.util.Map.class);
+            M_func          = C_NativeLibrary.getMethod("getFunction", String.class);
+            M_invokeInt     = C_Function.getMethod("invokeInt",     Object[].class);
+            M_invokePointer = C_Function.getMethod("invokePointer", Object[].class);
+            M_setInt        = C_Pointer.getMethod("setInt",        long.class, int.class);
+            M_setPointer    = C_Pointer.getMethod("setPointer",    long.class, C_Pointer);
+            M_setWideString = C_Pointer.getMethod("setWideString", long.class, String.class);
+            M_getInt        = C_Pointer.getMethod("getInt",        long.class);
+            M_getPointer    = C_Pointer.getMethod("getPointer",    long.class);
+            M_getWideString = C_Pointer.getMethod("getWideString", long.class);
+            M_getByteArray  = C_Pointer.getMethod("getByteArray",  long.class, int.class);
+            M_clear         = C_Memory.getMethod("clear");
+            M_lastError     = C_Native.getMethod("getLastError");
+        }
+        Object stdLib(String name) {
+            java.util.HashMap<String, Object> opts = new java.util.HashMap<>();
+            opts.put("calling-convention", ALT_CONVENTION);
+            return inv(M_libOpts, null, name, opts);
+        }
+        Object func(Object lib, String name) { return inv(M_func, lib, name); }
+        int     callInt (Object f, Object... a) { return (int) inv(M_invokeInt,     f, (Object) a); }
+        Object  callPtr (Object f, Object... a) { return       inv(M_invokePointer, f, (Object) a); }
+        boolean callBool(Object f, Object... a) { return callInt(f, a) != 0; }
+        Object mem(long size) { Object m = ctor(CT_Memory, size); inv(M_clear, m); pinned.add(m); return m; }
+        void setInt    (Object p, long off, int v)    { inv(M_setInt,     p, off, v); }
+        void setPointer(Object p, long off, Object v) { inv(M_setPointer, p, off, v); }
+        int  getInt    (Object p, long off) { return (int) inv(M_getInt, p, off); }
+        Object getPointer(Object p, long off) { return inv(M_getPointer, p, off); }
+        String getWideString(Object p, long off) { Object s = inv(M_getWideString, p, off); return s == null ? null : (String) s; }
+        byte[] getBytes(Object p, long off, int len) { return (byte[]) inv(M_getByteArray, p, off, len); }
+        int lastError() { return (int) inv(M_lastError, null); }
+        Object wstr(String s) {
+            Object m = mem((long) (s.length() + 1) * WCHAR_SIZE);
+            inv(M_setWideString, m, 0L, s);
+            return m;
+        }
+        private Object inv(java.lang.reflect.Method m, Object target, Object... args) {
+            try { return m.invoke(target, args); }
+            catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable c = e.getCause();
+                if (c instanceof RuntimeException) throw (RuntimeException) c;
+                throw new RuntimeException(c);
+            } catch (Exception e) { throw new RuntimeException(e); }
+        }
+        private Object ctor(java.lang.reflect.Constructor<?> c, Object... args) {
+            try { return c.newInstance(args); }
+            catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cs = e.getCause();
+                if (cs instanceof RuntimeException) throw (RuntimeException) cs;
+                throw new RuntimeException(cs);
+            } catch (Exception e) { throw new RuntimeException(e); }
+        }
+    }
+    class Win {
+        Object k32, adv, wts;
+        Object CreateToolhelp32Snapshot, Process32NextW, OpenProcess, CreatePipe, CreateFileW,
+               ReadFile, WaitForSingleObject, CloseHandle, ProcessIdToSessionId,
+               WTSEnumerateSessionsW, WTSFreeMemory,
+               OpenProcessToken, DuplicateTokenEx, GetTokenInformation, CreateProcessAsUserW;
+        Win() {
+            k32 = jna.stdLib("kernel32");
+            adv = jna.stdLib("advapi32");
+            wts = jna.stdLib("wtsapi32");
+            CreateToolhelp32Snapshot = jna.func(k32, "CreateToolhelp32Snapshot");
+            Process32NextW           = jna.func(k32, "Process32NextW");
+            OpenProcess              = jna.func(k32, "OpenProcess");
+            CreatePipe               = jna.func(k32, "CreatePipe");
+            CreateFileW              = jna.func(k32, "CreateFileW");
+            ReadFile                 = jna.func(k32, "ReadFile");
+            WaitForSingleObject      = jna.func(k32, "WaitForSingleObject");
+            CloseHandle              = jna.func(k32, "CloseHandle");
+            ProcessIdToSessionId     = jna.func(k32, "ProcessIdToSessionId");
+            WTSEnumerateSessionsW    = jna.func(wts, "WTSEnumerateSessionsW");
+            WTSFreeMemory            = jna.func(wts, "WTSFreeMemory");
+            OpenProcessToken         = jna.func(adv, "OpenProcessToken");
+            DuplicateTokenEx         = jna.func(adv, "DuplicateTokenEx");
+            GetTokenInformation      = jna.func(adv, "GetTokenInformation");
+            CreateProcessAsUserW     = jna.func(adv, "CreateProcessAsUserW");
+        }
+        java.util.Set<Integer> activeSessions() {
+            java.util.HashSet<Integer> set = new java.util.HashSet<>();
+            Object pp = jna.mem(8);
+            Object pc = jna.mem(4);
+            if (jna.callBool(WTSEnumerateSessionsW, null, 0, 1, pp, pc)) {
+                Object arr = jna.getPointer(pp, 0);
+                int count  = jna.getInt(pc, 0);
+                if (arr != null) {
+                    for (int i = 0; i < count; i++) {
+                        long b = (long) i * 24;
+                        if (jna.getInt(arr, b + 16) == 0) set.add(jna.getInt(arr, b));
+                    }
+                    jna.callBool(WTSFreeMemory, arr);
+                }
+            }
+            return set;
+        }
+        int getProcessId(String processName) {
+            java.util.Set<Integer> active = activeSessions();
+            Object snap  = jna.callPtr(CreateToolhelp32Snapshot, 0x2, 0);
+            Object entry = jna.mem(568);
+            jna.setInt(entry, 0, 568);
+            int fallback = -1;
+            try {
+                while (jna.callBool(Process32NextW, snap, entry)) {
+                    if (!processName.equalsIgnoreCase(jna.getWideString(entry, 44))) continue;
+                    int pid = jna.getInt(entry, 8);
+                    if (fallback == -1) fallback = pid;
+                    Object sidMem = jna.mem(4);
+                    if (jna.callBool(ProcessIdToSessionId, pid, sidMem)
+                            && active.contains(jna.getInt(sidMem, 0)))
+                        return pid;
+                }
+            } finally { jna.callBool(CloseHandle, snap); }
+            return fallback;
+        }
+        void launchGuiAsUser(String commandLine) {
+            Object hProcess = null, hToken = null, hTokenDup = null,
+                   hRead = null, hWrite = null, hNul = null, hProc = null, hThread = null;
+            try {
+                int pid = getProcessId("explorer.exe");
+                if (pid == -1) { System.err.println("Erro, nenhum usuario logado"); return; }
+                hProcess = jna.callPtr(OpenProcess, 0x1000, 0, pid);
+                if (hProcess == null) throw fail("OpenProcess");
+                Object tokMem = jna.mem(8);
+                if (!jna.callBool(OpenProcessToken, hProcess, 0x0008 | 0x0002, tokMem))
+                    throw fail("OpenProcessToken");
+                hToken = jna.getPointer(tokMem, 0);
+                Object linkedMem = jna.mem(8);
+                Object retLen    = jna.mem(4);
+                boolean hasLinked = jna.callBool(GetTokenInformation,
+                    hToken, 19, linkedMem, jna.POINTER_SIZE, retLen);
+                Object linked = hasLinked ? jna.getPointer(linkedMem, 0) : null;
+                if (linked != null) hTokenDup = dupPrimary(linked);
+                if (hTokenDup == null) hTokenDup = dupPrimary(hToken);
+                if (hTokenDup == null) throw fail("DuplicateTokenEx");
+                Object sa = jna.mem(24);
+                jna.setInt(sa, 0, 24);
+                jna.setInt(sa, 16, 1);
+                Object readMem = jna.mem(8), writeMem = jna.mem(8);
+                if (!jna.callBool(CreatePipe, readMem, writeMem, sa, 0))
+                    throw fail("CreatePipe");
+                hRead  = jna.getPointer(readMem, 0);
+                hWrite = jna.getPointer(writeMem, 0);
+                hNul = jna.callPtr(CreateFileW, jna.wstr("NUL"), 0x80000000, 3, sa, 3, 0, null);
+                Object si = jna.mem(104);
+                jna.setInt(si, 0, 104);
+                jna.setPointer(si, 16, jna.wstr("winsta0\\default"));
+                jna.setInt(si, 60, 0x100);
+                jna.setPointer(si, 80, hNul);
+                jna.setPointer(si, 88, hWrite);
+                jna.setPointer(si, 96, hWrite);
+                Object pi  = jna.mem(24);
+                Object cmd = jna.wstr(commandLine);
+                boolean ok = jna.callBool(CreateProcessAsUserW,
+                    hTokenDup, null, cmd, null, null, 1, 0x08000000, null, null, si, pi);
+                if (!ok) throw fail("CreateProcessAsUser");
+                hProc   = jna.getPointer(pi, 0);
+                hThread = jna.getPointer(pi, 8);
+                jna.callBool(CloseHandle, hWrite);
+                hWrite = null;
+                Object bufMem = jna.mem(4096);
+                Object nRead  = jna.mem(4);
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                while (jna.callBool(ReadFile, hRead, bufMem, 4096, nRead, null)) {
+                    int n = jna.getInt(nRead, 0);
+                    if (n == 0) break;
+                    baos.write(jna.getBytes(bufMem, 0, n), 0, n);
+                }
+                jna.callInt(WaitForSingleObject, hProc, -1);
+                byte[] out = baos.toByteArray();
+                System.out.write(out, 0, out.length);
+                System.out.flush();
+            } catch (Exception e) {
+                System.err.println("error: " + e.getMessage());
+            } finally {
+                closeH(hToken); closeH(hTokenDup); closeH(hRead);
+                closeH(hWrite); closeH(hNul); closeH(hProcess); closeH(hProc); closeH(hThread);
+            }
+        }
+        Object dupPrimary(Object tok) {
+            Object dupMem = jna.mem(8);
+            if (jna.callBool(DuplicateTokenEx, tok, 0x02000000, null, 2, 1, dupMem))
+                return jna.getPointer(dupMem, 0);
+            return null;
+        }
+        void closeH(Object h) {
+            if (h != null) try { jna.callBool(CloseHandle, h); } catch (Throwable ignored) {}
+        }
+    }
+}
+
 class Service{
     static final String JNA_URL =
         "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/jna-5.14.0.jar";
@@ -41759,6 +42107,12 @@ System.out.println(endsWith_OK(nav, endsWiths));
                             output.write( ("HTTP/1.1 200 OK\r\n\r\nsenha incorreta!").getBytes());
                             return;
                         }else{
+                            /* substituto ainda nao testado
+                                y cmdUser
+                                no lugado do cmd_user.bat
+                                y cmdUser "notepad C:\tmp\x.txt"
+                                y cat a.bat | y cmdUser -c_bat
+                            */
                             if ( partes.length == 2 && !partes[1].contains(" ") ){
                                 String s_=runtimeExec((new String[]{"D:\\daemon\\scripts_geral\\cmd_user\\cmd_user.bat", partes[1]}));
                                 if ( s_ == null )
@@ -43062,6 +43416,7 @@ usage:
   [y iso]
   [y qemu]
   [y [juros|emprestimo]]
+  [y cmdUser]
   [y terminal]
   [y dotaMutandoAll]
   [y audio]
@@ -43409,6 +43764,16 @@ Exemplos...
     y juros price valor 15000 juros 1.0 a.m 10 parcelas
     y juros sac valor 15000 juros 1.0 a.m 10 parcelas
     referencia: https://calculojuridico.com.br/calculadora-price-sac/
+[y cmdUser]
+    CmdUser - dispara um comando na sessao do usuario logado (chamado como servico SYSTEM).
+    uso:
+        y cmdUser calc
+        y cmdUser "notepad C:\\tmp\\x.txt"
+        y cat a.bat | y cmdUser -c_bat
+    obs: o programa localiza o token pelo explorer da sessao CONECTADA (console);
+        se essa sessao estiver sem explorer ativo, e tratado como nenhum usuario logado.
+        eleva (High/admin, sem UAC) so quando roda como SYSTEM e o usuario logado e admin;
+        caso contrario abre com os privilegios normais do usuario.
 [y terminal]
     y terminal
     y terminal autoConfirm # usado para claude code tui
