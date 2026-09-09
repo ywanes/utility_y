@@ -2,6 +2,7 @@
 # irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/wmic.ps1 | iex
 #
 
+
 $__oldEAP = $ErrorActionPreference
 $ErrorActionPreference = 'Stop'
 
@@ -53,6 +54,8 @@ function Is-MicrosoftFile([string]$path) {
 }
 
 function Copy-Track([string]$src, [string]$dst) {
+    # destino ja existe com o mesmo tamanho: deixa como esta (arquivos do Windows sao do TrustedInstaller e dao "acesso negado")
+    if ((Test-Path -LiteralPath $dst) -and ((Get-Item -LiteralPath $dst).Length -eq (Get-Item -LiteralPath $src).Length)) { return }
     $dir = Split-Path $dst
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     Copy-Item -LiteralPath $src -Destination $dst -Force
@@ -62,15 +65,6 @@ function Copy-Track([string]$src, [string]$dst) {
 function Undo-Copies {
     foreach ($f in $script:copiados) { try { if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force } } catch { } }
     $script:copiados.Clear()
-}
-
-function Remove-Shim {
-    foreach ($d in $wbem, $wbem32) {
-        foreach ($n in 'wmic.cmd', 'wmic-shim.ps1') {
-            $p = Join-Path $d $n
-            if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force; Info "Removido substituto antigo: $p" }
-        }
-    }
 }
 
 # ---------------------------------------------------------------- 2) WinSxS
@@ -105,6 +99,7 @@ function Restore-FromWinSxS {
     foreach ($arch in 'amd64', 'wow64') {
         $dest = if ($arch -eq 'amd64') { $wbem } else { $wbem32 }
         if ($arch -eq 'wow64' -and -not (Test-Path $wbem32)) { continue }
+      try {
         $e = $best["exe|$arch|none"]
         if (-not $e) { if ($arch -eq 'amd64') { Warn "WinSxS: wmic.exe 64 bits nao encontrado." }; continue }
         $src = Join-Path $e.dir 'WMIC.exe'
@@ -119,9 +114,15 @@ function Restore-FromWinSxS {
             $langDir = Join-Path $dest $v.lang
             if ($v.tipo -eq 'mui')      { Copy-Track (Join-Path $v.dir 'WMIC.exe.mui') (Join-Path $langDir 'WMIC.exe.mui') }
             if ($v.tipo -eq 'xsl-lang') { Get-ChildItem -LiteralPath $v.dir -Filter *.xsl -File | ForEach-Object { Copy-Track $_.FullName (Join-Path $langDir $_.Name) } }
+            # o wmic procura texttable/textvaluelist/rawxml em wbem\<idioma>; sem isso "get ... /value" sai vazio
+            if ($v.tipo -eq 'mui' -and $x) { Get-ChildItem -LiteralPath $x.dir -Filter *.xsl -File | ForEach-Object { Copy-Track $_.FullName (Join-Path $langDir $_.Name) } }
         }
         Ok "WinSxS: WMIC $arch v$($e.ver) copiado para $dest"
         if ($arch -eq 'amd64') { $ok64 = $true }
+      } catch {
+        if ($arch -eq 'amd64') { throw }
+        Warn "WinSxS: parte 32 bits (SysWOW64) nao concluida: $($_.Exception.Message). O wmic de 64 bits nao depende dela."
+      }
     }
     return $ok64
 }
@@ -140,6 +141,7 @@ function Restore-FromWbem([string]$srcWbem, [string]$rotulo) {
         Get-ChildItem -LiteralPath $p.s -Directory | Where-Object { $_.Name -match '^[a-z]{2}(-[A-Za-z0-9]+)?$' } | ForEach-Object {
             $ld = $_
             Get-ChildItem -LiteralPath $ld.FullName -File | Where-Object { $_.Name -match '^(wmic\.exe\.mui|.*\.xsl)$' } | ForEach-Object { Copy-Track $_.FullName (Join-Path (Join-Path $p.d $ld.Name) $_.Name) }
+            Get-ChildItem -LiteralPath $p.s -Filter *.xsl -File | ForEach-Object { Copy-Track $_.FullName (Join-Path (Join-Path $p.d $ld.Name) $_.Name) }
         }
         Ok "${rotulo}: WMIC copiado de $($p.s) para $($p.d)"
     }
@@ -203,7 +205,10 @@ function Try-Step([string]$nome, [scriptblock]$acao) {
     Info "Etapa: $nome"
     $script:copiados.Clear()
     $fez = $false
-    try { $fez = & $acao } catch { Warn "$nome falhou: $($_.Exception.Message)" }
+    try { $fez = & $acao } catch {
+        Warn "$nome falhou: $($_.Exception.Message)"
+        if ($script:copiados.Count -gt 0) { Info "Mas copiou $($script:copiados.Count) arquivo(s); testando mesmo assim."; $fez = $true }
+    }
     if (-not $fez) { return $false }
     $t = Test-Wmic
     if ($t.ok) { Ok "wmic respondeu no cmd: $($t.caption.Trim())"; return $true }
@@ -222,7 +227,6 @@ function Main {
     $cv = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion'
     Info "Windows build $($cv.CurrentBuildNumber).$($cv.UBR) ($($cv.DisplayVersion)), idioma $((Get-UICulture).Name)."
 
-    Remove-Shim
     $pathChanged = Ensure-Path
 
     $origem = $null
@@ -267,6 +271,7 @@ function Main {
     if ($pathChanged)          { Warn "Janelas de cmd/PowerShell que JA estavam abertas precisam ser reabertas para enxergar o PATH novo." }
     if ($script:restartNeeded) { Warn "O DISM pediu reinicializacao; o wmic.exe pode aparecer so depois do reboot." }
 }
+
 
 try { Main }
 catch { Write-Host ""; Write-Host "[ERRO]  $($_.Exception.Message)" -ForegroundColor Red }
