@@ -16,7 +16,7 @@ $wbem   = Join-Path $env:SystemRoot 'System32\Wbem'
 $wbem32 = Join-Path $env:SystemRoot 'SysWOW64\wbem'
 $exe    = Join-Path $wbem 'wmic.exe'
 $script:restartNeeded = $false
-$script:copiados = New-Object System.Collections.Generic.List[string]
+$script:copiados = 0
 
 # ---------------------------------------------------------------- utilitarios
 function Decode-Bytes([byte[]]$b) {
@@ -38,10 +38,15 @@ function Run-Cmd([string]$linha) {
 }
 
 function Test-Wmic {
-    if (-not (Test-Path $exe)) { return @{ ok = $false; rc = -1; texto = 'wmic.exe nao existe em ' + $wbem } }
-    $r = Run-Cmd 'wmic os get caption /value'
-    $linha = (($r.texto -split "`r?`n") | Where-Object { $_ -match 'Caption=' } | Select-Object -First 1)
-    return @{ ok = ($r.rc -eq 0 -and $linha); rc = $r.rc; texto = $r.texto.Trim(); caption = $linha }
+    if (-not (Test-Path $exe)) { return @{ ok = $false; resumo = "wmic.exe nao existe em $wbem" } }
+    $t = Run-Cmd 'wmic os get caption'
+    $v = Run-Cmd 'wmic os get caption /value'
+    $tl = @($t.texto -split "`r?`n" | Where-Object { $_ -match '\S' })
+    $vl = @($v.texto -split "`r?`n" | Where-Object { $_ -match 'Caption=' })
+    $tabelaOk = ($t.rc -eq 0 -and $tl.Count -ge 2 -and $tl[0] -match '^Caption')
+    $valueOk  = ($v.rc -eq 0 -and $vl.Count -ge 1)
+    $resumo = "tabela: " + $(if ($tabelaOk) { 'OK' } else { "FALHOU (rc $($t.rc)) " + ($tl -join ' | ') }) + "; /value: " + $(if ($valueOk) { $vl[0].Trim() } else { "FALHOU (rc $($v.rc)) " + $v.texto.Trim() })
+    return @{ ok = ($tabelaOk -and $valueOk); resumo = $resumo }
 }
 
 function Is-MicrosoftFile([string]$path) {
@@ -53,19 +58,26 @@ function Is-MicrosoftFile([string]$path) {
     } catch { return $false }
 }
 
-function Copy-Track([string]$src, [string]$dst) {
-    # destino ja existe com o mesmo tamanho: deixa como esta (arquivos do Windows sao do TrustedInstaller e dao "acesso negado")
-    if ((Test-Path -LiteralPath $dst) -and ((Get-Item -LiteralPath $dst).Length -eq (Get-Item -LiteralPath $src).Length)) { return }
-    $dir = Split-Path $dst
-    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    Copy-Item -LiteralPath $src -Destination $dst -Force
-    $script:copiados.Add($dst)
+function Copy-One([string]$src, [string]$dst) {
+    # ja existe igual, ou ja e um arquivo do proprio Windows (TrustedInstaller): mantem. Falha de um arquivo vira aviso, nao derruba a etapa.
+    try {
+        if (Test-Path -LiteralPath $dst) {
+            if ((Get-Item -LiteralPath $dst).Length -eq (Get-Item -LiteralPath $src).Length) { return }
+            if ($dst -match '\.(exe|mui)$' -and (Is-MicrosoftFile $dst)) { return }
+        }
+        $dir = Split-Path $dst
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        Copy-Item -LiteralPath $src -Destination $dst -Force
+        $script:copiados++
+    } catch { Warn "nao copiei $dst : $($_.Exception.Message)" }
 }
 
-function Undo-Copies {
-    foreach ($f in $script:copiados) { try { if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force } } catch { } }
-    $script:copiados.Clear()
+function Copy-Files([string]$srcDir, [string]$dstDir, [string]$filtro) {
+    Get-ChildItem -LiteralPath $srcDir -File | Where-Object { $_.Name -match $filtro } | ForEach-Object { Copy-One $_.FullName (Join-Path $dstDir $_.Name) }
 }
+
+$FILTRO_RAIZ = '(?i)^(wmic\.exe|xsl-mappings\.xml|.*\.xsl|cli\.mof|cliegaliases\.mof)$'
+$FILTRO_LANG = '(?i)^(wmic\.exe\.mui|.*\.xsl|.*\.mfl)$'
 
 # ---------------------------------------------------------------- 2) WinSxS
 function Find-WinSxS {
@@ -80,10 +92,10 @@ function Find-WinSxS {
         $files = @(Get-ChildItem -LiteralPath $d.FullName -File -ErrorAction SilentlyContinue | ForEach-Object { $_.Name.ToLower() })
         if ($files.Count -eq 0) { continue }
         $tipo = $null
-        if     ($files -contains 'wmic.exe')      { $tipo = 'exe' }
-        elseif ($files -contains 'wmic.exe.mui')  { $tipo = 'mui' }
-        elseif ($files -contains 'texttable.xsl') { $tipo = 'xsl' }
-        elseif ($files -contains 'csv.xsl')       { $tipo = 'xsl-lang' }
+        if     ($files -contains 'wmic.exe')         { $tipo = 'exe' }
+        elseif ($files -contains 'wmic.exe.mui')     { $tipo = 'mui' }
+        elseif ($files -contains 'xsl-mappings.xml' -or $files -contains 'texttable.xsl') { $tipo = 'base' }
+        elseif ($files -contains 'csv.xsl' -or $files -contains 'cli.mfl')                { $tipo = 'base-lang' }
         if (-not $tipo) { continue }
         $k = "$tipo|$arch|$lang"
         if (-not $best[$k] -or $best[$k].ver -lt $ver) { $best[$k] = @{ dir = $d.FullName; ver = $ver; arch = $arch; lang = $lang; tipo = $tipo } }
@@ -94,37 +106,28 @@ function Find-WinSxS {
 function Restore-FromWinSxS {
     $best = Find-WinSxS
     if ($best.Count -eq 0) { Info "WinSxS: nenhum componente do WMIC encontrado."; return $false }
-    $best.Values | Sort-Object { $_.tipo }, { $_.arch }, { $_.lang } | ForEach-Object { Info ("WinSxS: {0,-8} {1,-5} {2,-6} v{3}" -f $_.tipo, $_.arch, $_.lang, $_.ver) }
-    $ok64 = $false
+    $best.Values | Sort-Object { $_.tipo }, { $_.arch }, { $_.lang } | ForEach-Object { Info ("WinSxS: {0,-9} {1,-5} {2,-6} v{3}" -f $_.tipo, $_.arch, $_.lang, $_.ver) }
+    $fez = $false
     foreach ($arch in 'amd64', 'wow64') {
         $dest = if ($arch -eq 'amd64') { $wbem } else { $wbem32 }
         if ($arch -eq 'wow64' -and -not (Test-Path $wbem32)) { continue }
-      try {
-        $e = $best["exe|$arch|none"]
-        if (-not $e) { if ($arch -eq 'amd64') { Warn "WinSxS: wmic.exe 64 bits nao encontrado." }; continue }
-        $src = Join-Path $e.dir 'WMIC.exe'
-        if (-not (Is-MicrosoftFile $src)) { Warn "WinSxS: $src sem assinatura Microsoft valida; ignorado."; continue }
-        Copy-Track $src (Join-Path $dest 'wmic.exe')
-        $x = $best["xsl|$arch|none"]
-        if ($x) { Get-ChildItem -LiteralPath $x.dir -Filter *.xsl -File | ForEach-Object { Copy-Track $_.FullName (Join-Path $dest $_.Name) } }
-        else { Warn "WinSxS: texttable.xsl/textvaluelist.xsl ($arch) nao encontrados; o wmic nao consegue formatar a saida sem eles." }
+        $e = $best["exe|$arch|none"]; $b = $best["base|$arch|none"]
+        if (-not $e -and -not (Test-Path (Join-Path $dest 'wmic.exe'))) { Warn "WinSxS: wmic.exe ($arch) nao encontrado."; if ($arch -eq 'amd64') { continue } }
+        if ($e) {
+            $src = Join-Path $e.dir 'WMIC.exe'
+            if (Is-MicrosoftFile $src) { Copy-One $src (Join-Path $dest 'wmic.exe') } else { Warn "WinSxS: $src sem assinatura Microsoft valida; ignorado." }
+        }
+        if ($b) { Copy-Files $b.dir $dest $FILTRO_RAIZ } else { Warn "WinSxS: componente base (${arch}: xsl-mappings.xml, .xsl, .mof) nao encontrado." }
         foreach ($k in @($best.Keys)) {
             $v = $best[$k]
             if ($v.arch -ne $arch -or $v.lang -eq 'none') { continue }
-            $langDir = Join-Path $dest $v.lang
-            if ($v.tipo -eq 'mui')      { Copy-Track (Join-Path $v.dir 'WMIC.exe.mui') (Join-Path $langDir 'WMIC.exe.mui') }
-            if ($v.tipo -eq 'xsl-lang') { Get-ChildItem -LiteralPath $v.dir -Filter *.xsl -File | ForEach-Object { Copy-Track $_.FullName (Join-Path $langDir $_.Name) } }
-            # o wmic procura texttable/textvaluelist/rawxml em wbem\<idioma>; sem isso "get ... /value" sai vazio
-            if ($v.tipo -eq 'mui' -and $x) { Get-ChildItem -LiteralPath $x.dir -Filter *.xsl -File | ForEach-Object { Copy-Track $_.FullName (Join-Path $langDir $_.Name) } }
+            Copy-Files $v.dir (Join-Path $dest $v.lang) $FILTRO_LANG
         }
-        Ok "WinSxS: WMIC $arch v$($e.ver) copiado para $dest"
-        if ($arch -eq 'amd64') { $ok64 = $true }
-      } catch {
-        if ($arch -eq 'amd64') { throw }
-        Warn "WinSxS: parte 32 bits (SysWOW64) nao concluida: $($_.Exception.Message). O wmic de 64 bits nao depende dela."
-      }
+        $verTxt = if ($e) { "v$($e.ver)" } else { 'exe ja existente' }
+        Ok "WinSxS: WMIC $arch ($verTxt) conferido/copiado em $dest"
+        if ($arch -eq 'amd64') { $fez = $true }
     }
-    return $ok64
+    return $fez
 }
 
 # ---------------------------------------------------------------- 3/4) pasta wbem de outro Windows
@@ -136,13 +139,8 @@ function Restore-FromWbem([string]$srcWbem, [string]$rotulo) {
     $src32 = $srcWbem -ireplace 'System32', 'SysWOW64'
     if ($src32 -ne $srcWbem -and (Test-Path -LiteralPath (Join-Path $src32 'wmic.exe')) -and (Test-Path $wbem32)) { $pares += @{ s = $src32; d = $wbem32 } }
     foreach ($p in $pares) {
-        Copy-Track (Join-Path $p.s 'wmic.exe') (Join-Path $p.d 'wmic.exe')
-        Get-ChildItem -LiteralPath $p.s -Filter *.xsl -File | ForEach-Object { Copy-Track $_.FullName (Join-Path $p.d $_.Name) }
-        Get-ChildItem -LiteralPath $p.s -Directory | Where-Object { $_.Name -match '^[a-z]{2}(-[A-Za-z0-9]+)?$' } | ForEach-Object {
-            $ld = $_
-            Get-ChildItem -LiteralPath $ld.FullName -File | Where-Object { $_.Name -match '^(wmic\.exe\.mui|.*\.xsl)$' } | ForEach-Object { Copy-Track $_.FullName (Join-Path (Join-Path $p.d $ld.Name) $_.Name) }
-            Get-ChildItem -LiteralPath $p.s -Filter *.xsl -File | ForEach-Object { Copy-Track $_.FullName (Join-Path (Join-Path $p.d $ld.Name) $_.Name) }
-        }
+        Copy-Files $p.s $p.d $FILTRO_RAIZ
+        Get-ChildItem -LiteralPath $p.s -Directory | Where-Object { $_.Name -match '^[a-z]{2}(-[A-Za-z0-9]+)?$' } | ForEach-Object { Copy-Files $_.FullName (Join-Path $p.d $_.Name) $FILTRO_LANG }
         Ok "${rotulo}: WMIC copiado de $($p.s) para $($p.d)"
     }
     return $true
@@ -165,9 +163,12 @@ function Get-CapState { try { return (Get-WindowsCapability -Online -Name $CAP).
 function Install-Fod([string]$fonte) {
     $st = Get-CapState
     Info "Estado do recurso $CAP no CBS: $st"
-    if ($st -eq 'Installed') {
+    if ($st -eq 'Installed' -and -not (Test-Path $exe)) {
         Warn "CBS diz 'Installed' mas o wmic.exe nao existe (registro orfao do upgrade). Removendo o registro para reinstalar..."
         [void](Invoke-Dism @('/Online', '/Remove-Capability', "/CapabilityName:$CAP", '/NoRestart'))
+    } elseif ($st -eq 'Installed') {
+        Info "CBS ja diz 'Installed' e o wmic.exe existe; o DISM nao vai trazer nada novo. Completando com o WinSxS."
+        return (Test-Path $exe)
     }
     $a = @('/Online', '/Add-Capability', "/CapabilityName:$CAP", '/NoRestart')
     if ($fonte) { $a += "/Source:$fonte"; $a += '/LimitAccess' }
@@ -199,21 +200,18 @@ function Ensure-Path {
     return $changed
 }
 
-# ---------------------------------------------------------------- etapa generica: tenta, testa, desfaz se nao funcionou
+# ---------------------------------------------------------------- etapa generica: tenta e testa (nunca desfaz)
 function Try-Step([string]$nome, [scriptblock]$acao) {
     Write-Host ""
     Info "Etapa: $nome"
-    $script:copiados.Clear()
+    $script:copiados = 0
     $fez = $false
-    try { $fez = & $acao } catch {
-        Warn "$nome falhou: $($_.Exception.Message)"
-        if ($script:copiados.Count -gt 0) { Info "Mas copiou $($script:copiados.Count) arquivo(s); testando mesmo assim."; $fez = $true }
-    }
-    if (-not $fez) { return $false }
+    try { $fez = & $acao } catch { Warn "$nome falhou: $($_.Exception.Message)" }
+    if ($script:copiados -gt 0) { Info "$($script:copiados) arquivo(s) copiado(s)." }
+    if (-not $fez -and $script:copiados -eq 0) { return $false }
     $t = Test-Wmic
-    if ($t.ok) { Ok "wmic respondeu no cmd: $($t.caption.Trim())"; return $true }
-    Warn "$nome deixou arquivos mas o wmic nao respondeu (codigo $($t.rc)): $($t.texto)"
-    if ($script:copiados.Count -gt 0) { Undo-Copies; Info "Arquivos dessa etapa removidos." }
+    if ($t.ok) { Ok "wmic respondeu no cmd. $($t.resumo)"; return $true }
+    Warn "$nome nao bastou. $($t.resumo)"
     return $false
 }
 
@@ -231,9 +229,9 @@ function Main {
 
     $origem = $null
     $t = Test-Wmic
-    if ($t.ok) { Ok "wmic ja responde no cmd: $($t.caption.Trim())"; $origem = 'ja instalado' }
+    if ($t.ok) { Ok "wmic ja responde no cmd. $($t.resumo)"; $origem = 'ja instalado' }
     else {
-        if (Test-Path $exe) { Warn "wmic.exe existe mas nao responde (codigo $($t.rc)): $($t.texto)" } else { Info "wmic.exe nao existe em $wbem." }
+        Info "wmic nao esta funcionando. $($t.resumo)"
 
         if (-not $origem -and (Try-Step 'WinSxS (componentes originais desta maquina)' { Restore-FromWinSxS })) { $origem = 'WinSxS' }
 
@@ -243,16 +241,16 @@ function Main {
         if (-not $origem -and $env:WMIC_ORIGEM -and (Try-Step "WMIC_ORIGEM ($($env:WMIC_ORIGEM))" { Restore-FromWbem $env:WMIC_ORIGEM 'WMIC_ORIGEM' })) { $origem = 'WMIC_ORIGEM' }
         elseif (-not $origem -and -not $env:WMIC_ORIGEM) { Info "WMIC_ORIGEM nao definido (pasta wbem de outro Windows); pulando." }
 
-        if (-not $origem -and $env:WMIC_FONTE -and (Try-Step "WMIC_FONTE ($($env:WMIC_FONTE)) via DISM" { Install-Fod $env:WMIC_FONTE })) { $origem = 'Feature on Demand (WMIC_FONTE)' }
+        if (-not $origem -and $env:WMIC_FONTE -and (Try-Step "WMIC_FONTE ($($env:WMIC_FONTE)) via DISM" { if (Install-Fod $env:WMIC_FONTE) { [void](Restore-FromWinSxS); $true } else { $false } })) { $origem = 'Feature on Demand (WMIC_FONTE)' }
         elseif (-not $origem -and -not $env:WMIC_FONTE) { Info "WMIC_FONTE nao definido (pasta com os .cab do FoD); pulando." }
 
         if (-not $origem) {
             Write-Host ""
-            Warn "Restou o Windows Update. Pode levar ~20 min e, nos builds com a atualizacao de ago/2026 ou mais nova, a Microsoft nao entrega mais o WMIC por ele."
+            Warn "Restou o Windows Update. Pode levar ~20 min."
             $resp = 'S'
             try { $resp = Read-Host "Tentar pelo Windows Update agora? [S/n]" } catch { $resp = 'S' }
             if ($resp -match '^\s*[nN]') { Warn "Windows Update pulado a pedido." }
-            elseif (Try-Step 'Windows Update via DISM' { Install-Fod '' }) { $origem = 'Feature on Demand (Windows Update)' }
+            elseif (Try-Step 'Windows Update via DISM' { if (Install-Fod '') { [void](Restore-FromWinSxS); $true } else { $false } }) { $origem = 'Feature on Demand (Windows Update)' }
         }
     }
 
@@ -263,7 +261,7 @@ function Main {
         $vi = (Get-Item $exe).VersionInfo
         Ok "Concluido: WMIC original da Microsoft funcionando (v$($vi.FileVersion), origem: $origem)."
     } else {
-        Write-Host "[ERRO]  Nao consegui colocar o wmic original na maquina por nenhuma das fontes." -ForegroundColor Red
+        Write-Host "[ERRO]  Nao consegui deixar o wmic funcionando por nenhuma das fontes." -ForegroundColor Red
         Write-Host "        Opcoes que faltaram: `$env:WMIC_ORIGEM = pasta wbem de um Windows que ainda tenha o wmic (ex.: \\pc\c`$\Windows\System32\wbem)" -ForegroundColor Red
         Write-Host "                             `$env:WMIC_FONTE  = pasta com os .cab do FoD (ISO 'Languages and Optional Features')" -ForegroundColor Red
         Write-Host "        Defina uma delas e rode o script de novo." -ForegroundColor Red
@@ -271,7 +269,6 @@ function Main {
     if ($pathChanged)          { Warn "Janelas de cmd/PowerShell que JA estavam abertas precisam ser reabertas para enxergar o PATH novo." }
     if ($script:restartNeeded) { Warn "O DISM pediu reinicializacao; o wmic.exe pode aparecer so depois do reboot." }
 }
-
 
 try { Main }
 catch { Write-Host ""; Write-Host "[ERRO]  $($_.Exception.Message)" -ForegroundColor Red }
