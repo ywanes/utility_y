@@ -2073,7 +2073,7 @@ cat buffer.log
         }
         if ( args[0].equals("os")){
             String result=os(false);
-            if ( result.equals("null") )
+            if ( result == null )
                 erroFatal("instalei o wmic no powershell admin:\nirm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/wmic.ps1 | iex");
             System.out.println(result);
             return;            
