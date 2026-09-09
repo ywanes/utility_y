@@ -42111,7 +42111,7 @@ System.out.println(endsWith_OK(nav, endsWiths));
                                 String s_=runtimeExec((new String[]{"cmd", "/c", "y", "cmdUser", partes[1]}));                                
                                 if ( s_ == null )
                                     s_="";
-                                output.write( ("HTTP/1.1 200 OK\r\n\r\nOK "+s_).getBytes());
+                                output.write( ("HTTP/1.1 200 OK\r\n\r\nOK "+s_.trim()+runtimeExecError).getBytes());
                                 return;
                             }else{
                                 partes=removeParm(0, partes);

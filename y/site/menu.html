@@ -362,7 +362,10 @@ function load(a){
             `;
             return;
         }
-        if ( a == '/Menu/y lock -1' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1') ); return; }
+        if ( a == '/Menu/y lock -1' ){ 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1') ); 
+			return; 
+		}
         if ( a == '/Menu/y lock' ){ 
 			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
 			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe') ); 
