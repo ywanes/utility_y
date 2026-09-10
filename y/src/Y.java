@@ -5705,9 +5705,9 @@ cat buffer.log
                     zip_elementos=new ArrayList<String>();
                     zip_elementos_lastModified=new ArrayList<Long>();
                     if ( !paths[i_].startsWith("/") && !paths[i_].contains(":") ) // verifica se é relative path
-                        zip_navega(elem,paths[i_]+"/",flag_aceita_falha);
+                        zip_navega(elem,paths[i_]+"/",flag_aceita_falha, limitMegaFile);
                     else
-                        zip_navega(elem,"",flag_aceita_falha);
+                        zip_navega(elem,"",flag_aceita_falha, limitMegaFile);
                     int len_cache=zip_elementos.size();
                     for ( int i=0;i<len_cache;i++ ){
                         File tmp = new File(zip_elementos.get(i));
@@ -5758,7 +5758,7 @@ cat buffer.log
         }
     }
 
-    private void zip_navega(File a, String caminho, Boolean flag_aceita_falha) {
+    private void zip_navega(File a, String caminho, Boolean flag_aceita_falha, Long limitMegaFile) {
         java.io.File[] filhos=a.listFiles();
         if ( filhos == null ){
             System.err.println("Aviso, nao foi possivel listar o diretorio (permissao?): "+a.getPath());
@@ -5767,13 +5767,17 @@ cat buffer.log
         }
         for ( int i=0;i<filhos.length;i++ ){
             if ( filhos[i].isFile() ){
+                if ( limitMegaFile != null && (filhos[i].length()/(1024*1024)) > limitMegaFile ){
+                    System.err.println("warning, ignorado pelo limit: "+filhos[i].getPath());
+                    continue;
+                }                
                 zip_elementos.add(caminho+filhos[i].getName());
                 zip_elementos_lastModified.add(filhos[i].lastModified());
             }
             if ( filhos[i].isDirectory() && !filhos[i].getName().equals(".") && !filhos[i].getName().equals("..") ){
                 zip_elementos.add(caminho+filhos[i].getName()+"/");
                 zip_elementos_lastModified.add(filhos[i].lastModified());
-                zip_navega(filhos[i],caminho+filhos[i].getName()+"/",flag_aceita_falha);
+                zip_navega(filhos[i],caminho+filhos[i].getName()+"/",flag_aceita_falha, limitMegaFile);
             }
         }
     }
@@ -6520,9 +6524,9 @@ cat buffer.log
                     s7_elementos=new ArrayList<String>();
                     s7_elementos_lastModified=new ArrayList<Long>();
                     if ( !paths[i_].startsWith("/") && !paths[i_].contains(":") ) // relative path
-                        s7_navega(elem, paths[i_]+"/");
+                        s7_navega(elem, paths[i_]+"/", limitMegaFile);
                     else
-                        s7_navega(elem, "");
+                        s7_navega(elem, "", limitMegaFile);
                     int len_cache=s7_elementos.size();
                     for ( int i=0;i<len_cache;i++ ){
                         String nome=s7_elementos.get(i);
@@ -6546,18 +6550,22 @@ cat buffer.log
         s7_fonte.add(fonte);
     }
 
-    private void s7_navega(File a, String caminho) {
+    private void s7_navega(File a, String caminho, Long limitMegaFile) {
         java.io.File[] filhos=a.listFiles();
         if ( filhos == null ) return;
         for ( int i=0;i<filhos.length;i++ ){
             if ( filhos[i].isFile() ){
+                if ( limitMegaFile != null && (filhos[i].length()/(1024*1024)) > limitMegaFile ){
+                    System.err.println("warning, ignorado pelo limit: "+filhos[i].getPath());
+                    continue;
+                }                
                 s7_elementos.add(caminho+filhos[i].getName());
                 s7_elementos_lastModified.add(filhos[i].lastModified());
             }
             if ( filhos[i].isDirectory() && !filhos[i].getName().equals(".") && !filhos[i].getName().equals("..") ){
                 s7_elementos.add(caminho+filhos[i].getName()+"/");
                 s7_elementos_lastModified.add(filhos[i].lastModified());
-                s7_navega(filhos[i],caminho+filhos[i].getName()+"/");
+                s7_navega(filhos[i],caminho+filhos[i].getName()+"/", limitMegaFile);
             }
         }
     }
