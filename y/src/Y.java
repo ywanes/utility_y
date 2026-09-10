@@ -1078,7 +1078,16 @@ cat buffer.log
         if ( args[0].equals("juros") || args[0].equals("emprestimo") ){
             juros(args);
             return;
-        }        
+        }       
+        if ( args[0].equals("transfer") ){
+            args=removeParm(0, args);
+            try{
+                new PsiTransfer(args);
+            }catch(Exception e){
+                erroFatal(e);
+            }
+            return;
+        }
         if ( args[0].equals("terminal") ){
             args=removeParm(0, args);
             if ( isWindows() )
@@ -20455,6 +20464,537 @@ class lock{
         });
         // go() para aqui e so retorna quando tudo estiver liberado
         try { done.await(); } catch (InterruptedException e) {}
+    }
+}
+
+class PsiTransfer{
+    public PsiTransfer(String[] args) throws Exception {
+        if (args.length != 4){
+            System.out.println("y transfer 192.168.0.100 3000 senha_admin43 c:\\tmp");
+            return;
+        }
+        iface = args[0];
+        port = Integer.parseInt(args[1]);
+        adminPass = args[2];
+        uploadDir = args[3];
+        retentions.put("one-time", "one time download");
+        retentions.put("3600", "1 Hour");
+        retentions.put("21600", "6 Hours");
+        retentions.put("86400", "1 Day");
+        retentions.put("259200", "3 Days");
+        retentions.put("604800", "1 Week");
+        retentions.put("1209600", "2 Weeks");
+        retentions.put("2419200", "4 Weeks");
+        retentions.put("4838400", "8 Weeks");
+        if (adminPass != null && (adminPass.isEmpty() || adminPass.equals("false"))) adminPass = null;
+        load();
+        java.util.Timer timer = new java.util.Timer(true);
+        timer.schedule(new java.util.TimerTask() {
+            public void run() {
+                gc();
+            }
+        }, 60000, 60000);
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress(iface, port), 0);
+        server.setExecutor(java.util.concurrent.Executors.newCachedThreadPool());
+        server.createContext("/", ex -> {
+            try {
+                handle(ex);
+            } catch (Exception e) {
+                e.printStackTrace();
+                try {
+                    text(ex, 500, "Internal Server Error");
+                } catch (Exception ignored) {
+                }
+            } finally {
+                ex.close();
+            }
+        });
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("PsiTransfer shutting down...");
+            server.stop(0);
+        }));
+        server.start();
+        System.out.println("PsiTransfer listening on http://" + iface + ":" + port + " (data: " + new java.io.File(uploadDir).getAbsolutePath() + ", admin: " + (adminPass == null ? "disabled" : "enabled") + ")");
+    }
+    java.util.Map<String, String> env = System.getenv();
+    String iface = env.getOrDefault("PSITRANSFER_IFACE", "0.0.0.0");
+    String uploadDir = env.getOrDefault("PSITRANSFER_UPLOAD_DIR", "/tmp/psitransfer");
+    int port = Integer.parseInt(env.getOrDefault("PSITRANSFER_PORT", "3000"));
+    String adminPass = env.getOrDefault("PSITRANSFER_ADMIN_PASS", "secret");
+    String uploadPass = env.get("PSITRANSFER_UPLOAD_PASS");
+    String defaultRetention = env.getOrDefault("PSITRANSFER_DEFAULT_RETENTION", "604800");
+    long maxAge = Long.parseLong(env.getOrDefault("PSITRANSFER_MAX_AGE", "6480000"));
+    long maxFileSize = Long.parseLong(env.getOrDefault("PSITRANSFER_MAX_FILE_SIZE", "0"));
+    long maxBucketSize = Long.parseLong(env.getOrDefault("PSITRANSFER_MAX_BUCKET_SIZE", "0"));
+    java.util.LinkedHashMap<String, String> retentions = new java.util.LinkedHashMap<>();
+    java.util.Map<String, java.util.List<Item>> db = new java.util.concurrent.ConcurrentHashMap<>();
+    java.util.regex.Pattern uuid = java.util.regex.Pattern.compile("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", java.util.regex.Pattern.CASE_INSENSITIVE);
+    java.nio.charset.Charset utf8 = java.nio.charset.StandardCharsets.UTF_8;
+    class Item {
+        String sid, key, name, retention, pass = "";
+        long created, length, last;
+        boolean partial = true, locked;
+        java.io.File file() {
+            return new java.io.File(new java.io.File(uploadDir, sid), key);
+        }
+        java.io.File meta() {
+            return new java.io.File(new java.io.File(uploadDir, sid), key + ".properties");
+        }
+        long size() {
+            return file().length();
+        }
+        void save() throws java.io.IOException {
+            java.util.Properties p = new java.util.Properties();
+            p.setProperty("name", name);
+            p.setProperty("retention", retention);
+            p.setProperty("pass", pass);
+            p.setProperty("created", Long.toString(created));
+            p.setProperty("length", Long.toString(length));
+            p.setProperty("last", Long.toString(last));
+            p.setProperty("partial", Boolean.toString(partial));
+            p.setProperty("locked", Boolean.toString(locked));
+            try (java.io.OutputStream o = new java.io.FileOutputStream(meta())) {
+                p.store(o, null);
+            }
+        }
+        void load(java.io.File f) throws java.io.IOException {
+            java.util.Properties p = new java.util.Properties();
+            try (java.io.InputStream i = new java.io.FileInputStream(f)) {
+                p.load(i);
+            }
+            name = p.getProperty("name", key);
+            retention = p.getProperty("retention", defaultRetention);
+            pass = p.getProperty("pass", "");
+            created = Long.parseLong(p.getProperty("created", "0"));
+            length = Long.parseLong(p.getProperty("length", "0"));
+            last = Long.parseLong(p.getProperty("last", "0"));
+            partial = Boolean.parseBoolean(p.getProperty("partial", "false"));
+            locked = Boolean.parseBoolean(p.getProperty("locked", "false"));
+        }
+        String json() {
+            return "{\"key\":" + q(key) + ",\"size\":" + size() + ",\"isPartial\":" + partial + ",\"url\":" + q("/files/" + sid + "++" + key) + ",\"metadata\":{\"name\":" + q(name) + ",\"sid\":" + q(sid) + ",\"key\":" + q(key) + ",\"retention\":" + q(retention) + ",\"uploadLength\":" + length + ",\"createdAt\":" + created + ",\"lastDownload\":" + last + ",\"buckedLocked\":" + locked + ",\"_password\":" + !pass.isEmpty() + "}}";
+        }
+    }
+    void load() throws Exception {
+        java.io.File root = new java.io.File(uploadDir);
+        root.mkdirs();
+        for (java.io.File d : root.listFiles()) {
+            if (!d.isDirectory()) continue;
+            for (java.io.File f : d.listFiles()) {
+                if (!f.getName().endsWith(".properties")) continue;
+                Item it = new Item();
+                it.sid = d.getName();
+                it.key = f.getName().substring(0, f.getName().length() - 11);
+                it.load(f);
+                db.computeIfAbsent(it.sid, k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(it);
+            }
+        }
+    }
+    void gc() {
+        long now = System.currentTimeMillis();
+        for (java.util.List<Item> l : new java.util.ArrayList<>(db.values())) {
+            for (Item it : new java.util.ArrayList<>(l)) {
+                long expires = it.created + maxAge * 1000 - now;
+                if (expires > 0 && it.retention.matches("\\d+")) expires = it.created + Long.parseLong(it.retention) * 1000 - now;
+                if (expires <= 0) remove(it);
+            }
+        }
+    }
+    void remove(Item it) {
+        it.file().delete();
+        it.meta().delete();
+        java.util.List<Item> l = db.get(it.sid);
+        if (l == null) return;
+        l.remove(it);
+        if (l.isEmpty()) {
+            db.remove(it.sid);
+            new java.io.File(uploadDir, it.sid).delete();
+        }
+    }
+    Item find(String fid) {
+        String[] p = fid.split("\\+\\+");
+        if (p.length != 2) return null;
+        java.util.List<Item> l = db.get(p[0]);
+        if (l == null) return null;
+        for (Item it : l) if (it.key.equals(p[1])) return it;
+        return null;
+    }
+    boolean safeName(String s) {
+        if (s == null || s.isEmpty() || s.equals(".") || s.equals("..") || s.length() > 255) return false;
+        if (!s.equals(s.trim())) return false;
+        for (char c : s.toCharArray()) if (c < 32 || c == 127 || c == '/' || c == '\\') return false;
+        return true;
+    }
+    boolean safeUploadId(String fid) {
+        String[] p = fid.split("\\+\\+", -1);
+        return p.length == 2 && safeName(p[0]) && uuid.matcher(p[1]).matches();
+    }
+    String hex(byte[] b) {
+        return java.util.HexFormat.of().formatHex(b);
+    }
+    byte[] pbkdf(String pw, byte[] salt) throws Exception {
+        return javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(new javax.crypto.spec.PBEKeySpec(pw.toCharArray(), salt, 100000, 256)).getEncoded();
+    }
+    String hash(String pw) throws Exception {
+        byte[] salt = new byte[16];
+        new java.security.SecureRandom().nextBytes(salt);
+        return hex(salt) + ":" + hex(pbkdf(pw, salt));
+    }
+    boolean verify(String stored, String pw) throws Exception {
+        if (stored.isEmpty()) return true;
+        String[] p = stored.split(":");
+        if (p.length != 2) return false;
+        java.util.HexFormat hf = java.util.HexFormat.of();
+        return java.security.MessageDigest.isEqual(hf.parseHex(p[1]), pbkdf(pw, hf.parseHex(p[0])));
+    }
+    boolean same(String a, String b) {
+        return java.security.MessageDigest.isEqual(a.getBytes(utf8), b.getBytes(utf8));
+    }
+    String sha256(String s) throws Exception {
+        return hex(java.security.MessageDigest.getInstance("SHA-256").digest(s.getBytes(utf8))).substring(0, 32);
+    }
+    String q(String s) {
+        StringBuilder b = new StringBuilder("\"");
+        for (char c : s.toCharArray()) {
+            if (c == '"' || c == '\\') b.append('\\').append(c);
+            else if (c < 32) b.append(String.format("\\u%04x", (int) c));
+            else b.append(c);
+        }
+        return b.append('"').toString();
+    }
+    String keyList(java.util.List<Item> l) {
+        StringBuilder b = new StringBuilder();
+        for (Item it : l) b.append(b.length() > 0 ? "," : "").append(it.key);
+        return b.toString();
+    }
+    void send(com.sun.net.httpserver.HttpExchange ex, int code, String type, byte[] body) throws java.io.IOException {
+        ex.getResponseHeaders().set("Content-Type", type);
+        ex.sendResponseHeaders(code, body.length == 0 ? -1 : body.length);
+        try (java.io.OutputStream o = ex.getResponseBody()) {
+            o.write(body);
+        }
+    }
+    void text(com.sun.net.httpserver.HttpExchange ex, int code, String s) throws java.io.IOException {
+        send(ex, code, "text/plain; charset=utf-8", s.getBytes(utf8));
+    }
+    void json(com.sun.net.httpserver.HttpExchange ex, int code, String s) throws java.io.IOException {
+        send(ex, code, "application/json; charset=utf-8", s.getBytes(utf8));
+    }
+    void html(com.sun.net.httpserver.HttpExchange ex, int code, String s) throws java.io.IOException {
+        send(ex, code, "text/html; charset=utf-8", s.getBytes(utf8));
+    }
+    void empty(com.sun.net.httpserver.HttpExchange ex, int code) throws java.io.IOException {
+        ex.sendResponseHeaders(code, -1);
+    }
+    boolean checkPass(com.sun.net.httpserver.HttpExchange ex, String pass, long delay) throws Exception {
+        if (pass == null) return true;
+        String p = ex.getRequestHeaders().getFirst("x-passwd");
+        if (p == null) {
+            Thread.sleep(delay);
+            text(ex, 401, "Unauthorized");
+            return false;
+        }
+        if (!same(p, pass)) {
+            Thread.sleep(delay);
+            text(ex, 403, "Forbidden");
+            return false;
+        }
+        return true;
+    }
+    void afterDownload(Item it) throws java.io.IOException {
+        if ("one-time".equals(it.retention)) remove(it);
+        else {
+            it.last = System.currentTimeMillis();
+            it.save();
+        }
+    }
+    void handle(com.sun.net.httpserver.HttpExchange ex) throws Exception {
+        String m = ex.getRequestMethod();
+        String path = ex.getRequestURI().getPath();
+        String query = ex.getRequestURI().getQuery();
+        System.out.println(java.time.Instant.now() + " " + m + " " + ex.getRequestURI() + " " + ex.getRemoteAddress().getAddress().getHostAddress());
+        ex.getResponseHeaders().set("Cache-Control", "private, max-age=0, no-cache, no-store, must-revalidate");
+        if (path.equals("/") && m.equals("GET")) {
+            html(ex, 200, uploadPage());
+            return;
+        }
+        if (path.equals("/config.json")) {
+            if (!checkPass(ex, uploadPass, 200)) return;
+            StringBuilder r = new StringBuilder();
+            for (java.util.Map.Entry<String, String> e : retentions.entrySet()) r.append(r.length() > 0 ? "," : "").append(q(e.getKey())).append(":").append(q(e.getValue()));
+            json(ex, 200, "{\"retentions\":{" + r + "},\"defaultRetention\":" + q(defaultRetention) + ",\"requireBucketPassword\":false,\"maxFileSize\":" + (maxFileSize > 0 ? maxFileSize : "null") + ",\"maxBucketSize\":" + (maxBucketSize > 0 ? maxBucketSize : "null") + "}");
+            return;
+        }
+        if (path.equals("/admin") && adminPass != null) {
+            html(ex, 200, adminPage());
+            return;
+        }
+        if (path.equals("/admin/data.json") && adminPass != null) {
+            if (!checkPass(ex, adminPass, 500)) return;
+            StringBuilder b = new StringBuilder("{");
+            for (java.util.Map.Entry<String, java.util.List<Item>> e : db.entrySet()) {
+                if (b.length() > 1) b.append(",");
+                b.append(q(e.getKey())).append(":[");
+                StringBuilder items = new StringBuilder();
+                for (Item it : e.getValue()) items.append(items.length() > 0 ? "," : "").append(it.json());
+                b.append(items).append("]");
+            }
+            Thread.sleep(500);
+            json(ex, 200, b.append("}").toString());
+            return;
+        }
+        if (path.equals("/files") || path.startsWith("/files/")) {
+            files(ex, m, path.length() > 6 ? java.net.URLDecoder.decode(path.substring(7).replace("+", "%2B"), utf8) : "", query);
+            return;
+        }
+        if (path.equals("/robots.txt")) {
+            text(ex, 200, "User-agent: *\nDisallow: /");
+            return;
+        }
+        if (path.endsWith(".json") && m.equals("GET")) {
+            String sid = path.substring(1, path.length() - 5);
+            java.util.List<Item> l = db.get(sid);
+            if (l == null) {
+                empty(ex, 404);
+                return;
+            }
+            String pass = ex.getRequestHeaders().getFirst("x-download-pass");
+            if (pass == null) pass = "";
+            for (Item it : l) {
+                if (!verify(it.pass, pass)) {
+                    Thread.sleep(500);
+                    text(ex, 401, "Unauthorized");
+                    return;
+                }
+            }
+            StringBuilder items = new StringBuilder();
+            for (Item it : l) items.append(items.length() > 0 ? "," : "").append(it.json());
+            json(ex, 200, "{\"items\":[" + items + "],\"archiveToken\":" + q(sha256(keyList(l))) + ",\"config\":{\"maxPreviewSize\":2097152}}");
+            return;
+        }
+        String sid = path.substring(1);
+        if (m.equals("GET") && db.containsKey(sid)) {
+            html(ex, 200, downloadPage());
+            return;
+        }
+        html(ex, 404, errorPage("Download bucket not found."));
+    }
+    void files(com.sun.net.httpserver.HttpExchange ex, String m, String fid, String query) throws Exception {
+        if (m.equals("GET")) {
+            if (fid.matches("^[A-Za-z0-9+\\-]+\\.zip$")) {
+                String sid = fid.split("\\+\\+")[0];
+                java.util.List<Item> l = db.get(sid);
+                if (l == null) {
+                    html(ex, 404, errorPage("Download bucket not found."));
+                    return;
+                }
+                if (!fid.equals(sid + "++" + sha256(keyList(l)) + ".zip")) {
+                    html(ex, 404, errorPage("Invalid link"));
+                    return;
+                }
+                ex.getResponseHeaders().set("Content-Type", "application/zip");
+                ex.getResponseHeaders().set("Content-Disposition", "attachment; filename=\"" + sid + ".zip\"");
+                ex.sendResponseHeaders(200, 0);
+                java.util.List<Item> snapshot = new java.util.ArrayList<>(l);
+                try (java.util.zip.ZipOutputStream z = new java.util.zip.ZipOutputStream(ex.getResponseBody(), utf8)) {
+                    java.util.Map<String, Integer> used = new java.util.HashMap<>();
+                    for (Item it : snapshot) {
+                        String n = it.name;
+                        int c = used.merge(n, 1, Integer::sum);
+                        if (c > 1) {
+                            int dot = n.lastIndexOf('.');
+                            n = dot > 0 ? n.substring(0, dot) + " (" + c + ")" + n.substring(dot) : n + " (" + c + ")";
+                        }
+                        z.putNextEntry(new java.util.zip.ZipEntry(n));
+                        try (java.io.InputStream in = new java.io.FileInputStream(it.file())) {
+                            in.transferTo(z);
+                        }
+                        z.closeEntry();
+                    }
+                }
+                for (Item it : snapshot) afterDownload(it);
+                return;
+            }
+            if (!safeUploadId(fid)) {
+                html(ex, 404, errorPage("Invalid link"));
+                return;
+            }
+            Item it = find(fid);
+            if (it == null || it.partial) {
+                html(ex, 404, errorPage("Not Found"));
+                return;
+            }
+            String enc = java.net.URLEncoder.encode(it.name, utf8).replace("+", "%20").replace("*", "%2A");
+            String ascii = java.text.Normalizer.normalize(it.name, java.text.Normalizer.Form.NFKD).replaceAll("[^\\x20-\\x7E]", "").replaceAll("[\"\\\\]", "_").trim();
+            ex.getResponseHeaders().set("Content-Type", "application/octet-stream");
+            ex.getResponseHeaders().set("Content-Disposition", "attachment; filename=\"" + (ascii.isEmpty() ? it.key : ascii) + "\"; filename*=UTF-8''" + enc);
+            long size = it.size();
+            ex.sendResponseHeaders(200, size == 0 ? -1 : size);
+            try (java.io.OutputStream o = ex.getResponseBody(); java.io.InputStream in = new java.io.FileInputStream(it.file())) {
+                in.transferTo(o);
+            }
+            afterDownload(it);
+            return;
+        }
+        if (!checkPass(ex, uploadPass, 500)) return;
+        com.sun.net.httpserver.Headers h = ex.getRequestHeaders();
+        if (m.equals("PATCH") && !fid.isEmpty() && !fid.contains("++") && query != null && query.contains("lock=")) {
+            if (!safeName(fid)) {
+                text(ex, 400, "Invalid bucket id");
+                return;
+            }
+            java.util.List<Item> l = db.get(fid);
+            if (l != null) for (Item it : l) {
+                it.locked = true;
+                it.save();
+            }
+            empty(ex, 204);
+            return;
+        }
+        if (m.equals("POST") && fid.isEmpty()) {
+            String name = h.getFirst("X-Name");
+            String sid = h.getFirst("X-Sid");
+            String retention = h.getFirst("X-Retention");
+            String pass = h.getFirst("X-Password");
+            String len = h.getFirst("Upload-Length");
+            if (name == null || sid == null || retention == null || len == null) {
+                text(ex, 400, "missing upload headers");
+                return;
+            }
+            name = java.net.URLDecoder.decode(name, utf8);
+            if (!safeName(sid)) {
+                text(ex, 400, "Invalid bucket id");
+                return;
+            }
+            if (!safeName(name)) {
+                text(ex, 400, "Invalid file name");
+                return;
+            }
+            if (!retentions.containsKey(retention)) {
+                text(ex, 400, "invalid retention " + retention);
+                return;
+            }
+            java.util.List<Item> l = db.get(sid);
+            if (l != null) for (Item it : l) if (it.locked) {
+                text(ex, 400, "Bucket locked");
+                return;
+            }
+            long length = Long.parseLong(len);
+            if (maxFileSize > 0 && length > maxFileSize) {
+                json(ex, 413, "{\"message\":\"File exceeds maximum upload size " + maxFileSize + ".\"}");
+                return;
+            }
+            long bucket = 0;
+            if (l != null) for (Item it : l) bucket += it.length;
+            if (maxBucketSize > 0 && bucket + length > maxBucketSize) {
+                json(ex, 413, "{\"message\":\"Bucket exceeds maximum upload size " + maxBucketSize + ".\"}");
+                return;
+            }
+            Item it = new Item();
+            it.sid = sid;
+            it.key = java.util.UUID.randomUUID().toString();
+            it.name = name;
+            it.retention = retention;
+            it.length = length;
+            it.created = System.currentTimeMillis();
+            it.partial = length > 0;
+            if (pass != null && !pass.isEmpty()) it.pass = hash(java.net.URLDecoder.decode(pass, utf8));
+            it.file().getParentFile().mkdirs();
+            it.file().createNewFile();
+            it.save();
+            db.computeIfAbsent(sid, k -> new java.util.concurrent.CopyOnWriteArrayList<>()).add(it);
+            ex.getResponseHeaders().set("Location", "/files/" + sid + "++" + it.key);
+            empty(ex, 201);
+            return;
+        }
+        if (m.equals("PATCH") || m.equals("HEAD")) {
+            if (!safeUploadId(fid)) {
+                text(ex, 400, "Invalid upload id");
+                return;
+            }
+            Item it = find(fid);
+            if (it == null) {
+                empty(ex, 404);
+                return;
+            }
+            if (m.equals("HEAD")) {
+                ex.getResponseHeaders().set("Upload-Offset", Long.toString(it.size()));
+                ex.getResponseHeaders().set("Upload-Length", Long.toString(it.length));
+                empty(ex, 200);
+                return;
+            }
+            if (it.locked) {
+                text(ex, 400, "Bucket locked");
+                return;
+            }
+            if (!it.partial) {
+                text(ex, 400, "Upload already completed");
+                return;
+            }
+            long offset = Long.parseLong(h.getFirst("Upload-Offset") == null ? "0" : h.getFirst("Upload-Offset"));
+            synchronized (it) {
+                if (offset != it.size()) {
+                    text(ex, 409, "Offset mismatch");
+                    return;
+                }
+                try (java.io.OutputStream o = new java.io.FileOutputStream(it.file(), true); java.io.InputStream in = ex.getRequestBody()) {
+                    in.transferTo(o);
+                }
+                if (it.size() > it.length) {
+                    remove(it);
+                    text(ex, 400, "Upload exceeds declared length");
+                    return;
+                }
+                if (it.size() == it.length) {
+                    it.partial = false;
+                    it.save();
+                    System.out.println("Completed upload " + fid + " size=" + it.length + " name=" + it.name);
+                }
+                ex.getResponseHeaders().set("Upload-Offset", Long.toString(it.size()));
+            }
+            empty(ex, 204);
+            return;
+        }
+        text(ex, 405, "Method Not Allowed");
+    }
+    String head(String title) {
+        return "<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>" + title + "</title>" +
+            "<style>body{font-family:sans-serif;max-width:720px;margin:40px auto;padding:0 16px;color:#222}h1{font-weight:300}li{margin:8px 0}progress{width:100%}input,select,button{padding:8px;margin:4px 0;font-size:1em}button{cursor:pointer}a{color:#0366d6;word-break:break-all}.box{border:1px solid #ddd;border-radius:6px;padding:16px;margin:12px 0}</style></head><body>";
+    }
+    String uploadPage() {
+        return head("PsiTransfer") +
+            "<h1>PsiTransfer</h1><div class='box'><input type='file' id='f' multiple><br><select id='r'></select><br><input id='p' type='password' placeholder='Password (optional)'><br><button id='b'>Upload</button></div><ul id='l'></ul><div id='out'></div>" +
+            "<script>" +
+            "const $=id=>document.getElementById(id);const sid=(()=>{const b=crypto.getRandomValues(new Uint8Array(16));b[6]=b[6]&15|64;b[8]=b[8]&63|128;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20)})();const CH=8388608;" +
+            "fetch('config.json').then(r=>r.json()).then(c=>{for(const k in c.retentions){const o=document.createElement('option');o.value=k;o.textContent=c.retentions[k];if(k==c.defaultRetention)o.selected=true;$('r').append(o)}});" +
+            "function patch(url,file,off,pr){return new Promise((ok,ko)=>{const x=new XMLHttpRequest();x.open('PATCH',url);x.setRequestHeader('Upload-Offset',off);x.upload.onprogress=e=>pr(off+e.loaded);x.onload=()=>x.status==204?ok():ko(x.responseText||x.status);x.onerror=()=>ko('network error');x.send(file.slice(off,off+CH))})}" +
+            "async function up(file,li){const pg=li.querySelector('progress');const r=await fetch('files',{method:'POST',headers:{'Upload-Length':file.size,'X-Name':encodeURIComponent(file.name),'X-Sid':sid,'X-Retention':$('r').value,'X-Password':encodeURIComponent($('p').value)}});if(!r.ok)throw await r.text();const url=r.headers.get('Location');for(let o=0;o<file.size;o+=CH)await patch(url,file,o,v=>pg.value=v);pg.value=file.size}" +
+            "$('b').onclick=async()=>{const fs=[...$('f').files];if(!fs.length)return;$('b').disabled=true;try{for(const f of fs){const li=document.createElement('li');li.textContent=f.name+' ';const pg=document.createElement('progress');pg.max=f.size;pg.value=0;li.append(pg);$('l').append(li);await up(f,li)}await fetch('files/'+sid+'?lock=yes',{method:'PATCH'});const u=location.origin+'/'+sid;$('out').innerHTML='<div class=\"box\">Download link: <a href=\"'+u+'\">'+u+'</a></div>'}catch(e){$('out').textContent='Error: '+e;$('b').disabled=false}};" +
+            "</script></body></html>";
+    }
+    String downloadPage() {
+        return head("PsiTransfer") +
+            "<h1>PsiTransfer</h1><div id='pw' class='box' style='display:none'><input id='p' type='password' placeholder='Password'><button id='b'>Open</button></div><ul id='l'></ul><div id='z'></div>" +
+            "<script>" +
+            "const $=id=>document.getElementById(id);const sid=location.pathname.slice(1);" +
+            "function fmt(n){const u=['B','KB','MB','GB'];let i=0;while(n>=1024&&i<3){n/=1024;i++}return n.toFixed(i?1:0)+' '+u[i]}" +
+            "async function load(p){const r=await fetch(sid+'.json',{headers:{'x-download-pass':p}});if(r.status==401){$('pw').style.display='block';if(p)alert('Wrong password');return}if(!r.ok){$('l').textContent='Not found';return}$('pw').style.display='none';const d=await r.json();$('l').innerHTML='';for(const i of d.items){const li=document.createElement('li');const a=document.createElement('a');a.href=i.url;a.textContent=i.metadata.name+' ('+fmt(i.size)+')';li.append(a);if(i.metadata.retention=='one-time')li.append(' [one-time download]');$('l').append(li)}if(d.items.length>1){const a=document.createElement('a');a.href='files/'+sid+'++'+d.archiveToken+'.zip';a.textContent='Download all (zip)';$('z').append(a)}}" +
+            "$('b').onclick=()=>load($('p').value);load('');" +
+            "</script></body></html>";
+    }
+    String adminPage() {
+        return head("PsiTransfer Admin") +
+            "<h1>PsiTransfer Admin</h1><div id='login' class='box'><input id='p' type='password' placeholder='Admin password'><button id='b'>Login</button></div><div id='bar' style='display:none'><button id='r'>Refresh</button> <button id='o'>Logout</button></div><div id='d'></div>" +
+            "<script>" +
+            "const $=id=>document.getElementById(id);const KEY='psitransfer-admin';" +
+            "function esc(s){return String(s).replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}" +
+            "async function load(pw){const r=await fetch('admin/data.json',{headers:{'x-passwd':pw}});if(!r.ok){localStorage.removeItem(KEY);$('login').style.display='block';$('bar').style.display='none';$('d').textContent=r.status==403?'Forbidden':'Unauthorized';return}localStorage.setItem(KEY,pw);$('login').style.display='none';$('bar').style.display='block';const d=await r.json();let h='';for(const s in d){h+='<div class=\"box\"><b><a href=\"/'+esc(s)+'\">'+esc(s)+'</a></b><ul>';for(const f of d[s])h+='<li>'+esc(f.metadata.name)+' - '+f.size+' B - '+esc(f.metadata.retention)+' - '+new Date(f.metadata.createdAt).toLocaleString()+(f.metadata._password?' [password]':'')+(f.isPartial?' [partial]':'')+'</li>';h+='</ul></div>'}$('d').innerHTML=h||'No files'}" +
+            "$('b').onclick=()=>load($('p').value);$('p').onkeydown=e=>{if(e.key=='Enter')load($('p').value)};$('r').onclick=()=>load(localStorage.getItem(KEY));$('o').onclick=()=>{localStorage.removeItem(KEY);location.reload()};" +
+            "const saved=localStorage.getItem(KEY);if(saved)load(saved);" +
+            "</script></body></html>";
+    }
+    String errorPage(String msg) {
+        return head("Error") + "<h1>Error</h1><p>" + msg.replace("<", "&lt;") + "</p><a href='/'>Upload files</a></body></html>";
     }
 }
 
@@ -43414,6 +43954,7 @@ usage:
   [y qemu]
   [y [juros|emprestimo]]
   [y cmdUser]
+  [y transfer]
   [y terminal]
   [y dotaMutandoAll]
   [y audio]
@@ -43771,6 +44312,10 @@ Exemplos...
         se essa sessao estiver sem explorer ativo, e tratado como nenhum usuario logado.
         eleva (High/admin, sem UAC) so quando roda como SYSTEM e o usuario logado e admin;
         caso contrario abre com os privilegios normais do usuario.
+[y transfer]
+    y transfer 192.168.0.100 3000 senha_admin43 c:\\tmp
+    navegando: http://192.168.0.100:3000
+    navegando como admin: http://192.168.0.100:3000/admin #use a senha senha_admin43
 [y terminal]
     y terminal
     y terminal autoConfirm # usado para claude code tui
