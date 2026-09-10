@@ -688,7 +688,7 @@ cat buffer.log
                     }
                 }
                 if ( args.length >= 3 && args[1].equals("add") ){
-                    Object [] objs = get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate(args);
+                    Object [] objs = get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate_limit(args);
                     if ( objs != null ){
                         String [] paths=(String [])objs[0];
                         String virtualname=(String)objs[1];
@@ -696,7 +696,8 @@ cat buffer.log
                         Boolean flag_aceita_falha=true;
                         String out=(String)objs[3];
                         OutputStream os=out==null?System.out:new FileOutputStream(out);
-                        zip_add_router(paths, virtualname, lvlCompress, os, null, senha, flag_aceita_falha);
+                        Long limitMegaFile=(Long)objs[4];
+                        zip_add_router(paths, virtualname, lvlCompress, os, null, senha, flag_aceita_falha, limitMegaFile);
                         return;
                     }
                 }
@@ -821,14 +822,15 @@ cat buffer.log
                     }
                 }
                 if ( args.length >= 3 && args[1].equals("add") ){
-                    Object [] objs = get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate(args);
+                    Object [] objs = get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate_limit(args);
                     if ( objs != null ){
                         String [] paths=(String [])objs[0];
                         String virtualname=(String)objs[1];
                         Integer lvlCompress=(Integer)objs[2];
                         String out=(String)objs[3];
                         OutputStream os=out==null?System.out:new FileOutputStream(out);                        
-                        s7_add_router(paths, virtualname, lvlCompress, os, null, senha);
+                        Long limitMegaFile=(Long)objs[4];
+                        s7_add_router(paths, virtualname, lvlCompress, os, null, senha, limitMegaFile);
                         return;
                     }
                 }
@@ -3710,7 +3712,7 @@ cat buffer.log
                     public void run() {
                         try{
                             Boolean flag_aceita_falha=false;
-                            zip_add_router(paths, "", 0, pos1, "enviando - ", null, flag_aceita_falha);
+                            zip_add_router(paths, "", 0, pos1, "enviando - ", null, flag_aceita_falha, null);
                             pos1.flush();
                             pos1.close();
                         }catch(Exception e){
@@ -5601,7 +5603,7 @@ cat buffer.log
 
     private void zip_add_router(String[] paths, String virtual_name, int lvlCompress,
                                 OutputStream out, String pre_line_print_on,
-                                String senha, Boolean flag_aceita_falha) throws Exception {
+                                String senha, Boolean flag_aceita_falha, Long limitMegaFile) throws Exception {
         this.virtual_name = virtual_name;
 
         zip_output = (senha == null)
@@ -5618,7 +5620,7 @@ cat buffer.log
         boolean ok = false;
         try {
             valida_paths(paths);
-            zip_add(paths, pre_line_print_on, flag_aceita_falha);
+            zip_add(paths, pre_line_print_on, flag_aceita_falha, limitMegaFile);
             zip_output.finish();   // grava central directory + EOCD
             ok = true;
         } finally {
@@ -5642,7 +5644,7 @@ cat buffer.log
     private ArrayList<String> zip_elementos=null;
     private ArrayList<Long> zip_elementos_lastModified=null;
     private String virtual_name;
-    private void zip_add(String [] paths, String pre_line_print_on, Boolean flag_aceita_falha) throws Exception {
+    private void zip_add(String [] paths, String pre_line_print_on, Boolean flag_aceita_falha, Long limitMegaFile) throws Exception {
         int len;
         java.util.zip.ZipEntry e=null;
         if ( paths.length == 0 ){
@@ -5662,6 +5664,10 @@ cat buffer.log
                     if ( !elem.canRead() ){
                         System.err.println("warning, sem permissao de leitura: "+elem.getPath());
                         if ( !flag_aceita_falha ) System.exit(1);
+                        continue;
+                    }
+                    if ( limitMegaFile != null && (elem.length()/(1024*1024)) > limitMegaFile ){
+                        System.err.println("warning, ignorado pelo limit: "+elem.getPath());
                         continue;
                     }
                     try {
@@ -6459,7 +6465,8 @@ cat buffer.log
     private ArrayList<Long> s7_mtime=null;
     private ArrayList<File> s7_fonte=null; // arquivo de onde ler o dado (null p/ dir/vazio)
 
-    private void s7_add_router(String [] paths, String s7_virtual_name, int lvlCompress, OutputStream out, String pre_line_print_on, String senha) throws Exception {
+    private void s7_add_router(String [] paths, String s7_virtual_name, int lvlCompress, 
+            OutputStream out, String pre_line_print_on, String senha, Long limitMegaFile) throws Exception {
         this.s7_virtual_name = s7_virtual_name;
         s7_valida_paths(paths);
         s7_nomes=new ArrayList<String>();
@@ -6467,7 +6474,7 @@ cat buffer.log
         s7_size=new ArrayList<Long>();
         s7_mtime=new ArrayList<Long>();
         s7_fonte=new ArrayList<File>();
-        s7_add(paths, pre_line_print_on); // coleta as entradas
+        s7_add(paths, pre_line_print_on, limitMegaFile); // coleta as entradas
         s7_grava(out, lvlCompress, senha, pre_line_print_on);
     }
 
@@ -6484,7 +6491,7 @@ cat buffer.log
     private ArrayList<Long> s7_elementos_lastModified=null;
 
     // coleta as entradas (no 7z nao da pra streamar entry a entry, junta tudo antes)
-    private void s7_add(String [] paths, String pre_line_print_on) throws Exception {
+    private void s7_add(String [] paths, String pre_line_print_on, Long limitMegaFile) throws Exception {
         if ( paths.length == 0 ){
             // stdin: grava num temporario e vira uma entrada com o s7_virtual_name
             File tmp=File.createTempFile("s7in_",".bin");
@@ -6504,6 +6511,10 @@ cat buffer.log
             for ( int i_=0; i_<paths.length; i_++ ){
                 File elem=new File(paths[i_]);
                 if ( elem.isFile() ){
+                    if ( limitMegaFile != null && (elem.length()/(1024*1024)) > limitMegaFile ){
+                        System.err.println("warning, ignorado pelo limit: "+elem.getPath());
+                        continue;
+                    }
                     s7_ent(elem.getName(), false, elem.length(), elem.lastModified(), elem);
                 }else{
                     s7_elementos=new ArrayList<String>();
@@ -16734,8 +16745,7 @@ while True:
         return new Object[]{path,acceptSymbolicLink,bkmg};
     }    
     
-    private Object [] get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate(String [] args) throws Exception{
-        //////////////////
+    private Object [] get_parms_paths_virtualname_lvlCompress_out_prefixdate_sufixdate_limit(String [] args) throws Exception{
         String [] paths=new String[]{};
         String virtualname="";
         Integer lvlCompress=1;
@@ -16743,6 +16753,7 @@ while True:
         String out=null;
         Boolean prefixdate=false;
         Boolean sufixdate=false;
+        Long limitMegaFile=null;
         
         args=sliceParm(2,args);
         while(args.length > 0){
@@ -16764,6 +16775,12 @@ while True:
             if ( args.length > 1 && out == null && args[0].equals("-out") ){
                 args=sliceParm(1,args);
                 out=args[0];
+                args=sliceParm(1,args);
+                continue;
+            }
+            if ( args.length > 1 && limitMegaFile == null && args[0].equals("-limitMegaFile") ){
+                args=sliceParm(1,args);
+                limitMegaFile=Long.parseLong(args[0]);
                 args=sliceParm(1,args);
                 continue;
             }
@@ -16834,7 +16851,7 @@ while True:
                     out=prepath+out+"_"+d+extensao;
             }
         }
-        return new Object[]{paths, virtualname, lvlCompress, out};
+        return new Object[]{paths, virtualname, lvlCompress, out, limitMegaFile};
     }
             
     private void find(String path, Boolean superficial, float mtime, boolean acceptSymbolicLink, String type, String pre, 
@@ -44169,7 +44186,7 @@ Exemplos...
     y zip add pasta1 pasta2 file3 -lvlStore > saida.zip
     y zip add /pasta1/pasta2 -pass a > saida_senha_a.zip
     y zip add /pasta1/pasta2 -pass a -out saida_senha_a.zip -prefixdata
-    y zip add /pasta1/pasta2 -pass a -out saida_senha_a.zip -sufixdata
+    y zip add /pasta1/pasta2 -pass a -out saida_senha_a.zip -sufixdata -limitMegaFile 100
     y zip add x.txt -out .zip -prefixdata # ficará com 20260824_210933.zip
     y zip list arquivo.zip
     y zip info arquivo.zip
