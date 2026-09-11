@@ -2264,6 +2264,13 @@ cat buffer.log
             injectMicLine(System.in);
             return;
         }
+        if ( args[0].equals("locksmith") ){
+            if ( !isWindows() )
+                erroFatal("implementado só para windows!");
+            args=removeParm(0, args);
+            new Locksmith(args);
+            return;
+        }
         if ( args[0].equals("kill") && args.length >= 2 ){
             if ( args.length == 2 && !isNumericDigits(args[1]) && new File(args[1]).exists() ){
                 kill_by_path(args[1]);
@@ -23254,6 +23261,482 @@ class terminal_linux {
 	}
 }
 
+class Locksmith {
+    static final String VERSION = "1.0.0";
+ 
+    static final String JNA_URL =
+        "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/jna-5.14.0.jar";
+    static final long   JNA_SIZE     = 1_878_533L;
+    static final String JNA_FILENAME = "jna-5.14.0.jar";
+    static final java.io.File JNA_CACHE_DIR = new java.io.File("c:\\y_lib");
+ 
+    Jna jna;
+    Rm  rm;
+ 
+    public static void main(String[] args) {
+        new Locksmith(args);
+    }
+ 
+    public Locksmith(String[] args) {
+        try {
+            for (String a : args) if ("-test".equalsIgnoreCase(a)) { System.exit(runTests()); return; }
+            if (!isWindows()) { System.out.println("! so funciona no Windows (rstrtmgr.dll)"); return; }
+            Config c = parse(args);
+            if (c == null) { usage(); return; }
+ 
+            java.util.List<String> files = expand(c.paths);
+            if (files.isEmpty()) { System.out.println("! nenhum arquivo valido"); return; }
+ 
+            boot();
+            java.util.List<Lock> locks = rm.find(files);
+ 
+            if (c.quiet) { for (Lock l : locks) System.out.println(l.pid); return; }
+ 
+            if (locks.isEmpty()) {
+                System.out.println("* nenhum processo bloqueando (" + files.size() + " arquivo(s) verificado(s))");
+                System.out.println("* se o processo roda como administrador, rode o locksmith como administrador tambem");
+                return;
+            }
+ 
+            System.out.println("* " + locks.size() + " processo(s) bloqueando:");
+            System.out.printf("  %-8s %-28s %-12s %-22s %s%n", "PID", "NOME", "TIPO", "USUARIO", "EXECUTAVEL");
+            for (Lock l : locks)
+                System.out.printf("  %-8d %-28s %-12s %-22s %s%n", l.pid, cut(l.name, 28), cut(l.type, 12), cut(l.user, 22), l.exe);
+ 
+            if (c.kill) { for (Lock l : locks) kill(l.pid); return; }
+ 
+            System.out.print("> PID para encerrar ('all' = todos, Enter = sair): ");
+            java.io.BufferedReader console = new java.io.BufferedReader(new java.io.InputStreamReader(System.in, "UTF-8"));
+            String line = console.readLine();
+            if (line == null || (line = line.trim()).isEmpty()) { System.out.println("* saindo"); return; }
+            if (line.equalsIgnoreCase("all")) { for (Lock l : locks) kill(l.pid); return; }
+            try { kill(Integer.parseInt(line)); }
+            catch (NumberFormatException e) { System.out.println("! PID invalido: " + line); }
+        } catch (Throwable t) {
+            System.err.println("error: " + t);
+        }
+    }
+ 
+    void usage() {
+        System.out.println("""
+            Locksmith - mostra e encerra os processos que seguram um arquivo/pasta (Restart Manager via JNA).
+            uso:
+              y locksmith "C:\\pasta\\arquivo.xlsx"
+              y locksmith "C:\\pasta\\arquivo.xlsx" -kill      (encerra todos sem perguntar)
+              y locksmith "C:\\pasta" -q                        (so imprime PIDs, um por linha; bom pra script)
+              y locksmith -test
+            obs: pastas sao expandidas nos arquivos dentro (recursivo);
+                 processos como administrador so aparecem se o locksmith rodar como administrador.
+        """);
+    }
+ 
+    final class Config {
+        java.util.List<String> paths = new java.util.ArrayList<>();
+        boolean kill;   // -kill: encerra todos sem perguntar
+        boolean quiet;  // -q:    so lista PIDs
+    }
+ 
+    Config parse(String[] a) {
+        Config c = new Config();
+        for (int i = 0; i < a.length; i++) {
+            switch (a[i]) {
+                case "-kill": c.kill = true; break;
+                case "-q":    c.quiet = true; break;
+                case "-arq":  if (i + 1 < a.length) c.paths.add(a[++i]); break;
+                default:      if (!a[i].startsWith("-")) c.paths.add(a[i]); break;
+            }
+        }
+        if (c.paths.isEmpty()) return null;
+        return c;
+    }
+ 
+    boolean isWindows() { return System.getProperty("os.name", "").toLowerCase().contains("win"); }
+ 
+    String cut(String s, int max) {
+        if (s == null) return "?";
+        return s.length() <= max ? s : s.substring(0, max - 1) + "~";
+    }
+ 
+    // pastas viram a lista dos arquivos dentro (recursivo); arquivos ficam como estao.
+    // walkFileTree ignora itens sem permissao (visitFileFailed) em vez de abortar o percurso.
+    java.util.List<String> expand(java.util.List<String> in) {
+        java.util.List<String> out = new java.util.ArrayList<>();
+        for (String s : in) {
+            java.nio.file.Path p = java.nio.file.Paths.get(s);
+            if (!java.nio.file.Files.exists(p)) { System.out.println("! nao existe: " + s); continue; }
+            if (java.nio.file.Files.isDirectory(p)) {
+                final int[] skipped = { 0 };
+                try {
+                    java.nio.file.Files.walkFileTree(p, new java.nio.file.SimpleFileVisitor<java.nio.file.Path>() {
+                        public java.nio.file.FileVisitResult visitFile(java.nio.file.Path f, java.nio.file.attribute.BasicFileAttributes a) {
+                            if (a.isRegularFile()) out.add(f.toAbsolutePath().toString());
+                            return java.nio.file.FileVisitResult.CONTINUE;
+                        }
+                        public java.nio.file.FileVisitResult visitFileFailed(java.nio.file.Path f, java.io.IOException e) {
+                            skipped[0]++;               // sem acesso (arquivo ou pasta) -> pula e continua
+                            return java.nio.file.FileVisitResult.CONTINUE;
+                        }
+                    });
+                } catch (java.io.IOException e) {
+                    System.out.println("! erro percorrendo " + s + ": " + e.getMessage());
+                }
+                if (skipped[0] > 0) System.out.println("* " + skipped[0] + " item(ns) sem acesso ignorado(s)");
+            } else out.add(p.toAbsolutePath().toString());
+        }
+        return out;
+    }
+ 
+    final class Lock {
+        int pid; String name, type, user, exe;
+        Lock(int pid, String name, String type, String user, String exe) {
+            this.pid = pid; this.name = name; this.type = type; this.user = user; this.exe = exe;
+        }
+    }
+ 
+    void kill(int pid) {
+        java.util.Optional<ProcessHandle> ph = ProcessHandle.of(pid);
+        if (ph.isEmpty()) { System.out.println("! PID " + pid + " nao existe mais"); return; }
+        boolean ok = ph.get().destroyForcibly();
+        System.out.println(ok ? "* " + pid + " encerrado" : "! nao consegui encerrar " + pid + " (tente como administrador)");
+    }
+ 
+    void boot() throws Exception {
+        java.io.File jar = ensureJna();
+        java.net.URLClassLoader cl = new java.net.URLClassLoader(
+            new java.net.URL[]{ jar.toURI().toURL() },
+            Locksmith.class.getClassLoader());
+        Thread.currentThread().setContextClassLoader(cl);
+        jna = new Jna();
+        jna.init(cl);
+        rm = new Rm();
+    }
+ 
+    RuntimeException fail(String fn) {
+        return new RuntimeException(fn + " falhou (err " + jna.lastError() + ")");
+    }
+ 
+    java.io.File ensureJna() throws Exception {
+        for (java.io.File d : candidateDirs()) {
+            java.io.File f = new java.io.File(d, JNA_FILENAME);
+            if (f.isFile()) return f;
+        }
+        java.io.File cache = new java.io.File(JNA_CACHE_DIR, JNA_FILENAME);
+        if (cache.isFile() && cache.length() == JNA_SIZE) return cache;
+        return download(cache);
+    }
+ 
+    java.util.List<java.io.File> candidateDirs() {
+        java.util.LinkedHashSet<java.io.File> dirs = new java.util.LinkedHashSet<>();
+        try {
+            String src = System.getProperty("jdk.launcher.sourcefile");
+            if (src != null) {
+                java.io.File p = new java.io.File(src).getAbsoluteFile().getParentFile();
+                if (p != null) dirs.add(p);
+            }
+        } catch (Throwable ignored) {}
+        try {
+            java.io.File cp = new java.io.File(Locksmith.class.getProtectionDomain()
+                                  .getCodeSource().getLocation().toURI());
+            java.io.File d = cp.isDirectory() ? cp : cp.getParentFile();
+            if (d != null) dirs.add(d);
+        } catch (Throwable ignored) {}
+        try { dirs.add(new java.io.File(System.getProperty("user.dir"))); }
+        catch (Throwable ignored) {}
+        return new java.util.ArrayList<>(dirs);
+    }
+ 
+    java.io.File download(java.io.File cache) throws Exception {
+        java.security.Security.setProperty("jdk.tls.disabledAlgorithms", "");
+        java.security.Security.setProperty("jdk.certpath.disabledAlgorithms", "");
+        System.setProperty("https.protocols", "TLSv1.3,TLSv1.2");
+        javax.net.ssl.SSLContext ctx = javax.net.ssl.SSLContext.getInstance("TLS");
+        ctx.init(null, null, null);
+        javax.net.ssl.HttpsURLConnection.setDefaultSSLSocketFactory(ctx.getSocketFactory());
+        JNA_CACHE_DIR.mkdirs();
+        java.net.HttpURLConnection con = (java.net.HttpURLConnection)
+            java.net.URI.create(JNA_URL).toURL().openConnection();
+        con.setConnectTimeout(15000);
+        con.setReadTimeout(120000);
+        java.io.File tmp = new java.io.File(cache.getPath() + ".part");
+        try (java.io.InputStream in = con.getInputStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(tmp)) {
+            byte[] b = new byte[16384];
+            int n;
+            while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        }
+        if (tmp.length() != JNA_SIZE) {
+            long got = tmp.length();
+            tmp.delete();
+            throw new RuntimeException("Download do JNA invalido: esperado " + JNA_SIZE
+                + " bytes, veio " + got + ".");
+        }
+        java.nio.file.Files.move(tmp.toPath(), cache.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return cache;
+    }
+ 
+    // ---- Restart Manager (rstrtmgr.dll) montado na mao sobre a camada Jna ----
+    class Rm {
+        // layout do RM_PROCESS_INFO (Unicode, sequential) -- conferido: 668 bytes
+        static final int CCH_RM_SESSION_KEY = 32;
+        static final int SZ_INFO     = 668;
+        static final int OFF_PID     = 0;
+        static final int OFF_APPNAME = 12;
+        static final int OFF_SVCNAME = 524;
+        static final int OFF_APPTYPE = 652;
+        static final int ERROR_MORE_DATA = 234;
+ 
+        Object lib;
+        Object RmStartSession, RmRegisterResources, RmGetList, RmEndSession;
+ 
+        Rm() {
+            lib = jna.stdLib("rstrtmgr");
+            RmStartSession      = jna.func(lib, "RmStartSession");
+            RmRegisterResources = jna.func(lib, "RmRegisterResources");
+            RmGetList           = jna.func(lib, "RmGetList");
+            RmEndSession        = jna.func(lib, "RmEndSession");
+        }
+ 
+        String typeName(int t) {
+            switch (t) {
+                case 1:  return "aplicativo";
+                case 2:  return "console";
+                case 3:  return "servico";
+                case 4:  return "explorer";
+                case 5:  return "sistema";
+                default: return "?";
+            }
+        }
+ 
+        // RmRegisterResources grava os recursos no REGISTRO; registrar milhares de caminhos de
+        // uma vez estoura essa escrita e retorna ERROR_WRITE_FAULT (29). Por isso registramos em
+        // lotes, cada um na propria sessao, e juntamos os processos por PID. Se um lote falhar,
+        // dividimos ao meio e tentamos de novo; um caminho isolado que insista em falhar e pulado.
+        static final int CHUNK = 128;
+        static final int ERROR_WRITE_FAULT = 29;
+        static final int ERROR_OUTOFMEMORY = 14;
+ 
+        java.util.List<Lock> find(java.util.List<String> files) {
+            if (files.isEmpty()) return java.util.List.of();
+            if (files.size() > 2000)
+                System.out.println("* verificando " + files.size() + " arquivos em lotes; pode demorar um pouco...");
+ 
+            java.util.LinkedHashMap<Integer, Lock> byPid = new java.util.LinkedHashMap<>();
+            int skipped = 0;
+ 
+            // pilha de intervalos [lo,hi) a processar; comeca fatiado em CHUNK
+            java.util.ArrayDeque<int[]> work = new java.util.ArrayDeque<>();
+            for (int s = files.size(); s > 0; s -= CHUNK)
+                work.push(new int[]{ Math.max(0, s - CHUNK), s });
+ 
+            while (!work.isEmpty()) {
+                int[] r = work.pop();
+                int lo = r[0], hi = r[1];
+                int rc = queryRange(files, lo, hi, byPid);
+                if (rc != 0) {
+                    if (hi - lo <= 1) {
+                        skipped++;                                   // caminho isolado rejeitado -> pula
+                    } else if (rc == ERROR_WRITE_FAULT || rc == ERROR_OUTOFMEMORY) {
+                        int mid = (lo + hi) >>> 1;                   // lote grande demais -> divide
+                        work.push(new int[]{ mid, hi });
+                        work.push(new int[]{ lo, mid });
+                    } else {
+                        throw new RuntimeException("Restart Manager falhou (" + rc + ")");
+                    }
+                }
+            }
+ 
+            if (skipped > 0)
+                System.out.println("* " + skipped + " caminho(s) rejeitado(s) pelo Restart Manager, ignorado(s)");
+            return new java.util.ArrayList<>(byPid.values());
+        }
+ 
+        // uma sessao completa (start/register/getlist/end) para files[lo,hi); junta em byPid.
+        // devolve 0 no sucesso ou o codigo de erro do RM (pra quem chamou decidir dividir/pular).
+        int queryRange(java.util.List<String> files, int lo, int hi, java.util.Map<Integer, Lock> byPid) {
+            int mark = jna.pinned.size();   // libera as alocacoes deste range no fim (evita inchar a memoria)
+            Object hMem   = jna.mem(4);
+            Object keyMem = jna.mem((long) (CCH_RM_SESSION_KEY + 1) * jna.WCHAR_SIZE);
+            int rc = jna.callInt(RmStartSession, hMem, 0, keyMem);
+            if (rc != 0) throw new RuntimeException("RmStartSession falhou (" + rc + ")");
+            int session = jna.getInt(hMem, 0);
+            try {
+                int n = hi - lo;
+                Object arr = jna.mem((long) n * jna.POINTER_SIZE);
+                for (int i = 0; i < n; i++)
+                    jna.setPointer(arr, (long) i * jna.POINTER_SIZE, jna.wstr(files.get(lo + i)));
+ 
+                rc = jna.callInt(RmRegisterResources, session, n, arr, 0, null, 0, null);
+                if (rc != 0) return rc;   // deixa o find() decidir (dividir ou pular)
+ 
+                return collect(session, byPid);
+            } finally {
+                jna.callInt(RmEndSession, session);
+                while (jna.pinned.size() > mark) jna.pinned.remove(jna.pinned.size() - 1);
+            }
+        }
+ 
+        // RmGetList (2 passes) e acumula os processos por PID
+        int collect(int session, java.util.Map<Integer, Lock> byPid) {
+            Object needed  = jna.mem(4);
+            Object have    = jna.mem(4);
+            Object reasons = jna.mem(4);
+ 
+            jna.setInt(have, 0, 0);
+            int rc = jna.callInt(RmGetList, session, needed, have, null, reasons);
+            if (rc != 0 && rc != ERROR_MORE_DATA) return rc;
+            int count = jna.getInt(needed, 0);
+            if (count == 0) return 0;
+ 
+            Object infos;
+            do {
+                infos = jna.mem((long) count * SZ_INFO);
+                jna.setInt(have, 0, count);
+                rc = jna.callInt(RmGetList, session, needed, have, infos, reasons);
+                count = jna.getInt(needed, 0);
+            } while (rc == ERROR_MORE_DATA);
+            if (rc != 0) return rc;
+ 
+            int got = jna.getInt(have, 0);
+            for (int i = 0; i < got; i++) {
+                long base = (long) i * SZ_INFO;
+                int pid = jna.getInt(infos, base + OFF_PID);
+                if (byPid.containsKey(pid)) continue;
+                String app = jna.getWideString(infos, base + OFF_APPNAME);
+                String svc = jna.getWideString(infos, base + OFF_SVCNAME);
+                int type   = jna.getInt(infos, base + OFF_APPTYPE);
+                java.util.Optional<ProcessHandle> ph = ProcessHandle.of(pid);
+                String user = ph.flatMap(p -> p.info().user()).orElse("?");
+                String exe  = ph.flatMap(p -> p.info().command()).orElse("?");
+                String name = (app == null || app.isEmpty()) ? (svc == null ? "?" : svc) : app;
+                byPid.put(pid, new Lock(pid, name, typeName(type), user, exe));
+            }
+            return 0;
+        }
+    }
+ 
+    // ---- camada JNA por reflexao (identica ao CmdUser) ----
+    class Jna {
+        int POINTER_SIZE, WCHAR_SIZE, ALT_CONVENTION;
+        Class<?> C_Pointer, C_Memory, C_Native, C_NativeLibrary, C_Function;
+        java.lang.reflect.Constructor<?> CT_Memory;
+        java.lang.reflect.Method M_libOpts, M_func, M_invokeInt, M_invokePointer,
+            M_setInt, M_setPointer, M_setWideString,
+            M_getInt, M_getPointer, M_getWideString, M_getByteArray, M_clear, M_lastError;
+        final java.util.List<Object> pinned =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<Object>());
+        void init(ClassLoader cl) throws Exception {
+            C_Pointer       = cl.loadClass("com.sun.jna.Pointer");
+            C_Memory        = cl.loadClass("com.sun.jna.Memory");
+            C_Native        = cl.loadClass("com.sun.jna.Native");
+            C_NativeLibrary = cl.loadClass("com.sun.jna.NativeLibrary");
+            C_Function      = cl.loadClass("com.sun.jna.Function");
+            POINTER_SIZE   = C_Native.getField("POINTER_SIZE").getInt(null);
+            WCHAR_SIZE     = C_Native.getField("WCHAR_SIZE").getInt(null);
+            ALT_CONVENTION = C_Function.getField("ALT_CONVENTION").getInt(null);
+            CT_Memory = C_Memory.getConstructor(long.class);
+            M_libOpts       = C_NativeLibrary.getMethod("getInstance", String.class, java.util.Map.class);
+            M_func          = C_NativeLibrary.getMethod("getFunction", String.class);
+            M_invokeInt     = C_Function.getMethod("invokeInt",     Object[].class);
+            M_invokePointer = C_Function.getMethod("invokePointer", Object[].class);
+            M_setInt        = C_Pointer.getMethod("setInt",        long.class, int.class);
+            M_setPointer    = C_Pointer.getMethod("setPointer",    long.class, C_Pointer);
+            M_setWideString = C_Pointer.getMethod("setWideString", long.class, String.class);
+            M_getInt        = C_Pointer.getMethod("getInt",        long.class);
+            M_getPointer    = C_Pointer.getMethod("getPointer",    long.class);
+            M_getWideString = C_Pointer.getMethod("getWideString", long.class);
+            M_getByteArray  = C_Pointer.getMethod("getByteArray",  long.class, int.class);
+            M_clear         = C_Memory.getMethod("clear");
+            M_lastError     = C_Native.getMethod("getLastError");
+        }
+        Object stdLib(String name) {
+            java.util.HashMap<String, Object> opts = new java.util.HashMap<>();
+            opts.put("calling-convention", ALT_CONVENTION);
+            return inv(M_libOpts, null, name, opts);
+        }
+        Object func(Object lib, String name) { return inv(M_func, lib, name); }
+        int     callInt (Object f, Object... a) { return (int) inv(M_invokeInt,     f, (Object) a); }
+        Object  callPtr (Object f, Object... a) { return       inv(M_invokePointer, f, (Object) a); }
+        boolean callBool(Object f, Object... a) { return callInt(f, a) != 0; }
+        Object mem(long size) { Object m = ctor(CT_Memory, size); inv(M_clear, m); pinned.add(m); return m; }
+        void setInt    (Object p, long off, int v)    { inv(M_setInt,     p, off, v); }
+        void setPointer(Object p, long off, Object v) { inv(M_setPointer, p, off, v); }
+        int  getInt    (Object p, long off) { return (int) inv(M_getInt, p, off); }
+        Object getPointer(Object p, long off) { return inv(M_getPointer, p, off); }
+        String getWideString(Object p, long off) { Object s = inv(M_getWideString, p, off); return s == null ? null : (String) s; }
+        byte[] getBytes(Object p, long off, int len) { return (byte[]) inv(M_getByteArray, p, off, len); }
+        int lastError() { return (int) inv(M_lastError, null); }
+        Object wstr(String s) {
+            Object m = mem((long) (s.length() + 1) * WCHAR_SIZE);
+            inv(M_setWideString, m, 0L, s);
+            return m;
+        }
+        private Object inv(java.lang.reflect.Method m, Object target, Object... args) {
+            try { return m.invoke(target, args); }
+            catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable c = e.getCause();
+                if (c instanceof RuntimeException) throw (RuntimeException) c;
+                throw new RuntimeException(c);
+            } catch (Exception e) { throw new RuntimeException(e); }
+        }
+        private Object ctor(java.lang.reflect.Constructor<?> c, Object... args) {
+            try { return c.newInstance(args); }
+            catch (java.lang.reflect.InvocationTargetException e) {
+                Throwable cs = e.getCause();
+                if (cs instanceof RuntimeException) throw (RuntimeException) cs;
+                throw new RuntimeException(cs);
+            } catch (Exception e) { throw new RuntimeException(e); }
+        }
+    }
+ 
+    // ---- auto-teste ----
+    int TESTS_OK = 0, TESTS_TOTAL = 0;
+    void check(boolean cond, String name) {
+        TESTS_TOTAL++;
+        if (cond) { TESTS_OK++; System.out.println("[OK]    " + name); }
+        else System.out.println("[FALHA] " + name);
+    }
+ 
+    int runTests() throws Exception {
+        System.out.println("== locksmith " + VERSION + " auto-teste ==");
+ 
+        Config c = parse(new String[]{ "a.txt", "b.txt", "-kill", "-q" });
+        check(c != null && c.paths.size() == 2 && c.kill && c.quiet, "parse (arquivos soltos + flags)");
+        check(parse(new String[]{ "-kill" }) == null, "parse sem arquivo -> usage");
+        check("abc~".equals(cut("abcdef", 4)) && "abc".equals(cut("abc", 4)), "cut()");
+ 
+        if (!isWindows()) {
+            System.out.println("\t(fora do Windows: testes da Restart Manager API pulados)");
+            System.out.println("== resultado: " + TESTS_OK + "/" + TESTS_TOTAL + " ==");
+            return (TESTS_OK == TESTS_TOTAL) ? 0 : 1;
+        }
+ 
+        boot();
+        long me = ProcessHandle.current().pid();
+        java.nio.file.Path tmp = java.nio.file.Files.createTempFile("locksmith-", ".tmp");
+        try {
+            check(rm.find(java.util.List.of(tmp.toString())).isEmpty(), "arquivo fechado -> nenhum processo");
+ 
+            try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(tmp.toFile(), "rw")) {
+                raf.write("x".getBytes());
+                java.util.List<Lock> locks = rm.find(java.util.List.of(tmp.toString()));
+                boolean achou = false;
+                for (Lock l : locks) if (l.pid == me) achou = true;
+                check(achou, "arquivo aberto -> encontra o proprio PID (" + me + ")");
+                check(!locks.isEmpty() && !"?".equals(locks.get(0).exe), "exe resolvido via ProcessHandle");
+            }
+ 
+            java.util.List<String> ex = expand(java.util.List.of(tmp.getParent().toString()));
+            check(ex.contains(tmp.toAbsolutePath().toString()), "expand() de pasta inclui o arquivo");
+        } finally {
+            java.nio.file.Files.deleteIfExists(tmp);
+        }
+ 
+        System.out.println("== resultado: " + TESTS_OK + "/" + TESTS_TOTAL + " ==");
+        return (TESTS_OK == TESTS_TOTAL) ? 0 : 1;
+    }
+}
+
 // Roda como servico SYSTEM e dispara um comando na sessao do usuario logado, localizando o token pelo explorer da sessao CONECTADA (console) e usando CreateProcessAsUser; captura o stdout/stderr; JNA e carregado dinamicamente em runtime (sem imports/dependencia de compilacao). Se a sessao conectada estiver sem explorer ativo, e tratado como nenhum usuario logado.
 // Elevacao e automatica e so acontece quando ha SeTcbPrivilege (na pratica, SYSTEM) E o usuario logado e admin (existe linked token): ai abre elevado/High sem UAC; caso contrario (chamador sem privilegio, ou usuario padrao) cai no token base e abre com os privilegios normais do usuario.
 class CmdUser {
@@ -44065,6 +44548,7 @@ usage:
   [y remote]
   [y injectMicLine]
   [y kill]
+  [y locksmith]
   [y win]
   [y speed]
   [y lock]
@@ -45071,6 +45555,10 @@ portal 1.2.2
     y kill "D:\\ProgramFiles\\site\\musicas\\cry"
     y kill "D:\\ProgramFiles\\site\\musicas\\cry\\Thomas Bergersen - Cry (Sun).mkv"
     obs: o kill de path só foi implementado para o windows
+    veja tambem o y locksmith
+[y locksmith]
+    y locksmith
+    obs: só para windows
 [y win]
     y win
     obs: mostra se o windows e office estão ativado
