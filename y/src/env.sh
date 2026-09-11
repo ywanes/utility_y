@@ -61,81 +61,80 @@ rm -f /opt/.u_flag
 alias u='/opt/.u'
 alias uu='/opt/.u_c'
 echo "" > /opt/.u_c
-if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep -e "Not Upgrading:" -e "não são mais requeridos" | wc -l` -eq 1 ]
-then
-  apt list --upgradable -a 2>/dev/null | while read linha 
-  do
-    if [ "$linha" != "" ] && [ `echo "$linha" | grep "apt autoremove" | wc -l` -eq 1 ]
-    then
-      echo 'apt autoremove'
-    else
-      if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listando..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
+
+( (
+  if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep -e "Not Upgrading:" -e "não são mais requeridos" | wc -l` -eq 1 ]
+  then
+    apt list --upgradable -a 2>/dev/null | while read linha
+    do
+      if [ "$linha" != "" ] && [ `echo "$linha" | grep "apt autoremove" | wc -l` -eq 1 ]
       then
-        p1=`echo $linha | awk ' { print $1 } '`
-        echo "apt-get install --only-upgrade $p1"
+        echo 'apt autoremove'
       else
-        echo ''
+        if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listando..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
+        then
+          p1=`echo $linha | awk ' { print $1 } '`
+          echo "apt-get install --only-upgrade $p1"
+        else
+          echo ''
+        fi
+      fi
+    done | head -1 | while read linha
+    do
+      echo "$linha" > /opt/.u_c
+      chmod 777 /opt/.u_c
+      if [ `printf "$linha" | wc -c` -ne 0 ]
+      then
+        echo digite uu # esse script só carrega quando entrar em root, se precisar entre em root varias vezes
+      fi
+    done
+  fi
+
+  if [ "1" == "1" ] # verify new ubuntu and LTS
+  then
+    if [ "$(whoami)" == "root" ] && [ -e /etc/os-release ]
+    then
+      # ultima atualização em 17/10/2025
+      v1=$(cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk '{ print $2 }')
+      v2=$(curl --max-time 5 https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk '{ print $2 }')
+      v3=$(curl --max-time 5 http://changelogs.ubuntu.com/meta-release-development 2>/dev/null | grep "Version: " | tail -1 | awk '{ print $2 }')
+      if [ "$v1" != "$v2" ] && [ "$v2" == "$v3" ] && [ "$v3" != "" ]
+      then
+        echo "New ubuntu --> $v3"
+      fi
+
+      if [ -e /etc/update-manager/release-upgrades ] && [ "$(grep -c '^Prompt=normal$' /etc/update-manager/release-upgrades)" == 0 ]
+      then
+        echo "Alerta LTS, roda o comando abaixo!!:"
+        echo "sed -i 's/Prompt=lts/Prompt=normal/g' /etc/update-manager/release-upgrades"
+      fi
+
+      ip6m=2002:2002:2002:2002
+      ip6b=::100
+      ipn=renato
+      if [ "$(grep -c "${ip6m}${ip6b}" /etc/hosts)" -eq 0 ]
+      then
+        echo "${ip6m}${ip6b} ${ipn}" >> /etc/hosts
+      fi
+      ip6b=::ff:feb3:63e9
+      ipn=local
+      if [ "$(grep -c "${ip6m}${ip6b}" /etc/hosts)" -eq 0 ]
+      then
+        echo "${ip6m}${ip6b} ${ipn}" >> /etc/hosts
       fi
     fi
-  done | head -1 | while read linha
-  do
-    echo "$linha" > /opt/.u_c
-    chmod 777 /opt/.u_c
-    if [ `printf "$linha" | wc -c` -ne 0 ]
-    then
-      echo digite uu # esse script só carrega quando entrar em root, se precisar entre em root varias vezes
-    fi
-  done
-fi
-if [ "1" == "1" ] # verify new ubuntu and LTS
-then
-  if [ `whoami` == "root" ] && [ -e /etc/os-release ]
-  then
-    # ultimas atualizacoes:
-    #    2025-10-17
-    #    2026-06-07 espectativa era 2026-04-20
-    v1=`cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk ' { print $2 } '`
-    v2=`curl https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk ' { print $2 } '`
-    v3=`curl http://changelogs.ubuntu.com/meta-release-development 2>/dev/null | grep "Version: " | tail -1 | awk ' { print $2 } '`
-    if [ "$v1" != "$v2" ] && [ "$v2" == "$v3" ] && [ "$v3" != "" ]
-    then
-      echo "New ubuntu --> $v3"
-    fi
-    if [ -e /etc/update-manager/release-upgrades ] && [ `cat /etc/update-manager/release-upgrades | grep ^Prompt=normal$ | wc -l` == 0 ]
-    then
-      echo Alerta LTS, roda o comando abaixo!!:
-      echo sed -i "s/Prompt=lts/Prompt=normal/g" /etc/update-manager/release-upgrades
-    fi
-    # desfazendo apt-mark unhold libegl-mesa0
-    #if [ $((`apt-mark showhold | grep ^libegl-mesa0$ | wc -l`)) == 0 ] && [ $((`dmidecode  | grep -i product | grep VMware | wc -l`)) -ge 1 ]
-    #then
-    #  echo o comando abaixo foi disparado automaticamente por questao de segurança
-    #  apt-mark hold libegl-mesa0
-    #fi
-    ip6m=2002:2002:2002:2002
-    ip6b=::100
-    ipn=renato
-    if [ `cat /etc/hosts | grep ${ip6m}${ip6b} | wc -l` -eq 0 ]
-    then
-      echo ${ip6m}${ip6b}' '${ipn} >> /etc/hosts
-    fi
-    ip6b=:ff:feb3:63e9
-    ipn=local
-    if [ `cat /etc/hosts | grep ${ip6m}${ip6b} | wc -l` -eq 0 ]
-    then
-      echo ${ip6m}${ip6b}' '${ipn} >> /etc/hosts
-    fi
+  else
+    echo "disable -> verify new ubuntu and LTS"
   fi
-  alias u1='echo u1/u7..;apt update'
-  alias u2='echo u2/u7..;apt upgrade'
-  alias u3='echo u3/u7..;do-release-upgrade'
-  alias u4='echo u4/u7..;u1'
-  alias u5='echo u5/u7..;u2'
-  alias u6='echo u6/u7..;apt dist-upgrade'
-  alias u7='echo u7/u7..;do-release-upgrade -d'
-else
-  echo "disable -> verify new ubuntu and LTS"
-fi
+) & ) </dev/null
+
+alias u1='echo u1/u7..;apt update'
+alias u2='echo u2/u7..;apt upgrade'
+alias u3='echo u3/u7..;do-release-upgrade'
+alias u4='echo u4/u7..;u1'
+alias u5='echo u5/u7..;u2'
+alias u6='echo u6/u7..;apt dist-upgrade'
+alias u7='echo u7/u7..;do-release-upgrade -d'
 
 export flag_enable_bracketed_paste='S'
 bind 'set enable-bracketed-paste off'
