@@ -2,6 +2,15 @@
 # irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/desativa_windowsupdate.ps1 | iex
 # & ([scriptblock]::Create((irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/desativa_windowsupdate.ps1))) -Restaurar
 
+<#
+
+# limpando cache
+Stop-Service wuauserv, UsoSvc, bits -Force -ErrorAction SilentlyContinue
+Remove-Item "C:\Windows\SoftwareDistribution\Download\*" -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired" -Recurse -Force -ErrorAction SilentlyContinue
+
+#>
+
 param(
     [switch]$Restaurar
 )
