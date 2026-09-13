@@ -1129,32 +1129,34 @@ cat buffer.log
         }
         if ( args[0].equals("make") && args.length == 2 ){
             if ( args[1].equals("cmdw") ){
-                if ( !isWindows() )
+                if ( isWindows() ){
+                    if ( !isWindowsGraalvm() )
+                        erroFatal("cmd sem graalvm!");
+                    if ( !isWindowsCPlusPlus() )
+                        erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+                }else{
                     erroFatal("só implementado para windows");
-                if ( !isWindowsGraalvm() )
-                    erroFatal("cmd sem graalvm!");
-                if ( !isWindowsCPlusPlus() )
-                    erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+                }
                 new MakeCMDW();
                 return;
             }
             if ( args[1].equals("portal") ){
-                if ( !isWindows() )
-                    erroFatal("só implementado para windows");
-                if ( !isWindowsGraalvm() )
-                    erroFatal("cmd sem graalvm!");
-                if ( !isWindowsCPlusPlus() )
-                    erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+                if ( isWindows() ){
+                    if ( !isWindowsGraalvm() )
+                        erroFatal("cmd sem graalvm!");
+                    if ( !isWindowsCPlusPlus() )
+                        erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+                }
                 new MakePORTAL();
                 return;
             }
             if ( args[1].equals("sshy") ){
-                if ( !isWindows() )
-                    erroFatal("só implementado para windows");
-                if ( !isWindowsGraalvm() )
-                    erroFatal("cmd sem graalvm!");
-                if ( !isWindowsCPlusPlus() )
-                    erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+                if ( isWindows() ){
+                    if ( !isWindowsGraalvm() )
+                        erroFatal("cmd sem graalvm!");
+                    if ( !isWindowsCPlusPlus() )
+                        erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+                }
                 new MakeSSHY();
                 return;
             }
