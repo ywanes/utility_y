@@ -1962,7 +1962,12 @@ cat buffer.log
             return;
         }        
         if ( args[0].equals("wget")){
-            wget(args);
+            args=removeParm(0, args);
+            try{
+                new Wget(args);
+            }catch(Exception e){
+                erroFatal(e);
+            }
             return;            
         }
         if ( args[0].equals("pwd")){
@@ -15434,20 +15439,6 @@ while True:
         }
         return retorno;
     }    
-
-    private void wget(String[] args) {
-        args=sliceParm(1,args);
-        if ( args.length == 0 )
-            args=new String[]{"-h"};
-        Wget w=new Wget();
-        for ( String comando : args)
-            w.comando(comando);
-        try {
-            w.start_motor();
-        } catch (Exception ex) {
-            System.err.println("Error: "+ex.toString());
-        }
-    }
     
     public Object [] get_parms_ip_port_fps(String [] args){
         String ip=null;
@@ -44928,35 +44919,1005 @@ class TabelaSAC {
     }
 }
 
-/* class Wget */ // download do Wget muito instavel, melhor refatorar baseado no curl
-/* class Wget */ //String [] args2 = {"-h"};               
-/* class Wget */ //String [] args2 = {"-ban","%d0","-only_before","-list_mp3","-list_diretories","http://195.122.253.112/public/mp3/"};        
-/* class Wget */ //String [] args2 = {"-list_files_and_diretories","http://www.dcbasso.rsn86.com/arquivos/Musicas/"};    
-/* class Wget */ //String [] args2 = {"-accep_escape_host_mp3","-list_files_and_diretories","http://openwebindex.com/mp3/music/"};    
-/* class Wget */ //String [] args2 = {"-accep_escape_host_mp3","-list_mp3","-list_diretories","http://www.brain-magazine.com"};    
-/* class Wget */ //String [] args2 = {"-only_before","-list_mp3","-list_diretories","http://moransa.com/music/"};        
-/* class Wget */ //String [] args2 = {"-r","http://www.blesscosmetics.com.br/","-list_files","-list_diretories","-output|C:\\Users\\ywanes\\Documents"};               
-/* class Wget */ //String [] args2 = {"-r","http://www.blesscosmetics.com.br/","-output|C:\\Users\\ywanes\\Documents"};               
-/* class Wget */ //String [] args2 = {"-r","http://www.naosalvo.com.br/","-output|C:\\Users\\ywanes\\Documents"};               
-/* class Wget */ //String [] args2 = {"http://moransa.com/music/Guns%20N'%20Roses%20-%20Appetite%20for%20Destruction/","-only_before","-output|C:\\Users\\ywanes\\Documents","-tipo|.ini|.jpg"};               
-/* class Wget */ //String [] args2 = {"-list_mp3","-only_before","http://jeankulle.free.fr/ftp/sons/"};
-/* class Wget */ //String [] args2 = {"-list_mp3","-only_before","http://percyvanrijn.com/music/"};        
-/* class Wget */ //String [] args2 = {"-list_mp3","-only_before","https://notendur.hi.is/gvr/music/Big%20Whiskey%20and%20the%20GrooGrux%20King/"};                                
-/* class Wget */ 
+class Wget {
+    final String VERSION = "1.2.0";
+
+    final class Opt {
+        java.util.List<String> urls = new java.util.ArrayList<>();
+        String inputFile;
+        String output;
+        String dirPrefix = ".";
+        boolean cont;
+        int tries = 3;
+        int timeoutSec = 30;
+        String userAgent = "Wget.java/1.0";
+        java.util.List<String[]> headers = new java.util.ArrayList<>();
+        String user, password;
+        String postData;
+        String method;
+        boolean noCheckCert;
+        boolean contentDisposition;
+        boolean quiet;
+        String loadCookies, saveCookies;
+        boolean recursive;
+        int level = 5;
+        boolean noParent;
+        boolean pageRequisites;
+        boolean convertLinks;
+        boolean noClobber;
+        boolean noDirectories;
+        boolean spanHosts;
+        java.util.List<String> accept = new java.util.ArrayList<>();
+        java.util.List<String> reject = new java.util.ArrayList<>();
+        boolean spider;
+        String  listFilter;
+        String  proxyHost; int proxyPort = 8080;
+        java.util.List<String> bans = new java.util.ArrayList<>();
+        boolean legend;
+    }
+
+    Opt opt = new Opt();
+    boolean testing = false;
+    java.util.List<String> lastListed = new java.util.ArrayList<>();
+    int legendSeq = 0;
+    java.util.List<String[]> legendMap = new java.util.ArrayList<>();
+
+    public Wget(String[] args) throws Exception{
+        for (String a : args) if (a.equals("-test")) System.exit(runTests());
+        for (String a : args) if (a.equals("-h") || a.equals("--help")) { usage(); System.exit(0); }
+        if (args.length == 0) { usage(); System.exit(2); }
+        if (!parse(args)) { usage(); System.exit(2); }
+
+        java.util.List<String> all = new java.util.ArrayList<>(opt.urls);
+        if (opt.inputFile != null) {
+            for (String l : java.nio.file.Files.readAllLines(java.nio.file.Paths.get(opt.inputFile), java.nio.charset.StandardCharsets.UTF_8)) {
+                l = l.trim();
+                if (!l.isEmpty() && !l.startsWith("#")) all.add(l);
+            }
+        }
+        if (all.isEmpty()) { System.err.println("! nenhuma URL"); usage(); System.exit(2); }
+
+        if (opt.spider) opt.quiet = true;
+
+        java.net.http.HttpClient client = buildClient();
+        if (opt.loadCookies != null) loadCookies(client, opt.loadCookies);
+
+        java.util.List<java.net.URI> seeds = new java.util.ArrayList<>();
+        for (String u : all) {
+            try { seeds.add(normalizeUrl(u)); }
+            catch (Exception e) { System.err.println("! URL invalida: " + u + " (" + e.getMessage() + ")"); }
+        }
+
+        int fail = 0;
+        if (opt.recursive || opt.spider) {
+            fail = crawl(client, seeds, opt);
+        } else {
+            for (java.net.URI u : seeds) {
+                if (banned(u, opt)) { if (!opt.quiet) System.err.println("* pulado (ban): " + u); continue; }
+                java.nio.file.Path out;
+                if (opt.legend) out = java.nio.file.Paths.get(opt.dirPrefix, legendLetter(legendSeq++) + extOf(basename(u)));
+                else out = simpleOutputPath(u);
+                DL dl = fetch(client, u, out, opt);
+                if (!dl.ok) fail++;
+                else {
+                    if (opt.legend) legendMap.add(new String[]{ out.getFileName().toString(), basename(u), u.toString() });
+                    if (!opt.quiet && !"-".equals(opt.output)) System.err.println("* salvo em " + out);
+                }
+            }
+        }
+        if (opt.legend) writeLegend(opt);
+        if (opt.saveCookies != null) saveCookies(client, opt.saveCookies);
+        System.exit(fail == 0 ? 0 : 1);
+    }
+
+    void usage() {
+        System.out.println("wget " + VERSION);
+        System.out.print("""
+    uso: 
+        y wget <url> [<url> ...] [opcoes]
+        y wget -test
+        saida:
+            -O <arq>            salva com esse nome ("-" = stdout)   [1 url]
+            -P <dir>            prefixo de diretorio (default .)   (= -output|dir)
+            -i <arq>            le as URLs de um arquivo (1 por linha)
+            -c                  continua download parcial (Range)
+            -nc                 nao sobrescreve arquivo existente
+            --content-disposition   usa o nome do header Content-Disposition
+        rede:
+            -t <n>              tentativas (default 3, 0=muitas)
+            -T <seg>            timeout (default 30)
+            -U <ua>             User-Agent
+            --header "K: V"     header extra (repetivel)
+            --user <u> --password <p>   autenticacao Basic
+            --post-data <dados> envia POST
+            --method <M>        metodo HTTP
+            --no-check-certificate   nao valida TLS
+            --load-cookies <f> / --save-cookies <f>   cookies formato Netscape
+            -q                  silencioso (sem barra de progresso)
+        recursivo:
+            -r                  baixa recursivamente
+            -m                  espelho: -r com profundidade ilimitada (mirror)
+            -l <n>              profundidade (default 5)
+            -np                 nao sobe para diretorios pai
+            -p                  baixa requisitos da pagina (img/css/js)
+            -k                  converte links para navegacao local
+            -nd                 achata: salva tudo em -P sem criar host/dirs
+            -H                  segue outros hosts (default: so o host inicial)
+            -A <lista>          aceita apenas estes sufixos/globs (ex: mp3,wma  ou  *.mp3)
+            -R <lista>          rejeita estes sufixos/globs (ex: index.html*)
+        listar (sem baixar):
+            --spider            percorre e lista as URLs, nao baixa (use com -r p/ site todo)
+            --list files        lista so arquivos       (= -list_files)
+            --list dirs         lista so diretorios     (= -list_diretories)
+            --list mp3[,wma]    lista so essas extensoes (= -list_mp3)
+        outros:
+            --proxy host:porta  usa proxy (tambem aceita -proxy|host|porta)
+            -ban <trecho>       pula URLs que contenham o trecho (repetivel; ex: -ban %d0)
+            -legend             renomeia baixados em sequencia A,B,C e grava legend.txt
+            (aliases do antigo:  -output|pasta   -tipo|.mp3|.wma)
+        ajuda:
+            -h                  mostra esta ajuda
+        exemplos:
+            y wget http://site/arquivo.zip
+            y wget http://site/a.zip -P c:\\Users\\usuario\\Documents   (pasta de saida)
+            y wget -r http://site.com.br/                     (site todo)
+            y wget -m -k -p http://site.com.br/               (espelho navegavel offline)
+            y wget -r -np http://site.com.br/pasta/           (so deste ponto pra frente)
+            y wget -r -A mp3,wma http://site/                 (so estas extensoes)
+            y wget -r -nd -R "index.html*" http://site/mods/  (achatado, sem os index)
+            y wget -r -H -A mp3 http://site/                  (segue outros hosts tambem)
+            y wget -r --spider http://site/                   (lista tudo, sem baixar)
+            y wget --list mp3 http://site/musicas/            (lista so as mp3)
+            y wget -r --proxy 10.0.0.1:8080 http://site/      (via proxy)
+            y wget -r -ban ?C= http://site/lista/             (pula links de ordenacao)
+            y wget -r -nd -legend -A jpg http://site/galeria/ (salva A.jpg,B.jpg + legend.txt)
+            y wget -c http://site/grande.iso                  (continua download parcial)
+            y wget --user u --password p http://site/priv     (autenticacao Basic)
+            y wget -h                                         (esta ajuda)
+""");
+    }
+
+    boolean parse(String[] a) {
+        for (int i = 0; i < a.length; i++) {
+            String s = a[i];
+            switch (s) {
+                case "-O": case "--output-document": opt.output = val(a, ++i); break;
+                case "-P": case "--directory-prefix": opt.dirPrefix = val(a, ++i); break;
+                case "-i": case "--input-file": opt.inputFile = val(a, ++i); break;
+                case "-c": case "--continue": opt.cont = true; break;
+                case "-nc": case "--no-clobber": opt.noClobber = true; break;
+                case "-nd": case "--no-directories": opt.noDirectories = true; break;
+                case "-h": case "--help": usage(); System.exit(0); break;
+                case "--content-disposition": opt.contentDisposition = true; break;
+                case "-t": case "--tries": opt.tries = intVal(a, ++i, opt.tries); break;
+                case "-T": case "--timeout": opt.timeoutSec = intVal(a, ++i, opt.timeoutSec); break;
+                case "-U": case "--user-agent": opt.userAgent = val(a, ++i); break;
+                case "--header": { String h = val(a, ++i); int c = h.indexOf(':');
+                    if (c > 0) opt.headers.add(new String[]{ h.substring(0, c).trim(), h.substring(c + 1).trim() }); break; }
+                case "--user": opt.user = val(a, ++i); break;
+                case "--password": opt.password = val(a, ++i); break;
+                case "--post-data": opt.postData = val(a, ++i); break;
+                case "--method": opt.method = val(a, ++i); break;
+                case "--no-check-certificate": opt.noCheckCert = true; break;
+                case "--load-cookies": opt.loadCookies = val(a, ++i); break;
+                case "--save-cookies": opt.saveCookies = val(a, ++i); break;
+                case "-q": case "--quiet": opt.quiet = true; break;
+                case "-r": case "--recursive": opt.recursive = true; break;
+                case "-l": case "--level": opt.level = intVal(a, ++i, opt.level); break;
+                case "-np": case "--no-parent": opt.noParent = true; break;
+                case "-p": case "--page-requisites": opt.pageRequisites = true; break;
+                case "-k": case "--convert-links": opt.convertLinks = true; break;
+                case "-H": case "--span-hosts": opt.spanHosts = true; break;
+                case "-m": case "--mirror": opt.recursive = true; opt.level = 0; break;
+                case "-A": case "--accept": for (String x : val(a, ++i).split(",")) opt.accept.add(x.trim().toLowerCase()); break;
+                case "-R": case "--reject": for (String x : val(a, ++i).split(",")) opt.reject.add(x.trim().toLowerCase()); break;
+                case "--spider": opt.spider = true; break;
+                case "--list": {
+                    String arg = val(a, ++i).trim().toLowerCase();
+                    opt.spider = true; opt.recursive = true;
+                    if (arg.equals("files") || arg.equals("file")) opt.listFilter = "files";
+                    else if (arg.startsWith("dir") || arg.equals("diretorios") || arg.equals("diretories")) opt.listFilter = "dirs";
+                    else { opt.listFilter = "ext"; for (String x : arg.split(",")) opt.accept.add(x.trim().replaceFirst("^\\.", "")); }
+                    break;
+                }
+                case "-list_files": opt.spider = true; opt.recursive = true; opt.listFilter = "files"; break;
+                case "-list_diretories": case "-list_directories": opt.spider = true; opt.recursive = true; opt.listFilter = "dirs"; break;
+                case "-list_mp3": opt.spider = true; opt.recursive = true; opt.listFilter = "ext"; opt.accept.add("mp3"); break;
+                case "--proxy": setProxy(val(a, ++i)); break;
+                case "-ban": { String v = val(a, ++i); if (!v.isEmpty()) opt.bans.add(v); break; }
+                case "-legend": opt.legend = true; break;
+                default:
+                    if (s.startsWith("-output|")) { opt.dirPrefix = s.substring(8); break; }
+                    if (s.startsWith("-tipo|")) { opt.recursive = true; for (String x : s.substring(6).split("\\|")) if (!x.trim().isEmpty()) opt.accept.add(x.trim().replaceFirst("^\\.", "").toLowerCase()); break; }
+                    if (s.startsWith("-proxy|")) { String[] pp = s.split("\\|"); setProxy(pp.length >= 3 ? pp[1] + ":" + pp[2] : (pp.length == 2 ? pp[1] : "")); break; }
+                    if (s.startsWith("-ban|")) { for (String x : s.substring(5).split("\\|")) if (!x.isEmpty()) opt.bans.add(x); break; }
+                    if (s.startsWith("-") && s.length() > 1) { System.err.println("! opcao desconhecida: " + s); return false; }
+                    opt.urls.add(s);
+            }
+        }
+        if (opt.tries <= 0) opt.tries = 1_000_000;
+        if (opt.level <= 0) opt.level = Integer.MAX_VALUE;
+        return true;
+    }
+
+    String val(String[] a, int i) { return i < a.length ? a[i] : ""; }
+    int intVal(String[] a, int i, int def) { try { return Integer.parseInt(val(a, i)); } catch (Exception e) { return def; } }
+
+    void setProxy(String hp) {
+        if (hp == null || hp.isEmpty()) return;
+        int c = hp.lastIndexOf(':');
+        if (c > 0) { opt.proxyHost = hp.substring(0, c); try { opt.proxyPort = Integer.parseInt(hp.substring(c + 1)); } catch (Exception e) {} }
+        else opt.proxyHost = hp;
+    }
+
+    java.net.http.HttpClient buildClient() throws Exception {
+        java.net.http.HttpClient.Builder b = java.net.http.HttpClient.newBuilder()
+                .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+                .connectTimeout(java.time.Duration.ofSeconds(opt.timeoutSec))
+                .cookieHandler(new java.net.CookieManager(null, java.net.CookiePolicy.ACCEPT_ALL));
+        if (opt.proxyHost != null) b.proxy(java.net.ProxySelector.of(new java.net.InetSocketAddress(opt.proxyHost, opt.proxyPort)));
+        if (opt.noCheckCert) {
+            System.setProperty("jdk.internal.httpclient.disableHostnameVerification", "true");
+            b.sslContext(trustAllSsl());
+        }
+        return b.build();
+    }
+
+    javax.net.ssl.SSLContext trustAllSsl() throws Exception {
+        javax.net.ssl.TrustManager[] tm = { new javax.net.ssl.X509TrustManager() {
+            public void checkClientTrusted(java.security.cert.X509Certificate[] c, String a) {}
+            public void checkServerTrusted(java.security.cert.X509Certificate[] c, String a) {}
+            public java.security.cert.X509Certificate[] getAcceptedIssuers() { return new java.security.cert.X509Certificate[0]; }
+        }};
+        javax.net.ssl.SSLContext sc = javax.net.ssl.SSLContext.getInstance("TLS");
+        sc.init(null, tm, new java.security.SecureRandom());
+        return sc;
+    }
+
+    final class DL { boolean ok; String contentType = ""; java.net.URI finalUri; java.nio.file.Path path; }
+
+    DL fetch(java.net.http.HttpClient client, java.net.URI url, java.nio.file.Path out, Opt o) {
+        DL dl = new DL(); dl.finalUri = url; dl.path = out;
+        java.io.IOException last = null;
+        for (int attempt = 1; attempt <= o.tries; attempt++) {
+            try {
+                long existing = 0;
+                boolean resume = o.cont && !"-".equals(o.output) && java.nio.file.Files.exists(out);
+                if (resume) existing = java.nio.file.Files.size(out);
+
+                java.net.http.HttpRequest.Builder rb = java.net.http.HttpRequest.newBuilder(url).timeout(java.time.Duration.ofSeconds(o.timeoutSec));
+                rb.header("User-Agent", o.userAgent);
+                for (String[] h : o.headers) try { rb.header(h[0], h[1]); } catch (RuntimeException e) { System.err.println("! header ignorado: " + h[0]); }
+                if (o.user != null) {
+                    String tok = java.util.Base64.getEncoder().encodeToString(((o.user + ":" + (o.password == null ? "" : o.password))).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                    rb.header("Authorization", "Basic " + tok);
+                }
+                if (resume && existing > 0) rb.header("Range", "bytes=" + existing + "-");
+                if (o.postData != null) rb.method(o.method != null ? o.method : "POST", java.net.http.HttpRequest.BodyPublishers.ofString(o.postData));
+                else if (o.method != null) rb.method(o.method, java.net.http.HttpRequest.BodyPublishers.noBody());
+                else rb.GET();
+
+                java.net.http.HttpResponse<java.io.InputStream> resp = client.send(rb.build(), java.net.http.HttpResponse.BodyHandlers.ofInputStream());
+                int code = resp.statusCode();
+                dl.finalUri = resp.uri();
+                dl.contentType = resp.headers().firstValue("content-type").orElse("");
+
+                if (code == 416) { if (!o.quiet) System.err.println("* " + out + " ja completo"); dl.ok = true; resp.body().close(); return dl; }
+                boolean append = resume && code == 206;
+                if (resume && code == 200) { existing = 0; append = false; }
+                if (code >= 400) { resp.body().close(); throw new java.io.IOException("HTTP " + code); }
+
+                if (o.contentDisposition && o.output == null && !o.recursive) {
+                    String cd = resp.headers().firstValue("content-disposition").orElse(null);
+                    String fn = filenameFromCD(cd);
+                    if (fn != null) { out = java.nio.file.Paths.get(o.dirPrefix, fn); dl.path = out;
+                        if (o.cont && java.nio.file.Files.exists(out)) {  } }
+                }
+
+                long total = totalSize(resp, append, existing);
+                if ("-".equals(o.output)) {
+                    try (java.io.InputStream in = resp.body()) { in.transferTo(System.out); System.out.flush(); }
+                } else {
+                    if (o.noClobber && java.nio.file.Files.exists(out) && !append) { if (!o.quiet) System.err.println("* " + out + " ja existe (-nc)"); dl.ok = true; resp.body().close(); return dl; }
+                    java.nio.file.Path parent = out.toAbsolutePath().getParent();
+                    if (parent != null) java.nio.file.Files.createDirectories(parent);
+                    java.nio.file.OpenOption[] mode = append
+                            ? new java.nio.file.OpenOption[]{ java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.WRITE, java.nio.file.StandardOpenOption.APPEND }
+                            : new java.nio.file.OpenOption[]{ java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.WRITE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING };
+                    try (java.io.InputStream in = resp.body(); java.io.OutputStream fo = new java.io.BufferedOutputStream(java.nio.file.Files.newOutputStream(out, mode))) {
+                        copyWithProgress(in, fo, out.getFileName().toString(), existing, total, o);
+                    }
+                }
+                dl.ok = true;
+                return dl;
+            } catch (java.io.IOException e) {
+                last = e;
+                if (attempt < o.tries) { if (!o.quiet) System.err.println("! tentativa " + attempt + " falhou (" + e.getMessage() + "), re-tentando..."); sleep(300L * attempt); }
+            } catch (InterruptedException e) { last = new java.io.IOException(e); break; }
+        }
+        System.err.println("! falhou: " + url + " (" + (last == null ? "?" : last.getMessage()) + ")");
+        dl.ok = false;
+        return dl;
+    }
+
+    long totalSize(java.net.http.HttpResponse<?> resp, boolean append, long existing) {
+        if (append) {
+            String cr = resp.headers().firstValue("content-range").orElse("");
+            int bar = cr.indexOf('/');
+            if (bar >= 0) { try { return Long.parseLong(cr.substring(bar + 1).trim()); } catch (Exception e) {} }
+            return -1;
+        }
+        return resp.headers().firstValueAsLong("content-length").orElse(-1);
+    }
+
+    void copyWithProgress(java.io.InputStream in, java.io.OutputStream out, String label, long start, long total, Opt o) throws java.io.IOException {
+        byte[] buf = new byte[65536];
+        long done = start, startBytes = start;
+        long t0 = System.nanoTime(), lastPrint = 0;
+        int r;
+        while ((r = in.read(buf)) >= 0) {
+            out.write(buf, 0, r);
+            done += r;
+            long now = System.nanoTime();
+            if (!o.quiet && now - lastPrint > 120_000_000L) { printProgress(label, done, total, startBytes, t0, now); lastPrint = now; }
+        }
+        out.flush();
+        if (!o.quiet) { printProgress(label, done, total, startBytes, t0, System.nanoTime()); System.err.println(); }
+    }
+
+    void printProgress(String label, long done, long total, long startBytes, long t0, long now) {
+        long ms = (now - t0) / 1_000_000L;
+        long xfer = done - startBytes;
+        long speed = ms > 0 ? xfer * 1000L / ms : 0;
+        String lbl = label.length() > 18 ? label.substring(0, 17) + "~" : label;
+        StringBuilder b = new StringBuilder("\r");
+        b.append(String.format("%-18s ", lbl));
+        if (total > 0) {
+            long pct = done * 100L / total;
+            int barw = 20, fill = (int) (barw * done / total);
+            b.append(String.format("%3d%% [", pct));
+            for (int i = 0; i < barw; i++) b.append(i < fill ? '=' : (i == fill ? '>' : ' '));
+            b.append("] ").append(human(done)).append('/').append(human(total));
+            b.append(' ').append(human(speed)).append("/s");
+            if (speed > 0) b.append(" eta ").append(fmtTime((total - done) / speed));
+        } else {
+            b.append(human(done)).append(' ').append(human(speed)).append("/s");
+        }
+        String s = b.toString();
+        if (s.length() < 79) s = s + " ".repeat(79 - s.length());
+        System.err.print(s);
+    }
+
+    String human(long n) {
+        String[] u = { "B", "KB", "MB", "GB", "TB" };
+        int idx = 0; long unit = 1;
+        while (idx < u.length - 1 && n >= unit * 1024) { unit *= 1024; idx++; }
+        if (idx == 0) return n + "B";
+        long tenths = n * 10L / unit;
+        return (tenths / 10) + "." + (tenths % 10) + u[idx];
+    }
+
+    String fmtTime(long secs) {
+        if (secs < 0) secs = 0;
+        long h = secs / 3600, m = (secs % 3600) / 60, s = secs % 60;
+        return h > 0 ? String.format("%d:%02d:%02d", h, m, s) : String.format("%d:%02d", m, s);
+    }
+
+    java.net.URI normalizeUrl(String u) {
+        if (!u.contains("://")) u = "http://" + u;
+        return java.net.URI.create(u);
+    }
+
+    java.nio.file.Path simpleOutputPath(java.net.URI u) {
+        if (opt.output != null) return "-".equals(opt.output) ? java.nio.file.Paths.get("-") : java.nio.file.Paths.get(opt.dirPrefix, opt.output);
+        String name = basename(u);
+        return java.nio.file.Paths.get(opt.dirPrefix, name);
+    }
+
+    String basename(java.net.URI u) {
+        String p = u.getPath();
+        if (p == null || p.isEmpty() || p.endsWith("/")) return "index.html";
+        String n = p.substring(p.lastIndexOf('/') + 1);
+        return n.isEmpty() ? "index.html" : n;
+    }
+
+    String filenameFromCD(String cd) {
+        if (cd == null) return null;
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?i)filename\\*?=(?:UTF-8''|\")?([^\";]+)").matcher(cd);
+        if (m.find()) {
+            String f = m.group(1).trim();
+            if (f.endsWith("\"")) f = f.substring(0, f.length() - 1);
+            f = f.replaceAll("[\\\\/]", "_");
+            try { f = java.net.URLDecoder.decode(f, java.nio.charset.StandardCharsets.UTF_8); } catch (Exception e) {}
+            return f.isEmpty() ? null : f;
+        }
+        return null;
+    }
+
+    final class Node { java.net.URI uri; int depth; boolean requisite; Node(java.net.URI u, int d, boolean r) { uri = u; depth = d; requisite = r; } }
+    final class Link { java.net.URI uri; boolean requisite; Link(java.net.URI u, boolean r) { uri = u; requisite = r; } }
+
+    int crawl(java.net.http.HttpClient client, java.util.List<java.net.URI> seeds, Opt o) {
+        java.util.Set<String> hosts = new java.util.HashSet<>();
+        java.util.Map<String, String> seedDir = new java.util.HashMap<>();
+        for (java.net.URI s : seeds) {
+            hosts.add(s.getHost());
+            String p = s.getPath() == null || s.getPath().isEmpty() ? "/" : s.getPath();
+            int sl = p.lastIndexOf('/');
+            seedDir.put(s.getHost(), sl >= 0 ? p.substring(0, sl + 1) : "/");
+        }
+        java.util.Deque<Node> q = new java.util.ArrayDeque<>();
+        for (java.net.URI s : seeds) q.add(new Node(s, 0, false));
+        java.util.Set<String> visited = new java.util.HashSet<>();
+        java.util.Map<java.net.URI, java.nio.file.Path> got = new java.util.LinkedHashMap<>();
+        java.util.Set<String> keptFlat = new java.util.HashSet<>();
+        java.util.Set<String> listed = new java.util.LinkedHashSet<>();
+        int fail = 0;
+        long tmpc = 0;
+        if (!o.spider) try { java.nio.file.Files.createDirectories(java.nio.file.Paths.get(o.dirPrefix)); } catch (java.io.IOException e) {}
+
+        while (!q.isEmpty()) {
+            Node nd = q.poll();
+            if (!visited.add(keyOf(nd.uri))) continue;
+            if (!visitOk(nd.uri, hosts, seedDir, o, nd.requisite)) continue;
+
+            boolean guessHtml = likelyHtml(nd.uri);
+
+            if (o.spider) {
+                boolean isDir = urlIsDir(nd.uri);
+                if (listMatch(o, nd.uri, isDir)) listed.add(nd.uri.toString());
+                if (o.recursive && guessHtml && nd.depth < o.level) {
+                    java.nio.file.Path tmp = null;
+                    try { tmp = java.nio.file.Files.createTempFile("wget-spider-", ".tmp"); } catch (java.io.IOException e) {}
+                    if (tmp != null) {
+                        DL dl = fetch(client, nd.uri, tmp, o);
+                        if (dl.ok) {
+                            boolean html = dl.contentType.toLowerCase().contains("html") || looksHtml(tmp);
+                            if (html) {
+                                String body = "";
+                                try { body = new String(java.nio.file.Files.readAllBytes(tmp), java.nio.charset.StandardCharsets.UTF_8); } catch (java.io.IOException e) {}
+                                for (Link l : extractLinks(dl.finalUri, body)) q.add(new Node(l.uri, nd.depth + 1, l.requisite));
+                            }
+                        }
+                        delQuiet(tmp);
+                    }
+                }
+                continue;
+            }
+
+            String reqName = nameFor(nd.uri, guessHtml);
+            boolean keepByName = nd.requisite || acceptKeep(reqName, o);
+            if (!guessHtml && !keepByName) continue;
+
+            java.nio.file.Path tmp = java.nio.file.Paths.get(o.dirPrefix, ".wgettmp-" + (tmpc++));
+            DL dl = fetch(client, nd.uri, tmp, o);
+            if (!dl.ok) { fail++; delQuiet(tmp); continue; }
+            visited.add(keyOf(dl.finalUri));
+
+            boolean html = dl.contentType.toLowerCase().contains("html") || (guessHtml && looksHtml(tmp));
+
+            if (html) {
+                String body = "";
+                try { body = new String(java.nio.file.Files.readAllBytes(tmp), java.nio.charset.StandardCharsets.UTF_8); } catch (java.io.IOException e) {}
+                for (Link l : extractLinks(dl.finalUri, body)) {
+                    if (l.requisite) { if (o.pageRequisites) q.add(new Node(l.uri, nd.depth, true)); }
+                    else if (nd.depth < o.level) q.add(new Node(l.uri, nd.depth + 1, false));
+                }
+            }
+
+            String name = nameFor(dl.finalUri, html);
+            boolean keep = nd.requisite || acceptKeep(name, o);
+            if (!keep) { delQuiet(tmp); continue; }
+
+            java.nio.file.Path dest;
+            if (o.legend) { String ln = legendLetter(legendSeq++) + extOf(name); dest = java.nio.file.Paths.get(o.dirPrefix, ln); legendMap.add(new String[]{ ln, name, dl.finalUri.toString() }); }
+            else dest = o.noDirectories ? uniqueFlat(java.nio.file.Paths.get(o.dirPrefix, name), keptFlat)
+                                        : mirrorPathFor(dl.finalUri, name, o);
+            try {
+                java.nio.file.Path parent = dest.toAbsolutePath().getParent();
+                if (parent != null) java.nio.file.Files.createDirectories(parent);
+                if (o.noClobber && java.nio.file.Files.exists(dest)) delQuiet(tmp);
+                else java.nio.file.Files.move(tmp, dest, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.io.IOException e) {
+                System.err.println("! nao gravou " + dest + ": " + e.getMessage()); delQuiet(tmp); continue;
+            }
+            got.put(dl.finalUri, dest);
+        }
+        if (o.spider) {
+            lastListed = new java.util.ArrayList<>(listed);
+            for (String s : listed) System.out.println(s);
+            System.err.println("* " + listed.size() + " item(s) listado(s)");
+            return 0;
+        }
+        if (!o.quiet) System.err.println("* recursivo: " + got.size() + " arquivo(s)");
+        if (o.convertLinks) convertLinks(got, o);
+        return fail;
+    }
+
+    void delQuiet(java.nio.file.Path p) { try { java.nio.file.Files.deleteIfExists(p); } catch (java.io.IOException e) {} }
+
+    boolean urlIsDir(java.net.URI u) {
+        String p = u.getPath();
+        if (p == null || p.isEmpty() || p.endsWith("/")) return true;
+        String n = p.substring(p.lastIndexOf('/') + 1);
+        return n.indexOf('.') < 0;
+    }
+
+    boolean listMatch(Opt o, java.net.URI u, boolean isDir) {
+        if (o.listFilter == null) return true;
+        if (o.listFilter.equals("files")) return !isDir;
+        if (o.listFilter.equals("dirs")) return isDir;
+        if (isDir) return false;
+        return matchList(o.accept, nameFor(u, false));
+    }
+
+    boolean visitOk(java.net.URI u, java.util.Set<String> hosts, java.util.Map<String, String> seedDir, Opt o, boolean requisite) {
+        if (u.getScheme() == null || !(u.getScheme().equals("http") || u.getScheme().equals("https"))) return false;
+        if (!o.spanHosts && !hosts.contains(u.getHost())) return false;
+        if (o.noParent && !requisite) {
+            String dir = seedDir.get(u.getHost());
+            String p = u.getPath() == null || u.getPath().isEmpty() ? "/" : u.getPath();
+            if (dir != null && !p.startsWith(dir)) return false;
+        }
+        if (banned(u, o)) return false;
+        return true;
+    }
+
+    boolean banned(java.net.URI u, Opt o) {
+        if (o.bans.isEmpty()) return false;
+        String s = u.toString().toLowerCase();
+        for (String b : o.bans) if (!b.isEmpty() && s.contains(b.toLowerCase())) return true;
+        return false;
+    }
+
+    String extOf(String n) { int d = n.lastIndexOf('.'); return (d > 0 && d > n.lastIndexOf('/')) ? n.substring(d) : ""; }
+
+    String legendLetter(int n) {
+        StringBuilder b = new StringBuilder(); n++;
+        while (n > 0) { n--; b.insert(0, (char) ('A' + n % 26)); n /= 26; }
+        return b.toString();
+    }
+
+    void writeLegend(Opt o) {
+        if (legendMap.isEmpty()) return;
+        StringBuilder sb = new StringBuilder("# legenda: local\toriginal\turl\n");
+        for (String[] m : legendMap) sb.append(m[0]).append('\t').append(m[1]).append('\t').append(m[2]).append('\n');
+        try {
+            java.nio.file.Files.createDirectories(java.nio.file.Paths.get(o.dirPrefix));
+            java.nio.file.Files.write(java.nio.file.Paths.get(o.dirPrefix, "legend.txt"), sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            if (!o.quiet) System.err.println("* legenda: " + java.nio.file.Paths.get(o.dirPrefix, "legend.txt") + " (" + legendMap.size() + " itens)");
+        } catch (java.io.IOException e) { System.err.println("! nao gravou legenda: " + e.getMessage()); }
+    }
+
+    boolean acceptKeep(String filename, Opt o) {
+        if (!o.reject.isEmpty() && matchList(o.reject, filename)) return false;
+        if (!o.accept.isEmpty() && !matchList(o.accept, filename)) return false;
+        return true;
+    }
+
+    boolean matchList(java.util.List<String> pats, String filename) {
+        String f = filename.toLowerCase();
+        for (String pat : pats) {
+            if (pat.isEmpty()) continue;
+            if (pat.indexOf('*') >= 0 || pat.indexOf('?') >= 0 || pat.indexOf('[') >= 0) {
+                if (java.util.regex.Pattern.compile("^" + globToRegex(pat) + "$", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(filename).matches()) return true;
+            } else if (f.endsWith("." + pat.toLowerCase()) || f.equals(pat.toLowerCase())) return true;
+        }
+        return false;
+    }
+
+    String globToRegex(String g) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < g.length(); i++) {
+            char c = g.charAt(i);
+            switch (c) {
+                case '*': b.append(".*"); break;
+                case '?': b.append('.'); break;
+                case '.': case '(': case ')': case '+': case '|': case '^': case '$': case '{': case '}': case '\\': b.append('\\').append(c); break;
+                default: b.append(c);
+            }
+        }
+        return b.toString();
+    }
+
+    boolean likelyHtml(java.net.URI u) {
+        String p = u.getPath();
+        if (p == null || p.isEmpty() || p.endsWith("/")) return true;
+        String n = p.substring(p.lastIndexOf('/') + 1);
+        if (n.indexOf('.') < 0) return true;
+        String low = n.toLowerCase();
+        return low.endsWith(".html") || low.endsWith(".htm");
+    }
+
+    String nameFor(java.net.URI u, boolean html) {
+        String p = u.getPath();
+        if (p == null || p.isEmpty() || p.endsWith("/")) return "index.html";
+        String n = p.substring(p.lastIndexOf('/') + 1);
+        if (n.isEmpty()) return "index.html";
+        if (html && n.indexOf('.') < 0) return "index.html";
+        return n;
+    }
+
+    boolean looksHtml(java.nio.file.Path p) {
+        try {
+            int len = (int) Math.min(512, java.nio.file.Files.size(p));
+            byte[] head = new byte[len];
+            try (java.io.InputStream in = java.nio.file.Files.newInputStream(p)) { int off = 0, r; while (off < len && (r = in.read(head, off, len - off)) > 0) off += r; }
+            String s = new String(head, java.nio.charset.StandardCharsets.ISO_8859_1).toLowerCase();
+            return s.contains("<html") || s.contains("<!doctype html") || s.contains("<a href") || s.contains("<body");
+        } catch (java.io.IOException e) { return false; }
+    }
+
+    java.nio.file.Path uniqueFlat(java.nio.file.Path p, java.util.Set<String> used) {
+        String name = p.getFileName().toString();
+        if (!used.contains(name) && !java.nio.file.Files.exists(p)) { used.add(name); return p; }
+        String bare = name, ext = "";
+        int dot = name.lastIndexOf('.');
+        if (dot > 0) { bare = name.substring(0, dot); ext = name.substring(dot); }
+        int i = 1; java.nio.file.Path cand;
+        do { cand = p.resolveSibling(bare + "." + i + ext); i++; } while (used.contains(cand.getFileName().toString()) || java.nio.file.Files.exists(cand));
+        used.add(cand.getFileName().toString());
+        return cand;
+    }
+
+    java.nio.file.Path mirrorPathFor(java.net.URI u, String name, Opt o) {
+        String host = u.getHost();
+        String p = u.getPath() == null ? "" : u.getPath();
+        String dir;
+        if (p.endsWith("/")) dir = p;
+        else { int sl = p.lastIndexOf('/'); dir = sl >= 0 ? p.substring(0, sl + 1) : "/"; }
+        if (dir.startsWith("/")) dir = dir.substring(1);
+        return java.nio.file.Paths.get(o.dirPrefix, host, (dir + name).replace('/', java.io.File.separatorChar));
+    }
+
+    String keyOf(java.net.URI u) {
+        String p = (u.getPath() == null || u.getPath().isEmpty()) ? "/" : u.getPath();
+        return u.getHost() + ":" + p + (u.getQuery() == null ? "" : "?" + u.getQuery());
+    }
+
+    boolean probableHtml(java.nio.file.Path p) {
+        String n = p.getFileName().toString().toLowerCase();
+        return n.endsWith(".html") || n.endsWith(".htm");
+    }
+
+    java.util.List<Link> extractLinks(java.net.URI base, String html) {
+        java.util.List<Link> out = new java.util.ArrayList<>();
+        java.net.URI b = base;
+        java.util.regex.Matcher bm = java.util.regex.Pattern.compile("(?i)<base\\s+[^>]*href\\s*=\\s*[\"']?([^\"'>\\s]+)").matcher(html);
+        if (bm.find()) { try { b = base.resolve(bm.group(1)); } catch (Exception e) {} }
+        collect(out, b, html, "(?i)<a\\s+[^>]*?href\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", false);
+        collect(out, b, html, "(?i)<(?:img|script|iframe|source|audio|video)\\s+[^>]*?src\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", true);
+        collect(out, b, html, "(?i)<link\\s+[^>]*?href\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", true);
+        return out;
+    }
+
+    void collect(java.util.List<Link> out, java.net.URI base, String html, String regex, boolean req) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile(regex).matcher(html);
+        while (m.find()) {
+            String raw = m.group(1) != null ? m.group(1) : m.group(2) != null ? m.group(2) : m.group(3);
+            java.net.URI u = resolveLink(base, raw);
+            if (u != null) out.add(new Link(u, req));
+        }
+    }
+
+    java.net.URI resolveLink(java.net.URI base, String raw) {
+        if (raw == null) return null;
+        raw = raw.trim();
+        if (raw.isEmpty() || raw.startsWith("#")) return null;
+        String low = raw.toLowerCase();
+        if (low.startsWith("javascript:") || low.startsWith("mailto:") || low.startsWith("data:") || low.startsWith("tel:")) return null;
+        try {
+            int h = raw.indexOf('#'); if (h >= 0) raw = raw.substring(0, h);
+            if (raw.isEmpty()) return null;
+            java.net.URI u = base.resolve(raw);
+            if (u.getScheme() == null || !(u.getScheme().equals("http") || u.getScheme().equals("https"))) return null;
+            return u;
+        } catch (Exception e) { return null; }
+    }
+
+    void convertLinks(java.util.Map<java.net.URI, java.nio.file.Path> got, Opt o) {
+        java.util.Map<String, java.nio.file.Path> byKey = new java.util.HashMap<>();
+        for (java.util.Map.Entry<java.net.URI, java.nio.file.Path> e : got.entrySet()) byKey.put(keyOf(e.getKey()), e.getValue());
+        for (java.util.Map.Entry<java.net.URI, java.nio.file.Path> e : got.entrySet()) {
+            java.nio.file.Path file = e.getValue();
+            if (!probableHtml(file) || !java.nio.file.Files.exists(file)) continue;
+            String html;
+            try { html = new String(java.nio.file.Files.readAllBytes(file), java.nio.charset.StandardCharsets.UTF_8); } catch (java.io.IOException ex) { continue; }
+            java.net.URI base = e.getKey();
+            java.nio.file.Path dir = file.toAbsolutePath().getParent();
+            String rewritten = rewrite(html, base, dir, byKey);
+            try { java.nio.file.Files.write(file, rewritten.getBytes(java.nio.charset.StandardCharsets.UTF_8)); } catch (java.io.IOException ex) {}
+        }
+        if (!o.quiet) System.err.println("* links convertidos para navegacao local");
+    }
+
+    String rewrite(String html, java.net.URI base, java.nio.file.Path dir, java.util.Map<String, java.nio.file.Path> byKey) {
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile("(?i)(href|src)\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))");
+        java.util.regex.Matcher m = p.matcher(html);
+        StringBuilder sb = new StringBuilder();
+        while (m.find()) {
+            String attr = m.group(1);
+            String raw = m.group(3) != null ? m.group(3) : m.group(4) != null ? m.group(4) : m.group(5);
+            java.net.URI u = resolveLink(base, raw);
+            String rep = m.group(0);
+            if (u != null) {
+                java.nio.file.Path target = byKey.get(keyOf(u));
+                if (target != null) {
+                    String rel = dir.relativize(target.toAbsolutePath()).toString().replace(java.io.File.separatorChar, '/');
+                    rep = attr + "=\"" + rel + "\"";
+                }
+            }
+            m.appendReplacement(sb, java.util.regex.Matcher.quoteReplacement(rep));
+        }
+        m.appendTail(sb);
+        return sb.toString();
+    }
+
+    void loadCookies(java.net.http.HttpClient client, String file) {
+        java.net.CookieStore store = ((java.net.CookieManager) client.cookieHandler().orElse(null)).getCookieStore();
+        try {
+            for (String line : java.nio.file.Files.readAllLines(java.nio.file.Paths.get(file), java.nio.charset.StandardCharsets.UTF_8)) {
+                if (line.startsWith("#") || line.trim().isEmpty()) continue;
+                String[] f = line.split("\t");
+                if (f.length < 7) continue;
+                java.net.HttpCookie c = new java.net.HttpCookie(f[5], f[6]);
+                c.setDomain(f[0]); c.setPath(f[2]); c.setSecure(Boolean.parseBoolean(f[3]));
+                String host = f[0].startsWith(".") ? f[0].substring(1) : f[0];
+                try { store.add(java.net.URI.create((c.getSecure() ? "https://" : "http://") + host), c); } catch (Exception e) {}
+            }
+        } catch (java.io.IOException e) { System.err.println("! nao leu cookies: " + e.getMessage()); }
+    }
+
+    void saveCookies(java.net.http.HttpClient client, String file) {
+        java.net.CookieStore store = ((java.net.CookieManager) client.cookieHandler().orElse(null)).getCookieStore();
+        StringBuilder sb = new StringBuilder("# Netscape HTTP Cookie File\n");
+        for (java.net.HttpCookie c : store.getCookies()) {
+            String dom = c.getDomain() == null ? "" : c.getDomain();
+            boolean subdom = dom.startsWith(".");
+            sb.append(dom).append('\t').append(subdom ? "TRUE" : "FALSE").append('\t')
+              .append(c.getPath() == null ? "/" : c.getPath()).append('\t')
+              .append(c.getSecure() ? "TRUE" : "FALSE").append('\t')
+              .append(c.getMaxAge() < 0 ? 0 : (System.currentTimeMillis() / 1000 + c.getMaxAge())).append('\t')
+              .append(c.getName()).append('\t').append(c.getValue()).append('\n');
+        }
+        try { java.nio.file.Files.write(java.nio.file.Paths.get(file), sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+        catch (java.io.IOException e) { System.err.println("! nao salvou cookies: " + e.getMessage()); }
+    }
+
+    void sleep(long ms) { try { Thread.sleep(ms); } catch (InterruptedException e) {} }
+
+    int OK = 0, TOTAL = 0;
+    void check(boolean c, String name) { TOTAL++; if (c) { OK++; System.out.println("[OK]    " + name); } else System.out.println("[FALHA] " + name); }
+
+    int runTests() throws Exception {
+        testing = true;
+        System.out.println("== Wget " + VERSION + " auto-teste ==");
+        byte[] big = new byte[200_000];
+        new java.util.Random(7).nextBytes(big);
+
+        com.sun.net.httpserver.HttpServer sv = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1", 0), 0);
+        sv.createContext("/hello.txt", ex -> send(ex, 200, "ola mundo".getBytes(java.nio.charset.StandardCharsets.UTF_8), "text/plain", null));
+        sv.createContext("/r", ex -> { ex.getResponseHeaders().add("Location", "/hello.txt"); ex.sendResponseHeaders(302, -1); ex.close(); });
+        sv.createContext("/dl", ex -> send(ex, 200, "conteudo".getBytes(java.nio.charset.StandardCharsets.UTF_8), "application/octet-stream", "attachment; filename=\"real.txt\""));
+        sv.createContext("/setcookie", ex -> { ex.getResponseHeaders().add("Set-Cookie", "sid=abc123; Path=/"); send(ex, 200, "ok".getBytes(), "text/plain", null); });
+        sv.createContext("/echocookie", ex -> { String c = ex.getRequestHeaders().getFirst("Cookie"); send(ex, 200, ("" + c).getBytes(java.nio.charset.StandardCharsets.UTF_8), "text/plain", null); });
+        sv.createContext("/secret", ex -> {
+            String a = ex.getRequestHeaders().getFirst("Authorization");
+            if (a == null) { ex.getResponseHeaders().add("WWW-Authenticate", "Basic realm=x"); ex.sendResponseHeaders(401, -1); ex.close(); return; }
+            send(ex, 200, "segredo".getBytes(), "text/plain", null);
+        });
+        sv.createContext("/big", ex -> rangeHandler(ex, big));
+        sv.createContext("/site/index.html", ex -> send(ex, 200, "<html><body><a href=\"a.html\">A</a> <img src=\"img.png\"> <a href=\"http://outro.example/x\">fora</a></body></html>".getBytes(java.nio.charset.StandardCharsets.UTF_8), "text/html", null));
+        sv.createContext("/site/a.html", ex -> send(ex, 200, "<html><body>pagina A <a href=\"b.txt\">B</a></body></html>".getBytes(java.nio.charset.StandardCharsets.UTF_8), "text/html", null));
+        sv.createContext("/site/b.txt", ex -> send(ex, 200, "arquivo B".getBytes(java.nio.charset.StandardCharsets.UTF_8), "text/plain", null));
+        sv.createContext("/site/img.png", ex -> send(ex, 200, new byte[]{ 1, 2, 3, 4 }, "image/png", null));
+        sv.createContext("/top.txt", ex -> send(ex, 200, "topo".getBytes(java.nio.charset.StandardCharsets.UTF_8), "text/plain", null));
+        sv.createContext("/mods/", ex -> send(ex, 200, ("<html><body>"
+                + "<a href=\"../\">Parent Directory</a> "
+                + "<a href=\"a.jar\">a.jar</a> <a href=\"b.jar\">b.jar</a> "
+                + "<a href=\"song.mp3\">song.mp3</a> "
+                + "<a href=\"sub/\">sub/</a> "
+                + "<a href=\"/top.txt\">topo</a>"
+                + "</body></html>").getBytes(java.nio.charset.StandardCharsets.UTF_8), "text/html", null));
+        sv.createContext("/mods/song.mp3", ex -> send(ex, 200, "ID3MP3".getBytes(java.nio.charset.StandardCharsets.UTF_8), "audio/mpeg", null));
+        sv.createContext("/mods/a.jar", ex -> send(ex, 200, "JAR-A".getBytes(java.nio.charset.StandardCharsets.UTF_8), "application/java-archive", null));
+        sv.createContext("/mods/b.jar", ex -> send(ex, 200, "JAR-B".getBytes(java.nio.charset.StandardCharsets.UTF_8), "application/java-archive", null));
+        sv.createContext("/mods/sub/", ex -> send(ex, 200, ("<html><body><a href=\"../\">up</a> <a href=\"c.jar\">c.jar</a></body></html>").getBytes(java.nio.charset.StandardCharsets.UTF_8), "text/html", null));
+        sv.createContext("/mods/sub/c.jar", ex -> send(ex, 200, "JAR-C".getBytes(java.nio.charset.StandardCharsets.UTF_8), "application/java-archive", null));
+        sv.start();
+        int port = ((java.net.InetSocketAddress) sv.getAddress()).getPort();
+        String base = "http://127.0.0.1:" + port;
+        java.nio.file.Path tmp = java.nio.file.Files.createTempDirectory("wgettest");
+
+        try {
+            java.net.http.HttpClient c1 = java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL).build();
+            Opt o = quietTo(tmp);
+            DL d = fetch(c1, java.net.URI.create(base + "/hello.txt"), tmp.resolve("hello.txt"), o);
+            check(d.ok && read(tmp.resolve("hello.txt")).equals("ola mundo"), "download simples");
+
+            d = fetch(c1, java.net.URI.create(base + "/r"), tmp.resolve("viar.txt"), o);
+            check(d.ok && read(tmp.resolve("viar.txt")).equals("ola mundo"), "segue redirect 302");
+
+            d = fetch(c1, java.net.URI.create(base + "/big"), tmp.resolve("big.bin"), o);
+            check(d.ok && java.nio.file.Files.size(tmp.resolve("big.bin")) == big.length && java.util.Arrays.equals(java.nio.file.Files.readAllBytes(tmp.resolve("big.bin")), big), "download 200KB integro");
+
+            java.nio.file.Path part = tmp.resolve("resume.bin");
+            java.nio.file.Files.write(part, java.util.Arrays.copyOf(big, 50_000));
+            Opt oc = quietTo(tmp); oc.cont = true;
+            d = fetch(c1, java.net.URI.create(base + "/big"), part, oc);
+            check(d.ok && java.util.Arrays.equals(java.nio.file.Files.readAllBytes(part), big), "resume -c (Range 206)");
+
+            java.net.http.HttpClient cc = buildClientPlain();
+            fetch(cc, java.net.URI.create(base + "/setcookie"), tmp.resolve("sc.txt"), quietTo(tmp));
+            fetch(cc, java.net.URI.create(base + "/echocookie"), tmp.resolve("ec.txt"), quietTo(tmp));
+            check(read(tmp.resolve("ec.txt")).contains("sid=abc123"), "cookies (Set-Cookie -> Cookie)");
+
+            Opt oa = quietTo(tmp); oa.user = "u"; oa.password = "p";
+            d = fetch(c1, java.net.URI.create(base + "/secret"), tmp.resolve("secret.txt"), oa);
+            check(d.ok && read(tmp.resolve("secret.txt")).equals("segredo"), "Basic auth --user/--password");
+            DL d401 = fetch(c1, java.net.URI.create(base + "/secret"), tmp.resolve("no.txt"), quietTo(tmp));
+            check(!d401.ok, "401 sem credencial e tratado como falha");
+
+            Opt od = quietTo(tmp); od.contentDisposition = true;
+            fetch(c1, java.net.URI.create(base + "/dl"), tmp.resolve("ignorado"), od);
+            check(java.nio.file.Files.exists(tmp.resolve("real.txt")) && read(tmp.resolve("real.txt")).equals("conteudo"), "--content-disposition usa nome do header");
+
+            java.nio.file.Path rroot = tmp.resolve("rec");
+            Opt orr = new Opt(); orr.quiet = true; orr.dirPrefix = rroot.toString(); orr.recursive = true; orr.pageRequisites = true; orr.level = 5;
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/site/index.html")), orr);
+            boolean rok = java.nio.file.Files.exists(rroot.resolve("127.0.0.1").resolve("site").resolve("index.html"))
+                    && java.nio.file.Files.exists(rroot.resolve("127.0.0.1").resolve("site").resolve("a.html"))
+                    && java.nio.file.Files.exists(rroot.resolve("127.0.0.1").resolve("site").resolve("b.txt"))
+                    && java.nio.file.Files.exists(rroot.resolve("127.0.0.1").resolve("site").resolve("img.png"))
+                    && !java.nio.file.Files.exists(rroot.resolve("outro.example"));
+            check(rok, "recursivo -r -p (mesmo host, requisitos)");
+
+            java.nio.file.Path aroot = tmp.resolve("acc");
+            Opt oaa = new Opt(); oaa.quiet = true; oaa.dirPrefix = aroot.toString(); oaa.recursive = true; oaa.level = 5; oaa.accept.add("txt");
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/site/index.html")), oaa);
+            check(java.nio.file.Files.exists(aroot.resolve("127.0.0.1").resolve("site").resolve("b.txt"))
+                    && !java.nio.file.Files.exists(aroot.resolve("127.0.0.1").resolve("site").resolve("img.png")), "-A aceita so sufixos dados");
+
+            java.nio.file.Path kroot = tmp.resolve("conv");
+            Opt ok = new Opt(); ok.quiet = true; ok.dirPrefix = kroot.toString(); ok.recursive = true; ok.pageRequisites = true; ok.level = 5; ok.convertLinks = true;
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/site/index.html")), ok);
+            String idx = read(kroot.resolve("127.0.0.1").resolve("site").resolve("index.html"));
+            check(idx.contains("href=\"a.html\"") && idx.contains("src=\"img.png\"") && idx.contains("http://outro.example/x"), "-k converte baixados e preserva externos");
+
+            java.nio.file.Path uroot = tmp.resolve("user");
+            Opt ou = new Opt(); ou.quiet = true; ou.dirPrefix = uroot.toString();
+            ou.recursive = true; ou.noParent = true; ou.noDirectories = true; ou.level = 20;
+            ou.reject.add("index.html*");
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/mods/")), ou);
+            boolean jars = read(uroot.resolve("a.jar")).equals("JAR-A")
+                    && read(uroot.resolve("b.jar")).equals("JAR-B")
+                    && read(uroot.resolve("c.jar")).equals("JAR-C");
+            boolean noIndex, flat;
+            try (var st = java.nio.file.Files.list(uroot)) { noIndex = st.noneMatch(pp -> pp.getFileName().toString().toLowerCase().startsWith("index.html")); }
+            try (var st = java.nio.file.Files.list(uroot)) { flat = st.noneMatch(pp -> java.nio.file.Files.isDirectory(pp)); }
+            boolean noParent = !java.nio.file.Files.exists(uroot.resolve("top.txt"));
+            check(jars && noIndex && flat && noParent, "-r -np -nd -R index.html* (autoindex achatado, sem index, sem pai)");
+
+            java.nio.file.Path nolist = tmp.resolve("nolist");
+            Opt ol = new Opt(); ol.quiet = true; ol.dirPrefix = nolist.toString();
+            ol.spider = true; ol.recursive = true; ol.noParent = true; ol.level = 20; ol.listFilter = "ext"; ol.accept.add("mp3");
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/mods/")), ol);
+            boolean mp3only = lastListed.stream().anyMatch(s -> s.endsWith("/mods/song.mp3"))
+                    && lastListed.stream().noneMatch(s -> s.endsWith(".jar"));
+            check(mp3only && !java.nio.file.Files.exists(nolist), "--list mp3 lista so mp3 e nao baixa");
+
+            Opt ofs = new Opt(); ofs.quiet = true; ofs.dirPrefix = tmp.resolve("n2").toString();
+            ofs.spider = true; ofs.recursive = true; ofs.noParent = true; ofs.level = 20; ofs.listFilter = "files";
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/mods/")), ofs);
+            java.util.List<String> filesList = new java.util.ArrayList<>(lastListed);
+            Opt ods = new Opt(); ods.quiet = true; ods.dirPrefix = tmp.resolve("n3").toString();
+            ods.spider = true; ods.recursive = true; ods.noParent = true; ods.level = 20; ods.listFilter = "dirs";
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/mods/")), ods);
+            java.util.List<String> dirsList = new java.util.ArrayList<>(lastListed);
+            boolean filesOk = filesList.stream().anyMatch(s -> s.endsWith("a.jar"))
+                    && filesList.stream().anyMatch(s -> s.endsWith("c.jar"))
+                    && filesList.stream().anyMatch(s -> s.endsWith("song.mp3"))
+                    && filesList.stream().noneMatch(s -> s.endsWith("/"));
+            boolean dirsOk = dirsList.stream().anyMatch(s -> s.endsWith("/mods/"))
+                    && dirsList.stream().anyMatch(s -> s.endsWith("/mods/sub/"))
+                    && dirsList.stream().noneMatch(s -> s.endsWith(".jar") || s.endsWith(".mp3"));
+            check(filesOk && dirsOk, "--list files x --list dirs separam arquivo/diretorio");
+
+            Opt ob = new Opt(); ob.quiet = true; ob.dirPrefix = tmp.resolve("nban").toString();
+            ob.spider = true; ob.recursive = true; ob.noParent = true; ob.level = 20; ob.listFilter = "files";
+            ob.bans.add("b.jar");
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/mods/")), ob);
+            boolean banOk = lastListed.stream().noneMatch(s -> s.endsWith("b.jar"))
+                    && lastListed.stream().anyMatch(s -> s.endsWith("a.jar"));
+            check(banOk, "-ban pula URL que contem o trecho");
+
+            java.nio.file.Path lroot = tmp.resolve("leg");
+            Opt olg = new Opt(); olg.quiet = true; olg.dirPrefix = lroot.toString();
+            olg.recursive = true; olg.pageRequisites = true; olg.level = 5; olg.legend = true;
+            legendSeq = 0; legendMap.clear();
+            crawl(buildClientPlain(), java.util.List.of(java.net.URI.create(base + "/site/index.html")), olg);
+            writeLegend(olg);
+            boolean legendFile = java.nio.file.Files.exists(lroot.resolve("legend.txt"));
+            long letras;
+            try (var st = java.nio.file.Files.list(lroot)) { letras = st.filter(p -> p.getFileName().toString().matches("[A-Z]+\\..*")).count(); }
+            check(legendFile && letras >= 3 && !legendMap.isEmpty(), "-legend renomeia A,B,C e grava legend.txt");
+
+        } catch (Exception e) {
+            check(false, "excecao no teste: " + e);
+            e.printStackTrace();
+        } finally {
+            sv.stop(0);
+        }
+
+        System.out.println("== resultado: " + OK + "/" + TOTAL + " ==");
+        return OK == TOTAL ? 0 : 1;
+    }
+
+    java.net.http.HttpClient buildClientPlain() {
+        return java.net.http.HttpClient.newBuilder().followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
+                .cookieHandler(new java.net.CookieManager(null, java.net.CookiePolicy.ACCEPT_ALL)).build();
+    }
+
+    Opt quietTo(java.nio.file.Path dir) { Opt o = new Opt(); o.quiet = true; o.dirPrefix = dir.toString(); return o; }
+
+    String read(java.nio.file.Path p) throws java.io.IOException { return new String(java.nio.file.Files.readAllBytes(p), java.nio.charset.StandardCharsets.UTF_8); }
+
+    void send(com.sun.net.httpserver.HttpExchange ex, int code, byte[] body, String ct, String cd) throws java.io.IOException {
+        if (ct != null) ex.getResponseHeaders().add("Content-Type", ct);
+        if (cd != null) ex.getResponseHeaders().add("Content-Disposition", cd);
+        ex.sendResponseHeaders(code, body.length == 0 ? -1 : body.length);
+        try (java.io.OutputStream os = ex.getResponseBody()) { os.write(body); }
+    }
+
+    void rangeHandler(com.sun.net.httpserver.HttpExchange ex, byte[] data) throws java.io.IOException {
+        String range = ex.getRequestHeaders().getFirst("Range");
+        if (range != null && range.startsWith("bytes=")) {
+            String spec = range.substring(6);
+            int dash = spec.indexOf('-');
+            long from = Long.parseLong(spec.substring(0, dash));
+            long to = (dash + 1 < spec.length() && !spec.substring(dash + 1).isEmpty()) ? Long.parseLong(spec.substring(dash + 1)) : data.length - 1;
+            if (from >= data.length) { ex.sendResponseHeaders(416, -1); ex.close(); return; }
+            int len = (int) (to - from + 1);
+            ex.getResponseHeaders().add("Content-Range", "bytes " + from + "-" + to + "/" + data.length);
+            ex.getResponseHeaders().add("Accept-Ranges", "bytes");
+            ex.sendResponseHeaders(206, len);
+            try (java.io.OutputStream os = ex.getResponseBody()) { os.write(data, (int) from, len); }
+        } else {
+            ex.getResponseHeaders().add("Accept-Ranges", "bytes");
+            ex.sendResponseHeaders(200, data.length);
+            try (java.io.OutputStream os = ex.getResponseBody()) { os.write(data); }
+        }
+    }
+}
+
+/* class WgetLegacy */ // download do Wget muito instavel, melhor refatorar baseado no curl
+/* class WgetLegacy */ //String [] args2 = {"-h"};               
+/* class WgetLegacy */ //String [] args2 = {"-ban","%d0","-only_before","-list_mp3","-list_diretories","http://195.122.253.112/public/mp3/"};        
+/* class WgetLegacy */ //String [] args2 = {"-list_files_and_diretories","http://www.dcbasso.rsn86.com/arquivos/Musicas/"};    
+/* class WgetLegacy */ //String [] args2 = {"-accep_escape_host_mp3","-list_files_and_diretories","http://openwebindex.com/mp3/music/"};    
+/* class WgetLegacy */ //String [] args2 = {"-accep_escape_host_mp3","-list_mp3","-list_diretories","http://www.brain-magazine.com"};    
+/* class WgetLegacy */ //String [] args2 = {"-only_before","-list_mp3","-list_diretories","http://moransa.com/music/"};        
+/* class WgetLegacy */ //String [] args2 = {"-r","http://www.blesscosmetics.com.br/","-list_files","-list_diretories","-output|C:\\Users\\ywanes\\Documents"};               
+/* class WgetLegacy */ //String [] args2 = {"-r","http://www.blesscosmetics.com.br/","-output|C:\\Users\\ywanes\\Documents"};               
+/* class WgetLegacy */ //String [] args2 = {"-r","http://www.naosalvo.com.br/","-output|C:\\Users\\ywanes\\Documents"};               
+/* class WgetLegacy */ //String [] args2 = {"http://moransa.com/music/Guns%20N'%20Roses%20-%20Appetite%20for%20Destruction/","-only_before","-output|C:\\Users\\ywanes\\Documents","-tipo|.ini|.jpg"};               
+/* class WgetLegacy */ //String [] args2 = {"-list_mp3","-only_before","http://jeankulle.free.fr/ftp/sons/"};
+/* class WgetLegacy */ //String [] args2 = {"-list_mp3","-only_before","http://percyvanrijn.com/music/"};        
+/* class WgetLegacy */ //String [] args2 = {"-list_mp3","-only_before","https://notendur.hi.is/gvr/music/Big%20Whiskey%20and%20the%20GrooGrux%20King/"};                                
+/* class WgetLegacy */ 
 @SuppressWarnings({"unchecked", "deprecation"})
-class Wget {  public int cont; public boolean list_mp3=false; public String motor="";  Hashtable hashtable = new Hashtable(); int hash_cont=0; private boolean list_files=false; private boolean list_diretorios=false; public ArrayList<String> pilha=new ArrayList<String>(); private boolean accep_escape_host_mp3=false; private boolean only_before=false; private String string_only_before=null; private boolean ban=false; private String string_ban=null; private boolean recursive=false; private String string_output_dir=""; public String sep=""; private String tipo=""; public String proxy=""; public boolean legend=false;   public String parametros [][] = { {"-output|","pasta de arquivo de saida ex:-output|c:\\user\\usuario\\Documents"}, { "http://site.com.br","site da utilizacao"}, {"-r","recursivo, download do site todo"}, {"-h","help, mostra parametros"}, {"-list_mp3","listar as mp3s"}, {"-list_files","listar os arquivos"}, {"-list_diretories","listar os diretorios"}, {"-accep_escape_host_mp3","aceitar navegação de outro host por url mp3"}, {"-tipo|.mp3|.wma","baixar somente arquivos com estas extensoes"}, { "-only_before","somente navegação da url de uma ponto pra frente"} , { "-proxy|","ex: -proxy|endereco-proxy|80"}, {"-ban","palava ou caracter banido, ex -ban %d0"}, {"-legend","colocando 1 arquivo A, 2 arquivo B ... "}, };   String parametros() { String retorno=""; for ( int i=0;i<parametros.length;i++){ retorno+=parametros[i][0]+" => "+parametros[i][1]+"\n"; } return retorno; }  void comando(String comando) { if ( comando.startsWith("-output|")){ string_output_dir=comando.split("\\|")[1]; return; } if ( comando.startsWith("-tipo|")){ tipo=comando.replace("-tipo\\|",""); return; } if ( ban && string_ban == null ){ string_ban=comando; return; } if ( comando.equals("-ban") ){ ban=true; return; } if ( comando.equals("-r") ){ recursive=true; only_before=true; return; } if ( comando.equals("-list_mp3") ){ list_mp3=true; return; } if ( comando.equals("-list_files") ){ list_files=true; return; } if ( comando.equals("-list_diretories") ){ list_diretorios=true;             return; } if ( comando.equals("-accep_escape_host_mp3") ){ accep_escape_host_mp3=true; return; } if ( comando.equals("-only_before") ){ only_before=true; return; } if ( comando.equals("-legend") ){ legend=true; return; } if ( comando.startsWith("-proxy|") ){ comando=comando.replace("-proxy|",""); if ( comando.split("\\|").length != 2 ){ throw new Error("Comando "+comando+" invalido "+comando.split("|").length+" "+comando); } proxy=comando; return; }  if ( comando.contains("-h") ){       System.out.println("Parametros:"); System.out.println(parametros()); System.exit(0); }  if ( ! comando.startsWith("-")){ fix_barra_url(comando); return; } throw new Error("Comando "+comando+" invalido"); }  public void start_motor() throws Exception{ if ( ! motor.equals("")){ cont=0; if ( recursive || ! tipo.equals("")){ if (string_output_dir.equals("")){ throw new Exception("erro, falta do parametro -output|[dir], necessario com o parametro -r ou -tipo ");                 }else{ if ( ! new File(string_output_dir).exists() ){ throw new Exception("erro, o diretorio "+string_output_dir + " nao existe.");                 }else{ grava(get_raiz(motor),"dir"); } } } motor(motor);             } }  public void motor(String url) throws Exception{ if ( url_invalida(url) ){ return; } if ( only_before ){ if (  string_only_before == null ){ string_only_before=url; 
-/* class Wget */ }else{ if ( ! url.contains(string_only_before)){ return; } }             } if ( url.contains("#")){ url=fix_sharp(url); } if ( url.contains("/../") ){ url=fix_dotdot(url); }    if ( ! url.endsWith("/") && ! get_life(url).contains(".")){ url+="/"; }     if ( url_de_request(url) ){  if ( list_diretorios && url.endsWith("/")){ if ( legend ){ System.out.println("pasta                  "+url); }else{ System.out.println(url); } } String html = getcode(url);   if ( ! html.equals("")){ boolean tmp_tipo=false; if ( ! tipo.equals("")){ for ( String ext : tipo.split("\\|")){ if ( url.toLowerCase().endsWith(ext)){ tmp_tipo=true; } } } if ( recursive || tmp_tipo ){ grava(url,"file"); } for ( String parametro : gethref(html) ){    if ( ! parametro.equals("") && ! parametro.contains("?") && ! parametro.contains(" ")){ if ( ban && string_ban != null && parametro.contains(string_ban)){ }else{ motor(monta_url(url,parametro)); } } } }             }else{ if (  (list_mp3 && url.toLowerCase().endsWith(".mp3")) || list_files                     ){ if ( legend ){ System.out.println(++cont+"           arquivo    "+url); }else{ System.out.println(url); } }   boolean tmp_tipo=false; if ( ! tipo.equals("")){ for ( String ext : tipo.split("\\|")){ if ( url.toLowerCase().endsWith(ext)){ tmp_tipo=true; } } } if ( recursive || tmp_tipo ){ grava(url,"file"); }             } }  public boolean url_invalida(String url) throws Exception{ if ( url.length() > 1000){ throw new Exception("erro inesperado ! "+url); }  url=url.trim();  if ( hashtable.contains(new String(url)) ){ return true;             } hashtable.put(hash_cont++,url);  if ( url.contains(";") && ! url.contains("&amp;")){ return true; }     return false; }  public ArrayList<String> gethref(String texto){ ArrayList<String> lista=new ArrayList<String>(); Matcher m; m = Pattern.compile(" href=\"([^\"])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" HREF=\"([^\"])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" href='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" HREF='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" src='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(6)); } m = Pattern.compile(" SRC='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(6)); } return lista; }  public String getcode(String url){  String texto=""; String inputLine="";         HttpURLConnection httpcon=null; BufferedReader in=null;  try{ URLConnection con=null; if ( proxy.equals("")){ con=new URL(url).openConnection();                 }else{ con=new URL(url).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1]))));                 }  con.setUseCaches(false);   (httpcon = (HttpURLConnection) con).addRequestProperty("User-Agent", "Mozilla/4.76"); if ( httpcon.getResponseCode() != 503 ){ in = new BufferedReader(new InputStreamReader(httpcon.getInputStream())); while ((inputLine = in.readLine()) != null) texto+=inputLine; in.close(); return texto; } return ""; }catch (Exception e){ if ( true )return ""; }  return texto; }
-/* class Wget */ public boolean mp3_realmente(String url){ String inputLine;   int cont=0;  try{ URL UrL=new URL(url); URLConnection con; con=UrL.openConnection(); HttpURLConnection httpcon = (HttpURLConnection) con;  httpcon.addRequestProperty("User-Agent", "Mozilla/6.0");  
-/* class Wget */ BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream())); cont=0; while ((inputLine = in.readLine()) != null && cont < 50){ cont++; } in.close(); }catch (Exception e){} if ( cont == 50 ){ return true; } return false; }  public void fix_barra_url(String comando){         if ( ! comando.toLowerCase().startsWith("http://") && ! comando.toLowerCase().startsWith("https://") ){ comando="http://"+comando; } if ( quantidade_de_barra(comando) == 0){ comando+="/";     } motor=comando;         }  private String fix_dotdot(String url2) { boolean final_com_barra=url2.endsWith("/"); reset_pilha(); for ( String pasta : url2.split("/")){ if ( pasta.equals("..") ){ resempilha(); }else{ empilha(pasta); } } String retorno=""; for ( String pasta : pilha ){ retorno+=pasta+"/"; } if ( ! final_com_barra ){ retorno=retorno.substring(0,retorno.length()-1); } return retorno; }  private void reset_pilha() { pilha=new ArrayList<String>(); }  private void resempilha() { if ( pilha.size() > 0 ){ pilha.remove(pilha.size()-1); } }  private void empilha(String pasta) { pilha.add(pasta); }  private String tira_file_da_url(String url2) { while ( ! url2.endsWith("/")){ url2=url2.substring(0,url2.length()-1); } return url2;      }  private String fix_sharp(String incremento) { if ( incremento.contains("#") ){ boolean ignore=false; String incremento_aux=""; for ( int i=0;i<incremento.length() && ! ignore;i++){ if ( incremento.substring(i,i+1).equals("#")){ ignore=true; }else{ incremento_aux+=incremento.substring(i,i+1); }                 } return incremento_aux; }         return incremento; }  private int quantidade_de_barra(String comando) { comando=tira_http(comando); int cont=0; for ( int i=0;i<comando.length();i++){ if ( comando.substring(i,i+1).equals("/")){ cont++; } } return cont; }  private boolean url_de_request(String url) { url=url.toLowerCase(); if ( url.endsWith("/") || url.contains(".asp")  || url.contains(".php") || url.contains(".html") || url.contains(".htm") || url.contains(".apsx") ){ return true; } if ( pasta(url) ){ return true; } return false; }  private boolean pasta(String url) { url=url.replace("http://",""); String u=""; for ( String p : url.split("/")) { u=p; } if ( ! u.contains(".")){ return true; } return false; }  private String get_raiz(String url) { url=tira_http(url); return "http://"+url.split("/")[0]; }  private String tira_http(String comando) { return comando.replace("http://",""); }  private String monta_url(String url, String parametro) { if ( parametro.startsWith("http://")){                         return parametro; }else{ if ( parametro.startsWith("/")){ return get_raiz(url)+parametro; }else{ if ( ! parametro.contains(".") && ! parametro.endsWith("/")){ parametro+="/"; } if ( url.endsWith("/")){ return url+parametro; }else{ if ( ! tira_file(url).equals("") ){ return tira_file(url)+parametro; } return url+"/"+parametro; } } } }  private String tira_file(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return retorno; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return ""; }  private void grava(String conteudo,String tipo) { if ( string_output_dir.contains("\\")){ sep="\\"; }else{ sep="/"; }  if ( tipo.equals("dir")){ conteudo=string_output_dir+sep+tira_http(conteudo);         if ( ! new File(conteudo).exists() ){ new File(conteudo).mkdir(); } }else{     download(conteudo); } }  
-/* class Wget */ public void download(String conteudo) { String path=string_output_dir+sep;  String aux="";  for ( String pasta : tira_http(tira_file_da_url(conteudo)).split("/")){ path+=pasta+sep; aux=path.replace("%20"," ");  if ( ! new File(aux).exists() ){ new File(aux).mkdir(); } }     String file=get_life(conteudo);  if ( ! conteudo.contains("?")){ System.out.println("Salvando: "+conteudo); if ( file.equals("")){ file="index.html";  if ( ! new File(path+file).exists() ){                 String html = getcode(conteudo);              try{ aux=(path+file).replace("%20"," ");  FileWriter fstream = new FileWriter(aux);  BufferedWriter out = new BufferedWriter(fstream);  out.write(html); out.close(); }catch (Exception e){  System.err.println("Error: " + e.getMessage()); } } }else{  aux=(path+file).replace("%20"," "); if ( !  new File(aux).exists() ){  new UrlDownload().fileDownload(conteudo,path,proxy); } } } }
-/* class Wget */ private String get_life(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return pasta; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return "";         }  
-/* class Wget */ public static class UrlDownload { final static int size=1024; 
-/* class Wget */  /* download de arquivo na internet retornando string - String texto=Wget.UrlDownload.stringDownloadUrl("[URL]", null); - muito instavel.. usar curl*/
-/* class Wget */ public static void fileDownloadUrl(String fAddress, String localFileName, String destinationDir,String proxy){      if ((new File(destinationDir+"\\"+localFileName)).exists()) {  System.out.println("Arquivo " + localFileName + " ja exite.");  return;  }else{  String aux=(destinationDir+"\\"+localFileName).replace("%20"," ");  try{ fileDownloadUrl(fAddress, new FileOutputStream(aux), proxy); }catch(Exception e){ System.out.println(e.toString()); } }      }
-/* class Wget */ public static String stringDownloadUrl(String fAddress, String proxy){      ByteArrayOutputStream baos=new ByteArrayOutputStream(); try{ fileDownloadUrl(fAddress, baos, proxy); }catch(Exception e){ System.out.println(e.toString()); } return baos.toString(); }
-/* class Wget */ public static void fileDownloadUrl(String fAddress, OutputStream outStream,String proxy) { URLConnection  uCon = null;  InputStream is = null; try {  URL Url;  byte[] buf;  int len;                  if ( proxy == null || proxy.equals("") ){  uCon=new URL(fAddress).openConnection();  }else{  uCon=new URL(fAddress).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1])))); }   is = uCon.getInputStream();  buf = new byte[size];   while ((len = is.read(buf)) != -1){ outStream.write(buf, 0, len);  } is.close();  outStream.close();  }catch (Exception e) { System.out.println(e.toString()); }  }  
-/* class Wget */ public static void fileDownload(String fAddress, String destinationDir,String proxy) {  int slashIndex =fAddress.lastIndexOf('/');  int periodIndex =fAddress.lastIndexOf('.');  String fileName=fAddress.substring(slashIndex + 1);  if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1) { if(fileName.contains("?")){  String tmp []=fileName.split("=");  fileName=tmp[0]; fileName=fileName.substring(0, fileName.length()-2);  } fileDownloadUrl(fAddress,fileName,destinationDir,proxy);  }else{  System.err.println("path or file name."); }  }} 
-/* class Wget */ } 
+class WgetLegacy {  public int cont; public boolean list_mp3=false; public String motor="";  Hashtable hashtable = new Hashtable(); int hash_cont=0; private boolean list_files=false; private boolean list_diretorios=false; public ArrayList<String> pilha=new ArrayList<String>(); private boolean accep_escape_host_mp3=false; private boolean only_before=false; private String string_only_before=null; private boolean ban=false; private String string_ban=null; private boolean recursive=false; private String string_output_dir=""; public String sep=""; private String tipo=""; public String proxy=""; public boolean legend=false;   public String parametros [][] = { {"-output|","pasta de arquivo de saida ex:-output|c:\\user\\usuario\\Documents"}, { "http://site.com.br","site da utilizacao"}, {"-r","recursivo, download do site todo"}, {"-h","help, mostra parametros"}, {"-list_mp3","listar as mp3s"}, {"-list_files","listar os arquivos"}, {"-list_diretories","listar os diretorios"}, {"-accep_escape_host_mp3","aceitar navegação de outro host por url mp3"}, {"-tipo|.mp3|.wma","baixar somente arquivos com estas extensoes"}, { "-only_before","somente navegação da url de uma ponto pra frente"} , { "-proxy|","ex: -proxy|endereco-proxy|80"}, {"-ban","palava ou caracter banido, ex -ban %d0"}, {"-legend","colocando 1 arquivo A, 2 arquivo B ... "}, };   String parametros() { String retorno=""; for ( int i=0;i<parametros.length;i++){ retorno+=parametros[i][0]+" => "+parametros[i][1]+"\n"; } return retorno; }  void comando(String comando) { if ( comando.startsWith("-output|")){ string_output_dir=comando.split("\\|")[1]; return; } if ( comando.startsWith("-tipo|")){ tipo=comando.replace("-tipo\\|",""); return; } if ( ban && string_ban == null ){ string_ban=comando; return; } if ( comando.equals("-ban") ){ ban=true; return; } if ( comando.equals("-r") ){ recursive=true; only_before=true; return; } if ( comando.equals("-list_mp3") ){ list_mp3=true; return; } if ( comando.equals("-list_files") ){ list_files=true; return; } if ( comando.equals("-list_diretories") ){ list_diretorios=true;             return; } if ( comando.equals("-accep_escape_host_mp3") ){ accep_escape_host_mp3=true; return; } if ( comando.equals("-only_before") ){ only_before=true; return; } if ( comando.equals("-legend") ){ legend=true; return; } if ( comando.startsWith("-proxy|") ){ comando=comando.replace("-proxy|",""); if ( comando.split("\\|").length != 2 ){ throw new Error("Comando "+comando+" invalido "+comando.split("|").length+" "+comando); } proxy=comando; return; }  if ( comando.contains("-h") ){       System.out.println("Parametros:"); System.out.println(parametros()); System.exit(0); }  if ( ! comando.startsWith("-")){ fix_barra_url(comando); return; } throw new Error("Comando "+comando+" invalido"); }  public void start_motor() throws Exception{ if ( ! motor.equals("")){ cont=0; if ( recursive || ! tipo.equals("")){ if (string_output_dir.equals("")){ throw new Exception("erro, falta do parametro -output|[dir], necessario com o parametro -r ou -tipo ");                 }else{ if ( ! new File(string_output_dir).exists() ){ throw new Exception("erro, o diretorio "+string_output_dir + " nao existe.");                 }else{ grava(get_raiz(motor),"dir"); } } } motor(motor);             } }  public void motor(String url) throws Exception{ if ( url_invalida(url) ){ return; } if ( only_before ){ if (  string_only_before == null ){ string_only_before=url; 
+/* class WgetLegacy */ }else{ if ( ! url.contains(string_only_before)){ return; } }             } if ( url.contains("#")){ url=fix_sharp(url); } if ( url.contains("/../") ){ url=fix_dotdot(url); }    if ( ! url.endsWith("/") && ! get_life(url).contains(".")){ url+="/"; }     if ( url_de_request(url) ){  if ( list_diretorios && url.endsWith("/")){ if ( legend ){ System.out.println("pasta                  "+url); }else{ System.out.println(url); } } String html = getcode(url);   if ( ! html.equals("")){ boolean tmp_tipo=false; if ( ! tipo.equals("")){ for ( String ext : tipo.split("\\|")){ if ( url.toLowerCase().endsWith(ext)){ tmp_tipo=true; } } } if ( recursive || tmp_tipo ){ grava(url,"file"); } for ( String parametro : gethref(html) ){    if ( ! parametro.equals("") && ! parametro.contains("?") && ! parametro.contains(" ")){ if ( ban && string_ban != null && parametro.contains(string_ban)){ }else{ motor(monta_url(url,parametro)); } } } }             }else{ if (  (list_mp3 && url.toLowerCase().endsWith(".mp3")) || list_files                     ){ if ( legend ){ System.out.println(++cont+"           arquivo    "+url); }else{ System.out.println(url); } }   boolean tmp_tipo=false; if ( ! tipo.equals("")){ for ( String ext : tipo.split("\\|")){ if ( url.toLowerCase().endsWith(ext)){ tmp_tipo=true; } } } if ( recursive || tmp_tipo ){ grava(url,"file"); }             } }  public boolean url_invalida(String url) throws Exception{ if ( url.length() > 1000){ throw new Exception("erro inesperado ! "+url); }  url=url.trim();  if ( hashtable.contains(new String(url)) ){ return true;             } hashtable.put(hash_cont++,url);  if ( url.contains(";") && ! url.contains("&amp;")){ return true; }     return false; }  public ArrayList<String> gethref(String texto){ ArrayList<String> lista=new ArrayList<String>(); Matcher m; m = Pattern.compile(" href=\"([^\"])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" HREF=\"([^\"])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" href='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" HREF='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(7)); } m = Pattern.compile(" src='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(6)); } m = Pattern.compile(" SRC='([^'])*").matcher(texto);  while ( m.find() ){ lista.add(m.group().substring(6)); } return lista; }  public String getcode(String url){  String texto=""; String inputLine="";         HttpURLConnection httpcon=null; BufferedReader in=null;  try{ URLConnection con=null; if ( proxy.equals("")){ con=new URL(url).openConnection();                 }else{ con=new URL(url).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1]))));                 }  con.setUseCaches(false);   (httpcon = (HttpURLConnection) con).addRequestProperty("User-Agent", "Mozilla/4.76"); if ( httpcon.getResponseCode() != 503 ){ in = new BufferedReader(new InputStreamReader(httpcon.getInputStream())); while ((inputLine = in.readLine()) != null) texto+=inputLine; in.close(); return texto; } return ""; }catch (Exception e){ if ( true )return ""; }  return texto; }
+/* class WgetLegacy */ public boolean mp3_realmente(String url){ String inputLine;   int cont=0;  try{ URL UrL=new URL(url); URLConnection con; con=UrL.openConnection(); HttpURLConnection httpcon = (HttpURLConnection) con;  httpcon.addRequestProperty("User-Agent", "Mozilla/6.0");  
+/* class WgetLegacy */ BufferedReader in = new BufferedReader(new InputStreamReader(httpcon.getInputStream())); cont=0; while ((inputLine = in.readLine()) != null && cont < 50){ cont++; } in.close(); }catch (Exception e){} if ( cont == 50 ){ return true; } return false; }  public void fix_barra_url(String comando){         if ( ! comando.toLowerCase().startsWith("http://") && ! comando.toLowerCase().startsWith("https://") ){ comando="http://"+comando; } if ( quantidade_de_barra(comando) == 0){ comando+="/";     } motor=comando;         }  private String fix_dotdot(String url2) { boolean final_com_barra=url2.endsWith("/"); reset_pilha(); for ( String pasta : url2.split("/")){ if ( pasta.equals("..") ){ resempilha(); }else{ empilha(pasta); } } String retorno=""; for ( String pasta : pilha ){ retorno+=pasta+"/"; } if ( ! final_com_barra ){ retorno=retorno.substring(0,retorno.length()-1); } return retorno; }  private void reset_pilha() { pilha=new ArrayList<String>(); }  private void resempilha() { if ( pilha.size() > 0 ){ pilha.remove(pilha.size()-1); } }  private void empilha(String pasta) { pilha.add(pasta); }  private String tira_file_da_url(String url2) { while ( ! url2.endsWith("/")){ url2=url2.substring(0,url2.length()-1); } return url2;      }  private String fix_sharp(String incremento) { if ( incremento.contains("#") ){ boolean ignore=false; String incremento_aux=""; for ( int i=0;i<incremento.length() && ! ignore;i++){ if ( incremento.substring(i,i+1).equals("#")){ ignore=true; }else{ incremento_aux+=incremento.substring(i,i+1); }                 } return incremento_aux; }         return incremento; }  private int quantidade_de_barra(String comando) { comando=tira_http(comando); int cont=0; for ( int i=0;i<comando.length();i++){ if ( comando.substring(i,i+1).equals("/")){ cont++; } } return cont; }  private boolean url_de_request(String url) { url=url.toLowerCase(); if ( url.endsWith("/") || url.contains(".asp")  || url.contains(".php") || url.contains(".html") || url.contains(".htm") || url.contains(".apsx") ){ return true; } if ( pasta(url) ){ return true; } return false; }  private boolean pasta(String url) { url=url.replace("http://",""); String u=""; for ( String p : url.split("/")) { u=p; } if ( ! u.contains(".")){ return true; } return false; }  private String get_raiz(String url) { url=tira_http(url); return "http://"+url.split("/")[0]; }  private String tira_http(String comando) { return comando.replace("http://",""); }  private String monta_url(String url, String parametro) { if ( parametro.startsWith("http://")){                         return parametro; }else{ if ( parametro.startsWith("/")){ return get_raiz(url)+parametro; }else{ if ( ! parametro.contains(".") && ! parametro.endsWith("/")){ parametro+="/"; } if ( url.endsWith("/")){ return url+parametro; }else{ if ( ! tira_file(url).equals("") ){ return tira_file(url)+parametro; } return url+"/"+parametro; } } } }  private String tira_file(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return retorno; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return ""; }  private void grava(String conteudo,String tipo) { if ( string_output_dir.contains("\\")){ sep="\\"; }else{ sep="/"; }  if ( tipo.equals("dir")){ conteudo=string_output_dir+sep+tira_http(conteudo);         if ( ! new File(conteudo).exists() ){ new File(conteudo).mkdir(); } }else{     download(conteudo); } }  
+/* class WgetLegacy */ public void download(String conteudo) { String path=string_output_dir+sep;  String aux="";  for ( String pasta : tira_http(tira_file_da_url(conteudo)).split("/")){ path+=pasta+sep; aux=path.replace("%20"," ");  if ( ! new File(aux).exists() ){ new File(aux).mkdir(); } }     String file=get_life(conteudo);  if ( ! conteudo.contains("?")){ System.out.println("Salvando: "+conteudo); if ( file.equals("")){ file="index.html";  if ( ! new File(path+file).exists() ){                 String html = getcode(conteudo);              try{ aux=(path+file).replace("%20"," ");  FileWriter fstream = new FileWriter(aux);  BufferedWriter out = new BufferedWriter(fstream);  out.write(html); out.close(); }catch (Exception e){  System.err.println("Error: " + e.getMessage()); } } }else{  aux=(path+file).replace("%20"," "); if ( !  new File(aux).exists() ){  new UrlDownload().fileDownload(conteudo,path,proxy); } } } }
+/* class WgetLegacy */ private String get_life(String url) { url=tira_http(url); String tmp="",retorno="http://";         for ( String pasta : url.split("/")){ if ( ! tmp.equals("")){ if ( pasta.contains(".")){ return pasta; }                     }else{ tmp=pasta; } retorno+=pasta+"/"; } return "";         }  
+/* class WgetLegacy */ public static class UrlDownload { final static int size=1024; 
+/* class WgetLegacy */ public static void fileDownloadUrl(String fAddress, String localFileName, String destinationDir,String proxy){      if ((new File(destinationDir+"\\"+localFileName)).exists()) {  System.out.println("Arquivo " + localFileName + " ja exite.");  return;  }else{  String aux=(destinationDir+"\\"+localFileName).replace("%20"," ");  try{ fileDownloadUrl(fAddress, new FileOutputStream(aux), proxy); }catch(Exception e){ System.out.println(e.toString()); } }      }
+/* class WgetLegacy */ public static String stringDownloadUrl(String fAddress, String proxy){      ByteArrayOutputStream baos=new ByteArrayOutputStream(); try{ fileDownloadUrl(fAddress, baos, proxy); }catch(Exception e){ System.out.println(e.toString()); } return baos.toString(); }
+/* class WgetLegacy */ public static void fileDownloadUrl(String fAddress, OutputStream outStream,String proxy) { URLConnection  uCon = null;  InputStream is = null; try {  URL Url;  byte[] buf;  int len;                  if ( proxy == null || proxy.equals("") ){  uCon=new URL(fAddress).openConnection();  }else{  uCon=new URL(fAddress).openConnection( new Proxy(Proxy.Type.HTTP, new InetSocketAddress( proxy.split("\\|")[0], Integer.parseInt(proxy.split("\\|")[1])))); }   is = uCon.getInputStream();  buf = new byte[size];   while ((len = is.read(buf)) != -1){ outStream.write(buf, 0, len);  } is.close();  outStream.close();  }catch (Exception e) { System.out.println(e.toString()); }  }  
+/* class WgetLegacy */ public static void fileDownload(String fAddress, String destinationDir,String proxy) {  int slashIndex =fAddress.lastIndexOf('/');  int periodIndex =fAddress.lastIndexOf('.');  String fileName=fAddress.substring(slashIndex + 1);  if (periodIndex >=1 &&  slashIndex >= 0 && slashIndex < fAddress.length()-1) { if(fileName.contains("?")){  String tmp []=fileName.split("=");  fileName=tmp[0]; fileName=fileName.substring(0, fileName.length()-2);  } fileDownloadUrl(fAddress,fileName,destinationDir,proxy);  }else{  System.err.println("path or file name."); }  }} 
+/* class WgetLegacy */ } 
 
 /* class Tar  */ // credits: https://github.com/kamranzafar/jtar/blob/master/src/test/java/org/kamranzafar/jtar/JTarTest.java 
 /* class Tar  */ // tar("in");
@@ -45019,22 +45980,6 @@ class Diff_PathNode { public final int i; public final int j; public final Diff_
 @SuppressWarnings({"unchecked", "deprecation"})
 class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public Diff_Patch() { this(10); } public Diff_Patch(int estimatedPatchSize) { deltas = new ArrayList<>(estimatedPatchSize); } public List<T> applyTo(List<T> target) throws Exception { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.applyTo(result); } return result; } public List<T> restore(List<T> target) { List<T> result = new ArrayList<>(target); ListIterator<Diff_AbstractDelta<T>> it = getDeltas().listIterator(deltas.size()); while (it.hasPrevious()) { Diff_AbstractDelta<T> delta = it.previous(); delta.restore(result); } return result; } public void addDelta(Diff_AbstractDelta<T> delta) { deltas.add(delta); } public List<Diff_AbstractDelta<T>> getDeltas() { Collections.sort(deltas, java.util.Comparator.comparing(d -> d.getSource().getPosition())); return deltas; } public String toString() { return "Patch{" + "deltas=" + deltas + '}'; } public static <T> Diff_Patch<T> generate(List<T> original, List<T> revised) throws Exception { Diff_MyersDiff m=new Diff_MyersDiff<>(); List<Diff_Change> changes=m.computeDiff(original, revised); 
 /* class Diff  */ Diff_Patch<T> patch = new Diff_Patch<>(changes.size()); for (Diff_Change change : changes) { Diff_Chunk<T> orgChunk = new Diff_Chunk<>(change.startOriginal, new ArrayList<>(original.subList(change.startOriginal, change.endOriginal))); Diff_Chunk<T> revChunk = new Diff_Chunk<>(change.startRevised, new ArrayList<>(revised.subList(change.startRevised, change.endRevised))); switch (change.deltaType) { case Diff_DiffRow.TAG_DELETE: patch.addDelta(new Diff_DeleteDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_INSERT: patch.addDelta(new Diff_InsertDelta<>(orgChunk, revChunk)); break; case Diff_DiffRow.TAG_CHANGE: patch.addDelta(new Diff_ChangeDelta<>(orgChunk, revChunk)); break; } } return patch; } } 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 @SuppressWarnings({"unchecked", "deprecation"})
 class Arquivos{
@@ -45923,7 +46868,67 @@ Exemplos...
 [y [httpProxy|hp]]
     y httpProxy -ip localhost -port 8080
 [y wget]
-    y wget -h
+    uso:
+        y wget <url> [<url> ...] [opcoes]
+        y wget -test
+        saida:
+            -O <arq>            salva com esse nome ("-" = stdout)   [1 url]
+            -P <dir>            prefixo de diretorio (default .)   (= -output|dir)
+            -i <arq>            le as URLs de um arquivo (1 por linha)
+            -c                  continua download parcial (Range)
+            -nc                 nao sobrescreve arquivo existente
+            --content-disposition   usa o nome do header Content-Disposition
+        rede:
+            -t <n>              tentativas (default 3, 0=muitas)
+            -T <seg>            timeout (default 30)
+            -U <ua>             User-Agent
+            --header "K: V"     header extra (repetivel)
+            --user <u> --password <p>   autenticacao Basic
+            --post-data <dados> envia POST
+            --method <M>        metodo HTTP
+            --no-check-certificate   nao valida TLS
+            --load-cookies <f> / --save-cookies <f>   cookies formato Netscape
+            -q                  silencioso (sem barra de progresso)
+        recursivo:
+            -r                  baixa recursivamente
+            -m                  espelho: -r com profundidade ilimitada (mirror)
+            -l <n>              profundidade (default 5)
+            -np                 nao sobe para diretorios pai
+            -p                  baixa requisitos da pagina (img/css/js)
+            -k                  converte links para navegacao local
+            -nd                 achata: salva tudo em -P sem criar host/dirs
+            -H                  segue outros hosts (default: so o host inicial)
+            -A <lista>          aceita apenas estes sufixos/globs (ex: mp3,wma  ou  *.mp3)
+            -R <lista>          rejeita estes sufixos/globs (ex: index.html*)
+        listar (sem baixar):
+            --spider            percorre e lista as URLs, nao baixa (use com -r p/ site todo)
+            --list files        lista so arquivos       (= -list_files)
+            --list dirs         lista so diretorios     (= -list_diretories)
+            --list mp3[,wma]    lista so essas extensoes (= -list_mp3)
+        outros:
+            --proxy host:porta  usa proxy (tambem aceita -proxy|host|porta)
+            -ban <trecho>       pula URLs que contenham o trecho (repetivel; ex: -ban %d0)
+            -legend             renomeia baixados em sequencia A,B,C e grava legend.txt
+            (aliases do antigo:  -output|pasta   -tipo|.mp3|.wma)
+        ajuda:
+            -h                  mostra esta ajuda
+        exemplos:
+            y wget http://site/arquivo.zip
+            y wget http://site/a.zip -P c:\Users\usuario\Documents   (pasta de saida)
+            y wget -r http://site.com.br/                     (site todo)
+            y wget -m -k -p http://site.com.br/               (espelho navegavel offline)
+            y wget -r -np http://site.com.br/pasta/           (so deste ponto pra frente)
+            y wget -r -A mp3,wma http://site/                 (so estas extensoes)
+            y wget -r -nd -R "index.html*" http://site/mods/  (achatado, sem os index)
+            y wget -r -H -A mp3 http://site/                  (segue outros hosts tambem)
+            y wget -r --spider http://site/                   (lista tudo, sem baixar)
+            y wget --list mp3 http://site/musicas/            (lista so as mp3)
+            y wget -r --proxy 10.0.0.1:8080 http://site/      (via proxy)
+            y wget -r -ban ?C= http://site/lista/             (pula links de ordenacao)
+            y wget -r -nd -legend -A jpg http://site/galeria/ (salva A.jpg,B.jpg + legend.txt)
+            y wget -c http://site/grande.iso                  (continua download parcial)
+            y wget --user u --password p http://site/priv     (autenticacao Basic)
+            y wget -h                                         (esta ajuda)
 [y pwd]
     y pwd
 [y find]
