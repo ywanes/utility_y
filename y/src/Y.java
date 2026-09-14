@@ -1146,6 +1146,9 @@ cat buffer.log
                         erroFatal("cmd sem graalvm!");
                     if ( !isWindowsCPlusPlus() )
                         erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+                }else{
+                    if ( !isLinuxRoot() )
+                        erroFatal("voce precisa estar como root!");
                 }
                 new MakePORTAL();
                 return;
@@ -1156,6 +1159,9 @@ cat buffer.log
                         erroFatal("cmd sem graalvm!");
                     if ( !isWindowsCPlusPlus() )
                         erroFatal("c++ nao encontrado, faça a instalacao com o comando abaixo:\nwinget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override \"--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended\"");
+                }else{
+                    if ( !isLinuxRoot() )
+                        erroFatal("voce precisa estar como root!");
                 }
                 new MakeSSHY();
                 return;
@@ -37732,6 +37738,15 @@ class Util{
         return os(true).equals("Linux");
     }
     
+    public boolean isLinuxRoot(){
+        String s=runtimeExec("id -u", null, null, null, null);
+        if ( s == null )
+            return false;
+        if ( !s.equals("0") )
+            return false;
+        return true;
+    }
+    
     public boolean isMac(){
         return os(true).equals("Mac");
     }
@@ -45453,6 +45468,7 @@ Exemplos...
     y make cmdw
     y make portal
     y make sshy
+    obs: se for rodar no linux, rode no ambiente root
 [y portal]
     uso:
         server : set var="portal" "-server" "-ip" "192.168.0.100" "-porta" "2323" "-pass" "senha" && y var
