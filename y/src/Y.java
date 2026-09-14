@@ -37742,7 +37742,7 @@ class Util{
         String s=runtimeExec("id -u", null, null, null, null);
         if ( s == null )
             return false;
-        if ( !s.equals("0") )
+        if ( !s.trim().equals("0") )
             return false;
         return true;
     }
