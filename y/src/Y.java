@@ -45985,7 +45985,8 @@ class Diff_Patch<T> { private final List<Diff_AbstractDelta<T>> deltas; public D
 class Arquivos{
     public String lendo_arquivo_pacote(String caminho){
         if ( caminho.equals("/y/manual") )
-return """
+return new StringBuilder().append(
+        """
 usage:
   [y daemon]
   [y take]
@@ -46281,6 +46282,7 @@ Exemplos...
     y cat test.tar | y untar
     y untar test.tar
     y untar test.tar in/in2/only
+""").append("""
 [y tarlist]
     y tarlist test.tar
 [y echo]
@@ -46914,7 +46916,7 @@ Exemplos...
             -h                  mostra esta ajuda
         exemplos:
             y wget http://site/arquivo.zip
-            y wget http://site/a.zip -P c:\Users\usuario\Documents   (pasta de saida)
+            y wget http://site/a.zip -P c:\\Users\\usuario\\Documents   (pasta de saida)
             y wget -r http://site.com.br/                     (site todo)
             y wget -m -k -p http://site.com.br/               (espelho navegavel offline)
             y wget -r -np http://site.com.br/pasta/           (so deste ponto pra frente)
@@ -47424,7 +47426,7 @@ Dica2: vendo os tokens: grep ":" $TOKEN_Y/*
 Dica3: vendo warnnings ORA: cat $ORAs_Y
 Mostrando lista dos scripts: 
 curl -s https://github.com/ywanes/utility_y/tree/master/y/src | grep -oP ',"path":"y/src/\\K[^"]+' | sed 's|^|https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/|' | sort | uniq
-""";
+""").toString();
         
         if ( caminho.equals("/y/ORAs") )
             return """
