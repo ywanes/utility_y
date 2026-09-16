@@ -47376,6 +47376,7 @@ Exemplos...
         winget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" # ajuda graalvm a montar exe
         # ultimo graalvm windows -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
         # ultimo graalvm linux -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
+        # mixer de som -> sndvol
 [y services]
     y services install yd yd.bat # registra (auto-start, LocalSystem)
     y services start   yd # inicia
