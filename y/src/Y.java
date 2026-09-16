@@ -37309,17 +37309,29 @@ class Util{
             return s;
         return s+"GPU_Memory: " + retorno.trim() + " GB";
     }
-    
-    public String tryGetCurrentBuildNumberWindowsByOs(String s, String type){
+
+    public String tryGetCurrentBuildNumberWindowsByOs(String s, String type) {
         if ( ! type.equals("Windows") )
             return s;
-
-        String retorno=runtimeExec(null, new String[]{"Reg", "Query", "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion", "/v", "CurrentBuildNumber"}, null, null, null);
+        String retorno = runtimeExec(null, new String[]{"Reg", "Query",
+                "HKLM\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion"}, null, null, null);
         if ( retorno == null || retorno.equals("") )
             return s;
-        if ( retorno.split(" ").length <= 13 )
+        String build = null, ubr = null, versao = null;
+        for ( String line : retorno.split("\\r?\\n") ) {
+            String[] p = line.trim().split("\\s+");        // nome | tipo | valor
+            if ( p.length < 3 ) continue;
+            if ( p[0].equals("CurrentBuildNumber") ) build  = p[p.length - 1];
+            if ( p[0].equals("UBR") )                ubr    = p[p.length - 1];
+            if ( p[0].equals("DisplayVersion") )     versao = p[p.length - 1];
+        }
+        if ( build == null )
             return s;
-        return s+"Build_OS: " + retorno.split(" ")[13];
+        if ( ubr != null )
+            build += "." + Integer.decode(ubr);            // 0x24e5 -> 9445
+        if ( versao != null )
+            build += " (" + versao + ")";
+        return s + "Build_OS: " + build + "\n";
     }
     
     public String tryPivotWindowsAndAjustsValues(String s, String type){
