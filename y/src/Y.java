@@ -13476,30 +13476,58 @@ while True:
             errorCpPrinted = true;
         }        
     }
-    
-    public void mv(File f1, File f2) throws Exception{
-        if ( !f1.exists() ){
-            System.out.println("Item nao encontrado: "+f1.getAbsolutePath());            
+
+    public void mv(java.io.File f1, java.io.File f2) throws Exception {
+        java.nio.file.LinkOption NF = java.nio.file.LinkOption.NOFOLLOW_LINKS;
+
+        if ( !java.nio.file.Files.exists(f1.toPath(), NF) ){          // symlink quebrado tambem "existe"
+            System.out.println("Item nao encontrado: "+f1.getAbsolutePath());
             System.exit(1);
         }
-        if ( f1.getAbsolutePath().toUpperCase().equals(f2.getAbsolutePath().toUpperCase()) ){
-            System.out.println("Erro, caminho de origem e destino é o mesmo!");            
+        boolean origemEhPasta = java.nio.file.Files.isDirectory(f1.toPath(), NF);   // pasta real; symlink p/ pasta = nao
+
+        // f2 é pasta (seguindo symlink, como o mv) -> mover PARA DENTRO; senao f2 e o proprio alvo
+        // (symlink p/ arquivo ou quebrado: o alvo e o LINK, que sera substituido)
+        java.io.File alvo = java.nio.file.Files.isDirectory(f2.toPath()) ? new java.io.File(f2, f1.getName()) : f2;
+
+        java.nio.file.Path origem  = f1.toPath().toAbsolutePath().normalize();
+        java.nio.file.Path destino = alvo.toPath().toAbsolutePath().normalize();
+
+        // caminhos REAIS p/ as travas (symlinks no meio do caminho resolvidos; o ultimo componente nao)
+        java.nio.file.Path origemReal  = origem.toRealPath(NF);
+        java.nio.file.Path destinoReal = destino.getParent().toRealPath().resolve(destino.getFileName());
+
+        if ( origemReal.equals(destinoReal) ){
+            System.out.println("Erro, caminho de origem e destino é o mesmo!");
             System.exit(1);
         }
-        if ( f1.isDirectory() ){
-            if ( !f2.exists() )
-                Files.move(f1.toPath(), f2.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-            else{
-                File f_=new File(f2.getAbsolutePath()+"/"+f1.getName());
-                if ( !f_.exists() )
-                    Files.move(f1.toPath(), f_.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                else{
-                    System.out.println("Erro, o diretorio nao esta vazio!");            
-                    System.exit(1);
+        if ( origemEhPasta && destinoReal.startsWith(origemReal) ){
+            System.out.println("Erro, nao da para mover uma pasta para dentro dela mesma!");
+            System.exit(1);
+        }
+
+        if ( java.nio.file.Files.exists(destinoReal, NF) ){            // lstat: symlink = existe, e nao e pasta
+            boolean alvoEhPasta = java.nio.file.Files.isDirectory(destinoReal, NF);
+            if ( alvoEhPasta && !origemEhPasta ){
+                System.out.println("Erro, nao da para sobrescrever a pasta "+destinoReal+" com um arquivo!");
+                System.exit(1);
+            }
+            if ( !alvoEhPasta && origemEhPasta ){
+                System.out.println("Erro, nao da para sobrescrever o arquivo "+destinoReal+" com uma pasta!");
+                System.exit(1);
+            }
+            if ( alvoEhPasta ){                                        // pasta sobre pasta: so se a de destino estiver vazia
+                try ( java.util.stream.Stream<java.nio.file.Path> s = java.nio.file.Files.list(destinoReal) ){
+                    if ( s.findAny().isPresent() ){
+                        System.out.println("Erro, o diretorio de destino nao esta vazio: "+destinoReal);
+                        System.exit(1);
+                    }
                 }
             }
-        }else
-            Files.move(f1.toPath(), f2.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            // arquivo/symlink sobre arquivo/symlink: substitui; pasta sobre pasta vazia: substitui
+        }
+
+        java.nio.file.Files.move(origemReal, destinoReal, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
     }
     
     public void cd(){
