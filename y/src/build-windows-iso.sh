@@ -41,6 +41,9 @@
 # Chrome + winget entram OFFLINE dentro da install.wim e são instalados no PRIMEIRO
 # boot por um SetupComplete.cmd (roda como SYSTEM no fim do Setup, antes do logon,
 # SEM precisar de rede). Chrome via msiexec; winget provisionado via DISM.
+# O mesmo SetupComplete.cmd garante o WinRE habilitado (reagentc /enable): sem ele o
+# servicing stack do 24H2+ recusa fechar a transação e o Windows Update falha (visto
+# em 2026-09 numa instalação em ReFS sem partição de recuperação).
 # Log no Windows: C:\Windows\Setup\Scripts\buildiso-postinstall.log
 #
 # obs: requer ~25 GB livres em $WORK (pacotes UUP + WIM + ISO). O download
@@ -477,6 +480,12 @@ reg add "HKLM\SYSTEM\Setup\LabConfig" /v "BypassRAMCheck" /t REG_DWORD /d 1 /f
 reg add "HKLM\SYSTEM\Setup\LabConfig" /v "BypassCPUCheck" /t REG_DWORD /d 1 /f
 reg add "HKLM\SYSTEM\Setup\LabConfig" /v "BypassStorageCheck" /t REG_DWORD /d 1 /f
 NOTPM_EOF
+  # refs_formata_automatico.bat — layout EFI + Windows (ReFS) + Recovery (NTFS 1GB).
+  # A partição de recuperação é OBRIGATÓRIA na prática: o servicing stack do 24H2+
+  # exige WinRE habilitado p/ fechar a transação; sem ela o Windows Update falha.
+  # ReFS NÃO encolhe depois de formatado -> o 'shrink' fica ANTES do 'format fs=refs'.
+  # set id + gpt attributes = partição de recuperação "de verdade" (reagentc a acha
+  # sozinho; o Windows instalado a mantém oculta, sem letra).
   cat > "$EXTRAS_DIR/refs_formata_automatico.bat" <<'REFS_EOF'
 @echo off
 echo ========================================
@@ -498,8 +507,14 @@ echo cre par efi size=512
 echo format fs=fat32 quick
 echo assign letter w
 echo cre par pri
+echo shrink minimum=1024
 echo format fs=refs quick
 echo assign letter c
+echo cre par pri
+echo format fs=ntfs quick
+echo assign letter r
+echo set id=de94bba4-06d1-4d40-a16a-bfd50179d6ac
+echo gpt attributes=0x8000000000000001
 echo exit
 ) | diskpart
 
@@ -509,6 +524,16 @@ echo Processo concluido com sucesso!
 echo Particoes criadas:
 echo - W: (EFI, FAT32, 512MB)
 echo - C: (PRIMARY, ReFS)
+echo - R: (RECOVERY, NTFS, 1GB)
+echo ========================================
+echo.
+echo Com o Windows instalado, verifique o WinRE assim:
+echo    reagentc /info
+echo    (esperado: Status do Windows RE: Enabled)
+echo.
+echo Caso o WinRE nao esteja presente, aplique assim:
+echo    reagentc /enable
+echo    reagentc /info
 echo ========================================
 pause
 REFS_EOF
@@ -527,7 +552,8 @@ rem SEMPRE (mesmo num errorlevel inesperado). -t 0 = reinicia na hora (sem os 30
 oobe\msoobe & shutdown -r -t 0
 ADDUSER_EOF
   # SetupComplete.cmd: o Windows roda este arquivo automaticamente no FIM do Setup,
-  # como SYSTEM, antes do primeiro logon. Ideal p/ instalar apps offline (sem rede).
+  # como SYSTEM, antes do primeiro logon. Ideal p/ instalar apps offline (sem rede)
+  # e p/ garantir o WinRE habilitado (o Setup costuma fazer, mas aqui fica auditável).
   # Vai p/ \Windows\Setup\Scripts\ dentro da install.wim (ver inject_extras...).
   cat > "$EXTRAS_DIR/SetupComplete.cmd" <<'SETUPC_EOF'
 @echo off
@@ -535,6 +561,23 @@ setlocal
 set "LOG=%SystemRoot%\Setup\Scripts\buildiso-postinstall.log"
 set "SRC=%SystemRoot%\Setup\Files"
 echo [buildiso] SetupComplete iniciado %DATE% %TIME%>>"%LOG%"
+
+rem ---- WinRE: garante habilitado (necessario p/ o Windows Update no 24H2+) ----
+rem  Sem WinRE o SSU falha em "WinRE is not enabled, cannot proceed with commit" e
+rem  nenhum cumulativo entra (nem pelo WU, nem por DISM). O Setup normalmente habilita
+rem  sozinho quando existe particao Recovery (refs_formata_automatico.bat cria uma);
+rem  este passo cobre o caso em que nao habilitou. O status sai em ingles
+rem  (Enabled/Disabled) mesmo no Windows pt-BR.
+reagentc /info | find /i "Enabled" >nul
+if errorlevel 1 (
+  echo [buildiso] WinRE desabilitado; habilitando...>>"%LOG%"
+  reagentc /enable>>"%LOG%" 2>&1
+)
+reagentc /info>>"%LOG%" 2>&1
+
+rem ---- menu Novo: Documento de Texto / Bitmap / RTF ----
+echo [buildiso] Corrigindo ShellNew (Novo -^> Documento de Texto)...>>"%LOG%"
+call "%SystemRoot%\Setup\Scripts\fix-shellnew.cmd">>"%LOG%" 2>&1
 
 rem ---- Google Chrome (MSI enterprise offline, instala por maquina) ----
 if exist "%SRC%\chrome.msi" (
@@ -558,6 +601,38 @@ echo [buildiso] SetupComplete concluido %DATE% %TIME%>>"%LOG%"
 endlocal
 exit /b 0
 SETUPC_EOF
+
+  # fix-shellnew.cmd: restaura "Clique direito -> Novo -> Documento de Texto" (e Bitmap /
+  # RTF). Em imagens UUP montadas fora do Windows as chaves ShellNew de .txt/.bmp/.rtf
+  # podem vir incompletas -> o menu Novo perde essas entradas. Roda pelo SetupComplete
+  # (SYSTEM), gravando em HKLM\SOFTWARE\Classes (= HKCR machine-wide). %%X%% vira %X%
+  # literal no arquivo final; ItemName/command precisam do %SystemRoot% NAO expandido.
+  cat > "$EXTRAS_DIR/fix-shellnew.cmd" <<'SHELLNEW_EOF'
+@echo off
+set "CLS=HKLM\SOFTWARE\Classes"
+
+rem ---- .txt -> Documento de Texto ----
+reg add "%CLS%\.txt" /ve /d "txtfile" /f
+reg add "%CLS%\.txt" /v "Content Type" /d "text/plain" /f
+reg add "%CLS%\.txt" /v "PerceivedType" /d "text" /f
+reg add "%CLS%\.txt\ShellNew" /v "NullFile" /d "" /f
+reg add "%CLS%\.txt\ShellNew" /v "ItemName" /t REG_EXPAND_SZ /d "@%%SystemRoot%%\system32\notepad.exe,-470" /f
+reg add "%CLS%\txtfile" /ve /d "Documento de Texto" /f
+reg add "%CLS%\txtfile\shell\open\command" /ve /t REG_EXPAND_SZ /d "%%SystemRoot%%\system32\NOTEPAD.EXE %%1" /f
+
+rem ---- .bmp -> Imagem de bitmap (so define o ProgID se estiver vazio) ----
+reg query "%CLS%\.bmp" /ve 2>nul | find /i "Paint" >nul || reg add "%CLS%\.bmp" /ve /d "Paint.Picture" /f
+reg add "%CLS%\.bmp\ShellNew" /v "NullFile" /d "" /f
+reg add "%CLS%\.bmp\ShellNew" /v "ItemName" /t REG_EXPAND_SZ /d "@%%SystemRoot%%\system32\mspaint.exe,-59414" /f
+
+rem ---- .rtf -> Documento RTF (WordPad saiu no 24H2; a entrada fica, abre no app que estiver associado) ----
+reg query "%CLS%\.rtf" /ve 2>nul | find /i "Document" >nul || reg add "%CLS%\.rtf" /ve /d "Wordpad.Document.1" /f
+reg add "%CLS%\.rtf\ShellNew" /v "Data" /d "{\rtf1}" /f
+
+rem ---- limpa o cache do menu Novo (recriado no 1o logon; ninguem logado ainda, sem reiniciar Explorer) ----
+reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\Discardable\PostSetup\ShellNew" /f >nul 2>&1
+exit /b 0
+SHELLNEW_EOF
 
   # Provisiona o App Installer (winget) p/ todos os usuarios, com suas dependencias.
   # Add-AppxProvisionedPackage aceita o array de deps direto — bem mais limpo que cmd.
@@ -773,12 +848,13 @@ cp -f "$__EX/notpm.bat" "$__EX/refs_formata_automatico.bat" "$__EX/add_user.bat"
 
 # (2) Chrome + winget DENTRO da install.$type (todos os índices) + SetupComplete.cmd.
 #     Instalam no 1º boot (SetupComplete.cmd roda como SYSTEM, sem rede).
+#     O SetupComplete.cmd entra SEMPRE (garante o WinRE), mesmo sem payloads.
 __wim="ISODIR/sources/install.$type"
-if [ -f "$__wim" ] && [ -f "$__EX/SetupComplete.cmd" ] \
-   && { [ -f "$__PL/chrome.msi" ] || [ -f "$__PL/winget/AppInstaller.msixbundle" ]; }; then
+if [ -f "$__wim" ] && [ -f "$__EX/SetupComplete.cmd" ]; then
   __u="${tempDir:-/tmp}/buildiso_payload_update.txt"
   {
     echo "add \"$__EX/SetupComplete.cmd\"    /Windows/Setup/Scripts/SetupComplete.cmd"
+    echo "add \"$__EX/fix-shellnew.cmd\"      /Windows/Setup/Scripts/fix-shellnew.cmd"
     echo "add \"$__EX/install-winget.ps1\"   /Windows/Setup/Scripts/install-winget.ps1"
     echo "add \"$__EX/register-winget.ps1\"  /Windows/Setup/Scripts/register-winget.ps1"
     [ -f "$__PL/chrome.msi" ] && echo "add \"$__PL/chrome.msi\" /Windows/Setup/Files/chrome.msi"
@@ -793,14 +869,14 @@ if [ -f "$__wim" ] && [ -f "$__EX/SetupComplete.cmd" ] \
   __i=1
   while [ "$__i" -le "${indexesExported:-1}" ]; do
     if wimlib-imagex update "$__wim" "$__i" < "$__u" >/dev/null 2>&1; then
-      echo "  [extra] Chrome/winget -> install.$type (índice $__i)"
+      echo "  [extra] SetupComplete.cmd (WinRE) + Chrome/winget -> install.$type (índice $__i)"
     else
-      echo "  [extra] AVISO: falhou enxertar payloads no índice $__i de install.$type"
+      echo "  [extra] AVISO: falhou enxertar SetupComplete/payloads no índice $__i de install.$type"
     fi
     __i=$((__i + 1))
   done
 else
-  echo "  [extra] (sem payloads para install.$type — Chrome/winget pulados)"
+  echo "  [extra] (install.$type ou SetupComplete.cmd ausente — enxerto pulado)"
 fi
 
 # (3) install.wim > 4GiB-1 não cabe no ISO9660. O -allow-limited-size faz o
@@ -857,7 +933,7 @@ INJ_EOF
     && echo ">> convert.sh: genisoimage com -allow-limited-size (install.wim pode passar de 4GiB)." \
     || echo ">> AVISO: não achei a chamada do genisoimage no convert.sh p/ adicionar -allow-limited-size."
   chmod +x "$cs"
-  echo ">> convert.sh ajustado: .bat na raiz + Chrome/winget na install.wim (antes do genisoimage)."
+  echo ">> convert.sh ajustado: .bat na raiz + SetupComplete/Chrome/winget na install.wim (antes do genisoimage)."
 }
 write_embedded_extras
 fetch_payloads
@@ -961,9 +1037,8 @@ echo ">> Pronto!"
 command -v sha256sum >/dev/null 2>&1 && sha256sum "$OUT"
 echo
 echo "ISO gerada em: $OUT"
-echo "Inclui na raiz: notpm.bat (bypass TPM/SecureBoot/RAM/CPU/Storage) + refs_formata_automatico.bat"
-{ [ "$CHROME" = "1" ] || [ "$WINGET" = "1" ]; } && \
-  echo "Instala no 1º boot (SetupComplete.cmd, sem rede):$([ "$CHROME" = "1" ] && echo ' Google Chrome')$([ "$WINGET" = "1" ] && echo ' winget/App-Installer') — log em C:\\Windows\\Setup\\Scripts\\buildiso-postinstall.log"
+echo "Inclui na raiz: notpm.bat (bypass TPM/SecureBoot/RAM/CPU/Storage) + refs_formata_automatico.bat (EFI + ReFS + Recovery 1GB)"
+echo "1º boot (SetupComplete.cmd, sem rede): garante WinRE habilitado + menu Novo (txt/bmp/rtf)$([ "$CHROME" = "1" ] && echo ' + Google Chrome')$([ "$WINGET" = "1" ] && echo ' + winget/App-Installer') — log em C:\\Windows\\Setup\\Scripts\\buildiso-postinstall.log"
 echo "Para um pendrive multiboot junto com a ISO do Ubuntu, use o Ventoy:"
 echo "  sudo sh Ventoy2Disk.sh -i /dev/sdX   # apaga o pendrive (confira com lsblk!)"
 echo "  cp '$OUT' ubuntu-*.iso /caminho/do/pendrive/"
