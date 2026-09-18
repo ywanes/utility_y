@@ -16,21 +16,52 @@ then
   exit 1
 fi
 
-type javac 2> /tmp/not
-if [ $((`cat /tmp/not | wc -l`)) -ge 1 ]
-then
-  echo instale o javac, use o comando abaixo:
-  echo "apt install -y openjdk-21-jdk" # limpa -> apt purge -y openjdk-* default-jdk default-jre && apt autoremove -y
-  echo Mas antes, faça apt update e apt upgrade
-  exit 1
-fi
-
 type curl 2> /tmp/not
 if [ $((`cat /tmp/not | wc -l`)) -ge 1 ]
 then
   echo instale o curl, use o comando abaixo:
   echo apt install curl
   exit 1
+fi
+
+# install javac
+set -euo pipefail
+
+GRAAL_HOME=/opt/graalvm-jdk-21
+GRAAL_URL="https://download.oracle.com/graalvm/21/latest/graalvm-jdk-21_linux-x64_bin.tar.gz"
+
+if [ -x "$GRAAL_HOME/bin/javac" ]; then
+    export JAVA_HOME="$GRAAL_HOME"
+    export PATH="$GRAAL_HOME/bin:$PATH"
+fi
+
+if ! command -v javac >/dev/null 2>&1; then
+    echo "javac não encontrado, instalando GraalVM em $GRAAL_HOME..."
+
+    SUDO=""
+    [ "$(id -u)" -ne 0 ] && SUDO=sudo
+
+    TMP=$(mktemp -d)
+    trap 'rm -rf "$TMP"' EXIT
+
+    curl -fsSL "$GRAAL_URL" -o "$TMP/graalvm.tar.gz"
+    mkdir "$TMP/x"
+    tar -xzf "$TMP/graalvm.tar.gz" -C "$TMP/x"
+
+    INNER=$(find "$TMP/x" -mindepth 1 -maxdepth 1 -type d)
+    [ "$(printf '%s\n' "$INNER" | wc -l)" -eq 1 ] || { echo "tarball inesperado: $INNER" >&2; exit 1; }
+    [ -x "$INNER/bin/javac" ] || { echo "conteúdo não é um JDK: $INNER" >&2; exit 1; }
+
+    $SUDO rm -rf "$GRAAL_HOME"
+    $SUDO mv "$INNER" "$GRAAL_HOME"
+
+    $SUDO tee /etc/profile.d/graalvm.sh >/dev/null <<-EOF
+    export JAVA_HOME=$GRAAL_HOME
+    export PATH="\$JAVA_HOME/bin:\$PATH"
+    EOF
+
+    export JAVA_HOME="$GRAAL_HOME"
+    export PATH="$GRAAL_HOME/bin:$PATH"
 fi
 
 if [ ! -e /opt ]

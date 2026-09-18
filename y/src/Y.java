@@ -47419,6 +47419,8 @@ Exemplos...
         # ultimo graalvm windows -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
         # ultimo graalvm linux -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
         # mixer de som -> sndvol
+        # install y windows powershell adm -> irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.ps1 | iex
+        # install y linux -> curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
 [y services]
     y services install yd yd.bat # registra (auto-start, LocalSystem)
     y services start   yd # inicia

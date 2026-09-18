@@ -38,11 +38,12 @@ curl.exe -L "https://www.regybox.pt/escolas/3/anima/ffmpeg/bin/ffplay.exe" -o ff
 
 
 # https://www.openlogic.com/openjdk-downloads -> link quebrado
-curl.exe -L "https://mirrors.huaweicloud.com/openjdk/21/openjdk-21_windows-x64_bin.zip" -o java.zip
-Expand-Archive -LiteralPath 'java.zip'
-[Environment]::SetEnvironmentVariable("JAVA_HOME", "c:\programFiles\java\jdk-21", "Machine")
+curl.exe -L "https://download.oracle.com/graalvm/21/latest/graalvm-jdk-21_windows-x64_bin.zip" -o java.zip
+Expand-Archive -LiteralPath 'java.zip' -DestinationPath 'java' -Force
+Rename-Item (Get-ChildItem 'java' -Directory -Filter 'graalvm-jdk-21.*')[0].FullName 'graalvm-jdk-21'
+[Environment]::SetEnvironmentVariable("JAVA_HOME", "c:\programFiles\java\graalvm-jdk-21", "Machine")
 
-$NewPATH = ("%JAVA_HOME%\bin;c:\programFiles\java\jdk-21\bin;c:\programFiles;" + [Environment]::GetEnvironmentVariable("PATH"))
+$NewPATH = ("%JAVA_HOME%\bin;c:\programFiles\java\graalvm-jdk-21\bin;c:\programFiles;" + [Environment]::GetEnvironmentVariable("PATH"))
 [Environment]::SetEnvironmentVariable("PATH", $NewPath, [EnvironmentVariableTarget]::Machine)   
 
 New-Item c:/y -ItemType Directory -ea 0
@@ -55,7 +56,7 @@ curl.exe -L "https://artifacts-oss.talend.com/nexus/content/groups/public/org/po
 curl.exe -L "https://repo1.maven.org/maven2/com/jcraft/jsch/0.1.55/jsch-0.1.55.jar" -o jsch-0.1.55.jar
 curl.exe -L "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java" -o Y.java
 
-c:\programFiles\java\jdk-21\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;." Y.java
+c:\programFiles\java\graalvm-jdk-21\bin\javac.exe -encoding UTF-8 -cp "ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;." Y.java
 
 Set-Content c:/windows/y.bat '@echo off
 setlocal enabledelayedexpansion
