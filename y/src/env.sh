@@ -110,7 +110,7 @@ echo "" > /opt/.u_c
           echo ''
         fi
       fi
-    done | head -1 | while read linha
+    done | grep -v ^$ | head -1 | while read linha
     do
       echo "$linha" > /opt/.u_c
       chmod 777 /opt/.u_c
