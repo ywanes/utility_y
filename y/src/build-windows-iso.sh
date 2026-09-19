@@ -495,6 +495,10 @@ echo.
 echo ATENCAO: Este script ira APAGAR TODOS OS DADOS
 echo do Disco 0. Certifique-se de fazer backup!
 echo.
+echo NOTA: ReFS NAO e bootavel. O volume C: (ReFS)
+echo serve apenas como volume de DADOS, nao para
+echo instalar o Windows nele.
+echo.
 pause
 echo.
 
@@ -503,28 +507,36 @@ echo Executando Diskpart...
 echo sel dis 0
 echo clean
 echo conv gpt
+echo rem --- EFI ---
 echo cre par efi size=512
 echo format fs=fat32 quick
 echo assign letter w
-echo cre par pri
-echo shrink minimum=1024
-echo format fs=refs quick
-echo assign letter c
-echo cre par pri
+echo rem --- MSR (reservada, recomendada em GPT) ---
+echo cre par msr size=16
+echo rem --- Recuperacao PRIMEIRO ---
+echo cre par pri size=1024
 echo format fs=ntfs quick
 echo assign letter r
 echo set id=de94bba4-06d1-4d40-a16a-bfd50179d6ac
 echo gpt attributes=0x8000000000000001
+echo rem --- ReFS por ULTIMO (para poder estender depois) ---
+echo cre par pri
+echo format fs=refs quick
+echo assign letter c
 echo exit
 ) | diskpart
 
 echo.
 echo ========================================
 echo Processo concluido com sucesso!
-echo Particoes criadas:
+echo Particoes criadas (nesta ordem no disco):
 echo - W: (EFI, FAT32, 512MB)
-echo - C: (PRIMARY, ReFS)
+echo - MSR (16MB, sem letra)
 echo - R: (RECOVERY, NTFS, 1GB)
+echo - C: (PRIMARY, ReFS, restante do disco)
+echo.
+echo O ReFS (C:) e a ULTIMA particao, entao pode ser
+echo estendido depois se o disco crescer (ex.: Resize-VHD).
 echo ========================================
 echo.
 echo Com o Windows instalado, verifique o WinRE assim:
