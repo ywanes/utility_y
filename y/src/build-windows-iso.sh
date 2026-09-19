@@ -507,19 +507,15 @@ echo Executando Diskpart...
 echo sel dis 0
 echo clean
 echo conv gpt
-echo rem --- EFI ---
 echo cre par efi size=512
 echo format fs=fat32 quick
 echo assign letter w
-echo rem --- MSR (reservada, recomendada em GPT) ---
 echo cre par msr size=16
-echo rem --- Recuperacao PRIMEIRO ---
 echo cre par pri size=1024
 echo format fs=ntfs quick
 echo assign letter r
 echo set id=de94bba4-06d1-4d40-a16a-bfd50179d6ac
 echo gpt attributes=0x8000000000000001
-echo rem --- ReFS por ULTIMO (para poder estender depois) ---
 echo cre par pri
 echo format fs=refs quick
 echo assign letter c
