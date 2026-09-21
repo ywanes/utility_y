@@ -94,23 +94,29 @@ alias uu='/opt/.u_c'
 echo "" > /opt/.u_c
 
 ( (
-  if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep -e "Not Upgrading:" -e "não são mais requeridos" | wc -l` -eq 1 ]
+  if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep -e "Not Upgrading:" -e "Não atualizando" -e "não são mais requeridos" | wc -l` -ge 1 ]
   then
-    apt list --upgradable -a 2>/dev/null | while read linha
-    do
-      if [ "$linha" != "" ] && [ `echo "$linha" | grep "apt autoremove" | wc -l` -eq 1 ]
+    (
+      if [ `apt upgrade 2>/dev/null < /dev/null | grep -e "apt autoremove" | wc -l` -eq 1 ]
       then
         echo 'apt autoremove'
-      else
-        if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listando..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
-        then
-          p1=`echo $linha | awk ' { print $1 } '`
-          echo "apt-get install --only-upgrade $p1"
-        else
-          echo ''
-        fi
       fi
-    done | grep -v ^$ | head -1 | while read linha
+      apt list --upgradable -a 2>/dev/null | while read linha
+      do
+        if [ `apt upgrade 2>/dev/null < /dev/null | grep -e "apt autoremove" | wc -l` -eq 1 ]
+        then
+          echo 'apt autoremove'
+        else
+          if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listando..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
+          then
+            p1=`echo $linha | awk ' { print $1 } '`
+            echo "apt-get install --only-upgrade $p1"
+          else
+            echo ''
+          fi
+        fi
+      done
+    ) | grep -v ^$ | head -1 | while read linha
     do
       echo "$linha" > /opt/.u_c
       chmod 777 /opt/.u_c
