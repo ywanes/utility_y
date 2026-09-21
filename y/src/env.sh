@@ -174,6 +174,7 @@ alias u4='echo u4/u7..;u1'
 alias u5='echo u5/u7..;u2'
 alias u6='echo u6/u7..;apt dist-upgrade'
 alias u7='echo u7/u7..;do-release-upgrade -d'
+alias news="sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) list'"
 
 export flag_enable_bracketed_paste='S'
 bind 'set enable-bracketed-paste off'
