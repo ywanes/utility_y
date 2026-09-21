@@ -35,8 +35,6 @@ set -euo pipefail
 case "${1:-}" in
   list|-l|--list)
     _mir="http://archive.ubuntu.com/ubuntu"
-    echo "Versões no archive (número | codinome | suite | status):"
-    echo "(número/suite/status vêm do archive AO VIVO; 'status' = já tem pacotes amd64?)"
     echo
     # suites base (1 palavra) no dists/: tira pockets (-updates/-security/...) e aliases.
     _suites="$(curl -fsSL "$_mir/dists/" 2>/dev/null \
@@ -116,7 +114,6 @@ case "${1:-}" in
       done
     } | sort -V
     echo
-    echo "Construa pelo NÚMERO:  build-ubuntu-iso.sh <numero>   (ex: 26.04)"
     exit 0
     ;;
   listFast|listfast|--list-fast|-lf)
