@@ -103,17 +103,12 @@ echo "" > /opt/.u_c
       fi
       apt list --upgradable -a 2>/dev/null | while read linha
       do
-        if [ `apt upgrade 2>/dev/null < /dev/null | grep -e "apt autoremove" | wc -l` -eq 1 ]
+        if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listando..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
         then
-          echo 'apt autoremove'
+          p1=`echo $linha | awk ' { print $1 } '`
+          echo "apt-get install --only-upgrade $p1"
         else
-          if [ "$linha" != "" ] && [ "$linha" != "Listing..." ] && [ "$linha" != "Listando..." ] && [ "$linha" != "Listagem..." ] && [ `echo "$linha" | grep ",now" | wc -l` -eq 0 ]
-          then
-            p1=`echo $linha | awk ' { print $1 } '`
-            echo "apt-get install --only-upgrade $p1"
-          else
-            echo ''
-          fi
+          echo ''
         fi
       done
     ) | grep -v ^$ | head -1 | while read linha
