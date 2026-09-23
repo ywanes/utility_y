@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Merge Idle 2</title>
+<style>
+    * { box-sizing: border-box; }
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background-color: #222;
+        font-family: Arial, sans-serif;
+        overflow: hidden;
+        touch-action: manipulation;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    #app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        width: 100%;
+    }
+    #fila_area {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        display: flex;
+        justify-content: center;
+        padding: 12px 0;
+    }
+    #fila {
+        width: 80%;
+        display: grid;
+        grid-template-columns: repeat(6, 1fr); /* sobrescrito pelo JS com 'colunas' */
+        gap: 8px;
+        align-content: start;
+    }
+    .peca {
+        aspect-ratio: 1 / 1;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 19px;
+        font-weight: bold;
+        color: #4a2f00;
+        background-color: #FFCC80;
+        word-break: break-all;
+        transition: background-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    }
+    .peca.piscar {
+        box-shadow: 0 0 14px #FFA726;
+        transform: scale(1.08);
+    }
+    #clicker_area {
+        flex: 0 0 20%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 8px 0 12px 0;
+    }
+    #clicker {
+        width: 80%;
+        height: 100%;
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+        background-color: #9e9e9e;
+        color: #222;
+        font-family: inherit;
+        font-size: 24px;
+        font-weight: bold;
+        touch-action: none; /* impede o navegador de cancelar o toque longo */
+        -webkit-tap-highlight-color: transparent;
+    }
+    #clicker:active { filter: brightness(0.85); }
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="fila_area">
+        <div id="fila"></div>
+    </div>
+    <div id="clicker_area">
+        <button id="clicker"></button>
+    </div>
+</div>
+
+<script>
+let canvas_tag = 'merge2_20260923';
+let intervalo_clicker_mili = 300; // segurar o dedo: um disparo a cada 300ms
+let colunas = 6;                  // quantas pecas cabem por linha
+let qtd_merge = 4;                // quantas pecas iguais viram uma de nivel acima
+
+var fila = []; // lista de niveis (Number), na ordem em que aparecem na tela
+this.z = null;
+
+/* ============ persistencia ============ */
+
+// WebView de APK pode ter o DOM storage desligado: setItem lança excecao.
+// Este wrapper blinda o jogo e usa memoria como fallback.
+var memoria_fallback = {};
+function ls_get(chave) {
+    try { return localStorage.getItem(chave); }
+    catch (e) { return memoria_fallback[chave] != null ? memoria_fallback[chave] : null; }
+}
+function ls_set(chave, valor) {
+    try { localStorage.setItem(chave, valor); }
+    catch (e) { memoria_fallback[chave] = valor; }
+}
+
+function salvar() {
+    ls_set(canvas_tag, JSON.stringify({ fila: fila }));
+}
+
+function carregar() {
+    let raw = ls_get(canvas_tag);
+    if (raw == null || raw === '') return;
+    try {
+        let estado = JSON.parse(raw);
+        fila = (estado.fila || []).map(n => Math.max(0, Math.floor(Number(n) || 0)));
+        processar_merges(); // garante estado valido mesmo se o save vier estranho
+    } catch (e) {
+        console.error('Erro ao carregar estado:', e);
+    }
+}
+
+z = function () {
+    // javascript:z('')  apaga o historico e recomeça
+    ls_set(canvas_tag, '');
+    location.reload();
+}
+console.log("apaga historico==>\njavascript:z('')");
+
+/* ============ regras do jogo ============ */
+
+// Procura um nivel com 'qtd_merge' pecas. Remove essas pecas e coloca
+// uma peca de nivel+1 no lugar da primeira removida. Repete ate nao
+// haver mais merges (cascata: 4 zeros -> 1, e se ja havia tres 1 -> 2 ...).
+// Retorna o indice da ultima peca promovida, ou -1 se nao houve merge.
+function processar_merges() {
+    let ultimo = -1;
+    let achou = true;
+    while (achou) {
+        achou = false;
+        let contagem = {};
+        for (let i = 0; i < fila.length; i++) {
+            let n = fila[i];
+            contagem[n] = (contagem[n] || 0) + 1;
+            if (contagem[n] >= qtd_merge) {
+                // remove as 'qtd_merge' ocorrencias desse nivel
+                let primeiro = -1;
+                let removidos = 0;
+                let nova = [];
+                for (let j = 0; j < fila.length; j++) {
+                    if (fila[j] === n && removidos < qtd_merge) {
+                        if (primeiro === -1) primeiro = nova.length;
+                        removidos++;
+                    } else {
+                        nova.push(fila[j]);
+                    }
+                }
+                nova.splice(primeiro, 0, n + 1);
+                fila = nova;
+                ultimo = primeiro;
+                achou = true;
+                break;
+            }
+        }
+    }
+    return ultimo;
+}
+
+function disparar() {
+    fila.push(0);
+    let promovido = processar_merges();
+    atualizar_tela();
+    if (promovido >= 0) piscar(promovido);
+}
+
+/* ============ interface ============ */
+
+const el_fila = document.getElementById('fila');
+const el_clicker = document.getElementById('clicker');
+el_fila.style.gridTemplateColumns = 'repeat(' + colunas + ', 1fr)';
+
+function cor_do_nivel(n) {
+    // nivel 0 = laranja claro; cada nivel gira a cor e escurece um pouco
+    let matiz = (36 + n * 47) % 360;
+    let luz = Math.max(45, 76 - n * 3);
+    return 'hsl(' + matiz + ', 85%, ' + luz + '%)';
+}
+
+function atualizar_tela() {
+    // reaproveita as pecas ja existentes para nao perder o efeito de piscar
+    while (el_fila.children.length < fila.length) {
+        let d = document.createElement('div');
+        d.className = 'peca';
+        el_fila.appendChild(d);
+    }
+    while (el_fila.children.length > fila.length) {
+        el_fila.removeChild(el_fila.lastChild);
+    }
+    for (let i = 0; i < fila.length; i++) {
+        let d = el_fila.children[i];
+        let txt = String(fila[i]);
+        if (d.textContent !== txt) d.textContent = txt;
+        d.style.backgroundColor = cor_do_nivel(fila[i]);
+    }
+}
+
+var timer_piscar = null;
+var peca_piscando = null;
+function piscar(i) {
+    let d = el_fila.children[i];
+    if (d == null) return;
+    if (peca_piscando != null) peca_piscando.classList.remove('piscar');
+    if (timer_piscar != null) clearTimeout(timer_piscar);
+    d.classList.add('piscar');
+    peca_piscando = d;
+    timer_piscar = setTimeout(function () {
+        d.classList.remove('piscar');
+        peca_piscando = null;
+        timer_piscar = null;
+    }, 180);
+}
+
+/* ============ clicker: toque unico e segurar o dedo ============ */
+
+var timer_clicker = null;
+
+function comeca_segurar(e) {
+    if (e && e.cancelable) e.preventDefault(); // impede toque longo de virar gesto do navegador
+    if (timer_clicker != null) return;
+    disparar(); // primeiro disparo imediato
+    timer_clicker = setInterval(disparar, intervalo_clicker_mili);
+}
+
+function para_segurar() {
+    if (timer_clicker == null) return;
+    clearInterval(timer_clicker);
+    timer_clicker = null;
+    salvar();
+}
+
+// touch no celular/WebView, mouse no desktop.
+// Pointer Events nao sao confiaveis em WebView de APK.
+if ('ontouchstart' in window) {
+    el_clicker.addEventListener('touchstart', comeca_segurar, false);
+    el_clicker.addEventListener('touchend', para_segurar, false);
+    el_clicker.addEventListener('touchcancel', para_segurar, false);
+} else {
+    el_clicker.addEventListener('mousedown', comeca_segurar, false);
+    el_clicker.addEventListener('mouseup', para_segurar, false);
+    el_clicker.addEventListener('mouseleave', para_segurar, false);
+}
+el_clicker.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+/* ============ inicio ============ */
+
+carregar();
+atualizar_tela();
+</script>
+</body>
+</html>
