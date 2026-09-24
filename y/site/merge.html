@@ -174,10 +174,17 @@ function processar_merges() {
     return ultimo;
 }
 
-function disparar() {
-    fila.push(0);
-    let promovido = processar_merges();
-    atualizar_tela();
+function disparar(qtd) {
+    // qtd > 1 acontece quando o navegador travou (redimensionar janela,
+    // aba em segundo plano) e precisamos recuperar os disparos atrasados
+    if (qtd == null) qtd = 1;
+    let promovido = -1;
+    for (let k = 0; k < qtd; k++) {
+        fila.push(0);
+        let p = processar_merges();
+        if (p >= 0) promovido = p;
+    }
+    atualizar_tela(); // desenha uma vez so, mesmo recuperando varios
     if (promovido >= 0) piscar(promovido);
 }
 
@@ -231,19 +238,56 @@ function piscar(i) {
 /* ============ clicker: toque unico e segurar o dedo ============ */
 
 var timer_clicker = null;
+var ultimo_disparo = 0; // momento (ms) do ultimo disparo contabilizado
+var ultimo_salvar = 0;
+let intervalo_salvar_mili = 1000; // enquanto segura, salva a cada 1s
+
+// Em vez de confiar que o setInterval rode certinho a cada 300ms
+// (o navegador segura os timers ao redimensionar a janela ou em segundo plano),
+// o tique confere o relogio e faz todos os disparos que deveriam ter acontecido.
+function tique_segurar() {
+    let agora = Date.now();
+    let n = Math.floor((agora - ultimo_disparo) / intervalo_clicker_mili);
+    if (n > 0) {
+        ultimo_disparo += n * intervalo_clicker_mili;
+        disparar(n);
+    }
+    if (agora - ultimo_salvar >= intervalo_salvar_mili) {
+        ultimo_salvar = agora;
+        salvar();
+    }
+}
 
 function comeca_segurar(e) {
     if (e && e.cancelable) e.preventDefault(); // impede toque longo de virar gesto do navegador
     if (timer_clicker != null) return;
     disparar(); // primeiro disparo imediato
-    timer_clicker = setInterval(disparar, intervalo_clicker_mili);
+    ultimo_disparo = Date.now();
+    ultimo_salvar = ultimo_disparo;
+    timer_clicker = setInterval(tique_segurar, 50); // confere o relogio com folga
 }
 
-function para_segurar() {
+function para_segurar(e) {
+    // no modo automatico, soltar o botao ou passar o mouse por cima
+    // nao desliga; so para_segurar() chamado pelo console desliga
+    if (modo_automatico && e) return;
+    modo_automatico = false;
     if (timer_clicker == null) return;
     clearInterval(timer_clicker);
     timer_clicker = null;
     salvar();
+}
+
+/* ============ automatico: botao "segurado" para sempre, pelo console ============ */
+
+var modo_automatico = false;
+
+function automatico() {
+    // usa o mesmo mecanismo do segurar: recupera disparos atrasados
+    // e salva a cada intervalo_salvar_mili
+    modo_automatico = true;
+    comeca_segurar();
+    console.log('automatico ligado. para desligar:\npara_segurar();');
 }
 
 // touch no celular/WebView, mouse no desktop.
@@ -263,6 +307,7 @@ el_clicker.addEventListener('contextmenu', function (e) { e.preventDefault(); })
 
 carregar();
 atualizar_tela();
+console.log("use isso para rodar automaticamente:\nautomatico();");
 </script>
 </body>
 </html>
