@@ -93,7 +93,9 @@
 let canvas_tag = 'merge2_20260923';
 let intervalo_clicker_mili = 300; // segurar o dedo: um disparo a cada 300ms
 let colunas = 6;                  // quantas pecas cabem por linha
-let qtd_merge = 4;                // quantas pecas iguais viram uma de nivel acima
+let qtd_merge = 5;                // quantas pecas iguais sao necessarias para o merge
+let qtd_sobra = 1;                // quantas pecas do mesmo nivel sobram apos o merge
+                                  // (precisa ser menor que qtd_merge, senao o merge nunca termina)
 
 var fila = []; // lista de niveis (Number), na ordem em que aparecem na tela
 this.z = null;
@@ -138,8 +140,9 @@ console.log("apaga historico==>\njavascript:z('')");
 /* ============ regras do jogo ============ */
 
 // Procura um nivel com 'qtd_merge' pecas. Remove essas pecas e coloca
-// uma peca de nivel+1 no lugar da primeira removida. Repete ate nao
-// haver mais merges (cascata: 4 zeros -> 1, e se ja havia tres 1 -> 2 ...).
+// uma peca de nivel+1 no lugar da primeira removida, seguida de 'qtd_sobra'
+// pecas do nivel original (ex.: 0 0 0 0 0 -> 1 0). Repete ate nao
+// haver mais merges (cascata: se o novo 1 completar cinco 1 -> 2 1 ...).
 // Retorna o indice da ultima peca promovida, ou -1 se nao houve merge.
 function processar_merges() {
     let ultimo = -1;
@@ -163,7 +166,9 @@ function processar_merges() {
                         nova.push(fila[j]);
                     }
                 }
-                nova.splice(primeiro, 0, n + 1);
+                let resultado = [n + 1];
+                for (let s = 0; s < qtd_sobra; s++) resultado.push(n);
+                nova.splice.apply(nova, [primeiro, 0].concat(resultado));
                 fila = nova;
                 ultimo = primeiro;
                 achou = true;
