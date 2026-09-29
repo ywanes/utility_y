@@ -42554,6 +42554,28 @@ class TelaBloqueio {
         "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings";
     private static final String LOCK11 =
         "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Lock Screen";
+    private static final String ADV =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced";
+    private static final String MENU_CLASSICO =
+        "HKCU\\SOFTWARE\\Classes\\CLSID\\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}\\InprocServer32";
+    private static final String DESKTOP =
+        "HKCU\\Control Panel\\Desktop";
+    private static final String CORES =
+        "HKCU\\Control Panel\\Colors";
+    private static final String WALLPAPERS =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Wallpapers";
+    private static final String BUSCA =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search";
+    private static final String DSH =
+        "HKLM\\SOFTWARE\\Policies\\Microsoft\\Dsh";
+    private static final String INICIAR =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Start";
+    // GUID fixo do perfil "Prompt de comando" no Windows Terminal
+    private static final String GUID_CMD = "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}";
+    private static final String CLASSES =
+        "HKLM\\SOFTWARE\\Classes";
+    private static final String CACHE_NOVO =
+        "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Discardable\\PostSetup\\ShellNew";
     public enum Modo { MINIMO, PADRAO }    
     public TelaBloqueio(String[] args){        
         try{
@@ -42576,10 +42598,10 @@ class TelaBloqueio {
     }
     private static void aplicarMinimo() throws java.io.IOException {
         System.out.println();
-        System.out.println("[1/5] Gerando imagem preta...");
+        System.out.println("[1/13] Gerando imagem preta...");
         gerarImagemPreta();
         System.out.println();
-        System.out.println("[2/5] Definindo o fundo da tela de bloqueio...");
+        System.out.println("[2/13] Definindo o fundo da tela de bloqueio...");
         definirTexto(CSP, "LockScreenImagePath", ARQ_IMAGEM);
         definirTexto(CSP, "LockScreenImageUrl",  ARQ_IMAGEM);
         definirDword(CSP, "LockScreenImageStatus", 1);
@@ -42587,21 +42609,72 @@ class TelaBloqueio {
         // 0 mantem o mesmo fundo preto na tela de senha
         definirDword(SYS, "DisableLogonBackgroundImage", 0);
         System.out.println();
-        System.out.println("[3/5] Desativando Spotlight, dicas e curiosidades...");
+        System.out.println("[3/13] Desativando Spotlight, dicas e curiosidades...");
         definirDword(CDM, "RotatingLockScreenEnabled", 0);
         definirDword(CDM, "RotatingLockScreenOverlayEnabled", 0);
         definirDword(CDM, "SubscribedContent-338387Enabled", 0);
         definirDword(CLOUD, "DisableWindowsSpotlightFeatures", 1);
         System.out.println();
-        System.out.println("[4/5] Removendo notificacoes e widgets...");
+        System.out.println("[4/13] Removendo notificacoes e widgets...");
         definirDword(SYS, "DisableLockScreenAppNotifications", 1);
         definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 0);
         definirDword(LOCK11, "LockScreenWidgetsEnabled", 0);
         System.out.println();
-        System.out.println("[5/5] Removendo o relogio...");
+        System.out.println("[5/13] Removendo o relogio...");
         definirDword(PERS, "NoLockScreen", 1);
+        System.out.println();
+        System.out.println("[6/13] Ajustando energia (tela, suspensao, hibernacao e tampa)...");
+        executarPowercfg("-change", "-monitor-timeout-ac", "0");
+        executarPowercfg("-change", "-standby-timeout-ac", "0");
+        executarPowercfg("-change", "-hibernate-timeout-ac", "0");
+        // 0 = nao fazer nada ao fechar a tampa (na tomada)
+        executarPowercfg("-setacvalueindex", "SCHEME_CURRENT", "SUB_BUTTONS", "LIDACTION", "0");
+        executarPowercfg("-setactive", "SCHEME_CURRENT");
+        executarPowercfg("-h", "off");
+        mostrarEstadosEnergia();
+        System.out.println();
+        System.out.println("[7/13] Ajustando o Explorador de Arquivos...");
+        // 1 = mostrar arquivos, pastas e unidades ocultas
+        definirDword(ADV, "Hidden", 1);
+        // 1 = abrir o Explorador em "Este Computador"
+        definirDword(ADV, "LaunchTo", 1);
+        // valor padrao vazio = menu de contexto classico (Windows 11)
+        definirValor(MENU_CLASSICO, null, null, null);
+        System.out.println();
+        System.out.println("[8/13] Definindo a area de trabalho com cor solida preta...");
+        definirFundoDesktopPreto();
+        System.out.println();
+        System.out.println("[9/13] Ajustando itens da barra de tarefas...");
+        // 0 = Pesquisar: Ocultar
+        definirDword(BUSCA, "SearchboxTaskbarMode", 0);
+        // 0 = Visao de tarefas: Desativado
+        definirDword(ADV, "ShowTaskViewButton", 0);
+        // 0 = Widgets: Desativado (pode falhar em builds novas do Windows 11,
+        // que bloqueiam essa chave; a politica abaixo cobre esse caso)
+        definirDword(ADV, "TaskbarDa", 0);
+        definirDword(DSH, "AllowNewsAndInterests", 0);
+        System.out.println();
+        System.out.println("[10/13] Ajustando o menu Iniciar...");
+        // 0 = nao mostrar aplicativos adicionados recentemente
+        definirDword(INICIAR, "ShowRecentList", 0);
+        // 0 = nao mostrar arquivos recentes e sugeridos
+        definirDword(ADV, "Start_TrackDocs", 0);
+        // 0 = nao mostrar dicas e recomendacoes de aplicativos
+        definirDword(ADV, "Start_IrisRecommendations", 0);
+        System.out.println();
+        System.out.println("[11/13] Definindo o Prompt de comando como perfil padrao do Terminal...");
+        definirPerfilPadraoTerminal();
+        System.out.println();
+        System.out.println("[12/13] Desligando o Firewall do Windows (todos os perfis)...");
+        executarComando("netsh", "advfirewall", "set", "allprofiles", "state", "off");
+        System.out.println();
+        System.out.println("[13/13] Restaurando itens do menu Novo (txt, bmp, rtf)...");
+        restaurarMenuNovo();
+        System.out.println();
+        System.out.println("Reiniciando o Explorer...");
+        reiniciarExplorer();
         //System.out.println();
-        //System.out.println("[6/6] Ocultando as informacoes do usuario...");
+        //System.out.println("[14/14] Ocultando as informacoes do usuario...");
         //definirDword(POL_SYS, "dontdisplaylastusername", 1);
         //definirDword(POL_SYS, "DontDisplayLockedUserId", 3);
     }
@@ -42635,6 +42708,106 @@ class TelaBloqueio {
         System.out.println();
         System.out.println("O Spotlight pode levar um logon e alguns minutos de internet");
         System.out.println("para baixar a primeira imagem.");
+    }
+    private static void definirFundoDesktopPreto() throws java.io.IOException {
+        // sem imagem de fundo (valor vazio)
+        definirValor(DESKTOP, "Wallpaper", "REG_SZ", null);
+        // cor de fundo em RGB
+        definirTexto(CORES, "Background", "0 0 0");
+        // 1 = "Cor solida" em Configuracoes > Personalizacao > Tela de fundo
+        definirDword(WALLPAPERS, "BackgroundType", 1);
+        // aplica agora, sem precisar sair e entrar de novo
+        String script =
+            "Add-Type -TypeDefinition 'using System.Runtime.InteropServices; " +
+            "public static class Fundo { " +
+            "[DllImport(\"user32.dll\", CharSet = CharSet.Unicode)] " +
+            "public static extern bool SystemParametersInfo(int acao, int param, string valor, int flags); " +
+            "[DllImport(\"user32.dll\")] " +
+            "public static extern bool SetSysColors(int n, int[] elementos, int[] cores); }'; " +
+            "[Fundo]::SetSysColors(1, @(1), @(0)) | Out-Null; " +
+            "[Fundo]::SystemParametersInfo(20, 0, '', 3) | Out-Null";
+        String codificado = java.util.Base64.getEncoder().encodeToString(
+            script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        java.util.List<String> cmd = java.util.Arrays.asList(
+            "powershell", "-NoProfile", "-NonInteractive",
+            "-ExecutionPolicy", "Bypass", "-EncodedCommand", codificado);
+        if (executarSilencioso(cmd) == 0) {
+            System.out.println("  [ok]     Fundo preto aplicado");
+        } else {
+            System.out.println("  [falhou] Aplicar fundo agora (vale no proximo logon)");
+        }
+    }
+    // qualquer erro aqui e apenas avisado; o restante do script continua
+    private static void definirPerfilPadraoTerminal() {
+        try {
+            String local = System.getenv("LOCALAPPDATA");
+            if (local == null) {
+                System.out.println("  [ausente] LOCALAPPDATA nao encontrado, etapa ignorada");
+                return;
+            }
+            java.nio.file.Path pacote = java.nio.file.Paths.get(
+                local, "Packages", "Microsoft.WindowsTerminal_8wekyb3d8bbwe");
+            if (!java.nio.file.Files.isDirectory(pacote)) {
+                System.out.println("  [ausente] Windows Terminal nao instalado, etapa ignorada");
+                return;
+            }
+            java.nio.file.Path arquivo = pacote.resolve("LocalState").resolve("settings.json");
+            String json = java.nio.file.Files.exists(arquivo)
+                ? new String(java.nio.file.Files.readAllBytes(arquivo),
+                             java.nio.charset.StandardCharsets.UTF_8)
+                : "{}";
+            if (json.startsWith("\uFEFF")) {
+                json = json.substring(1);
+            }
+            String novo = "\"defaultProfile\": \"" + GUID_CMD + "\"";
+            java.util.regex.Matcher m = java.util.regex.Pattern
+                .compile("\"defaultProfile\"\\s*:\\s*\"[^\"]*\"")
+                .matcher(json);
+            if (m.find()) {
+                json = m.replaceFirst(java.util.regex.Matcher.quoteReplacement(novo));
+            } else {
+                int i = json.indexOf('{');
+                if (i < 0) {
+                    json = "{\n    " + novo + "\n}\n";
+                } else {
+                    String resto = json.substring(i + 1);
+                    boolean vazio = resto.trim().startsWith("}");
+                    json = json.substring(0, i + 1) + "\n    " + novo
+                         + (vazio ? "\n" : ",") + resto;
+                }
+            }
+            java.nio.file.Files.createDirectories(arquivo.getParent());
+            java.nio.file.Files.write(arquivo,
+                json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            System.out.println("  [ok]     settings.json\\defaultProfile = Prompt de comando");
+        } catch (Exception e) {
+            System.out.println("  [aviso]  Nao foi possivel ajustar o Windows Terminal: " + e.getMessage());
+        }
+    }
+    private static void restaurarMenuNovo() throws java.io.IOException {
+        // .txt -> Documento de Texto
+        String txt = CLASSES + "\\.txt";
+        definirValor(txt, null, "REG_SZ", "txtfile");
+        definirTexto(txt, "Content Type", "text/plain");
+        definirTexto(txt, "PerceivedType", "text");
+        definirValor(txt + "\\ShellNew", "NullFile", "REG_SZ", null);
+        definirValor(txt + "\\ShellNew", "ItemName", "REG_EXPAND_SZ",
+            "@%SystemRoot%\\system32\\notepad.exe,-470");
+        definirValor(CLASSES + "\\txtfile", null, "REG_SZ", "Documento de Texto");
+        definirValor(CLASSES + "\\txtfile\\shell\\open\\command", null, "REG_EXPAND_SZ",
+            "%SystemRoot%\\system32\\NOTEPAD.EXE %1");
+        // .bmp -> Imagem de bitmap
+        String bmp = CLASSES + "\\.bmp";
+        definirPadraoSeVazio(bmp, "Paint.Picture");
+        definirValor(bmp + "\\ShellNew", "NullFile", "REG_SZ", null);
+        definirValor(bmp + "\\ShellNew", "ItemName", "REG_EXPAND_SZ",
+            "@%SystemRoot%\\system32\\mspaint.exe,-59414");
+        // .rtf -> Documento RTF
+        String rtf = CLASSES + "\\.rtf";
+        definirPadraoSeVazio(rtf, "Wordpad.Document.1");
+        definirTexto(rtf + "\\ShellNew", "Data", "{\\rtf1}");
+        // limpa o cache do menu Novo
+        removerChave(CACHE_NOVO);
     }
     private static void gerarImagemPreta() throws java.io.IOException {
         java.nio.file.Path pasta = java.nio.file.Paths.get(PASTA_BASE);
@@ -42698,6 +42871,54 @@ class TelaBloqueio {
             System.out.println("  [falhou] " + curto(chave) + "\\" + nome);
         }
     }
+    // nome null = valor padrao (/ve); tipo null = REG_SZ; valor null = vazio
+    private static void definirValor(String chave, String nome, String tipo, String valor)
+            throws java.io.IOException {
+        java.util.List<String> cmd = new java.util.ArrayList<>(
+            java.util.Arrays.asList("reg", "add", chave));
+        if (nome == null) {
+            cmd.add("/ve");
+        } else {
+            cmd.add("/v");
+            cmd.add(nome);
+        }
+        if (tipo != null) {
+            cmd.add("/t");
+            cmd.add(tipo);
+        }
+        if (valor != null) {
+            cmd.add("/d");
+            cmd.add(valor);
+        }
+        cmd.add("/f");
+        String rotulo = curto(chave) + "\\" + (nome == null ? "(padrao)" : nome);
+        if (executarSilencioso(cmd) == 0) {
+            System.out.println("  [ok]     " + rotulo);
+        } else {
+            System.out.println("  [falhou] " + rotulo);
+        }
+    }
+    // so define o valor padrao se a chave nao existir ou estiver sem valor
+    private static void definirPadraoSeVazio(String chave, String valor)
+            throws java.io.IOException {
+        StringBuilder saida = new StringBuilder();
+        int codigo = executarCapturando(
+            java.util.Arrays.asList("reg", "query", chave, "/ve"), saida);
+        if (codigo == 0) {
+            for (String linha : saida.toString().split("\\r?\\n")) {
+                int i = linha.indexOf("REG_");
+                if (i < 0) {
+                    continue;
+                }
+                String resto = linha.substring(i).replaceFirst("^REG_\\S+", "").trim();
+                if (!resto.isEmpty() && !resto.startsWith("(")) {
+                    System.out.println("  [mantido] " + curto(chave) + "\\(padrao) = " + resto);
+                    return;
+                }
+            }
+        }
+        definirValor(chave, null, "REG_SZ", valor);
+    }
     private static void remover(String chave, String nome) throws java.io.IOException {
         java.util.List<String> cmd =
             java.util.Arrays.asList("reg", "delete", chave, "/v", nome, "/f");
@@ -42705,11 +42926,66 @@ class TelaBloqueio {
         String status = (codigo == 0) ? "[limpo]  " : "[ausente]";
         System.out.println("  " + status + " " + curto(chave) + "\\" + nome);
     }
+    private static void removerChave(String chave) throws java.io.IOException {
+        java.util.List<String> cmd =
+            java.util.Arrays.asList("reg", "delete", chave, "/f");
+        int codigo = executarSilencioso(cmd);
+        String status = (codigo == 0) ? "[limpo]  " : "[ausente]";
+        System.out.println("  " + status + " " + curto(chave) + " (cache)");
+    }
+    private static void executarPowercfg(String... args) throws java.io.IOException {
+        java.util.List<String> cmd = new java.util.ArrayList<>();
+        cmd.add("powercfg");
+        cmd.addAll(java.util.Arrays.asList(args));
+        String linha = String.join(" ", cmd);
+        if (executarSilencioso(cmd) == 0) {
+            System.out.println("  [ok]     " + linha);
+        } else {
+            System.out.println("  [falhou] " + linha);
+        }
+    }
+    private static void executarComando(String... comando) throws java.io.IOException {
+        String linha = String.join(" ", comando);
+        if (executarSilencioso(java.util.Arrays.asList(comando)) == 0) {
+            System.out.println("  [ok]     " + linha);
+        } else {
+            System.out.println("  [falhou] " + linha);
+        }
+    }
+    private static void mostrarEstadosEnergia() throws java.io.IOException {
+        System.out.println();
+        System.out.println("  Estados de suspensao disponiveis (powercfg -a):");
+        StringBuilder saida = new StringBuilder();
+        executarCapturando(java.util.Arrays.asList("powercfg", "-a"), saida);
+        for (String linha : saida.toString().split("\\r?\\n")) {
+            System.out.println("    " + linha);
+        }
+    }
+    private static void reiniciarExplorer() throws java.io.IOException {
+        executarSilencioso(java.util.Arrays.asList("taskkill", "/f", "/im", "explorer.exe"));
+        try {
+            // o Windows normalmente reabre o Explorer sozinho
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        StringBuilder saida = new StringBuilder();
+        executarCapturando(java.util.Arrays.asList(
+            "tasklist", "/fi", "imagename eq explorer.exe"), saida);
+        if (!saida.toString().toLowerCase().contains("explorer.exe")) {
+            new ProcessBuilder("explorer.exe").start();
+        }
+        System.out.println("  [ok]     Explorer reiniciado");
+    }
     private static String curto(String chave) {
         int i = chave.lastIndexOf('\\');
         return (i < 0) ? chave : chave.substring(i + 1);
     }
     private static int executarSilencioso(java.util.List<String> comando)
+            throws java.io.IOException {
+        return executarCapturando(comando, null);
+    }
+    private static int executarCapturando(java.util.List<String> comando, StringBuilder saida)
             throws java.io.IOException {
         ProcessBuilder pb = new ProcessBuilder(comando);
         pb.redirectErrorStream(true);
@@ -42719,7 +42995,12 @@ class TelaBloqueio {
                 new java.io.InputStreamReader(p.getInputStream(), java.nio.charset.Charset.defaultCharset())
             )
         ){
-            while (r.readLine() != null){}
+            String linha;
+            while ((linha = r.readLine()) != null){
+                if (saida != null) {
+                    saida.append(linha).append(System.lineSeparator());
+                }
+            }
         }
         try {
             return p.waitFor();
