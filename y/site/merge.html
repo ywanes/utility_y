@@ -77,12 +77,44 @@
         -webkit-tap-highlight-color: transparent;
     }
     #clicker:active { filter: brightness(0.85); }
+    #barra_area {
+        flex: 0 0 auto;
+        display: flex;
+        justify-content: center;
+        padding: 4px 0 0 0;
+    }
+    #barra {
+        width: 80%;
+        display: flex;
+        justify-content: flex-end;
+    }
+    #btn_auto {
+        border: none;
+        border-radius: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        background-color: #555;
+        color: #ddd;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: bold;
+        -webkit-tap-highlight-color: transparent;
+    }
+    #btn_auto.ligado {
+        background-color: #66BB6A;
+        color: #0d2e0f;
+    }
 </style>
 </head>
 <body>
 <div id="app">
     <div id="fila_area">
         <div id="fila"></div>
+    </div>
+    <div id="barra_area">
+        <div id="barra">
+            <button id="btn_auto">auto on/off</button>
+        </div>
     </div>
     <div id="clicker_area">
         <button id="clicker"></button>
@@ -276,7 +308,9 @@ function para_segurar(e) {
     // no modo automatico, soltar o botao ou passar o mouse por cima
     // nao desliga; so para_segurar() chamado pelo console desliga
     if (modo_automatico && e) return;
+    let era_automatico = modo_automatico;
     modo_automatico = false;
+    if (era_automatico) sincronizar_auto(); // desligado pelo console
     if (timer_clicker == null) return;
     clearInterval(timer_clicker);
     timer_clicker = null;
@@ -292,8 +326,37 @@ function automatico() {
     // e salva a cada intervalo_salvar_mili
     modo_automatico = true;
     comeca_segurar();
+    sincronizar_auto();
     console.log('automatico ligado. para desligar:\npara_segurar();');
 }
+
+/* ============ botao auto on/off e parametro ?auto= na URL ============ */
+
+const el_auto = document.getElementById('btn_auto');
+
+function url_com_auto(valor) {
+    // mantem os outros parametros e o #hash; funciona em http:// e file://
+    let p = new URLSearchParams(location.search);
+    p.set('auto', valor);
+    return location.pathname + '?' + p.toString() + location.hash;
+}
+
+// Mantem botao e URL coerentes com o estado real, inclusive quando
+// automatico() / para_segurar() sao chamados pelo console.
+function sincronizar_auto() {
+    el_auto.classList.toggle('ligado', modo_automatico);
+    try {
+        history.replaceState(null, '', url_com_auto(modo_automatico ? '1' : '0'));
+    } catch (e) {
+        // alguns WebViews bloqueiam replaceState em file://; o botao continua certo
+    }
+}
+
+el_auto.addEventListener('click', function () {
+    // redireciona para a pagina com o estado trocado
+    salvar();
+    location.replace(url_com_auto(modo_automatico ? '0' : '1'));
+});
 
 // touch no celular/WebView, mouse no desktop.
 // Pointer Events nao sao confiaveis em WebView de APK.
@@ -312,6 +375,7 @@ el_clicker.addEventListener('contextmenu', function (e) { e.preventDefault(); })
 
 carregar();
 atualizar_tela();
+if (new URLSearchParams(location.search).get('auto') === '1') automatico();
 console.log("use isso para rodar automaticamente:\nautomatico();");
 </script>
 </body>
