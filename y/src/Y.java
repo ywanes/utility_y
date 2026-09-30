@@ -1059,6 +1059,14 @@ cat buffer.log
             iso(args);
             return;
         }
+        if ( args[0].equals("validaDisco") && args.length == 2 ){
+            try{
+                validaDisco(args[1]);
+            }catch(Exception e){
+                erroFatal(e);
+            }
+            return;
+        }        
         if ( args[0].equals("check_util") ){
             String [] verifys=check_util_list;
             if ( args.length > 1 )
@@ -34870,7 +34878,397 @@ class Util{
             }catch(Exception e){}
         }
     }
-        
+       
+    public void validaDisco(String path) throws Exception {
+        try (var f = new java.io.RandomAccessFile(path, "r")) { // so leitura
+            final long eof = f.length();
+            final long[] erros = {0};
+            final java.nio.ByteOrder LE = java.nio.ByteOrder.LITTLE_ENDIAN;
+            java.util.function.BiFunction<Long, Integer, java.nio.ByteBuffer> ler = (off, len) -> {
+                byte[] a = new byte[len];
+                try {
+                    if (off >= 0 && off < eof) { f.seek(off); f.readFully(a, 0, (int) Math.min((long) len, eof - off)); }
+                } catch (java.io.IOException e) { throw new java.io.UncheckedIOException(e); }
+                return java.nio.ByteBuffer.wrap(a);
+            };
+            java.util.function.Consumer<String> erro = s -> { erros[0]++; System.out.println("   ERRO " + s); };
+            // leitor de um setor do disco da VM (offset em bytes); null = nao da p/ ler
+            var setor = new java.util.concurrent.atomic.AtomicReference<java.util.function.LongFunction<byte[]>>();
+            final long[] vsize = {0}, ss = {512};
+            // pedacos do arquivo (inicio, tamanho, indice do nome) p/ achar sobreposicao: vhdx, vmdk, vdi
+            var iv = new java.util.ArrayList<long[]>();
+            var nomes = new java.util.ArrayList<String>();
+            java.util.function.BiConsumer<long[], String> pedaco = (r, n) -> { iv.add(new long[]{r[0], r[1], nomes.size()}); nomes.add(n); };
+
+            byte[] cab = ler.apply(0L, 512).array();
+            String ini = new String(cab, 0, 21, java.nio.charset.StandardCharsets.ISO_8859_1);
+            String formato = ini.startsWith("vhdxfile") ? "vhdx"
+                    : (cab[0] == 'Q' && cab[1] == 'F' && cab[2] == 'I' && (cab[3] & 0xFF) == 0xFB) ? "qcow2"
+                    : (cab[0] == 'K' && cab[1] == 'D' && cab[2] == 'M' && cab[3] == 'V') ? "vmdk"
+                    : ini.equals("# Disk DescriptorFile") ? "vmdk-descritor"
+                    : java.nio.ByteBuffer.wrap(cab).order(LE).getInt(0x40) == 0xBEDA107F ? "vdi" : "raw";
+            System.out.printf("arquivo   %s%nformato   %s, %d bytes (%d MB)%n", path, formato, eof, eof >> 20);
+
+            if (formato.equals("vhdx")) {
+                final String BAT = "2DC27766-F623-4200-9D64-115E9BFD4A08", META = "8B7CA206-4790-4B9A-B8FE-575F050F886E",
+                        FILE_PARAMS = "CAA16737-FA36-4D43-B3B6-33F0AA44E76B", DISK_SIZE = "2FA54224-CD1B-4876-B211-5DBED83BF4B8",
+                        SECTOR_SIZE = "8141BF1D-A96F-4709-BA47-F233A8FAAB5F";
+                java.util.function.BiFunction<java.nio.ByteBuffer, Integer, String> guid = (b, o) -> String.format(
+                        "%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X",
+                        b.getInt(o), b.getShort(o + 4) & 0xFFFF, b.getShort(o + 6) & 0xFFFF,
+                        b.get(o + 8) & 0xFF, b.get(o + 9) & 0xFF, b.get(o + 10) & 0xFF, b.get(o + 11) & 0xFF,
+                        b.get(o + 12) & 0xFF, b.get(o + 13) & 0xFF, b.get(o + 14) & 0xFF, b.get(o + 15) & 0xFF);
+                pedaco.accept(new long[]{0, 1L << 20}, "cabecalhos vhdx");
+                long seq = -1;
+                for (long ho : new long[]{0x10000, 0x20000}) {             // cabecalho mais novo diz onde esta o log
+                    var hh = ler.apply(ho, 4096).order(LE);
+                    if (hh.getInt(0) == 0x64616568 && hh.getLong(8) > seq) {
+                        seq = hh.getLong(8);
+                        long lo = hh.getLong(72), ll = hh.getInt(68) & 0xFFFFFFFFL;
+                        if (ll > 0) { iv.removeIf(x -> nomes.get((int) x[2]).equals("log vhdx")); pedaco.accept(new long[]{lo, ll}, "log vhdx"); }
+                    }
+                }
+                var rt = ler.apply(0x30000L, 64 * 1024).order(LE);
+                if (rt.getInt(0) != 0x69676572) { erro.accept("region table invalida (sem 'regi')"); return; }
+                var reg = new java.util.HashMap<String, long[]>();
+                for (int i = 0, n = rt.getInt(8); i < n; i++) {
+                    int o = 16 + 32 * i;
+                    reg.put(guid.apply(rt, o), new long[]{rt.getLong(o + 16), rt.getInt(o + 24) & 0xFFFFFFFFL});
+                }
+                long[] m = reg.get(META), b = reg.get(BAT);
+                pedaco.accept(m, "metadados vhdx");
+                pedaco.accept(b, "BAT vhdx");
+                var mt = ler.apply(m[0], (int) m[1]).order(LE);
+                var items = new java.util.HashMap<String, Integer>();
+                for (int i = 0, n = mt.getShort(10) & 0xFFFF; i < n; i++) {
+                    int o = 32 + 32 * i;
+                    items.put(guid.apply(mt, o), mt.getInt(o + 16));
+                }
+                final long block = mt.getInt(items.get(FILE_PARAMS)) & 0xFFFFFFFFL;
+                vsize[0] = mt.getLong(items.get(DISK_SIZE));
+                ss[0] = mt.getInt(items.get(SECTOR_SIZE)) & 0xFFFFFFFFL;
+                final long chunk = ((1L << 23) * ss[0]) / block;   // a cada 'chunk' blocos vem 1 entrada de sector bitmap
+                long nblk = (vsize[0] + block - 1) / block, pres = 0;
+                final var bat = ler.apply(b[0], (int) b[1]).order(LE);
+                var estados = new java.util.TreeMap<Integer, Integer>();
+                for (long blk = 0; blk < nblk; blk++) {
+                    long e = bat.getLong((int) ((blk + blk / chunk) * 8));
+                    int st = (int) (e & 7);
+                    estados.merge(st, 1, Integer::sum);
+                    if (st == 6 || st == 7) { pres++; pedaco.accept(new long[]{(e >>> 20) << 20, block}, "bloco " + blk + " (VM @" + ((blk * block) >> 20) + " MB)"); }
+                }
+                System.out.printf("vhdx      virtual %d MB, bloco %d MB, %d presentes, estados %s (6=presente 0=ausente 2=zero)%n",
+                        vsize[0] >> 20, block >> 20, pres, estados);
+                setor.set(off -> {
+                    long blk = off / block;
+                    long e = bat.getLong((int) ((blk + blk / chunk) * 8));
+                    int st = (int) (e & 7);
+                    return (st == 6 || st == 7) ? ler.apply(((e >>> 20) << 20) + off % block, (int) ss[0]).array() : new byte[(int) ss[0]];
+                });
+
+            } else if (formato.equals("qcow2")) {
+                var h = ler.apply(0L, 104);                        // qcow2 e big-endian
+                int ver = h.getInt(4), cbits = h.getInt(20), l1n = h.getInt(36), rtcl = h.getInt(56), nsnap = h.getInt(60);
+                final long cs = 1L << cbits, l1off = h.getLong(40), rtoff = h.getLong(48);
+                vsize[0] = h.getLong(24);
+                long incompat = ver >= 3 ? h.getLong(72) : 0;
+                int rbits = 1 << (ver >= 3 ? h.getInt(96) : 4);
+                final long MASK = 0x00FFFFFFFFFFFE00L;
+                System.out.printf("qcow2     v%d, virtual %d MB, cluster %d KB, refcount %d bits, snapshots %d%n",
+                        ver, vsize[0] >> 20, cs >> 10, rbits, nsnap);
+                if ((incompat & 1) != 0) System.out.println("   aviso: marcado 'sujo' (aberto pelo QEMU agora ou fechado sem gravar os metadados)");
+                if ((incompat & 2) != 0) erro.accept("o proprio QEMU marcou a imagem como CORROMPIDA");
+                if ((incompat & 0x14) != 0) { erro.accept("data file externo / L2 estendido: nao suportado aqui"); return; }
+                if (h.getInt(32) != 0) System.out.println("   aviso: criptografada, o conteudo (GPT) nao sera lido");
+                int ncl = (int) ((eof + cs - 1) >> cbits);
+                int[] uso = new int[ncl];
+                long[] dono = new long[ncl];                         // >=0 cluster da VM; <0 metadado
+                String[] meta = {"", "cabecalho", "tabela L1", "tabela refcount", "bloco refcount", "tabela L2"};
+                java.util.function.LongFunction<String> nome = d -> d >= 0 ? "dados da VM @" + ((d << cbits) >> 20) + " MB" : meta[(int) -d];
+                final int[] sobrep = {0};
+                java.util.function.BiConsumer<Long, Long> marca = (off, d) -> {
+                    if (off % cs != 0) { erro.accept(nome.apply(d) + " em offset desalinhado " + off); return; }
+                    if (off >= eof) { erro.accept(nome.apply(d) + " aponta alem do fim do arquivo (@" + (off >> 20) + " MB)"); return; }
+                    int c = (int) (off >> cbits);
+                    if (uso[c]++ > 0 && sobrep[0]++ < 20)
+                        erro.accept("SOBREPOSTOS @" + (off >> 20) + " MB: " + nome.apply(dono[c]) + " x " + nome.apply(d));
+                    dono[c] = d;
+                };
+                marca.accept(0L, -1L);
+                for (long o = 0; o < (long) l1n * 8; o += cs) marca.accept(l1off + o, -2L);
+                for (long o = 0; o < (long) rtcl * cs; o += cs) marca.accept(rtoff + o, -3L);
+                var rt = ler.apply(rtoff, (int) (rtcl * cs));
+                int rtn = (int) (rtcl * cs / 8);
+                for (int k = 0; k < rtn; k++) { long rb = rt.getLong(k * 8) & ~(cs - 1); if (rb != 0) marca.accept(rb, -4L); }
+                final var l1 = ler.apply(l1off, l1n * 8);
+                int l2n = (int) (cs / 8), comp = 0;
+                long dados = 0;
+                for (int i = 0; i < l1n; i++) {
+                    long l2off = l1.getLong(i * 8) & MASK;
+                    if (l2off == 0) continue;
+                    marca.accept(l2off, -5L);
+                    if (l2off % cs != 0 || l2off >= eof) continue;
+                    var l2 = ler.apply(l2off, (int) cs);
+                    for (int j = 0; j < l2n; j++) {
+                        long x = l2.getLong(j * 8);
+                        if ((x & (1L << 62)) != 0) { comp++; continue; } // comprimido: pode dividir cluster, fica de fora
+                        long off = x & MASK;
+                        if (off == 0) continue;
+                        dados++;
+                        marca.accept(off, ((long) i << (cbits - 3)) + j);
+                    }
+                }
+                // refcount no arquivo x uso real
+                long epb = cs * 8 / rbits, vazado = 0, abaixo = 0;
+                java.nio.ByteBuffer blkRc = null;
+                long kAtual = -1;
+                for (int c = 0; c < ncl; c++) {
+                    long k = c / epb;
+                    if (k != kAtual) {
+                        kAtual = k;
+                        long rb = k < rtn ? rt.getLong((int) k * 8) & ~(cs - 1) : 0;
+                        blkRc = rb != 0 ? ler.apply(rb, (int) cs) : null;
+                    }
+                    long rc = 0;
+                    if (blkRc != null) {
+                        long bit = (c % epb) * rbits;
+                        if (rbits >= 8) for (int q = 0; q < rbits / 8; q++) rc = (rc << 8) | (blkRc.get((int) (bit / 8) + q) & 0xFF);
+                        else rc = ((blkRc.get((int) (bit / 8)) & 0xFF) >> (8 - rbits - (int) (bit % 8))) & ((1 << rbits) - 1);
+                    }
+                    if (uso[c] > rc) { if (abaixo++ < 20) erro.accept("cluster @" + (((long) c << cbits) >> 20) + " MB usado " + uso[c] + "x mas refcount " + rc + " (sera sobrescrito)"); }
+                    else if (nsnap == 0 && rc > 0 && uso[c] == 0) vazado++;
+                }
+                System.out.printf("qcow2     %d clusters de dados, %d comprimidos, %d vazados (so desperdicio; com a VM ligada pode ser falso alarme)%n",
+                        dados, comp, vazado);
+                if (nsnap > 0) System.out.println("   aviso: com snapshots, so a camada ativa e conferida");
+                final int fl1n = l1n;
+                setor.set(off -> {
+                    long l1i = off >> (cbits + cbits - 3);
+                    if (l1i >= fl1n) return new byte[512];
+                    long l2off = l1.getLong((int) l1i * 8) & MASK;
+                    if (l2off == 0) return new byte[512];
+                    long x = ler.apply(l2off + ((off >> cbits) & (l2n - 1)) * 8, 8).getLong(0);
+                    if ((x & (1L << 62)) != 0) return null;
+                    long d = x & MASK;
+                    return d == 0 ? new byte[512] : ler.apply(d + (off & (cs - 1)), 512).array();
+                });
+
+            } else if (formato.equals("vmdk")) {
+                var h = ler.apply(0L, 512).order(LE);
+                if (h.getLong(56) == -1L) h = ler.apply(eof - 1024, 512).order(LE); // streamOptimized: GD so no rodape
+                long flags = h.getInt(8) & 0xFFFFFFFFL, gd = h.getLong(56), rgd = h.getLong(48);
+                final long grain = h.getLong(20) * 512;
+                final int nGTE = h.getInt(44);
+                final boolean comp = (flags & 0x10000) != 0;
+                vsize[0] = h.getLong(12) * 512;
+                int nGT = (int) ((vsize[0] + grain * nGTE - 1) / (grain * nGTE));
+                long gtBytes = ((nGTE * 4L + 511) / 512) * 512, gdBytes = ((nGT * 4L + 511) / 512) * 512;
+                System.out.printf("vmdk      v%d, virtual %d MB, grao %d KB, %d GTs de %d entradas%s%n", h.getInt(4),
+                        vsize[0] >> 20, grain >> 10, nGT, nGTE, comp ? ", graos comprimidos (streamOptimized)" : "");
+                if ((cab[72] & 0xFF) != 0) System.out.println("   aviso: marcado 'unclean shutdown' (aberto agora ou fechado sem gravar)");
+                pedaco.accept(new long[]{0, 512}, "cabecalho vmdk");
+                if (h.getLong(28) > 0) pedaco.accept(new long[]{h.getLong(28) * 512, h.getLong(36) * 512}, "descritor vmdk");
+                long graos = 0;
+                final var gdb = ler.apply(gd * 512, (int) gdBytes).order(LE);
+                for (long[] dir : comp || rgd == 0 ? new long[][]{{gd, 0}} : new long[][]{{gd, 0}, {rgd, 1}}) {
+                    String q = dir[1] == 0 ? "" : " (copia redundante)";
+                    pedaco.accept(new long[]{dir[0] * 512, gdBytes}, "GD" + q);
+                    var d = ler.apply(dir[0] * 512, (int) gdBytes).order(LE);
+                    for (int i = 0; i < nGT; i++) {
+                        long g = d.getInt(i * 4) & 0xFFFFFFFFL;
+                        if (g == 0) continue;
+                        pedaco.accept(new long[]{g * 512, gtBytes}, "GT " + i + q);
+                        if (dir[1] != 0) continue;                         // graos: so pela tabela principal
+                        var gt = ler.apply(g * 512, (int) gtBytes).order(LE);
+                        for (int j = 0; j < nGTE; j++) {
+                            long e = gt.getInt(j * 4) & 0xFFFFFFFFL;
+                            if (e <= 1) continue;                          // 0 ausente, 1 zerado
+                            long k = (long) i * nGTE + j, len = grain;
+                            if (comp) len = ((12 + (ler.apply(e * 512 + 8, 4).order(LE).getInt(0) & 0xFFFFFFFFL) + 511) / 512) * 512;
+                            graos++;
+                            pedaco.accept(new long[]{e * 512, len}, "grao " + k + " (VM @" + ((k * grain) >> 20) + " MB)");
+                        }
+                    }
+                }
+                System.out.printf("vmdk      %d graos alocados%n", graos);
+                setor.set(off -> {
+                    long k = off / grain;
+                    long g = gdb.getInt((int) (k / nGTE) * 4) & 0xFFFFFFFFL;
+                    if (g == 0) return new byte[512];
+                    long e = ler.apply(g * 512 + (k % nGTE) * 4, 4).order(LE).getInt(0) & 0xFFFFFFFFL;
+                    if (e <= 1) return new byte[512];
+                    if (!comp) return ler.apply(e * 512 + off % grain, 512).array();
+                    int n = ler.apply(e * 512 + 8, 4).order(LE).getInt(0);
+                    byte[] z = ler.apply(e * 512 + 12, n).array(), g2 = new byte[(int) grain];
+                    for (boolean nowrap : new boolean[]{false, true}) {
+                        var inf = new java.util.zip.Inflater(nowrap);
+                        try { inf.setInput(z); inf.inflate(g2); return java.util.Arrays.copyOfRange(g2, (int) (off % grain), (int) (off % grain) + 512); }
+                        catch (java.util.zip.DataFormatException x) { } finally { inf.end(); }
+                    }
+                    return null;
+                });
+
+            } else if (formato.equals("vmdk-descritor")) {
+                String txt = new String(ler.apply(0L, (int) Math.min(eof, 65536L)).array(), java.nio.charset.StandardCharsets.ISO_8859_1);
+                var re = java.util.regex.Pattern.compile("(?m)^(RW|RDONLY|NOACCESS)\\s+(\\d+)\\s+(\\w+)\\s+\"([^\"]+)\"(?:\\s+(\\d+))?");
+                var mm = re.matcher(txt);
+                var dirBase = new java.io.File(path).getAbsoluteFile().getParentFile();
+                int n = 0;
+                String unico = null;
+                long uOff = 0;
+                while (mm.find()) {
+                    n++;
+                    long setores = Long.parseLong(mm.group(2));
+                    String tipo = mm.group(3);
+                    var ex = new java.io.File(mm.group(4));
+                    if (!ex.isAbsolute()) ex = new java.io.File(dirBase, mm.group(4));
+                    long off = mm.group(5) != null ? Long.parseLong(mm.group(5)) * 512 : 0;
+                    vsize[0] += setores * 512;
+                    System.out.printf("   extent %d: %s %d MB \"%s\"%n", n, tipo, (setores * 512) >> 20, ex.getPath());
+                    if (!ex.exists()) erro.accept("extent " + n + " nao existe: " + ex.getPath());
+                    else if (tipo.equals("FLAT") && ex.length() < off + setores * 512) erro.accept("extent " + n + " FLAT menor que o esperado (arquivo cortado?)");
+                    else if (tipo.equals("SPARSE")) System.out.println("      (sparse: rode validaDisco nesse arquivo para a checagem de blocos)");
+                    if (tipo.equals("FLAT")) { unico = ex.getPath(); uOff = off; }
+                }
+                System.out.printf("vmdk      descritor com %d extent(s), virtual %d MB%n", n, vsize[0] >> 20);
+                if (n == 1 && unico != null) {                             // um FLAT so: le o conteudo p/ o GPT
+                    final String up = unico;
+                    final long uo = uOff;
+                    setor.set(off -> {
+                        byte[] a = new byte[512];
+                        try (var g = new java.io.RandomAccessFile(up, "r")) { if (uo + off < g.length()) { g.seek(uo + off); g.readFully(a, 0, (int) Math.min(512L, g.length() - uo - off)); } }
+                        catch (java.io.IOException e) { return null; }
+                        return a;
+                    });
+                }
+
+            } else if (formato.equals("vdi")) {
+                var h = ler.apply(0L, 512).order(LE);
+                int tipo = h.getInt(0x4C);
+                final long offBlocks = h.getInt(0x154) & 0xFFFFFFFFL, offData = h.getInt(0x158) & 0xFFFFFFFFL;
+                vsize[0] = h.getLong(0x170);
+                final long cbBlock = h.getInt(0x178) & 0xFFFFFFFFL, cbExtra = h.getInt(0x17C) & 0xFFFFFFFFL;
+                int cBlocks = h.getInt(0x180);
+                long cAlloc = h.getInt(0x184) & 0xFFFFFFFFL;
+                String[] tipos = {"?", "dinamico", "fixo", "undo", "diferencial"};
+                System.out.printf("vdi       v%d.%d %s, virtual %d MB, bloco %d MB, %d blocos, %d alocados no cabecalho%n",
+                        h.getShort(0x46) & 0xFFFF, h.getShort(0x44) & 0xFFFF, tipo >= 1 && tipo <= 4 ? tipos[tipo] : "tipo " + tipo,
+                        vsize[0] >> 20, cbBlock >> 20, cBlocks, cAlloc);
+                if (tipo == 4) System.out.println("   aviso: diferencial, o conteudo (GPT) depende do disco pai");
+                pedaco.accept(new long[]{0, 512}, "cabecalho vdi");
+                pedaco.accept(new long[]{offBlocks, cBlocks * 4L}, "mapa de blocos vdi");
+                final var mapa = ler.apply(offBlocks, cBlocks * 4).order(LE);
+                long usados = 0;
+                for (int i = 0; i < cBlocks; i++) {
+                    long v = mapa.getInt(i * 4) & 0xFFFFFFFFL;
+                    if (v >= 0xFFFFFFFEL) continue;                         // ausente / zerado
+                    usados++;
+                    if (v >= cAlloc) erro.accept("bloco " + i + " aponta p/ o indice " + v + ", alem dos " + cAlloc + " alocados");
+                    pedaco.accept(new long[]{offData + v * (cbBlock + cbExtra), cbBlock + cbExtra}, "bloco " + i + " (VM @" + ((i * cbBlock) >> 20) + " MB)");
+                }
+                if (usados < cAlloc) System.out.printf("   aviso: %d blocos alocados sem uso (so desperdicio)%n", cAlloc - usados);
+                setor.set(off -> {
+                    long v = mapa.getInt((int) (off / cbBlock) * 4) & 0xFFFFFFFFL;
+                    return v >= 0xFFFFFFFEL ? new byte[512] : ler.apply(offData + v * (cbBlock + cbExtra) + cbExtra + off % cbBlock, 512).array();
+                });
+
+            } else {
+                vsize[0] = eof;
+                System.out.println("raw       sem tabela de blocos: nada para sobrepor, so o conteudo (GPT/MBR) e conferido");
+                setor.set(off -> ler.apply(off, 512).array());
+            }
+
+            // sobreposicao e fim do arquivo (vhdx, vmdk, vdi)
+            if (!iv.isEmpty()) {
+                iv.sort(java.util.Comparator.comparingLong(x -> x[0]));
+                long fimMax = -1, donoMax = -1, iniMax = -1;
+                int nsob = 0;
+                for (long[] x : iv) {
+                    if (x[0] + x[1] > eof) erro.accept(nomes.get((int) x[2]) + " @" + (x[0] >> 20) + " MB passa do fim do arquivo");
+                    if (x[0] < fimMax && nsob++ < 20) {
+                        long c = Math.min(fimMax, x[0] + x[1]) - x[0];
+                        erro.accept(String.format("SOBREPOSTOS: %s @%d MB x %s @%d MB (%s em comum)", nomes.get((int) donoMax),
+                                iniMax >> 20, nomes.get((int) x[2]), x[0] >> 20, c >= 1024 ? (c >> 10) + " KB" : c + " bytes"));
+                    }
+                    if (x[0] + x[1] > fimMax) { fimMax = x[0] + x[1]; donoMax = x[2]; iniMax = x[0]; }
+                }
+                if (nsob > 20) System.out.println("   ... " + nsob + " sobreposicoes no total");
+            }
+
+            // tabela de particoes do disco da VM (todos os formatos)
+            int S = (int) ss[0];
+            long ultimo = vsize[0] / S - 1;
+            byte[] s0 = setor.get() == null ? null : setor.get().apply(0), s1b = s0 == null ? null : setor.get().apply(S);
+            if (s0 == null || s1b == null) System.out.println("disco     conteudo nao lido aqui, particoes nao conferidas");
+            else {
+                var s1 = java.nio.ByteBuffer.wrap(s1b).order(LE);
+                boolean vazio = true;
+                for (byte x : s0) if (x != 0) { vazio = false; break; }
+                boolean mbr = (s0[S - 2] & 0xFF) == 0x55 && (s0[S - 1] & 0xFF) == 0xAA;
+                java.util.function.Function<java.nio.ByteBuffer, Boolean> crcOk = hb -> {
+                    int hs = hb.getInt(12);
+                    if (hs < 92 || hs > S) return false;
+                    byte[] c = java.util.Arrays.copyOf(hb.array(), hs);
+                    c[16] = c[17] = c[18] = c[19] = 0;
+                    var crc = new java.util.zip.CRC32();
+                    crc.update(c);
+                    return (int) crc.getValue() == hb.getInt(16);
+                };
+                if (s1.getLong(0) == 0x5452415020494645L) {      // "EFI PART"
+                    long alt = s1.getLong(32), fu = s1.getLong(40), lu = s1.getLong(48), pe = s1.getLong(72);
+                    int np = s1.getInt(80), es = s1.getInt(84);
+                    System.out.printf("disco     GPT, %d entradas, area util LBA %d-%d%n", np, fu, lu);
+                    if (!crcOk.apply(s1)) erro.accept("CRC do cabecalho GPT principal nao confere");
+                    byte[] ent = new byte[np * es];
+                    boolean legivel = true;
+                    for (int o = 0; o < ent.length; o += S) {
+                        byte[] sx = setor.get().apply((pe * S) + o);
+                        if (sx == null) { legivel = false; break; }
+                        System.arraycopy(sx, 0, ent, o, Math.min(S, ent.length - o));
+                    }
+                    if (legivel) {
+                        var crc = new java.util.zip.CRC32();
+                        crc.update(ent);
+                        if ((int) crc.getValue() != s1.getInt(88)) erro.accept("CRC das entradas de particao GPT nao confere");
+                        var eb = java.nio.ByteBuffer.wrap(ent).order(LE);
+                        var parts = new java.util.ArrayList<long[]>();
+                        for (int i = 0; i < np; i++) {
+                            int o = i * es;
+                            if (eb.getLong(o) == 0 && eb.getLong(o + 8) == 0) continue;
+                            long pi = eb.getLong(o + 32), pf = eb.getLong(o + 40);
+                            String nm = new String(ent, o + 56, 72, java.nio.charset.StandardCharsets.UTF_16LE).replace("\0", "");
+                            System.out.printf("   part %d: LBA %d-%d (%d MB) \"%s\"%n", i + 1, pi, pf, ((pf - pi + 1) * S) >> 20, nm);
+                            if (pi < fu || pf > lu || pi > pf) erro.accept("particao " + (i + 1) + " fora da area util");
+                            parts.add(new long[]{pi, pf, i + 1});
+                        }
+                        parts.sort(java.util.Comparator.comparingLong(x -> x[0]));
+                        for (int i = 1; i < parts.size(); i++)
+                            if (parts.get(i - 1)[1] >= parts.get(i)[0]) erro.accept("particoes " + parts.get(i - 1)[2] + " e " + parts.get(i)[2] + " sobrepostas");
+                    }
+                    if (alt != ultimo) erro.accept("GPT reserva esperada no LBA " + ultimo + ", cabecalho diz " + alt);
+                    byte[] rb = setor.get().apply(ultimo * S);
+                    if (rb != null) {
+                        var r = java.nio.ByteBuffer.wrap(rb).order(LE);
+                        if (r.getLong(0) != 0x5452415020494645L) erro.accept("GPT reserva (fim do disco) ausente");
+                        else if (!crcOk.apply(r)) erro.accept("CRC do GPT reserva nao confere");
+                    }
+                } else if (mbr) {
+                    var m = java.nio.ByteBuffer.wrap(s0).order(LE);
+                    System.out.println("disco     MBR");
+                    for (int i = 0; i < 4; i++) {
+                        int o = 446 + 16 * i, tipo = s0[o + 4] & 0xFF;
+                        if (tipo == 0) continue;
+                        long pi = m.getInt(o + 8) & 0xFFFFFFFFL, n = m.getInt(o + 12) & 0xFFFFFFFFL;
+                        System.out.printf("   part %d: tipo %02X, LBA %d, %d MB%n", i + 1, tipo, pi, (n * S) >> 20);
+                        if (tipo == 0xEE) erro.accept("MBR protetor de GPT, mas o cabecalho GPT sumiu");
+                        else if (pi + n > ultimo + 1) erro.accept("particao " + (i + 1) + " passa do fim do disco");
+                    }
+                } else if (vazio) System.out.println("disco     sem tabela de particoes (disco vazio)");
+                else erro.accept("LBA 0 sem assinatura 55AA: inicio do disco sobrescrito?");
+            }
+            System.out.println(erros[0] == 0 ? "RESULTADO ok" : "RESULTADO " + erros[0] + " erro(s)");
+        }
+    }    
     public boolean check_util(String a){
         try{
             if ( a.trim().length() == 0 )
@@ -46644,10 +47042,12 @@ Exemplos...
             | "\\(.title)\\nbuild: \\(.build)\\nlink:  https://uupdump.net/selectlang.php?id=\\(.uuid)"'
 [y qemu]
     qemu-img convert -f vmdk -O vhdx c:\\vm\\gc.vmdk c:\\vm\\GCC.vhdx
+    opcoes: vhdx, qcow2, vmdk, vdi, raw
     qemu-img resize c:\\vm\\GCC.vhdx 100G
     qemu-img info c:\\vm\\GCC.vhdx 
     # compactando espaço livre. converter para ele mesmo
         qemu-img convert -f vhdx -O vhdx c:\\vm\\GCC.vhdx c:\\vm\\GCC_compact.vhdx
+    ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
     somente informativo -> y help qemu
 [y [juros|emprestimo]]
     y juros price valor 15000 juros 1.0 a.m 10 parcelas
