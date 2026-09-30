@@ -46700,6 +46700,7 @@ usage:
   [y sorte
   [y iso]
   [y qemu]
+  [y validaDisco]
   [y [juros|emprestimo]]
   [y cmdUser]
   [y transfer]
@@ -47049,6 +47050,10 @@ Exemplos...
         qemu-img convert -f vhdx -O vhdx c:\\vm\\GCC.vhdx c:\\vm\\GCC_compact.vhdx
     ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
     somente informativo -> y help qemu
+[y validaDisco]
+    y validaDisco win11.vhdx
+        formatos suportados: vhdx, qcow2, vmdk, vdi, raw
+        obs: nao valide arquivo com snapshot ou parcial
 [y [juros|emprestimo]]
     y juros price valor 15000 juros 1.0 a.m 10 parcelas
     y juros sac valor 15000 juros 1.0 a.m 10 parcelas
