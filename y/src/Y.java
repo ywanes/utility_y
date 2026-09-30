@@ -47214,6 +47214,8 @@ Exemplos...
     qemu-img info c:\\vm\\GCC.vhdx 
     # compactando espaço livre. converter para ele mesmo
         qemu-img convert -f vhdx -O vhdx c:\\vm\\GCC.vhdx c:\\vm\\GCC_compact.vhdx
+    # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink 
+    # para um disco 300G dinamico, externo 200G e interno 100G vc nao deve fazer resize --shrink para menos do valor externo, da problema.
     ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
     somente informativo -> y help qemu
 [y validaDisco]
