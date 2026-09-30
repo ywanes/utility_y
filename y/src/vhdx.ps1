@@ -13,144 +13,257 @@
 #
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-$validaAdm=$currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+$validaAdm = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if ( ! $validaAdm ){ Write-Host "Erro: Requer Admin." -ForegroundColor Red; pause; exit }
 
-function Get-VHDXBootEntries {
-    try {
-        $bcdRaw = cmd /c "bcdedit /enum all /v"
-        $results = @()
-        $currentEntry = $null
-        foreach ($line in $bcdRaw) {
-            if ($line -match "{([a-f0-9-]{36})}") {
-                if ($currentEntry -and $currentEntry.IsVHD) {
-                    $results += [PSCustomObject]@{ GUID = $currentEntry.GUID; Desc = $currentEntry.Desc; Path = $currentEntry.Path }
-                }
-                $currentEntry = @{ GUID = $matches[0]; Desc = "n/a"; Path = "n/a"; IsVHD = $false }
-            }
-            if ($line -match "(?i)(descri|desc).*?\s+(.*)") {
-                if ($currentEntry) { $currentEntry.Desc = $matches[2].Trim() }
-            }
-            if ($line -match "vhd=\[(.*?)\](.*)") {
-                if ($currentEntry) {
-                    $cleanPath = ("[$($matches[1])]$($matches[2])").Split(',')[0]
-                    $currentEntry.Path  = $cleanPath
-                    $currentEntry.IsVHD = $true
-                }
-            }
+$RX_GUID = '\{[0-9a-fA-F-]{36}\}'
+
+# ---------------------------------------------------------------
+# Leitura do BCD
+# ---------------------------------------------------------------
+
+# Entradas de SO (osloader). Uma entrada nova so comeca na linha
+# identifier/identificador, assim GUIDs de inherit/recoverysequence
+# nao sao confundidos com a entrada.
+function Get-BcdOsEntries {
+    $entries = @(); $cur = $null
+    foreach ($line in (bcdedit /enum osloader /v)) {
+        if ($line -match "^(identifier|identificador)\s+($RX_GUID)") {
+            if ($cur) { $entries += [pscustomobject]$cur }
+            $cur = @{ GUID = $matches[2].ToLower(); Desc = ''; Device = ''; OsDevice = ''; Path = ''; IsVHD = $false }
         }
-        if ($currentEntry -and $currentEntry.IsVHD) {
-            $results += [PSCustomObject]@{ GUID = $currentEntry.GUID; Desc = $currentEntry.Desc; Path = $currentEntry.Path }
-        }
-        return $results
+        elseif ($cur -and $line -match '^descri\S*\s+(.*)$') { $cur.Desc     = $matches[1].Trim() }
+        elseif ($cur -and $line -match '^device\s+(.*)$')     { $cur.Device   = $matches[1].Trim() }
+        elseif ($cur -and $line -match '^osdevice\s+(.*)$')   { $cur.OsDevice = $matches[1].Trim() }
     }
-    catch { return @() }
+    if ($cur) { $entries += [pscustomobject]$cur }
+
+    foreach ($e in $entries) {
+        $dev = if ($e.OsDevice) { $e.OsDevice } else { $e.Device }
+        $e.IsVHD = ($dev -like 'vhd=*')
+        $e.Path  = ($dev -replace '^vhd=', '').Split(',')[0]
+    }
+    return $entries
+}
+
+# GUID real da entrada em uso
+function Get-CurrentGuid {
+    $m = bcdedit /enum '{current}' /v | Select-String "^(identifier|identificador)\s+($RX_GUID)" | Select-Object -First 1
+    if ($m) { return $m.Matches[0].Groups[2].Value.ToLower() }
+    return ''
+}
+
+# Ordem do menu, entrada padrao e timeout do Boot Manager
+function Get-BootManagerInfo {
+    $order = @(); $default = ''; $timeout = ''; $inOrder = $false
+    foreach ($line in (bcdedit /enum '{bootmgr}' /v)) {
+        $g = $null
+        if ($line -match "^displayorder\s+($RX_GUID)") { $inOrder = $true; $g = $matches[1] }
+        elseif ($inOrder -and $line -match "^\s+($RX_GUID)") { $g = $matches[1] }
+        else {
+            $inOrder = $false
+            if ($line -match "^default\s+($RX_GUID)") { $default = $matches[1].ToLower() }
+            if ($line -match '^timeout\s+(\d+)')      { $timeout = $matches[1] }
+        }
+        if ($g) { $order += $g.ToLower() }
+    }
+    return [pscustomobject]@{ Order = $order; Default = $default; Timeout = $timeout }
+}
+
+# Menu de boot na ordem atual, com marcas
+function Get-BootMenu {
+    $mgr = Get-BootManagerInfo
+    $os  = @{}; Get-BcdOsEntries | ForEach-Object { $os[$_.GUID] = $_ }
+    $cur = Get-CurrentGuid
+    $i = 0
+    foreach ($g in $mgr.Order) {
+        $i++
+        $e = $os[$g]
+        $marcas = @()
+        if ($g -eq $mgr.Default) { $marcas += 'padrao' }
+        if ($g -eq $cur)         { $marcas += 'atual' }
+        [pscustomobject]@{
+            N         = $i
+            Descricao = if ($e) { $e.Desc } else { '(outro)' }
+            Tipo      = if ($e -and $e.IsVHD) { 'VHDX' } else { 'Disco' }
+            Caminho   = if ($e) { $e.Path } else { '' }
+            Marcas    = $marcas -join ','
+            GUID      = $g
+        }
+    }
+}
+
+function Backup-BCD {
+    $dir = "$env:SystemDrive\bcd_backup"
+    New-Item -ItemType Directory -Path $dir -Force | Out-Null
+    $f = Join-Path $dir ("bcd_" + (Get-Date -Format 'yyyyMMdd_HHmmss'))
+    bcdedit /export $f | Out-Null
+    if ($LASTEXITCODE -eq 0) { Write-Host "Backup do BCD: $f" -ForegroundColor DarkGray }
+    else { Write-Host "Aviso: falha ao gerar backup do BCD." -ForegroundColor Yellow }
+}
+
+# ---------------------------------------------------------------
+# Acoes
+# ---------------------------------------------------------------
+
+function Show-BootEntries {
+    $menu = @(Get-BootMenu)
+    if ($menu.Count -eq 0) { Write-Host "Vazio." -ForegroundColor Yellow; return }
+    $menu | Format-Table N, Descricao, Tipo, Caminho, Marcas, GUID -AutoSize
+
+    # VHDX que existem no BCD mas estao fora do menu
+    $ocultas = @(Get-BcdOsEntries | Where-Object { $_.IsVHD -and ($menu.GUID -notcontains $_.GUID) })
+    if ($ocultas.Count -gt 0) {
+        Write-Host "VHDX fora do menu de boot (nao aparecem na inicializacao):" -ForegroundColor Yellow
+        $ocultas | Format-Table Desc, Path, GUID -AutoSize
+    }
 }
 
 function Add-VHDXToDualBoot {
     param ([string]$VHDXPath, [string]$CustomDesc)
-    
+
     $path = $VHDXPath.Replace('"', '').Trim()
-    if (-not (Test-Path $path)) { Write-Host "arquivo nao encontrado " -ForegroundColor Red; return }
+    if (-not (Test-Path $path)) { Write-Host "arquivo nao encontrado" -ForegroundColor Red; return }
+    $path = (Resolve-Path $path).Path
+
+    if ($path -like '\\*') { Write-Host "Boot nativo exige disco local (caminho de rede nao suportado)." -ForegroundColor Red; return }
+    if ([System.IO.Path]::GetExtension($path) -notmatch '^\.vhdx?$') { Write-Host "O arquivo precisa ser .vhd ou .vhdx." -ForegroundColor Red; return }
 
     if ([string]::IsNullOrWhiteSpace($CustomDesc)) {
         $CustomDesc = [System.IO.Path]::GetFileNameWithoutExtension($path)
     }
 
-    try {
-        $drive = [System.IO.Path]::GetPathRoot($path).Replace("\","")
-        $relPath = $path.Substring($drive.Length)
-        if (-not $relPath.StartsWith("\")) { $relPath = "\" + $relPath }
-        
-        Write-Host "Adicionando entrada: $CustomDesc..." -ForegroundColor Cyan
-        
-        $copyOutput = cmd /c "bcdedit /copy {current} /d `"$CustomDesc`"" 2>$null
-        if ($null -eq $copyOutput -or $copyOutput -match "incorret|error") {
-            $copyOutput = cmd /c "bcdedit /copy {default} /d `"$CustomDesc`""
-        }
-        
-        if ($copyOutput -match "{([a-fA-F0-9-]+)}") {
-            $guid = $matches[0]
-            $vhdStr = "vhd=[$drive]$relPath"
-            cmd /c "bcdedit /set $guid device `"$vhdStr`""
-            cmd /c "bcdedit /set $guid osdevice `"$vhdStr`""
-            cmd /c "bcdedit /set $guid detecthal on"
-            Write-Host "Sucesso! Adicionado com GUID $guid" -ForegroundColor Green
-        }
+    $drive   = [System.IO.Path]::GetPathRoot($path).TrimEnd('\')
+    $relPath = $path.Substring($drive.Length)
+    if (-not $relPath.StartsWith("\")) { $relPath = "\" + $relPath }
+
+    Backup-BCD
+    Write-Host "Adicionando entrada: $CustomDesc..." -ForegroundColor Cyan
+
+    $copyOutput = bcdedit /copy '{current}' /d $CustomDesc 2>&1
+    if ($LASTEXITCODE -ne 0) { $copyOutput = bcdedit /copy '{default}' /d $CustomDesc 2>&1 }
+    if ($LASTEXITCODE -ne 0 -or -not (($copyOutput -join ' ') -match $RX_GUID)) {
+        Write-Host "Erro ao copiar entrada: $copyOutput" -ForegroundColor Red; return
     }
-    catch { Write-Host "Erro ao adicionar." -ForegroundColor Red }
+    $guid   = $matches[0]
+    $vhdStr = "vhd=[$drive]$relPath"
+
+    bcdedit /set $guid device   $vhdStr | Out-Null; $ok1 = $LASTEXITCODE -eq 0
+    bcdedit /set $guid osdevice $vhdStr | Out-Null; $ok2 = $LASTEXITCODE -eq 0
+    if ($ok1 -and $ok2) {
+        Write-Host "Sucesso! Adicionado com GUID $guid (no fim do menu - use a opcao 6 para reordenar)" -ForegroundColor Green
+    } else {
+        Write-Host "Erro ao configurar o VHDX. Removendo entrada incompleta..." -ForegroundColor Red
+        bcdedit /delete $guid /f | Out-Null
+    }
 }
 
 function Remove-AllVHDXBootEntries {
-    try {
-        Write-Host "Limpando entradas VHDX..." -ForegroundColor Cyan
-        $bcdRaw = cmd /c "bcdedit /enum all /v"
-        $targets = @()
-        $currentBoot = bcdedit /get {current} | Select-String "identifier"
-        $safeGuid = ""
-        if ($currentBoot -match "{([a-f0-9-]{36})}") { $safeGuid = $matches[0] }
+    $cur    = Get-CurrentGuid
+    $todas  = @(Get-BcdOsEntries | Where-Object { $_.IsVHD })
+    $alvos  = @($todas | Where-Object { $_.GUID -ne $cur })
 
-        foreach ($line in $bcdRaw) {
-            if ($line -match "{([a-f0-9-]{36})}") { $lastGUID = $matches[0] }
-            if ($line -match "\.vhd") {
-                if ($lastGUID -and $lastGUID -ne $safeGuid -and $lastGUID -notmatch "{current}|{default}") {
-                    $targets += $lastGUID
-                }
-            }
-        }
-        $targets | Select-Object -Unique | ForEach-Object {
-            cmd /c "bcdedit /delete $_ /f"
-            Write-Host "Removido: $_" -ForegroundColor Yellow
+    if ($todas.Count -ne $alvos.Count) {
+        Write-Host "A entrada em uso (VHDX atual) sera mantida." -ForegroundColor Yellow
+    }
+    if ($alvos.Count -eq 0) { Write-Host "Nenhuma entrada VHDX para remover." -ForegroundColor Yellow; return }
+
+    $alvos | Format-Table Desc, Path, GUID -AutoSize
+    if ((Read-Host "Remover essas $($alvos.Count) entradas? (S/N)") -notmatch '^[sS]') { return }
+
+    Backup-BCD
+    foreach ($a in $alvos) {
+        bcdedit /delete $a.GUID /f | Out-Null
+        if ($LASTEXITCODE -eq 0) { Write-Host "Removido: $($a.Desc) $($a.GUID)" -ForegroundColor Yellow }
+        else { Write-Host "Falha ao remover: $($a.GUID)" -ForegroundColor Red }
+    }
+}
+
+function Set-BootOrder {
+    $menu = @(Get-BootMenu)
+    if ($menu.Count -eq 0) { Write-Host "Menu de boot vazio." -ForegroundColor Yellow; return }
+    $menu | Format-Table N, Descricao, Tipo, Marcas -AutoSize
+
+    if ($menu.Count -ge 2) {
+        Write-Host "Nova ordem: numeros separados por espaco (ex: 2 1 3)."
+        Write-Host "Pode informar so os primeiros; os demais seguem na ordem atual. Enter = manter."
+        $in = Read-Host "Nova ordem"
+
+        if (-not [string]::IsNullOrWhiteSpace($in)) {
+            $nums = @($in -split '[\s,;]+' | Where-Object { $_ })
+            $invalido = $nums | Where-Object { $_ -notmatch '^\d+$' -or [int]$_ -lt 1 -or [int]$_ -gt $menu.Count }
+            if ($invalido) { Write-Host "Numero invalido: $($invalido -join ' ')" -ForegroundColor Red; return }
+            if (@($nums | Select-Object -Unique).Count -ne $nums.Count) { Write-Host "Numero repetido." -ForegroundColor Red; return }
+
+            $escolhidos = @($nums | ForEach-Object { [int]$_ })
+            $resto      = @(1..$menu.Count | Where-Object { $escolhidos -notcontains $_ })
+            $guids      = @($escolhidos + $resto | ForEach-Object { $menu[$_ - 1].GUID })
+
+            Backup-BCD
+            bcdedit /displayorder @guids | Out-Null
+            if ($LASTEXITCODE -ne 0) { Write-Host "Erro ao alterar a ordem." -ForegroundColor Red; return }
+            Write-Host "Ordem alterada!" -ForegroundColor Green
+
+            $menu = @(Get-BootMenu)
+            $menu | Format-Table N, Descricao, Tipo, Marcas -AutoSize
         }
     }
-    catch { Write-Host "Erro na limpeza." -ForegroundColor Red }
+
+    Write-Host "A entrada padrao e a que inicia sozinha quando o timeout acaba."
+    $d = Read-Host "Numero da entrada padrao (Enter = manter)"
+    if ([string]::IsNullOrWhiteSpace($d)) { return }
+    if ($d -notmatch '^\d+$' -or [int]$d -lt 1 -or [int]$d -gt $menu.Count) { Write-Host "Invalido." -ForegroundColor Red; return }
+
+    bcdedit /default $menu[[int]$d - 1].GUID | Out-Null
+    if ($LASTEXITCODE -eq 0) { Write-Host "Padrao: $($menu[[int]$d - 1].Descricao)" -ForegroundColor Green }
+    else { Write-Host "Erro ao definir padrao." -ForegroundColor Red }
 }
 
 function Set-BootTimeout {
-    $currentTimeout = bcdedit /timeout | Select-String "\d+"
-    Write-Host "`nTempo atual: $($currentTimeout) segundos." -ForegroundColor Cyan
+    $atual = (Get-BootManagerInfo).Timeout
+    Write-Host "`nTempo atual: $atual segundos." -ForegroundColor Cyan
     $newTimeout = Read-Host "Digite o novo tempo (segundos)"
     if ($newTimeout -match "^\d+$") {
-        cmd /c "bcdedit /timeout $newTimeout"
-        Write-Host "Tempo alterado!" -ForegroundColor Green
+        bcdedit /timeout $newTimeout | Out-Null
+        if ($LASTEXITCODE -eq 0) { Write-Host "Tempo alterado!" -ForegroundColor Green }
+        else { Write-Host "Erro ao alterar o tempo." -ForegroundColor Red }
     }
 }
 
 function Reset-EFIPartition {
     Write-Host "`n=== Refazer UEFI ===" -ForegroundColor Cyan
-    
+
     $letter = Read-Host "Letra da particao UEFI"
     if ([string]::IsNullOrWhiteSpace($letter)) { Write-Host "Invalido." -ForegroundColor Red; return }
     $letter = $letter.TrimEnd(':').ToUpper()
-    
+
     if (-not (Test-Path "${letter}:\")) { Write-Host "Particao ${letter}: nao acessivel." -ForegroundColor Red; return }
-    
+
     cmd /c "bcdboot C:\Windows /s ${letter}: /f UEFI /p"
 }
 
 # --- Menu ---
 do {
-    Write-Host "`n=== GERENCIADOR BOOT VHDX (v11.0) ===" -ForegroundColor Magenta
+    Write-Host "`n=== GERENCIADOR BOOT VHDX (v12.0) ===" -ForegroundColor Magenta
     Write-Host "1. Listar Entradas"
     Write-Host "2. Adicionar VHDX (Com Descricao)"
     Write-Host "3. Limpar Tudo (VHDX)"
     Write-Host "4. Ajustar Tempo (Timeout)"
     Write-Host "5. Refazer UEFI"
-    Write-Host "6. Sair"
-    
+    Write-Host "6. Alterar Ordem / Padrao"
+    Write-Host "7. Sair"
+
     $op = Read-Host "Opcao"
     switch ($op) {
-        "1" { 
-            $v = Get-VHDXBootEntries
-            if ($v) { $v | Format-Table -AutoSize } else { Write-Host "Vazio." -ForegroundColor Yellow }
-        }
-        "2" { 
+        "1" { Show-BootEntries }
+        "2" {
             $p = Read-Host "Caminho do .vhdx"
             $d = Read-Host "Descricao"
-            Add-VHDXToDualBoot -VHDXPath $p -CustomDesc $d 
+            Add-VHDXToDualBoot -VHDXPath $p -CustomDesc $d
         }
         "3" { Remove-AllVHDXBootEntries }
         "4" { Set-BootTimeout }
         "5" { Reset-EFIPartition }
+        "6" { Set-BootOrder }
     }
-} while ($op -ne "6")
+} while ($op -ne "7")
