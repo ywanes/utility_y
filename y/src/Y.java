@@ -43205,13 +43205,78 @@ class TelaBloqueio {
                          + (vazio ? "\n" : ",") + resto;
                 }
             }
+            // Ctrl+C copia (com selecao; sem selecao segue como cancelar) e Ctrl+V cola
+            String bindings =
+                "[\n" +
+                "        { \"command\": { \"action\": \"copy\", \"singleLine\": false }, \"keys\": \"ctrl+c\" },\n" +
+                "        { \"command\": \"paste\", \"keys\": \"ctrl+v\" }\n" +
+                "    ]";
+            json = definirArrayJson(json, "keybindings", bindings);
             java.nio.file.Files.createDirectories(arquivo.getParent());
             java.nio.file.Files.write(arquivo,
                 json.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             System.out.println("  [ok]     settings.json\\defaultProfile = Prompt de comando");
+            System.out.println("  [ok]     settings.json\\keybindings = Ctrl+C copiar / Ctrl+V colar");
         } catch (Exception e) {
             System.out.println("  [aviso]  Nao foi possivel ajustar o Windows Terminal: " + e.getMessage());
         }
+    }
+    // substitui (ou insere) o valor de uma chave de array JSON no nivel raiz
+    private static String definirArrayJson(String json, String chave, String conteudoArray) {
+        String alvo = "\"" + chave + "\"";
+        int k = json.indexOf(alvo);
+        if (k >= 0) {
+            int dois = json.indexOf(':', k + alvo.length());
+            if (dois >= 0) {
+                int ini = json.indexOf('[', dois);
+                // so troca se entre ':' e '[' houver apenas espacos (evita casar chave errada)
+                if (ini >= 0 && json.substring(dois + 1, ini).trim().isEmpty()) {
+                    int fim = fecharColchete(json, ini);
+                    if (fim >= 0) {
+                        return json.substring(0, ini) + conteudoArray + json.substring(fim + 1);
+                    }
+                }
+            }
+        }
+        // chave inexistente: insere logo apos o primeiro '{'
+        int i = json.indexOf('{');
+        if (i < 0) {
+            return "{\n    " + alvo + ": " + conteudoArray + "\n}\n";
+        }
+        String resto = json.substring(i + 1);
+        boolean vazio = resto.trim().startsWith("}");
+        return json.substring(0, i + 1) + "\n    " + alvo + ": " + conteudoArray
+             + (vazio ? "\n" : ",") + resto;
+    }
+    // dado o indice de um '[', retorna o indice do ']' correspondente (respeita strings)
+    private static int fecharColchete(String s, int abre) {
+        int nivel = 0;
+        boolean emString = false;
+        boolean escape = false;
+        for (int i = abre; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (emString) {
+                if (escape) {
+                    escape = false;
+                } else if (c == '\\') {
+                    escape = true;
+                } else if (c == '"') {
+                    emString = false;
+                }
+                continue;
+            }
+            if (c == '"') {
+                emString = true;
+            } else if (c == '[') {
+                nivel++;
+            } else if (c == ']') {
+                nivel--;
+                if (nivel == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
     private static void restaurarMenuNovo() throws java.io.IOException {
         // .txt -> Documento de Texto
