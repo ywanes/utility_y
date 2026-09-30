@@ -47591,9 +47591,9 @@ Exemplos...
         criando chave randomica: ssh-keygen -t ed25519 -C "comentario1" -f C:\\Users\\usuario1\\.ssh\\id_ed25519_pc
 	obs3: No windows (admin): C:\\ProgramData\\ssh\\administrators_authorized_keys
         obs4: desbugando permissao .ssh(Bad permissions. Try removing permissions for user...):
-            icacls "%USERPROFILE%\.ssh" /setowner "%USERNAME%" /t /c
-            icacls "%USERPROFILE%\.ssh" /inheritance:r /grant:r "%USERNAME%:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F"
-            icacls "%USERPROFILE%\.ssh\*" /reset /t /c
+            icacls "%USERPROFILE%\\.ssh" /setowner "%USERNAME%" /t /c
+            icacls "%USERPROFILE%\\.ssh" /inheritance:r /grant:r "%USERNAME%:(OI)(CI)F" "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F"
+            icacls "%USERPROFILE%\\.ssh\\*" /reset /t /c
     y ssh admin@10.0.0.1 -i id_ed25519 -P 333        cliente: login por chave (senha ignorada)
     y ssh admin@10.0.0.1 -i id_ed25519 -hostpub ssh_host_key.pub -P 333   idem + verifica/pina a host key (anti-MITM)
     (-hostpub pode REPETIR e cada arquivo aceita varias linhas: pina ed25519 E mldsa44 juntas; casa a que o servidor apresentar)
