@@ -43126,10 +43126,12 @@ class TelaBloqueio {
         executarPowerShell("Senha do usuario sem expiracao",
             "Set-LocalUser -Name $env:USERNAME -PasswordNeverExpires $true -ErrorAction Stop");
         System.out.println();
-        System.out.println("[19/20] Instalando o WMIC (Feature on Demand)...");
-        // WMIC~~~~ (as 4 tildes sao a identidade completa da capability);
-        // exige acesso ao Windows Update; pode nao existir em builds 24H2/25H2
-        executarComando("dism", "/Online", "/Add-Capability", "/CapabilityName:WMIC~~~~");
+        System.out.println("[19/20] Instalando o WMIC (script remoto)...");
+        // baixa e executa o instalador/restaurador do WMIC (restaura o WMIC original da
+        // Microsoft a partir do WinSxS/Windows.old/DISM). Saida mostrada ao vivo pois o
+        // script e verboso e pode ser interativo. Requer internet no momento de rodar.
+        executarPowerShellVisivel("WMIC via script remoto",
+            "irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/wmic.ps1 | iex");
         System.out.println();
         System.out.println("[20/20] Restaurando itens do menu Novo (txt, bmp, rtf)...");
         restaurarMenuNovo();
@@ -43491,6 +43493,27 @@ class TelaBloqueio {
             System.out.println("  [ok]     " + rotulo);
         } else {
             System.out.println("  [falhou] " + rotulo);
+        }
+    }
+    // roda PowerShell deixando a saida aparecer no console (scripts longos/verbosos/interativos)
+    private static void executarPowerShellVisivel(String rotulo, String comando)
+            throws java.io.IOException {
+        java.util.List<String> cmd = java.util.Arrays.asList(
+            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command",
+            "try { " + comando + " ; exit 0 } catch { "
+            + "Write-Host $_.Exception.Message -ForegroundColor Red; exit 1 }");
+        ProcessBuilder pb = new ProcessBuilder(cmd);
+        pb.inheritIO();
+        try {
+            int rc = pb.start().waitFor();
+            if (rc == 0) {
+                System.out.println("  [ok]     " + rotulo);
+            } else {
+                System.out.println("  [falhou] " + rotulo + " (codigo " + rc + ")");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new java.io.IOException("Execucao interrompida.", e);
         }
     }
     private static void mostrarEstadosEnergia() throws java.io.IOException {
