@@ -136,17 +136,26 @@ function Add-VHDXToDualBoot {
     $drive   = [System.IO.Path]::GetPathRoot($path).TrimEnd('\')
     $relPath = $path.Substring($drive.Length)
     if (-not $relPath.StartsWith("\")) { $relPath = "\" + $relPath }
+    $vhdStr  = "vhd=[$drive]$relPath"
+
+    # Ja existe entrada para este mesmo arquivo?
+    $existe = @(Get-BcdOsEntries | Where-Object { $_.IsVHD -and $_.Path -ieq "[$drive]$relPath" })
+    if ($existe.Count -gt 0) {
+        Write-Host "Ja existe entrada para este VHDX:" -ForegroundColor Yellow
+        $existe | Format-Table Desc, Path, GUID -AutoSize
+        if ((Read-Host "Adicionar outra mesmo assim? (S/N)") -notmatch '^[sS]') { return }
+    }
 
     Backup-BCD
     Write-Host "Adicionando entrada: $CustomDesc..." -ForegroundColor Cyan
 
-    $copyOutput = bcdedit /copy '{current}' /d $CustomDesc 2>&1
-    if ($LASTEXITCODE -ne 0) { $copyOutput = bcdedit /copy '{default}' /d $CustomDesc 2>&1 }
-    if ($LASTEXITCODE -ne 0 -or -not (($copyOutput -join ' ') -match $RX_GUID)) {
-        Write-Host "Erro ao copiar entrada: $copyOutput" -ForegroundColor Red; return
+    # So tenta {default} se a copia de {current} NAO criou entrada
+    $copyOutput = (bcdedit /copy '{current}' /d $CustomDesc 2>&1) -join ' '
+    if ($copyOutput -notmatch $RX_GUID) {
+        $copyOutput = (bcdedit /copy '{default}' /d $CustomDesc 2>&1) -join ' '
     }
-    $guid   = $matches[0]
-    $vhdStr = "vhd=[$drive]$relPath"
+    if ($copyOutput -match $RX_GUID) { $guid = $matches[0] }
+    else { Write-Host "Erro ao copiar entrada: $copyOutput" -ForegroundColor Red; return }
 
     bcdedit /set $guid device   $vhdStr | Out-Null; $ok1 = $LASTEXITCODE -eq 0
     bcdedit /set $guid osdevice $vhdStr | Out-Null; $ok2 = $LASTEXITCODE -eq 0
