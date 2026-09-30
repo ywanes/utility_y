@@ -48172,6 +48172,12 @@ Exemplos...
         # mixer de som -> sndvol
         # install y windows powershell adm -> irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.ps1 | iex
         # install y linux -> curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
+    segureboot teste:
+        desligue secure boot bios
+        ligar testsigning:
+            bcdedit /set testsigning on
+        tirar marcadagua:
+            https://winaero.com/download-universal-watermark-disabler/
 [y services]
     y services install yd yd.bat # registra (auto-start, LocalSystem)
     y services start   yd # inicia
