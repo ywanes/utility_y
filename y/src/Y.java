@@ -42951,6 +42951,8 @@ class TelaBloqueio {
         "HKCU\\SOFTWARE\\Policies\\Microsoft\\Windows\\CloudContent";
     private static final String NOTIF =
         "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings";
+    private static final String PUSH =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PushNotifications";
     private static final String LOCK11 =
         "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Lock Screen";
     private static final String ADV =
@@ -43025,6 +43027,9 @@ class TelaBloqueio {
         definirDword(SYS, "DisableLockScreenAppNotifications", 1);
         definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 0);
         definirDword(LOCK11, "LockScreenWidgetsEnabled", 0);
+        // 0 = desliga o interruptor mestre de Notificacoes (Sistema > Notificacoes)
+        definirDword(NOTIF, "NOC_GLOBAL_SETTING_TOASTS_ENABLED", 0);
+        definirDword(PUSH, "ToastEnabled", 0);
         System.out.println();
         System.out.println("[5/19] Removendo o relogio...");
         definirDword(PERS, "NoLockScreen", 1);
@@ -48196,6 +48201,7 @@ Exemplos...
         # mixer de som -> sndvol
         # install y windows powershell adm -> irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.ps1 | iex
         # install y linux -> curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
+        # install wmic cmd adm -> DISM /Online /Add-Capability /CapabilityName:WMIC~~~~
     segureboot teste:
         desligue secure boot bios
         ligar testsigning:
