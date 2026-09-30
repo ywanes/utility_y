@@ -42963,6 +42963,8 @@ class TelaBloqueio {
         "HKCU\\Control Panel\\Colors";
     private static final String WALLPAPERS =
         "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Wallpapers";
+    private static final String DESKTOP_BAG =
+        "HKCU\\SOFTWARE\\Microsoft\\Windows\\Shell\\Bags\\1\\Desktop";
     private static final String BUSCA =
         "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Search";
     private static final String DSH =
@@ -43045,8 +43047,10 @@ class TelaBloqueio {
         // valor padrao vazio = menu de contexto classico (Windows 11)
         definirValor(MENU_CLASSICO, null, null, null);
         System.out.println();
-        System.out.println("[8/17] Definindo a area de trabalho com cor solida preta...");
+        System.out.println("[8/17] Definindo a area de trabalho (cor solida preta e icones pequenos)...");
         definirFundoDesktopPreto();
+        // 32 = icones pequenos no desktop (48 = medio/padrao, 96 = grande)
+        definirDword(DESKTOP_BAG, "IconSize", 32);
         System.out.println();
         System.out.println("[9/17] Ajustando itens da barra de tarefas...");
         // 0 = Pesquisar: Ocultar
