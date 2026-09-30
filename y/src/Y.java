@@ -42995,12 +42995,13 @@ class TelaBloqueio {
             System.exit(1);
         }
     }
+    
     private static void aplicarMinimo() throws java.io.IOException {
         System.out.println();
-        System.out.println("[1/13] Gerando imagem preta...");
+        System.out.println("[1/14] Gerando imagem preta...");
         gerarImagemPreta();
         System.out.println();
-        System.out.println("[2/13] Definindo o fundo da tela de bloqueio...");
+        System.out.println("[2/14] Definindo o fundo da tela de bloqueio...");
         definirTexto(CSP, "LockScreenImagePath", ARQ_IMAGEM);
         definirTexto(CSP, "LockScreenImageUrl",  ARQ_IMAGEM);
         definirDword(CSP, "LockScreenImageStatus", 1);
@@ -43008,21 +43009,21 @@ class TelaBloqueio {
         // 0 mantem o mesmo fundo preto na tela de senha
         definirDword(SYS, "DisableLogonBackgroundImage", 0);
         System.out.println();
-        System.out.println("[3/13] Desativando Spotlight, dicas e curiosidades...");
+        System.out.println("[3/14] Desativando Spotlight, dicas e curiosidades...");
         definirDword(CDM, "RotatingLockScreenEnabled", 0);
         definirDword(CDM, "RotatingLockScreenOverlayEnabled", 0);
         definirDword(CDM, "SubscribedContent-338387Enabled", 0);
         definirDword(CLOUD, "DisableWindowsSpotlightFeatures", 1);
         System.out.println();
-        System.out.println("[4/13] Removendo notificacoes e widgets...");
+        System.out.println("[4/14] Removendo notificacoes e widgets...");
         definirDword(SYS, "DisableLockScreenAppNotifications", 1);
         definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 0);
         definirDword(LOCK11, "LockScreenWidgetsEnabled", 0);
         System.out.println();
-        System.out.println("[5/13] Removendo o relogio...");
+        System.out.println("[5/14] Removendo o relogio...");
         definirDword(PERS, "NoLockScreen", 1);
         System.out.println();
-        System.out.println("[6/13] Ajustando energia (tela, suspensao, hibernacao e tampa)...");
+        System.out.println("[6/14] Ajustando energia (tela, suspensao, hibernacao e tampa)...");
         executarPowercfg("-change", "-monitor-timeout-ac", "0");
         executarPowercfg("-change", "-standby-timeout-ac", "0");
         executarPowercfg("-change", "-hibernate-timeout-ac", "0");
@@ -43032,7 +43033,7 @@ class TelaBloqueio {
         executarPowercfg("-h", "off");
         mostrarEstadosEnergia();
         System.out.println();
-        System.out.println("[7/13] Ajustando o Explorador de Arquivos...");
+        System.out.println("[7/14] Ajustando o Explorador de Arquivos...");
         // 1 = mostrar arquivos, pastas e unidades ocultas
         definirDword(ADV, "Hidden", 1);
         // 1 = abrir o Explorador em "Este Computador"
@@ -43040,10 +43041,10 @@ class TelaBloqueio {
         // valor padrao vazio = menu de contexto classico (Windows 11)
         definirValor(MENU_CLASSICO, null, null, null);
         System.out.println();
-        System.out.println("[8/13] Definindo a area de trabalho com cor solida preta...");
+        System.out.println("[8/14] Definindo a area de trabalho com cor solida preta...");
         definirFundoDesktopPreto();
         System.out.println();
-        System.out.println("[9/13] Ajustando itens da barra de tarefas...");
+        System.out.println("[9/14] Ajustando itens da barra de tarefas...");
         // 0 = Pesquisar: Ocultar
         definirDword(BUSCA, "SearchboxTaskbarMode", 0);
         // 0 = Visao de tarefas: Desativado
@@ -43053,7 +43054,7 @@ class TelaBloqueio {
         definirDword(ADV, "TaskbarDa", 0);
         definirDword(DSH, "AllowNewsAndInterests", 0);
         System.out.println();
-        System.out.println("[10/13] Ajustando o menu Iniciar...");
+        System.out.println("[10/14] Ajustando o menu Iniciar...");
         // 0 = nao mostrar aplicativos adicionados recentemente
         definirDword(INICIAR, "ShowRecentList", 0);
         // 0 = nao mostrar arquivos recentes e sugeridos
@@ -43061,13 +43062,19 @@ class TelaBloqueio {
         // 0 = nao mostrar dicas e recomendacoes de aplicativos
         definirDword(ADV, "Start_IrisRecommendations", 0);
         System.out.println();
-        System.out.println("[11/13] Definindo o Prompt de comando como perfil padrao do Terminal...");
+        System.out.println("[11/14] Definindo o Prompt de comando como perfil padrao do Terminal...");
         definirPerfilPadraoTerminal();
         System.out.println();
-        System.out.println("[12/13] Desligando o Firewall do Windows (todos os perfis)...");
+        System.out.println("[12/14] Desligando o Firewall do Windows (todos os perfis)...");
         executarComando("netsh", "advfirewall", "set", "allprofiles", "state", "off");
         System.out.println();
-        System.out.println("[13/13] Restaurando itens do menu Novo (txt, bmp, rtf)...");
+        System.out.println("[13/14] Deixando o Controle de Conta de Usuario (UAC) no minimo...");
+        // 0 = elevar sem pedir confirmacao (equivale a "Nunca notificar")
+        definirDword(POL_SYS, "ConsentPromptBehaviorAdmin", 0);
+        // 0 = nao escurecer/isolar a area de trabalho ao elevar
+        definirDword(POL_SYS, "PromptOnSecureDesktop", 0);
+        System.out.println();
+        System.out.println("[14/14] Restaurando itens do menu Novo (txt, bmp, rtf)...");
         restaurarMenuNovo();
         System.out.println();
         System.out.println("Reiniciando o Explorer...");
