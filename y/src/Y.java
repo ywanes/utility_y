@@ -42977,6 +42977,8 @@ class TelaBloqueio {
         "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Discardable\\PostSetup\\ShellNew";
     private static final String BOOT =
         "HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Authentication\\LogonUI\\BootAnimation";
+    private static final String TS =
+        "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Terminal Server";
     public enum Modo { MINIMO, PADRAO }    
     public TelaBloqueio(String[] args){        
         try{
@@ -43000,10 +43002,10 @@ class TelaBloqueio {
     
     private static void aplicarMinimo() throws java.io.IOException {
         System.out.println();
-        System.out.println("[1/15] Gerando imagem preta...");
+        System.out.println("[1/17] Gerando imagem preta...");
         gerarImagemPreta();
         System.out.println();
-        System.out.println("[2/15] Definindo o fundo da tela de bloqueio...");
+        System.out.println("[2/17] Definindo o fundo da tela de bloqueio...");
         definirTexto(CSP, "LockScreenImagePath", ARQ_IMAGEM);
         definirTexto(CSP, "LockScreenImageUrl",  ARQ_IMAGEM);
         definirDword(CSP, "LockScreenImageStatus", 1);
@@ -43011,21 +43013,21 @@ class TelaBloqueio {
         // 0 mantem o mesmo fundo preto na tela de senha
         definirDword(SYS, "DisableLogonBackgroundImage", 0);
         System.out.println();
-        System.out.println("[3/15] Desativando Spotlight, dicas e curiosidades...");
+        System.out.println("[3/17] Desativando Spotlight, dicas e curiosidades...");
         definirDword(CDM, "RotatingLockScreenEnabled", 0);
         definirDword(CDM, "RotatingLockScreenOverlayEnabled", 0);
         definirDword(CDM, "SubscribedContent-338387Enabled", 0);
         definirDword(CLOUD, "DisableWindowsSpotlightFeatures", 1);
         System.out.println();
-        System.out.println("[4/15] Removendo notificacoes e widgets...");
+        System.out.println("[4/17] Removendo notificacoes e widgets...");
         definirDword(SYS, "DisableLockScreenAppNotifications", 1);
         definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 0);
         definirDword(LOCK11, "LockScreenWidgetsEnabled", 0);
         System.out.println();
-        System.out.println("[5/15] Removendo o relogio...");
+        System.out.println("[5/17] Removendo o relogio...");
         definirDword(PERS, "NoLockScreen", 1);
         System.out.println();
-        System.out.println("[6/15] Ajustando energia (tela, suspensao, hibernacao e tampa)...");
+        System.out.println("[6/17] Ajustando energia (tela, suspensao, hibernacao e tampa)...");
         executarPowercfg("-change", "-monitor-timeout-ac", "0");
         executarPowercfg("-change", "-standby-timeout-ac", "0");
         executarPowercfg("-change", "-hibernate-timeout-ac", "0");
@@ -43035,7 +43037,7 @@ class TelaBloqueio {
         executarPowercfg("-h", "off");
         mostrarEstadosEnergia();
         System.out.println();
-        System.out.println("[7/15] Ajustando o Explorador de Arquivos...");
+        System.out.println("[7/17] Ajustando o Explorador de Arquivos...");
         // 1 = mostrar arquivos, pastas e unidades ocultas
         definirDword(ADV, "Hidden", 1);
         // 1 = abrir o Explorador em "Este Computador"
@@ -43043,10 +43045,10 @@ class TelaBloqueio {
         // valor padrao vazio = menu de contexto classico (Windows 11)
         definirValor(MENU_CLASSICO, null, null, null);
         System.out.println();
-        System.out.println("[8/15] Definindo a area de trabalho com cor solida preta...");
+        System.out.println("[8/17] Definindo a area de trabalho com cor solida preta...");
         definirFundoDesktopPreto();
         System.out.println();
-        System.out.println("[9/15] Ajustando itens da barra de tarefas...");
+        System.out.println("[9/17] Ajustando itens da barra de tarefas...");
         // 0 = Pesquisar: Ocultar
         definirDword(BUSCA, "SearchboxTaskbarMode", 0);
         // 0 = Visao de tarefas: Desativado
@@ -43056,7 +43058,7 @@ class TelaBloqueio {
         definirDword(ADV, "TaskbarDa", 0);
         definirDword(DSH, "AllowNewsAndInterests", 0);
         System.out.println();
-        System.out.println("[10/15] Ajustando o menu Iniciar...");
+        System.out.println("[10/17] Ajustando o menu Iniciar...");
         // 0 = nao mostrar aplicativos adicionados recentemente
         definirDword(INICIAR, "ShowRecentList", 0);
         // 0 = nao mostrar arquivos recentes e sugeridos
@@ -43064,23 +43066,38 @@ class TelaBloqueio {
         // 0 = nao mostrar dicas e recomendacoes de aplicativos
         definirDword(ADV, "Start_IrisRecommendations", 0);
         System.out.println();
-        System.out.println("[11/15] Definindo o Prompt de comando como perfil padrao do Terminal...");
+        System.out.println("[11/17] Definindo o Prompt de comando como perfil padrao do Terminal...");
         definirPerfilPadraoTerminal();
         System.out.println();
-        System.out.println("[12/15] Desligando o Firewall do Windows (todos os perfis)...");
+        System.out.println("[12/17] Desligando o Firewall do Windows (todos os perfis)...");
         executarComando("netsh", "advfirewall", "set", "allprofiles", "state", "off");
         System.out.println();
-        System.out.println("[13/15] Deixando o Controle de Conta de Usuario (UAC) no minimo...");
+        System.out.println("[13/17] Deixando o Controle de Conta de Usuario (UAC) no minimo...");
         // 0 = elevar sem pedir confirmacao (equivale a "Nunca notificar")
         definirDword(POL_SYS, "ConsentPromptBehaviorAdmin", 0);
         // 0 = nao escurecer/isolar a area de trabalho ao elevar
         definirDword(POL_SYS, "PromptOnSecureDesktop", 0);
         System.out.println();
-        System.out.println("[14/15] Removendo o som de inicializacao do Windows...");
+        System.out.println("[14/17] Habilitando o Acesso Remoto (RDP / mstsc)...");
+        // 0 = permitir conexoes de Area de Trabalho Remota
+        definirDword(TS, "fDenyTSConnections", 0);
+        // libera a regra do RDP no firewall (util caso o firewall seja religado)
+        executarComando("netsh", "advfirewall", "firewall", "set", "rule",
+            "group=remote desktop", "new", "enable=Yes");
+        System.out.println();
+        System.out.println("[15/17] Instalando e habilitando o servidor OpenSSH (auto start)...");
+        executarPowerShell("OpenSSH.Server instalado",
+            "Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 -ErrorAction Stop | Out-Null");
+        executarPowerShell("Servico sshd em inicializacao automatica",
+            "Set-Service -Name sshd -StartupType Automatic -ErrorAction Stop");
+        executarPowerShell("Servico sshd iniciado",
+            "Start-Service -Name sshd -ErrorAction Stop");
+        System.out.println();
+        System.out.println("[16/17] Removendo o som de inicializacao do Windows...");
         // 1 = nao tocar o som de inicializacao (logon)
         definirDword(BOOT, "DisableStartupSound", 1);
         System.out.println();
-        System.out.println("[15/15] Restaurando itens do menu Novo (txt, bmp, rtf)...");
+        System.out.println("[17/17] Restaurando itens do menu Novo (txt, bmp, rtf)...");
         restaurarMenuNovo();
         System.out.println();
         System.out.println("Reiniciando o Explorer...");
@@ -43362,6 +43379,19 @@ class TelaBloqueio {
             System.out.println("  [ok]     " + linha);
         } else {
             System.out.println("  [falhou] " + linha);
+        }
+    }
+    // roda um comando PowerShell e converte sucesso/erro em [ok]/[falhou]
+    private static void executarPowerShell(String rotulo, String comando)
+            throws java.io.IOException {
+        java.util.List<String> cmd = java.util.Arrays.asList(
+            "powershell", "-NoProfile", "-NonInteractive",
+            "-ExecutionPolicy", "Bypass", "-Command",
+            "try { " + comando + " ; exit 0 } catch { exit 1 }");
+        if (executarSilencioso(cmd) == 0) {
+            System.out.println("  [ok]     " + rotulo);
+        } else {
+            System.out.println("  [falhou] " + rotulo);
         }
     }
     private static void mostrarEstadosEnergia() throws java.io.IOException {
