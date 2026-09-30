@@ -47181,7 +47181,7 @@ Exemplos...
     qemu-img info c:\\vm\\GCC.vhdx 
     # compactando espaço livre. converter para ele mesmo
         qemu-img convert -f vhdx -O vhdx c:\\vm\\GCC.vhdx c:\\vm\\GCC_compact.vhdx
-    ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
+    ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
     somente informativo -> y help qemu
 [y validaDisco]
     y validaDisco win11.vhdx
