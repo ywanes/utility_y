@@ -43006,10 +43006,10 @@ class TelaBloqueio {
     
     private static void aplicarMinimo() throws java.io.IOException {
         System.out.println();
-        System.out.println("[1/19] Gerando imagem preta...");
+        System.out.println("[1/20] Gerando imagem preta...");
         gerarImagemPreta();
         System.out.println();
-        System.out.println("[2/19] Definindo o fundo da tela de bloqueio...");
+        System.out.println("[2/20] Definindo o fundo da tela de bloqueio...");
         definirTexto(CSP, "LockScreenImagePath", ARQ_IMAGEM);
         definirTexto(CSP, "LockScreenImageUrl",  ARQ_IMAGEM);
         definirDword(CSP, "LockScreenImageStatus", 1);
@@ -43017,13 +43017,13 @@ class TelaBloqueio {
         // 0 mantem o mesmo fundo preto na tela de senha
         definirDword(SYS, "DisableLogonBackgroundImage", 0);
         System.out.println();
-        System.out.println("[3/19] Desativando Spotlight, dicas e curiosidades...");
+        System.out.println("[3/20] Desativando Spotlight, dicas e curiosidades...");
         definirDword(CDM, "RotatingLockScreenEnabled", 0);
         definirDword(CDM, "RotatingLockScreenOverlayEnabled", 0);
         definirDword(CDM, "SubscribedContent-338387Enabled", 0);
         definirDword(CLOUD, "DisableWindowsSpotlightFeatures", 1);
         System.out.println();
-        System.out.println("[4/19] Removendo notificacoes e widgets...");
+        System.out.println("[4/20] Removendo notificacoes e widgets...");
         definirDword(SYS, "DisableLockScreenAppNotifications", 1);
         definirDword(NOTIF, "NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK", 0);
         definirDword(LOCK11, "LockScreenWidgetsEnabled", 0);
@@ -43031,10 +43031,10 @@ class TelaBloqueio {
         definirDword(NOTIF, "NOC_GLOBAL_SETTING_TOASTS_ENABLED", 0);
         definirDword(PUSH, "ToastEnabled", 0);
         System.out.println();
-        System.out.println("[5/19] Removendo o relogio...");
+        System.out.println("[5/20] Removendo o relogio...");
         definirDword(PERS, "NoLockScreen", 1);
         System.out.println();
-        System.out.println("[6/19] Ajustando energia (tela, suspensao, hibernacao e tampa)...");
+        System.out.println("[6/20] Ajustando energia (tela, suspensao, hibernacao e tampa)...");
         executarPowercfg("-change", "-monitor-timeout-ac", "0");
         executarPowercfg("-change", "-standby-timeout-ac", "0");
         executarPowercfg("-change", "-hibernate-timeout-ac", "0");
@@ -43046,7 +43046,7 @@ class TelaBloqueio {
         executarPowercfg("-h", "off");
         mostrarEstadosEnergia();
         System.out.println();
-        System.out.println("[7/19] Ajustando o Explorador de Arquivos...");
+        System.out.println("[7/20] Ajustando o Explorador de Arquivos...");
         // 1 = mostrar arquivos, pastas e unidades ocultas
         definirDword(ADV, "Hidden", 1);
         // 1 = abrir o Explorador em "Este Computador"
@@ -43054,12 +43054,12 @@ class TelaBloqueio {
         // valor padrao vazio = menu de contexto classico (Windows 11)
         definirValor(MENU_CLASSICO, null, null, null);
         System.out.println();
-        System.out.println("[8/19] Definindo a area de trabalho (cor solida preta e icones pequenos)...");
+        System.out.println("[8/20] Definindo a area de trabalho (cor solida preta e icones pequenos)...");
         definirFundoDesktopPreto();
         // 32 = icones pequenos no desktop (48 = medio/padrao, 96 = grande)
         definirDword(DESKTOP_BAG, "IconSize", 32);
         System.out.println();
-        System.out.println("[9/19] Ajustando itens da barra de tarefas...");
+        System.out.println("[9/20] Ajustando itens da barra de tarefas...");
         // 0 = Pesquisar: Ocultar
         definirDword(BUSCA, "SearchboxTaskbarMode", 0);
         // 0 = Visao de tarefas: Desativado
@@ -43069,7 +43069,7 @@ class TelaBloqueio {
         definirDword(ADV, "TaskbarDa", 0);
         definirDword(DSH, "AllowNewsAndInterests", 0);
         System.out.println();
-        System.out.println("[10/19] Ajustando o menu Iniciar...");
+        System.out.println("[10/20] Ajustando o menu Iniciar...");
         // 0 = nao mostrar aplicativos adicionados recentemente
         definirDword(INICIAR, "ShowRecentList", 0);
         // 0 = nao mostrar arquivos recentes e sugeridos
@@ -43077,26 +43077,26 @@ class TelaBloqueio {
         // 0 = nao mostrar dicas e recomendacoes de aplicativos
         definirDword(ADV, "Start_IrisRecommendations", 0);
         System.out.println();
-        System.out.println("[11/19] Definindo o Prompt de comando como perfil padrao do Terminal...");
+        System.out.println("[11/20] Definindo o Prompt de comando como perfil padrao do Terminal...");
         definirPerfilPadraoTerminal();
         System.out.println();
-        System.out.println("[12/19] Desligando o Firewall do Windows (todos os perfis)...");
+        System.out.println("[12/20] Desligando o Firewall do Windows (todos os perfis)...");
         executarComando("netsh", "advfirewall", "set", "allprofiles", "state", "off");
         System.out.println();
-        System.out.println("[13/19] Deixando o Controle de Conta de Usuario (UAC) no minimo...");
+        System.out.println("[13/20] Deixando o Controle de Conta de Usuario (UAC) no minimo...");
         // 0 = elevar sem pedir confirmacao (equivale a "Nunca notificar")
         definirDword(POL_SYS, "ConsentPromptBehaviorAdmin", 0);
         // 0 = nao escurecer/isolar a area de trabalho ao elevar
         definirDword(POL_SYS, "PromptOnSecureDesktop", 0);
         System.out.println();
-        System.out.println("[14/19] Habilitando o Acesso Remoto (RDP / mstsc)...");
+        System.out.println("[14/20] Habilitando o Acesso Remoto (RDP / mstsc)...");
         // 0 = permitir conexoes de Area de Trabalho Remota
         definirDword(TS, "fDenyTSConnections", 0);
         // libera a regra do RDP no firewall (util caso o firewall seja religado)
         executarComando("netsh", "advfirewall", "firewall", "set", "rule",
             "group=remote desktop", "new", "enable=Yes");
         System.out.println();
-        System.out.println("[15/19] Instalando e habilitando o servidor OpenSSH (auto start)...");
+        System.out.println("[15/20] Instalando e habilitando o servidor OpenSSH (auto start)...");
         executarPowerShell("OpenSSH.Server instalado",
             "Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 -ErrorAction Stop | Out-Null");
         executarPowerShell("Servico sshd em inicializacao automatica",
@@ -43104,11 +43104,11 @@ class TelaBloqueio {
         executarPowerShell("Servico sshd iniciado",
             "Start-Service -Name sshd -ErrorAction Stop");
         System.out.println();
-        System.out.println("[16/19] Removendo o som de inicializacao do Windows...");
+        System.out.println("[16/20] Removendo o som de inicializacao do Windows...");
         // 1 = nao tocar o som de inicializacao (logon)
         definirDword(BOOT, "DisableStartupSound", 1);
         System.out.println();
-        System.out.println("[17/19] Configurando a Lixeira para guardar o maximo possivel...");
+        System.out.println("[17/20] Configurando a Lixeira para guardar o maximo possivel...");
         // MaxCapacity (MB) = tamanho do disco de cada volume, para reter o maximo possivel
         executarPowerShell("Lixeira no tamanho maximo por volume",
             "$bb='HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\BitBucket\\Volume'; "
@@ -43120,13 +43120,18 @@ class TelaBloqueio {
             + "else { $mb=[uint32]4294967000 }; "
             + "New-ItemProperty -Path $_.PSPath -Name MaxCapacity -Value $mb -PropertyType DWord -Force | Out-Null } }");
         System.out.println();
-        System.out.println("[18/19] Definindo a senha do usuario para nunca expirar...");
+        System.out.println("[18/20] Definindo a senha do usuario para nunca expirar...");
         // Set-LocalUser (modulo nativo do Windows 10/11) substitui o wmic;
         // vale para contas locais/Microsoft; em conta de dominio a etapa falha e e ignorada
         executarPowerShell("Senha do usuario sem expiracao",
             "Set-LocalUser -Name $env:USERNAME -PasswordNeverExpires $true -ErrorAction Stop");
         System.out.println();
-        System.out.println("[19/19] Restaurando itens do menu Novo (txt, bmp, rtf)...");
+        System.out.println("[19/20] Instalando o WMIC (Feature on Demand)...");
+        // WMIC~~~~ (as 4 tildes sao a identidade completa da capability);
+        // exige acesso ao Windows Update; pode nao existir em builds 24H2/25H2
+        executarComando("dism", "/Online", "/Add-Capability", "/CapabilityName:WMIC~~~~");
+        System.out.println();
+        System.out.println("[20/20] Restaurando itens do menu Novo (txt, bmp, rtf)...");
         restaurarMenuNovo();
         System.out.println();
         System.out.println("Reiniciando o Explorer...");
