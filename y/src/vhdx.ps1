@@ -172,14 +172,14 @@ function Remove-AllVHDXBootEntries {
     }
     if ($alvos.Count -eq 0) { Write-Host "Nenhuma entrada VHDX para remover." -ForegroundColor Yellow; return }
 
-    $alvos | Format-Table Desc, Path, GUID -AutoSize
-    if ((Read-Host "Remover essas $($alvos.Count) entradas? (S/N)") -notmatch '^[sS]') { return }
-
     Backup-BCD
+    foreach ($a in $alvos) { bcdedit /delete $a.GUID /f | Out-Null }
+
+    # Confere relendo o BCD (nao depende de codigo de saida)
+    $restantes = @(Get-BcdOsEntries | ForEach-Object { $_.GUID })
     foreach ($a in $alvos) {
-        bcdedit /delete $a.GUID /f | Out-Null
-        if ($LASTEXITCODE -eq 0) { Write-Host "Removido: $($a.Desc) $($a.GUID)" -ForegroundColor Yellow }
-        else { Write-Host "Falha ao remover: $($a.GUID)" -ForegroundColor Red }
+        if ($restantes -contains $a.GUID) { Write-Host "Falha ao remover: $($a.Desc) $($a.GUID)" -ForegroundColor Red }
+        else { Write-Host "Removido: $($a.Desc) $($a.GUID)" -ForegroundColor Yellow }
     }
 }
 
