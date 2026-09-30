@@ -138,14 +138,6 @@ function Add-VHDXToDualBoot {
     if (-not $relPath.StartsWith("\")) { $relPath = "\" + $relPath }
     $vhdStr  = "vhd=[$drive]$relPath"
 
-    # Ja existe entrada para este mesmo arquivo?
-    $existe = @(Get-BcdOsEntries | Where-Object { $_.IsVHD -and $_.Path -ieq "[$drive]$relPath" })
-    if ($existe.Count -gt 0) {
-        Write-Host "Ja existe entrada para este VHDX:" -ForegroundColor Yellow
-        $existe | Format-Table Desc, Path, GUID -AutoSize
-        if ((Read-Host "Adicionar outra mesmo assim? (S/N)") -notmatch '^[sS]') { return }
-    }
-
     Backup-BCD
     Write-Host "Adicionando entrada: $CustomDesc..." -ForegroundColor Cyan
 
@@ -157,9 +149,12 @@ function Add-VHDXToDualBoot {
     if ($copyOutput -match $RX_GUID) { $guid = $matches[0] }
     else { Write-Host "Erro ao copiar entrada: $copyOutput" -ForegroundColor Red; return }
 
-    bcdedit /set $guid device   $vhdStr | Out-Null; $ok1 = $LASTEXITCODE -eq 0
-    bcdedit /set $guid osdevice $vhdStr | Out-Null; $ok2 = $LASTEXITCODE -eq 0
-    if ($ok1 -and $ok2) {
+    bcdedit /set $guid device   $vhdStr | Out-Null
+    bcdedit /set $guid osdevice $vhdStr | Out-Null
+
+    # Confere relendo o BCD (nao depende de codigo de saida)
+    $nova = Get-BcdOsEntries | Where-Object { $_.GUID -eq $guid.ToLower() }
+    if ($nova -and $nova.Device -like 'vhd=*' -and $nova.OsDevice -like 'vhd=*') {
         Write-Host "Sucesso! Adicionado com GUID $guid (no fim do menu - use a opcao 6 para reordenar)" -ForegroundColor Green
     } else {
         Write-Host "Erro ao configurar o VHDX. Removendo entrada incompleta..." -ForegroundColor Red
@@ -253,7 +248,7 @@ function Reset-EFIPartition {
 
 # --- Menu ---
 do {
-    Write-Host "`n=== GERENCIADOR BOOT VHDX (v12.0) ===" -ForegroundColor Magenta
+    Write-Host "`n=== GERENCIADOR BOOT VHDX (v13.0) ===" -ForegroundColor Magenta
     Write-Host "1. Listar Entradas"
     Write-Host "2. Adicionar VHDX (Com Descricao)"
     Write-Host "3. Limpar Tudo (VHDX)"
