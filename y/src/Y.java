@@ -48189,24 +48189,27 @@ Exemplos...
         Iniciando a desinstalação do pacote...
         Falha na desinstalação com o código de saída: 2147747483
     principais:
-        winget install --id Google.Chrome -e --accept-package-agreements  # Google Chrome
-        winget install --id Microsoft.WindowsTerminal -e --accept-package-agreements  # Terminal do Windows
-        winget install --id Notepad++.Notepad++ -e --accept-package-agreements  # Notepad++ (64-bit x64)
-        winget install --id 9MZ95KL8MR0L --accept-package-agreements  # snippingtool
-        winget install --id 9PCFS5B6T72H --accept-package-agreements  # mspaint
-        winget install --id Python.Python.3.13 -e --accept-package-agreements  # Python 3.13.12 (64-bit)
-        winget install --id Python.Launcher -e --accept-package-agreements  # Python Launcher
-        winget install --id Git.Git -e --accept-package-agreements  # Git
-        winget install --id VideoLAN.VLC -e --accept-package-agreements
-        winget install --id Microsoft.RemoteDesktopClient -e --accept-package-agreements
-        winget install --id Anthropic.Claude -e --accept-package-agreements  # Claude
+        winget install --id Google.Chrome -e --accept-package-agreements                 # Google Chrome
+        winget install --id Microsoft.WindowsTerminal -e --accept-package-agreements     # Terminal do Windows
+        winget install --id Notepad++.Notepad++ -e --accept-package-agreements           # Notepad++ (64-bit x64)
+        winget install --id 9MZ95KL8MR0L --accept-package-agreements                     # snippingtool
+        winget install --id 9WZDNCRFHVN5 --accept-package-agreements                     # calc
+        winget install --id VideoLAN.VLC -e --accept-package-agreements                  # VLC
+        winget install --id 9PCFS5B6T72H --accept-package-agreements                     # mspaint
+        winget install --id 9WZDNCRFJBH4 --source msstore --accept-package-agreements --accept-source-agreements # ms-photos:
+        winget install --id Python.Python.3.13 -e --accept-package-agreements            # Python 3.13.12 (64-bit)
+        winget install --id Python.Launcher -e --accept-package-agreements               # Python Launcher
+        winget install --id Git.Git -e --accept-package-agreements                       # Git
+        winget install --id Microsoft.RemoteDesktopClient -e --accept-package-agreements # mstsc
+        winget install --id Anthropic.Claude -e --accept-package-agreements              # Claude
         winget install --id Microsoft.VisualStudio.2022.BuildTools -e --accept-package-agreements --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" # ajuda graalvm a montar exe
         # ultimo graalvm windows -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
         # ultimo graalvm linux -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
         # mixer de som -> sndvol
         # install y windows powershell adm -> irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.ps1 | iex
         # install y linux -> curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
-        # install wmic cmd adm -> DISM /Online /Add-Capability /CapabilityName:WMIC~~~~
+        # install wmic powershell adm -> irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/wmic.ps1 | iex
+        # ou                          -> DISM /Online /Add-Capability /CapabilityName:WMIC~~~~
     segureboot teste:
         desligue secure boot bios
         ligar testsigning:
