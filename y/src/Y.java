@@ -35269,6 +35269,7 @@ class Util{
             System.out.println(erros[0] == 0 ? "RESULTADO ok" : "RESULTADO " + erros[0] + " erro(s)");
         }
     }    
+    
     public boolean check_util(String a){
         try{
             if ( a.trim().length() == 0 )
