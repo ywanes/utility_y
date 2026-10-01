@@ -47208,14 +47208,16 @@ Exemplos...
             | max_by(.build | split(".") | map(tonumber))
             | "\\(.title)\\nbuild: \\(.build)\\nlink:  https://uupdump.net/selectlang.php?id=\\(.uuid)"'
 [y qemu]
-    qemu-img convert -f vmdk -O vhdx c:\\vm\\gc.vmdk c:\\vm\\GCC.vhdx
+    qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx
     opcoes: vhdx, qcow2, vmdk, vdi, raw
-    qemu-img resize c:\\vm\\GCC.vhdx 100G
-    qemu-img info c:\\vm\\GCC.vhdx 
+    qemu-img resize c:\\tmp\\a.vhdx 100G
+    qemu-img info c:\\tmp\\a.vhdx 
     # compactando espaço livre. converter para ele mesmo
-        qemu-img convert -f vhdx -O vhdx c:\\vm\\GCC.vhdx c:\\vm\\GCC_compact.vhdx
-    # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink 
-    # para um disco 300G dinamico, externo 200G e interno 100G vc nao deve fazer resize --shrink para menos do valor externo, da problema.
+        qemu-img convert -f vhdx -O vhdx c:\\tmp\\a.vhdx c:\\tmp\\a.vhdx
+    # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink. tem que diminuir internamente com https://gparted.org/download.php
+    # para forçar destino fisico: -o "preallocation=full"
+    # para mostrar progress em %: -p
+    # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao
     ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
     somente informativo -> y help qemu
 [y validaDisco]
