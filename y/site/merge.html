@@ -100,6 +100,18 @@
         font-weight: bold;
         -webkit-tap-highlight-color: transparent;
     }
+    #btn_menu {
+        border: none;
+        border-radius: 8px;
+        padding: 6px 12px;
+        cursor: pointer;
+        background-color: #555;
+        color: #ddd;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: bold;
+        -webkit-tap-highlight-color: transparent;
+    }
     #btn_auto.ligado {
         background-color: #66BB6A;
         color: #0d2e0f;
@@ -111,9 +123,11 @@
     <div id="fila_area">
         <div id="fila"></div>
     </div>
+	<br/>
     <div id="barra_area">
         <div id="barra">
-            <button id="btn_auto">auto on/off</button>
+			<br/><br/>
+            <button id="btn_auto">auto on/off</button> &nbsp;<button id="btn_menu">menu</button>
         </div>
     </div>
     <div id="clicker_area">
@@ -333,6 +347,7 @@ function automatico() {
 /* ============ botao auto on/off e parametro ?auto= na URL ============ */
 
 const el_auto = document.getElementById('btn_auto');
+const el_menu = document.getElementById('btn_menu');
 
 function url_com_auto(valor) {
     // mantem os outros parametros e o #hash; funciona em http:// e file://
@@ -356,6 +371,11 @@ el_auto.addEventListener('click', function () {
     // redireciona para a pagina com o estado trocado
     salvar();
     location.replace(url_com_auto(modo_automatico ? '0' : '1'));
+});
+
+el_menu.addEventListener('click', function () {
+    // redireciona para a pagina com o estado trocado    
+    location.replace('/menu.html');
 });
 
 // touch no celular/WebView, mouse no desktop.

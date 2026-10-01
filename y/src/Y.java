@@ -48247,6 +48247,8 @@ Exemplos...
             bcdedit /set testsigning on
         tirar marcadagua:
             https://winaero.com/download-universal-watermark-disabler/
+    ativar windows e office:
+        powershell adm -> irm https://get.activated.win | iex
 [y services]
     y services install yd yd.bat # registra (auto-start, LocalSystem)
     y services start   yd # inicia
