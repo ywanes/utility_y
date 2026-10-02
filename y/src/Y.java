@@ -47474,12 +47474,12 @@ Exemplos...
     y touch fileA 60
     y touch fileA 20210128235959
     y touch fileA fileB fileC
-    y -p a/b/c
+    y touch -p a/b/c
     obs: 60(60 segundos a frente)
     obs2: -3600(3600 segundos atrás)
     obs3: 20210128235959(setando em 28/01/2021 23:59:59)
     obs4: -p indica touch de pasta
-    obs5: caminho superior será criado se nao existir, exemplo: pasta final existe como /a/b e touch file pedido é /a/b/c/d/e, as pastas intermediarias serao criadas.
+    obs5: caminhos intermediarios poderao ser criados, ex y touch -p a/b/c terá a capacidade de criar as pastas "a" e "a/b" caso não exista além da pasta c solicitada
 [y rm]
     y rm file1 file2
     y rm -R pasta
