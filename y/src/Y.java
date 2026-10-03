@@ -1227,15 +1227,15 @@ cat buffer.log
             if ( ! isWindows() )
                 erroFatal("overflix implementado somente para o windows");            
             try{
-                global_header="cookie: ips4_device_key=1f1502912420da8b49e4387938432c81; ips4_member_id=178526; ips4_login_key=c3a8f68031330078cdffddfe7c9deff6;\r\n";                
+                global_header="cookie: ips4_device_key=1f1502912420da8b49e4387938432c81; ips4_member_id=178526; ips4_login_key=bc2e80139df1f0217acca9ebd0091995;\r\n";                
                 /*
                 console browser
                 quando troca o dominio, também precisa renovar essas credenciais!
                 document.cookie='ips4_device_key=1f1502912420da8b49e4387938432c81';
                 document.cookie='ips4_member_id=178526';
-                document.cookie='ips4_login_key=c3a8f68031330078cdffddfe7c9deff6';                                
+                document.cookie='ips4_login_key=bc2e80139df1f0217acca9ebd0091995';                                
                 
-                while [ true ]; do y cls && y curl -H "cookie: ips4_device_key=1f1502912420da8b49e4387938432c81; ips4_member_id=178526; ips4_login_key=c3a8f68031330078cdffddfe7c9deff6;" https://encontrei.me/id-62616/ | y tr "'" "\n" | y grep .com/f/;  y curl https://mixdrop23.net/f/9wxdwkjof8o8zn | y grep "ALMOST THERE"; sleep 30; done
+                while [ true ]; do y cls && y curl -H "cookie: ips4_device_key=1f1502912420da8b49e4387938432c81; ips4_member_id=178526; ips4_login_key=bc2e80139df1f0217acca9ebd0091995;" https://encontrei.me/id-62616/ | y tr "'" "\n" | y grep .com/f/;  y curl https://mixdrop23.net/f/9wxdwkjof8o8zn | y grep "ALMOST THERE"; sleep 30; done
                 */
                 overflix(args);                
             }catch(Exception e){
