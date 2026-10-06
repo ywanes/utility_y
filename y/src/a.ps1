@@ -289,6 +289,8 @@ Write-Host "Iniciando QEMU com as configuracoes definidas..." -ForegroundColor G
 # ping6 f100::100
 # no Windows
 # y ping f100::200
+# mapear na mao
+# \\f100--200.ipv6-literal.net\share
 
 # linux live-server para terminal
 # https://releases.ubuntu.com/25.10/ubuntu-25.10-live-server-amd64.iso
