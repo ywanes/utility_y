@@ -222,8 +222,8 @@ try {
 
     Write-Log 'Troca agendada. Reinicie para concluir; depois insira sua licenca real.'
     if ($Restart) {
-        Write-Log 'Reiniciando em 10 segundos...'
-        Start-Sleep -Seconds 10
+        Write-Log 'Reiniciando em 2 segundos...'
+        Start-Sleep -Seconds 2
         Restart-Computer -Force
     }
     exit 0
