@@ -48230,6 +48230,7 @@ Exemplos...
         winget install --id 9WZDNCRFJBH4 --source msstore --accept-package-agreements --accept-source-agreements # ms-photos:
         winget install --id Python.Python.3.13 -e --accept-package-agreements            # Python 3.13.12 (64-bit)
         winget install --id Python.Launcher -e --accept-package-agreements               # Python Launcher
+        winget install Microsoft.DotNet.SDK.10                                           # dotnetcore
         winget install --id Git.Git -e --accept-package-agreements                       # Git
         winget install --id Microsoft.RemoteDesktopClient -e --accept-package-agreements # mstsc
         winget install --id Anthropic.Claude -e --accept-package-agreements              # Claude
