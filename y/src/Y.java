@@ -2312,8 +2312,8 @@ cat buffer.log
                     return;
                 }
                 
-                // lock configuracoes de windows L
-                if ( args.length == 1 && ( args[0].equals("minimo") || args[0].equals("padrao") ) ){
+                // lock monitor on off
+                if ( args.length == 2 && args[0].equals("monitor") && ( args[1].equals("on") || args[1].equals("off") ) ){
                     if ( !isWindowsAdm() )
                         erroFatal("Erro,\nexigencia: cmd admin!");
                     new TelaBloqueio(args);
@@ -11638,7 +11638,6 @@ bind 'set enable-bracketed-paste off'
                       main();
         """;
 
-////////////////        
         String alert_puppeteer="puppeteer nao encontrado!, instale ele com npm install puppeteer na pasta C:/npm_puppeteer\nPara instalar o npm: winget install OpenJS.NodeJS.LTS\n e tem que reiniciar o pc para ele achar o node!";
         if ( !new File("C:/npm_puppeteer").exists() )
             throw new Exception(alert_puppeteer);
@@ -42996,10 +42995,19 @@ class TelaBloqueio {
                 aplicarPadrao();
                 return;
             }
-            System.out.println("Uso: java TelaBloqueio.java <minimo|padrao>");
+            if (args[0].equals("monitor")){
+                String acao = args.length > 1 ? args[1].toLowerCase(java.util.Locale.ROOT) : "";
+                if (acao.equals("off"))      monitorDesligar();
+                else if (acao.equals("on"))  monitorLigar();
+                else System.out.println("uso: y lock monitor on|off");
+                return;
+            }
+            System.out.println("Uso: java TelaBloqueio.java <minimo|padrao|monitor on|monitor off>");
             System.out.println();
-            System.out.println("  minimo   deixa a tela de bloqueio com o minimo visivel");
-            System.out.println("  padrao   devolve o comportamento de fabrica do Windows");
+            System.out.println("  minimo        deixa a tela de bloqueio com o minimo visivel");
+            System.out.println("  padrao        devolve o comportamento de fabrica do Windows");
+            System.out.println("  monitor off   desliga (standby) os monitores");
+            System.out.println("  monitor on    liga os monitores novamente");
         } catch (Exception e) {
             System.err.println(e.getMessage());
             System.exit(1);
@@ -43574,6 +43582,106 @@ class TelaBloqueio {
             Thread.currentThread().interrupt();
             throw new java.io.IOException("Execucao interrompida.", e);
         }
+    }
+
+    // ============================================================
+    //  monitor: liga/desliga a tela. Roda na sessao do usuario
+    //  (chamado pelo servico SYSTEM via CmdUser: y lock monitor off|on).
+    //  Nao exige admin. JNA carregado em runtime, mesmo jar/cache do Y.
+    // ============================================================
+    private static final String MON_JNA_URL =
+        "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_lib/jna-5.14.0.jar";
+    private static final long   MON_JNA_SIZE     = 1_878_533L;
+    private static final String MON_JNA_FILENAME = "jna-5.14.0.jar";
+    private static final java.io.File MON_JNA_DIR = new java.io.File("c:\\y_lib");
+
+    private static final int  WM_SYSCOMMAND    = 0x0112;
+    private static final long SC_MONITORPOWER  = 0xF170;
+    private static final long HWND_BROADCAST   = 0xFFFF;
+    private static final int  MOUSEEVENTF_MOVE = 0x0001;
+
+    // desliga (standby) todos os monitores
+    private static void monitorDesligar() throws Exception {
+        Object[] j = monInit();
+        Thread.sleep(500); // evita o soltar do Enter/clique religar a tela na hora
+        monSinal(j, 2);
+        System.out.println("  [ok]     monitor off");
+    }
+
+    // liga os monitores novamente
+    private static void monitorLigar() throws Exception {
+        Object[] j = monInit();
+        monSinal(j, -1);
+        // o -1 nem sempre acorda a tela no Win10/11; mover o mouse 1px (ida e volta) e o metodo confiavel
+        Object fMouse = monFunc(j, "mouse_event");
+        monCall(j, fMouse, MOUSEEVENTF_MOVE,  1, 0, 0, monSizeT(j, 0));
+        monCall(j, fMouse, MOUSEEVENTF_MOVE, -1, 0, 0, monSizeT(j, 0));
+        System.out.println("  [ok]     monitor on");
+    }
+
+    // envia WM_SYSCOMMAND/SC_MONITORPOWER por broadcast (PostMessage, nao SendMessage)
+    private static void monSinal(Object[] j, long estado) throws Exception {
+        Object fPost = monFunc(j, "PostMessageW");
+        java.lang.reflect.Constructor<?> ctPtr = (java.lang.reflect.Constructor<?>) j[3];
+        monCall(j, fPost, ctPtr.newInstance(HWND_BROADCAST), WM_SYSCOMMAND,
+                monSizeT(j, SC_MONITORPOWER), monSizeT(j, estado));
+    }
+
+    // j = { user32(NativeLibrary), Method invokeInt, int POINTER_SIZE, Constructor<Pointer>(long) }
+    private static Object[] monInit() throws Exception {
+        if (!System.getProperty("os.name", "").toLowerCase().contains("win"))
+            throw new RuntimeException("monitor: apenas Windows");
+        java.io.File jar = monEnsureJna();
+        ClassLoader cl = new java.net.URLClassLoader(
+            new java.net.URL[]{ jar.toURI().toURL() }, TelaBloqueio.class.getClassLoader());
+        Class<?> cNative  = cl.loadClass("com.sun.jna.Native");
+        Class<?> cNatLib  = cl.loadClass("com.sun.jna.NativeLibrary");
+        Class<?> cFunc    = cl.loadClass("com.sun.jna.Function");
+        Class<?> cPointer = cl.loadClass("com.sun.jna.Pointer");
+        int pointerSize = cNative.getField("POINTER_SIZE").getInt(null);
+        java.lang.reflect.Method invokeInt = cFunc.getMethod("invokeInt", Object[].class);
+        java.lang.reflect.Constructor<?> ctPtr = cPointer.getConstructor(long.class);
+        java.util.HashMap<String, Object> opts = new java.util.HashMap<>();
+        opts.put("calling-convention", cFunc.getField("ALT_CONVENTION").getInt(null)); // stdcall
+        Object user32 = cNatLib.getMethod("getInstance", String.class, java.util.Map.class)
+            .invoke(null, "user32", opts);
+        return new Object[]{ user32, invokeInt, pointerSize, ctPtr };
+    }
+
+    private static Object monFunc(Object[] j, String nome) throws Exception {
+        return j[0].getClass().getMethod("getFunction", String.class).invoke(j[0], nome);
+    }
+    private static int monCall(Object[] j, Object f, Object... a) throws Exception {
+        return (int) ((java.lang.reflect.Method) j[1]).invoke(f, (Object) a);
+    }
+    // WPARAM/LPARAM/ULONG_PTR tem tamanho de ponteiro
+    private static Object monSizeT(Object[] j, long v) {
+        return ((int) j[2]) == 8 ? (Object) v : (Object) (int) v;
+    }
+
+    private static java.io.File monEnsureJna() throws Exception {
+        java.io.File cache = new java.io.File(MON_JNA_DIR, MON_JNA_FILENAME);
+        if (cache.isFile() && cache.length() == MON_JNA_SIZE) return cache;
+        MON_JNA_DIR.mkdirs();
+        java.net.HttpURLConnection con = (java.net.HttpURLConnection)
+            java.net.URI.create(MON_JNA_URL).toURL().openConnection();
+        con.setConnectTimeout(15000);
+        con.setReadTimeout(120000);
+        java.io.File tmp = new java.io.File(cache.getPath() + ".part");
+        try (java.io.InputStream in = con.getInputStream();
+             java.io.FileOutputStream out = new java.io.FileOutputStream(tmp)) {
+            byte[] b = new byte[16384];
+            int n;
+            while ((n = in.read(b)) > 0) out.write(b, 0, n);
+        }
+        if (tmp.length() != MON_JNA_SIZE) {
+            long got = tmp.length();
+            tmp.delete();
+            throw new RuntimeException("jna.jar invalido: esperado " + MON_JNA_SIZE + ", veio " + got);
+        }
+        java.nio.file.Files.move(tmp.toPath(), cache.toPath(),
+            java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        return cache;
     }
 }
 
@@ -48053,6 +48161,8 @@ Exemplos...
         y lock -1 -> desliga lock
         y lock 0 -> somente o primeiro monitor
         y lock 0 w
+        y lock monitor off -> desliga o monitor
+        y lock monitor on -> liga o monitor
     lock real:
         y lock lock # windows L
         y lock logoff # shutdown /l # comando estranho mesmo
