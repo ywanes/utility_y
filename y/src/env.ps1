@@ -100,6 +100,10 @@ Set-Content config_y.reg 'Windows Registry Editor Version 5.00
 
 Set-Content compila2.cmd 'curl.exe -s -L https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
 javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;. Y.java
+rem " modelo dev
+rem " del Y.java
+rem " copy D:\.......\utility_y\y\src\Y.java Y.java
+rem " javac -encoding UTF-8 -cp ojdbc6.jar;sqljdbc4-3.0.jar;mysql-connector-java-8.0.26.jar;postgresql-42.7.5.jar;jsch-0.1.55.jar;. Y.java
 '
 
 Set-Content compilaCurl.cmd 'curl.exe -L https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/Y.java > Y.java
