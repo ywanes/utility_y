@@ -256,6 +256,7 @@ do {
     Write-Host "5. Refazer UEFI"
     Write-Host "6. Alterar Ordem / Padrao"
     Write-Host "7. Sair"
+    Write-Host "obs: para deletar na mao -> bcdedit /delete {55281582-b647-11ed-b9e4-9b5ba3d8e273}"
 
     $op = Read-Host "Opcao"
     switch ($op) {
