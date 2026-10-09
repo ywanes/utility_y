@@ -24,6 +24,20 @@
 # bcdedit /timeout 10
 
 
+# se precisar fazer um efi novo quando o disco é novo e tem espaço para criar o efi
+# diskpart
+# list disk
+# Veja qual número tem o disco de ~40 GB e use no lugar do N:
+# select disk N
+# create partition efi size=100
+# format quick fs=fat32 label="System"
+# assign letter=S
+# exit
+# bcdboot E:\Windows /s S: /f UEFI /addlast
+# removendo a letra S:
+# mountvol S: /d
+
+
 # download https://wimlib.net
 # copiando windows para outra particao na mao - recomendado para destino menos com refs:
 # wimlib-imagex capture F:\ C:\temp.wim --compress=none
@@ -273,7 +287,8 @@ do {
     Write-Host "5. Refazer UEFI"
     Write-Host "6. Alterar Ordem / Padrao"
     Write-Host "7. Sair"
-    Write-Host "obs: para deletar na mao -> bcdedit /delete {55281582-b647-11ed-b9e4-9b5ba3d8e273}"
+    Write-Host "obs: para deletar na mao cdm adm:"
+    Write-Host "     bcdedit /delete {55281582-b647-11ed-b9e4-9b5ba3d8e273}"
 
     $op = Read-Host "Opcao"
     switch ($op) {
