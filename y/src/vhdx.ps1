@@ -12,6 +12,23 @@
 # http://203.cloudns.cl:8000/z_outros/vhdx/win11_98G.vhdx
 #
 
+# colocando windows disco no dual boot
+# # com o cmd como administrador, rode:
+# bcdboot E:\Windows /d
+# # olhe
+# bcdedit /enum
+# # Procure a entrada cujo device é partition=E:, copie o identificador (algo como {a1b2c3d4-...}) e renomeie:
+# bcdedit /set {a1b2c3d4-...} description "Win11 ReFS"
+# # Para garantir que o menu apareça e dê tempo de escolher:
+# bcdedit /set {bootmgr} displaybootmenu yes
+# bcdedit /timeout 10
+
+
+# download https://wimlib.net
+# copiando windows para outra particao na mao - recomendado para destino menos com refs:
+# wimlib-imagex capture F:\ C:\temp.wim --compress=none
+# wimlib-imagex apply C:\temp.wim 1 E:\
+
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 $validaAdm = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if ( ! $validaAdm ){ Write-Host "Erro: Requer Admin." -ForegroundColor Red; pause; exit }
