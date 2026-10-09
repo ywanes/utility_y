@@ -43783,6 +43783,4243 @@ class LockSession{
     }
 }
 
+/**
+examples:
+  y particao 1G_winre_refs.vhdx#2 E:\new.vhdx#TAIL
+  y particao 1G_winre_refs.vhdx#3 E:\new.vhdx#TAIL
+  y particao 1G_winre_refs.vhdx#2 E:\new.vhdx#TAIL 2000
+  y particao 1G_winre_refs.vhdx#3 E:\new.vhdx#5 --verify
+  y particao D 2#5
+  y particao 1#3 2#4 max
+  y particao maximum E:\new.vhdx#1 3000
+  y particao list [showFreeUsage] [disk | letter | file.vhdx]
+  y particao <from> <to> [size] [--verify]
+  y particao -test [a.vhdx]
+  y particao maximum a.vhdx MB | maximum a.vhdx#N MB | maximum a.vhdx#N max | maximum 1#3 MB|max
+  y particao compare <partition> <partition>
+  y particao create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
+  y particao detach b.vhdx
+  y particao delete b.vhdx#6 | delete 1#3
+  y particao format_refs b.vhdx#3 | format_refs b.vhdx#3 2000 | format_refs b.vhdx#3 max
+  y particao format_ntfs b.vhdx#3 [MB|max] | format_fat32 b.vhdx#3 [MB|max] | format_exfat b.vhdx#3 [MB|max]
+  y particao format_ntfs 1#3 [MB|max]   (disco 1; tambem format_refs/fat32/exfat)
+    #N     : numero da particao na GPT (na listagem pode ficar fora de ordem). Espaco livre entre particoes
+             aparece com o numero que a particao vai receber ali; o livre do fim e o #TAIL
+    from   : D | 1#3 (disco#particao) | C:\vm\a.vhdx#3
+    to     : 2#5 | E:\b.vhdx#5 | E:\b.vhdx#TAIL (um espaco livre; #N ou #TAIL obrigatorio). Nada e
+             renumerado, para nao comprometer um possivel boot
+    size   : (omitido) = mesmo tamanho do from | max = todo esse espaco livre | valor em MB. Maior que o FS:
+             NTFS/ReFS, como Administrador, o FS cresce junto (diskpart extend, como o maximum)
+    compare: diz se o FS das duas particoes e identico byte a byte (so le; cada uma como no from)
+    showFreeUsage: espaco livre dentro do FS; experimental no ReFS
+    delete : tira a particao da GPT, mesmo protegida (em Java; nada e renumerado; os dados ficam no livre).
+             Disco: particao com letra ou EFI pede para digitar 4 numeros aleatorios
+    maximum a.vhdx MB menor que o atual: diminui o VHDX em Java; experimental
+    format_*: formata em Java (o que havia se perde). #N existente: MB/max mudam o tamanho antes;
+             #N livre ou #TAIL: cria a particao (sem tamanho = todo o livre). Minimo: ReFS 1088 MB, NTFS 16 MB,
+             FAT32 36 MB (ate 2 TB), exFAT 16 MB. Disco: particao com letra recusa (tire a letra); EFI pede
+             para digitar 4 numeros aleatorios
+
+ * ClonaParticao - clona UMA particao NTFS, ReFS, FAT32 ou exFAT, em JAVA PURO (sem PowerShell, diskpart ou
+ * qualquer outro programa; so o "maximum", o "detach" e o clone maior que o FS (NTFS/ReFS em VHDX) usam o diskpart; o "create_by_template_*" e o "-test" sem a.vhdx usam o %RAR%).
+ * Java 21, 1 classe, sem import, 1 static.
+ *
+ * Comandos do Windows: usa SOMENTE expand, extend, shrink, attach, detach e rescan.
+ *
+ * Rode num prompt de ADMINISTRADOR:
+ *
+ *   y particao  list                todos os discos numa tabela so (numero do disco na 1a coluna)
+ *   y particao  list 2              so o disco 2
+ *   y particao  list C              o disco inteiro onde esta o C:
+ *   y particao  list E:\b.vhdx      so um VHDX (desmontado)
+ *   y particao  list showFreeUsage E:\b.vhdx   + coluna FreeUsage: espaco livre DENTRO do FS, lido do
+ *                    mapa de uso dele (NTFS $Bitmap, FAT32 FAT, exFAT bitmap; ReFS: EXPERIMENTAL)
+ *   y particao  <from> <to> [tamanho] [--verify]
+ *   y particao  -test [a.vhdx]      testes VHDX -> VHDX e do maximum em arquivos temporarios (a.vhdx
+ *                                               so e lido; o maximum roda em clones e copias dele, como Administrador).
+ *                                               Sem a.vhdx: baixa o 1G_winre_refs.rar do GitHub e extrai com o
+ *                                               %RAR% (caminho do UnRAR.exe/Rar.exe ou da pasta deles)
+ *   y particao  maximum a.vhdx 3000       muda SO o VHDX para 3000 MB: aumenta com diskpart expand vdisk;
+ *                    diminui em Java, no proprio arquivo, ate o fim da ultima particao
+ *   y particao  maximum a.vhdx#2 2000     muda SO a particao 2 e o FS para 2000 MB (diskpart attach vdisk,
+ *                    extend size= ou shrink, detach vdisk). Aumentar: NTFS/ReFS, no espaco livre logo depois dela.
+ *                    Diminuir: so NTFS (ReFS nao reduz). max no lugar do tamanho: todo o livre logo depois dela.
+ *   y particao  create_by_template_1G_vazio 1G_vazio.vhdx  (e create_by_template_1G_refs, create_by_template_1G_winre_refs) baixa o .rar do
+ *                    modelo do GitHub (utils_discos) e extrai com o %RAR%; o destino nao pode existir.
+ *                    O .rar fica em cache em c:\tmp_cache\ (vale tambem para o -test) e nao e baixado de novo.
+ *   y particao  delete b.vhdx#6    tira a entrada 6 da GPT (primaria e backup, com CRC), em Java, mesmo
+ *                    particao protegida (recuperacao); nada e renumerado e os dados ficam no espaco livre.
+ *                    delete 1#3 = disco 1: particao com letra (montada) ou EFI pede para digitar 4 numeros aleatorios
+ *   y particao  detach b.vhdx      desanexa o VHDX (diskpart detach vdisk), ex: depois de um duplo
+ *                    clique que anexou e deu erro
+ *   y particao  compare a.vhdx#2 b.vhdx#1    o sistema de arquivos das duas e identico byte a byte? (so le;
+ *                    cada particao como a origem: D | 1#3 | a.vhdx#N)
+ *   y particao  format_refs b.vhdx#3 [MB|max]   formata a particao 3 em ReFS 3.14, em Java (sem o format
+ *                    do Windows; format_ntfs, format_fat32 e format_exfat iguais: NTFS 3.1 minimo 16 MB, FAT32 36 MB ate 2 TB,
+ *                    exFAT 16 MB; cluster e layout como o format do Windows 11). Existente: MB/max mudam so a entrada da GPT antes (max = ate o livre logo depois);
+ *                    #N livre ou #TAIL: cria a particao ali (sem tamanho = todo o livre). FS = particao arredondada para 
+ *
+ *   #N = numero da particao na GPT; livre entre particoes = numero que a particao vai receber; livre do fim = #TAIL.
+ *   origem  D                 particao com letra
+ *            1#3               disco 1, particao 3
+ *            C:\vm\a.vhdx#3    particao 3 de um VHDX desmontado (sem #N: a unica com FS suportado)
+ *   destino  2#5               disco 2 (GPT, pode ter outras particoes): o #5 precisa ser um espaco livre
+ *            2#TAIL            disco 2, espaco livre do fim (a particao recebe o proximo numero livre da GPT)
+ *            E:\b.vhdx#5       VHDX existente e desmontado (pode ter outras particoes; vazio: cria a GPT e o
+ *                              livre e o #TAIL). #N ou #TAIL obrigatorio; #N vira a entrada N da GPT. Nada e
+ *                              renumerado, para nao comprometer um possivel boot.
+ *   tamanho  (omitido)         mesmo tamanho da particao de origem
+ *            max               ocupa TODO o espaco livre do #N
+ *            500000            tamanho em MB (MiB): maior OU menor que a origem
+ *
+ * Maior: NTFS/ReFS em VHDX, como Administrador: clona do tamanho do FS e o maximum (diskpart attach, extend,
+ *   detach) cresce particao e FS juntos. FAT32/exFAT, disco fisico ou sem Administrador: so a particao fica maior.
+ * Menor: funciona se o sistema de arquivos couber. O programa le o tamanho REAL do FS no
+ *   setor de boot e copia so ele. Para ir abaixo disso, reduza a origem antes no Windows
+ *   (NTFS: Gerenciamento de Disco > Reduzir volume). ReFS, FAT32 e exFAT o Windows nao reduz.
+ *
+ * Seguranca: copia para espaco livre e SO NO FINAL grava a entrada na GPT (primaria e backup,
+ * com CRC32). Se algo falhar no meio, a tabela de particoes nao muda. Nada existente e apagado.
+ * Disco fisico: depois use Gerenciamento de Disco > Acao > Examinar discos novamente (ou reinicie).
+ */
+
+class Particao {
+    private final long MiB = 1L << 20;
+    private final int BLOCO = 8 << 20;
+    private final String T_BASICO = "EBD0A0A2-B9E5-4433-87C0-68B6B72699C7";
+    private final String T_RECUP = "DE94BBA4-06D1-4D40-A16A-BFD50179D6AC";
+    private final String T_EFI = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B";
+    private final String T_MSR = "E3C9E316-0B5C-4DB8-817D-F92DF00215AE";
+    private final String T_LINUX = "0FC63DAF-8483-4772-8E79-3D69D8477DE4";
+    private final String T_LDM_META = "5808C8AA-7E8F-42E0-85D2-E1E90434CFB3";
+    private final String T_LDM_DADOS = "AF9B60A0-1431-4F62-BC68-3311714A69AD";
+    private final String T_SPACES = "E75CAF8F-F680-4CEE-AFA3-B001E56EFC2D";
+
+    private final String R_BAT = "2DC27766-F623-4200-9D64-115E9BFD4A08";
+    private final String R_META = "8B7CA206-4790-4B9A-B8FE-575F050F886E";
+    private final String M_PARAMS = "CAA16737-FA36-4D43-B3B6-33F0AA44E76B";
+    private final String M_TAMANHO = "2FA54224-CD1B-4876-B211-5DBED83BF4B8";
+    private final String M_ID = "BECA12AB-B2E6-4523-93EF-C309E000C746";
+    private final String M_SETOR_LOG = "8141BF1D-A96F-4709-BA47-F233A8FAAB5F";
+    private final String M_SETOR_FIS = "CDA348C7-445D-4471-9CC9-E9885251C556";
+
+    // ------------------------------------------------------- estado de DISPOSITIVO
+    // Uma instancia desta mesma classe representa um disco fisico ou um VHDX.
+    private java.io.RandomAccessFile raf;
+    // disco fisico para gravar: o RandomAccessFile "rw" pede "abrir ou criar" e o Windows recusa (Parametro incorreto);
+    // o FileChannel abre so o que existe, pelo caminho GLOBALROOT (o \\.\PhysicalDriveN o NIO trata como rede)
+    private java.nio.channels.FileChannel canal;
+    private String nome = "";
+    private boolean vhdx, fisico, escrita, cabAtualizado, temGpt;
+    private long tamanho;
+    private int setor = 512;
+    private long batOffset, blocoVhdx, chunkRatio, tamanhoOff, fimRegioes;
+    private long[] bat;
+    private byte[] cab;
+    private int cabSlot;
+    private byte[] gptCab, gptEnt;
+    private long gptAlt, gptPrimeiro, gptUltimo, gptEntLBA;
+    private int gptNum, gptTamEnt;
+
+    private boolean verificar, mostraFree;
+    private boolean soJava;              // -test com FS falso: o clone nao chama o diskpart para crescer o FS
+
+    public static void main(String[] args) {
+        try {
+            var app = new Particao();
+            if (args.length > 0 && args[0].equalsIgnoreCase("list")) {
+                int i = 1;
+                if (args.length > 1 && args[1].equalsIgnoreCase("showFreeUsage")) { app.mostraFree = true; i = 2; }
+                app.listar(args.length > i ? args[i] : null);
+            }
+            else if (args.length > 0 && args[0].equalsIgnoreCase("-test")) app.testar(args.length > 1 ? args[1] : null);
+            else if (args.length > 0 && args[0].equalsIgnoreCase("maximum")) app.maximo(java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].equalsIgnoreCase("detach")) app.desanexar(java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].equalsIgnoreCase("delete")) app.apagar(java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].toLowerCase().matches("create_by_template_1g_(vazio|refs|winre_refs)"))
+                app.criarModelo("1G_" + args[0].substring(22).toLowerCase(), java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].equalsIgnoreCase("compare")) app.comparar(java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].toLowerCase().matches("format_(refs|ntfs|fat32|exfat)")) app.formatar(args[0].substring(7).toLowerCase(), java.util.Arrays.copyOfRange(args, 1, args.length));
+            else app.clonar(args);
+        } catch (Exception e) {
+            System.err.println();
+            System.err.println("ERRO: " + e.getMessage());
+            System.exit(1);
+        }
+    }
+
+    // ====================================================================== CLONAR
+
+    private void clonar(String[] args) throws Exception {
+        var pos = new java.util.ArrayList<String>();
+        for (String a : args) {
+            switch (a) {
+                case "--verify" -> verificar = true;
+                default -> {
+                    if (a.startsWith("--")) throw new Exception("opcao desconhecida: " + a);
+                    pos.add(a);
+                }
+            }
+        }
+        if (pos.size() == 1) throw new Exception("comando desconhecido: " + pos.get(0));
+        if (pos.size() < 2 || pos.size() > 3) {
+            System.out.print("""
+                    ClonaParticao - clones one NTFS, ReFS, FAT32 or exFAT partition (pure Java)
+                    examples:
+                      y particao 1G_winre_refs.vhdx#2 E:\\new.vhdx#TAIL
+                      y particao 1G_winre_refs.vhdx#3 E:\\new.vhdx#TAIL
+                      y particao 1G_winre_refs.vhdx#2 E:\\new.vhdx#TAIL 2000
+                      y particao 1G_winre_refs.vhdx#3 E:\\new.vhdx#5 --verify
+                      y particao D 2#5
+                      y particao 1#3 2#4 max
+                      y particao maximum E:\\new.vhdx#1 3000
+                      y particao list [showFreeUsage] [disk | letter | file.vhdx]
+                      y particao <from> <to> [size] [--verify]
+                      y particao -test [a.vhdx]
+                      y particao maximum a.vhdx MB | maximum a.vhdx#N MB | maximum a.vhdx#N max | maximum 1#3 MB|max
+                      y particao compare <partition> <partition>
+                      y particao create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
+                      y particao detach b.vhdx
+                      y particao delete b.vhdx#6 | delete 1#3
+                      y particao format_refs b.vhdx#3 | format_refs b.vhdx#3 2000 | format_refs b.vhdx#3 max
+                      y particao format_ntfs b.vhdx#3 [MB|max] | format_fat32 b.vhdx#3 [MB|max] | format_exfat b.vhdx#3 [MB|max]
+                      y particao format_ntfs 1#3 [MB|max]   (disco 1; tambem format_refs/fat32/exfat)
+                        #N     : numero da particao na GPT (na listagem pode ficar fora de ordem). Espaco livre entre particoes
+                                 aparece com o numero que a particao vai receber ali; o livre do fim e o #TAIL
+                        from   : D | 1#3 (disco#particao) | C:\\vm\\a.vhdx#3
+                        to     : 2#5 | E:\\b.vhdx#5 | E:\\b.vhdx#TAIL (um espaco livre; #N ou #TAIL obrigatorio). Nada e
+                                 renumerado, para nao comprometer um possivel boot
+                        size   : (omitido) = mesmo tamanho do from | max = todo esse espaco livre | valor em MB. Maior que o FS:
+                                 NTFS/ReFS, como Administrador, o FS cresce junto (diskpart extend, como o maximum)
+                        compare: diz se o FS das duas particoes e identico byte a byte (so le; cada uma como no from)
+                        showFreeUsage: espaco livre dentro do FS; experimental no ReFS
+                        delete : tira a particao da GPT, mesmo protegida (em Java; nada e renumerado; os dados ficam no livre).
+                                 Disco: particao com letra ou EFI pede para digitar 4 numeros aleatorios
+                        maximum a.vhdx MB menor que o atual: diminui o VHDX em Java; experimental
+                        format_*: formata em Java (o que havia se perde). #N existente: MB/max mudam o tamanho antes;
+                                 #N livre ou #TAIL: cria a particao (sem tamanho = todo o livre). Minimo: ReFS 1088 MB, NTFS 16 MB,
+                                 FAT32 36 MB (ate 2 TB), exFAT 16 MB. Disco: particao com letra recusa (tire a letra); EFI pede
+                                 para digitar 4 numeros aleatorios
+                    """);
+            return;
+        }
+        long mbPedido = -1;
+        String tam = pos.size() == 3 ? pos.get(2).toLowerCase() : "";        // omitido = mesmo tamanho da origem
+        boolean usarMax = tam.equals("max");
+        if (!tam.isEmpty() && !usarMax) {
+            if (!tam.matches("\\d+(mb|m)?")) throw new Exception("tamanho invalido: " + pos.get(2) + " (use max ou um valor em MB; omitido = mesmo da origem)");
+            mbPedido = Long.parseLong(tam.replaceAll("[^0-9]", ""));
+            if (mbPedido <= 0) throw new Exception("tamanho invalido: " + pos.get(2));
+        }
+
+        Particao src = null;
+        Particao dst = null;
+        String arqOrigem, crescerArq = null;
+        boolean rescanFisico = false;
+        int crescerNum = 0;
+        long crescerMb = 0;
+        try {
+            // ---------------------------------------------------------------- origem
+            Object[] ao = abrirParticao(pos.get(0));
+            src = (Particao) ao[0];
+            Object[] po = (Object[]) ao[1];
+            arqOrigem = (String) ao[3];
+            Object[] fs = src.fsInfo(po);                 // {String nome, Long bytes, Integer bps}
+            // sem FS conhecido (ex: MSR): copia a particao inteira, byte a byte, no tamanho exato dela
+            boolean bruto = fs == null;
+            if (bruto) fs = new Object[]{"conteudo", pTam(po), 0, 0L};
+            String fsNome = (String) fs[0];
+            long fsBytes = (Long) fs[1];
+            long minimo = bruto ? fsBytes : Math.ceilDiv(fsBytes, MiB) * MiB;
+
+            // --------------------------------------------------------------- destino
+            String d = pos.get(1);
+            int vaga = 0;
+            boolean tail = false;
+            int hd = d.lastIndexOf('#');
+            if (hd > 0 && d.substring(hd + 1).equalsIgnoreCase("TAIL")) { tail = true; d = d.substring(0, hd); }
+            else if (hd > 0 && d.substring(hd + 1).matches("\\d+")) {
+                vaga = Integer.parseInt(d.substring(hd + 1));
+                d = d.substring(0, hd);
+                if (vaga < 1) throw new Exception("numero de particao invalido: #" + vaga);
+            }
+            if (vaga == 0 && !tail) throw new Exception("informe o destino com #N ou #TAIL (ex: 2#5 ou E:\\b.vhdx#TAIL): " + d);
+            String dl = d.toLowerCase();
+            boolean ehArquivo = dl.endsWith(".vhdx") || dl.endsWith(".img");
+            if (!ehArquivo && !d.matches("\\d+")) throw new Exception("destino deve ser o numero do disco (2) ou um .vhdx existente: " + d);
+            if (ehArquivo && !new java.io.File(d).isFile()) throw new Exception("VHDX de destino nao encontrado: " + d);
+            boolean mesmoArq = ehArquivo && arqOrigem != null
+                    && new java.io.File(d).getCanonicalPath().equalsIgnoreCase(new java.io.File(arqOrigem).getCanonicalPath());
+
+            if (mesmoArq) src.fechar();
+            if (ehArquivo) exigirDesanexado(d);
+            dst = dispositivo(d, true);
+            if (mesmoArq) { src = dst; po = dst.particao(pNum(po)); }    // mesmo VHDX: um dispositivo so (uma BAT so)
+            if (!dst.temGpt) {
+                if (!dst.particoes().isEmpty()) throw new Exception(dst.nome + " usa MBR. Este programa so grava em discos GPT.");
+                if (!dst.vhdx) throw new Exception(dst.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
+            }
+            for (Object[] p : dst.particoes())
+                if (pTipo(p).equals(T_LDM_META) || pTipo(p).equals(T_LDM_DADOS) || pTipo(p).equals(T_SPACES))
+                    throw new Exception(dst.nome + " e disco dinamico/Storage Spaces: nao suportado.");
+            if (dst.setor != src.setor)
+                throw new Exception("setor da origem (" + src.setor + ") diferente do destino (" + dst.setor + "): o " + fsNome + " nao montaria.");
+            // #N = espaco livre entre particoes (vira a entrada N da GPT) ou #TAIL = livre do fim (ver espacos)
+            Object[] alvo = null;
+            for (Object[] x : dst.espacos()) if (tail ? (Boolean) x[4] : !(Boolean) x[4] && (Integer) x[3] == vaga) alvo = x;
+            if (alvo != null && alvo[0] != null)
+                throw new Exception("a particao " + vaga + " ja existe em " + dst.nome + " (nada existente e apagado). Particoes:\n"
+                        + dst.descreverParticoes());
+            if (alvo == null) throw new Exception(dst.nome + (tail ? " nao tem espaco livre no fim (#TAIL)." : " nao tem o #" + vaga + " livre.")
+                    + " Particoes:\n" + dst.descreverParticoes());
+            if (tail) vaga = (Integer) alvo[3];
+            if (vaga == 0) throw new Exception(dst.nome + ": tabela GPT cheia.");
+            long[] livre = {(Long) alvo[1], (Long) alvo[2]};
+            String onde = tail ? "no #TAIL" : "no #" + vaga;
+            long livreBytes = (livre[1] - livre[0] + 1) * dst.setor;
+
+            long desejado = usarMax ? livreBytes : mbPedido < 0 ? (bruto ? pTam(po) : Math.ceilDiv(pTam(po), MiB) * MiB) : mbPedido * MiB;
+            if (usarMax && desejado < minimo)
+                throw new Exception("o " + "espaco livre " + onde + " em " + dst.nome + " tem so "
+                        + desejado / MiB + " MB; o " + fsNome + " da origem precisa de pelo menos " + minimo / MiB + " MB.");
+            if (desejado < minimo && bruto)
+                throw new Exception("a particao de origem nao tem FS conhecido e e copiada inteira: o destino precisa de pelo menos " + mb(minimo) + ".");
+            if (desejado < minimo)
+                throw new Exception("o " + fsNome + " da origem ocupa " + mb(fsBytes) + "; o destino precisa de pelo menos "
+                        + minimo / MiB + " MB.\n" + (fsNome.equals("NTFS")
+                        ? "Para ficar menor, reduza o volume de origem antes (Gerenciamento de Disco > Reduzir volume)."
+                        : fsNome + " nao pode ser reduzido no Windows."));
+            if (desejado > livreBytes)
+                throw new Exception("nao cabe: pedido " + desejado / MiB + " MB, " + "espaco livre " + onde + " em " + dst.nome + " = " + livreBytes / MiB + " MB.");
+
+            System.out.println();
+
+            // -------------------------------------------------------------- execucao
+            // NTFS/ReFS maior que o FS, em VHDX e como Administrador: clona do tamanho do FS e depois o maximum
+            // (diskpart extend) cresce particao e FS juntos; sem Administrador ou FAT32/exFAT: so a particao fica maior
+            // (ReFS cresce em faixas de 64 MB: menos que isso o FS nao muda e a particao fica so maior)
+            boolean crescer = !soJava && admin() && (fsNome.equals("NTFS") && desejado - minimo >= MiB
+                    || fsNome.equals("ReFS") && desejado - minimo >= 64 * MiB);
+            if (!dst.temGpt) dst.criarGpt();                    // o livre ja e o que a GPT criada deixa (livreAposInicializar)
+            long ini = livre[0], fim = ini + (crescer ? minimo : desejado) / dst.setor - 1;
+            long offDst = ini * dst.setor;
+
+            System.out.println("Copiando " + mb(fsBytes) + "...");
+            try {
+                copiar(src, pOff(po), dst, offDst, fsBytes);
+                if (verificar) {
+                    System.out.println("Verificando...");
+                    verificarCopia(src, pOff(po), dst, offDst, fsBytes);
+                }
+                // NTFS: o boot de backup fica no ultimo setor do FS e e copia do setor 0. Regrava-lo
+                // garante o backup certo mesmo se a origem o tinha fora do lugar (ex: FS reduzido).
+                int bps = (Integer) fs[2];
+                if (fsNome.equals("NTFS") && bps > 0 && bps % dst.setor == 0) {
+                    byte[] boot = new byte[bps];
+                    dst.ler(offDst, boot, 0, bps);
+                    dst.gravar(offDst + fsBytes - bps, boot, 0, bps);
+                }
+            } catch (Exception e) {
+                throw new Exception(e.getMessage() + "\nNada foi registrado na tabela de particoes; o espaco continua livre.");
+            }
+            String tipo = pTipo(po).startsWith("MBR") ? T_BASICO : pTipo(po);
+            dst.adicionarParticao(vaga, ini, fim, tipo, pAttr(po), pNome(po).isEmpty() ? "Clone" : pNome(po));
+            if (crescer) { crescerArq = dst.vhdx ? new java.io.File(d).getCanonicalPath() : d; crescerNum = vaga; crescerMb = desejado / MiB; }
+            if (dst.fisico && !crescer) rescanFisico = true;      // o crescer ja faz o rescan
+        } finally {
+            if (src != null) src.fechar();
+            if (dst != null) dst.fechar();
+        }
+        if (rescanFisico) diskpart("reexaminar os discos", "rescan");   // o Windows passa a ver a particao nova
+        if (crescerArq != null) estender(crescerArq, crescerNum, crescerMb, pos.get(1));
+    }
+
+    /**
+     * Particao por letra (D), disco#particao (1#3) ou arquivo.vhdx#N (sem #N: a unica com FS suportado):
+     * {dispositivo aberto so para leitura, particao, descricao, arquivo (null se for disco)}.
+     */
+    private Object[] abrirParticao(String o) throws Exception {
+        if (o.matches("(?i)[a-z]:?\\\\?")) {
+            char l = Character.toUpperCase(o.charAt(0));
+            int[] dp = acharLetra(l);
+            var d = dispositivo(String.valueOf(dp[0]), false);
+            try { return new Object[]{d, d.particao(dp[1]), l + ": (disco " + dp[0] + ", #" + dp[1] + ")", null}; }
+            catch (Exception e) { d.fechar(); throw e; }
+        }
+        if (o.matches("\\d+#\\d+")) {
+            String[] x = o.split("#");
+            var d = dispositivo(x[0], false);
+            try { return new Object[]{d, d.particao(Integer.parseInt(x[1])), "disco " + x[0] + ", #" + x[1], null}; }
+            catch (Exception e) { d.fechar(); throw e; }
+        }
+        String arq = o;
+        int num = 0, h = o.lastIndexOf('#');
+        if (h > 0 && o.substring(h + 1).matches("\\d+")) {
+            num = Integer.parseInt(o.substring(h + 1));
+            arq = o.substring(0, h);
+        }
+        if (!arq.toLowerCase().endsWith(".vhdx") && !arq.toLowerCase().endsWith(".img"))
+            throw new Exception("particao deve ser uma letra (D), disco#particao (1#3) ou um .vhdx: " + o);
+        var d = dispositivo(arq, false);
+        try {
+            Object[] p = num > 0 ? d.particao(num) : d.unicaComFs();
+            return new Object[]{d, p, arq + "#" + pNum(p), arq};
+        } catch (Exception e) { d.fechar(); throw e; }
+    }
+
+    private void copiar(Particao src, long so, Particao dst, long dO, long total) throws Exception {
+        byte[] buf = new byte[BLOCO + 4096];
+        int primeiro = (int) Math.min(BLOCO, total);
+        long inicio = System.nanoTime(), ultimo = 0;
+        try {
+            for (long pos = primeiro; pos < total; ) {          // o 1o bloco (boot do FS) vai por ULTIMO
+                int n = (int) Math.min(BLOCO, total - pos);
+                transferir(src, so + pos, dst, dO + pos, buf, n);
+                pos += n;
+                long agora = System.nanoTime();
+                if (agora - ultimo > 1_000_000_000L) { progresso(pos - primeiro, total, inicio); ultimo = agora; }
+            }
+            transferir(src, so, dst, dO, buf, primeiro);
+        } catch (java.io.IOException e) {
+            throw new Exception("falha de E/S na copia: " + e.getMessage());
+        }
+        progresso(total, total, inicio);
+        System.out.println();
+    }
+
+    private void transferir(Particao src, long a, Particao dst, long b, byte[] buf, int n) throws java.io.IOException {
+        src.ler(a, buf, 0, n);
+        int nw = Math.ceilDiv(n, dst.setor) * dst.setor;
+        java.util.Arrays.fill(buf, n, nw, (byte) 0);
+        dst.gravar(b, buf, 0, nw);
+    }
+
+    private void verificarCopia(Particao src, long so, Particao dst, long dO, long total) throws Exception {
+        byte[] b1 = new byte[BLOCO], b2 = new byte[BLOCO];
+        long inicio = System.nanoTime(), ultimo = 0;
+        for (long pos = 0; pos < total; ) {
+            int n = (int) Math.min(BLOCO, total - pos);
+            src.ler(so + pos, b1, 0, n);
+            dst.ler(dO + pos, b2, 0, n);
+            if (!java.util.Arrays.equals(b1, 0, n, b2, 0, n))
+                throw new Exception("verificacao falhou perto do byte " + pos + " (a origem mudou durante a copia?).");
+            pos += n;
+            long agora = System.nanoTime();
+            if (agora - ultimo > 1_000_000_000L) { progresso(pos, total, inicio); ultimo = agora; }
+        }
+        progresso(total, total, inicio);
+        System.out.println("\nVerificacao OK: identicos.");
+    }
+
+    // ==================================================================== COMPARAR
+
+    /** compare <particao> <particao>: o sistema de arquivos das duas e identico byte a byte? So le. Diferentes = erro. */
+    private void comparar(String[] args) throws Exception {
+        if (args.length != 2) throw new Exception("use: compare <particao> <particao>   (D | 1#3 | a.vhdx#N)");
+        Object[] a = null, b = null;
+        try {
+            a = abrirParticao(args[0]);
+            b = abrirParticao(args[1]);
+            var da = (Particao) a[0];
+            var db = (Particao) b[0];
+            Object[] pa = (Object[]) a[1], pb = (Object[]) b[1], fa = da.fsInfo(pa), fb = db.fsInfo(pb);
+            if (fa == null) throw new Exception(a[2] + " nao e NTFS, ReFS, FAT32 nem exFAT.");
+            if (fb == null) throw new Exception(b[2] + " nao e NTFS, ReFS, FAT32 nem exFAT.");
+            System.out.println();
+            System.out.printf("A: %s  %s de %s%n", a[2], fa[0], mb((Long) fa[1]));
+            System.out.printf("B: %s  %s de %s%n", b[2], fb[0], mb((Long) fb[1]));
+            if (!fa[0].equals(fb[0]) || !fa[1].equals(fb[1]))
+                throw new Exception("DIFERENTES: " + fa[0] + " de " + fa[1] + " bytes x " + fb[0] + " de " + fb[1] + " bytes.");
+            long total = (Long) fa[1];
+            byte[] b1 = new byte[BLOCO], b2 = new byte[BLOCO];
+            long inicio = System.nanoTime(), ultimo = 0;
+            for (long pos = 0; pos < total; ) {
+                int n = (int) Math.min(BLOCO, total - pos);
+                da.ler(pOff(pa) + pos, b1, 0, n);
+                db.ler(pOff(pb) + pos, b2, 0, n);
+                int i = java.util.Arrays.mismatch(b1, 0, n, b2, 0, n);
+                if (i >= 0) {
+                    System.out.println();
+                    throw new Exception("DIFERENTES: primeiro byte diferente no byte " + (pos + i) + " do " + fa[0] + ".");
+                }
+                pos += n;
+                long agora = System.nanoTime();
+                if (agora - ultimo > 1_000_000_000L) { progresso(pos, total, inicio); ultimo = agora; }
+            }
+            progresso(total, total, inicio);
+            System.out.println();
+            System.out.println("IGUAIS: " + fa[0] + " de " + total + " bytes, byte a byte.");
+        } finally {
+            if (a != null) ((Particao) a[0]).fechar();
+            if (b != null) ((Particao) b[0]).fechar();
+        }
+    }
+
+    // ====================================================================== LISTAR
+
+    private void listar(String alvo) throws Exception {
+        if (alvo == null) { listaDiscos(); return; }
+        if (alvo.matches("[A-Za-z]:?")) alvo = String.valueOf(acharLetra(Character.toUpperCase(alvo.charAt(0)))[0]);   // o disco inteiro da letra
+        var letras = alvo.matches("\\d+") ? letrasMontadas() : new java.util.TreeMap<Character, byte[]>();
+        var d = dispositivo(alvo, false);
+        try { mostrar(d, letras); } finally { d.fechar(); }
+    }
+
+    /** list sem alvo: uma tabela so, com as particoes de todos os discos fisicos e o numero do disco na 1a coluna. */
+    private void listaDiscos() throws Exception {
+        var letras = letrasMontadas();
+        int achados = 0;
+        boolean cab = false;                                  // cabecalho so quando algum disco aparece (sem Administrador: so o erro)
+        for (int i = 0; i < 64; i++) {
+            Particao d;
+            try { d = dispositivo(String.valueOf(i), false); }
+            catch (Exception e) {
+                if (e.getMessage() != null && e.getMessage().contains("GPT")) {
+                    if (!cab) { System.out.println("\n" + cabecalho(true, true)); cab = true; }
+                    System.out.printf("  %-7d%s%n", i, e.getMessage());
+                }
+                continue;
+            }
+            if (!cab) { System.out.println("\n" + cabecalho(true, true)); cab = true; }
+            achados++;
+            try { linhas(d, letras, String.format("%-7d", i)); } finally { d.fechar(); }
+        }
+        if (achados == 0) throw new Exception("nenhum disco acessivel. Abra o prompt como Administrador.");
+    }
+
+    /** Mostra um disco ou VHDX: titulo (so VHDX), cabecalho e as particoes. */
+    private void mostrar(Particao d, java.util.Map<Character, byte[]> letras) throws Exception {
+        String tabela = d.temGpt ? "GPT" : d.particoes().isEmpty() ? "sem tabela" : "MBR";
+        if (d.fisico) System.out.println();
+        else System.out.printf("%n%s   %s   %s   setor %d%n", d.nome, mb(d.tamanho), tabela, d.setor);
+        // disco fisico (list 0 ou list C): como no list sem alvo (coluna Disco, sem titulo); VHDX: titulo e sem a coluna
+        String disco = d.fisico ? String.format("%-7s", d.nome.substring(d.nome.lastIndexOf(' ') + 1)) : "";
+        if (d.temGpt || !d.particoes().isEmpty()) System.out.println(cabecalho(d.fisico, d.fisico));
+        linhas(d, letras, disco);
+    }
+
+    /** Coluna Disco so no list sem alvo; coluna Letra so em disco fisico (VHDX/IMG lido aqui esta desmontado, nunca tem letra). */
+    private String cabecalho(boolean disco, boolean letra) {
+        return "  " + (disco ? "Disco  " : "") + "Num   " + (letra ? "Letra  " : "")
+                + "FS     TamanhoPar   TamanhoFS    " + (mostraFree ? "FreeUsage    " : "") + "Serie      Tipo          GUID                                   Nome";
+    }
+
+    /**
+     * Particoes e espacos livres na ordem fisica; #N = numero da GPT; livre do fim = #TAIL (ver espacos).
+     * disco = conteudo da coluna Disco ("" no listar).
+     */
+    private void linhas(Particao d, java.util.Map<Character, byte[]> letras, String disco) throws Exception {
+        if (!d.temGpt && d.particoes().isEmpty()) {
+            System.out.println("  " + disco + (d.vhdx ? "(vazio) -- aceito como destino: sera criada uma GPT."
+                    : "(vazio) -- inicialize como GPT no Gerenciamento de Disco para usar como destino."));
+            return;
+        }
+        // Num = numero da GPT (na ordem do disco pode ficar fora de ordem); livre = numero que vai receber ou #TAIL (ver espacos)
+        byte[] b = new byte[4096];
+        long totalTam = 0;                                    // soma da coluna TamanhoPar
+        for (Object[] x : d.espacos()) {
+            int n = (Integer) x[3];
+            if (x[0] == null) {
+                long livre = ((Long) x[2] - (Long) x[1] + 1) * d.setor;
+                System.out.printf("  %s%-6s%s%-6s %11s%n", disco, (Boolean) x[4] ? "#TAIL" : n == 0 ? "---" : "#" + n, d.fisico ? "--     " : "", "livre", mb(livre));
+                totalTam += livre;
+                continue;
+            }
+            Object[] p = (Object[]) x[0];
+            String letra = d.fisico ? "--     " : "";
+            if (d.fisico && pTam(p) >= 4096 && !letras.isEmpty()) {
+                d.ler(pOff(p), b, 0, 4096);
+                for (var e : letras.entrySet())
+                    if (java.util.Arrays.equals(e.getValue(), b)) { letra = String.format("%-7s", e.getKey() + ":"); break; }
+            }
+            Object[] fs = d.fsInfo(p);
+            // serie como o "vol" mostra (32 bits baixos); GUID = o da particao na GPT
+            String serie = fs == null ? "" : String.format("%04X-%04X", ((Long) fs[3] >>> 16) & 0xFFFF, (Long) fs[3] & 0xFFFF);
+            String guid = d.temGpt ? guidStr(d.gptEnt, (pNum(p) - 1) * d.gptTamEnt + 16) : "-";
+            String livreFs = "";
+            if (mostraFree && fs != null) {
+                long l = d.livreNoFs(p, fs);
+                livreFs = l < 0 ? "-" : mb(l);
+            }
+            System.out.printf("  %s#%-4d %s%-6s %11s  %11s  %s%-9s  %-13s %-38s %s%n", disco, n, letra, fs == null ? "-" : fs[0], mb(pTam(p)),
+                    fs == null ? "" : mb((Long) fs[1]), mostraFree ? String.format("%11s  ", livreFs) : "", serie, tipoCurto(pTipo(p)), guid,
+                    pNome(p).isEmpty() ? "" : "'" + pNome(p) + "'");
+            totalTam += pTam(p);
+        }
+        System.out.printf("  %s%-6s%s%-6s %11s%n", disco, "", d.fisico ? "       " : "", "total", mb(totalTam));
+        if (!d.temGpt && disco.isEmpty()) System.out.println("  (MBR: pode ser ORIGEM; como destino so discos GPT)");
+    }
+
+
+    /** Le o 1o bloco de cada volume com letra; comparado ao inicio das particoes, revela a letra. */
+    private java.util.Map<Character, byte[]> letrasMontadas() {
+        var m = new java.util.TreeMap<Character, byte[]>();
+        for (char c = 'A'; c <= 'Z'; c++) {
+            byte[] v = new byte[4096];
+            try (var r = new java.io.RandomAccessFile("\\\\.\\" + c + ":", "r")) {
+                r.readFully(v);
+                m.put(c, v);
+            } catch (Exception ignorado) { }
+        }
+        return m;
+    }
+
+    private String tipoCurto(String t) {
+        return switch (t) {
+            case T_BASICO -> "Dados";
+            case T_RECUP -> "Recuperacao";
+            case T_EFI -> "EFI";
+            case T_MSR -> "MSR";
+            case T_LINUX -> "Linux";
+            case T_LDM_META, T_LDM_DADOS -> "Dinamico";
+            case T_SPACES -> "StorageSpace";
+            case "MBR-07" -> "Dados (MBR)";
+            case "MBR-0B", "MBR-0C" -> "FAT32 (MBR)";
+            case "MBR-27" -> "Recup. (MBR)";
+            case "MBR-05", "MBR-0F" -> "Estendida";
+            default -> t.startsWith("MBR-") ? t : "?" + t.substring(0, 8);
+        };
+    }
+
+    // ================================================== ORIGEM POR LETRA / FS
+
+    /** Acha disco e particao de uma letra comparando o inicio do volume com o de cada particao. */
+    private int[] acharLetra(char l) throws Exception {
+        byte[] v = new byte[4096];
+        try (var r = new java.io.RandomAccessFile("\\\\.\\" + l + ":", "r")) { r.readFully(v); }
+        catch (Exception e) { throw new Exception("nao consegui ler " + l + ": (letra inexistente ou sem Administrador)."); }
+        var achados = new java.util.ArrayList<int[]>();
+        byte[] b = new byte[4096];
+        for (int n = 0; n < 64; n++) {
+            Particao d;
+            try { d = dispositivo(String.valueOf(n), false); } catch (Exception e) { continue; }
+            try {
+                for (Object[] p : d.particoes()) {
+                    if (pTam(p) < 4096) continue;
+                    d.ler(pOff(p), b, 0, 4096);
+                    if (java.util.Arrays.equals(v, b)) achados.add(new int[]{n, pNum(p)});
+                }
+            } catch (Exception ignorado) {
+            } finally { d.fechar(); }
+        }
+        if (achados.isEmpty()) throw new Exception("nao achei a particao de " + l + ": (BitLocker? disco dinamico?). Use disco#particao.");
+        if (achados.size() > 1) throw new Exception("mais de uma particao identica a " + l + ": (um clone conectado?). Use disco#particao.");
+        return achados.get(0);
+    }
+
+    /** {nome, bytes reais do FS, bytes por setor (0 = desconhecido), numero de serie} lidos do setor de boot, ou null se nao for NTFS, ReFS, FAT32 nem exFAT. */
+    private Object[] fsInfo(Object[] p) throws java.io.IOException {
+        if (pTam(p) < 4096) return null;
+        byte[] b = new byte[4096];
+        ler(pOff(p), b, 0, 4096);
+        if (ascii(b, 3, 8).equals("NTFS    ")) {
+            long serie = le64(b, 0x48);
+            int bps = le16(b, 0x0B);
+            long total = le64(b, 0x28);                      // setores do volume; +1 = boot de backup
+            if (bps < 512 || bps > 4096 || Integer.bitCount(bps) != 1 || total <= 0 || (total + 1) * bps > pTam(p))
+                return new Object[]{"NTFS", pTam(p), 0, serie};
+            return new Object[]{"NTFS", (total + 1) * bps, bps, serie};
+        }
+        if (ascii(b, 3, 4).equals("ReFS") && ascii(b, 0x10, 4).equals("FSRS")) {
+            long count = le64(b, 0x18), serie = le64(b, 0x38);
+            int bps = le32(b, 0x20);
+            if ((bps != 512 && bps != 4096) || count <= 0 || count * bps > pTam(p)) return new Object[]{"ReFS", pTam(p), 0, serie};
+            return new Object[]{"ReFS", count * bps, bps, serie};
+        }
+        if (ascii(b, 0x52, 8).equals("FAT32   ")) {
+            int bps = le16(b, 0x0B);
+            long total = le16(b, 0x13) != 0 ? le16(b, 0x13) : le32(b, 0x20) & 0xFFFFFFFFL, serie = le32(b, 0x43) & 0xFFFFFFFFL;
+            if (bps < 512 || bps > 4096 || Integer.bitCount(bps) != 1 || total <= 0 || total * bps > pTam(p))
+                return new Object[]{"FAT32", pTam(p), 0, serie};
+            return new Object[]{"FAT32", total * bps, bps, serie};
+        }
+        if (ascii(b, 3, 8).equals("EXFAT   ")) {
+            int sh = b[0x6C];
+            long total = le64(b, 0x48), serie = le32(b, 0x64) & 0xFFFFFFFFL;
+            if (sh < 9 || sh > 12 || total <= 0 || (total << sh) > pTam(p)) return new Object[]{"exFAT", pTam(p), 0, serie};
+            return new Object[]{"exFAT", total << sh, 1 << sh, serie};
+        }
+        return null;
+    }
+
+    /**
+     * Espaco livre DENTRO do FS (o que o Windows mostraria como livre), lido do mapa de uso: NTFS = $Bitmap
+     * (registro 6 da MFT), FAT32 = entradas zeradas da FAT, exFAT = bitmap de alocacao do diretorio raiz.
+     * ReFS: EXPERIMENTAL, ver livreRefs. -1 = nao da para saber (estrutura que nao confere).
+     */
+    private long livreNoFs(Object[] p, Object[] fs) {
+        try {
+            byte[] b = new byte[512];
+            ler(pOff(p), b, 0, 512);
+            switch ((String) fs[0]) {
+                case "NTFS": {
+                    int bps = le16(b, 0x0B), spc = b[0x0D] & 0xFF;
+                    if (spc > 0x80) spc = 1 << (256 - spc);
+                    long cl = (long) bps * spc, clusters = le64(b, 0x28) / spc, mftLcn = le64(b, 0x30);
+                    int c = b[0x40];
+                    int reg = c > 0 ? (int) (c * cl) : 1 << -c;
+                    byte[] r = new byte[reg];
+                    ler(pOff(p) + mftLcn * cl + 6L * reg, r, 0, reg);     // registro 6 = $Bitmap
+                    if (!ascii(r, 0, 4).equals("FILE")) return -1;
+                    int us = le16(r, 4), un = le16(r, 6);                  // fixups a cada 512 bytes
+                    for (int i = 1; i < un && i * 512 <= reg; i++) { r[i * 512 - 2] = r[us + 2 * i]; r[i * 512 - 1] = r[us + 2 * i + 1]; }
+                    for (int a = le16(r, 0x14); a + 16 <= reg && le32(r, a) != -1; a += le32(r, a + 4)) {
+                        if (le32(r, a) != 0x80 || (r[a + 9] & 0xFF) != 0) continue;   // $DATA sem nome
+                        long bytesMapa = Math.ceilDiv(clusters, 8);
+                        byte[] mapa = new byte[(int) bytesMapa];
+                        if (r[a + 8] == 0) {                                // residente
+                            System.arraycopy(r, a + le16(r, a + 0x14), mapa, 0, (int) Math.min(bytesMapa, le32(r, a + 0x10)));
+                        } else {                                            // lista de extents (runlist)
+                            int q = a + le16(r, a + 0x20);
+                            long lcn = 0, pos = 0;
+                            while (pos < bytesMapa && r[q] != 0) {
+                                int nl = r[q] & 0x0F, no = (r[q] >> 4) & 0x0F;
+                                long len = 0, off = 0;
+                                for (int i = 0; i < nl; i++) len |= (long) (r[q + 1 + i] & 0xFF) << (8 * i);
+                                for (int i = 0; i < no; i++) off |= (long) (r[q + 1 + nl + i] & 0xFF) << (8 * i);
+                                if (no > 0 && (r[q + nl + no] & 0x80) != 0) off -= 1L << (8 * no);   // deslocamento com sinal
+                                lcn += off;
+                                int n = (int) Math.min(len * cl, bytesMapa - pos);
+                                ler(pOff(p) + lcn * cl, mapa, (int) pos, n);
+                                pos += n;
+                                q += 1 + nl + no;
+                            }
+                        }
+                        // reservados nao sao livres: o NTFS montado reserva 1.024 clusters (fsutil "Total de bytes
+                        // reservados", 4 MB com cluster de 4 KB, medido em 08/10/2026); a reserva de armazenamento do C: nao entra
+                        return Math.max(0, bitsZerados(mapa, clusters) - 1024) * cl;
+                    }
+                    return -1;
+                }
+                case "FAT32": {
+                    int bps = le16(b, 0x0B), spc = b[0x0D] & 0xFF, res = le16(b, 0x0E), nf = b[0x10] & 0xFF;
+                    long total = le16(b, 0x13) != 0 ? le16(b, 0x13) : le32(b, 0x20) & 0xFFFFFFFFL, spf = le32(b, 0x24) & 0xFFFFFFFFL;
+                    long clusters = (total - res - nf * spf) / spc;
+                    byte[] fat = new byte[(int) ((clusters + 2) * 4)];
+                    ler(pOff(p) + (long) res * bps, fat, 0, fat.length);
+                    long livres = 0;
+                    for (long i = 2; i < clusters + 2; i++) if ((le32(fat, (int) (i * 4)) & 0x0FFFFFFF) == 0) livres++;
+                    return livres * spc * bps;
+                }
+                case "exFAT": {
+                    int bps = 1 << b[0x6C], spc = 1 << b[0x6D];
+                    long cl = (long) bps * spc, heap = (le32(b, 0x58) & 0xFFFFFFFFL) * bps, clusters = le32(b, 0x5C) & 0xFFFFFFFFL;
+                    long raiz = le32(b, 0x60) & 0xFFFFFFFFL;
+                    byte[] dir = new byte[(int) cl];
+                    ler(pOff(p) + heap + (raiz - 2) * cl, dir, 0, dir.length);
+                    for (int e = 0; e + 32 <= dir.length; e += 32) {
+                        if ((dir[e] & 0xFF) != 0x81) continue;               // entrada do bitmap de alocacao
+                        long ini = le32(dir, e + 20) & 0xFFFFFFFFL, tam = le64(dir, e + 24);
+                        byte[] mapa = new byte[(int) Math.min(tam, Math.ceilDiv(clusters, 8))];
+                        ler(pOff(p) + heap + (ini - 2) * cl, mapa, 0, mapa.length);
+                        return bitsZerados(mapa, clusters) * cl;
+                    }
+                    return -1;
+                }
+                case "ReFS": return livreRefs(pOff(p), b);
+                default: return -1;
+            }
+        } catch (Exception e) { return -1; }
+    }
+
+    /**
+     * ReFS (EXPERIMENTAL, so cluster de 4 KB; formato achado por engenharia reversa e conferido com o Windows em
+     * 08/10/2026, ReFS 3.14): superbloco no cluster 0x1E -> checkpoint mais novo -> arvores (13 referencias).
+     * A 7 e a tabela de containers (enderecos reais: id do container -> cluster inicial); a 1 e o "medium allocator",
+     * com enderecos virtuais (id << 15 | deslocamento). Cada registro dele cobre uma faixa: flag 1 = bitmap parcial
+     * (u16 em +16 = clusters livres), flag 2 sem 0xFFFF em +22 = faixa toda livre; o resto e metadado ou reserva.
+     * O Windows desconta 69680 clusters (272 MB) fixos: bateu em 3 volumes (1088 MB, 1088 MB e 2176 MB).
+     */
+    private long livreRefs(long base, byte[] vh) throws java.io.IOException {
+        long cl = (long) le32(vh, 0x20) * le32(vh, 0x24);
+        if (cl != 4096 || le64(vh, 0x40) != 64 * MiB) return -1;
+        int bloco = 4 * 4096;
+        byte[] sb = new byte[4096];
+        ler(base + 0x1E * cl, sb, 0, 4096);
+        if (!ascii(sb, 0, 4).equals("SUPB")) return -1;
+        int co = le32(sb, 80 + 32), cn = le32(sb, 80 + 36);
+        byte[] ck = null;
+        for (int i = 0; i < cn; i++) {                                      // checkpoint com o maior relogio
+            byte[] c = new byte[bloco];
+            ler(base + le64(sb, co + 8 * i) * cl, c, 0, bloco);
+            if (ascii(c, 0, 4).equals("CHKP") && (ck == null || Long.compareUnsigned(le64(c, 96), le64(ck, 96)) > 0)) ck = c;
+        }
+        if (ck == null || le32(ck, 144) < 8) return -1;
+        int arr = le32(ck, 148);
+        long tabela = le64(ck, le32(ck, arr + 4 * 7)), medium = le64(ck, le32(ck, arr + 4 * 1));
+        var inicio = new java.util.HashMap<Long, Long>();
+        for (byte[] v : folhasRefs(base, tabela, null)) inicio.put(le64(v, 0), le64(v, 144));
+        long livres = 0;
+        for (byte[] v : folhasRefs(base, medium, inicio)) {
+            int f = v[18] & 0xFF;
+            if (f == 1) livres += le16(v, 16);
+            else if (f == 2 && le16(v, 22) != 0xFFFF) livres += le64(v, 8);
+        }
+        return Math.max(0, livres - 69680) * cl;
+    }
+
+    /** Valores das folhas de uma arvore do ReFS (no de 16 KB); inicio != null traduz endereco virtual -> real. */
+    private java.util.List<byte[]> folhasRefs(long base, long lcn, java.util.Map<Long, Long> inicio) throws java.io.IOException {
+        var saida = new java.util.ArrayList<byte[]>();
+        var pilha = new java.util.ArrayDeque<Long>();
+        pilha.push(lcn);
+        while (!pilha.isEmpty()) {
+            long v = pilha.pop(), real = v;
+            if (inicio != null) {
+                Long ini = inicio.get(v >>> 15);
+                if (ini == null) throw new java.io.IOException("container " + (v >>> 15) + " fora da tabela");
+                real = ini + (v & 0x7FFF);
+            }
+            byte[] b = new byte[16384];
+            ler(base + real * 4096, b, 0, b.length);
+            if (!ascii(b, 0, 4).equals("MSB+")) throw new java.io.IOException("no do ReFS invalido");
+            int h = 80 + le32(b, 80), nivel = b[h + 12], ks = le32(b, h + 16), n = le32(b, h + 20);
+            for (int i = 0; i < n; i++) {
+                int r = h + (le32(b, h + ks + 4 * i) & 0xFFFF), vo = le16(b, r + 10), vt = le16(b, r + 12);
+                if (nivel > 0) pilha.push(le64(b, r + vo));                  // galho: referencia do filho
+                else saida.add(java.util.Arrays.copyOfRange(b, r + vo, r + vo + vt));
+            }
+        }
+        return saida;
+    }
+
+    /** Quantos dos n primeiros bits do mapa estao em zero (bit 0 do byte 0 = cluster 0). */
+    private long bitsZerados(byte[] mapa, long n) {
+        long z = 0, cheios = Math.min(n / 8, mapa.length);
+        for (int i = 0; i < cheios; i++) z += 8 - Integer.bitCount(mapa[i] & 0xFF);
+        for (long i = cheios * 8; i < n && i / 8 < mapa.length; i++) if ((mapa[(int) (i / 8)] >> (i % 8) & 1) == 0) z++;
+        return z;
+    }
+
+    private Object[] unicaComFs() throws Exception {
+        Object[] achada = null;
+        int n = 0;
+        for (Object[] p : particoes()) if (fsInfo(p) != null) { achada = p; n++; }
+        if (n == 1) return achada;
+        throw new Exception((n == 0 ? nome + " nao tem particao NTFS, ReFS, FAT32 nem exFAT." : nome + " tem mais de uma particao com FS suportado; escolha com #N.")
+                + "\n" + descreverParticoes());
+    }
+
+    private String descreverParticoes() throws Exception {
+        var sb = new StringBuilder();
+        for (Object[] x : espacos()) {
+            int n = (Integer) x[3];
+            if (x[0] == null) { sb.append(String.format("  %-5s %-5s %12s%n", (Boolean) x[4] ? "#TAIL" : n == 0 ? "---" : "#" + n, "livre", mb(((Long) x[2] - (Long) x[1] + 1) * setor))); continue; }
+            Object[] p = (Object[]) x[0], fs = fsInfo(p);
+            sb.append(String.format("  %-5s %-5s %12s  %s %s%n", "#" + n, fs == null ? "-" : fs[0], mb(pTam(p)), tipoCurto(pTipo(p)),
+                    pNome(p).isEmpty() ? "" : "'" + pNome(p) + "'"));
+        }
+        return sb.length() == 0 ? "  (nenhuma particao)" : sb.toString().stripTrailing();
+    }
+
+    // ================================================================ DISPOSITIVO
+
+    private Particao dispositivo(String spec, boolean w) throws Exception {
+        var d = new Particao();
+        String s = spec.toLowerCase();
+        try {
+            d.fisico = spec.matches("\\d+");
+            if (d.fisico) d.abrirBruto("\\\\.\\PhysicalDrive" + spec, "Disco " + spec, w);
+            else if (s.endsWith(".vhdx")) d.abrirVhdx(spec, w);
+            else if (s.endsWith(".img")) d.abrirBruto(spec, spec, w);
+            else throw new Exception("dispositivo invalido: " + spec);
+            d.lerTabela();
+        } catch (java.io.FileNotFoundException e) {
+            throw new Exception("nao consegui abrir " + spec + " (" + e.getMessage() + "). Rode como Administrador; o VHDX precisa estar desmontado.");
+        } catch (Exception e) {
+            d.fechar();
+            throw e;
+        }
+        return d;
+    }
+
+    private void abrirBruto(String c, String desc, boolean w) throws Exception {
+        nome = desc;
+        escrita = w;
+        raf = new java.io.RandomAccessFile(c, w && !fisico ? "rw" : "r");
+        if (w && fisico)
+            canal = java.nio.channels.FileChannel.open(java.nio.file.Path.of("\\\\.\\GLOBALROOT\\Device\\Harddisk"
+                    + c.substring(c.indexOf("PhysicalDrive") + 13) + "\\Partition0"),
+                    java.nio.file.StandardOpenOption.READ, java.nio.file.StandardOpenOption.WRITE);
+        long len;
+        try { len = raf.length(); } catch (java.io.IOException e) { len = 0; }   // disco fisico nao informa
+        byte[] b = new byte[8192];
+        boolean ok = lerBruto(0, b, 8192);
+        if (ok && ascii(b, 512, 8).equals("EFI PART")) setor = 512;
+        else if (ok && ascii(b, 4096, 8).equals("EFI PART")) setor = 4096;
+        else if (len == 0) setor = lerBruto(512, new byte[512], 512) ? 512 : 4096;
+        long alt = ok && ascii(b, setor, 8).equals("EFI PART") ? le64(b, setor + 32) : -1;
+        if (len > 0) {
+            tamanho = len / setor * setor;
+        } else if (alt > 0 && lerBruto(alt * setor, new byte[setor], setor) && !lerBruto((alt + 1) * setor, new byte[setor], setor)) {
+            tamanho = (alt + 1) * setor;                         // GPT de backup no ultimo setor: so 1 leitura alem do fim
+        } else {                                                 // busca binaria pelo ultimo setor legivel (cada leitura alem
+                                                                 // do fim vira um evento 7 "setor defeituoso" no Windows)
+            byte[] t = new byte[setor];
+            long lo = 0, hi = 1L << 40;
+            while (hi - lo > 1) {
+                long m = (lo + hi) >>> 1;
+                if (lerBruto(m * setor, t, setor)) lo = m; else hi = m;
+            }
+            tamanho = (lo + 1) * setor;
+        }
+    }
+
+    private boolean lerBruto(long off, byte[] b, int n) {
+        try { raf.seek(off); raf.readFully(b, 0, n); return true; }
+        catch (java.io.IOException e) { return false; }
+    }
+
+    private void fechar() {
+        if (canal != null) {
+            try { canal.force(true); } catch (Exception ignorado) { }
+            try { canal.close(); } catch (Exception ignorado) { }
+            canal = null;
+        }
+        if (raf == null) return;
+        try { if (escrita) raf.getFD().sync(); } catch (Exception ignorado) { }
+        try { raf.close(); } catch (Exception ignorado) { }
+        raf = null;
+    }
+
+    /** Le do disco "logico" (no VHDX traduz pelo BAT; bloco nao alocado vale zero). */
+    private void ler(long off, byte[] buf, int pos, int len) throws java.io.IOException {
+        if (!vhdx) {
+            if (fisico && (off % setor != 0 || len % setor != 0)) {      // disco fisico so le setores inteiros
+                long ini = off / setor * setor;
+                byte[] t = new byte[(int) (Math.ceilDiv(off + len, setor) * setor - ini)];
+                raf.seek(ini);
+                raf.readFully(t);
+                System.arraycopy(t, (int) (off - ini), buf, pos, len);
+                return;
+            }
+            raf.seek(off);
+            raf.readFully(buf, pos, len);
+            return;
+        }
+        while (len > 0) {
+            long blk = off / blocoVhdx, dentro = off % blocoVhdx;
+            int n = (int) Math.min(len, blocoVhdx - dentro);
+            long e = bat[(int) (blk + blk / chunkRatio)];
+            int st = (int) (e & 7);
+            if (st == 6) { raf.seek((e >>> 20) * MiB + dentro); raf.readFully(buf, pos, n); }
+            else if (st == 7) throw new java.io.IOException("bloco parcial (VHDX diferencial) nao suportado");
+            else java.util.Arrays.fill(buf, pos, pos + n, (byte) 0);
+            off += n; pos += n; len -= n;
+        }
+    }
+
+    /** Grava no disco "logico" (no VHDX aloca blocos sob demanda; zeros em bloco livre nao ocupam espaco). */
+    private void gravar(long off, byte[] buf, int pos, int len) throws java.io.IOException {
+        if (canal != null) {
+            if (off % setor != 0 || len % setor != 0) {               // disco fisico so grava setores inteiros: le, troca, grava
+                long ini = off / setor * setor;
+                byte[] t = new byte[(int) (Math.ceilDiv(off + len, setor) * setor - ini)];
+                ler(ini, t, 0, t.length);
+                System.arraycopy(buf, pos, t, (int) (off - ini), len);
+                buf = t; pos = 0; len = t.length; off = ini;
+            }
+            var bb = java.nio.ByteBuffer.wrap(buf, pos, len);
+            while (bb.hasRemaining()) canal.write(bb, off + bb.position() - pos);
+            return;
+        }
+        if (!vhdx) { raf.seek(off); raf.write(buf, pos, len); return; }
+        atualizarCabecalho();
+        while (len > 0) {
+            long blk = off / blocoVhdx, dentro = off % blocoVhdx;
+            int n = (int) Math.min(len, blocoVhdx - dentro);
+            int idx = (int) (blk + blk / chunkRatio);
+            long e = bat[idx];
+            if ((e & 7) == 6) {
+                raf.seek((e >>> 20) * MiB + dentro);
+                raf.write(buf, pos, n);
+            } else if (!zero(buf, pos, n)) {
+                long novo = Math.ceilDiv(raf.length(), MiB) * MiB;
+                raf.setLength(novo + blocoVhdx);
+                raf.seek(novo + dentro);
+                raf.write(buf, pos, n);
+                bat[idx] = ((novo / MiB) << 20) | 6;
+                gravarBat(idx);
+            }
+            off += n; pos += n; len -= n;
+        }
+    }
+
+    private void gravarBat(int idx) throws java.io.IOException {
+        byte[] b8 = new byte[8];
+        put64(b8, 0, bat[idx]);
+        raf.seek(batOffset + idx * 8L);
+        raf.write(b8);
+    }
+
+    // ======================================================================== VHDX
+
+    private void abrirVhdx(String c, boolean w) throws Exception {
+        nome = c;
+        escrita = w;
+        vhdx = true;
+        if (!new java.io.File(c).isFile()) throw new Exception("VHDX nao encontrado: " + c);
+        raf = new java.io.RandomAccessFile(c, w ? "rw" : "r");
+        if (!ascii(lerArq(0, 8), 0, 8).equals("vhdxfile")) throw new Exception(c + " nao e um VHDX valido.");
+
+        byte[] h1 = lerArq(64 * 1024, 4096), h2 = lerArq(128 * 1024, 4096);
+        boolean v1 = assinado(h1, "head"), v2 = assinado(h2, "head");
+        if (!v1 && !v2) throw new Exception(c + ": cabecalhos VHDX corrompidos.");
+        if (v1 && (!v2 || Long.compareUnsigned(le64(h1, 8), le64(h2, 8)) >= 0)) { cab = h1; cabSlot = 0; }
+        else { cab = h2; cabSlot = 1; }
+        if (!zero(cab, 48, 16))
+            throw new Exception(c + " tem log pendente (nao foi desmontado corretamente). Monte e desmonte uma vez no Windows.");
+        if (le16(cab, 66) != 1) throw new Exception(c + ": versao de VHDX nao suportada.");
+
+        byte[] rt = lerArq(192 * 1024, 64 * 1024);
+        if (!assinado(rt, "regi")) { rt = lerArq(256 * 1024, 64 * 1024); if (!assinado(rt, "regi")) throw new Exception(c + ": tabela de regioes corrompida."); }
+        long metaOff = -1;
+        int metaLen = 0, n = le32(rt, 8);
+        fimRegioes = Math.max(MiB, le64(cab, 72) + (le32(cab, 68) & 0xFFFFFFFFL));      // cabecalhos e log
+        for (int i = 0; i < n; i++) {
+            int o = 16 + i * 32;
+            String g = guidStr(rt, o);
+            fimRegioes = Math.max(fimRegioes, le64(rt, o + 16) + (le32(rt, o + 24) & 0xFFFFFFFFL));
+            if (g.equals(R_BAT)) batOffset = le64(rt, o + 16);
+            else if (g.equals(R_META)) { metaOff = le64(rt, o + 16); metaLen = le32(rt, o + 24); }
+            else if ((le32(rt, o + 28) & 1) != 0) throw new Exception(c + ": regiao obrigatoria desconhecida.");
+        }
+        if (metaOff < 0 || batOffset == 0) throw new Exception(c + ": VHDX sem BAT ou metadados.");
+
+        byte[] md = lerArq(metaOff, metaLen);
+        if (!ascii(md, 0, 8).equals("metadata")) throw new Exception(c + ": metadados invalidos.");
+        int cnt = le16(md, 10);
+        for (int i = 0; i < cnt; i++) {
+            int o = 32 + i * 32, off = le32(md, o + 16), flags = le32(md, o + 24);
+            String g = guidStr(md, o);
+            if (g.equals(M_PARAMS)) {
+                blocoVhdx = le32(md, off) & 0xFFFFFFFFL;
+                if ((le32(md, off + 4) & 2) != 0) throw new Exception(c + " e um VHDX diferencial: nao suportado.");
+            } else if (g.equals(M_TAMANHO)) { tamanho = le64(md, off); tamanhoOff = metaOff + off; }
+            else if (g.equals(M_SETOR_LOG)) setor = le32(md, off);
+            else if (!g.equals(M_ID) && !g.equals(M_SETOR_FIS) && (flags & 4) != 0)
+                throw new Exception(c + ": metadado obrigatorio desconhecido " + g);
+        }
+        if (blocoVhdx == 0 || tamanho == 0) throw new Exception(c + ": metadados incompletos.");
+        chunkRatio = ((1L << 23) * setor) / blocoVhdx;
+        long blocos = Math.ceilDiv(tamanho, blocoVhdx), total = blocos + (blocos - 1) / chunkRatio;
+        byte[] b = lerArq(batOffset, (int) (total * 8));
+        bat = new long[(int) total];
+        for (int i = 0; i < total; i++) bat[i] = le64(b, i * 8);
+    }
+
+    /** Na 1a gravacao, grava um cabecalho novo (sequencia+1, novos GUIDs de escrita) no outro slot. */
+    private void atualizarCabecalho() throws java.io.IOException {
+        if (cabAtualizado) return;
+        byte[] h = cab.clone();
+        put64(h, 8, le64(cab, 8) + 1);
+        putGuid(h, 16, guidAleatorio());
+        putGuid(h, 32, guidAleatorio());
+        put32(h, 4, 0);
+        put32(h, 4, crc32c(h));
+        raf.seek(cabSlot == 0 ? 128 * 1024 : 64 * 1024);
+        raf.write(h);
+        cab = h;
+        cabSlot ^= 1;
+        cabAtualizado = true;
+    }
+
+    private boolean assinado(byte[] b, String sig) {
+        if (!ascii(b, 0, 4).equals(sig)) return false;
+        byte[] c = b.clone();
+        put32(c, 4, 0);
+        return crc32c(c) == le32(b, 4);
+    }
+
+    private byte[] lerArq(long off, int n) throws java.io.IOException {
+        byte[] b = new byte[n];
+        raf.seek(off);
+        raf.readFully(b);
+        return b;
+    }
+
+    // ========================================================================= GPT
+
+    private void lerTabela() throws Exception {
+        temGpt = false;
+        byte[] h = new byte[setor];
+        ler(setor, h, 0, setor);
+        if (!ascii(h, 0, 8).equals("EFI PART")) return;
+        int hs = le32(h, 12);
+        if (hs < 92 || hs > setor) throw new Exception(nome + ": cabecalho GPT invalido.");
+        byte[] c = java.util.Arrays.copyOf(h, hs);
+        put32(c, 16, 0);
+        if (crc32(c, 0, hs) != le32(h, 16)) throw new Exception(nome + ": GPT primaria com CRC invalido; nao vou mexer.");
+        gptCab = h;
+        gptAlt = le64(h, 32);
+        gptPrimeiro = le64(h, 40);
+        gptUltimo = le64(h, 48);
+        gptEntLBA = le64(h, 72);
+        gptNum = le32(h, 80);
+        gptTamEnt = le32(h, 84);
+        if (gptTamEnt < 128 || gptNum <= 0 || (long) gptNum * gptTamEnt > 4 * MiB)
+            throw new Exception(nome + ": tabela GPT com formato inesperado.");
+        int bytes = gptNum * gptTamEnt;
+        gptEnt = new byte[Math.ceilDiv(bytes, setor) * setor];
+        ler(gptEntLBA * setor, gptEnt, 0, gptEnt.length);
+        if (crc32(gptEnt, 0, bytes) != le32(h, 88)) throw new Exception(nome + ": entradas GPT com CRC invalido.");
+        temGpt = true;
+    }
+
+    /** Particoes: {Integer num, Long offset, Long tamanho, String tipo, String nome, Long atributos}. */
+    private java.util.List<Object[]> particoes() throws Exception {
+        var lista = new java.util.ArrayList<Object[]>();
+        if (temGpt) {
+            for (int i = 0; i < gptNum; i++) {
+                int o = i * gptTamEnt;
+                if (zero(gptEnt, o, 16)) continue;
+                long ini = le64(gptEnt, o + 32), fim = le64(gptEnt, o + 40);
+                String nm = new String(gptEnt, o + 56, 72, java.nio.charset.StandardCharsets.UTF_16LE);
+                int z = nm.indexOf('\0');
+                if (z >= 0) nm = nm.substring(0, z);
+                lista.add(new Object[]{i + 1, ini * setor, (fim - ini + 1) * setor, guidStr(gptEnt, o), nm.trim(), le64(gptEnt, o + 48)});
+            }
+        } else {
+            byte[] m = new byte[setor];
+            ler(0, m, 0, setor);
+            if ((m[510] & 0xFF) == 0x55 && (m[511] & 0xFF) == 0xAA) {
+                for (int i = 0; i < 4; i++) {
+                    int o = 446 + i * 16, t = m[o + 4] & 0xFF;
+                    long ini = le32(m, o + 8) & 0xFFFFFFFFL, n = le32(m, o + 12) & 0xFFFFFFFFL;
+                    if (t == 0 || n == 0) continue;
+                    lista.add(new Object[]{i + 1, ini * setor, n * setor, String.format("MBR-%02X", t), "", 0L});
+                }
+            }
+        }
+        return lista;
+    }
+
+    private Object[] particao(int n) throws Exception {
+        for (Object[] p : particoes()) if (pNum(p) == n) return p;
+        for (Object[] x : espacos())
+            if (!(Boolean) x[4] && (Integer) x[3] == n) throw new Exception("o #" + n + " de " + nome + " e espaco livre. Particoes:\n" + descreverParticoes());
+        throw new Exception(nome + " nao tem particao " + n + ".");
+    }
+
+    /**
+     * Particoes e espacos livres (alinhados a 1 MiB) na ordem do disco. #N de particao = numero real da GPT (pode ficar
+     * fora de ordem); livre entre particoes = o numero da GPT que a particao vai receber ali (o menor ainda nao usado,
+     * na ordem do disco); livre do fim = #TAIL (recebe o proximo numero). Nada e renumerado (nao comprometer um boot).
+     * Item: {particao ou null se livre, lbaIni, lbaFim, Integer #N (0 = GPT sem numero sobrando), Boolean e o #TAIL}.
+     * Livre so em GPT ou em VHDX vazio (a GPT que sera criada).
+     */
+    private java.util.List<Object[]> espacos() throws Exception {
+        var parts = new java.util.ArrayList<>(particoes());
+        parts.sort((a, b) -> Long.compare(pOff(a), pOff(b)));
+        var usados = new java.util.HashSet<Integer>();
+        for (Object[] p : parts) usados.add(pNum(p));
+        int max = temGpt ? gptNum : 128;                    // VHDX vazio: a GPT criada tem 128 entradas
+        var lista = new java.util.ArrayList<Object[]>();
+        long cur = gptPrimeiro;
+        java.util.function.BiConsumer<long[], Boolean> livre = (c, tail) -> {
+            int n = 1;
+            while (n <= max && usados.contains(n)) n++;
+            if (n <= max) usados.add(n); else n = 0;
+            lista.add(new Object[]{null, c[0], c[1], n, tail});
+        };
+        if (!temGpt && parts.isEmpty() && vhdx) {
+            long[] c = livreAposInicializar();
+            if (c != null) livre.accept(c, true);
+        }
+        for (Object[] p : parts) {
+            long ini = pOff(p) / setor, fim = (pOff(p) + pTam(p)) / setor - 1;
+            long[] c = temGpt ? candidato(cur, ini - 1, MiB / setor, null) : null;
+            // livre do comeco do disco: logo depois da tabela GPT (17 KB), sem alinhar, como a MSR do Windows;
+            // so se tiver 1 MB ou mais (disco comum, com a 1a particao em 1 MB, nao mostra livre ali)
+            if (temGpt && cur == gptPrimeiro && ini - cur >= MiB / setor) c = new long[]{cur, ini - 1};
+            if (c != null) livre.accept(c, false);
+            lista.add(new Object[]{p, ini, fim, pNum(p), false});
+            cur = Math.max(cur, fim + 1);
+        }
+        long[] c = temGpt ? candidato(cur, gptUltimo, MiB / setor, null) : null;
+        if (c != null) livre.accept(c, true);
+        return lista;
+    }
+
+    private long[] livreAposInicializar() {
+        long ultimo = tamanho / setor - 1;
+        int entSet = Math.ceilDiv(128 * 128, setor);
+        return candidato(2 + entSet, ultimo - entSet - 1, MiB / setor, null);
+    }
+
+    private long[] candidato(long a, long b, long alin, long[] melhor) {
+        long s = Math.ceilDiv(a, alin) * alin, e = (b + 1) / alin * alin - 1;
+        if (e < s) return melhor;
+        if (melhor == null || e - s > melhor[1] - melhor[0]) return new long[]{s, e};
+        return melhor;
+    }
+
+    /** numero = 0: primeiro numero vago da GPT; senao usa esse numero (precisa estar vago). */
+    private int adicionarParticao(int numero, long ini, long fim, String tipo, long attr, String nomePart) throws Exception {
+        int slot = -1;
+        if (numero > 0) {
+            if (!zero(gptEnt, (numero - 1) * gptTamEnt, 16)) throw new Exception(nome + ": a particao " + numero + " ja existe.");
+            slot = numero - 1;
+        }
+        for (int i = 0; i < gptNum && slot < 0; i++) if (zero(gptEnt, i * gptTamEnt, 16)) slot = i;
+        if (slot < 0) throw new Exception(nome + ": tabela GPT cheia.");
+        int o = slot * gptTamEnt;
+        java.util.Arrays.fill(gptEnt, o, o + gptTamEnt, (byte) 0);
+        putGuid(gptEnt, o, tipo);
+        putGuid(gptEnt, o + 16, guidAleatorio());
+        put64(gptEnt, o + 32, ini);
+        put64(gptEnt, o + 40, fim);
+        put64(gptEnt, o + 48, attr);
+        byte[] nm = nomePart.getBytes(java.nio.charset.StandardCharsets.UTF_16LE);
+        System.arraycopy(nm, 0, gptEnt, o + 56, Math.min(nm.length, 72));
+        escreverGpt();
+        return slot + 1;
+    }
+
+    /** Grava entradas + cabecalho: primeiro o backup (fim do disco), depois a GPT primaria. */
+    private void escreverGpt() throws Exception {
+        int bytes = gptNum * gptTamEnt;
+        int crcEnt = crc32(gptEnt, 0, bytes);
+        byte[] b = new byte[setor];
+        ler(gptAlt * setor, b, 0, setor);
+        if (!ascii(b, 0, 8).equals("EFI PART")) {
+            b = gptCab.clone();
+            put64(b, 24, gptAlt);
+            put64(b, 32, 1);
+            put64(b, 72, gptAlt - gptEnt.length / setor);
+        }
+        put32(b, 88, crcEnt);
+        selarGpt(b);
+        gravar(le64(b, 72) * setor, gptEnt, 0, gptEnt.length);
+        gravar(gptAlt * setor, b, 0, setor);
+        put32(gptCab, 88, crcEnt);
+        selarGpt(gptCab);
+        gravar(gptEntLBA * setor, gptEnt, 0, gptEnt.length);
+        gravar(setor, gptCab, 0, setor);
+    }
+
+    private void selarGpt(byte[] h) {
+        int hs = le32(h, 12);
+        put32(h, 16, 0);
+        put32(h, 16, crc32(h, 0, hs));
+    }
+
+    /**
+     * Disco que mudou de tamanho (expand vdisk ou maximum menor): grava a GPT de backup no ultimo setor de novoTam,
+     * atualiza o fim util e o MBR protetor, e so depois zera o cabecalho de backup antigo. As particoes nao mudam.
+     */
+    private void moverGptParaFim(long novoTam) throws Exception {
+        long ultimo = novoTam / setor - 1, antigo = gptAlt;
+        if (ultimo == antigo) return;
+        gptAlt = ultimo;
+        gptUltimo = ultimo - gptEnt.length / setor - 1;
+        put64(gptCab, 32, gptAlt);
+        put64(gptCab, 48, gptUltimo);
+        gravar(ultimo * setor, new byte[setor], 0, setor);  // diminuindo, o setor pode ter lixo: o backup sai da primaria
+        escreverGpt();                                       // backup no novo fim e depois a primaria
+        byte[] mbr = new byte[setor];
+        ler(0, mbr, 0, setor);
+        if ((mbr[446 + 4] & 0xFF) == 0xEE) {
+            put32(mbr, 446 + 12, (int) Math.min(ultimo, 0xFFFFFFFFL));
+            gravar(0, mbr, 0, setor);
+        }
+        gravar(antigo * setor, new byte[setor], 0, setor);
+    }
+
+    /** MBR protetor + GPT vazia (so para VHDX ainda sem tabela). */
+    private void criarGpt() throws Exception {
+        long ultimo = tamanho / setor - 1;
+        int entSet = Math.ceilDiv(128 * 128, setor);
+        byte[] mbr = new byte[setor];
+        int o = 446;
+        mbr[o + 2] = 2;
+        mbr[o + 4] = (byte) 0xEE;
+        mbr[o + 5] = (byte) 0xFF; mbr[o + 6] = (byte) 0xFF; mbr[o + 7] = (byte) 0xFF;
+        put32(mbr, o + 8, 1);
+        put32(mbr, o + 12, (int) Math.min(ultimo, 0xFFFFFFFFL));
+        mbr[510] = 0x55;
+        mbr[511] = (byte) 0xAA;
+        gravar(0, mbr, 0, setor);
+        gptCab = new byte[setor];
+        putAscii(gptCab, 0, "EFI PART");
+        put32(gptCab, 8, 0x00010000);
+        put32(gptCab, 12, 92);
+        put64(gptCab, 24, 1);
+        put64(gptCab, 32, ultimo);
+        put64(gptCab, 40, 2 + entSet);
+        put64(gptCab, 48, ultimo - entSet - 1);
+        putGuid(gptCab, 56, guidAleatorio());
+        put64(gptCab, 72, 2);
+        put32(gptCab, 80, 128);
+        put32(gptCab, 84, 128);
+        gptAlt = ultimo;
+        gptPrimeiro = 2 + entSet;
+        gptUltimo = ultimo - entSet - 1;
+        gptEntLBA = 2;
+        gptNum = 128;
+        gptTamEnt = 128;
+        gptEnt = new byte[entSet * setor];
+        gravar(ultimo * setor, new byte[setor], 0, setor);
+        escreverGpt();
+        temGpt = true;
+    }
+
+    // ===================================================================== MAXIMUM
+    // O unico comando que usa o diskpart. maximum a.vhdx = so o VHDX; maximum a.vhdx#N = so a particao e o FS.
+
+    /**
+     * maximum a.vhdx MB     muda o VHDX para MB (so o VHDX; as particoes nao mudam)
+     * maximum a.vhdx#N MB   muda a particao N e o FS para MB (so a particao; NTFS aumenta e diminui, ReFS so aumenta)
+     */
+    private void maximo(String[] args) throws Exception {
+        String uso = "maximum a.vhdx MB  |  maximum a.vhdx#N MB|max  |  maximum 1#3 MB|max";
+        var pos = new java.util.ArrayList<String>();
+        for (String x : args) {
+            if (x.startsWith("--")) throw new Exception("opcao desconhecida: " + x);
+            else pos.add(x);
+        }
+        if (pos.size() != 2) throw new Exception("use: " + uso);
+        String arq = pos.get(0);
+        int num = 0, h = arq.lastIndexOf('#');
+        if (h > 0 && arq.substring(h + 1).matches("\\d+")) {
+            num = Integer.parseInt(arq.substring(h + 1));
+            arq = arq.substring(0, h);
+        }
+        boolean disco = arq.matches("\\d+");                        // maximum 1#3: particao de disco fisico
+        if (disco && num == 0) throw new Exception("disco fisico so por particao: maximum 1#3 MB|max");
+        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+        if (!disco) exigirDesanexado(arq);
+        boolean usarMax = pos.get(1).equalsIgnoreCase("max");                  // so na particao: todo o livre logo depois dela
+        if (usarMax && num == 0) throw new Exception("max so vale para particao: maximum a.vhdx#N max");
+        if (!usarMax && !pos.get(1).toLowerCase().matches("\\d{1,9}(mb|m)?")) throw new Exception("tamanho invalido: " + pos.get(1) + " (tamanho final em MB ou max)");
+        long max = usarMax ? -1 : Long.parseLong(pos.get(1).replaceAll("[^0-9]", ""));
+        String caminho = disco ? arq : new java.io.File(arq).getCanonicalPath();
+        if (num == 0) expandirVhdx(caminho, max, pos.get(0));
+        else estender(caminho, num, max, pos.get(0));
+    }
+
+    /**
+     * maximum a.vhdx MB: muda so o tamanho virtual do VHDX; as particoes nao mudam. Aumentar = diskpart expand vdisk;
+     * diminuir = em Java, no proprio arquivo (reduzirVhdx).
+     */
+    private void expandirVhdx(String caminho, long max, String rotulo) throws Exception {
+        var v = dispositivo(caminho, false);
+        long antes;
+        try { antes = v.tamanho; } finally { v.fechar(); }
+        if (max * MiB == antes) throw new Exception("o VHDX ja tem " + mb(antes) + ".");
+        if (max * MiB < antes) { reduzirVhdx(caminho, max, rotulo); return; }
+
+        diskpart("aumentar o VHDX", "select vdisk file=\"" + caminho + "\"", "expand vdisk maximum=" + max);
+
+        // o expand vdisk so aumenta o arquivo; a GPT continua marcando o fim antigo. Leva o fim dela para o novo fim.
+        var w = dispositivo(caminho, true);
+        try {
+            if (w.tamanho != max * MiB) throw new Exception("o VHDX ficou com " + mb(w.tamanho) + ", esperado " + max + " MB.");
+            if (w.temGpt) w.moverGptParaFim(w.tamanho);
+        } finally { w.fechar(); }
+    }
+
+    /**
+     * maximum a.vhdx MB menor: so se nenhuma particao passar do novo fim. Ordem: GPT de backup no novo fim, BAT sem os
+     * blocos de depois do fim (o resto do ultimo bloco vira zero), tamanho nos metadados e, por ultimo, o arquivo
+     * encurtado ate o fim do ultimo bloco ainda usado (bloco solto no meio do arquivo fica la).
+     */
+    private void reduzirVhdx(String caminho, long max, String rotulo) throws Exception {
+        var v = dispositivo(caminho, true);
+        try {
+            // minimo: fim da ultima particao (ou das entradas da GPT primaria) + entradas e cabecalho de backup
+            long fim = v.temGpt ? (v.gptEntLBA + v.gptEnt.length / v.setor) * v.setor : 0;
+            for (Object[] q : v.particoes()) fim = Math.max(fim, pOff(q) + pTam(q));
+            long minimo = Math.max(1, Math.ceilDiv(fim + (v.temGpt ? v.gptEnt.length + v.setor : 0), MiB));
+            if (max < minimo) throw new Exception(rotulo + " tem particoes; o minimo possivel eh " + minimo + " MB");
+            long novo = max * MiB;
+            long blocos = Math.ceilDiv(novo, v.blocoVhdx), total = blocos + (blocos - 1) / v.chunkRatio;
+            int ultimo = (int) (blocos - 1 + (blocos - 1) / v.chunkRatio);
+            byte[] z = new byte[(int) MiB];
+            v.atualizarCabecalho();
+            // o bloco do novo fim (onde vai a GPT de backup) ainda nao existe: usa, zerado, um bloco de depois do fim
+            // em vez de crescer o arquivo
+            if ((v.bat[ultimo] & 7) != 6)
+                for (int i = (int) total; i < v.bat.length; i++)
+                    if ((v.bat[i] & 7) == 6 && (i + 1) % (v.chunkRatio + 1) != 0) {
+                        for (long o = 0; o < v.blocoVhdx; o += z.length) { v.raf.seek((v.bat[i] >>> 20) * MiB + o); v.raf.write(z); }
+                        v.bat[ultimo] = v.bat[i];
+                        v.gravarBat(ultimo);
+                        v.bat[i] = 0;
+                        v.gravarBat(i);
+                        break;
+                    }
+            if (v.temGpt) v.moverGptParaFim(novo);
+
+            long resto = novo % v.blocoVhdx, e = v.bat[ultimo];
+            if (resto > 0 && (e & 7) == 6)
+                for (long o = resto; o < v.blocoVhdx; o += z.length) {
+                    v.raf.seek((e >>> 20) * MiB + o);
+                    v.raf.write(z, 0, (int) Math.min(z.length, v.blocoVhdx - o));
+                }
+            v.raf.seek(v.batOffset + total * 8);
+            v.raf.write(new byte[(int) ((v.bat.length - total) * 8)]);
+            v.bat = java.util.Arrays.copyOf(v.bat, (int) total);
+            byte[] b8 = new byte[8];
+            put64(b8, 0, novo);
+            v.raf.seek(v.tamanhoOff);
+            v.raf.write(b8);
+            v.tamanho = novo;
+
+            long fimArq = v.fimRegioes;
+            for (int i = 0; i < total; i++)
+                if (v.bat[i] >>> 20 != 0)        // bloco de dados ou, a cada chunkRatio, bitmap de setores (1 MB)
+                    fimArq = Math.max(fimArq, (v.bat[i] >>> 20) * MiB + ((i + 1) % (v.chunkRatio + 1) == 0 ? MiB : v.blocoVhdx));
+            fimArq = Math.ceilDiv(fimArq, MiB) * MiB;
+            if (fimArq < v.raf.length()) v.raf.setLength(fimArq);
+        } finally { v.fechar(); }
+    }
+
+    /**
+     * maximum a.vhdx#N MB: muda so a particao N e o FS para MB. Aumentar (NTFS/ReFS) usa o espaco livre logo depois
+     * dela; diminuir so NTFS (ReFS nao reduz). diskpart: attach vdisk (confere se o disco apareceu), extend size= ou
+     * shrink querymax + shrink desired= minimum=, detach vdisk.
+     */
+    private void estender(String caminho, int num, long max, String rotulo) throws Exception {
+        // le o VHDX desmontado (ou o disco fisico), sem gravar nada
+        boolean fisico = caminho.matches("\\d+");
+        var v = dispositivo(caminho, false);
+        Object[] p;
+        String guidDisco, guidPart;
+        String fsNome;
+        long fsAntes, tamDisco, livre;
+        boolean reduzir;
+        int partWin = 1;
+        try {
+            if (!v.temGpt) throw new Exception(caminho + " nao tem GPT.");
+            p = v.particao(num);
+            Object[] fs = v.fsInfo(p);
+            if (fs == null) throw new Exception("a particao #" + num + " nao e NTFS nem ReFS. Particoes:\n" + v.descreverParticoes());
+            fsNome = (String) fs[0];
+            if (!fsNome.equals("NTFS") && !fsNome.equals("ReFS"))
+                throw new Exception("a particao #" + num + " e " + fsNome + ": o diskpart so estende NTFS e ReFS.");
+            fsAntes = (Long) fs[1];
+            tamDisco = v.tamanho;
+            guidDisco = guidStr(v.gptCab, 56);
+            guidPart = guidStr(v.gptEnt, (pNum(p) - 1) * v.gptTamEnt + 16);
+            // numero do "select partition": o Windows numera as entradas ocupadas da GPT em ordem, sem contar as vazias
+            // (entradas 1,2,4 = particoes 1,2,3); conferido anexando VHDX com buraco na GPT (08/10/2026)
+            for (int i = 0; i < pNum(p) - 1; i++) if (!zero(v.gptEnt, i * v.gptTamEnt, 16)) partWin++;
+            // o extend so usa o espaco contiguo: ate a proxima particao ou ate a GPT de backup no fim
+            long limite = tamDisco - v.gptEnt.length - v.setor, fimP = pOff(p) + pTam(p);
+            boolean outraDepois = false;
+            for (Object[] q : v.particoes())
+                if (pOff(q) >= fimP && pOff(q) < limite) { limite = pOff(q); outraDepois = true; }
+            livre = limite - fimP;
+            if (max < 0) max = (pTam(p) + livre) / MiB;          // max: todo o livre logo depois dela
+            if (max * MiB == pTam(p)) throw new Exception("a particao #" + num + " ja tem " + mb(pTam(p)) + ".");
+            reduzir = max * MiB < pTam(p);
+            if (reduzir && fsNome.equals("ReFS"))
+                throw new Exception("ReFS nao pode ser reduzido: a particao #" + num + " tem " + mb(pTam(p)) + ".");
+            if (!reduzir && livre < MiB)
+                throw new Exception("nao ha espaco livre logo depois da particao #" + num
+                        + (outraDepois ? " (ha outra particao depois dela)." : fisico ? " (fim do disco)." : "; aumente o VHDX antes (maximum a.vhdx MB)."));
+        } finally { v.fechar(); }
+        String comando;
+        long tamFinal;
+        if (reduzir) {
+            long tirar = (pTam(p) - max * MiB) / MiB;            // MB do "shrink"; minimum = desired: ou reduz tudo ou falha
+            if (tirar < 1) throw new Exception("o tamanho precisa ser pelo menos 1 MB menor que a particao atual (" + mb(pTam(p)) + ").");
+            comando = "shrink desired=" + tirar + " minimum=" + tirar;
+            tamFinal = pTam(p) - tirar * MiB;
+        } else {
+            if (max * MiB - pTam(p) > livre)
+                throw new Exception("nao cabe: " + max + " MB, mas a particao #" + num + " so pode ir ate " + (pTam(p) + livre) / MiB + " MB.");
+            long somar = (max * MiB - pTam(p)) / MiB;           // MB do "extend size="
+            if (somar < 1) throw new Exception("o tamanho precisa ser pelo menos 1 MB maior que a particao atual (" + mb(pTam(p)) + ").");
+            comando = "extend size=" + somar;
+            tamFinal = pTam(p) + somar * MiB;
+        }
+
+
+        String vdisk = "select vdisk file=\"" + caminho + "\"";
+        boolean anexado = false, desanexado = fisico;                 // disco fisico: nada a anexar/desanexar
+        try {
+            int disco;
+            if (fisico) {
+                disco = Integer.parseInt(caminho);
+                diskpart("reexaminar os discos", "rescan");             // o Windows passa a ver o que foi gravado direto na GPT
+            } else {
+                diskpart("anexar o VHDX", vdisk, "attach vdisk");
+                anexado = true;
+                disco = discoAnexado(tamDisco, pOff(p), pTam(p), guidDisco, guidPart);
+            }
+            int part = partWin;
+            if (reduzir) {
+                // quanto o Windows deixa tirar (dados gravados e arquivos que ele nao move ficam): "... e:  717 MB"
+                var m = java.util.regex.Pattern.compile("(\\d+)\\s*(KB|MB|GB|TB)\\b").matcher(
+                        diskpart("consultar o minimo", "select disk " + disco, "select partition " + part, "shrink querymax"));
+                long pode = -1;
+                while (m.find()) pode = Long.parseLong(m.group(1)) << (10 * ("KMGT".indexOf(m.group(2).charAt(0)) + 1));
+                if (pode >= 0 && pode < pTam(p) - tamFinal)
+                    throw new Exception(rotulo + " tem dados gravados; o minimo possivel eh " + Math.ceilDiv(pTam(p) - pode, MiB) + " MB");
+            }
+            diskpart(reduzir ? "reduzir a particao" : "estender a particao", "select disk " + disco, "select partition " + part, comando);
+        } finally {
+            if (anexado) {
+                try { diskpart("desanexar o VHDX", vdisk, "detach vdisk"); desanexado = true; }
+                catch (Exception e) { System.out.println("AVISO: " + e.getMessage() + "\nDesanexe no Gerenciamento de Disco."); }
+            }
+        }
+
+        // confere lendo o VHDX de novo (ja desanexado) ou o disco
+        if (!desanexado) return;
+        var w = dispositivo(caminho, false);
+        try {
+            // pela posicao no disco: com buraco na GPT, o diskpart regrava a tabela compactada e o numero pode mudar
+            Object[] q = null;
+            for (Object[] x : w.particoes()) if (pOff(x) == pOff(p)) q = x;
+            if (q == null) throw new Exception("a particao que comecava em " + mb(pOff(p)) + " sumiu da GPT.");
+            Object[] fs = w.fsInfo(q);
+            long fsDepois = fs == null ? 0 : (Long) fs[1];
+            if (pTam(q) != tamFinal || (reduzir ? fsDepois >= fsAntes : fsDepois <= fsAntes))
+                throw new Exception("a particao ficou com " + mb(pTam(q)) + " (esperado " + mb(tamFinal) + ") ou o " + fsNome + " nao " + (reduzir ? "diminuiu." : "cresceu."));
+        } finally { w.fechar(); }
+    }
+
+    /**
+     * delete a.vhdx#N | delete 1#3: zera a entrada N da GPT (primaria e backup, com CRC), em Java. Vale tambem para
+     * particao protegida (ex: recuperacao com atributo 0x8000000000000001, que o Gerenciamento de Disco nao exclui).
+     * Nada e renumerado e os dados nao sao apagados: o espaco so volta a ser livre. Disco fisico: particao com letra
+     * (volume montado) ou EFI so com a confirmacao de 4 numeros aleatorios.
+     */
+    private void apagar(String[] args) throws Exception {
+        String uso = "use: delete a.vhdx#N | delete 1#3";
+        if (args.length != 1) throw new Exception(uso);
+        String alvo = args[0];
+        int h = alvo.lastIndexOf('#');
+        if (h <= 0 || !alvo.substring(h + 1).matches("\\d+")) throw new Exception(uso);
+        int num = Integer.parseInt(alvo.substring(h + 1));
+        alvo = alvo.substring(0, h);
+        boolean disco = alvo.matches("\\d+");
+        if (!disco && (!alvo.toLowerCase().endsWith(".vhdx") || !new java.io.File(alvo).isFile())) throw new Exception("VHDX nao encontrado: " + alvo);
+        if (!disco) exigirDesanexado(alvo);
+        var letras = disco ? letrasMontadas() : new java.util.TreeMap<Character, byte[]>();
+        var d = dispositivo(alvo, true);
+        try {
+            if (!d.temGpt) throw new Exception(d.nome + " nao tem GPT.");
+            Object[] p = d.particao(num);
+            if (disco) {                                       // EFI ou montada (com letra): so com os 4 numeros
+                boolean grave = pTipo(p).equals(T_EFI);
+                byte[] b = new byte[4096];
+                if (pTam(p) >= 4096) {
+                    d.ler(pOff(p), b, 0, 4096);
+                    for (var e : letras.entrySet()) if (java.util.Arrays.equals(e.getValue(), b)) grave = true;
+                }
+                if (grave) {
+                    String n = String.valueOf(1000 + new java.util.Random().nextInt(9000));
+                    System.out.println("ATENCAO, esse comando e muito grave, cuidado, digite os numeros " + n + " e de enter para prosseguir");
+                    String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
+                    if (r == null || !r.trim().equals(n)) throw new Exception("confirmacao errada; nada foi feito.");
+                }
+            }
+            int o = (pNum(p) - 1) * d.gptTamEnt;
+            java.util.Arrays.fill(d.gptEnt, o, o + d.gptTamEnt, (byte) 0);
+            d.escreverGpt();
+        } finally { d.fechar(); }
+        if (disco) diskpart("reexaminar os discos", "rescan");   // o Windows passa a ver a GPT nova
+    }
+
+    /** detach a.vhdx: desanexa o VHDX (diskpart detach vdisk). */
+    private void desanexar(String[] args) throws Exception {
+        if (args.length != 1) throw new Exception("use: detach a.vhdx");
+        if (!args[0].toLowerCase().endsWith(".vhdx") || !new java.io.File(args[0]).isFile()) throw new Exception("VHDX nao encontrado: " + args[0]);
+        String caminho = new java.io.File(args[0]).getCanonicalPath();
+        diskpart("desanexar o VHDX", "select vdisk file=\"" + caminho + "\"", "detach vdisk");
+    }
+
+    /**
+     * Disco fisico que o Windows criou para o VHDX anexado: mesmo tamanho, particao no mesmo offset e
+     * tamanho, e mesmo GUID de disco ou de particao (o Windows troca o GUID de disco se colidir).
+     */
+    private int discoAnexado(long tam, long off, long tamPart, String guidDisco, String guidPart) throws Exception {
+        for (int t = 0; t < 30; t++) {
+            var achados = new java.util.ArrayList<Integer>();
+            for (int n = 0; n < 64; n++) {
+                Particao d;
+                try { d = dispositivo(String.valueOf(n), false); } catch (Exception e) { continue; }
+                try {
+                    if (!d.temGpt || d.tamanho != tam) continue;
+                    for (Object[] q : d.particoes())
+                        if (pOff(q) == off && pTam(q) == tamPart && (guidStr(d.gptCab, 56).equals(guidDisco)
+                                || guidStr(d.gptEnt, (pNum(q) - 1) * d.gptTamEnt + 16).equals(guidPart))) achados.add(n);
+                } catch (Exception ignorado) {
+                } finally { d.fechar(); }
+            }
+            if (achados.size() == 1) return achados.get(0);
+            if (achados.size() > 1) throw new Exception("os discos " + achados + " parecem o VHDX anexado (uma copia dele anexada?); nao sei qual estender.");
+            Thread.sleep(500);
+        }
+        throw new Exception("o diskpart disse que anexou, mas o disco nao apareceu em 15 s.");
+    }
+
+    /** Roda um script do diskpart; erro com o fim da saida dele se o codigo de saida nao for 0. */
+    private String diskpart(String passo, String... linhas) throws Exception {
+        var script = java.io.File.createTempFile("clona-diskpart", ".txt");
+        try {
+            java.nio.file.Files.writeString(script.toPath(), String.join("\r\n", linhas) + "\r\n",
+                    java.nio.charset.Charset.forName(System.getProperty("native.encoding")));
+            Process pr;
+            try { pr = new ProcessBuilder("diskpart", "/s", script.getPath()).redirectErrorStream(true).start(); }
+            catch (java.io.IOException e) {
+                throw new Exception(String.valueOf(e.getMessage()).contains("error=740") ? "o diskpart precisa de Administrador: abra o prompt como Administrador."
+                        : "nao consegui rodar o diskpart (" + e.getMessage() + ").");
+            }
+            String saida = textoDiskpart(pr.getInputStream().readAllBytes());
+            int rc = pr.waitFor();
+            if (rc != 0) {
+                // pula o cabecalho (versao, copyright, computador) e a linha de sucesso de cada "select": sobra o erro
+                var l = saida.strip().lines().map(String::strip).filter(x -> !x.isEmpty()).toList();
+                int pular = 3 + (int) java.util.Arrays.stream(linhas).filter(x -> x.startsWith("select")).count();
+                var erro = l.size() > pular ? l.subList(pular, l.size()) : l.subList(Math.max(0, l.size() - 1), l.size());
+                throw new Exception("diskpart falhou ao " + passo + (erro.isEmpty() ? "." : ": " + String.join(" ", erro)));
+            }
+            return saida;
+        } finally { script.delete(); }
+    }
+
+    /**
+     * Erro se o Windows estiver com o VHDX anexado: anexado, ele nao deixa abrir o arquivo para escrita
+     * (um arquivo so de leitura tambem nao abre, mas esse o canWrite ja separa).
+     */
+    private void exigirDesanexado(String arq) throws Exception {
+        if (!new java.io.File(arq).canWrite()) return;
+        try { new java.io.RandomAccessFile(arq, "rw").close(); }
+        catch (java.io.IOException e) {
+            throw new Exception("voce precisa desanexar o " + arq + " primeiro\nuse o parametro detach " + arq + " ou ejete o drive");
+        }
+    }
+
+    /** Saida do diskpart: UTF-8 se for valido; senao a pagina OEM (850 no Windows ocidental, cuja ANSI e a 1252). */
+    private String textoDiskpart(byte[] b) {
+        try { return java.nio.charset.StandardCharsets.UTF_8.newDecoder().decode(java.nio.ByteBuffer.wrap(b)).toString(); }
+        catch (java.nio.charset.CharacterCodingException e) {
+            String nat = System.getProperty("native.encoding", "");
+            boolean ocidental = nat.isEmpty() || nat.equalsIgnoreCase("Cp1252") || nat.equalsIgnoreCase("windows-1252");
+            return new String(b, java.nio.charset.Charset.forName(ocidental ? "IBM850" : nat));
+        }
+    }
+
+    // ======================================================================== CRIA
+
+    private final String URL_MODELOS = "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_discos/";
+    private final String CACHE = "c:\\tmp_cache\\";                    // .rar baixados ficam aqui e nao sao baixados de novo
+
+    /** create_by_template_1G_vazio | create_by_template_1G_refs | create_by_template_1G_winre_refs destino.vhdx: baixa o .rar do GitHub e extrai com %RAR%. */
+    private void criarModelo(String modelo, String[] args) throws Exception {
+        if (args.length != 1 || !args[0].toLowerCase().endsWith(".vhdx")) throw new Exception("use: create_by_template_" + modelo + " destino.vhdx");
+        var destino = new java.io.File(args[0]).getAbsoluteFile();
+        if (destino.exists()) throw new Exception(destino + " ja existe (nada existente e apagado).");
+        var tmp = java.nio.file.Files.createTempDirectory("clona-cria").toFile();
+        try {
+            String vhdx = baixar(modelo, tmp);
+            java.nio.file.Files.move(new java.io.File(vhdx).toPath(), destino.toPath());
+        } finally {
+            for (var f : tmp.listFiles()) f.delete();
+            tmp.delete();
+        }
+    }
+
+    /**
+     * Extrai CACHE + modelo + ".rar" para dir com %RAR% (UnRAR.exe/Rar.exe ou a pasta deles); devolve o .vhdx.
+     * Se o .rar nao estiver no cache, baixa antes de URL_MODELOS.
+     */
+    private String baixar(String modelo, java.io.File dir) throws Exception {
+        String rar = System.getenv("RAR");
+        if (rar == null || rar.isBlank()) throw new Exception("defina %RAR% (caminho do UnRAR.exe/Rar.exe ou da pasta deles).");
+        rar = rar.replace("\"", "");
+        var exe = new java.io.File(rar);
+        if (exe.isDirectory()) {
+            var u = new java.io.File(exe, "UnRAR.exe");
+            exe = u.isFile() ? u : new java.io.File(exe, "Rar.exe");
+        }
+        if (!exe.isFile()) throw new Exception("%RAR% nao aponta para o UnRAR.exe/Rar.exe: " + rar);
+        var arq = new java.io.File(CACHE + modelo + ".rar");
+        if (!arq.isFile()) {
+            // baixa num .parcial e so renomeia no fim: download interrompido nao fica no cache
+            var parcial = new java.io.File(CACHE + modelo + ".rar.parcial");
+            if (!new java.io.File(CACHE).isDirectory() && !new java.io.File(CACHE).mkdirs()) throw new Exception("nao consegui criar " + CACHE);
+            try (var in = java.net.URI.create(URL_MODELOS + modelo + ".rar").toURL().openStream()) {
+                java.nio.file.Files.copy(in, parcial.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.io.IOException e) {
+                parcial.delete();
+                throw new Exception("nao consegui baixar " + URL_MODELOS + modelo + ".rar (" + e.getMessage() + ")");
+            }
+            java.nio.file.Files.move(parcial.toPath(), arq.toPath());
+        }
+        var pr = new ProcessBuilder(exe.getPath(), "x", "-o+", "-inul", arq.getPath(), dir.getPath() + "\\").redirectErrorStream(true).start();
+        pr.getInputStream().readAllBytes();
+        int rc = pr.waitFor();
+        var vhdx = new java.io.File(dir, modelo + ".vhdx");
+        if (rc != 0 || !vhdx.isFile()) throw new Exception(exe.getName() + " nao extraiu " + modelo + ".vhdx de " + arq.getName() + " (codigo " + rc + ")");
+        return vhdx.getPath();
+    }
+
+    // ====================================================================== FORMAT
+
+    /**
+     * format_refs | format_ntfs | format_fat32 | format_exfat a.vhdx#N|1#3 [MB|max]: formata a particao N, em Java (sem o format do Windows; o que havia
+     * nela se perde). Particao existente: MB/max mudam antes so a entrada da GPT (max = ate o livre logo depois dela);
+     * sem tamanho, fica como esta. #N livre ou #TAIL: cria a particao ali (sem tamanho ou max = todo o livre) e grava
+     * a entrada da GPT so no fim. Minimo: ReFS 1088 MB (o FS ocupa a particao arredondada para baixo a 64 MB), NTFS 16 MB,
+     * FAT32 36 MB (65525 clusters), exFAT 16 MB.
+     */
+    private void formatar(String fs, String[] args) throws Exception {
+        String uso = "use: format_" + fs + " a.vhdx#N [MB|max] | format_" + fs + " 1#3 [MB|max]";
+        if (args.length < 1 || args.length > 2) throw new Exception(uso);
+        String alvo = args[0];
+        int h = alvo.lastIndexOf('#');
+        if (h <= 0) throw new Exception(uso);
+        String sufixo = alvo.substring(h + 1), arq = alvo.substring(0, h);
+        boolean tail = sufixo.equalsIgnoreCase("TAIL");
+        if (!tail && !sufixo.matches("\\d+")) throw new Exception(uso);
+        int num = tail ? 0 : Integer.parseInt(sufixo);
+        if (!tail && num < 1) throw new Exception("numero de particao invalido: #" + num);
+        boolean disco = arq.matches("\\d+");
+        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+        String tam = args.length == 2 ? args[1].toLowerCase() : "";
+        boolean usarMax = tam.equals("max");
+        if (!tam.isEmpty() && !usarMax && !tam.matches("\\d{1,9}(mb|m)?")) throw new Exception("tamanho invalido: " + args[1] + " (tamanho final em MB ou max)");
+        long pedido = tam.isEmpty() || usarMax ? -1 : Long.parseLong(tam.replaceAll("[^0-9]", "")) * MiB;
+        if (!disco) exigirDesanexado(arq);
+        var letras = disco ? letrasMontadas() : new java.util.TreeMap<Character, byte[]>();
+        var d = dispositivo(arq, true);
+        try {
+            if (!d.temGpt && !d.particoes().isEmpty()) throw new Exception(d.nome + " usa MBR. Este programa so grava em discos GPT.");
+            if (!d.temGpt && !d.vhdx) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
+            Object[] x = null;                                // particao existente ou espaco livre com esse numero
+            for (Object[] e : d.espacos()) if (tail ? e[0] == null && (Boolean) e[4] : (Integer) e[3] == num) x = e;
+            if (x == null) throw new Exception(d.nome + (tail ? " nao tem espaco livre no fim (#TAIL)." : " nao tem particao nem livre #" + num + ".")
+                    + " Particoes:\n" + d.descreverParticoes());
+            Object[] p = (Object[]) x[0];
+            if (disco && p != null) {                          // disco: montada nao (o Windows nao deixa gravar); EFI so com os 4 numeros
+                byte[] b = new byte[4096];
+                if (pTam(p) >= 4096) d.ler(pOff(p), b, 0, 4096);
+                for (var e : letras.entrySet())
+                    if (java.util.Arrays.equals(e.getValue(), b))
+                        throw new Exception("a particao #" + num + " esta montada como " + e.getKey() + ": e o Windows nao deixa gravar nela; tire a letra antes"
+                                + " (Gerenciamento de Disco > Alterar letra da unidade e caminho > Remover).");
+                byte[] t = new byte[d.setor];                  // montada sem letra: o Windows tambem nega; testa antes da GPT
+                d.ler(pOff(p), t, 0, d.setor);
+                try { d.gravar(pOff(p), t, 0, d.setor); }
+                catch (java.io.IOException e) {
+                    throw new Exception("o Windows nao deixa gravar na particao #" + num + " (" + e.getMessage() + "): o volume dela esta montado,"
+                            + " mesmo sem letra. Nada foi feito.");
+                }
+                if (pTipo(p).equals(T_EFI)) {
+                    String n = String.valueOf(1000 + new java.util.Random().nextInt(9000));
+                    System.out.println("ATENCAO, esse comando e muito grave, cuidado, digite os numeros " + n + " e de enter para prosseguir");
+                    String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
+                    if (r == null || !r.trim().equals(n)) throw new Exception("confirmacao errada; nada foi feito.");
+                }
+            }
+            long ini, max, novo;
+            if (p != null) {                                   // existente: pode crescer ate a proxima particao ou o fim
+                ini = pOff(p);
+                long limite = d.tamanho - d.gptEnt.length - d.setor, fimP = pOff(p) + pTam(p);
+                for (Object[] q : d.particoes()) if (pOff(q) >= fimP && pOff(q) < limite) limite = pOff(q);
+                max = (limite - ini) / MiB * MiB;
+                novo = usarMax ? max : pedido < 0 ? pTam(p) : pedido;
+            } else {                                           // livre: cria a particao nele
+                if ((Integer) x[3] == 0) throw new Exception(d.nome + ": tabela GPT cheia.");
+                ini = (Long) x[1] * d.setor;
+                max = ((Long) x[2] - (Long) x[1] + 1) * d.setor;
+                novo = pedido < 0 ? max : pedido;
+            }
+            String onde = tail ? "#TAIL" : "#" + num;
+            if (novo > Math.max(max, p == null ? 0 : pTam(p)))
+                throw new Exception("nao cabe: " + novo / MiB + " MB, mas a " + onde + " so pode ir ate " + max / MiB + " MB.");
+            String nomeFs = switch (fs) { case "refs" -> "ReFS"; case "ntfs" -> "NTFS"; case "fat32" -> "FAT32"; default -> "exFAT"; };
+            long minimo = switch (fs) { case "refs" -> 1088 * MiB; case "fat32" -> 36 * MiB; default -> 16 * MiB; };
+            if (novo < minimo)
+                throw new Exception("o " + nomeFs + " precisa de pelo menos " + minimo / MiB + " MB; a " + onde + " ficaria com " + mb(novo) + ".");
+            if (p != null && novo != pTam(p)) {
+                put64(d.gptEnt, (pNum(p) - 1) * d.gptTamEnt + 40, ini / d.setor + novo / d.setor - 1);
+                d.escreverGpt();
+            }
+            if (p == null && !d.temGpt) d.criarGpt();          // o livre ja e o que a GPT criada deixa
+            switch (fs) {
+                case "refs" -> d.gerarRefs(ini, novo / 4096 / REFS_BANDA * REFS_BANDA);
+                case "ntfs" -> d.gerarNtfs(ini, novo);
+                case "fat32" -> d.gerarFat32(ini, novo);
+                default -> d.gerarExfat(ini, novo);
+            }
+            if (p == null) d.adicionarParticao((Integer) x[3], ini / d.setor, (ini + novo) / d.setor - 1, T_BASICO, 0, "Basic data partition");
+        } finally { d.fechar(); }
+        if (disco) diskpart("reexaminar os discos", "rescan");   // o Windows passa a ver a particao e o FS novos
+    }
+
+    // ---- ReFS 3.14 (cluster 4 KB). Volume = VBR (cluster 0 e ultimo setor), SUPB (cluster 30, fim-3, fim-2), 2 CHKP
+    // com as 13 arvores (B+ "MSB+" de 16 KB = 4 blocos; enderecos virtuais = container << 15 | deslocamento, menos nas
+    // arvores 7, 8 e 12, que usam o cluster real). Referencia de pagina = 4 blocos + CRC64 dela; SUPB/CHKP = CRC32C.
+    private long refsBase;                                    // offset da particao sendo formatada
+    private java.util.Map<Long, Long> refsCont = new java.util.HashMap<>();     // container -> cluster real
+    private java.util.Map<String, byte[]> refsPags = new java.util.HashMap<>(), refsX = new java.util.HashMap<>();
+    private java.util.Map<String, Long> refsV0 = new java.util.HashMap<>();
+    private byte[] refsUp;
+    private int refsSig;
+    private long refsDeltaT;
+    private final long REFS_BANDA = 0x4000, REFS_BASE = 0x44000;   // clusters: container (64 MB) e a base gerada (1088 MB)
+    private final long REFS_T0 = 0x1DD577E4A51D1BBL, REFS_JANELA = 0x100000000L;  // datas da ESPEC: [T0, T0 + JANELA)
+    private final int REFS_POR_FOLHA = 88;                   // containers por folha na arvore de 2 niveis (como o Windows)
+
+    /**
+     * Gera o ReFS de REFS_BASE clusters em off e estende ate clusters. A base vem da REFS_ESPEC (tirada de um ReFS
+     * recem-formatado pelo Windows 11, 08/10/2026; o que nao se entendeu fica como estava la); calculados aqui:
+     * tabela upcase, enderecos, referencias e CRC64, CHKP, SUPB, VBR, datas (agora) e identidade nova (GUID do volume;
+     * a assinatura de 4 bytes de toda pagina e o XOR das 4 palavras dele; serie do VBR; GUID do log).
+     */
+    private void gerarRefs(long off, long clusters) throws Exception {
+        refsBase = off;
+        refsDeltaT = (System.currentTimeMillis() + 11644473600000L) * 10000 - REFS_T0;
+        refsUp = tabelaUpcase(REFS_UPCASE);
+        String[] linhas = REFS_ESPEC.trim().split("\n");
+        for (String l : linhas) if (l.startsWith("X ")) { String[] c = l.split(" "); refsX.put(c[1], java.util.Arrays.copyOf(refsHex(c[2]), 4096)); }
+        byte[] sb = refsX.get("SUPB"), ck = refsX.get("CHKP"), vbr = refsX.get("VBR");
+        var rnd = new java.security.SecureRandom();
+        byte[] g = new byte[16];
+        rnd.nextBytes(g);
+        System.arraycopy(g, 0, sb, 80, 16);
+        refsSig = le32(g, 0) ^ le32(g, 4) ^ le32(g, 8) ^ le32(g, 12);   // trocar so o GUID o Windows nao monta
+        put32(sb, 12, refsSig);
+        put32(ck, 12, refsSig);
+        byte[] sr = new byte[8];
+        rnd.nextBytes(sr);
+        System.arraycopy(sr, 0, vbr, 56, 8);
+        rnd.nextBytes(g);
+        for (String m : new String[]{"MLOG0", "MLOG1"}) {           // MLog: o checksum em 0x80 fica o da ESPEC (aceito)
+            byte[] x = refsX.get(m), velho = java.util.Arrays.copyOfRange(x, 16, 32);
+            put32(x, 4, refsSig);
+            for (int i = 0; i + 16 <= 4096; i++) if (java.util.Arrays.equals(x, i, i + 16, velho, 0, 16)) System.arraycopy(g, 0, x, i, 16);
+        }
+        long tid = -1;                                            // containers (arvore 7 = tid B) para os virtuais
+        for (String l : linhas) {
+            String[] c = l.split(" ");
+            if (c[0].equals("P")) tid = Long.parseLong(c[5], 16);
+            else if (c[0].equals("R") && tid == 0xB) { byte[] b = refsHex(c[7]); refsCont.put(le64(b, 0), le64(b, 144)); }
+        }
+        String[] raiz = new String[13], pc = null;
+        var regs = new java.util.ArrayList<String[]>();
+        for (String l : linhas) {                                 // paginas: filhas antes das maes
+            String[] c = l.split(" ");
+            switch (c[0]) {
+                case "P" -> { if (pc != null) montarPagRefs(pc, regs); pc = c; regs.clear(); }
+                case "R", "B", "O", "U" -> regs.add(c);
+                case "T" -> { if (pc != null) montarPagRefs(pc, regs); pc = null; regs.clear(); raiz[Integer.parseInt(c[1])] = c[3]; }
+            }
+        }
+        for (var e : refsPags.entrySet()) {
+            long v0 = refsV0.get(e.getKey());
+            boolean virt = le64(e.getValue(), 72) != 0xB && le64(e.getValue(), 72) != 0xC && le64(e.getValue(), 72) != 0x22;
+            for (int i = 0; i < 4; i++) refsGravar(refsReal(v0 + i, virt), e.getValue(), i * 4096, 4096);
+        }
+        int nref = le32(ck, 144), arr = le32(ck, 148), co = le32(sb, 80 + 32);
+        for (int t = 0; t < nref; t++) refsRef(ck, le32(ck, arr + 4 * t), raiz[t]);
+        long meu = le64(ck, 32), rel = le64(ck, 96);
+        for (int i = 0; i < 2; i++) {                             // 2 slots: o da ESPEC com o relogio dela, o outro com -1
+            long l = le64(sb, co + 8 * i);
+            byte[] x = ck.clone();
+            long r = l == meu ? rel : rel - 1;
+            put64(x, 16, r); put64(x, 96, r); put64(x, 32, l);
+            int self = le32(x, 80 + 8);
+            put64(x, self, l);
+            put32(x, self + 40, crc32cRefs(x, self));
+            refsGravar(l, x, 0, 4096);
+        }
+        refsSupbVbr(REFS_BASE);
+        refsGravar(0x8000, refsX.get("MLOG0"), 0, 4096);
+        refsGravar(0x8001, refsX.get("MLOG1"), 0, 4096);
+        if (clusters > REFS_BASE) estenderRefs(clusters);
+    }
+
+    /** SUPB em 30, fim-3 e fim-2; VBR (setores, bytes por setor, checksum) no cluster 0 e no ultimo setor do FS. */
+    private void refsSupbVbr(long fs) throws Exception {
+        byte[] sb = refsX.get("SUPB");
+        for (long l : new long[]{30, fs - 3, fs - 2}) {
+            byte[] x = sb.clone();
+            put64(x, 32, l);
+            int self = le32(x, 80 + 40);
+            put64(x, self, l);
+            put32(x, self + 40, crc32cRefs(x, self));
+            refsGravar(l, x, 0, 4096);
+        }
+        byte[] v = new byte[setor];
+        System.arraycopy(refsX.get("VBR"), 0, v, 0, 512);
+        put32(v, 32, setor);
+        put32(v, 36, 4096 / setor);
+        put64(v, 24, fs * (4096 / setor));
+        int cs = 0;
+        for (int i = 0; i < 512; i++) if (i != 22 && i != 23) cs = (((cs & 1) != 0 ? 0x8000 : 0) + (cs >>> 1) + (v[i] & 0xFF)) & 0xFFFF;
+        put16(v, 22, cs);
+        refsX.put("VBR", v);
+        byte[] c0 = new byte[4096];
+        System.arraycopy(v, 0, c0, 0, setor);
+        refsGravar(0, c0, 0, 4096);
+        gravar(refsBase + fs * 4096 - setor, v, 0, setor);
+    }
+
+    /** P nome v0 c16 c24 tid nivel tipo u24 u28 cab + registros (R/B/O/U da ESPEC) -> pagina de 16 KB. */
+    private void montarPagRefs(String[] c, java.util.List<String[]> regs) {
+        long v0 = Long.parseLong(c[2], 16), tid = Long.parseLong(c[5], 16);
+        byte[] pg = new byte[16384];
+        putAscii(pg, 0, "MSB+");
+        put32(pg, 4, 2);
+        put32(pg, 12, refsSig);
+        put64(pg, 16, Long.parseLong(c[3], 16));
+        put64(pg, 24, Long.parseLong(c[4], 16));
+        for (int i = 0; i < 4; i++) put64(pg, 32 + 8 * i, v0 + i);
+        put64(pg, 72, tid);
+        byte[] cab = refsHex(c[10]);
+        put32(pg, 80, cab.length + 4);
+        System.arraycopy(cab, 0, pg, 84, cab.length);
+        var lista = new java.util.ArrayList<Object[]>();          // {hi, flags, ko, kt, vo, vt, corpo}
+        for (String[] r : regs) {
+            int hi = Integer.parseInt(r[1], 16), fl = Integer.parseInt(r[2]);
+            if (r[0].equals("U")) {                               // upcase: n registros (chave idx+2, pedaco de 341 bytes)
+                int vo = Integer.parseInt(r[3]), vt = Integer.parseInt(r[4]), tam = Integer.parseInt(r[5]), i0 = Integer.parseInt(r[6]);
+                for (int j = 0; j < Integer.parseInt(r[7]); j++) {
+                    byte[] b = new byte[tam - 16];
+                    put32(b, 0, i0 + j + 2);
+                    System.arraycopy(refsUp, (i0 + j) * 341, b, vo - 16, vt);
+                    lista.add(new Object[]{hi, fl, 16, 4, vo, vt, b});
+                }
+                continue;
+            }
+            int ko = Integer.parseInt(r[3]), kt = Integer.parseInt(r[4]), vo = Integer.parseInt(r[5]), vt = Integer.parseInt(r[6]);
+            byte[] b = refsHex(r[7]);
+            if (r[0].equals("B")) refsRef(b, vo - 16, r[8]);
+            if (r[0].equals("O")) refsRef(b, vo - 16 + 32, r[8]);
+            if ((tid == 0x500 || tid == 0x501) && kt == 8 && le64(b, ko - 16) == 0x510) {   // rotulo: vazio
+                vt = 0;
+                b = new byte[(vo + 7) / 8 * 8 - 16];
+                put64(b, ko - 16, 0x510);
+            }
+            for (int j = 0; j + 8 <= b.length; j++) {             // datas da ESPEC -> agora
+                long t = le64(b, j);
+                if (t >= REFS_T0 && t < REFS_T0 + REFS_JANELA) { put64(b, j, t + refsDeltaT); j += 7; }
+            }
+            lista.add(new Object[]{hi, fl, ko, kt, vo, vt, b});
+        }
+        int h = 84 + cab.length;
+        escreverNoRefs(pg, h, Integer.parseInt(c[6]), Integer.parseInt(c[7]), lista);
+        put32(pg, h + 24, (int) Long.parseLong(c[8], 16));
+        put32(pg, h + 28, (int) Long.parseLong(c[9], 16));
+        refsPags.put(c[1], pg);
+        refsV0.put(c[1], v0);
+    }
+
+    /** Referencia de 48 bytes em b[o]: 4 blocos da pagina + CRC64 (o descritor ja vem no corpo). */
+    private void refsRef(byte[] b, int o, String pag) {
+        long v0 = refsV0.get(pag);
+        for (int i = 0; i < 4; i++) put64(b, o + 8 * i, v0 + i);
+        put64(b, o + 40, crc64(refsPags.get(pag)));
+    }
+
+    /**
+     * Estende o ReFS (refsBase) ate novo clusters, no lugar, como o extend do Windows: VBR e SUPB no novo fim,
+     * containers novos (arvores 7/8; mais de 87 = raiz + folhas de 88 no container 5, marcadas no small allocator),
+     * medium allocator (livre + bitmap do fim), CRC64 subindo ate os 2 CHKP (relogios mantidos, por causa do MLog).
+     */
+    private void estenderRefs(long novo) throws Exception {
+        byte[] vbr = refsLer(0, 4096);
+        long velho = le64(vbr, 24) / le32(vbr, 36);
+        byte[] sb = refsLer(30, 4096);
+        int co = le32(sb, 80 + 32);
+        long[] ckL = {le64(sb, co), le64(sb, co + 8)};
+        byte[][] ck = {refsLer(ckL[0], 4096), refsLer(ckL[1], 4096)};
+        int at = Long.compareUnsigned(le64(ck[1], 96), le64(ck[0], 96)) > 0 ? 1 : 0;
+        byte[] c = ck[at];
+        int nref = le32(c, 144), arr = le32(c, 148);
+        int[] ro = new int[nref];
+        for (int i = 0; i < nref; i++) ro[i] = le32(c, arr + 4 * i);
+
+        byte[] p7 = refsPag(c, ro[7], false);
+        if (p7[noRefs(p7) + 12] != 0) throw new Exception("ReFS: arvore de containers com mais de um nivel.");
+        long maxId = 0;
+        byte[] livreC = null, fimC = null;
+        for (byte[][] r : registrosRefs(p7)) {
+            long id = le64(r[1], 0), cl = le64(r[1], 144);
+            refsCont.put(id, cl);
+            if (id > maxId) { maxId = id; livreC = r[1]; }
+            if (cl == velho - REFS_BANDA) fimC = r[1];
+        }
+        if (fimC == null || le32(livreC, 20) != 0x2000) throw new Exception("ReFS: containers modelo nao achados.");
+        var novosC = new java.util.ArrayList<byte[][]>();
+        long id = maxId;
+        for (long cl = velho; cl < novo; cl += REFS_BANDA) {      // o do novo fim e como o do fim antigo (VBR/SUPB)
+            byte[] v = (cl == novo - REFS_BANDA ? fimC : livreC).clone();
+            put64(v, 0, ++id);
+            put64(v, 144, cl);
+            novosC.add(new byte[][]{java.util.Arrays.copyOf(v, 16), v});
+        }
+        var todos = registrosRefs(p7);
+        todos.addAll(novosC);
+        int h7 = noRefs(p7);
+        boolean cabe = todos.size() * 180 <= 16384 - h7 - 40;
+        int folhas = cabe ? 0 : Math.ceilDiv(todos.size(), REFS_POR_FOLHA);
+        if (folhas > (16384 - h7 - 40) / 84) throw new Exception("ReFS: containers demais (" + todos.size() + "); o maximo e perto de 1 TB.");
+        for (int t : new int[]{7, 8}) {
+            byte[] pg = t == 7 ? p7 : refsPag(c, ro[t], false);
+            if (cabe) acrescentarRefs(pg, novosC);
+            else {
+                var galhos = new java.util.ArrayList<Object[]>();
+                for (int f = 0; f < folhas; f++) {
+                    long v0 = 0x4000 + 8L * f + (t == 8 ? 4 : 0);
+                    byte[] fo = new byte[16384];
+                    System.arraycopy(pg, 0, fo, 0, 80);
+                    for (int i = 0; i < 4; i++) put64(fo, 32 + 8 * i, v0 + i);
+                    put32(fo, 80, 8);
+                    var regs = new java.util.ArrayList<Object[]>();
+                    var parte = todos.subList(f * REFS_POR_FOLHA, Math.min(todos.size(), (f + 1) * REFS_POR_FOLHA));
+                    for (byte[][] r : parte) regs.add(new Object[]{0xFFFF, 0, 16, 16, 16, 160, r[1]});
+                    escreverNoRefs(fo, 88, 0, 0, regs);
+                    for (int i = 0; i < 4; i++) refsGravar(v0 + i, fo, i * 4096, 4096);
+                    byte[] ref = new byte[48];
+                    for (int i = 0; i < 4; i++) put64(ref, 8 * i, v0 + i);
+                    ref[34] = 2; ref[35] = 8; ref[36] = 8;             // descritor: CRC64, offset 8, 8 bytes
+                    put64(ref, 40, crc64(fo));
+                    if (f < folhas - 1) {
+                        byte[] corpo = new byte[64];
+                        System.arraycopy(parte.get(parte.size() - 1)[0], 0, corpo, 0, 16);
+                        System.arraycopy(ref, 0, corpo, 16, 48);
+                        galhos.add(new Object[]{0xFFFF, 0, 16, 16, 32, 48, corpo});
+                    } else galhos.add(new Object[]{0, 2, 16, 0, 16, 48, ref});
+                }
+                escreverNoRefs(pg, h7, 1, 3, galhos);
+                put32(pg, 104, folhas);
+            }
+            put32(pg, 112, todos.size());                         // cabecalho da arvore: qtd e maior id
+            put64(pg, 120, id);
+            refsGravarPag(c, ro[t], false, pg);
+        }
+        if (!cabe) {                                              // small allocator: folhas no container 5 (0x4000)
+            byte[] sa = refsPag(c, ro[12], false);
+            int h = noRefs(sa), ks = le32(sa, h + 16), n = le32(sa, h + 20), usados = 8 * folhas;
+            for (int i = 0; i < n; i++) {
+                int r = h + (le32(sa, h + ks + 4 * i) & 0xFFFF), vo = r + le16(sa, r + 10);
+                if (le64(sa, vo) != 0x4000) continue;
+                for (int b = 0; b < usados; b++) sa[vo + 24 + b / 8] |= (byte) (1 << (b % 8));
+                put16(sa, vo + 16, le16(sa, vo + 16) - usados);
+            }
+            put64(sa, 136, le64(sa, 136) - usados);
+            refsGravarPag(c, ro[12], false, sa);
+        }
+
+        // medium allocator (arvore 1, virtual): faixas novas na folha mais a direita
+        var caminho = new java.util.ArrayList<byte[]>();
+        var refs = new java.util.ArrayList<int[]>();
+        byte[] pg = refsPag(c, ro[1], true);
+        caminho.add(pg);
+        while (pg[noRefs(pg) + 12] > 0) {
+            int h = noRefs(pg), ks = le32(pg, h + 16), n = le32(pg, h + 20);
+            int r = h + (le32(pg, h + ks + 4 * (n - 1)) & 0xFFFF), vo = r + le16(pg, r + 10);
+            refs.add(new int[]{caminho.size() - 1, vo});
+            pg = refsPag(pg, vo, true);
+            caminho.add(pg);
+        }
+        byte[] folha = pg, raiz = caminho.get(0), fimVelho = null;
+        for (byte[][] r : registrosRefs(folha)) if (le64(r[0], 0) == velho - REFS_BANDA) fimVelho = r[1];
+        if (fimVelho == null) throw new Exception("ReFS: faixa do fim antigo nao esta na ultima folha do medium allocator.");
+        var novosM = new java.util.ArrayList<byte[][]>();
+        long livre = novo - REFS_BANDA - velho;
+        if (livre > 0) {                                          // livre: u16 livres (satura), 2, 0x200, 0
+            byte[] v = new byte[24];
+            put64(v, 0, velho); put64(v, 8, livre);
+            put16(v, 16, (int) Math.min(livre, 0xFFFF)); put16(v, 18, 2); put16(v, 20, 0x0200);
+            novosM.add(new byte[][]{java.util.Arrays.copyOf(v, 16), v});
+        }
+        byte[] v = fimVelho.clone();                              // o novo fim: mesmo bitmap do fim antigo (VBR/SUPB)
+        put64(v, 0, novo - REFS_BANDA);
+        novosM.add(new byte[][]{java.util.Arrays.copyOf(v, 16), v});
+        long livreFim = le16(fimVelho, 16);
+        acrescentarRefs(folha, novosM);
+        put32(raiz, 112, le32(raiz, 112) + novosM.size());       // qtd, total, livre, usado
+        put64(raiz, 128, novo);
+        put64(raiz, 136, le64(raiz, 136) + livre + livreFim);
+        put64(raiz, 152, le64(raiz, 152) + REFS_BANDA - livreFim);
+        for (int i = caminho.size() - 1; i > 0; i--) {            // de baixo para cima: o CRC64 vai no pai
+            int[] rf = refs.get(i - 1);
+            refsGravarPag(caminho.get(rf[0]), rf[1], true, caminho.get(i));
+        }
+        refsGravarPag(c, ro[1], true, raiz);
+
+        // os 2 slots com o conteudo novo e os relogios de antes: o cabecalho do MLog (+0xF4) aponta o relogio do CHKP mais
+        // velho; subir o relogio (como o extend do Windows faz, com log) deixa o MLog sem o CHKP dele e o Windows ignora o
+        // log ao montar (evento 138, "erro na soma de verificacao")
+        for (int s : new int[]{at, 1 - at}) {
+            byte[] x = c.clone();
+            long r2 = le64(ck[s], 96);
+            put64(x, 16, r2); put64(x, 96, r2); put64(x, 32, ckL[s]);
+            int self = le32(x, 80 + 8);
+            put64(x, self, ckL[s]);
+            put32(x, self + 40, crc32cRefs(x, self));
+            refsGravar(ckL[s], x, 0, 4096);
+        }
+        if (refsX.get("SUPB") == null) refsX.put("SUPB", sb);
+        if (refsX.get("VBR") == null) refsX.put("VBR", vbr);
+        refsSupbVbr(novo);
+    }
+
+    /** Registros de folha de uma arvore inteira (desce pelos galhos). */
+    private java.util.List<byte[][]> refsFolhas(byte[] ref, int o, boolean virt) throws java.io.IOException {
+        byte[] pg = refsPag(ref, o, virt);
+        if (pg[noRefs(pg) + 12] == 0) return registrosRefs(pg);
+        var out = new java.util.ArrayList<byte[][]>();
+        int h = noRefs(pg), ks = le32(pg, h + 16), n = le32(pg, h + 20);
+        for (int i = 0; i < n; i++) {
+            int r = h + (le32(pg, h + ks + 4 * i) & 0xFFFF);
+            out.addAll(refsFolhas(pg, r + le16(pg, r + 10), virt));
+        }
+        return out;
+    }
+
+    private long refsReal(long v, boolean virt) {
+        if (!virt) return v;
+        Long i = refsCont.get(v >>> 15);
+        if (i == null) throw new IllegalStateException("ReFS: endereco virtual sem container: " + v);
+        return i + (v & 0x7FFF);
+    }
+
+    private byte[] refsLer(long cl, int n) throws java.io.IOException { byte[] b = new byte[n]; ler(refsBase + cl * 4096, b, 0, n); return b; }
+
+    private void refsGravar(long cl, byte[] b, int o, int n) throws java.io.IOException { gravar(refsBase + cl * 4096, b, o, n); }
+
+    /** Pagina de 16 KB pela referencia de 48 bytes em ref[o]. */
+    private byte[] refsPag(byte[] ref, int o, boolean virt) throws java.io.IOException {
+        byte[] p = new byte[16384];
+        for (int i = 0; i < 4; i++) ler(refsBase + refsReal(le64(ref, o + 8 * i), virt) * 4096, p, i * 4096, 4096);
+        return p;
+    }
+
+    /** Grava a pagina nos blocos da referencia e poe o CRC64 dela na referencia (no pai). */
+    private void refsGravarPag(byte[] ref, int o, boolean virt, byte[] p) throws java.io.IOException {
+        for (int i = 0; i < 4; i++) refsGravar(refsReal(le64(ref, o + 8 * i), virt), p, i * 4096, 4096);
+        put64(ref, o + 40, crc64(p));
+    }
+
+    /** CRC-64/NVME (poly 0xAD93D23594C93659 refletido, init e xorout ~0): checksum das paginas do ReFS. */
+    private long crc64(byte[] b) {
+        long c = -1, rp = Long.reverse(0xAD93D23594C93659L);
+        for (byte x : b) { c ^= x & 0xFF; for (int k = 0; k < 8; k++) c = (c & 1) != 0 ? (c >>> 1) ^ rp : c >>> 1; }
+        return ~c;
+    }
+
+    /** SUPB/CHKP: CRC32C dos primeiros 4096 bytes com a auto-referencia (48 bytes em self) zerada. */
+    private int crc32cRefs(byte[] b, int self) {
+        byte[] q = java.util.Arrays.copyOf(b, 4096);
+        java.util.Arrays.fill(q, self, self + 48, (byte) 0);
+        return crc32c(q);
+    }
+
+    /** Hex da ESPEC: "~N." = N bytes zero. */
+    private byte[] refsHex(String s) {
+        var o = new java.io.ByteArrayOutputStream();
+        for (int i = 0; i < s.length(); ) {
+            if (s.charAt(i) == '~') { int p = s.indexOf('.', i), n = Integer.parseInt(s.substring(i + 1, p)); o.write(new byte[n], 0, n); i = p + 1; }
+            else { o.write(Integer.parseInt(s.substring(i, i + 2), 16)); i += 2; }
+        }
+        return o.toByteArray();
+    }
+
+    // no MSB+: em 80 o offset do no (relativo a 80); no: +4 fim dos dados, +8 livre, +12 nivel, +13 tipo, +16 inicio
+    // do vetor de offsets, +20 qtd, +32 tamanho do no; registro: +0 tam, +4/+6 chave, +8 flags, +10/+12 valor
+    private int noRefs(byte[] p) { return 80 + le32(p, 80); }
+
+    private java.util.List<byte[][]> registrosRefs(byte[] p) {
+        int h = noRefs(p), ks = le32(p, h + 16), n = le32(p, h + 20);
+        var out = new java.util.ArrayList<byte[][]>();
+        for (int i = 0; i < n; i++) {
+            int r = h + (le32(p, h + ks + 4 * i) & 0xFFFF), ko = r + le16(p, r + 4), vo = r + le16(p, r + 10);
+            out.add(new byte[][]{java.util.Arrays.copyOfRange(p, ko, ko + le16(p, r + 6)), java.util.Arrays.copyOfRange(p, vo, vo + le16(p, r + 12))});
+        }
+        return out;
+    }
+
+    /** Registros novos no fim do no (chaves maiores), com chave = 16 primeiros bytes do valor (container, faixa). */
+    private void acrescentarRefs(byte[] p, java.util.List<byte[][]> novos) throws Exception {
+        int h = noRefs(p), dend = le32(p, h + 4), ks = le32(p, h + 16), n = le32(p, h + 20);
+        int[] offs = new int[n];
+        for (int i = 0; i < n; i++) offs[i] = le32(p, h + ks + 4 * i);
+        int precisa = 0;
+        for (byte[][] r : novos) precisa += 16 + r[0].length + r[1].length + 4;
+        if (dend + precisa > ks) throw new Exception("ReFS: no cheio.");
+        int nks = ks - 4 * novos.size(), k = n;
+        java.util.Arrays.fill(p, h + nks, h + ks, (byte) 0);
+        for (int i = 0; i < n; i++) put32(p, h + nks + 4 * i, offs[i]);
+        for (byte[][] r : novos) {
+            int tam = 16 + r[0].length + r[1].length, o = h + dend;
+            put32(p, o, tam); put16(p, o + 4, 16); put16(p, o + 6, r[0].length); put16(p, o + 8, 0);
+            put16(p, o + 10, 16 + r[0].length); put16(p, o + 12, r[1].length); put16(p, o + 14, 0);
+            System.arraycopy(r[0], 0, p, o + 16, r[0].length);
+            System.arraycopy(r[1], 0, p, o + 16 + r[0].length, r[1].length);
+            put32(p, h + nks + 4 * k++, 0xFFFF0000 | dend);
+            dend += tam;
+        }
+        put32(p, h + 4, dend);
+        put32(p, h + 8, nks - dend);
+        put32(p, h + 16, nks);
+        put32(p, h + 20, n + novos.size());
+    }
+
+    /** Reescreve o no em h com os registros {hi, flags, ko, kt, vo, vt, corpo} (corpo = bytes 16.. do registro). */
+    private void escreverNoRefs(byte[] p, int h, int nivel, int tipo, java.util.List<Object[]> regs) {
+        java.util.Arrays.fill(p, h, 16384, (byte) 0);
+        int n = regs.size(), ks = 16384 - h - 4 * n, d = 40;
+        for (int i = 0; i < n; i++) {
+            Object[] r = regs.get(i);
+            byte[] b = (byte[]) r[6];
+            int o = h + d;
+            put32(p, o, 16 + b.length);
+            put16(p, o + 4, (Integer) r[2]); put16(p, o + 6, (Integer) r[3]); put16(p, o + 8, (Integer) r[1]);
+            put16(p, o + 10, (Integer) r[4]); put16(p, o + 12, (Integer) r[5]);
+            System.arraycopy(b, 0, p, o + 16, b.length);
+            put32(p, h + ks + 4 * i, (Integer) r[0] << 16 | d);
+            d += 16 + b.length;
+        }
+        put32(p, h, 40); put32(p, h + 4, d); put32(p, h + 8, ks - d);
+        p[h + 12] = (byte) nivel; p[h + 13] = (byte) tipo;
+        put32(p, h + 16, ks); put32(p, h + 20, n); put32(p, h + 32, 16384 - h);   // +32 zerado: "pagina invalida"
+    }
+
+    // tabela upcase do Windows (a do Java difere em 443 posicoes e muda com a versao do JDK): inicio:qtd:delta
+    private final String REFS_UPCASE = """
+        61:1A:-32 E0:17:-32 F8:7:-32 101:30:-1,0 133:6:-1,0 139:10:0,-1 14B:2C:-1,0 177:1:-1 178:1:-121 179:6:0,-1
+        183:4:-1,0 188:1:-1 18C:1:-1 192:1:-1 199:1:-1 1A1:6:-1,0 1A8:1:-1 1AD:1:-1 1B0:1:-1 1B4:4:-1,0 1B9:1:-1
+        1BD:1:-1 1C6:1:-2 1C9:1:-2 1CC:1:-2 1CD:10:0,-1 1DD:1:-79 1DE:12:0,-1 1F3:1:-2 1F5:1:-1 1F6:1:-97 1F7:1:-56
+        1F8:28:0,-1 220:1:-130 223:12:-1,0 23C:1:-1 23D:1:-163 242:1:-1 243:1:-195 247:A:-1,0 253:1:-210 254:1:-206
+        256:2:-205 259:1:-202 25B:1:-203 260:1:-205 263:1:-207 268:1:-209 269:1:-211 26F:1:-211 272:1:-213 275:1:-214
+        280:1:-218 283:1:-218 288:1:-218 289:1:-69 28A:2:-217 28C:1:-71 292:1:-219 371:4:-1,0 377:1:-1 3AC:1:-38
+        3AD:3:-37 3B1:11:-32 3C3:9:-32 3CC:1:-64 3CD:2:-63 3D7:1:-8 3D8:18:0,-1 3F8:1:-1 3F9:1:-7 3FB:1:-1 3FD:3:-130
+        430:20:-32 450:10:-80 460:22:0,-1 48B:36:-1,0 4C1:E:0,-1 4CF:1:-15 4D0:54:0,-1 561:26:-48 1E01:96:-1,0
+        1EA1:60:-1,0 1F08:8:-8 1F18:6:-8 1F28:8:-8 1F38:8:-8 1F48:6:-8 1F59:8:-8,0 1F68:8:-8 1F88:8:-8 1F98:8:-8
+        1FA8:8:-8 1FB8:2:-8 1FBA:2:-74 1FBC:1:-9 1FC8:4:-86 1FCC:1:-9 1FD8:2:-8 1FDA:2:-100 1FE8:2:-8 1FEA:2:-112
+        1FEC:1:-7 1FF8:2:-128 1FFA:2:-126 1FFC:1:-9 214E:1:-28 2170:10:-16 2184:1:-1 24D0:1A:-26 2C30:2F:-48
+        2C61:1:-1 2C62:1:-10743 2C63:1:-3814 2C64:1:-10727 2C65:1:-10795 2C66:1:-10792 2C67:6:0,-1 2C6D:1:-10780
+        2C6E:1:-10749 2C6F:1:-10783 2C73:1:-1 2C76:1:-1 2C81:64:-1,0 2D00:26:-7264 A641:20:-1,0 A663:C:-1,0
+        A681:18:-1,0 A723:E:-1,0 A733:3E:-1,0 A77A:1:-1 A77C:1:-1 A77D:1:-35332 A77E:A:0,-1 A78C:1:-1 FF41:1A:-32
+        """;
+
+    // ESPEC do ReFS base (1088 MB): P pagina, R/B/O/U registros, T raiz da arvore N, X VBR/SUPB/CHKP/MLog (ver Tira.java
+    private final String REFS_ESPEC = """
+        X VBR 00000052654653~9.4653525300021257000022~6.02000008000000030E020066~11.C1524AA66E4AA69200000004~4.44D86029648595479E18B4BAC906E2CA~424.
+        X SUPB 5355504202~7.4EFE0B9E~16.1E~47.BA82D014EB88D24785BA28B39A4E217E~8.01~7.C000000002000000D000000030~67.040B~6.AC82~6.1E~33.010804000000EB46DED3~3844.
+        X CHKP 43484B5002~7.4EFE0B9E1A~15.AC82~46.03000E0003000E00E0000000300000001A~7.17~7.0F000000010000008206~14.80030000200000000D000000A800000038~15.100100004001000070010000A0010000D001000000020000300200006002000090020000C0020000F0020000200300005003~6.AC82~32.010804000000A6F8EBAB~4.043201~5.053201~5.063201~5.073201~7.02080800000072C8D37DC66F20CC003405~5.013405~5.023405~5.033405~7.020808000000555FCB8F68B02FD6041605~5.051605~5.061605~5.071605~7.02080800000093AD6E3092DCE093148001~5.158001~5.168001~5.178001~7.020808000000C90C6B0C29EB2D2E002201~5.012201~5.022201~5.032201~7.020808000000590DA3C7AEFFBE6F082601~5.092601~5.0A2601~5.0B2601~7.020808000000290FB8721CB1B4CD0C0005~5.0D0005~5.0E0005~5.0F0005~7.020808000000857F051166488F6728~7.29~7.2A~7.2B~9.02080800000047082F1913159E2A2C~7.2D~7.2E~7.2F~9.020808000000FE731FDF99E4E742188001~5.198001~5.1A8001~5.1B8001~7.020808000000CAFF724FF5CCE0C2048001~5.058001~5.068001~5.078001~7.0208080000009A1D0BFF0F630BEC080005~5.090005~5.0A0005~5.0B0005~7.020808000000885541BC58CB88EB24~7.25~7.26~7.27~9.0208080000007EC9BDAE3EFA688B~3200.
+        X MLOG0 4D4C6F674EFE0B9E01~4.1000002B59A78F1329144DB8F1CE8162AE3D6D02~23.0100000001~23.78~43.07AC65F9~20.480E~6.38~7.01~7.15~8.C0~7.C001~5.0F000000010000000F000000010000002B59A78F1329144DB8F1CE8162AE3D6D02000000010000000100000019~3851.
+        X MLOG1 4D4C6F674EFE0B9E01~4.1000002B59A78F1329144DB8F1CE8162AE3D6D02~23.0100000001~23.78~43.07AC65F9~20.480E~6.38~7.01~7.14~8.C0~7.C001~5.0F000000010000000F000000010000002B59A78F1329144DB8F1CE8162AE3D6D02000000010000000100000018~3851.
+        P p2 1802C 0 1 7 0 0 0 0 ~4.
+        R ffff 0 16 4 24 12 ~8.557063617365205461626C65~4.
+        R ffff 0 16 4 24 4 01~9.01~5.
+        U ffff 0 24 341 368 0 42
+        P p3 18030 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 42 42
+        P p4 18038 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 84 42
+        P p5 18040 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 126 42
+        P p6 18048 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 168 42
+        P p7 18050 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 210 42
+        P p8 18058 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 252 42
+        P p9 18060 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 294 42
+        P p10 18068 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 336 42
+        P p11 18070 0 1 7 0 0 0 0 ~4.
+        U ffff 0 24 341 368 378 6
+        U ffff 0 24 128 152 384 1
+        P p1 18020 0 1 7 1 3 0 0 280000000100000090E0000090E00000020000000A~7.8301~78.
+        B ffff 0 16 4 24 48 2B~7.2C8001~5.2D8001~5.2E8001~5.2F8001~7.02080800000035AAB8403897C936 p2
+        B ffff 0 16 4 24 48 55~7.308001~5.318001~5.328001~5.338001~7.02080800000068FDA0E5CCB58A90 p3
+        B ffff 0 16 4 24 48 7F~7.388001~5.398001~5.3A8001~5.3B8001~7.0208080000005C01CE9F9A2E716F p4
+        B ffff 0 16 4 24 48 A9~7.408001~5.418001~5.428001~5.438001~7.020808000000527D48487DE285D2 p5
+        B ffff 0 16 4 24 48 D3~7.488001~5.498001~5.4A8001~5.4B8001~7.02080800000042DC34C87F9D3A93 p6
+        B ffff 0 16 4 24 48 FD~7.508001~5.518001~5.528001~5.538001~7.0208080000009C1DF62911E768DF p7
+        B ffff 0 16 4 24 48 2701~6.588001~5.598001~5.5A8001~5.5B8001~7.0208080000005032755E048FCC33 p8
+        B ffff 0 16 4 24 48 5101~6.608001~5.618001~5.628001~5.638001~7.0208080000003ADC610698DE510E p9
+        B ffff 0 16 4 24 48 7B01~6.688001~5.698001~5.6A8001~5.6B8001~7.020808000000983267D94480CC1D p10
+        B 0 2 16 0 16 48 708001~5.718001~5.728001~5.738001~7.0208080000006B5F9710B0364311 p11
+        P p13 18024 0 1 8 0 0 0 0 ~4.
+        R ffff 0 16 4 24 12 ~8.557063617365205461626C65~4.
+        R ffff 0 16 4 24 4 01~9.01~5.
+        U ffff 0 24 341 368 0 42
+        P p14 18028 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 42 42
+        P p15 18034 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 84 42
+        P p16 1803C 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 126 42
+        P p17 18044 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 168 42
+        P p18 1804C 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 210 42
+        P p19 18054 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 252 42
+        P p20 1805C 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 294 42
+        P p21 18064 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 336 42
+        P p22 1806C 0 1 8 0 0 0 0 ~4.
+        U ffff 0 24 341 368 378 6
+        U ffff 0 24 128 152 384 1
+        P p12 1801C 0 1 8 1 3 0 0 280000000100000090E0000090E00000020000000A~7.8301~78.
+        B ffff 0 16 4 24 48 2B~7.248001~5.258001~5.268001~5.278001~7.0208080000001E5265E50B90728F p13
+        B ffff 0 16 4 24 48 55~7.288001~5.298001~5.2A8001~5.2B8001~7.0208080000005C87B91201388114 p14
+        B ffff 0 16 4 24 48 7F~7.348001~5.358001~5.368001~5.378001~7.0208080000002A3D877882429094 p15
+        B ffff 0 16 4 24 48 A9~7.3C8001~5.3D8001~5.3E8001~5.3F8001~7.02080800000079CF5E139E3A7799 p16
+        B ffff 0 16 4 24 48 D3~7.448001~5.458001~5.468001~5.478001~7.02080800000034E07D2F67F1DB68 p17
+        B ffff 0 16 4 24 48 FD~7.4C8001~5.4D8001~5.4E8001~5.4F8001~7.020808000000F5A37B9CF7013919 p18
+        B ffff 0 16 4 24 48 2701~6.548001~5.558001~5.568001~5.578001~7.020808000000260E3CB91CE32DC8 p19
+        B ffff 0 16 4 24 48 5101~6.5C8001~5.5D8001~5.5E8001~5.5F8001~7.0208080000006D666516822D61B3 p20
+        B ffff 0 16 4 24 48 7B01~6.648001~5.658001~5.668001~5.678001~7.020808000000EE0E2E3E5CEC2DE6 p21
+        B 0 2 16 0 16 48 6C8001~5.6D8001~5.6E8001~5.6F8001~7.02080800000002E11AA556D012D7 p22
+        P p23 18078 0 3 9 0 2 0 0 280000000100000090E0000090E0000002~11.02~79.
+        R ffff 0 16 4 24 25 ~8.4C6F6766696C6520496E666F726D6174696F6E205461626C65~7.
+        R ffff 0 16 4 24 48 01~8.C0~7.C001~7.01~6.80~6.0180~14.
+        P p24 18074 0 3 A 0 2 0 0 280000000100000090E0000090E0000002~11.02~79.
+        R ffff 0 16 4 24 25 ~8.4C6F6766696C6520496E666F726D6174696F6E205461626C65~7.
+        R ffff 0 16 4 24 48 01~8.C0~7.C001~7.01~6.80~6.0180~14.
+        P p25 1807C 0 5 D 0 2 0 0 2800000001000000D0E00000D0E0000002~211.
+        P p26 13C00 14 2 30 0 2 0 0 280000000100000030E1000030E1000002~531.
+        P p27 12E04 C 1 500 0 2 0 0 2800010001000000500100005001000002~11.03~199.
+        R ffff 0 16 8 24 6 1005~6.6C00610062000000
+        R ffff 0 16 8 24 448 2005~134.030E030E~12.BBD1514A7E57DD01~8.01C3564A7E57DD01~280.
+        R ffff 0 16 8 24 16 4005~6.23~7.01~7.
+        P p28 13800 C 1 501 0 2 0 0 2800010001000000500100005001000002~11.03~199.
+        R ffff 0 16 8 24 6 1005~6.6C00610062000000
+        R ffff 0 16 8 24 448 2005~134.030E030E~12.BBD1514A7E57DD01~8.01C3564A7E57DD01~280.
+        R ffff 0 16 8 24 16 4005~6.23~7.01~7.
+        P p29 10600 6 8 520 0 2 0 0 2800010001000000300100003001000002~11.01~71.
+        R ffff 1 16 4 24 488 10~7.A80000002800010001000000F0010000F001000002~11.02~7.4D005A4A7E57DD014D005A4A7E57DD014D005A4A7E57DD014D005A4A7E57DD01~8.0525902001~67.01~15.280000003801~7.0200003801000002~11.4001~6.5800000010004800000018004000000040~7.0200008039000D000006~14.460069006C0065002000530079007300740065006D0020004D006500740061006400610074006100B800000010001800000028008C0000008C~7.020000809000050024004900330030~5.800000000C000000300000004002010016000000100000007000000070~111.2800FFFF8000FFFF
+        P p30 10200 D 1 530 0 2 0 0 2800010001000000400100004001000002~11.05~199.
+        R ffff 0 16 16 32 88 58~7.01000000629BA30A629BA30A0100000058000000010004903000000040~7.1400000002001C0001~4.031400FF011F000101~5.05120000000102~5.0520000000200200000101~5.0512000000
+        R ffff 0 16 16 32 112 70~7.0100000005259020052590200100000070000000010004804800000058~7.140000000200340002~5.1400FF011F000101~5.0512~5.1800FF011F000102~5.0520000000200200000102~5.0520000000200200000101~5.0512000000
+        R ffff 0 16 16 32 84 54~7.01000000F506D323F506D323010000005400000001000480300000003C~7.1400000002001C0001~5.1400FF011F000101~5.05120000000101~5.05120000000101~5.0512~7.
+        R ffff 0 16 16 32 84 54~7.01000000B587D323B587D323010000005400000001000490300000003C~7.1400000002001C0001~4.031400FF011F000101~5.05120000000101~5.05120000000101~5.0512~7.
+        R ffff 0 16 16 32 220 DC~7.010000001B2D7E481B2D7E4801000000DC00000001000480B4000000C4~7.140000000200A00007~4.031800FF011F000102~5.05200000002002~4.1400FF011F000101~5.0512~4.0B14~4.100101~5.0512~5.1400BF0113000101~5.050B~4.0B1400000001E00101~5.050B~5.1800A90012000102~5.052000000021020000000B18~4.A00102~5.0520000000210200000102~5.0520000000200200000101~5.0512~7.
+        P p31 12604 6 6 540 0 2 0 0 2800010001000000600100006001000002~211.
+        P p32 10204 6 6 541 0 2 0 0 2800010001000000600100006001000002~211.
+        P p33 12600 E 1 600 0 2 0 0 2800010001000000300100003001000002~11.02~71.
+        R ffff 1 16 4 24 456 10~7.A80000002800010001000000F0010000F001000002~11.02~7.4D005A4A7E57DD015C855D4A7E57DD015C855D4A7E57DD015C855D4A7E57DD01~8.1B2D7E4801~67.01~15.280000001801~7.0200001801000002~11.2001~6.3800000010002200000018001A0000001A~7.0200008039000D000006~14.2E~7.B800000010001800000028008C0000008C~7.020000809000050024004900330030~5.800000000C000000300000004002010016000000100000007000000070~111.2800FFFF6000FFFF
+        R ffff 0 16 54 72 84 30000200530079007300740065006D00200056006F006C0075006D006500200049006E0066006F0072006D006100740069006F006E~11.0107~6.5C855D4A7E57DD01A691624B7E57DD01A691624B7E57DD01A691624B7E57DD01~16.06000010~20.
+        P p34 13200 E 1 701 0 2 0 0 2800010001000000300100003001000002~11.05~71.
+        R ffff 1 16 4 24 504 10~7.A80000002800010001000000F0010000F001000002~11.02~7.5C855D4A7E57DD01A691624B7E57DD01A691624B7E57DD01A691624B7E57DD0106~7.629BA30A01~67.01~15.280000004801~7.0200004801000002~11.5001~6.6800000010005200000018004A0000004A~7.0200008039000D000006~14.530079007300740065006D00200056006F006C0075006D006500200049006E0066006F0072006D006100740069006F006E~7.B800000010001800000028008C0000008C~7.020000809000050024004900330030~5.800000000C000000300000004002010016000000100000007000000070~111.2800FFFF9000FFFF
+        R ffff 0 16 24 40 40 20000080~4.02~23.0C001C0057005000530065007400740069006E00670073002E00640061007400
+        R ffff 0 16 24 40 48 20000080~4.03~23.0C00220049006E006400650078006500720056006F006C0075006D00650047007500690064000000
+        R ffff 1 16 38 56 392 3000010049006E006400650078006500720056006F006C0075006D00650047007500690064000000A80000002800010001000000E0010000E001000002~11.01~7.A691624B7E57DD01A691624B7E57DD01A691624B7E57DD01A691624B7E57DD012000000008000000F506D323010000004C~7.50~31.03~23.01~15.28000000D800000004~4.020000DC00000001~11.E0~7.B000000010001000000020008C0000008C~7.0100008080~7.800000000C00000030~11.50~7.4C~7.4C~7.50~7.020000007B00450034004100330035003500410045002D0041004200330036002D0034004100330046002D0041003800410045002D003400460034003200360035004200420030003600330038007D~13.2800FFFF
+        R ffff 1 16 32 48 328 3000010057005000530065007400740069006E00670073002E00640061007400A80000002800010001000000E0010000E001000002~11.01~7.5C855D4A7E57DD01E3D55D4A7E57DD01E3D55D4A7E57DD01E3D55D4A7E57DD012000000008000000F506D323010000000C~7.10~31.02~23.01~15.280000009800000004~4.0200009C00000001~11.A0~7.7000000010001000000020004C0000004C~7.0100008080~7.400000000C00000030~11.10~7.0C~7.0C~7.10~7.020000000C0000005681A6EA6907D6AA~12.2800FFFF
+        P p0 13204 15 0 2 0 2 0 0 280000000100000030E0000030E0000002~11.0E~7.01~15.0107~494.
+        O ffff 0 16 16 32 80 ~8.07~7.02~7.180000003000000050~15.208001~5.218001~5.228001~5.238001~7.0208080000009263912C461049C0 p1
+        O ffff 0 16 16 32 80 ~8.08~7.02~7.180000003000000050~15.1C8001~5.1D8001~5.1E8001~5.1F8001~7.0208080000002D35309AAB6402E0 p12
+        O ffff 0 16 16 32 80 ~8.09~7.02~7.180000003000000050~15.788001~5.798001~5.7A8001~5.7B8001~7.0208080000005FCC97D812E76FB2 p23
+        O ffff 0 16 16 32 80 ~8.0A~7.02~7.180000003000000050~15.748001~5.758001~5.768001~5.778001~7.0208080000005391ED65057658CF p24
+        O ffff 0 16 16 32 80 ~8.0D~7.02~7.180000003000000050~7.02~7.7C8001~5.7D8001~5.7E8001~5.7F8001~7.0208080000009844748FAA450C88 p25
+        O ffff 0 16 16 32 80 ~8.30~7.02~7.180000003000000050~7.0F00000001~4.3C01~5.013C01~5.023C01~5.033C01~7.02080800000012187BA6F59C0A3C p26
+        O ffff 0 16 16 32 80 ~9.05~6.02~7.180000003000000050~7.0900000001000000042E01~5.052E01~5.062E01~5.072E01~7.020808000000855FFEE342E93B98 p27
+        O ffff 0 16 16 32 80 ~8.0105~6.02~7.180000003000000050~7.0900000001~4.3801~5.013801~5.023801~5.033801~7.02080800000071146E3E1DD7260F p28
+        O ffff 0 16 16 32 88 ~8.2005~6.02~7.180000003000000050000000080000000800000001~4.0601~5.010601~5.020601~5.030601~7.0208080000004729219146356FCB0005~6. p29
+        O ffff 0 16 16 32 80 ~8.3005~6.02~7.180000003000000050~7.0D00000001~4.0201~5.010201~5.020201~5.030201~7.020808000000B39E00E50CCCB214 p30
+        O ffff 0 16 16 32 80 ~8.4005~6.02~7.180000003000000050~7.0800000001000000042601~5.052601~5.062601~5.072601~7.020808000000C1CFA607A7A23614 p31
+        O ffff 0 16 16 32 80 ~8.4105~6.02~7.180000003000000050~7.0800000001000000040201~5.050201~5.060201~5.070201~7.020808000000D7BD2556BCB3C2D1 p32
+        O ffff 0 16 16 32 88 ~9.06~6.02~7.180000003000000050000000080000000F00000001~4.2601~5.012601~5.022601~5.032601~7.020808000000320B208CDA05E21401~7. p33
+        O ffff 0 16 16 32 88 ~8.0107~6.02~7.180000003000000050000000080000000F00000001~4.3201~5.013201~5.023201~5.033201~7.0208080000002E3A29D86CF885A203~7. p34
+        T 0 raiz p0
+        P p36 51008 16 0 21 0 4 0 0 ~4.
+        R ffff 0 16 16 16 2072 ~9.40~6.9C3F010018026400FFFFFFFFFFFF~58.FF~127.0F~159.F0~735.0F~127.FF0F~254.F0~127.FF~191.0F~127.0F~127.
+        R ffff 0 16 16 16 24 0040~7.40~8.02000002FFFF
+        R ffff 0 16 16 16 2072 0080~7.40~6.883F010018027800FF00F0FFFFFFFFFFFFFFFFFFFFFFFFFF~69.F0~1962.
+        R ffff 0 16 16 16 24 00C0~8.01~7.02000002FFFF
+        R ffff 0 16 16 16 24 00C001~6.40~8.02000002FFFF
+        R ffff 0 16 16 16 24 000002~6.40~8.02000002FFFF
+        R ffff 0 16 16 16 2072 004002~6.40~7.4005001802~2050.
+        P p37 50014 1 0 21 0 4 0 0 ~4.
+        R ffff 0 16 16 16 2072 008002~6.40~7.4009001802~2050.
+        R ffff 0 16 16 16 2072 00C002~6.40~7.4009001802~2050.
+        R ffff 0 16 16 16 2072 000003~6.40~7.4009001802~2050.
+        R ffff 0 16 16 16 2072 004003~6.40~7.4009001802~2050.
+        R ffff 0 16 16 16 24 008003~6.80~7.80020000020000
+        R ffff 0 16 16 16 2072 000004~6.40~6.FC3F0100180204~2048.F0
+        P p35 53400 16 0 21 1 15 27FFE 0 280010E00100000010E0000010E000000200000002~7.0D~7.02~8.4004~5.207F02~13.E0C001~7.01~6.10~15.80~6.29000080~7.C003~5.2901~420.
+        B 1 0 16 16 32 48 FF7F02~5.01~7.081005~5.091005~5.0A1005~5.0B1005~7.0208080000003522321D34EC9C9B p36
+        B ffff 2 16 0 16 48 140005~5.150005~5.160005~5.170005~7.0208080000009BB19EA5B68B2540 p37
+        T 1 raiz p35
+        P p38 51604 16 0 20 0 14 1BFFF 0 280010E00100000010E0000010E0000002~11.02~16.80~6.E87F~494.
+        R 1 0 16 16 16 2072 00C001~6.40~6.E83F01001801640000FFF0~510.0F~190.F0~959.0F~383.
+        R 4001 0 16 16 16 2072 000002~6.40~7.4001001801~2050.
+        T 2 raiz p38
+        P p39 18014 1 0 1 0 2 0 0 280000000100000060E0000060E0000002~11.1D~207.
+        R ffff 0 16 4 24 80 1001~6.5000000018~19.380000000900000001000000100100001001~6.9001000080~8.4000000010000001000000010000004B000000
+        R ffff 0 16 4 24 80 2001~6.5000000018~19.380000000B00000001000000200100002001~6.6001000060~8.400000001000000E000000010000004B000000
+        R ffff 0 16 4 24 80 3001~6.5000000018~19.380000000900000001000000300100003001~10.40~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 4001~6.5000000018~19.380000000100000001000000400100004001~10.C0~8.4000000010000081000000010000004B000000
+        R ffff 0 16 4 24 80 5001~6.5000000018~19.380000000100000001000000500100005001~10.C0~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 6001~6.5000000018~19.380000000900000001000000600100006001~10.C0~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 7001~6.5000000018~19.380000000900000001000000700100007001~6.9001000080~8.4000000010000009000000010000004B000000
+        R ffff 0 16 4 24 80 8001~6.5000000018~19.380000000900000001000000800100008001~6.8002000080~8.4000000010000001000000010000004B000000
+        R ffff 0 16 4 24 80 9001~6.5000000018~19.380000000900000001000000900100009001~6.8002000080~8.4000000010000009000000010000004B000000
+        R ffff 0 16 4 24 80 A001~6.5000000018~19.380000000B00000001000000A0010000A001~6.7801000060~8.400000001000000E000000010000004B000000
+        R ffff 0 16 4 24 80 B001~6.5000000018~19.380000000900000001000000B0010000B001~6.2003000080~8.4000000010000001000000010000004B000000
+        R ffff 0 16 4 24 80 C001~6.5000000018~19.380000000F00000001000000C0010000C001~6.2003000080~8.4000000010000001000000010000004B000000
+        R ffff 0 16 4 24 80 D001~6.5000000018~19.380000000F00000001000000D0010000D001~6.8002000080~8.4000000010000009000000010000004B000000
+        R ffff 0 16 4 24 80 E001~6.5000000018~19.380000000F00000001000000E0010000E001~6.2003000080~8.4000000010000001100000010000004B000000
+        R ffff 0 16 4 24 80 F001~6.5000000018~19.380000000F00000001000000F0010000F001~6.8002000080~8.4000000010000001100000010000004B000000
+        R ffff 0 16 4 24 80 0002~6.5000000018~19.380000000B00000001~4.0200000002~6.7801000060~8.400000001000000E100000010000004B000000
+        R ffff 0 16 4 24 80 10E0~6.5000000018~19.380000000300000010E0000010E0000010E00000FFFFFFFF~5.02~7.4000000010000032000000010000004B000000
+        R ffff 0 16 4 24 80 30E0~6.5000000018~19.3800000006~7.30E0000030E00000FFFFFFFF~5.02~7.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 40E0~6.5000000018~19.3800000008~7.40E0000040E0~11.02~7.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 60E0~6.5000000018~19.3800000002~7.60E0000060E0~10.C8~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 80E0~6.5000000018~19.3800000003~7.80E0000080E0~11.02~7.4000000010000042000000010000004B000000
+        R ffff 0 16 4 24 80 90E0~6.5000000018~19.3800000002~7.90E0000090E0~10.48~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 B0E0~6.5000000018~19.3800000003~7.B0E00000B0E0~11.02~7.4000000010000042000000010000004B000000
+        R ffff 0 16 4 24 80 C0E0~6.5000000018~19.380000000A~7.C0E00000C0E0~11.02~7.4000000010000000050000010000004B000000
+        R ffff 0 16 4 24 80 D0E0~6.5000000018~19.3800000006~7.D0E00000D0E0~10.C0~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 00E1~6.5000000018~19.380000000A~8.E1000000E1~11.02~7.4000000010000000020000010000004B000000
+        R ffff 0 16 4 24 80 10E1~6.5000000018~19.3800000001~7.10E1000010E1~11.02~7.4000000010~5.80010000004B000000
+        R ffff 0 16 4 24 80 20E1~6.5000000018~19.3800000010~7.20E1000020E1~11.02~7.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 30E1~6.5000000018~19.3800000011~7.30E1000030E1~11.02~7.4000000010~6.010000004B000000
+        T 3 raiz p39
+        P p40 12200 F 0 3 0 2 0 0 280000000100000040E0000040E0000002~11.02~519.
+        R ffff 0 16 32 16 32 ~9.06~14.2005~6.
+        R ffff 0 16 32 16 32 ~9.06~14.0107~6.
+        T 4 raiz p40
+        P p41 12608 15 0 4 0 2 0 0 280000000100000030E0000030E0000002~11.0E~7.01~15.0107~494.
+        R ffff 0 16 16 32 80 ~8.07~7.02~7.180000003000000050~15.208001~5.218001~5.228001~5.238001~7.0208080000009263912C461049C0
+        R ffff 0 16 16 32 80 ~8.08~7.02~7.180000003000000050~15.1C8001~5.1D8001~5.1E8001~5.1F8001~7.0208080000002D35309AAB6402E0
+        R ffff 0 16 16 32 80 ~8.09~7.02~7.180000003000000050~15.788001~5.798001~5.7A8001~5.7B8001~7.0208080000005FCC97D812E76FB2
+        R ffff 0 16 16 32 80 ~8.0A~7.02~7.180000003000000050~15.748001~5.758001~5.768001~5.778001~7.0208080000005391ED65057658CF
+        R ffff 0 16 16 32 80 ~8.0D~7.02~7.180000003000000050~7.02~7.7C8001~5.7D8001~5.7E8001~5.7F8001~7.0208080000009844748FAA450C88
+        R ffff 0 16 16 32 80 ~8.30~7.02~7.180000003000000050~7.0F00000001~4.3C01~5.013C01~5.023C01~5.033C01~7.02080800000012187BA6F59C0A3C
+        R ffff 0 16 16 32 80 ~9.05~6.02~7.180000003000000050~7.0900000001000000042E01~5.052E01~5.062E01~5.072E01~7.020808000000855FFEE342E93B98
+        R ffff 0 16 16 32 80 ~8.0105~6.02~7.180000003000000050~7.0900000001~4.3801~5.013801~5.023801~5.033801~7.02080800000071146E3E1DD7260F
+        R ffff 0 16 16 32 88 ~8.2005~6.02~7.180000003000000050000000080000000800000001~4.0601~5.010601~5.020601~5.030601~7.0208080000004729219146356FCB0005~6.
+        R ffff 0 16 16 32 80 ~8.3005~6.02~7.180000003000000050~7.0D00000001~4.0201~5.010201~5.020201~5.030201~7.020808000000B39E00E50CCCB214
+        R ffff 0 16 16 32 80 ~8.4005~6.02~7.180000003000000050~7.0800000001000000042601~5.052601~5.062601~5.072601~7.020808000000C1CFA607A7A23614
+        R ffff 0 16 16 32 80 ~8.4105~6.02~7.180000003000000050~7.0800000001000000040201~5.050201~5.060201~5.070201~7.020808000000D7BD2556BCB3C2D1
+        R ffff 0 16 16 32 88 ~9.06~6.02~7.180000003000000050000000080000000F00000001~4.2601~5.012601~5.022601~5.032601~7.020808000000320B208CDA05E21401~7.
+        R ffff 0 16 16 32 88 ~8.0107~6.02~7.180000003000000050000000080000000F00000001~4.3201~5.013201~5.023201~5.033201~7.0208080000002E3A29D86CF885A203~7.
+        T 5 raiz p41
+        P p42 5000C 1 0 5 0 6 0 0 2800000001000000B0E00000B0E0000002~531.
+        T 6 raiz p42
+        P p43 28 1 0 B 0 2 0 0 2800000001000000C0E00000C0E0000002~11.11~7.12~8.FFFFFFFF7F0000004001~13.04~7.0F~47.01~31.80970600140000005802~382.
+        R ffff 0 16 16 16 160 02~11.010000000100000001~4.40~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~76.40~6.
+        R ffff 0 16 16 16 160 03~11.010000000100000001~4.40~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.80~7.40~6.
+        R ffff 0 16 16 16 160 04~11.010000000100000001~4.40~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~69.04~6.40~6.
+        R ffff 0 16 16 16 160 05~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.40~7.40~6.
+        R ffff 0 16 16 16 160 06~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.C0~7.40~6.
+        R ffff 0 16 16 16 160 07~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~69.01~6.40~6.
+        R ffff 0 16 16 16 160 08~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.4001~6.40~6.
+        R ffff 0 16 16 16 160 09~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.8001~6.40~6.
+        R ffff 0 16 16 16 160 0A~11.0100000001~4.4200000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.C001~6.40~6.
+        R ffff 0 16 16 16 160 0B~11.0100000001~4.4200000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~69.02~6.40~6.
+        R ffff 0 16 16 16 160 0C~11.0100000001000000402000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.4002~6.40~6.
+        R ffff 0 16 16 16 160 0D~11.0100000001000000402400000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.8002~6.40~6.
+        R ffff 0 16 16 16 160 0E~11.0100000001000000402400000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.C002~6.40~6.
+        R ffff 0 16 16 16 160 0F~11.0100000001000000402400000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~69.03~6.40~6.
+        R ffff 0 16 16 16 160 10~11.0100000001000000402400000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.4003~6.40~6.
+        R ffff 0 16 16 16 160 11~11.0100000001~4.2000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.8003~6.40~6.
+        R ffff 0 16 16 16 160 12~11.0100000001~4.2000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.C003~6.40~6.
+        T 7 raiz p43
+        P p44 2C 1 0 C 0 2 0 0 2800000001000000C0E00000C0E0000002~11.11~7.12~8.FFFFFFFF7F0000004001~13.04~7.0F~47.01~31.80970600140000005802~382.
+        R ffff 0 16 16 16 160 02~11.010000000100000001~4.40~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~76.40~6.
+        R ffff 0 16 16 16 160 03~11.010000000100000001~4.40~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.80~7.40~6.
+        R ffff 0 16 16 16 160 04~11.010000000100000001~4.40~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~69.04~6.40~6.
+        R ffff 0 16 16 16 160 05~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.40~7.40~6.
+        R ffff 0 16 16 16 160 06~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.C0~7.40~6.
+        R ffff 0 16 16 16 160 07~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~69.01~6.40~6.
+        R ffff 0 16 16 16 160 08~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.4001~6.40~6.
+        R ffff 0 16 16 16 160 09~11.0100000001000000014000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.8001~6.40~6.
+        R ffff 0 16 16 16 160 0A~11.0100000001~4.4200000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.C001~6.40~6.
+        R ffff 0 16 16 16 160 0B~11.0100000001~4.4200000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~69.02~6.40~6.
+        R ffff 0 16 16 16 160 0C~11.0100000001000000402000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.4002~6.40~6.
+        R ffff 0 16 16 16 160 0D~11.0100000001000000402400000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.8002~6.40~6.
+        R ffff 0 16 16 16 160 0E~11.0100000001000000402400000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.C002~6.40~6.
+        R ffff 0 16 16 16 160 0F~11.0100000001000000402400000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~69.03~6.40~6.
+        R ffff 0 16 16 16 160 10~11.0100000001000000402400000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.4003~6.40~6.
+        R ffff 0 16 16 16 160 11~11.0100000001~4.2000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.8003~6.40~6.
+        R ffff 0 16 16 16 160 12~11.0100000001~4.2000000040~6.FFFFFFFFFFFFFFFFFFFFFFFF~32.01~68.C003~6.40~6.
+        T 8 raiz p44
+        P p45 18018 1 0 6 0 2 0 0 280000000100000060E0000060E0000002~11.1D~207.
+        R ffff 0 16 4 24 80 1001~6.5000000018~19.380000000900000001000000100100001001~6.9001000080~8.4000000010000001000000010000004B000000
+        R ffff 0 16 4 24 80 2001~6.5000000018~19.380000000B00000001000000200100002001~6.6001000060~8.400000001000000E000000010000004B000000
+        R ffff 0 16 4 24 80 3001~6.5000000018~19.380000000900000001000000300100003001~10.40~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 4001~6.5000000018~19.380000000100000001000000400100004001~10.C0~8.4000000010000081000000010000004B000000
+        R ffff 0 16 4 24 80 5001~6.5000000018~19.380000000100000001000000500100005001~10.C0~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 6001~6.5000000018~19.380000000900000001000000600100006001~10.C0~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 7001~6.5000000018~19.380000000900000001000000700100007001~6.9001000080~8.4000000010000009000000010000004B000000
+        R ffff 0 16 4 24 80 8001~6.5000000018~19.380000000900000001000000800100008001~6.8002000080~8.4000000010000001000000010000004B000000
+        R ffff 0 16 4 24 80 9001~6.5000000018~19.380000000900000001000000900100009001~6.8002000080~8.4000000010000009000000010000004B000000
+        R ffff 0 16 4 24 80 A001~6.5000000018~19.380000000B00000001000000A0010000A001~6.7801000060~8.400000001000000E000000010000004B000000
+        R ffff 0 16 4 24 80 B001~6.5000000018~19.380000000900000001000000B0010000B001~6.2003000080~8.4000000010000001000000010000004B000000
+        R ffff 0 16 4 24 80 C001~6.5000000018~19.380000000F00000001000000C0010000C001~6.2003000080~8.4000000010000001000000010000004B000000
+        R ffff 0 16 4 24 80 D001~6.5000000018~19.380000000F00000001000000D0010000D001~6.8002000080~8.4000000010000009000000010000004B000000
+        R ffff 0 16 4 24 80 E001~6.5000000018~19.380000000F00000001000000E0010000E001~6.2003000080~8.4000000010000001100000010000004B000000
+        R ffff 0 16 4 24 80 F001~6.5000000018~19.380000000F00000001000000F0010000F001~6.8002000080~8.4000000010000001100000010000004B000000
+        R ffff 0 16 4 24 80 0002~6.5000000018~19.380000000B00000001~4.0200000002~6.7801000060~8.400000001000000E100000010000004B000000
+        R ffff 0 16 4 24 80 10E0~6.5000000018~19.380000000300000010E0000010E0000010E00000FFFFFFFF~5.02~7.4000000010000032000000010000004B000000
+        R ffff 0 16 4 24 80 30E0~6.5000000018~19.3800000006~7.30E0000030E00000FFFFFFFF~5.02~7.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 40E0~6.5000000018~19.3800000008~7.40E0000040E0~11.02~7.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 60E0~6.5000000018~19.3800000002~7.60E0000060E0~10.C8~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 80E0~6.5000000018~19.3800000003~7.80E0000080E0~11.02~7.4000000010000042000000010000004B000000
+        R ffff 0 16 4 24 80 90E0~6.5000000018~19.3800000002~7.90E0000090E0~10.48~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 B0E0~6.5000000018~19.3800000003~7.B0E00000B0E0~11.02~7.4000000010000042000000010000004B000000
+        R ffff 0 16 4 24 80 C0E0~6.5000000018~19.380000000A~7.C0E00000C0E0~11.02~7.4000000010000000050000010000004B000000
+        R ffff 0 16 4 24 80 D0E0~6.5000000018~19.3800000006~7.D0E00000D0E0~10.C0~8.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 00E1~6.5000000018~19.380000000A~8.E1000000E1~11.02~7.4000000010000000020000010000004B000000
+        R ffff 0 16 4 24 80 10E1~6.5000000018~19.3800000001~7.10E1000010E1~11.02~7.4000000010~5.80010000004B000000
+        R ffff 0 16 4 24 80 20E1~6.5000000018~19.3800000010~7.20E1000020E1~11.02~7.4000000010~6.010000004B000000
+        R ffff 0 16 4 24 80 30E1~6.5000000018~19.3800000011~7.30E1000030E1~11.02~7.4000000010~6.010000004B000000
+        T 9 raiz p45
+        P p46 18004 1 0 E 0 2 0 0 2800000001~4.E1000000E1000002~531.
+        T 10 raiz p46
+        P p47 50008 1 0 F 0 14 0 0 280000000100000080E0000080E0000002~11.01~519.
+        R 0 0 16 16 16 24 ~9.4004~5.FFFF020000010000
+        T 11 raiz p47
+        P p48 24 1 0 22 0 14 23 0 280010E00100000010E0000010E0000002~11.02~15.0C40~7.40~494.
+        R 1 0 16 16 16 32 24~7.0C~9.010018010000FFFF~6.
+        R 3fdd 0 16 16 16 2072 0040~7.40~7.4001001801~2050.
+        T 12 raiz p48
+        """;
+
+    // ---- NTFS 3.1 (cluster 4 KB; registro da MFT de 1 KB, ou 4 KB em disco de setor 4096; fixup a cada 512 bytes)
+
+    /**
+     * NTFS vazio em off (bytes): boot (copia no ultimo setor da particao), $MFT (64 clusters perto de 1/3 do volume, no
+     * maximo em 3 GB, como o Windows) com $LogFile e $Bitmap logo antes, $MFTMirr, $LogFile limpo (2 paginas de restart
+     * com LSN 0, resto 0xFF, como o mkntfs), $Volume, $AttrDef, raiz, $Boot, $BadClus, $Secure (os 8 descritores do
+     * format do Windows 11), $UpCase, $Extend ($ObjId, $Quota, $Reparse). O Windows cria o resto ao montar.
+     */
+    private void gerarNtfs(long off, long bytes) throws Exception {
+        final int cl = 4096, rec = Math.max(1024, setor), nrec = 64 * cl / rec;
+        long setores = bytes / setor - 1, total = setores * setor / cl;
+        long t = (System.currentTimeMillis() + 11644473600000L) * 10000;
+        int mirrCl = Math.ceilDiv(4 * rec, cl);
+        long mirr = 2, up = mirr + mirrCl, attrDef = up + 32, raizIdx = attrDef + 1, mftBmp = raizIdx + 1, sds = mftBmp + 1, sdhIdx = sds + 65;
+        long inicioFim = sdhIdx + 1;
+        long logCl = Math.max(512, Math.min(16384, total / 256)), bmpReal = Math.ceilDiv(total, 64) * 8, bmpCl = Math.ceilDiv(bmpReal, cl);
+        long mft = Math.max(inicioFim + logCl + bmpCl, Math.min(786432, total / 3)), bmp = mft - bmpCl, log = bmp - logCl;
+        if (mft + 64 > total) throw new Exception("particao pequena demais para o NTFS.");
+        byte[] upc = tabelaUpcase(NTFS_UPCASE);
+        var rnd = new java.security.SecureRandom();
+
+        // boot (setor 0 do $Boot) e copia no ultimo setor da particao
+        byte[] boot = new byte[8192];
+        boot[0] = (byte) 0xEB; boot[1] = 0x52; boot[2] = (byte) 0x90;
+        putAscii(boot, 3, "NTFS    ");
+        put16(boot, 0x0B, setor);
+        boot[0x0D] = (byte) (cl / setor);
+        boot[0x15] = (byte) 0xF8;
+        put16(boot, 0x18, 63); put16(boot, 0x1A, 255);
+        put32(boot, 0x1C, (int) (off / setor));
+        put32(boot, 0x24, 0x00800080);
+        put64(boot, 0x28, setores);
+        put64(boot, 0x30, mft);
+        put64(boot, 0x38, mirr);
+        boot[0x40] = (byte) (rec >= cl ? rec / cl : -Integer.numberOfTrailingZeros(rec));
+        boot[0x44] = 1;
+        put64(boot, 0x48, rnd.nextLong());
+        boot[0x1FE] = 0x55; boot[0x1FF] = (byte) 0xAA;
+
+        // $Secure: descritores ($SDS, com espelho em 256 KB) e os indices $SII (id) e $SDH (hash, id)
+        byte[] sd = refsHex(NTFS_SDS);
+        var sii = new java.util.ArrayList<byte[]>();
+        var sdh = new java.util.TreeMap<Long, byte[]>();
+        for (int o = 0; o < sd.length; o = (o + le32(sd, o + 16) + 15) / 16 * 16) {
+            byte[] cab = java.util.Arrays.copyOfRange(sd, o, o + 20), k1 = new byte[4], k2 = new byte[8];
+            put32(k1, 0, le32(sd, o + 4));
+            put32(k2, 0, le32(sd, o)); put32(k2, 4, le32(sd, o + 4));
+            sii.add(ntfsEntradaVista(k1, cab, 0x28, 0));
+            byte[] e = ntfsEntradaVista(k2, cab, 0x30, 0);
+            put32(e, 0x2C, 0x00490049);                           // "II": enchimento que o Windows poe no $SDH
+            sdh.put((le32(sd, o) & 0xFFFFFFFFL) << 32 | (le32(sd, o + 4) & 0xFFFFFFFFL), e);
+        }
+        sii.add(ntfsEntradaVista(new byte[0], new byte[0], 16, 2));
+        var sdhL = new java.util.ArrayList<>(sdh.values());
+        sdhL.add(ntfsEntradaVista(new byte[0], new byte[0], 16, 2));
+        byte[] sdsDados = new byte[65 * cl];
+        System.arraycopy(sd, 0, sdsDados, 0, sd.length);
+        System.arraycopy(sd, 0, sdsDados, 0x40000, sd.length);
+
+        // registros da MFT
+        long tamUp = 131072;
+        byte[][] regs = new byte[nrec][];
+        String[] nomes = {"$MFT", "$MFTMirr", "$LogFile", "$Volume", "$AttrDef", ".", "$Bitmap", "$Boot", "$BadClus", "$Secure", "$UpCase", "$Extend"};
+        long[][] tam = {{64 * cl, 64 * cl}, {mirrCl * cl, 4 * rec}, {logCl * cl, logCl * cl}, {0, 0}, {cl, 2560}, {0, 0}, {bmpCl * cl, bmpReal},
+                {8192, 8192}, {0, 0}, {0, 0}, {tamUp, tamUp}, {0, 0}};
+        int[] fnFlags = {6, 6, 6, 6, 6, 0x10000006, 6, 6, 6, 0x20000006, 6, 0x10000006};
+        byte[][] fn = new byte[12][];
+        for (int i = 0; i < 12; i++) fn[i] = ntfsFn(ntfsRef(5, 5), t, tam[i][0], tam[i][1], fnFlags[i], nomes[i], 3);
+        byte[] fim3 = ntfsEntrada(0, new byte[0], 3, 0), fim = ntfsEntrada(0, new byte[0], 2, 0);
+        regs[0] = ntfsReg(rec, 0, 1, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, 0x100), false), ntfsRes(0x30, "", fn[0], true),
+                ntfsNaoRes(0x80, "", new long[][]{{mft, 64}}, 64L * cl, 64L * cl), ntfsNaoRes(0xB0, "", new long[][]{{mftBmp, 1}}, nrec / 8, nrec / 8));
+        regs[1] = ntfsReg(rec, 1, 1, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, 0x100), false), ntfsRes(0x30, "", fn[1], true),
+                ntfsNaoRes(0x80, "", new long[][]{{mirr, mirrCl}}, 4 * rec, 4 * rec));
+        regs[2] = ntfsReg(rec, 2, 2, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, 0x100), false), ntfsRes(0x30, "", fn[2], true),
+                ntfsNaoRes(0x80, "", new long[][]{{log, logCl}}, logCl * cl, logCl * cl));
+        byte[] info = new byte[12];
+        info[8] = 3; info[9] = 1;                                 // versao 3.1
+        regs[3] = ntfsReg(rec, 3, 3, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, 0x101), false), ntfsRes(0x30, "", fn[3], true),
+                ntfsRes(0x60, "", new byte[0], false), ntfsRes(0x70, "", info, false), ntfsRes(0x80, "", new byte[0], false));
+        regs[4] = ntfsReg(rec, 4, 4, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, 0x100), false), ntfsRes(0x30, "", fn[4], true),
+                ntfsNaoRes(0x80, "", new long[][]{{attrDef, 1}}, 2560, 2560));
+        byte[] um = new byte[8];
+        um[0] = 1;
+        regs[5] = ntfsReg(rec, 5, 5, 1, 3, ntfsRes(0x10, "", ntfsSi(t, 6, -1), false), ntfsRes(0x30, "", fn[5], true),
+                ntfsRes(0x50, "", refsHex(NTFS_SD_RAIZ), false), ntfsRes(0x90, "$I30", ntfsRaiz(0x30, 1, 1, fim3), false),
+                ntfsNaoRes(0xA0, "$I30", new long[][]{{raizIdx, 1}}, cl, cl), ntfsRes(0xB0, "$I30", um, false));
+        regs[6] = ntfsReg(rec, 6, 6, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, 0x100), false), ntfsRes(0x30, "", fn[6], true),
+                ntfsNaoRes(0x80, "", new long[][]{{bmp, bmpCl}}, bmpReal, bmpReal));
+        regs[7] = ntfsReg(rec, 7, 7, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, -1), false), ntfsRes(0x30, "", fn[7], true),
+                ntfsRes(0x50, "", refsHex(NTFS_SD_BOOT), false), ntfsNaoRes(0x80, "", new long[][]{{0, 2}}, 8192, 8192));
+        regs[8] = ntfsReg(rec, 8, 8, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, 0x100), false), ntfsRes(0x30, "", fn[8], true),
+                ntfsRes(0x80, "", new byte[0], false), ntfsNaoRes(0x80, "$Bad", new long[][]{{-1, total}}, total * cl, 0));
+        regs[9] = ntfsReg(rec, 9, 9, 1, 9, ntfsRes(0x10, "", ntfsSi(t, 0x20000006, 0x101), false), ntfsRes(0x30, "", fn[9], true),
+                ntfsNaoRes(0x80, "$SDS", new long[][]{{sds, 65}}, 0x40000 + sd.length, 0x40000 + sd.length),
+                ntfsRes(0x90, "$SDH", ntfsRaiz(0, 0x12, 1, ntfsEntradaVista(new byte[0], new byte[0], 24, 3)), false),
+                ntfsRes(0x90, "$SII", ntfsRaiz(0, 0x10, 0, sii.toArray(new byte[0][])), false),
+                ntfsNaoRes(0xA0, "$SDH", new long[][]{{sdhIdx, 1}}, cl, cl), ntfsRes(0xB0, "$SDH", um, false));
+        regs[10] = ntfsReg(rec, 10, 10, 1, 1, ntfsRes(0x10, "", ntfsSi(t, 6, 0x100), false), ntfsRes(0x30, "", fn[10], true),
+                ntfsNaoRes(0x80, "", new long[][]{{up, 32}}, tamUp, tamUp), ntfsRes(0x80, "$Info", refsHex(NTFS_UPCASE_INFO), false));
+        String[] ext = {"$ObjId", "$Quota", "$Reparse"};
+        int[] extReg = {25, 24, 26};
+        byte[][] extFn = new byte[3][], extE = new byte[4][];
+        for (int i = 0; i < 3; i++) {
+            extFn[i] = ntfsFn(ntfsRef(11, 11), t, 0, 0, 0x20000006, ext[i], 0);
+            extE[i] = ntfsEntrada(ntfsRef(extReg[i], 1), extFn[i], 0, 0);
+        }
+        extE[3] = fim;
+        regs[11] = ntfsReg(rec, 11, 11, 1, 3, ntfsRes(0x10, "", ntfsSi(t, 6, 0x101), false), ntfsRes(0x30, "", fn[11], true),
+                ntfsRes(0x90, "$I30", ntfsRaiz(0x30, 1, 0, extE), false));
+        for (int i = 12; i < 16; i++)
+            regs[i] = ntfsReg(rec, i, i, 0, 1, ntfsRes(0x10, "", ntfsSi(t, 6, -1), false), ntfsRes(0x50, "", refsHex(NTFS_SD_RESERV), false),
+                    ntfsRes(0x80, "", new byte[0], false));
+        byte[] q = refsHex(NTFS_QUOTA_Q), vaziaO = ntfsRaiz(0, 0x13, 0, ntfsEntradaVista(new byte[0], new byte[0], 16, 2));
+        for (int j = 0; j + 8 <= q.length; j++) if (le64(q, j) == 0x01DD5788903292C3L) put64(q, j, t);
+        regs[24] = ntfsReg(rec, 24, 1, 1, 0xD, ntfsRes(0x10, "", ntfsSi(t, 0x20000006, 0x101), false), ntfsRes(0x30, "", extFn[1], true),
+                ntfsRes(0x90, "$O", refsHex(NTFS_QUOTA_O), false), ntfsRes(0x90, "$Q", q, false));
+        regs[25] = ntfsReg(rec, 25, 1, 1, 0xD, ntfsRes(0x10, "", ntfsSi(t, 0x20000006, 0x101), false), ntfsRes(0x30, "", extFn[0], true),
+                ntfsRes(0x90, "$O", vaziaO, false));
+        regs[26] = ntfsReg(rec, 26, 1, 1, 0xD, ntfsRes(0x10, "", ntfsSi(t, 0x20000006, 0x101), false), ntfsRes(0x30, "", extFn[2], true),
+                ntfsRes(0x90, "$R", vaziaO, false));
+
+        // raiz: as 12 entradas num bloco INDX (ordem do $UpCase), a raiz so aponta para ele
+        var raiz = new java.util.TreeMap<String, byte[]>((a, b) -> {
+            for (int i = 0; i < Math.min(a.length(), b.length()); i++) {
+                int x = le16(upc, 2 * a.charAt(i)), y = le16(upc, 2 * b.charAt(i));
+                if (x != y) return x - y;
+            }
+            return a.length() - b.length();
+        });
+        for (int i = 0; i < 12; i++) raiz.put(nomes[i], ntfsEntrada(ntfsRef(i, i < 2 ? 1 : i), fn[i], 0, 0));
+        var raizL = new java.util.ArrayList<>(raiz.values());
+        raizL.add(fim);
+
+        // grava: o $MFT inteiro (o que sobra zerado), espelho, indices, $AttrDef, $UpCase, $SDS, $Bitmap, $LogFile, boot
+        byte[] mftDados = new byte[64 * cl];
+        for (int i = 0; i < nrec; i++) if (regs[i] != null) System.arraycopy(regs[i], 0, mftDados, i * rec, rec);
+        byte[] bm = new byte[nrec / 8];
+        for (int i = 0; i < nrec; i++) if (regs[i] != null) bm[i / 8] |= (byte) (1 << (i % 8));
+        byte[] mb1 = new byte[cl];
+        System.arraycopy(bm, 0, mb1, 0, bm.length);
+        byte[] bits = new byte[(int) (bmpCl * cl)];
+        for (long[] f : new long[][]{{0, inicioFim}, {log, mft + 64}, {total, bmpReal * 8}})
+            for (long c = f[0]; c < f[1]; c++) bits[(int) (c >>> 3)] |= (byte) (1 << (c & 7));
+        byte[] mirrDados = new byte[mirrCl * cl];
+        System.arraycopy(mftDados, 0, mirrDados, 0, 4 * rec);
+        gravar(off, boot, 0, 8192);
+        gravar(off + mirr * cl, mirrDados, 0, mirrDados.length);
+        gravar(off + up * cl, upc, 0, upc.length);
+        gravar(off + attrDef * cl, ntfsAttrDef(), 0, cl);
+        gravar(off + raizIdx * cl, ntfsIndx(raizL.toArray(new byte[0][])), 0, cl);
+        gravar(off + mftBmp * cl, mb1, 0, cl);
+        gravar(off + sds * cl, sdsDados, 0, sdsDados.length);
+        gravar(off + sdhIdx * cl, ntfsIndx(sdhL.toArray(new byte[0][])), 0, cl);
+        byte[] ff = new byte[(int) (Math.min(logCl, 256) * cl)];
+        java.util.Arrays.fill(ff, (byte) 0xFF);
+        for (long c = 0; c < logCl; c += 256) gravar(off + (log + c) * cl, ff, 0, (int) (Math.min(256, logCl - c) * cl));
+        byte[] rst = ntfsRestart(logCl * cl, rnd.nextInt());
+        gravar(off + log * cl, rst, 0, cl);
+        gravar(off + log * cl + cl, rst, 0, cl);
+        gravar(off + bmp * cl, bits, 0, bits.length);
+        gravar(off + mft * cl, mftDados, 0, mftDados.length);
+        gravar(off + bytes - setor, boot, 0, setor);
+    }
+
+    /** Pagina de restart do $LogFile limpo (versao 1.1, LSN 0, volume limpo), com fixups. */
+    private byte[] ntfsRestart(long tamLog, int abertura) {
+        byte[] p = new byte[4096];
+        putAscii(p, 0, "RSTR");
+        put16(p, 4, 0x1E); put16(p, 6, 9);
+        put32(p, 0x10, 4096); put32(p, 0x14, 4096);
+        put16(p, 0x18, 0x30); put16(p, 0x1A, 1); put16(p, 0x1C, 1);
+        put16(p, 0x38, 1); put16(p, 0x3A, 0xFFFF); put16(p, 0x3C, 0); put16(p, 0x3E, 2);    // 1 cliente, livre, limpo
+        put32(p, 0x40, 67 - (64 - Long.numberOfLeadingZeros(tamLog)));                      // bits do numero de sequencia
+        put16(p, 0x44, 0xE0); put16(p, 0x46, 0x40);
+        put64(p, 0x48, tamLog);
+        put16(p, 0x54, 0x30); put16(p, 0x56, 0x40);
+        put32(p, 0x58, abertura);
+        put16(p, 0x80, 0xFFFF); put16(p, 0x82, 0xFFFF);                                       // cliente "NTFS"
+        put32(p, 0x8C, 8);
+        putUtf16(p, 0x90, "NTFS");
+        ntfsFixup(p, 0x1E);
+        return p;
+    }
+
+    /** $AttrDef: nome, tipo, regra de exibicao, colacao, flags, minimo, maximo (160 bytes cada; o ultimo zerado). */
+    private byte[] ntfsAttrDef() {
+        String[] n = {"$STANDARD_INFORMATION", "$ATTRIBUTE_LIST", "$FILE_NAME", "$OBJECT_ID", "$SECURITY_DESCRIPTOR", "$VOLUME_NAME",
+                "$VOLUME_INFORMATION", "$DATA", "$INDEX_ROOT", "$INDEX_ALLOCATION", "$BITMAP", "$REPARSE_POINT", "$EA_INFORMATION", "$EA",
+                "$LOGGED_UTILITY_STREAM"};
+        long[][] v = {{0x10, 0, 0x40, 48, 72}, {0x20, 0, 0x80, 0, -1}, {0x30, 0, 0x42, 68, 578}, {0x40, 0, 0x40, 0, 256}, {0x50, 0, 0x80, 0, -1},
+                {0x60, 0, 0x40, 2, 256}, {0x70, 0, 0x40, 12, 12}, {0x80, 0, 0, 0, -1}, {0x90, 0, 0x40, 0, -1}, {0xA0, 0, 0x80, 0, -1},
+                {0xB0, 0, 0x80, 0, -1}, {0xC0, 0, 0x80, 0, 16384}, {0xD0, 0, 0x40, 8, 8}, {0xE0, 0, 0, 0, 65536}, {0x100, 0, 0x80, 0, 65536}};
+        byte[] b = new byte[4096];
+        for (int i = 0; i < n.length; i++) {
+            putUtf16(b, 160 * i, n[i]);
+            put32(b, 160 * i + 128, (int) v[i][0]);
+            put32(b, 160 * i + 136, (int) v[i][1]);
+            put32(b, 160 * i + 140, (int) v[i][2]);
+            put64(b, 160 * i + 144, v[i][3]);
+            put64(b, 160 * i + 152, v[i][4]);
+        }
+        return b;
+    }
+
+    private long ntfsRef(long reg, int seq) { return reg | (long) seq << 48; }
+
+    /** $STANDARD_INFORMATION: 4 datas, atributos; secId < 0 = forma de 48 bytes (arquivo com $SECURITY_DESCRIPTOR). */
+    private byte[] ntfsSi(long t, int attrs, int secId) {
+        byte[] v = new byte[secId < 0 ? 48 : 72];
+        for (int i = 0; i < 4; i++) put64(v, 8 * i, t);
+        put32(v, 32, attrs);
+        if (secId >= 0) put32(v, 52, secId);
+        return v;
+    }
+
+    /** $FILE_NAME: pai, 4 datas, tamanhos, flags, nome (ns 3 = Win32 e DOS; 0 = POSIX). */
+    private byte[] ntfsFn(long pai, long t, long aloc, long real, int flags, String nome, int ns) {
+        byte[] v = new byte[66 + 2 * nome.length()];
+        put64(v, 0, pai);
+        for (int i = 0; i < 4; i++) put64(v, 8 + 8 * i, t);
+        put64(v, 40, aloc); put64(v, 48, real); put32(v, 56, flags);
+        v[64] = (byte) nome.length(); v[65] = (byte) ns;
+        putUtf16(v, 66, nome);
+        return v;
+    }
+
+    /** Atributo residente (id preenchido pelo ntfsReg). */
+    private byte[] ntfsRes(int tipo, String nome, byte[] valor, boolean indexado) {
+        int nl = nome.length(), vo = (0x18 + 2 * nl + 7) / 8 * 8, tam = (vo + valor.length + 7) / 8 * 8;
+        byte[] a = new byte[tam];
+        put32(a, 0, tipo); put32(a, 4, tam); a[9] = (byte) nl; put16(a, 10, 0x18);
+        put32(a, 16, valor.length); put16(a, 20, vo); a[22] = (byte) (indexado ? 1 : 0);
+        putUtf16(a, 0x18, nome);
+        System.arraycopy(valor, 0, a, vo, valor.length);
+        return a;
+    }
+
+    /** Atributo nao residente: runs {lcn, clusters} (lcn -1 = esparso); real e init em bytes. */
+    private byte[] ntfsNaoRes(int tipo, String nome, long[][] runs, long real, long init) {
+        var r = new java.io.ByteArrayOutputStream();
+        long ant = 0, vcns = 0;
+        for (long[] x : runs) {
+            byte[] qt = ntfsNum(x[1], true), d = x[0] < 0 ? new byte[0] : ntfsNum(x[0] - ant, true);   // o Windows le os dois com sinal
+            r.write(qt.length | d.length << 4);
+            r.writeBytes(qt);
+            r.writeBytes(d);
+            if (x[0] >= 0) ant = x[0];
+            vcns += x[1];
+        }
+        r.write(0);
+        byte[] rb = r.toByteArray();
+        int nl = nome.length(), ro = (0x40 + 2 * nl + 7) / 8 * 8, tam = (ro + rb.length + 7) / 8 * 8;
+        byte[] a = new byte[tam];
+        put32(a, 0, tipo); put32(a, 4, tam); a[8] = 1; a[9] = (byte) nl; put16(a, 10, 0x40);
+        put64(a, 0x18, vcns - 1); put16(a, 0x20, ro);
+        put64(a, 0x28, vcns * 4096); put64(a, 0x30, real); put64(a, 0x38, init);
+        putUtf16(a, 0x40, nome);
+        System.arraycopy(rb, 0, a, ro, rb.length);
+        return a;
+    }
+
+    /** Numero do data run com o minimo de bytes (com sinal: deslocamento; sem: quantidade). */
+    private byte[] ntfsNum(long v, boolean sinal) {
+        int n = 1;
+        while (n < 8 && (sinal ? (v >> (8 * n - 1)) != 0 && (v >> (8 * n - 1)) != -1 : (v >>> (8 * n)) != 0)) n++;
+        byte[] b = new byte[n];
+        for (int i = 0; i < n; i++) b[i] = (byte) (v >>> (8 * i));
+        return b;
+    }
+
+    /** Registro da MFT: cabecalho, atributos (ids na ordem), marcador de fim e fixups. */
+    private byte[] ntfsReg(int rec, long num, int seq, int links, int flags, byte[]... attrs) {
+        byte[] r = new byte[rec];
+        int uc = rec / 512 + 1, o = (0x30 + 2 * uc + 7) / 8 * 8;
+        putAscii(r, 0, "FILE");
+        put16(r, 4, 0x30); put16(r, 6, uc);
+        put16(r, 0x10, seq); put16(r, 0x12, links); put16(r, 0x14, o); put16(r, 0x16, flags);
+        for (int i = 0; i < attrs.length; i++) {
+            put16(attrs[i], 14, i);
+            System.arraycopy(attrs[i], 0, r, o, attrs[i].length);
+            o += attrs[i].length;
+        }
+        put32(r, o, -1);
+        put32(r, 0x18, o + 8); put32(r, 0x1C, rec); put16(r, 0x28, attrs.length); put32(r, 0x2C, (int) num);
+        ntfsFixup(r, 0x30);
+        return r;
+    }
+
+    /** Fixup: o fim de cada 512 bytes vai para o vetor em usa e da lugar ao numero de sequencia (1). */
+    private void ntfsFixup(byte[] b, int usa) {
+        put16(b, usa, 1);
+        for (int i = 1; i <= b.length / 512; i++) {
+            b[usa + 2 * i] = b[i * 512 - 2];
+            b[usa + 2 * i + 1] = b[i * 512 - 1];
+            b[i * 512 - 2] = 1;
+            b[i * 512 - 1] = 0;
+        }
+    }
+
+    /** Entrada de indice de nomes ($I30): referencia, chave ($FILE_NAME); flags 1 = tem filho (VCN no fim), 2 = ultima. */
+    private byte[] ntfsEntrada(long ref, byte[] chave, int flags, long vcn) {
+        int tam = (16 + chave.length + 7) / 8 * 8 + ((flags & 1) != 0 ? 8 : 0);
+        byte[] e = new byte[tam];
+        put64(e, 0, ref); put16(e, 8, tam); put16(e, 10, chave.length); put16(e, 12, flags);
+        System.arraycopy(chave, 0, e, 16, chave.length);
+        if ((flags & 1) != 0) put64(e, tam - 8, vcn);
+        return e;
+    }
+
+    /** Entrada de indice de dados ($SII, $SDH, $O, $Q, $R): chave e dados no lugar da referencia. */
+    private byte[] ntfsEntradaVista(byte[] chave, byte[] dados, int tam, int flags) {
+        byte[] e = new byte[tam];
+        int dof = 16 + chave.length;
+        if (dados.length > 0) { put16(e, 0, dof); put16(e, 2, dados.length); }
+        put16(e, 8, tam); put16(e, 10, chave.length); put16(e, 12, flags);
+        System.arraycopy(chave, 0, e, 16, chave.length);
+        System.arraycopy(dados, 0, e, dof, dados.length);
+        return e;
+    }
+
+    /** $INDEX_ROOT: tipo indexado (0x30 ou 0), colacao, bloco de 4 KB; flags 1 = indice grande (ha blocos INDX). */
+    private byte[] ntfsRaiz(int tipo, int colacao, int flags, byte[]... entradas) {
+        int n = 0;
+        for (byte[] e : entradas) n += e.length;
+        byte[] v = new byte[32 + n];
+        put32(v, 0, tipo); put32(v, 4, colacao); put32(v, 8, 4096); v[12] = 1;
+        put32(v, 16, 16); put32(v, 20, 16 + n); put32(v, 24, 16 + n); v[28] = (byte) flags;
+        int o = 32;
+        for (byte[] e : entradas) { System.arraycopy(e, 0, v, o, e.length); o += e.length; }
+        return v;
+    }
+
+    /** Bloco INDX de 4 KB (VCN 0, folha) com as entradas, com fixups. */
+    private byte[] ntfsIndx(byte[]... entradas) {
+        byte[] b = new byte[4096];
+        putAscii(b, 0, "INDX");
+        put16(b, 4, 0x28); put16(b, 6, 9);
+        int o = 0x40;
+        for (byte[] e : entradas) { System.arraycopy(e, 0, b, o, e.length); o += e.length; }
+        put32(b, 0x18, 0x28); put32(b, 0x1C, o - 0x18); put32(b, 0x20, 4096 - 0x18);
+        ntfsFixup(b, 0x28);
+        return b;
+    }
+
+    /** Tabela upcase (64 K entradas de 16 bits) a partir das faixas inicio:qtd:delta (hex, hex, dec); d1,d2 alterna. */
+    private byte[] tabelaUpcase(String faixas) {
+        byte[] u = new byte[131072];
+        for (int i = 0; i < 65536; i++) put16(u, 2 * i, i);
+        for (String f : faixas.trim().split("\\s+")) {
+            String[] q = f.split(":"), dl = q[2].split(",");
+            int a = Integer.parseInt(q[0], 16), n = Integer.parseInt(q[1], 16);
+            for (int i = 0; i < n; i++) put16(u, 2 * (a + i), a + i + Integer.parseInt(dl[dl.length == 1 ? 0 : i % 2]));
+        }
+        return u;
+    }
+
+    private void putUtf16(byte[] b, int o, String s) {
+        byte[] x = s.getBytes(java.nio.charset.StandardCharsets.UTF_16LE);
+        System.arraycopy(x, 0, b, o, x.length);
+    }
+
+    // do format do Windows 11 (08/10/2026): descritores de seguranca do $SDS (ids 0x100..0x107; 0x100 = arquivos do
+    // sistema, 0x101 = $Volume/$Secure/$Extend), da raiz, do $Boot, dos registros reservados 12-15, e $Quota ($O, $Q)
+    private final String NTFS_SDS = "CBC6FE3200010000000000000000000078000000010004804800000054000000000000001400000002003400020000000000140089001200010100000000000512000000000018008900120001020000000000052000000020020000010100000000000512000000010200000000000520000000200200000000000000000000F7C814340101000080000000000000007800000001000480480000005400000000000000140000000200340002000000000014009F011200010100000000000512000000000018009F0112000102000000000005200000002002000001010000000000051200000001020000000000052000000020020000000000000000000019227620020100000001000000000000780000000100048048000000580000000000000014000000020034000200000000001400FF011F0001010000000000051200000000001800890012000102000000000005200000002002000001020000000000052000000020020000010100000000000512000000000000000000000059227620030100008001000000000000780000000100048048000000580000000000000014000000020034000200000000001400FF011F0001010000000000051200000000001800A90012000102000000000005200000002002000001020000000000052000000020020000010100000000000512000000000000000000000091588E06040100000002000000000000740000000100048048000000540000000000000014000000020034000200000000001400FF011F0001010000000000051200000000001800A900120001020000000000052000000020020000010100000000000512000000010100000000000512000000000000000000000000000000B587D3230501000080020000000000005C00000001000490300000003C000000000000001400000002001C000100000000031400FF011F0001010000000000051200000001010000000000051200000001010000000000051200000000000000629BA30A06010000E00200000000000060000000010004903000000040000000000000001400000002001C000100000000031400FF011F0001010000000000051200000001020000000000052000000020020000010100000000000512000000F506D3230701000040030000000000005C00000001000480300000003C000000000000001400000002001C000100000000001400FF011F00010100000000000512000000010100000000000512000000010100000000000512000000";
+    private final String NTFS_SD_RAIZ = "01000480CC000000D800000000000000140000000200B8000800000000001800FF011F0001020000000000052000000020020000000B1800000000100102000000000005200000002002000000001400FF011F00010100000000000512000000000B14000000001001010000000000051200000000001400BF01130001010000000000050B000000000B1400000001E001010000000000050B00000000001800A900120001020000000000052000000021020000000B1800000000A001020000000000052000000021020000010100000000000512000000010100000000000512000000";
+    private final String NTFS_SD_BOOT = "01000480480000005400000000000000140000000200340002000000000014008900120001010000000000051200000000001800890012000102000000000005200000002002000001010000000000051200000001020000000000052000000020020000";
+    private final String NTFS_SD_RESERV = "01000480480000005400000000000000140000000200340002000000000014009F011200010100000000000512000000000018009F0112000102000000000005200000002002000001010000000000051200000001020000000000052000000020020000";
+    private final String NTFS_QUOTA_O = "00000000110000000010000001000000100000004800000048000000000000002000040000000000280010000000000001020000000000052000000020020000000100002000000000000000000000001000000002000000";
+    private final String NTFS_QUOTA_Q = "0000000010000000001000000100000010000000C0000000C000000000000000140030000000000048000400000000000100000002000000010000000000000000000000C39232908857DD01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF000000000000000000000000140040000000000058000400000000000001000002000000010000000000000000000000C39232908857DD01FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF0000000000000000010200000000000520000000200200000000000000000000000000001000000002000000";
+    private final String NTFS_UPCASE_INFO = "20000000000000000C691B6B777EDCDA00000000000000000000000000000000";
+
+    // $UpCase do NTFS (difere da do ReFS em 226 posicoes): inicio:qtd:delta
+    private final String NTFS_UPCASE = """
+        61:1A:-32 E0:17:-32 F8:7:-32 FF:1:121 100:30:0,-1 133:6:-1,0 139:10:0,-1 14B:2E:-1,0 179:6:0,-1 180:1:195
+        183:4:-1,0 188:1:-1 18C:1:-1 192:1:-1 195:1:97 199:1:-1 19A:1:163 19E:1:130 1A1:6:-1,0 1A8:1:-1 1AD:1:-1
+        1B0:1:-1 1B4:4:-1,0 1B9:1:-1 1BD:1:-1 1BF:1:56 1C6:1:-2 1C9:1:-2 1CC:1:-2 1CD:10:0,-1 1DD:1:-79 1DE:12:0,-1
+        1F3:1:-2 1F5:1:-1 1F9:28:-1,0 223:12:-1,0 23C:1:-1 242:1:-1 247:8:-1,0 24F:1:-1 250:1:10783 251:1:10780
+        253:1:-210 254:1:-206 256:2:-205 259:1:-202 25B:1:-203 260:1:-205 263:1:-207 268:1:-209 269:1:-211
+        26B:1:10743 26F:1:-211 271:1:10749 272:1:-213 275:1:-214 27D:1:10727 280:1:-218 283:1:-218 288:1:-218
+        289:1:-69 28A:2:-217 28C:1:-71 292:1:-219 371:4:-1,0 377:1:-1 37B:3:130 3AC:1:-38 3AD:3:-37 3B1:11:-32
+        3C3:9:-32 3CC:1:-64 3CD:2:-63 3D7:1:-8 3D8:18:0,-1 3F2:1:7 3F8:1:-1 3FB:1:-1 430:20:-32 450:10:-80
+        460:22:0,-1 48B:36:-1,0 4C1:E:0,-1 4CF:1:-15 4D0:54:0,-1 561:26:-48 1D79:1:35332 1D7D:1:3814 1E01:96:-1,0
+        1EA1:5E:-1,0 1EFF:1:-1 1F00:8:8 1F10:6:8 1F20:8:8 1F30:8:8 1F40:6:8 1F51:8:8,0 1F60:8:8 1F70:2:74 1F72:4:86
+        1F76:2:100 1F78:2:128 1F7A:2:112 1F7C:2:126 1F80:8:8 1F90:8:8 1FA0:8:8 1FB0:2:8 1FB3:1:9 1FC3:1:9 1FD0:2:8
+        1FE0:2:8 1FE5:1:7 1FF3:1:9 214E:1:-28 2170:10:-16 2184:1:-1 24D0:1A:-26 2C30:2F:-48 2C61:1:-1 2C65:1:-10795
+        2C66:1:-10792 2C67:6:0,-1 2C73:1:-1 2C76:1:-1 2C81:64:-1,0 2D00:26:-7264 A641:20:-1,0 A663:C:-1,0
+        A681:18:-1,0 A723:E:-1,0 A733:3E:-1,0 A77A:4:-1,0 A77E:A:0,-1 A78C:1:-1 FF41:1A:-32
+        """;
+
+    // ---- FAT32 (como o format do Windows 11: dados alinhados a 4 MB, boot de 3 setores com copia no setor 6)
+
+    /**
+     * FAT32 vazio em off: cluster pela tabela do Windows (512 B ate 64 MB, 1 KB ate 128 MB, 2 KB ate 256 MB, 4 KB ate
+     * 8 GB, 8 KB ate 16 GB, 16 KB ate 32 GB, 32 KB acima), 2 FATs, raiz no cluster 2, FSInfo no setor 1.
+     */
+    private void gerarFat32(long off, long bytes) throws Exception {
+        long tot = bytes / setor, mbv = bytes >> 20;
+        if (tot > 0xFFFFFFFFL) throw new Exception("FAT32 vai ate 2 TB.");
+        int clB = Math.max(setor, mbv <= 64 ? 512 : mbv <= 128 ? 1024 : mbv <= 256 ? 2048 : mbv <= 8192 ? 4096 : mbv <= 16384 ? 8192 : mbv <= 32768 ? 16384 : 32768);
+        int spc = clB / setor;
+        long alin = 4 * MiB / setor, fatsz = 1, data = 0, cls = 0;
+        for (int i = 0; i < 8; i++) {                         // FAT do tamanho dos clusters que sobram depois dela
+            data = Math.ceilDiv(32 + 2 * fatsz, alin) * alin;
+            cls = (tot - data) / spc;
+            fatsz = Math.max(fatsz, Math.ceilDiv((cls + 2) * 4, setor));
+        }
+        data = Math.ceilDiv(32 + 2 * fatsz, alin) * alin;
+        cls = (tot - data) / spc;
+        if (cls < 65525) throw new Exception("pequena demais para FAT32 (" + cls + " clusters; precisa de 65525).");
+        if (cls > 0x0FFFFFF5L) throw new Exception("grande demais para FAT32.");
+        long res = data - 2 * fatsz;
+
+        byte[] boot = new byte[3 * setor];
+        boot[0] = (byte) 0xEB; boot[1] = 0x58; boot[2] = (byte) 0x90;
+        putAscii(boot, 3, "MSDOS5.0");
+        put16(boot, 11, setor);
+        boot[13] = (byte) spc;
+        put16(boot, 14, (int) res);
+        boot[16] = 2;
+        boot[21] = (byte) 0xF8;
+        put16(boot, 24, 63); put16(boot, 26, 255);
+        put32(boot, 28, (int) (off / setor));
+        put32(boot, 32, (int) tot);
+        put32(boot, 36, (int) fatsz);
+        put32(boot, 44, 2);                                    // raiz
+        put16(boot, 48, 1); put16(boot, 50, 6);                // FSInfo, copia do boot
+        boot[64] = (byte) 0x80; boot[66] = 0x29;
+        put32(boot, 67, new java.security.SecureRandom().nextInt());
+        putAscii(boot, 71, "NO NAME    FAT32   ");
+        int fi = setor;                                        // FSInfo: livres e proximo livre
+        putAscii(boot, fi, "RRaA");
+        putAscii(boot, fi + 484, "rrAa");
+        put32(boot, fi + 488, (int) (cls - 1));
+        put32(boot, fi + 492, 3);
+        for (int s = 0; s < 3; s++) { boot[s * setor + 510] = 0x55; boot[s * setor + 511] = (byte) 0xAA; }
+
+        gravar(off, new byte[(int) (res * setor)], 0, (int) (res * setor));
+        gravar(off, boot, 0, boot.length);
+        gravar(off + 6L * setor, boot, 0, boot.length);
+        byte[] z = new byte[(int) Math.min(fatsz * setor, BLOCO)];
+        for (int f = 0; f < 2; f++) {
+            long ini = off + (res + f * fatsz) * setor;
+            for (long o = 0; o < fatsz * setor; o += z.length) gravar(ini + o, z, 0, (int) Math.min(z.length, fatsz * setor - o));
+            byte[] e = new byte[12];
+            put32(e, 0, 0x0FFFFFF8); put32(e, 4, 0x0FFFFFFF); put32(e, 8, 0x0FFFFFFF);   // midia, limpo, raiz (fim de cadeia)
+            gravar(ini, e, 0, 12);
+        }
+        gravar(off + data * setor, new byte[clB], 0, clB);   // raiz vazia
+    }
+
+    // ---- exFAT (como o format do Windows 11)
+
+    /**
+     * exFAT vazio em off: cluster 4 KB ate 256 MB, 32 KB ate 32 GB, 128 KB acima; regiao de boot de 12 setores (e copia),
+     * FAT em 64 KB (1 MB acima de 4 GB), heap alinhado (64 KB/cluster ou 1 MB), bitmap, upcase (compactada) e raiz.
+     */
+    private void gerarExfat(long off, long bytes) throws Exception {
+        long vol = bytes / setor, mbv = bytes >> 20;
+        int clB = Math.max(setor, mbv <= 256 ? 4096 : mbv <= 32768 ? 32768 : 131072), spc = clB / setor;
+        boolean grande = bytes > 4096 * MiB;
+        // FAT depois das 2 regioes de boot (24 setores): setor 4096 = 32, como o Windows
+        long fatOff = Math.max(32, (grande ? MiB : 64 * 1024) / setor), alin = Math.max(spc, (grande ? MiB : 64 * 1024) / setor);
+        long fatLen = spc, heap = 0, cc = 0;
+        for (int i = 0; i < 8; i++) {
+            heap = Math.ceilDiv(fatOff + fatLen, alin) * alin;
+            cc = (vol - heap) / spc;
+            fatLen = Math.max(fatLen, Math.ceilDiv(Math.ceilDiv((cc + 2) * 4, setor), spc) * spc);
+        }
+        heap = Math.ceilDiv(fatOff + fatLen, alin) * alin;
+        cc = (vol - heap) / spc;
+        if (cc > 0xFFFFFFF5L) throw new Exception("grande demais para exFAT.");
+
+        // upcase: tabela pelas faixas, compactada como o Windows (sequencias identicas de 512+ viram FFFF, n)
+        byte[] tab = tabelaUpcase(EXFAT_UPCASE);
+        var up = new java.io.ByteArrayOutputStream();
+        for (int k = 0; k < 65536; ) {
+            int j = k;
+            while (j < 65536 && le16(tab, 2 * j) == j) j++;
+            if (j - k >= 512) { up.write(0xFF); up.write(0xFF); up.write(j - k); up.write((j - k) >> 8); k = j; }
+            else { up.write(tab[2 * k]); up.write(tab[2 * k + 1]); k++; }
+        }
+        byte[] upc = up.toByteArray();
+        int upCs = 0;
+        for (byte x : upc) upCs = (((upCs & 1) != 0 ? 0x80000000 : 0) + (upCs >>> 1) + (x & 0xFF));
+        if (upCs != 0xE619D30D) throw new IllegalStateException("upcase do exFAT com checksum errado");
+
+        long bmLen = Math.ceilDiv(cc, 8), bmCl = Math.ceilDiv(bmLen, clB), upCl = Math.ceilDiv(upc.length, clB);
+        long cBm = 2, cUp = cBm + bmCl, cRaiz = cUp + upCl, usados = bmCl + upCl + 1;
+
+        // regiao de boot: setor 0, 8 setores estendidos (assinatura AA550000 no fim), OEM, reservado, checksum
+        byte[] br = new byte[12 * setor];
+        br[0] = (byte) 0xEB; br[1] = 0x76; br[2] = (byte) 0x90;
+        putAscii(br, 3, "EXFAT   ");
+        put64(br, 64, off / setor);
+        put64(br, 72, vol);
+        put32(br, 80, (int) fatOff); put32(br, 84, (int) fatLen);
+        put32(br, 88, (int) heap); put32(br, 92, (int) cc);
+        put32(br, 96, (int) cRaiz);
+        put32(br, 100, new java.security.SecureRandom().nextInt());
+        put16(br, 104, 0x100);
+        br[108] = (byte) Integer.numberOfTrailingZeros(setor);
+        br[109] = (byte) Integer.numberOfTrailingZeros(spc);
+        br[110] = 1; br[111] = (byte) 0x80;
+        br[510] = 0x55; br[511] = (byte) 0xAA;
+        for (int s = 1; s <= 8; s++) { br[s * setor + setor - 2] = 0x55; br[s * setor + setor - 1] = (byte) 0xAA; }
+        int cs = 0;
+        for (int i = 0; i < 11 * setor; i++)
+            if (i != 106 && i != 107 && i != 112) cs = (((cs & 1) != 0 ? 0x80000000 : 0) + (cs >>> 1) + (br[i] & 0xFF));
+        for (int i = 11 * setor; i < 12 * setor; i += 4) put32(br, i, cs);
+
+        // FAT: midia, fim, e as cadeias do bitmap, da upcase e da raiz
+        byte[] fat = new byte[(int) (fatLen * setor)];
+        put32(fat, 0, 0xFFFFFFF8); put32(fat, 4, 0xFFFFFFFF);
+        for (long[] f : new long[][]{{cBm, bmCl}, {cUp, upCl}, {cRaiz, 1}})
+            for (long c = f[0]; c < f[0] + f[1]; c++) put32(fat, (int) (4 * c), c == f[0] + f[1] - 1 ? 0xFFFFFFFF : (int) (c + 1));
+        byte[] bm = new byte[(int) (bmCl * clB)];
+        for (int c = 0; c < usados; c++) bm[c / 8] |= (byte) (1 << (c % 8));
+        byte[] raiz = new byte[clB];                           // entradas: bitmap (0x81) e upcase (0x82)
+        raiz[0] = (byte) 0x81;
+        put32(raiz, 20, (int) cBm); put64(raiz, 24, bmLen);
+        raiz[32] = (byte) 0x82;
+        put32(raiz, 36, upCs); put32(raiz, 52, (int) cUp); put64(raiz, 56, upc.length);
+        byte[] upCl0 = java.util.Arrays.copyOf(upc, (int) (upCl * clB));
+
+        gravar(off, br, 0, br.length);
+        gravar(off + 12L * setor, br, 0, br.length);
+        gravar(off + fatOff * setor, fat, 0, fat.length);
+        long h = off + heap * setor;
+        gravar(h + (cBm - 2) * clB, bm, 0, bm.length);
+        gravar(h + (cUp - 2) * clB, upCl0, 0, upCl0.length);
+        gravar(h + (cRaiz - 2) * clB, raiz, 0, raiz.length);
+    }
+
+    // upcase do exFAT do Windows (a recomendada na especificacao, checksum E619D30D): inicio:qtd:delta
+    private final String EXFAT_UPCASE = """
+        61:1A:-32 E0:17:-32 F8:7:-32 FF:1:121 100:30:0,-1 133:6:-1,0 139:10:0,-1 14B:2E:-1,0 179:6:0,-1 180:1:195
+        183:4:-1,0 188:1:-1 18C:1:-1 192:1:-1 195:1:97 199:1:-1 19A:1:163 19E:1:130 1A1:6:-1,0 1A8:1:-1 1AD:1:-1
+        1B0:1:-1 1B4:4:-1,0 1B9:1:-1 1BD:1:-1 1BF:1:56 1C6:1:-2 1C9:1:-2 1CC:1:-2 1CD:10:0,-1 1DD:1:-79 1DE:12:0,-1
+        1F3:1:-2 1F5:1:-1 1F9:28:-1,0 223:12:-1,0 23A:1:10795 23C:1:-1 23E:1:10792 242:1:-1 247:A:-1,0 253:1:-210
+        254:1:-206 256:2:-205 259:1:-202 25B:1:-203 260:1:-205 263:1:-207 268:1:-209 269:1:-211 26B:1:10743
+        26F:1:-211 272:1:-213 275:1:-214 27D:1:10727 280:1:-218 283:1:-218 288:1:-218 289:1:-69 28A:2:-217 28C:1:-71
+        292:1:-219 37B:3:130 3AC:1:-38 3AD:3:-37 3B1:11:-32 3C2:1:-31 3C3:9:-32 3CC:1:-64 3CD:2:-63 3D9:18:-1,0
+        3F2:1:7 3F8:1:-1 3FB:1:-1 430:20:-32 450:10:-80 460:22:0,-1 48B:36:-1,0 4C1:E:0,-1 4CF:1:-15 4D0:44:0,-1
+        561:26:-48 1D7D:1:3814 1E01:96:-1,0 1EA1:5A:-1,0 1F00:8:8 1F10:6:8 1F20:8:8 1F30:8:8 1F40:6:8 1F51:8:8,0
+        1F60:8:8 1F70:2:74 1F72:4:86 1F76:2:100 1F78:2:128 1F7A:2:112 1F7C:2:126 1F80:8:8 1F90:8:8 1FA0:8:8 1FB0:2:8
+        1FB3:1:9 1FCC:1:-9 1FD0:2:8 1FE0:2:8 1FE5:1:7 1FFC:1:-9 214E:1:-28 2170:10:-16 2184:1:-1 24D0:1A:-26
+        2C30:2F:-48 2C61:1:-1 2C68:6:-1,0 2C76:1:-1 2C81:64:-1,0 2D00:26:-7264 FF41:1A:-32
+        """;
+
+    // ======================================================================= TESTE
+
+    private final int SEM_FS = 0, NTFS = 1, REFS = 2, FAT32 = 3, EXFAT = 4;
+    private java.io.File dirTeste;
+    private int testes, falhas;
+
+    /** -test [a.vhdx]: varios clones VHDX -> VHDX em arquivos temporarios; a.vhdx (opcional) so e lido. */
+    private void testar(String real) throws Exception {
+        if (real != null && (!real.toLowerCase().endsWith(".vhdx") || !new java.io.File(real).isFile()))
+            throw new Exception("VHDX nao encontrado: " + real);
+        if (real == null && (System.getenv("RAR") == null || System.getenv("RAR").isBlank()))
+            throw new Exception("defina %RAR% (caminho do UnRAR.exe/Rar.exe ou da pasta deles) para baixar o VHDX de teste, ou use -test a.vhdx.");
+        dirTeste = java.nio.file.Files.createTempDirectory("clona-test").toFile();
+        soJava = true;                                         // testes com FS falso: o diskpart nao cresceria o FS
+        System.out.println("Testes VHDX -> VHDX em " + dirTeste);
+        try {
+            // origem comum: MSR, NTFS cheio, NTFS reduzido (FS de 40 numa particao de 64 MB) e ReFS
+            String s = disco("origem.vhdx", 256, 512, 1, p(1, 1, 16, SEM_FS, 0), p(2, 17, 64, NTFS, 64),
+                    p(3, 81, 64, NTFS, 40), p(4, 145, 32, REFS, 32));
+
+            teste("destino sem #N: recusa", () -> {
+                String d = novoVhdx("t00.vhdx", 128, 512, 1);
+                recusa("informe o destino com #N ou #TAIL", d, s + "#2", d);
+                return null;
+            });
+            teste("NTFS -> VHDX vazio #1 max: cria GPT e ocupa todo o espaco", () -> {
+                String d = novoVhdx("t01.vhdx", 128, 512, 1);
+                roda(s + "#2", d + "#TAIL", "max");
+                checa(pTam(confere(s, 2, d, 1)) == 126 * MiB, "tamanho errado");
+                byte[] mbr = lerVhdx(d, 0, 512);
+                checa((mbr[450] & 0xFF) == 0xEE && (mbr[510] & 0xFF) == 0x55, "sem MBR protetor");
+                return null;
+            });
+            teste("tamanho omitido = mesmo da origem", () -> {
+                String d = novoVhdx("t02.vhdx", 128, 512, 1);
+                roda(s + "#2", d + "#TAIL");
+                checa(pTam(confere(s, 2, d, 1)) == 64 * MiB, "tamanho errado");
+                return null;
+            });
+            teste("tamanho igual (opcao removida): recusa", () -> {
+                String d = novoVhdx("t02b.vhdx", 128, 512, 1);
+                recusa("tamanho invalido", d, s + "#2", d + "#TAIL", "igual");
+                return null;
+            });
+            teste("maior que a origem (100 MB)", () -> {
+                String d = novoVhdx("t03.vhdx", 128, 512, 1);
+                roda(s + "#2", d + "#TAIL", "100");
+                checa(pTam(confere(s, 2, d, 1)) == 100 * MiB, "tamanho errado");
+                return null;
+            });
+            teste("menor que a particao, do tamanho do FS (64 -> 40 MB)", () -> {
+                String d = novoVhdx("t04.vhdx", 128, 512, 1);
+                roda(s + "#3", d + "#TAIL", "40");
+                checa(pTam(confere(s, 3, d, 1)) == 40 * MiB, "tamanho errado");
+                return null;
+            });
+            teste("menor que o FS: recusa", () -> {
+                String d = novoVhdx("t05.vhdx", 128, 512, 1);
+                recusa("precisa de pelo menos", d, s + "#3", d + "#TAIL", "39");
+                return null;
+            });
+            teste("ReFS", () -> {
+                String d = novoVhdx("t06.vhdx", 128, 512, 1);
+                roda(s + "#4", d + "#TAIL");
+                confere(s, 4, d, 1);
+                return null;
+            });
+            teste("FAT32", () -> {
+                String o = disco("t06f.vhdx", 128, 512, 1, p(1, 1, 64, FAT32, 64));
+                String d = novoVhdx("t06g.vhdx", 128, 512, 1);
+                roda(o, d + "#TAIL");
+                confere(o, 1, d, 1);
+                roda("compare", o + "#1", d + "#1");
+                return null;
+            });
+            teste("exFAT", () -> {
+                String o = disco("t06x.vhdx", 128, 512, 1, p(1, 1, 64, EXFAT, 64));
+                String d = novoVhdx("t06y.vhdx", 128, 512, 1);
+                roda(o, d + "#TAIL");
+                confere(o, 1, d, 1);
+                roda("compare", o + "#1", d + "#1");
+                return null;
+            });
+            teste("exFAT setor 4096", () -> {
+                String o = disco("t06z.vhdx", 128, 4096, 1, p(1, 1, 64, EXFAT, 64));
+                String d = novoVhdx("t06w.vhdx", 128, 4096, 1);
+                roda(o, d + "#TAIL");
+                confere(o, 1, d, 1);
+                return null;
+            });
+            teste("FAT32 menor que o FS: recusa", () -> {
+                String o = disco("t06m.vhdx", 128, 512, 1, p(1, 1, 64, FAT32, 48));
+                String d = novoVhdx("t06n.vhdx", 128, 512, 1);
+                recusa("FAT32 nao pode ser reduzido", d, o, d + "#TAIL", "40");
+                return null;
+            });
+            teste("tamanho e serie lidos do boot (NTFS, ReFS, FAT32, exFAT)", () -> {
+                String o = disco("t06s.vhdx", 128, 512, 1, p(1, 1, 32, NTFS, 30), p(2, 33, 32, REFS, 28),
+                        p(3, 65, 32, FAT32, 26), p(4, 97, 24, EXFAT, 20));
+                var x = dispositivo(o, false);
+                try {
+                    String[] nomes = {"NTFS", "ReFS", "FAT32", "exFAT"};
+                    long[] mbs = {30, 28, 26, 20}, tams = {32, 32, 32, 24};
+                    for (int i = 0; i < 4; i++) {
+                        Object[] fs = x.fsInfo(x.particao(i + 1));
+                        checa(fs != null && fs[0].equals(nomes[i]), "#" + (i + 1) + ": FS " + (fs == null ? "nenhum" : fs[0]));
+                        checa((Long) fs[1] == mbs[i] * MiB, "#" + (i + 1) + ": FS com " + mb((Long) fs[1]));
+                        checa((Long) fs[3] == serieFalsa((i + 1) * 1000 + tams[i]), "#" + (i + 1) + ": serie errada");
+                    }
+                } finally { x.fechar(); }
+                return null;
+            });
+            teste("livre #2 (entre a particao 1 e a 3): vira a entrada 2 da GPT", () -> {
+                String d = disco("t07.vhdx", 256, 512, 1, p(1, 1, 32, NTFS, 32), p(3, 161, 32, NTFS, 32));
+                roda(s + "#2", d + "#2", "max");
+                Object[] nova = confere(s, 2, d, 2);
+                checa(pOff(nova) == 33 * MiB && pTam(nova) == 128 * MiB, "fora do espaco entre a 1 e a 3");
+                return null;
+            });
+            teste("#N que ja e particao ou que nao existe: recusa", () -> {
+                String d = disco("t08.vhdx", 256, 512, 1, p(1, 1, 32, NTFS, 32), p(3, 161, 32, NTFS, 32));
+                recusa("a particao 1 ja existe", d, s + "#2", d + "#1");
+                recusa("nao tem o #9 livre", d, s + "#2", d + "#9");
+                return null;
+            });
+            teste("livre entre a 2 e a 3 = #4 (numero que vai receber); livre do fim = #TAIL; nada renumerado", () -> {
+                // MSR #1, NTFS #2, livre #4, NTFS #3, livre #TAIL (na ordem do disco; a GPT tem as entradas 1, 2 e 3)
+                String d = disco("t08b.vhdx", 256, 512, 1, p(1, 1, 16, SEM_FS, 0), p(2, 17, 64, NTFS, 64), p(3, 145, 64, NTFS, 64));
+                String antes = layout(d);
+                var x = dispositivo(d, false);
+                try {
+                    var e = x.espacos();
+                    var ns = new StringBuilder();
+                    for (Object[] y : e) ns.append(y[0] == null ? "L" : "P").append(y[3]).append(' ');
+                    checa(ns.toString().equals("P1 P2 L4 P3 L5 ") && (Boolean) e.get(4)[4] && !(Boolean) e.get(2)[4], "numeros: " + ns);
+                } finally { x.fechar(); }
+                recusa("o #4 de " + d + " e espaco livre", d, d + "#4", s + "#5");
+                roda(d + "#3", d + "#4", "--verify");
+                checa(layout(d).startsWith(antes), "as particoes existentes mudaram de numero ou lugar");
+                Object[] nova = confere(d, 3, d, 4);
+                checa(pOff(nova) == 81 * MiB && pTam(nova) == 64 * MiB, "fora do livre #4");
+                roda("compare", d + "#3", d + "#4");
+                return null;
+            });
+            teste("livre sem espaco para o FS: recusa", () -> {
+                String d = disco("t09.vhdx", 128, 512, 1, p(1, 1, 32, NTFS, 32), p(3, 40, 32, NTFS, 32));
+                recusa("precisa de pelo menos", d, s + "#2", d + "#2", "max");
+                return null;
+            });
+            teste("maior que o espaco livre: recusa", () -> {
+                String d = novoVhdx("t10.vhdx", 128, 512, 1);
+                recusa("nao cabe", d, s + "#2", d + "#TAIL", "200");
+                return null;
+            });
+            teste("origem com varias particoes com FS sem #N: recusa", () -> {
+                String d = novoVhdx("t11.vhdx", 128, 512, 1);
+                recusa("mais de uma", d, s, d + "#TAIL");
+                return null;
+            });
+            teste("origem sem FS (MSR): copia a particao inteira, no tamanho exato e com o tipo dela", () -> {
+                String d = novoVhdx("t12.vhdx", 128, 512, 1);
+                roda(s + "#1", d + "#TAIL");
+                var o = dispositivo(s, false);
+                var c = dispositivo(d, false);
+                try {
+                    Object[] po = o.particao(1), pc = c.particao(1);
+                    checa(pTam(pc) == pTam(po) && pTipo(pc).equals(T_MSR), "tamanho ou tipo errado");
+                    byte[] a = new byte[(int) pTam(po)], b = new byte[(int) pTam(pc)];
+                    o.ler(pOff(po), a, 0, a.length);
+                    c.ler(pOff(pc), b, 0, b.length);
+                    checa(java.util.Arrays.equals(a, b), "conteudo diferente");
+                } finally { o.fechar(); c.fechar(); }
+                recusa("copiada inteira", d, s + "#1", d + "#TAIL", "8");
+                return null;
+            });
+            teste("origem MBR -> destino GPT", () -> {
+                String o = novoVhdx("t13o.vhdx", 128, 512, 1);
+                var x = dispositivo(o, true);
+                try {
+                    byte[] mbr = new byte[512];
+                    mbr[446 + 4] = 0x07;
+                    put32(mbr, 446 + 8, 2048);
+                    put32(mbr, 446 + 12, (int) (64 * MiB / 512));
+                    mbr[510] = 0x55;
+                    mbr[511] = (byte) 0xAA;
+                    x.gravar(0, mbr, 0, 512);
+                    x.fsFalso(MiB, NTFS, 64 * MiB, 13);
+                } finally { x.fechar(); }
+                String d = novoVhdx("t13.vhdx", 128, 512, 1);
+                roda(o, d + "#TAIL");
+                confere(o, 1, d, 1);
+                return null;
+            });
+            teste("setor 4096 -> 4096", () -> {
+                String o = disco("t14o.vhdx", 128, 4096, 1, p(1, 1, 64, NTFS, 64));
+                String d = novoVhdx("t14.vhdx", 128, 4096, 1);
+                roda(o, d + "#TAIL");
+                confere(o, 1, d, 1);
+                return null;
+            });
+            teste("setor 4096 -> 512: recusa", () -> {
+                String o = disco("t15o.vhdx", 128, 4096, 1, p(1, 1, 64, NTFS, 64));
+                String d = novoVhdx("t15.vhdx", 128, 512, 1);
+                recusa("setor da origem", d, o, d + "#TAIL");
+                return null;
+            });
+            teste("dois clones no mesmo VHDX (#TAIL duas vezes: entradas 1 e 2)", () -> {
+                String d = novoVhdx("t16.vhdx", 256, 512, 1);
+                roda(s + "#2", d + "#TAIL");
+                roda(s + "#4", d + "#TAIL");
+                confere(s, 2, d, 1);
+                confere(s, 4, d, 2);
+                return null;
+            });
+            teste("blocos VHDX diferentes (1 -> 32 MB)", () -> {
+                String d = novoVhdx("t17.vhdx", 256, 512, 32);
+                roda(s + "#2", d + "#TAIL");
+                confere(s, 2, d, 1);
+                return null;
+            });
+            teste("esparso: zeros nao alocam blocos", () -> {
+                String d = novoVhdx("t18.vhdx", 256, 512, 1);
+                long antes = new java.io.File(d).length();
+                roda(s + "#2", d + "#TAIL");
+                confere(s, 2, d, 1);
+                long cresceu = new java.io.File(d).length() - antes;
+                checa(cresceu < 16 * MiB, "cresceu " + mb(cresceu) + " para um FS quase todo zero");
+                return null;
+            });
+            teste("NTFS sem boot de backup: o clone ganha o backup", () -> {
+                String o = disco("t19o.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 40));
+                var x = dispositivo(o, true);
+                try { x.gravar(MiB + 40 * MiB - 512, new byte[512], 0, 512); } finally { x.fechar(); }
+                checa(zero(lerVhdx(o, MiB + 40 * MiB - 512, 512), 0, 512), "premissa: backup da origem deveria estar zerado");
+                String d = novoVhdx("t19.vhdx", 128, 512, 1);
+                roda(o, d + "#TAIL");
+                confere(o, 1, d, 1);
+                return null;
+            });
+            teste("cabecalho VHDX: sequencia +1, GUIDs novos, CRC", () -> {
+                String d = novoVhdx("t20.vhdx", 128, 512, 1);
+                byte[] h0 = cabVhdx(d);
+                roda(s + "#2", d + "#TAIL");
+                byte[] h1 = cabVhdx(d);
+                checa(le64(h1, 8) == le64(h0, 8) + 1, "sequencia " + le64(h0, 8) + " -> " + le64(h1, 8));
+                checa(!guidStr(h1, 16).equals(guidStr(h0, 16)) && !guidStr(h1, 32).equals(guidStr(h0, 32)), "GUIDs de escrita iguais");
+                checa(zero(h1, 48, 16), "LogGuid deveria ser zero");
+                return null;
+            });
+            teste("--verify", () -> {
+                String d = novoVhdx("t21.vhdx", 128, 512, 1);
+                roda(s + "#2", d + "#TAIL", "--verify");
+                confere(s, 2, d, 1);
+                return null;
+            });
+            teste("livre do comeco do disco: comeca logo depois do GPT (LBA 34, sem alinhar) e aceita clone", () -> {
+                String d = disco("t24.vhdx", 256, 512, 1, p(2, 41, 64, NTFS, 64));
+                var x = dispositivo(d, false);
+                try {
+                    Object[] e = x.espacos().get(0);
+                    checa(e[0] == null && (Long) e[1] == x.gptPrimeiro && (Integer) e[3] == 1, "o #1 livre deveria comecar no LBA " + x.gptPrimeiro);
+                } finally { x.fechar(); }
+                var y = dispositivo(s, false);                       // disco comum (1a particao em 1 MB): sem livre no comeco
+                try { checa(y.espacos().get(0)[0] != null, "nao deveria haver livre antes da 1a particao em 1 MB"); } finally { y.fechar(); }
+                roda(s + "#4", d + "#1");
+                Object[] nova = confere(s, 4, d, 1);
+                checa(pOff(nova) == 34 * 512, "a particao deveria comecar no LBA 34");
+                return null;
+            });
+            teste("delete #3: some so a entrada 3 (GPT primaria e backup), nada renumerado; o livre volta a ser #3", () -> {
+                String c = copia(s, "t23.vhdx");
+                String antes = layout(c), esperado = antes.replaceFirst("(^|;)3@[^;]*;", "$1");
+                roda("delete", c + "#3");
+                confereVhdx(c, 256, esperado);
+                cabVhdx(c);
+                roda(s + "#2", c + "#3");                            // o livre do meio volta como #3 e aceita clone
+                confere(s, 2, c, 3);
+                recusa("nao tem particao 9", c, "delete", c + "#9");
+                recusa("use: delete", c, "delete", c);
+                return null;
+            });
+            teste("origem e destino no mesmo arquivo (#2 -> #TAIL = entrada 5, --verify)", () -> {
+                String c = copia(s, "t22.vhdx");
+                roda(c + "#2", c + "#TAIL", "--verify");
+                confere(c, 2, c, 5);
+                roda("compare", c + "#2", c + "#5");
+                roda("compare", s + "#4", c + "#4");
+                return null;
+            });
+            teste("VHDX diferencial: recusa", () -> {
+                String o = novoVhdx("t23o.vhdx", 128, 512, 1);
+                try (var r = new java.io.RandomAccessFile(o, "rw")) { r.seek(2 * MiB + 0x10004); r.write(2); }   // HasParent
+                String d = novoVhdx("t23.vhdx", 128, 512, 1);
+                recusa("diferencial", d, o, d + "#TAIL");
+                return null;
+            });
+            teste("VHDX com log pendente: recusa", () -> {
+                String d = novoVhdx("t24.vhdx", 128, 512, 1);
+                try (var r = new java.io.RandomAccessFile(d, "rw")) {
+                    for (long off : new long[]{64 * 1024, 128 * 1024}) {
+                        byte[] h = new byte[4096];
+                        r.seek(off);
+                        r.readFully(h);
+                        putGuid(h, 48, guidAleatorio());
+                        put32(h, 4, 0);
+                        put32(h, 4, crc32c(h));
+                        r.seek(off);
+                        r.write(h);
+                    }
+                }
+                recusa("log pendente", d, s + "#2", d + "#TAIL");
+                return null;
+            });
+
+            // comparar
+            teste("compare clone com a origem: iguais", () -> {
+                String d = novoVhdx("c01.vhdx", 128, 512, 1);
+                roda(s + "#2", d + "#TAIL");
+                roda("compare", s + "#2", d + "#1");
+                roda("compare", s + "#4", s + "#4");
+                return null;
+            });
+            teste("compare FS de tamanhos diferentes: DIFERENTES", () -> {
+                recusa("DIFERENTES", s, "compare", s + "#2", s + "#3");
+                return null;
+            });
+            teste("compare com 1 byte alterado: DIFERENTES no byte certo", () -> {
+                String d = novoVhdx("c03.vhdx", 128, 512, 1);
+                roda(s + "#2", d + "#TAIL");
+                long off = 5 * MiB + 3;
+                var x = dispositivo(d, true);
+                try {
+                    Object[] q = x.particao(1);
+                    byte[] b = new byte[1];
+                    x.ler(pOff(q) + off, b, 0, 1);
+                    b[0] ^= (byte) 0xFF;
+                    x.gravar(pOff(q) + off, b, 0, 1);
+                } finally { x.fechar(); }
+                recusa("no byte " + off + " ", d, "compare", s + "#2", d + "#1");
+                return null;
+            });
+
+            // maximum: recusas antes do diskpart (sem Administrador)
+            teste("GPT levada ao novo fim do VHDX (o que o maximum faz depois do expand vdisk)", () -> {
+                String d = disco("e00.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 64));
+                var x = dispositivo(d, true);
+                try {                                        // simula um VHDX que cresceu: GPT terminando em 100 MB
+                    long fimVelho = x.gptAlt;
+                    x.gptAlt = 100 * MiB / 512 - 1;
+                    x.gptUltimo = x.gptAlt - x.gptEnt.length / 512 - 1;
+                    put64(x.gptCab, 32, x.gptAlt);
+                    put64(x.gptCab, 48, x.gptUltimo);
+                    x.escreverGpt();
+                    x.gravar(fimVelho * 512, new byte[512], 0, 512);
+                } finally { x.fechar(); }
+                String antes = layout(d);
+                x = dispositivo(d, true);
+                try { x.moverGptParaFim(x.tamanho); } finally { x.fechar(); }
+                confereVhdx(d, 128, antes);
+                byte[] mbr = lerVhdx(d, 0, 512);
+                checa((le32(mbr, 446 + 12) & 0xFFFFFFFFL) == 128 * MiB / 512 - 1, "MBR protetor nao acompanhou");
+                checa(zero(lerVhdx(d, (100 * MiB / 512 - 1) * 512, 512), 0, 512), "cabecalho de backup antigo nao foi zerado");
+                return null;
+            });
+            for (int[] sb : new int[][]{{512, 1}, {4096, 32}})
+                teste("maximum do VHDX menor (setor " + sb[0] + ", bloco " + sb[1] + " MB): particao igual, GPT no novo fim", () -> {
+                    String d = disco("e01-" + sb[0] + ".vhdx", 128, sb[0], sb[1], p(1, 1, 64, NTFS, 64));
+                    String antes = layout(d);
+                    long h = java.util.Arrays.hashCode(lerVhdx(d, MiB, (int) (64 * MiB))), tam = new java.io.File(d).length();
+                    roda("maximum", d, "66");
+                    confereVhdx(d, 66, antes);
+                    cabVhdx(d);
+                    checa(java.util.Arrays.hashCode(lerVhdx(d, MiB, (int) (64 * MiB))) == h, "os dados da particao mudaram");
+                    checa(new java.io.File(d).length() <= tam, "o arquivo cresceu");
+                    return null;
+                });
+            teste("maximum do VHDX abaixo do fim da ultima particao: recusa", () -> {
+                String d = disco("e01b.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 64));
+                recusa("e01b.vhdx tem particoes; o minimo possivel eh 66 MB", d, "maximum", d, "65");
+                return null;
+            });
+            teste("maximum do VHDX com max: recusa (max so na particao)", () -> {
+                String d = disco("e01d.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 64));
+                recusa("max so vale para particao", d, "maximum", d, "max");
+                return null;
+            });
+            teste("maximum do VHDX do mesmo tamanho: recusa", () -> {
+                String d = disco("e01c.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 64));
+                recusa("o VHDX ja tem", d, "maximum", d, "128");
+                return null;
+            });
+            teste("maximum sem tamanho: recusa", () -> {
+                String d = disco("e02.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 64));
+                recusa("use:", d, "maximum", d + "#1");
+                return null;
+            });
+            teste("maximum menor que a particao ReFS: recusa (ReFS nao reduz)", () -> {
+                String d = disco("e03.vhdx", 128, 512, 1, p(1, 1, 64, REFS, 64));
+                recusa("ReFS nao pode ser reduzido", d, "maximum", d + "#1", "32");
+                return null;
+            });
+            teste("maximum de particao sem espaco livre depois: recusa", () -> {
+                String d = disco("e04.vhdx", 128, 512, 1, p(1, 1, 126, NTFS, 126));
+                recusa("aumente o VHDX antes", d, "maximum", d + "#1", "127");
+                return null;
+            });
+            teste("maximum de particao com outra logo depois: recusa", () -> {
+                String d = disco("e05.vhdx", 128, 512, 1, p(1, 1, 32, NTFS, 32), p(2, 33, 32, NTFS, 32));
+                recusa("outra particao depois", d, "maximum", d + "#1", "64");
+                return null;
+            });
+            teste("maximum de particao maior que o livre: recusa", () -> {
+                String d = disco("e06.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 64));
+                recusa("nao cabe", d, "maximum", d + "#1", "200");
+                return null;
+            });
+            teste("maximum do mesmo tamanho da particao: recusa", () -> {
+                String d = disco("e07.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 64));
+                recusa("ja tem", d, "maximum", d + "#1", "64");
+                return null;
+            });
+            teste("maximum de particao FAT32: recusa", () -> {
+                String d = disco("e09.vhdx", 128, 512, 1, p(1, 1, 64, FAT32, 64));
+                recusa("so estende NTFS e ReFS", d, "maximum", d + "#1", "100");
+                return null;
+            });
+            teste("maximum de particao exFAT: recusa", () -> {
+                String d = disco("e10.vhdx", 128, 512, 1, p(1, 1, 64, EXFAT, 64));
+                recusa("so estende NTFS e ReFS", d, "maximum", d + "#1", "100");
+                return null;
+            });
+            teste("detach de arquivo que nao e VHDX: recusa", () -> {
+                recusa("VHDX nao encontrado", s, "detach", s + ".txt");
+                return null;
+            });
+            teste("maximum de particao inexistente: recusa", () -> {
+                String d = disco("e08.vhdx", 128, 512, 1, p(1, 1, 64, NTFS, 64));
+                recusa("nao tem particao 5", d, "maximum", d + "#5", "100");
+                return null;
+            });
+
+            // format_refs: ReFS gerado em Java (montar no Windows foi conferido a parte)
+            teste("format_refs #1 existente: ReFS do tamanho da particao (1100 MB -> FS 1088), checksums", () -> {
+                String d = disco("f01.vhdx", 1200, 512, 32, p(1, 1, 1100, NTFS, 1100));
+                roda("format_refs", d + "#1");
+                confereRefs(d, 1, 1100, 1088);
+                return null;
+            });
+            teste("format_refs #1 2000: a particao cresce antes (FS 1984)", () -> {
+                String d = disco("f02.vhdx", 2100, 512, 32, p(1, 1, 1100, NTFS, 1100));
+                roda("format_refs", d + "#1", "2000");
+                confereRefs(d, 1, 2000, 1984);
+                return null;
+            });
+            teste("format_refs #1 max: ate o fim do disco (2998 MB, FS 2944)", () -> {
+                String d = disco("f03.vhdx", 3000, 512, 32, p(1, 1, 1100, NTFS, 1100));
+                roda("format_refs", d + "#1", "max");
+                confereRefs(d, 1, 2998, 2944);
+                return null;
+            });
+            teste("format_refs #TAIL: cria a particao #2 no livre; 123 containers = arvore de 2 niveis", () -> {
+                String d = disco("f04.vhdx", 8000, 512, 32, p(1, 1, 100, NTFS, 100));
+                roda("format_refs", d + "#TAIL");
+                confereRefs(d, 2, 7898, 7872);
+                return null;
+            });
+            teste("format_refs #2 livre com 1200: cria do tamanho pedido; setor 4096", () -> {
+                String d = disco("f05.vhdx", 3000, 4096, 32, p(1, 1, 100, NTFS, 100));
+                roda("format_refs", d + "#2", "1200");
+                confereRefs(d, 2, 1200, 1152);
+                return null;
+            });
+            teste("format_ntfs #1 existente e 2000; #TAIL criando; setor 4096; 20 MB: NTFS conferido", () -> {
+                String d = disco("n01.vhdx", 2100, 512, 32, p(1, 1, 1100, REFS, 1100));
+                roda("format_ntfs", d + "#1");
+                confereNtfs(d, 1, 1100);
+                roda("format_ntfs", d + "#1", "2000");
+                confereNtfs(d, 1, 2000);
+                String e = disco("n02.vhdx", 3000, 4096, 32, p(1, 1, 100, NTFS, 100));
+                roda("format_ntfs", e + "#TAIL");
+                confereNtfs(e, 2, 2898);
+                String f = disco("n03.vhdx", 64, 512, 1, p(1, 1, 20, NTFS, 20));
+                roda("format_ntfs", f + "#1");
+                confereNtfs(f, 1, 20);
+                recusa("pelo menos 16 MB", f, "format_ntfs", f + "#1", "15");
+                return null;
+            });
+            for (String fs : new String[]{"fat32", "exfat"})
+                teste("format_" + fs + " #1 existente e 2000; #TAIL criando; setor 4096; recusa abaixo do minimo", () -> {
+                    String d = disco("g" + fs + "1.vhdx", 2100, 512, 32, p(1, 1, 100, NTFS, 100));
+                    roda("format_" + fs, d + "#1");
+                    confereFat(d, 1, 100);
+                    roda("format_" + fs, d + "#1", "2000");
+                    confereFat(d, 1, 2000);
+                    String e = disco("g" + fs + "2.vhdx", 3000, 4096, 32, p(1, 1, 100, NTFS, 100));
+                    roda("format_" + fs, e + "#TAIL");
+                    confereFat(e, 2, 2898);
+                    long min = fs.equals("fat32") ? 36 : 16;
+                    recusa("pelo menos " + min + " MB", d, "format_" + fs, d + "#1", String.valueOf(min - 1));
+                    return null;
+                });
+            teste("format_refs: recusas (menor que 1088, nao cabe, inexistente, sem #N, tamanho invalido)", () -> {
+                String d = disco("f06.vhdx", 2100, 512, 32, p(1, 1, 1100, NTFS, 1100));
+                recusa("pelo menos 1088 MB", d, "format_refs", d + "#1", "1000");
+                recusa("nao cabe", d, "format_refs", d + "#1", "3000");
+                recusa("nao tem particao nem livre #9", d, "format_refs", d + "#9");
+                recusa("use: format_refs", d, "format_refs", d);
+                recusa("tamanho invalido", d, "format_refs", d + "#1", "x");
+                recusa("pelo menos 1088 MB", d, "format_refs", d + "#TAIL");
+                return null;
+            });
+
+            // sem a.vhdx: baixa o VHDX de teste do GitHub e extrai com o programa de %RAR%
+            String alvo = real;
+            if (alvo == null) {
+                String[] baixado = new String[1];
+                teste("baixar 1G_winre_refs.rar do GitHub e extrair com %RAR%", () -> {
+                    baixado[0] = baixar("1G_winre_refs", dirTeste);
+                    return null;
+                });
+                alvo = baixado[0];
+            }
+            soJava = false;                                    // daqui em diante: FS de verdade
+            if (alvo != null) testarReal(alvo);
+        } finally {
+            if (falhas == 0) {
+                for (var f : dirTeste.listFiles()) f.delete();
+                dirTeste.delete();
+            } else System.out.println("Arquivos mantidos em " + dirTeste);
+        }
+        System.out.println((testes - falhas) + "/" + testes + " ok");
+        if (falhas > 0) throw new Exception(falhas + " teste(s) falharam.");
+    }
+
+    private void testarReal(String real) throws Exception {
+        String nomeReal = new java.io.File(real).getName();
+        long hReal = hash(real);
+        var reais = new java.util.ArrayList<Object[]>();          // {num, tamanho, bytes do FS, nome do FS, ha particao depois, livre depois}
+        long mbReal;
+        int setorReal;
+        var r = dispositivo(real, false);
+        try {
+            mbReal = Math.ceilDiv(r.tamanho, MiB);
+            setorReal = r.setor;
+            for (Object[] q : r.particoes()) {
+                Object[] fs = r.fsInfo(q);
+                if (fs == null) continue;
+                long fim = pOff(q) + pTam(q);
+                boolean depois = false;
+                for (Object[] o : r.particoes()) if (pOff(o) >= fim) depois = true;
+                reais.add(new Object[]{pNum(q), pTam(q), fs[1], fs[0], depois, (r.gptUltimo + 1) * r.setor - fim});
+            }
+        } finally { r.fechar(); }
+        checa(!reais.isEmpty(), nomeReal + " nao tem particao com FS suportado.");
+
+        for (Object[] x : reais) {
+            int n = (Integer) x[0];
+            long mbPart = Math.ceilDiv((Long) x[1], MiB);
+            boolean refs = x[3].equals("ReFS");
+            teste(nomeReal + "#" + n + " (" + x[3] + ") -> VHDX vazio", () -> {
+                String d = novoVhdx("r" + n + ".vhdx", mbPart + 8, setorReal, 32);
+                roda(real + "#" + n, d + "#TAIL", "--verify");
+                confere(real, n, d, 1);
+                roda("compare", real + "#" + n, d + "#1");
+                // FreeUsage: o clone tem o mesmo livre que a origem (ReFS: experimental, 47 MB no 1G_winre_refs)
+                var o = dispositivo(real, false);
+                var c = dispositivo(d, false);
+                try {
+                    Object[] po = o.particao(n), pc = c.particao(1);
+                    long lo = o.livreNoFs(po, o.fsInfo(po)), lc = c.livreNoFs(pc, c.fsInfo(pc));
+                    checa(lo == lc, "FreeUsage da origem " + lo + " x clone " + lc);
+                    checa(lo > 0 && lo <= (Long) x[2], "FreeUsage " + lo + " fora do esperado");
+                } finally { o.fechar(); c.fechar(); }
+                return null;
+            });
+            if (refs)
+                teste("maximum " + nomeReal + "#" + n + " menor (ReFS): recusa", () -> {
+                    String c = copia(real, "r" + n + "-menor.vhdx");
+                    recusa("ReFS nao pode ser reduzido", c, "maximum", c + "#" + n, String.valueOf(mbPart - 100));
+                    return null;
+                });
+            if ((Boolean) x[4])
+                teste("maximum " + nomeReal + "#" + n + " (outra particao depois): recusa", () -> {
+                    String c = copia(real, "r" + n + "-depois.vhdx");
+                    recusa("outra particao depois", c, "maximum", c + "#" + n, String.valueOf(mbPart + 100));
+                    return null;
+                });
+        }
+
+        // maximum do VHDX ate o minimo (em Java); o minimo sai da propria mensagem de recusa
+        java.util.function.Function<String, Long> minimoVhdx = c -> {
+            try { roda("maximum", c, "1"); } catch (Exception e) {
+                var m = java.util.regex.Pattern.compile("tem particoes; o minimo possivel eh (\\d+) MB").matcher(String.valueOf(e.getMessage()));
+                if (m.find()) return Long.parseLong(m.group(1));
+            }
+            return -1L;
+        };
+        teste("maximum " + nomeReal + " ate o minimo, numa copia: particoes e FS iguais", () -> {
+            String c = copia(real, "x-menor.vhdx");
+            String antes = layout(c);
+            long min = minimoVhdx.apply(c);
+            checa(min > 0 && min < mbReal, "minimo inesperado: " + min);
+            roda("maximum", c, String.valueOf(min));
+            confereVhdx(c, min, antes);
+            cabVhdx(c);
+            for (Object[] x : reais) roda("compare", real + "#" + x[0], c + "#" + x[0]);
+            return null;
+        });
+
+        if (!admin()) System.out.println("  --         maximum com diskpart: pulados (rode como Administrador)");
+        else {
+            teste("maximum " + nomeReal + " ate o minimo e de volta +256 MB (diskpart aceita o VHDX reduzido)", () -> {
+                String c = copia(real, "x-menor-maior.vhdx");
+                String antes = layout(c);
+                long min = minimoVhdx.apply(c);
+                roda("maximum", c, String.valueOf(min));
+                roda("maximum", c, String.valueOf(min + 256));
+                confereVhdx(c, min + 256, antes);
+                for (Object[] x : reais) roda("compare", real + "#" + x[0], c + "#" + x[0]);
+                return null;
+            });
+            teste("maximum " + nomeReal + " +256 MB, numa copia: so o VHDX cresce", () -> {
+                String c = copia(real, "x-vhdx.vhdx");
+                String antes = layout(c);
+                roda("maximum", c, String.valueOf(mbReal + 256));
+                confereVhdx(c, mbReal + 256, antes);
+                return null;
+            });
+            teste("VHDX anexado: maximum e clone pedem detach; o detach desanexa", () -> {
+                String c = copia(real, "x-anexado.vhdx");
+                diskpart("anexar o VHDX", "select vdisk file=\"" + c + "\"", "attach vdisk");
+                try {
+                    for (String[] cmd : new String[][]{{"maximum", c, String.valueOf(mbReal + 256)}, {"maximum", c + "#1", "100"}, {real + "#2", c + "#9"}}) {
+                        try { roda(cmd); throw new Exception("deveria recusar: " + String.join(" ", cmd)); }
+                        catch (Exception e) { checa(String.valueOf(e.getMessage()).startsWith("voce precisa desanexar o " + c + " primeiro"), "erro inesperado: " + e.getMessage()); }
+                    }
+                } finally { roda("detach", c); }
+                new java.io.RandomAccessFile(c, "rw").close();       // desanexado de novo
+                return null;
+            });
+            teste("detach de VHDX nao anexado: erro do diskpart", () -> {
+                String c = copia(real, "x-detach.vhdx");
+                recusa("diskpart falhou ao desanexar", c, "detach", c);
+                return null;
+            });
+            teste("maximum do VHDX: falha (copia somente leitura)", () -> {
+                String c = copia(real, "x-leitura.vhdx");
+                var f = new java.io.File(c);
+                checa(f.setReadOnly(), "nao consegui marcar somente leitura");
+                try { recusa("aumentar", c, "maximum", c, String.valueOf(mbReal + 256)); } finally { f.setWritable(true); }
+                return null;
+            });
+            for (Object[] x : reais) {
+                int n = (Integer) x[0];
+                long mbPart = Math.ceilDiv((Long) x[1], MiB), fsAntes = (Long) x[2], mbLivre = (Long) x[5] / MiB;
+                if (!(Boolean) x[4] && mbLivre >= 2)
+                    teste("maximum " + nomeReal + "#" + n + " (" + x[3] + ") +" + Math.min(50, mbLivre - 1) + " MB, numa copia", () -> {
+                        String c = copia(real, "x" + n + "-particao.vhdx");
+                        roda("maximum", c + "#" + n, String.valueOf(mbPart + Math.min(50, mbLivre - 1)));
+                        confereParticao(c, n, mbPart + Math.min(50, mbLivre - 1), fsAntes);
+                        return null;
+                    });
+                teste("clone de " + nomeReal + "#" + n + " (" + x[3] + ") -> VHDX vazio com max: particao e FS crescem juntos", () -> {
+                    String d = novoVhdx("x" + n + "-max.vhdx", mbPart + 300, setorReal, 32);
+                    roda(real + "#" + n, d + "#TAIL", "max");
+                    confereParticao(d, 1, mbPart + 298, fsAntes);        // livre do VHDX vazio: de 1 MB ate o ultimo MB (GPT de backup)
+                    roda("compare", real + "#" + n, real + "#" + n);
+                    return null;
+                });
+                teste("clone de " + nomeReal + "#" + n + " (" + x[3] + ") -> maximum do VHDX +256 -> maximum da particao +200 MB -> max", () -> {
+                    String d = novoVhdx("x" + n + ".vhdx", mbPart + 8, setorReal, 32);
+                    roda(real + "#" + n, d + "#TAIL");
+                    String antes = layout(d);
+                    roda("maximum", d, String.valueOf(mbPart + 8 + 256));
+                    confereVhdx(d, mbPart + 8 + 256, antes);
+                    roda("maximum", d + "#1", String.valueOf(mbPart + 200));
+                    confereParticao(d, 1, mbPart + 200, fsAntes);
+                    // max: ate a GPT de backup (VHDX de mbPart+264 MB, particao em 1 MB, GPT no ultimo MB)
+                    long fsMeio;
+                    var dd = dispositivo(d, false);
+                    try { fsMeio = (Long) dd.fsInfo(dd.particao(1))[1]; } finally { dd.fechar(); }
+                    roda("maximum", d + "#1", "max");
+                    confereParticao(d, 1, mbPart + 262, fsMeio);
+                    return null;
+                });
+                if (x[3].equals("NTFS")) {
+                    teste("clone de " + nomeReal + "#" + n + " (NTFS) -> maximum da particao -200 MB (shrink)", () -> {
+                        String d = novoVhdx("x" + n + "-menor.vhdx", mbPart + 8, setorReal, 32);
+                        roda(real + "#" + n, d + "#TAIL");
+                        roda("maximum", d + "#1", String.valueOf(mbPart - 200));
+                        var vd = dispositivo(d, false);
+                        try {
+                            Object[] q = vd.particao(1), fs = vd.fsInfo(q);
+                            checa(pTam(q) == (mbPart - 200) * MiB, "particao com " + mb(pTam(q)) + ", esperado " + (mbPart - 200) + " MB");
+                            checa(fs != null && (Long) fs[1] < fsAntes && (Long) fs[1] >= pTam(q) - MiB, "NTFS nao acompanhou a particao");
+                        } finally { vd.fechar(); }
+                        roda("maximum", d + "#1", String.valueOf(mbPart));    // e volta a crescer
+                        confereParticao(d, 1, mbPart, (mbPart - 200) * MiB - MiB);
+                        return null;
+                    });
+                    teste("maximum da particao: reduzir alem do possivel falha e nao muda a particao", () -> {
+                        String d = novoVhdx("x" + n + "-minimo.vhdx", mbPart + 8, setorReal, 32);
+                        roda(real + "#" + n, d + "#TAIL");
+                        try { roda("maximum", d + "#1", "1"); throw new Exception("deveria falhar"); }
+                        catch (Exception e) { checa(String.valueOf(e.getMessage()).matches(".*#1 tem dados gravados; o minimo possivel eh \\d+ MB"), "erro inesperado: " + e.getMessage()); }
+                        var vd = dispositivo(d, false);
+                        try { checa(pTam(vd.particao(1)) == mbPart * MiB, "a particao mudou"); } finally { vd.fechar(); }
+                        return null;
+                    });
+                }
+                teste("maximum da particao: falha ao anexar (somente leitura)", () -> {
+                    String d = novoVhdx("x" + n + "-leitura.vhdx", mbPart + 264, setorReal, 32);
+                    roda(real + "#" + n, d + "#TAIL");
+                    var f = new java.io.File(d);
+                    checa(f.setReadOnly(), "nao consegui marcar somente leitura");
+                    try { recusa("anexar", d, "maximum", d + "#1", String.valueOf(mbPart + 100)); } finally { f.setWritable(true); }
+                    return null;
+                });
+            }
+        }
+        teste(nomeReal + " nao mudou", () -> {
+            checa(hash(real) == hReal, real + " mudou");
+            return null;
+        });
+    }
+
+    private long[] p(long... x) { return x; }
+
+    private void teste(String nome, java.util.concurrent.Callable<Object> c) {
+        testes++;
+        try {
+            c.call();
+            System.out.printf("  ok      %2d %s%n", testes, nome);
+        } catch (Exception e) {
+            falhas++;
+            System.out.printf("  FALHOU  %2d %s: %s%n", testes, nome, e.getMessage());
+        }
+    }
+
+    private void checa(boolean ok, String msg) throws Exception { if (!ok) throw new Exception(msg); }
+
+    /** Roda o clone (ou o maximum/detach/compare, se a[0] for um deles) de verdade, sem a saida dele. */
+    private void roda(String... a) throws Exception {
+        String[] args = a;
+        var out = System.out;
+        System.setOut(new java.io.PrintStream(java.io.OutputStream.nullOutputStream()));
+        try {
+            if (a[0].equals("maximum")) new Particao().maximo(java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (a[0].equals("detach")) new Particao().desanexar(java.util.Arrays.copyOfRange(a, 1, a.length));
+            else if (a[0].equals("delete")) new Particao().apagar(java.util.Arrays.copyOfRange(a, 1, a.length));
+            else if (a[0].equals("compare")) new Particao().comparar(java.util.Arrays.copyOfRange(a, 1, a.length));
+            else if (a[0].startsWith("format_")) new Particao().formatar(a[0].substring(7), java.util.Arrays.copyOfRange(a, 1, a.length));
+            else { var c = new Particao(); c.soJava = soJava; c.clonar(args); }
+        } finally { System.setOut(out); }
+    }
+
+    private boolean admin() {
+        try { new java.io.RandomAccessFile("\\\\.\\PhysicalDrive0", "r").close(); return true; } catch (Exception e) { return false; }
+    }
+
+    private String copia(String arq, String nomeArq) throws Exception {
+        var f = new java.io.File(dirTeste, nomeArq);
+        java.nio.file.Files.copy(new java.io.File(arq).toPath(), f.toPath());
+        return f.getPath();
+    }
+
+    /** Particoes do VHDX (numero, offset, tamanho, tipo), para ver que o maximum do VHDX nao mexeu nelas. */
+    private String layout(String arq) throws Exception {
+        var d = dispositivo(arq, false);
+        try {
+            var sb = new StringBuilder();
+            for (Object[] q : d.particoes()) sb.append(pNum(q)).append('@').append(pOff(q)).append('+').append(pTam(q)).append(pTipo(q)).append(';');
+            return sb.toString();
+        } finally { d.fechar(); }
+    }
+
+    /** Depois do maximum do VHDX: tamanho novo e particoes iguais. */
+    private void confereVhdx(String arq, long mb, String layoutAntes) throws Exception {
+        var d = dispositivo(arq, false);
+        try {
+            checa(d.tamanho == mb * MiB, "VHDX com " + mb(d.tamanho) + ", esperado " + mb + " MB");
+            // o fim da GPT acompanhou o VHDX: backup no ultimo setor, valido e igual a primaria
+            checa(d.gptAlt == d.tamanho / d.setor - 1 && d.gptUltimo == d.gptAlt - d.gptEnt.length / d.setor - 1, "GPT nao foi ate o novo fim");
+            byte[] h = new byte[d.setor];
+            d.ler(d.gptAlt * d.setor, h, 0, d.setor);
+            int hs = le32(h, 12);
+            byte[] c = java.util.Arrays.copyOf(h, hs);
+            put32(c, 16, 0);
+            checa(ascii(h, 0, 8).equals("EFI PART") && crc32(c, 0, hs) == le32(h, 16) && le64(h, 24) == d.gptAlt, "GPT backup invalida");
+            byte[] e = new byte[d.gptEnt.length];
+            d.ler(le64(h, 72) * d.setor, e, 0, e.length);
+            checa(java.util.Arrays.equals(e, d.gptEnt), "entradas da GPT backup diferem da primaria");
+        } finally { d.fechar(); }
+        checa(layout(arq).equals(layoutAntes), "as particoes mudaram");
+    }
+
+    /** Depois do maximum da particao: particao com mb, FS maior e do tamanho dela, GPT backup no fim do disco. */
+    private void confereParticao(String arq, int num, long mb, long fsAntes) throws Exception {
+        var d = dispositivo(arq, false);
+        try {
+            Object[] q = d.particao(num), fs = d.fsInfo(q);
+            checa(pTam(q) == mb * MiB, "particao com " + mb(pTam(q)) + ", esperado " + mb + " MB");
+            // NTFS ocupa a particao toda; ReFS cresce em blocos e deixa uns MB no fim (o 1G_refs.vhdx original deixava 6 MB)
+            checa(fs != null && (Long) fs[1] > fsAntes && (Long) fs[1] >= pTam(q) - (fs[0].equals("NTFS") ? MiB : 64 * MiB),
+                    (fs == null ? "FS" : fs[0] + " com " + mb((Long) fs[1])) + " (antes " + mb(fsAntes) + ") numa particao de " + mb(pTam(q)));
+            checa(d.gptAlt == d.tamanho / d.setor - 1, "GPT backup fora do fim do disco");
+        } finally { d.fechar(); }
+    }
+
+    /** Depois do format_refs: particao com mbPart, ReFS de mbFs e os checksums de tudo (VBR, SUPB, CHKP, paginas). */
+    private void confereRefs(String arq, int num, long mbPart, long mbFs) throws Exception {
+        var d = dispositivo(arq, false);
+        try {
+            Object[] q = d.particao(num), fs = d.fsInfo(q);
+            checa(pTam(q) == mbPart * MiB, "particao com " + mb(pTam(q)) + ", esperado " + mbPart + " MB");
+            checa(fs != null && fs[0].equals("ReFS") && (Long) fs[1] == mbFs * MiB, "FS " + (fs == null ? "?" : fs[0] + " " + mb((Long) fs[1])) + ", esperado ReFS " + mbFs + " MB");
+            d.refsBase = pOff(q);
+            long n = mbFs * 256;
+            byte[] v = d.refsLer(0, 4096), vf = new byte[512];
+            int cs = 0;
+            for (int i = 0; i < 512; i++) if (i != 22 && i != 23) cs = (((cs & 1) != 0 ? 0x8000 : 0) + (cs >>> 1) + (v[i] & 0xFF)) & 0xFFFF;
+            checa(cs == le16(v, 22) && le32(v, 32) == d.setor, "VBR invalido");
+            d.ler(pOff(q) + n * 4096 - d.setor, vf, 0, 512);
+            checa(java.util.Arrays.equals(vf, 0, 512, v, 0, 512), "VBR do fim diferente");
+            for (long l : new long[]{30, n - 3, n - 2}) {
+                byte[] x = d.refsLer(l, 4096);
+                int self = le32(x, 80 + 40);
+                checa(ascii(x, 0, 4).equals("SUPB") && le64(x, 32) == l && le32(x, self + 40) == crc32cRefs(x, self), "SUPB em " + l);
+            }
+            byte[] sb = d.refsLer(30, 4096), c = null;
+            for (int i = 0; i < 2; i++) {
+                long l = le64(sb, le32(sb, 80 + 32) + 8 * i);
+                byte[] x = d.refsLer(l, 4096);
+                int self = le32(x, 80 + 8);
+                checa(ascii(x, 0, 4).equals("CHKP") && le64(x, self) == l && le32(x, self + 40) == crc32cRefs(x, self), "CHKP em " + l);
+                if (c == null || Long.compareUnsigned(le64(x, 96), le64(c, 96)) > 0) c = x;
+            }
+            int nref = le32(c, 144), arr = le32(c, 148);
+            for (byte[][] r : d.refsFolhas(c, le32(c, arr + 28), false)) d.refsCont.put(le64(r[1], 0), le64(r[1], 144));
+            checa(d.refsCont.size() == n / REFS_BANDA, d.refsCont.size() + " containers, esperado " + n / REFS_BANDA);
+            for (int t = 0; t < nref; t++) d.confereArvoreRefs(c, le32(c, arr + 4 * t), t != 7 && t != 8 && t != 12, t == 0);
+            checa(d.livreNoFs(q, fs) > 0, "FreeUsage do ReFS nao deu");
+        } finally { d.fechar(); }
+    }
+
+    /** Depois do format_ntfs: particao com mbPart, NTFS dela inteira (o fsInfo conta o setor do boot de backup), boot de backup,
+     *  $MFTMirr = 4 primeiros registros da MFT, registros 0-11 "FILE" com fixups certos e FreeUsage. */
+    private void confereNtfs(String arq, int num, long mbPart) throws Exception {
+        var d = dispositivo(arq, false);
+        try {
+            Object[] q = d.particao(num), fs = d.fsInfo(q);
+            checa(pTam(q) == mbPart * MiB, "particao com " + mb(pTam(q)) + ", esperado " + mbPart + " MB");
+            checa(fs != null && fs[0].equals("NTFS") && (Long) fs[1] == pTam(q), "FS " + (fs == null ? "?" : fs[0] + " " + (Long) fs[1]));
+            byte[] b = new byte[512], c = new byte[512];
+            d.ler(pOff(q), b, 0, 512);
+            d.ler(pOff(q) + pTam(q) - d.setor, c, 0, 512);
+            checa(java.util.Arrays.equals(b, c), "boot de backup diferente");
+            int rec = Math.max(1024, d.setor);
+            byte[] mft = new byte[12 * rec], mir = new byte[4 * rec];
+            d.ler(pOff(q) + le64(b, 0x30) * 4096, mft, 0, mft.length);
+            d.ler(pOff(q) + le64(b, 0x38) * 4096, mir, 0, mir.length);
+            checa(java.util.Arrays.equals(mft, 0, 4 * rec, mir, 0, 4 * rec), "$MFTMirr diferente da MFT");
+            for (int i = 0; i < 12; i++) {
+                int o = i * rec, usa = o + le16(mft, o + 4);
+                checa(ascii(mft, o, 4).equals("FILE") && le32(mft, o + 0x2C) == i, "registro " + i + " da MFT");
+                for (int k = 1; k <= rec / 512; k++) checa(le16(mft, o + k * 512 - 2) == le16(mft, usa), "fixup do registro " + i);
+            }
+            checa(d.livreNoFs(q, fs) > 0, "FreeUsage do NTFS nao deu");
+        } finally { d.fechar(); }
+    }
+
+    /** Depois do format_fat32/exfat: particao com mbPart, FS da particao inteira, boot de backup (FAT32: setores 6-8;
+     *  exFAT: regiao 12-23 e checksum) e FreeUsage. */
+    private void confereFat(String arq, int num, long mbPart) throws Exception {
+        var d = dispositivo(arq, false);
+        try {
+            Object[] q = d.particao(num), fs = d.fsInfo(q);
+            checa(pTam(q) == mbPart * MiB, "particao com " + mb(pTam(q)) + ", esperado " + mbPart + " MB");
+            checa(fs != null && (fs[0].equals("FAT32") || fs[0].equals("exFAT")) && (Long) fs[1] <= pTam(q) && (Long) fs[1] > pTam(q) - 2 * d.setor,
+                    "FS " + (fs == null ? "?" : fs[0] + " " + (Long) fs[1]));
+            boolean ex = fs[0].equals("exFAT");
+            int n = ex ? 12 : 3, bak = ex ? 12 : 6;
+            byte[] a = new byte[n * d.setor], b = new byte[n * d.setor];
+            d.ler(pOff(q), a, 0, a.length);
+            d.ler(pOff(q) + (long) bak * d.setor, b, 0, b.length);
+            checa(java.util.Arrays.equals(a, b), "boot de backup diferente");
+            if (ex) {
+                int cs = 0;
+                for (int i = 0; i < 11 * d.setor; i++)
+                    if (i != 106 && i != 107 && i != 112) cs = (((cs & 1) != 0 ? 0x80000000 : 0) + (cs >>> 1) + (a[i] & 0xFF));
+                checa(le32(a, 11 * d.setor) == cs, "checksum da regiao de boot do exFAT");
+            }
+            checa(d.livreNoFs(q, fs) > 0, "FreeUsage nao deu");
+        } finally { d.fechar(); }
+    }
+
+    /** CRC64 de cada pagina da arvore (e, na de objetos, das arvores de cada objeto). */
+    private void confereArvoreRefs(byte[] ref, int o, boolean virt, boolean objetos) throws Exception {
+        byte[] pg = refsPag(ref, o, virt);
+        checa(ascii(pg, 0, 4).equals("MSB+") && crc64(pg) == le64(ref, o + 40), "pagina ReFS invalida em " + le64(ref, o));
+        int h = noRefs(pg), ks = le32(pg, h + 16), n = le32(pg, h + 20);
+        for (int i = 0; i < n; i++) {
+            int r = h + (le32(pg, h + ks + 4 * i) & 0xFFFF), vo = r + le16(pg, r + 10);
+            if (pg[h + 12] > 0) confereArvoreRefs(pg, vo, virt, objetos);
+            else if (objetos) confereArvoreRefs(pg, vo + 32, true, false);
+        }
+    }
+
+    /** O clone tem de falhar com a mensagem esperada e sem alterar nenhum byte do arquivo alvo. */
+    private void recusa(String trecho, String alvo, String... a) throws Exception {
+        long antes = hash(alvo);
+        try { roda(a); }
+        catch (Exception e) {
+            checa(String.valueOf(e.getMessage()).contains(trecho), "erro inesperado: " + e.getMessage());
+            checa(hash(alvo) == antes, alvo + " mudou");
+            return;
+        }
+        throw new Exception("deveria recusar (" + trecho + ")");
+    }
+
+    private long hash(String arq) throws Exception {
+        var c = new java.util.zip.CRC32C();
+        byte[] b = new byte[1 << 20];
+        try (var in = new java.io.FileInputStream(arq)) { for (int n; (n = in.read(b)) > 0; ) c.update(b, 0, n); }
+        return c.getValue() ^ new java.io.File(arq).length() << 32;
+    }
+
+    private byte[] lerVhdx(String arq, long off, int n) throws Exception {
+        var d = dispositivo(arq, false);
+        try { byte[] b = new byte[n]; d.ler(off, b, 0, n); return b; } finally { d.fechar(); }
+    }
+
+    /** Cabecalho VHDX atual; exige os 2 slots com CRC valido. */
+    private byte[] cabVhdx(String arq) throws Exception {
+        var d = new Particao();
+        try {
+            d.abrirVhdx(arq, false);
+            checa(d.assinado(d.lerArq(64 * 1024, 4096), "head") && d.assinado(d.lerArq(128 * 1024, 4096), "head"), "cabecalho VHDX invalido");
+            return d.cab;
+        } finally { d.fechar(); }
+    }
+
+    /** Confere o clone: bytes do FS, boot de backup NTFS, tipo/nome/atributos, GUID novo, sem sobrepor, GPT backup = primaria. */
+    private Object[] confere(String orig, int on, String dest, int dn) throws Exception {
+        var s = dispositivo(orig, false);
+        var d = dispositivo(dest, false);
+        try {
+            Object[] po = s.particao(on), pd = d.particao(dn), fs = s.fsInfo(po);
+            long n = (Long) fs[1];
+            boolean ntfs = fs[0].equals("NTFS");
+            checa(pTam(pd) >= n, "particao nova menor que o " + fs[0]);
+            long cmp = ntfs ? n - s.setor : n;
+            byte[] a = new byte[BLOCO], b = new byte[BLOCO];
+            for (long pos = 0; pos < cmp; ) {
+                int k = (int) Math.min(BLOCO, cmp - pos);
+                s.ler(pOff(po) + pos, a, 0, k);
+                d.ler(pOff(pd) + pos, b, 0, k);
+                if (!java.util.Arrays.equals(a, 0, k, b, 0, k)) throw new Exception("conteudo difere perto do byte " + pos);
+                pos += k;
+            }
+            if (ntfs) {
+                d.ler(pOff(pd), a, 0, s.setor);
+                d.ler(pOff(pd) + n - s.setor, b, 0, s.setor);
+                checa(java.util.Arrays.equals(a, 0, s.setor, b, 0, s.setor), "sem boot de backup no fim do NTFS");
+            }
+            checa(pTipo(pd).equals(pTipo(po).startsWith("MBR") ? T_BASICO : pTipo(po)), "tipo " + tipoCurto(pTipo(pd)));
+            checa(pNome(pd).equals(pNome(po).isEmpty() ? "Clone" : pNome(po)), "nome '" + pNome(pd) + "'");
+            checa(pAttr(pd) == pAttr(po), "atributos diferentes");
+            if (s.temGpt)
+                checa(!guidStr(s.gptEnt, (on - 1) * s.gptTamEnt + 16).equals(guidStr(d.gptEnt, (dn - 1) * d.gptTamEnt + 16)), "GUID igual ao da origem");
+            for (Object[] q : d.particoes())
+                if (pNum(q) != dn) checa(pOff(q) + pTam(q) <= pOff(pd) || pOff(pd) + pTam(pd) <= pOff(q), "sobrepoe a particao " + pNum(q));
+            byte[] h = new byte[d.setor];
+            d.ler(d.gptAlt * d.setor, h, 0, d.setor);
+            int hs = le32(h, 12);
+            byte[] c = java.util.Arrays.copyOf(h, hs);
+            put32(c, 16, 0);
+            checa(ascii(h, 0, 8).equals("EFI PART") && crc32(c, 0, hs) == le32(h, 16), "GPT backup invalida");
+            checa(le64(h, 24) == d.gptAlt && le64(h, 32) == 1 && le32(h, 88) == le32(d.gptCab, 88), "GPT backup nao bate com a primaria");
+            byte[] e = new byte[d.gptEnt.length];
+            d.ler(le64(h, 72) * d.setor, e, 0, e.length);
+            checa(java.util.Arrays.equals(e, d.gptEnt), "entradas da GPT backup diferem da primaria");
+            return pd;
+        } finally {
+            s.fechar();
+            d.fechar();
+        }
+    }
+
+    /** VHDX de teste com GPT; cada particao = p(numero, inicioMB, tamanhoMB, SEM_FS/NTFS/REFS, tamanhoDoFsMB). */
+    private String disco(String nomeArq, long mb, int setorL, long blocoMB, long[]... parts) throws Exception {
+        String arq = novoVhdx(nomeArq, mb, setorL, blocoMB);
+        var d = dispositivo(arq, true);
+        try {
+            d.criarGpt();
+            for (long[] x : parts) {
+                long ini = x[1] * MiB / setorL;
+                d.adicionarParticao((int) x[0], ini, ini + x[2] * MiB / setorL - 1, x[3] == SEM_FS ? T_MSR : T_BASICO,
+                        x[3] == SEM_FS ? 0 : 1L << 63, "Teste " + x[0]);
+                d.fsFalso(x[1] * MiB, (int) x[3], x[4] * MiB, x[0] * 1000 + x[2]);
+            }
+        } finally { d.fechar(); }
+        return arq;
+    }
+
+    /** VHDX dinamico vazio: cabecalhos em 64/128 KB, regioes em 192/256 KB, log em 1 MB, metadados em 2 MB, BAT em 3 MB. */
+    private String novoVhdx(String nomeArq, long mb, int setorL, long blocoMB) throws Exception {
+        var f = new java.io.File(dirTeste, nomeArq);
+        long bloco = blocoMB * MiB, blocos = Math.ceilDiv(mb * MiB, bloco), ratio = ((1L << 23) * setorL) / bloco;
+        long batLen = Math.ceilDiv((blocos + (blocos - 1) / ratio) * 8, MiB) * MiB;
+        try (var r = new java.io.RandomAccessFile(f, "rw")) {
+            r.setLength(3 * MiB + batLen);
+            byte[] id = new byte[64 * 1024];
+            putAscii(id, 0, "vhdxfile");
+            r.write(id);
+            byte[] h = new byte[4096];
+            putAscii(h, 0, "head");
+            putGuid(h, 16, guidAleatorio());
+            putGuid(h, 32, guidAleatorio());
+            put16(h, 66, 1);
+            put32(h, 68, (int) MiB);
+            put64(h, 72, MiB);
+            for (int i = 0; i < 2; i++) {
+                put64(h, 8, i + 1);
+                put32(h, 4, 0);
+                put32(h, 4, crc32c(h));
+                r.seek((i + 1) * 64 * 1024L);
+                r.write(h);
+            }
+            byte[] rt = new byte[64 * 1024];
+            putAscii(rt, 0, "regi");
+            put32(rt, 8, 2);
+            putGuid(rt, 16, R_BAT);
+            put64(rt, 32, 3 * MiB);
+            put32(rt, 40, (int) batLen);
+            put32(rt, 44, 1);
+            putGuid(rt, 48, R_META);
+            put64(rt, 64, 2 * MiB);
+            put32(rt, 72, (int) MiB);
+            put32(rt, 76, 1);
+            put32(rt, 4, crc32c(rt));
+            r.seek(192 * 1024);
+            r.write(rt);
+            r.seek(256 * 1024);
+            r.write(rt);
+            byte[] md = new byte[(int) MiB];
+            putAscii(md, 0, "metadata");
+            put16(md, 10, 5);
+            String[] ids = {M_PARAMS, M_TAMANHO, M_ID, M_SETOR_LOG, M_SETOR_FIS};
+            int[] lens = {8, 8, 16, 4, 4};
+            int off = 64 * 1024;
+            for (int i = 0; i < 5; i++) {
+                int o = 32 + i * 32;
+                putGuid(md, o, ids[i]);
+                put32(md, o + 16, off);
+                put32(md, o + 20, lens[i]);
+                put32(md, o + 24, i == 0 ? 4 : 6);                // IsRequired (+ IsVirtualDisk)
+                off += lens[i];
+            }
+            put32(md, 64 * 1024, (int) bloco);
+            put64(md, 64 * 1024 + 8, mb * MiB);
+            putGuid(md, 64 * 1024 + 16, guidAleatorio());
+            put32(md, 64 * 1024 + 32, setorL);
+            put32(md, 64 * 1024 + 36, setorL);
+            r.seek(2 * MiB);
+            r.write(md);
+        }
+        return f.getPath();
+    }
+
+    /** Boot NTFS/ReFS/FAT32/exFAT falso (so o que fsInfo le, com a serie de serieFalsa(semente)) e trechos aleatorios no inicio, meio e fim do FS. */
+    private long serieFalsa(long semente) { return semente * 2654435761L & 0xFFFFFFFFL; }
+
+    private void fsFalso(long off, int fs, long fsBytes, long semente) throws Exception {
+        if (fs == SEM_FS) return;
+        byte[] boot = new byte[setor];
+        if (fs == NTFS) {
+            putAscii(boot, 3, "NTFS    ");
+            put16(boot, 0x0B, setor);
+            boot[0x0D] = 8;
+            put64(boot, 0x28, fsBytes / setor - 1);
+            put64(boot, 0x48, serieFalsa(semente));
+        } else if (fs == REFS) {
+            putAscii(boot, 3, "ReFS");
+            putAscii(boot, 0x10, "FSRS");
+            put64(boot, 0x18, fsBytes / setor);
+            put32(boot, 0x20, setor);
+            put64(boot, 0x38, serieFalsa(semente));
+        } else if (fs == FAT32) {
+            putAscii(boot, 3, "MSDOS5.0");
+            put16(boot, 0x0B, setor);
+            boot[0x0D] = 8;
+            put16(boot, 0x0E, 32);
+            boot[0x10] = 2;
+            put32(boot, 0x20, (int) (fsBytes / setor));
+            put32(boot, 0x43, (int) serieFalsa(semente));
+            putAscii(boot, 0x52, "FAT32   ");
+        } else {
+            putAscii(boot, 3, "EXFAT   ");
+            put64(boot, 0x48, fsBytes / setor);
+            put32(boot, 0x64, (int) serieFalsa(semente));
+            boot[0x6C] = (byte) Integer.numberOfTrailingZeros(setor);
+            boot[0x6D] = 3;
+        }
+        boot[0x1FE] = 0x55;
+        boot[0x1FF] = (byte) 0xAA;
+        var rnd = new java.util.Random(semente);
+        long[][] trechos = {{setor, 60 << 10}, {MiB - 4096, 8192}, {fsBytes / 2 - MiB, 2 * MiB + 512}, {fsBytes - setor - (64 << 10), 64 << 10}};
+        for (long[] t : trechos) {
+            byte[] b = new byte[(int) t[1]];
+            rnd.nextBytes(b);
+            gravar(off + t[0], b, 0, b.length);
+        }
+        gravar(off, boot, 0, setor);
+        if (fs == NTFS) gravar(off + fsBytes - setor, boot, 0, setor);
+    }
+
+    // ================================================================= utilitarios
+
+    private int pNum(Object[] p) { return (Integer) p[0]; }
+    private long pOff(Object[] p) { return (Long) p[1]; }
+    private long pTam(Object[] p) { return (Long) p[2]; }
+    private String pTipo(Object[] p) { return (String) p[3]; }
+    private String pNome(Object[] p) { return (String) p[4]; }
+    private long pAttr(Object[] p) { return (Long) p[5]; }
+
+    private void progresso(long feito, long total, long inicioNs) {
+        double seg = Math.max((System.nanoTime() - inicioNs) / 1e9, 0.001);
+        double taxa = feito / seg;
+        long eta = taxa > 0 ? (long) ((total - feito) / taxa) : 0;
+        System.out.printf("\r  %5.1f%%  %s / %s  %.0f MB/s  ETA %02d:%02d:%02d   ",
+                feito * 100.0 / total, mb(feito), mb(total), taxa / MiB, eta / 3600, (eta % 3600) / 60, eta % 60);
+    }
+
+    /** MB sem separador de milhar (255032 MB, nao 255.032 MB): em tabela, mensagem e progresso. */
+    private String mb(long b) { return Math.ceilDiv(b, MiB) + " MB"; }
+
+    private int crc32(byte[] b, int o, int n) {
+        var c = new java.util.zip.CRC32();
+        c.update(b, o, n);
+        return (int) c.getValue();
+    }
+
+    private int crc32c(byte[] b) {
+        var c = new java.util.zip.CRC32C();
+        c.update(b, 0, b.length);
+        return (int) c.getValue();
+    }
+
+    private boolean zero(byte[] b, int o, int n) {
+        for (int i = o; i < o + n; i++) if (b[i] != 0) return false;
+        return true;
+    }
+
+    private String ascii(byte[] b, int o, int n) { return new String(b, o, n, java.nio.charset.StandardCharsets.ISO_8859_1); }
+
+    private void putAscii(byte[] b, int o, String s) {
+        byte[] x = s.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+        System.arraycopy(x, 0, b, o, x.length);
+    }
+
+    private int le16(byte[] b, int o) { return (b[o] & 0xFF) | (b[o + 1] & 0xFF) << 8; }
+    private int le32(byte[] b, int o) { return le16(b, o) | le16(b, o + 2) << 16; }
+    private long le64(byte[] b, int o) { return (le32(b, o) & 0xFFFFFFFFL) | (long) le32(b, o + 4) << 32; }
+    private void put16(byte[] b, int o, int v) { b[o] = (byte) v; b[o + 1] = (byte) (v >>> 8); }
+    private void put32(byte[] b, int o, int v) { put16(b, o, v); put16(b, o + 2, v >>> 16); }
+    private void put64(byte[] b, int o, long v) { put32(b, o, (int) v); put32(b, o + 4, (int) (v >>> 32)); }
+
+    /** GUID no formato do disco: 3 primeiros campos little-endian, resto na ordem. */
+    private String guidStr(byte[] b, int o) {
+        return String.format("%08X-%04X-%04X-%02X%02X-%02X%02X%02X%02X%02X%02X", le32(b, o), le16(b, o + 4), le16(b, o + 6),
+                b[o + 8], b[o + 9], b[o + 10], b[o + 11], b[o + 12], b[o + 13], b[o + 14], b[o + 15]);
+    }
+
+    private void putGuid(byte[] b, int o, String g) {
+        String h = g.replace("-", "");
+        put32(b, o, (int) Long.parseLong(h.substring(0, 8), 16));
+        put16(b, o + 4, Integer.parseInt(h.substring(8, 12), 16));
+        put16(b, o + 6, Integer.parseInt(h.substring(12, 16), 16));
+        for (int i = 0; i < 8; i++) b[o + 8 + i] = (byte) Integer.parseInt(h.substring(16 + i * 2, 18 + i * 2), 16);
+    }
+
+    private String guidAleatorio() { return java.util.UUID.randomUUID().toString().toUpperCase(); }
+}
+
 /* class BannerFiglet */ class BannerFiglet { private static final int WIDTH = 80; private static final char HB = '$'; private static final int H = 6; private static final int RULES = 15; private static final String[][] FONT = { { " ", " $", " $", " $", " $", " $", " $" }, { "!", "  _ ", " | |", " | |", " |_|", " (_)", "    " }, { "\"", "  _ _ ", " ( | )", "  V V ", "   $  ", "   $  ", "      " }, { "#", "    _  _   ", "  _| || |_ ", " |_  ..  _|", " |_      _|", "   |_||_|  ", "           " }, { "$", "   _  ", "  | | ", " / __)", " \\__ \\", " (   /", "  |_| " }, { "%", "  _  __", " (_)/ /", "   / / ", "  / /_ ", " /_/(_)", "       " }, { "&", "   ___   ", "  ( _ )  ", "  / _ \\/\\", " | (_>  <", "  \\___/\\/", "         " }, { "'", "  _ ", " ( )", " |/ ", "  $ ", "  $ ", "    " }, { "(", "   __", "  / /", " | | ", " | | ", " | | ", "  \\_\\" }, { ")", " __  ", " \\ \\ ", "  | |", "  | |", "  | |", " /_/ " }, { "*", "       ", " __/\\__", " \\    /", " /_  _\\", "   \\/  ", "       " }, { "+", "        ", "    _   ", "  _| |_ ", " |_   _|", "   |_|  ", "        " }, { ",", "    ", "    ", "    ", "  _ ", " ( )", " |/ " }, { "-", "        ", "        ", "  _____ ", " |_____|", "    $   ", "        " }, { ".", "    ", "    ", "    ", "  _ ", " (_)", "    " }, { "/", "     __", "    / /", "   / / ", "  / /  ", " /_/   ", "       " }, { "0", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "1", "  _ ", " / |", " | |", " | |", " |_|", "    " }, { "2", "  ____  ", " |___ \\ ", "   __) |", "  / __/ ", " |_____|", "        " }, { "3", "  _____ ", " |___ / ", "   |_ \\ ", "  ___) |", " |____/ ", "        " }, { "4", "  _  _   ", " | || |  ", " | || |_ ", " |__   _|", "    |_|  ", "         " }, { "5", "  ____  ", " | ___| ", " |___ \\ ", "  ___) |", " |____/ ", "        " }, { "6", "   __   ", "  / /_  ", " | '_ \\ ", " | (_) |", "  \\___/ ", "        " }, { "7", "  _____ ", " |___  |", "    / / ", "   / /  ", "  /_/   ", "        " }, { "8", "   ___  ", "  ( _ ) ", "  / _ \\ ", " | (_) |", "  \\___/ ", "        " }, { "9", "   ___  ", "  / _ \\ ", " | (_) |", "  \\__, |", "    /_/ ", "        " }, { ":", "    ", "  _ ", " (_)", "  _ ", " (_)", "    " }, { ";", "    ", "  _ ", " (_)", "  _ ", " ( )", " |/ " }, { "<", "   __", "  / /", " / / ", " \\ \\ ", "  \\_\\", "     " }, { "=", "        ", "  _____ ", " |_____|", " |_____|", "    $   ", "        " }, { ">", " __  ", " \\ \\ ", "  \\ \\", "  / /", " /_/ ", "     " }, { "?", "  ___ ", " |__ \\", "   / /", "  |_| ", "  (_) ", "      " }, { "@", "    ____  ", "   / __ \\ ", "  / / _` |", " | | (_| |", "  \\ \\__,_|", "   \\____/ " }, { "A", "     _    ", "    / \\   ", "   / _ \\  ", "  / ___ \\ ", " /_/   \\_\\", "          " }, { "B", "  ____  ", " | __ ) ", " |  _ \\ ", " | |_) |", " |____/ ", "        " }, { "C", "   ____ ", "  / ___|", " | |    ", " | |___ ", "  \\____|", "        " }, { "D", "  ____  ", " |  _ \\ ", " | | | |", " | |_| |", " |____/ ", "        " }, { "E", "  _____ ", " | ____|", " |  _|  ", " | |___ ", " |_____|", "        " }, { "F", "  _____ ", " |  ___|", " | |_   ", " |  _|  ", " |_|    ", "        " }, { "G", "   ____ ", "  / ___|", " | |  _ ", " | |_| |", "  \\____|", "        " }, { "H", "  _   _ ", " | | | |", " | |_| |", " |  _  |", " |_| |_|", "        " }, { "I", "  ___ ", " |_ _|", "  | | ", "  | | ", " |___|", "      " }, { "J", "      _ ", "     | |", "  _  | |", " | |_| |", "  \\___/ ", "        " }, { "K", "  _  __", " | |/ /", " | ' / ", " | . \\ ", " |_|\\_\\", "       " }, { "L", "  _     ", " | |    ", " | |    ", " | |___ ", " |_____|", "        " }, { "M", "  __  __ ", " |  \\/  |", " | |\\/| |", " | |  | |", " |_|  |_|", "         " }, { "N", "  _   _ ", " | \\ | |", " |  \\| |", " | |\\  |",
 /* class BannerFiglet */ " |_| \\_|", "        " }, { "O", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "P", "  ____  ", " |  _ \\ ", " | |_) |", " |  __/ ", " |_|    ", "        " }, { "Q", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\__\\_\\", "        " }, { "R", "  ____  ", " |  _ \\ ", " | |_) |", " |  _ < ", " |_| \\_\\", "        " }, { "S", "  ____  ", " / ___| ", " \\___ \\ ", "  ___) |", " |____/ ", "        " }, { "T", "  _____ ", " |_   _|", "   | |  ", "   | |  ", "   |_|  ", "        " }, { "U", "  _   _ ", " | | | |", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "V", " __     __", " \\ \\   / /", "  \\ \\ / / ", "   \\ V /  ", "    \\_/   ", "          " }, { "W", " __        __", " \\ \\      / /", "  \\ \\ /\\ / / ", "   \\ V  V /  ", "    \\_/\\_/   ", "             " }, { "X", " __  __", " \\ \\/ /", "  \\  / ", "  /  \\ ", " /_/\\_\\", "       " }, { "Y", " __   __", " \\ \\ / /", "  \\ V / ", "   | |  ", "   |_|  ", "        " }, { "Z", "  _____", " |__  /", "   / / ", "  / /_ ", " /____|", "       " }, { "[", "  __ ", " | _|", " | | ", " | | ", " | | ", " |__|" }, { "\\", " __    ", " \\ \\   ", "  \\ \\  ", "   \\ \\ ", "    \\_\\", "       " }, { "]", "  __ ", " |_ |", "  | |", "  | |", "  | |", " |__|" }, { "^", "  /\\ ", " |/\\|", "   $ ", "   $ ", "   $ ", "     " }, { "_", "        ", "        ", "        ", "        ", "  _____ ", " |_____|" }, { "`", "  _ ", " ( )", "  \\|", "  $ ", "  $ ", "    " }, { "a", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__,_|", "        " }, { "b", "  _     ", " | |__  ", " | '_ \\ ", " | |_) |", " |_.__/ ", "        " }, { "c", "       ", "   ___ ", "  / __|", " | (__ ", "  \\___|", "       " }, { "d", "      _ ", "   __| |", "  / _` |", " | (_| |", "  \\__,_|", "        " }, { "e", "       ", "   ___ ", "  / _ \\", " |  __/", "  \\___|", "       " }, { "f", "   __ ", "  / _|", " | |_ ", " |  _|", " |_|  ", "      " }, { "g", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__, |", "  |___/ " }, { "h", "  _     ", " | |__  ", " | '_ \\ ", " | | | |", " |_| |_|", "        " }, { "i", "  _ ", " (_)", " | |", " | |", " |_|", "    " }, { "j", "    _ ", "   (_)", "   | |", "   | |", "  _/ |", " |__/ " }, { "k", "  _    ", " | | __", " | |/ /", " |   < ", " |_|\\_\\", "       " }, { "l", "  _ ", " | |", " | |", " | |", " |_|", "    " }, { "m", "            ", "  _ __ ___  ", " | '_ ` _ \\ ", " | | | | | |", " |_| |_| |_|", "            " }, { "n", "        ", "  _ __  ", " | '_ \\ ", " | | | |", " |_| |_|", "        " }, { "o", "        ", "   ___  ", "  / _ \\ ", " | (_) |", "  \\___/ ", "        " }, { "p", "        ", "  _ __  ", " | '_ \\ ", " | |_) |", " | .__/ ", " |_|    " }, { "q", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__, |", "     |_|" }, { "r", "       ", "  _ __ ", " | '__|", " | |   ", " |_|   ", "       " }, { "s", "      ", "  ___ ", " / __|", " \\__ \\", " |___/", "      " }, { "t", "  _   ", " | |_ ", " | __|", " | |_ ", "  \\__|", "      " }, { "u", "        ", "  _   _ ", " | | | |", " | |_| |", "  \\__,_|", "        " }, { "v", "        ", " __   __", " \\ \\ / /", "  \\ V / ", "   \\_/  ", "        " }, { "w", "           ", " __      __", " \\ \\ /\\ / /", "  \\ V  V / ", "   \\_/\\_/  ", "           " }, { "x", "       ", " __  __", " \\ \\/ /", "  >  < ", " /_/\\_\\", "       " }, { "y", "        ", "  _   _ ", " | | | |", " | |_| |", "  \\__, |", "  |___/ " }, { "z", "      ", "  ____", " |_  /", "  / / ", " /___|", "      " }, { "{", "    __", "   / /", "  | | ", " < <  ", "  | | ", "   \\_\\" }, { "|", "  _ ", " | |", " | |", " | |", " | |", " |_|" }, { "}", " __   ", " \\ \\  ", "  | | ", "   > >", "  | | ", " /_/  " }, { "~", "  /\\/|", " |/\\/ ", "   $  ", "   $  ",
 /* class BannerFiglet */ "   $  ", "      " }, { "\u00a0", " $", " $", " $", " $", " $", " $" }, { "\u00a1", "  _ ", " (_)", " | |", " | |", " |_|", "    " }, { "\u00a2", "    _  ", "   | | ", "  / __)", " | (__ ", "  \\   )", "   |_| " }, { "\u00a3", "    ___  ", "   / ,_\\ ", " _| |_   ", "  | |___ ", " (_,____|", "         " }, { "\u00a4", " /\\___/\\", " \\  _  /", " | (_) |", " / ___ \\", " \\/   \\/", "        " }, { "\u00a5", "  __ __ ", "  \\ V / ", " |__ __|", " |__ __|", "   |_|  ", "        " }, { "\u00a6", "  _ ", " | |", " |_|", "  _ ", " | |", " |_|" }, { "\u00a7", "    __ ", "  _/ _)", " / \\ \\ ", " \\ \\\\ \\", "  \\ \\_/", " (__/  " }, { "\u00a8", "  _   _ ", " (_) (_)", "  $   $ ", "  $   $ ", "  $   $ ", "        " }, { "\u00a9", "    _____   ", "   / ___ \\  ", "  / / __| \\ ", " | | (__   |", "  \\ \\___| / ", "   \\_____/  " }, { "\u00aa", "  __ _ ", " / _` |", " \\__,_|", " |____|", "    $  ", "       " }, { "\u00ab", "   ____", "  / / /", " / / / ", " \\ \\ \\ ", "  \\_\\_\\", "       " }, { "\u00ac", "        ", "  _____ ", " |___  |", "     |_|", "    $   ", "        " }, { "\u00ad", "       ", "       ", "  ____ ", " |____|", "    $  ", "       " }, { "\u00ae", "    _____   ", "   / ___ \\  ", "  / | _ \\ \\ ", " |  |   /  |", "  \\ |_|_\\ / ", "   \\_____/  " }, { "\u00af", "  _____ ", " |_____|", "    $   ", "    $   ", "    $   ", "        " }, { "\u00b0", "   __  ", "  /  \\ ", " | () |", "  \\__/ ", "    $  ", "       " }, { "\u00b1", "    _   ", "  _| |_ ", " |_   _|", "  _|_|_ ", " |_____|", "        " }, { "\u00b2", "  ___ ", " |_  )", "  / / ", " /___|", "   $  ", "      " }, { "\u00b3", "  ____", " |__ /", "  |_ \\", " |___/", "   $  ", "      " }, { "\u00b4", "  __", " /_/", "  $ ", "  $ ", "  $ ", "    " }, { "\u00b5", "        ", "  _   _ ", " | | | |", " | |_| |", " | ._,_|", " |_|    " }, { "\u00b6", "   _____ ", "  /     |", " | (| | |", "  \\__ | |", "    |_|_|", "         " }, { "\u00b7", "    ", "  _ ", " (_)", "  $ ", "  $ ", "    " }, { "\u00b8", "    ", "    ", "    ", "    ", "  _ ", " )_)" }, { "\u00b9", "  _ ", " / |", " | |", " |_|", "  $ ", "    " }, { "\u00ba", "  ___ ", " / _ \\", " \\___/", " |___|", "   $  ", "      " }, { "\u00bb", " ____  ", " \\ \\ \\ ", "  \\ \\ \\", "  / / /", " /_/_/ ", "       " }, { "\u00bc", "  _   __    ", " / | / / _  ", " | |/ / | | ", " |_/ /|_  _|", "  /_/   |_| ", "            " }, { "\u00bd", "  _   __   ", " / | / /__ ", " | |/ /_  )", " |_/ / / / ", "  /_/ /___|", "           " }, { "\u00be", "  ____  __    ", " |__ / / / _  ", "  |_ \\/ / | | ", " |___/ /|_  _|", "    /_/   |_| ", "              " }, { "\u00bf", "   _  ", "  (_) ", "  | | ", " / /_ ", " \\___|", "      " }, { "\u00c0", "   __   ", "   \\_\\  ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c1", "    __  ", "   /_/  ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c2", "   //\\  ", "  |/_\\| ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c3", "   /\\/| ", "  |/\\/  ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c4", "  _   _ ", " (_)_(_)", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c5", "    _   ", "   (o)  ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c6", "     ______ ", "    /  ____|", "   / _  _|  ", "  / __ |___ ", " /_/ |_____|", "            " }, { "\u00c7", "   ____ ", "  / ___|", " | |    ", " | |___ ", "  \\____|", "    )_) " }, { "\u00c8", "   __   ", "  _\\_\\_ ", " | ____|", " |  _|_ ", " |_____|", "        " }, { "\u00c9", "    __  ", "  _/_/_ ", " | ____|", " |  _|_ ", " |_____|", "        " }, { "\u00ca", "   //\\  ", "  |/_\\| ", " | ____|", " |  _|_ ", " |_____|", "        " }, { "\u00cb", "  _   _ ", " (_)_(_)", " | ____|", " |  _|_ ", " |_____|",
