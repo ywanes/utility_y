@@ -1060,6 +1060,10 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("particao") ){
+            if ( ! isWindows() )
+                erroFatal("implementado só para windows!");
+            if ( ! isWindowsAdm() )
+                erroFatal("você precisa estar no cmd adm!");
             args=removeParm(0, args);
             new Particao().main(args);
             return;
