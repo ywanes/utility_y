@@ -36,6 +36,7 @@
 # bcdboot E:\Windows /s S: /f UEFI /addlast
 # removendo a letra S:
 # mountvol S: /d
+# obs: efi nao precisa estar no começo do disco!
 
 
 # download https://wimlib.net
