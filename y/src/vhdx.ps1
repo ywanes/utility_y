@@ -43,6 +43,8 @@
 # copiando windows para outra particao na mao - recomendado para destino menos com refs:
 # wimlib-imagex capture F:\ C:\temp.wim --compress=none
 # wimlib-imagex apply C:\temp.wim 1 E:\
+# opcional:
+#     compressao extrema fica assim: --solid --compress=LZMS:100 --solid-chunk-size=256M
 
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 $validaAdm = $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
