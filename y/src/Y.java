@@ -43998,6 +43998,7 @@ class Particao {
             else if (args.length > 0 && args[0].toLowerCase().matches("create_by_template_1g_(vazio|refs|winre_refs)"))
                 app.criarModelo("1G_" + args[0].substring(22).toLowerCase(), java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].equalsIgnoreCase("compare")) app.comparar(java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].equalsIgnoreCase("format_efi")) app.formatarEfi(java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].toLowerCase().matches("format_(refs|ntfs|fat32|exfat)")) app.formatar(args[0].substring(7).toLowerCase(), java.util.Arrays.copyOfRange(args, 1, args.length));
             else app.clonar(args);
         } catch (Exception e) {
@@ -44025,13 +44026,13 @@ class Particao {
             System.out.print("""
                     ClonaParticao - clones one NTFS, ReFS, FAT32 or exFAT partition (pure Java)
                     exemplos:
-                        y particao 1G_winre_refs.vhdx#2 E:\new.vhdx#TAIL
-                        y particao 1G_winre_refs.vhdx#3 E:\new.vhdx#TAIL
-                        y particao 1G_winre_refs.vhdx#2 E:\new.vhdx#TAIL 2000
-                        y particao 1G_winre_refs.vhdx#3 E:\new.vhdx#5 --verify
+                        y particao 1G_winre_refs.vhdx#2 E:\\new.vhdx#TAIL
+                        y particao 1G_winre_refs.vhdx#3 E:\\new.vhdx#TAIL
+                        y particao 1G_winre_refs.vhdx#2 E:\\new.vhdx#TAIL 2000
+                        y particao 1G_winre_refs.vhdx#3 E:\\new.vhdx#5 --verify
                         y particao D 2#5
                         y particao 1#3 2#4 max
-                        y particao maximum E:\new.vhdx#1 3000
+                        y particao maximum E:\\new.vhdx#1 3000
                         y particao list [showFreeUsage] [disk | letter | file.vhdx]
                         y particao <from> <to> [size] [--verify]
                         y particao -test [a.vhdx]
@@ -44043,22 +44044,28 @@ class Particao {
                         y particao format_refs b.vhdx#3 | format_refs b.vhdx#3 2000 | format_refs b.vhdx#3 max
                         y particao format_ntfs b.vhdx#3 [MB|max] | format_fat32 b.vhdx#3 [MB|max] | format_exfat b.vhdx#3 [MB|max]
                         y particao format_ntfs 1#3 [MB|max]   (disco 1; tambem format_refs/fat32/exfat)
+                        y particao format_efi b.vhdx#1 C:\\vm\\a.vhdx#3 |format_efi 1#TAIL D
                           #N     : numero da particao na GPT (na listagem pode ficar fora de ordem). Espaco livre entre particoes
                                    aparece com o numero que a particao vai receber ali; o livre do fim e o #TAIL
                           from   : D | 1#3 (disco#particao) | C:\\vm\\a.vhdx#3
-                          to     : 2#5 | E:\b.vhdx#5 | E:\b.vhdx#TAIL (um espaco livre; #N ou #TAIL obrigatorio). Nada e
+                          to     : 2#5 | E:\\b.vhdx#5 | E:\\b.vhdx#TAIL (um espaco livre; #N ou #TAIL obrigatorio). Nada e
                                    renumerado, para nao comprometer um possivel boot
                           size   : (omitido) = mesmo tamanho do from | max = todo esse espaco livre | valor em MB. Maior que o FS:
                                    NTFS/ReFS, como Administrador, o FS cresce junto (diskpart extend, como o maximum)
                           compare: diz se o FS das duas particoes e identico byte a byte (so le; cada uma como no from)
                           showFreeUsage: espaco livre dentro do FS; experimental no ReFS
                           delete : tira a particao da GPT, mesmo protegida (em Java; nada e renumerado; os dados ficam no livre).
-                                   Disco: particao com letra ou EFI pede para digitar 4 numeros aleatorios
+                                   Particao EFI (disco ou VHDX) pede para digitar 4 numeros aleatorios
                           maximum a.vhdx MB menor que o atual: diminui o VHDX em Java; experimental
                           format_*: formata em Java (o que havia se perde). #N existente: MB/max mudam o tamanho antes;
                                    #N livre ou #TAIL: cria a particao (sem tamanho = todo o livre). Minimo: ReFS 1088 MB, NTFS 16 MB,
                                    FAT32 36 MB (ate 2 TB), exFAT 16 MB. Disco: particao com letra recusa (tire a letra); EFI pede
                                    para digitar 4 numeros aleatorios
+                          format_efi: cria no espaco livre (#N livre ou #TAIL; nunca uma particao existente) a EFI de
+                                   100 MB (FAT32) que da boot no Windows da particao indicada (D | 1#3 | a.vhdx#3; NTFS ou ReFS):
+                                   copia o \\Windows\\Boot dela como o bcdboot e grava o BCD apontando para ela. EFI num
+                                   disco e Windows num .vhdx: boot nativo do VHDX (o BCD aponta para o arquivo). Disco que
+                                   e um VHDX montado (ex: o Windows rodando de um VHDX): recusa. Setor diferente de 512: recusa
                     """);
             return;
         }
@@ -44182,7 +44189,7 @@ class Particao {
                 throw new Exception(e.getMessage() + "\nNada foi registrado na tabela de particoes; o espaco continua livre.");
             }
             String tipo = pTipo(po).startsWith("MBR") ? T_BASICO : pTipo(po);
-            dst.adicionarParticao(vaga, ini, fim, tipo, pAttr(po), pNome(po).isEmpty() ? "Clone" : pNome(po));
+            dst.adicionarParticao(vaga, ini, fim, tipo, pAttr(po), pNome(po).isEmpty() ? "Clone" : pNome(po), null);
             if (crescer) { crescerArq = dst.vhdx ? new java.io.File(d).getCanonicalPath() : d; crescerNum = vaga; crescerMb = desejado / MiB; }
             if (dst.fisico && !crescer) rescanFisico = true;      // o crescer ja faz o rescan
         } finally {
@@ -44512,43 +44519,13 @@ class Particao {
             ler(pOff(p), b, 0, 512);
             switch ((String) fs[0]) {
                 case "NTFS": {
-                    int bps = le16(b, 0x0B), spc = b[0x0D] & 0xFF;
-                    if (spc > 0x80) spc = 1 << (256 - spc);
-                    long cl = (long) bps * spc, clusters = le64(b, 0x28) / spc, mftLcn = le64(b, 0x30);
-                    int c = b[0x40];
-                    int reg = c > 0 ? (int) (c * cl) : 1 << -c;
-                    byte[] r = new byte[reg];
-                    ler(pOff(p) + mftLcn * cl + 6L * reg, r, 0, reg);     // registro 6 = $Bitmap
-                    if (!ascii(r, 0, 4).equals("FILE")) return -1;
-                    int us = le16(r, 4), un = le16(r, 6);                  // fixups a cada 512 bytes
-                    for (int i = 1; i < un && i * 512 <= reg; i++) { r[i * 512 - 2] = r[us + 2 * i]; r[i * 512 - 1] = r[us + 2 * i + 1]; }
-                    for (int a = le16(r, 0x14); a + 16 <= reg && le32(r, a) != -1; a += le32(r, a + 4)) {
-                        if (le32(r, a) != 0x80 || (r[a + 9] & 0xFF) != 0) continue;   // $DATA sem nome
-                        long bytesMapa = Math.ceilDiv(clusters, 8);
-                        byte[] mapa = new byte[(int) bytesMapa];
-                        if (r[a + 8] == 0) {                                // residente
-                            System.arraycopy(r, a + le16(r, a + 0x14), mapa, 0, (int) Math.min(bytesMapa, le32(r, a + 0x10)));
-                        } else {                                            // lista de extents (runlist)
-                            int q = a + le16(r, a + 0x20);
-                            long lcn = 0, pos = 0;
-                            while (pos < bytesMapa && r[q] != 0) {
-                                int nl = r[q] & 0x0F, no = (r[q] >> 4) & 0x0F;
-                                long len = 0, off = 0;
-                                for (int i = 0; i < nl; i++) len |= (long) (r[q + 1 + i] & 0xFF) << (8 * i);
-                                for (int i = 0; i < no; i++) off |= (long) (r[q + 1 + nl + i] & 0xFF) << (8 * i);
-                                if (no > 0 && (r[q + nl + no] & 0x80) != 0) off -= 1L << (8 * no);   // deslocamento com sinal
-                                lcn += off;
-                                int n = (int) Math.min(len * cl, bytesMapa - pos);
-                                ler(pOff(p) + lcn * cl, mapa, (int) pos, n);
-                                pos += n;
-                                q += 1 + nl + no;
-                            }
-                        }
-                        // reservados nao sao livres: o NTFS montado reserva 1.024 clusters (fsutil "Total de bytes
-                        // reservados", 4 MB com cluster de 4 KB, medido em 08/10/2026); a reserva de armazenamento do C: nao entra
-                        return Math.max(0, bitsZerados(mapa, clusters) - 1024) * cl;
-                    }
-                    return -1;
+                    ntfsAbrir(pOff(p));
+                    long clusters = le64(b, 0x28) * le16(b, 0x0B) / ntCl;
+                    byte[] mapa = ntfsConteudo(ntfsAtributos(6), 0x80, "");      // registro 6 = $Bitmap
+                    if (mapa == null) return -1;
+                    // reservados nao sao livres: o NTFS montado reserva 1.024 clusters (fsutil "Total de bytes
+                    // reservados", 4 MB com cluster de 4 KB, medido em 08/10/2026); a reserva de armazenamento do C: nao entra
+                    return Math.max(0, bitsZerados(mapa, clusters) - 1024) * ntCl;
                 }
                 case "FAT32": {
                     int bps = le16(b, 0x0B), spc = b[0x0D] & 0xFF, res = le16(b, 0x0E), nf = b[0x10] & 0xFF;
@@ -45013,8 +44990,8 @@ class Particao {
         return melhor;
     }
 
-    /** numero = 0: primeiro numero vago da GPT; senao usa esse numero (precisa estar vago). */
-    private int adicionarParticao(int numero, long ini, long fim, String tipo, long attr, String nomePart) throws Exception {
+    /** numero = 0: primeiro numero vago da GPT; senao usa esse numero (precisa estar vago). guid null = aleatorio. */
+    private int adicionarParticao(int numero, long ini, long fim, String tipo, long attr, String nomePart, String guid) throws Exception {
         int slot = -1;
         if (numero > 0) {
             if (!zero(gptEnt, (numero - 1) * gptTamEnt, 16)) throw new Exception(nome + ": a particao " + numero + " ja existe.");
@@ -45025,7 +45002,7 @@ class Particao {
         int o = slot * gptTamEnt;
         java.util.Arrays.fill(gptEnt, o, o + gptTamEnt, (byte) 0);
         putGuid(gptEnt, o, tipo);
-        putGuid(gptEnt, o + 16, guidAleatorio());
+        putGuid(gptEnt, o + 16, guid == null ? guidAleatorio() : guid);
         put64(gptEnt, o + 32, ini);
         put64(gptEnt, o + 40, fim);
         put64(gptEnt, o + 48, attr);
@@ -45344,8 +45321,8 @@ class Particao {
     /**
      * delete a.vhdx#N | delete 1#3: zera a entrada N da GPT (primaria e backup, com CRC), em Java. Vale tambem para
      * particao protegida (ex: recuperacao com atributo 0x8000000000000001, que o Gerenciamento de Disco nao exclui).
-     * Nada e renumerado e os dados nao sao apagados: o espaco so volta a ser livre. Disco fisico: particao com letra
-     * (volume montado) ou EFI so com a confirmacao de 4 numeros aleatorios.
+     * Nada e renumerado e os dados nao sao apagados: o espaco so volta a ser livre. Particao EFI (disco ou VHDX) so com
+     * a confirmacao de 4 numeros aleatorios.
      */
     private void apagar(String[] args) throws Exception {
         String uso = "use: delete a.vhdx#N | delete 1#3";
@@ -45358,24 +45335,15 @@ class Particao {
         boolean disco = alvo.matches("\\d+");
         if (!disco && (!alvo.toLowerCase().endsWith(".vhdx") || !new java.io.File(alvo).isFile())) throw new Exception("VHDX nao encontrado: " + alvo);
         if (!disco) exigirDesanexado(alvo);
-        var letras = disco ? letrasMontadas() : new java.util.TreeMap<Character, byte[]>();
         var d = dispositivo(alvo, true);
         try {
             if (!d.temGpt) throw new Exception(d.nome + " nao tem GPT.");
             Object[] p = d.particao(num);
-            if (disco) {                                       // EFI ou montada (com letra): so com os 4 numeros
-                boolean grave = pTipo(p).equals(T_EFI);
-                byte[] b = new byte[4096];
-                if (pTam(p) >= 4096) {
-                    d.ler(pOff(p), b, 0, 4096);
-                    for (var e : letras.entrySet()) if (java.util.Arrays.equals(e.getValue(), b)) grave = true;
-                }
-                if (grave) {
-                    String n = String.valueOf(1000 + new java.util.Random().nextInt(9000));
-                    System.out.println("ATENCAO, esse comando e muito grave, cuidado, digite os numeros " + n + " e de enter para prosseguir");
-                    String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
-                    if (r == null || !r.trim().equals(n)) throw new Exception("confirmacao errada; nada foi feito.");
-                }
+            if (pTipo(p).equals(T_EFI)) {                      // EFI (disco ou VHDX): so com os 4 numeros
+                String n = String.valueOf(1000 + new java.util.Random().nextInt(9000));
+                System.out.println("ATENCAO, esse comando e muito grave, cuidado, digite os numeros " + n + " e de enter para prosseguir");
+                String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
+                if (r == null || !r.trim().equals(n)) throw new Exception("confirmacao errada; nada foi feito.");
             }
             int o = (pNum(p) - 1) * d.gptTamEnt;
             java.util.Arrays.fill(d.gptEnt, o, o + d.gptTamEnt, (byte) 0);
@@ -45608,9 +45576,788 @@ class Particao {
                 case "fat32" -> d.gerarFat32(ini, novo);
                 default -> d.gerarExfat(ini, novo);
             }
-            if (p == null) d.adicionarParticao((Integer) x[3], ini / d.setor, (ini + novo) / d.setor - 1, T_BASICO, 0, "Basic data partition");
+            if (p == null) d.adicionarParticao((Integer) x[3], ini / d.setor, (ini + novo) / d.setor - 1, T_BASICO, 0, "Basic data partition", null);
         } finally { d.fechar(); }
         if (disco) diskpart("reexaminar os discos", "rescan");   // o Windows passa a ver a particao e o FS novos
+    }
+
+    // ========================================================================= EFI
+
+    private final long EFI_MB = 100;
+
+    /**
+     * format_efi a.vhdx#N|#TAIL|1#N <windows>: cria no espaco livre (so livre; nada existente e apagado) a particao EFI de
+     * 100 MB em FAT32 que da boot no Windows da particao <windows> (D | 1#3 | a.vhdx#3; NTFS ou ReFS). Copia o
+     * \Windows\Boot dela como o bcdboot (EFI -> EFI\Microsoft\Boot, Fonts e Resources dentro dela, bootmgfw.efi ->
+     * EFI\Boot\BOOTX64.EFI) e grava o BCD apontando para ela pelos GUIDs da GPT (disco e particao). Tudo e lido antes
+     * de abrir o destino para escrita: o Windows pode estar no mesmo disco ou VHDX.
+     */
+    private void formatarEfi(String[] args) throws Exception {
+        String uso = "use: format_efi a.vhdx#N|a.vhdx#TAIL <windows> | format_efi 1#N|1#TAIL <windows>   (windows = D | 1#3 | a.vhdx#3)";
+        if (args.length != 2) throw new Exception(uso);
+        String alvo = args[0];
+        int h = alvo.lastIndexOf('#');
+        if (h <= 0) throw new Exception(uso);
+        String sufixo = alvo.substring(h + 1), arq = alvo.substring(0, h);
+        boolean tail = sufixo.equalsIgnoreCase("TAIL");
+        if (!tail && !sufixo.matches("\\d+")) throw new Exception(uso);
+        int num = tail ? 0 : Integer.parseInt(sufixo);
+        if (!tail && num < 1) throw new Exception("numero de particao invalido: #" + num);
+        boolean disco = arq.matches("\\d+");
+        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+
+        // Windows: GUIDs da GPT e arquivos de boot. Num disco: o disco nao pode ser um VHDX montado (ex: o Windows rodando
+        // de um VHDX). Num .vhdx desmontado com a EFI num disco fisico = boot nativo: o BCD aponta para o arquivo .vhdx
+        // na particao fisica onde ele esta (GUIDs dela + caminho) e para a particao dentro dele.
+        String w = args[1];
+        int discoW = w.matches("(?i)[a-z]:?\\\\?") ? acharLetra(Character.toUpperCase(w.charAt(0)))[0] : w.matches("\\d+#\\d+") ? Integer.parseInt(w.split("#")[0]) : -1;
+        if (discoW >= 0) {
+            String vd = vdisksAnexados().get(discoW);
+            if (vd != null) throw new Exception(w + " esta no disco " + discoW + ", que e o VHDX montado " + vd + ": nao suportado"
+                    + " (desmonte e use " + new java.io.File(vd).getName() + "#N).");
+        }
+        String arqW = discoW < 0 ? new java.io.File(w.substring(0, w.lastIndexOf('#') > 0 ? w.lastIndexOf('#') : w.length())).getCanonicalPath() : null;
+        if (arqW != null) exigirDesanexado(arqW);
+        boolean nativo = arqW != null && disco;
+        var arquivos = new java.util.TreeMap<String, byte[]>(String.CASE_INSENSITIVE_ORDER);
+        String discoWin, partWin;
+        Object[] ao = abrirParticao(w);
+        var src = (Particao) ao[0];
+        try {
+            Object[] p = (Object[]) ao[1];
+            if (!src.temGpt) throw new Exception(ao[2] + " nao esta num disco GPT: o boot UEFI precisa de GPT.");
+            discoWin = guidStr(src.gptCab, 56);
+            partWin = guidStr(src.gptEnt, (pNum(p) - 1) * src.gptTamEnt + 16);
+            src.lerBoot(p, (String) ao[2], arquivos);
+        } finally { src.fechar(); }
+        byte[] devWin = bcdDispositivo(discoWin, partWin), osWin = devWin;
+        if (nativo) {                                              // a particao fisica onde o arquivo .vhdx esta
+            int[] dp = acharLetra(Character.toUpperCase(arqW.charAt(0)));
+            var hd = dispositivo(String.valueOf(dp[0]), false);
+            try {
+                if (!hd.temGpt) throw new Exception("o disco " + dp[0] + ", onde esta o " + arqW + ", nao e GPT: nao suportado.");
+                String dh = guidStr(hd.gptCab, 56), ph = guidStr(hd.gptEnt, (dp[1] - 1) * hd.gptTamEnt + 16);
+                devWin = bcdDispositivoVhd(dh, ph, arqW.substring(2), 0x12000002);
+                osWin = bcdDispositivoVhd(dh, ph, arqW.substring(2), 0x22000002);
+            } finally { hd.fechar(); }
+        }
+
+        if (!disco) exigirDesanexado(arq);
+        var d = dispositivo(arq, true);
+        try {
+            if (!d.temGpt && !d.particoes().isEmpty()) throw new Exception(d.nome + " usa MBR. Este programa so grava em discos GPT.");
+            if (!d.temGpt && !d.vhdx) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
+            if (d.setor != 512)                                  // raro (o padrao e 512): cluster minimo de 4 KB
+                throw new Exception(d.nome + " tem setor de " + d.setor + " bytes: a EFI de " + EFI_MB + " MB nao chega aos 65525 clusters"
+                        + " que o FAT32 exige. Nada foi feito.");
+            Object[] x = null;
+            for (Object[] e : d.espacos()) if (tail ? e[0] == null && (Boolean) e[4] : (Integer) e[3] == num) x = e;
+            if (x == null) throw new Exception(d.nome + (tail ? " nao tem espaco livre no fim (#TAIL)." : " nao tem o #" + num + " livre.")
+                    + " Particoes:\n" + d.descreverParticoes());
+            if (x[0] != null) throw new Exception("o #" + num + " de " + d.nome + " e uma particao; o format_efi so cria em espaco livre"
+                    + " (nada existente e apagado). Particoes:\n" + d.descreverParticoes());
+            if ((Integer) x[3] == 0) throw new Exception(d.nome + ": tabela GPT cheia.");
+            long ini = (Long) x[1] * d.setor, livre = ((Long) x[2] - (Long) x[1] + 1) * d.setor, tam = EFI_MB * MiB;
+            if (tam > livre) throw new Exception("nao cabe: a EFI tem " + EFI_MB + " MB, mas o livre " + (tail ? "#TAIL" : "#" + num)
+                    + " de " + d.nome + " tem " + livre / MiB + " MB.");
+            if (!d.temGpt) d.criarGpt();                           // o livre ja e o que a GPT criada deixa
+            String guidEfi = guidAleatorio();
+            arquivos.put("EFI/Microsoft/Boot/BCD", bcd(bcdDispositivo(guidStr(d.gptCab, 56), guidEfi), devWin, osWin));
+            d.gerarFat32(ini, tam);
+            d.fat32Gravar(ini, arquivos);
+            d.adicionarParticao((Integer) x[3], ini / d.setor, (ini + tam) / d.setor - 1, T_EFI, 0, "EFI system partition", guidEfi);
+        } finally { d.fechar(); }
+        if (disco) diskpart("reexaminar os discos", "rescan");   // o Windows passa a ver a particao nova
+    }
+
+    /**
+     * Arquivos de boot do Windows da particao p, nos caminhos que o bcdboot usa na EFI (caminho com / -> conteudo):
+     * \Windows\Boot\EFI -> EFI/Microsoft/Boot, Fonts e Resources dentro dela, bootmgfw.efi tambem em EFI/Boot/BOOTX64.EFI.
+     */
+    private void lerBoot(Object[] p, String desc, java.util.Map<String, byte[]> saida) throws Exception {
+        Object[] fs = fsInfo(p);
+        if (fs == null || !fs[0].equals("NTFS") && !fs[0].equals("ReFS")) throw new Exception(desc + " nao e NTFS nem ReFS: nao tem Windows.");
+        boolean ntfs = fs[0].equals("NTFS");
+        if (ntfs) ntfsAbrir(pOff(p)); else refsAbrirLeitura(pOff(p));
+        String wl = "Windows/System32/winload.efi";
+        boolean temWl = ntfs ? ntfsAchar(wl) != null && ntfsAchar(wl)[1] == 0 : refsAchar(wl) != null && (Integer) refsAchar(wl)[0] == 1;
+        if (!temWl) throw new Exception(desc + " nao tem \\Windows\\System32\\winload.efi (nao e a particao do Windows).");
+        for (String[] pa : new String[][]{{"Windows/Boot/EFI", "EFI/Microsoft/Boot/"}, {"Windows/Boot/Fonts", "EFI/Microsoft/Boot/Fonts/"},
+                {"Windows/Boot/Resources", "EFI/Microsoft/Boot/Resources/"}}) {
+            String falta = desc + " nao tem a pasta \\" + pa[0].replace('/', '\\') + ".";
+            if (ntfs) {
+                long[] r = ntfsAchar(pa[0]);
+                if (r == null || r[1] == 0) throw new Exception(falta);
+                ntfsTudo(r[0], pa[1], saida);
+            } else {
+                Object[] r = refsAchar(pa[0]);
+                if (r == null || (Integer) r[0] != 2) throw new Exception(falta);
+                refsTudo(le64((byte[]) r[1], 8), pa[1], saida);
+            }
+        }
+        byte[] bm = saida.get("EFI/Microsoft/Boot/bootmgfw.efi");
+        if (bm == null) throw new Exception(desc + " nao tem \\Windows\\Boot\\EFI\\bootmgfw.efi.");
+        saida.put("EFI/Boot/BOOTX64.EFI", bm);
+    }
+
+    // ---- leitura de NTFS (so leitura): registros da MFT pelos data runs do $MFT, pastas pelo indice $I30
+
+    private long ntOff;                                       // offset da particao
+    private int ntCl, ntRec;                                  // bytes por cluster e por registro da MFT
+    private java.util.List<long[]> ntMft;                     // data runs do $MFT
+
+    private void ntfsAbrir(long off) throws Exception {
+        byte[] b = new byte[512];
+        ler(off, b, 0, 512);
+        int bps = le16(b, 0x0B), spc = b[0x0D] & 0xFF, c = b[0x40];
+        if (spc > 0x80) spc = 1 << (256 - spc);
+        ntOff = off;
+        ntCl = bps * spc;
+        ntRec = c > 0 ? c * ntCl : 1 << -c;
+        ntMft = java.util.List.of(new long[]{le64(b, 0x30), Math.ceilDiv((long) ntRec, ntCl)});   // so o registro 0
+        var a0 = new java.util.ArrayList<byte[]>();
+        ntfsAtrsDoRegistro(ntfsRegistro(0), a0);
+        ntMft = ntfsRuns(a0, 0x80, "");                       // parte do registro 0 (alcanca os de extensao)
+        ntMft = ntfsRuns(ntfsAtributos(0), 0x80, "");          // todas as partes
+    }
+
+    /** Registro n da MFT com os fixups desfeitos. */
+    private byte[] ntfsRegistro(long n) throws Exception {
+        byte[] r = new byte[ntRec];
+        ntfsLer(ntMft, n * ntRec, r, ntRec);
+        if (!ascii(r, 0, 4).equals("FILE") || (le16(r, 0x16) & 1) == 0) throw new Exception("NTFS: registro " + n + " da MFT invalido ou livre.");
+        int us = le16(r, 4), un = le16(r, 6);
+        for (int i = 1; i < un && i * 512 <= ntRec; i++) {
+            if (r[i * 512 - 2] != r[us] || r[i * 512 - 1] != r[us + 1]) throw new Exception("NTFS: registro " + n + " da MFT com fixup errado.");
+            r[i * 512 - 2] = r[us + 2 * i];
+            r[i * 512 - 1] = r[us + 2 * i + 1];
+        }
+        return r;
+    }
+
+    /** Atributos do registro n (copias), incluindo os dos registros de extensao da $ATTRIBUTE_LIST. */
+    private java.util.List<byte[]> ntfsAtributos(long n) throws Exception {
+        var lista = new java.util.ArrayList<byte[]>();
+        ntfsAtrsDoRegistro(ntfsRegistro(n), lista);
+        byte[] al = ntfsConteudo(lista, 0x20, "");
+        if (al == null) return lista;
+        var ext = new java.util.TreeSet<Long>();
+        for (int e = 0; e + 26 <= al.length && le16(al, e + 4) > 0; e += le16(al, e + 4)) ext.add(le64(al, e + 16) & 0xFFFFFFFFFFFFL);
+        ext.remove(n);
+        for (long x : ext) ntfsAtrsDoRegistro(ntfsRegistro(x), lista);
+        return lista;
+    }
+
+    private void ntfsAtrsDoRegistro(byte[] r, java.util.List<byte[]> lista) {
+        for (int a = le16(r, 0x14); a + 16 <= ntRec && le32(r, a) != -1 && le32(r, a + 4) > 0; a += le32(r, a + 4))
+            lista.add(java.util.Arrays.copyOfRange(r, a, a + le32(r, a + 4)));
+    }
+
+    /** Partes (pela VCN inicial) do atributo tipo/nome; vazia se nao existir. */
+    private java.util.List<byte[]> ntfsPartes(java.util.List<byte[]> atrs, int tipo, String nome) {
+        var l = new java.util.ArrayList<byte[]>();
+        for (byte[] a : atrs)
+            if (le32(a, 0) == tipo && new String(a, le16(a, 10), 2 * (a[9] & 0xFF), java.nio.charset.StandardCharsets.UTF_16LE).equals(nome)) l.add(a);
+        l.sort((x, y) -> Long.compare(x[8] == 0 ? 0 : le64(x, 0x10), y[8] == 0 ? 0 : le64(y, 0x10)));
+        return l;
+    }
+
+    /** Data runs do atributo nao residente (todas as partes): {lcn ou -1 se esparso, clusters}. */
+    private java.util.List<long[]> ntfsRuns(java.util.List<byte[]> atrs, int tipo, String nome) {
+        var runs = new java.util.ArrayList<long[]>();
+        for (byte[] a : ntfsPartes(atrs, tipo, nome)) {
+            long lcn = 0;
+            for (int q = le16(a, 0x20); q < a.length && a[q] != 0; ) {
+                int nl = a[q] & 0x0F, no = (a[q] >> 4) & 0x0F;
+                long len = 0, off = 0;
+                for (int i = 0; i < nl; i++) len |= (long) (a[q + 1 + i] & 0xFF) << (8 * i);
+                for (int i = 0; i < no; i++) off |= (long) (a[q + 1 + nl + i] & 0xFF) << (8 * i);
+                if (no > 0 && (a[q + nl + no] & 0x80) != 0) off -= 1L << (8 * no);   // deslocamento com sinal
+                lcn += off;
+                runs.add(new long[]{no == 0 ? -1 : lcn, len});
+                q += 1 + nl + no;
+            }
+        }
+        return runs;
+    }
+
+    /** Le n bytes a partir do byte pos do conteudo descrito pelos runs (esparso = zeros). */
+    private void ntfsLer(java.util.List<long[]> runs, long pos, byte[] b, int n) throws Exception {
+        int feito = 0;
+        long base = 0;
+        for (long[] r : runs) {
+            long fim = base + r[1] * ntCl;
+            while (feito < n && pos + feito < fim) {
+                long dentro = pos + feito - base;
+                int k = (int) Math.min(n - feito, fim - pos - feito);
+                if (r[0] < 0) java.util.Arrays.fill(b, feito, feito + k, (byte) 0);
+                else ler(ntOff + r[0] * ntCl + dentro, b, feito, k);
+                feito += k;
+            }
+            base = fim;
+            if (feito == n) return;
+        }
+        throw new Exception("NTFS: leitura alem do fim do atributo.");
+    }
+
+    /** Conteudo do atributo tipo/nome (residente ou nao); null se nao existir. Comprimido ou criptografado: erro. */
+    private byte[] ntfsConteudo(java.util.List<byte[]> atrs, int tipo, String nome) throws Exception {
+        var partes = ntfsPartes(atrs, tipo, nome);
+        if (partes.isEmpty()) return null;
+        byte[] a = partes.get(0);
+        if (a[8] == 0) return java.util.Arrays.copyOfRange(a, le16(a, 0x14), le16(a, 0x14) + le32(a, 0x10));
+        if ((le16(a, 0x0C) & 0x4001) != 0) throw new Exception("NTFS: arquivo comprimido ou criptografado, nao suportado.");
+        long real = le64(a, 0x30);
+        if (real > Integer.MAX_VALUE - 8) throw new Exception("NTFS: arquivo grande demais (" + mb(real) + ").");
+        byte[] b = new byte[(int) real];
+        ntfsLer(ntfsRuns(atrs, tipo, nome), 0, b, b.length);
+        return b;
+    }
+
+    /** Itens da pasta (registro n), sem o nome DOS: nome -> {registro, 1 se for pasta}. */
+    private java.util.Map<String, long[]> ntfsFilhos(long n) throws Exception {
+        var atrs = ntfsAtributos(n);
+        byte[] raiz = ntfsConteudo(atrs, 0x90, "$I30");
+        if (raiz == null) throw new Exception("NTFS: registro " + n + " nao e pasta.");
+        byte[] aloc = ntfsConteudo(atrs, 0xA0, "$I30");
+        int tamBloco = le32(raiz, 8), unidade = tamBloco >= ntCl ? ntCl : 512;
+        var m = new java.util.TreeMap<String, long[]>(String.CASE_INSENSITIVE_ORDER);
+        var nos = new java.util.ArrayDeque<Object[]>();          // {bytes, offset do cabecalho do no}
+        nos.push(new Object[]{raiz, 16});
+        while (!nos.isEmpty()) {
+            Object[] no = nos.pop();
+            byte[] b = (byte[]) no[0];
+            int hn = (Integer) no[1];
+            for (int e = hn + le32(b, hn), fim = hn + le32(b, hn + 4); e + 16 <= fim; e += le16(b, e + 8)) {
+                int fl = le16(b, e + 12), len = le16(b, e + 8);
+                if ((fl & 1) != 0) {                                  // filho: bloco INDX na VCN do fim da entrada
+                    if (aloc == null) throw new Exception("NTFS: indice da pasta " + n + " sem $INDEX_ALLOCATION.");
+                    long o = le64(b, e + len - 8) * unidade;
+                    byte[] blk = java.util.Arrays.copyOfRange(aloc, (int) o, (int) o + tamBloco);
+                    if (!ascii(blk, 0, 4).equals("INDX")) throw new Exception("NTFS: bloco INDX invalido na pasta " + n + ".");
+                    int us = le16(blk, 4), un = le16(blk, 6);
+                    for (int i = 1; i < un && i * 512 <= tamBloco; i++) { blk[i * 512 - 2] = blk[us + 2 * i]; blk[i * 512 - 1] = blk[us + 2 * i + 1]; }
+                    nos.push(new Object[]{blk, 0x18});
+                }
+                if ((fl & 2) != 0 || len == 0) break;                 // ultima entrada (sem chave)
+                int k = e + 16;
+                if (b[k + 0x41] == 2) continue;                       // nome DOS 8.3: o longo tambem esta no indice
+                String nm = new String(b, k + 0x42, 2 * (b[k + 0x40] & 0xFF), java.nio.charset.StandardCharsets.UTF_16LE);
+                m.put(nm, new long[]{le64(b, e) & 0xFFFFFFFFFFFFL, (le32(b, k + 0x38) & 0x10000000) != 0 ? 1 : 0});
+            }
+        }
+        return m;
+    }
+
+    /** Registro e tipo ({registro, 1 se pasta}) do caminho (com /) a partir da raiz; null se nao existir. */
+    private long[] ntfsAchar(String caminho) throws Exception {
+        long[] cur = {5, 1};
+        for (String c : caminho.split("/")) {
+            if (cur[1] == 0) return null;
+            cur = ntfsFilhos(cur[0]).get(c);
+            if (cur == null) return null;
+        }
+        return cur;
+    }
+
+    /** Todos os arquivos da pasta (registro n), recursivo: prefixo + caminho com / -> conteudo do $DATA sem nome. */
+    private void ntfsTudo(long n, String prefixo, java.util.Map<String, byte[]> saida) throws Exception {
+        for (var e : ntfsFilhos(n).entrySet()) {
+            long[] f = e.getValue();
+            if (f[0] == n) continue;                              // "." da raiz
+            if (f[1] != 0) { ntfsTudo(f[0], prefixo + e.getKey() + "/", saida); continue; }
+            var atrs = ntfsAtributos(f[0]);
+            if (!ntfsPartes(atrs, 0xC0, "").isEmpty())
+                throw new Exception("NTFS: " + prefixo + e.getKey() + " tem reparse point (comprimido pelo CompactOS?), nao suportado.");
+            byte[] c = ntfsConteudo(atrs, 0x80, "");
+            saida.put(prefixo + e.getKey(), c == null ? new byte[0] : c);
+        }
+    }
+
+    // ---- leitura de ReFS 3.x (so leitura; cluster 4 KB; achado nas amostras do Windows 11 26100, 09/10/2026)
+    // Arvore de objetos (CHKP, referencia 0): chave {0, id}, valor com a referencia da raiz do objeto em +32. Pasta
+    // (raiz = 0x600): registros 0x30 = {u16 0x30, u16 tipo (1 arquivo, 2 pasta), nome UTF-16}; pasta: id em +8 do
+    // valor; arquivo: o valor e um no embutido (u32 em +0 = onde comeca o cabecalho do no) com o tamanho em +0x58 e
+    // os atributos; o $DATA tem 0x80 em +12 da chave: residente (+8 da chave = 1) ou com outro no embutido de extents
+    // de 0x18 bytes {u64 cluster virtual, ..., u32 em +12 = cluster no arquivo, u32 em +20 = quantidade}.
+
+    private java.util.Map<Long, byte[]> rfObjs;
+
+    private void refsAbrirLeitura(long off) throws Exception {
+        refsBase = off;
+        byte[] vbr = refsLer(0, 512);
+        if ((long) le32(vbr, 0x20) * le32(vbr, 0x24) != 4096) throw new Exception("ReFS: so cluster de 4 KB e suportado.");
+        byte[] sb = refsLer(30, 4096);
+        if (!ascii(sb, 0, 4).equals("SUPB")) throw new Exception("ReFS: superbloco nao encontrado.");
+        int co = le32(sb, 80 + 32), cn = le32(sb, 80 + 36);
+        byte[] ck = null;
+        for (int i = 0; i < cn; i++) {                                    // checkpoint com o maior relogio
+            byte[] c = refsLer(le64(sb, co + 8 * i), 4096);
+            if (ascii(c, 0, 4).equals("CHKP") && (ck == null || Long.compareUnsigned(le64(c, 96), le64(ck, 96)) > 0)) ck = c;
+        }
+        if (ck == null) throw new Exception("ReFS: checkpoint nao encontrado.");
+        int arr = le32(ck, 148);
+        refsCont.clear();
+        for (byte[][] r : refsFolhas(ck, le32(ck, arr + 4 * 7), false)) refsCont.put(le64(r[1], 0), le64(r[1], 144));
+        rfObjs = new java.util.HashMap<>();
+        rfIds.clear();
+        for (byte[][] r : refsFolhas(ck, le32(ck, arr), true)) rfObjs.put(le64(r[0], 8), r[1]);
+    }
+
+    /** Itens da pasta (objeto id): nome -> {Integer tipo (1 arquivo, 2 pasta), byte[] valor}. */
+    private java.util.Map<String, Object[]> refsFilhos(long id) throws Exception {
+        byte[] o = rfObjs.get(id);
+        if (o == null) throw new Exception("ReFS: objeto " + Long.toHexString(id) + " nao existe.");
+        var m = new java.util.TreeMap<String, Object[]>(String.CASE_INSENSITIVE_ORDER);
+        for (byte[][] r : refsFolhas(o, 32, true)) {
+            if (r[0].length < 4 || le16(r[0], 0) != 0x30) continue;
+            int tipo = le16(r[0], 2);
+            byte[] v = r[1];
+            // tipo 2 sem o atributo de pasta = arquivo por id (hard link, como o Windows instalado grava): {id, objeto dono}
+            if (tipo == 2 && v.length >= 0x44 && (le32(v, 0x40) & 0x10000000) == 0 && le64(v, 0) != 0) { tipo = 1; v = refsPorId(le64(v, 8), le64(v, 0)); }
+            if (tipo == 1 || tipo == 2) m.put(new String(r[0], 4, r[0].length - 4, java.nio.charset.StandardCharsets.UTF_16LE), new Object[]{tipo, v});
+        }
+        return m;
+    }
+
+    private java.util.Map<Long, java.util.Map<Long, byte[]>> rfIds = new java.util.HashMap<>();
+
+    /** Registro do arquivo pelo id: chave {u16 0x40, u16, u32, u64 id, u64 objeto} no objeto dono (o valor e como o do tipo 1). */
+    private byte[] refsPorId(long obj, long id) throws Exception {
+        var m = rfIds.get(obj);
+        if (m == null) {
+            byte[] o = rfObjs.get(obj);
+            if (o == null) throw new Exception("ReFS: objeto " + Long.toHexString(obj) + " nao existe.");
+            m = new java.util.HashMap<>();
+            for (byte[][] r : refsFolhas(o, 32, true)) if (r[0].length >= 16 && le16(r[0], 0) == 0x40) m.put(le64(r[0], 8), r[1]);
+            rfIds.put(obj, m);
+        }
+        byte[] v = m.get(id);
+        if (v == null) throw new Exception("ReFS: arquivo " + id + " do objeto " + Long.toHexString(obj) + " nao encontrado.");
+        return v;
+    }
+
+    /** {tipo, valor} do caminho (com /) a partir da raiz; null se nao existir. */
+    private Object[] refsAchar(String caminho) throws Exception {
+        Object[] cur = {2, null};
+        long id = 0x600;
+        for (String c : caminho.split("/")) {
+            if ((Integer) cur[0] != 2) return null;
+            if (cur[1] != null) id = le64((byte[]) cur[1], 8);
+            cur = refsFilhos(id).get(c);
+            if (cur == null) return null;
+        }
+        return cur;
+    }
+
+    /** Todos os arquivos da pasta (objeto id), recursivo: prefixo + caminho com / -> conteudo. */
+    private void refsTudo(long id, String prefixo, java.util.Map<String, byte[]> saida) throws Exception {
+        for (var e : refsFilhos(id).entrySet()) {
+            byte[] v = (byte[]) e.getValue()[1];
+            if ((Integer) e.getValue()[0] == 2) refsTudo(le64(v, 8), prefixo + e.getKey() + "/", saida);
+            else saida.put(prefixo + e.getKey(), refsArquivo(v, prefixo + e.getKey()));
+        }
+    }
+
+    /** Conteudo do arquivo (valor do registro 0x30 tipo 1): $DATA residente ou pelos extents. */
+    private byte[] refsArquivo(byte[] v, String nome) throws Exception {
+        long tam = le64(v, 0x58);
+        if (tam > Integer.MAX_VALUE - 8) throw new Exception("ReFS: " + nome + " grande demais (" + mb(tam) + ").");
+        byte[] saida = new byte[(int) tam];
+        if (tam == 0) return saida;
+        for (byte[][] r : refsRegistrosNo(v, le32(v, 0))) {
+            byte[] k = r[0], a = r[1];
+            if (k.length < 16 || le16(k, 12) != 0x80) continue;
+            if ((k[8] & 0xFF) == 1) {                                         // residente
+                int o = le32(a, 8) + le32(a, 12);
+                if (o + tam > a.length) throw new Exception("ReFS: " + nome + ": dado residente fora do registro.");
+                System.arraycopy(a, o, saida, 0, (int) tam);
+                return saida;
+            }
+            if (a.length < 0x40 || le32(a, 0) <= 0 || le32(a, 0) + 24 > a.length) continue;
+            var ext = new java.util.ArrayList<long[]>();
+            refsExtents(a, 0, ext);
+            if (ext.isEmpty()) continue;
+            long coberto = 0;
+            for (long[] x : ext) {
+                long ini = x[1] * 4096, n = Math.min(x[2] * 4096, tam - ini);
+                if (n <= 0) continue;
+                long real = refsReal(x[0], true);
+                ler(refsBase + real * 4096, saida, (int) ini, (int) n);
+                coberto += n;
+            }
+            if (coberto != tam) throw new Exception("ReFS: " + nome + ": extents cobrem " + coberto + " de " + tam + " bytes.");
+            return saida;
+        }
+        throw new Exception("ReFS: " + nome + ": $DATA nao encontrado.");
+    }
+
+    /** Registros {chave, valor} do no que comeca em b[h] (embutido ou pagina), descendo pelos galhos. */
+    private java.util.List<byte[][]> refsRegistrosNo(byte[] b, int h) throws Exception {
+        var out = new java.util.ArrayList<byte[][]>();
+        int nivel = b[h + 12], vet = le32(b, h + 16), n = le32(b, h + 20);
+        for (int i = 0; i < n; i++) {
+            int r = h + (le32(b, h + vet + 4 * i) & 0xFFFF);
+            byte[] k = java.util.Arrays.copyOfRange(b, r + le16(b, r + 4), r + le16(b, r + 4) + le16(b, r + 6));
+            byte[] v = java.util.Arrays.copyOfRange(b, r + le16(b, r + 10), r + le16(b, r + 10) + le16(b, r + 12));
+            if (nivel > 0) { byte[] pg = refsPag(v, 0, true); out.addAll(refsRegistrosNo(pg, noRefs(pg))); }
+            else out.add(new byte[][]{k, v});
+        }
+        return out;
+    }
+
+    /** Extents do no embutido em b[base] (u32 em base = cabecalho do no): {cluster virtual, cluster no arquivo, quantidade}. */
+    private void refsExtents(byte[] b, int base, java.util.List<long[]> out) throws Exception {
+        int h = base + le32(b, base), nivel = b[h + 12], vet = le32(b, h + 16), n = le32(b, h + 20);
+        if (h + vet + 4L * n > b.length) return;
+        for (int i = 0; i < n; i++) {
+            int r = h + (le32(b, h + vet + 4 * i) & 0xFFFF);
+            if (nivel > 0) {                                                   // galho: referencia da pagina filha no valor
+                byte[] pg = refsPag(b, r + le16(b, r + 10), true);
+                refsExtents(pg, 80, out);
+            } else out.add(new long[]{le64(b, r), le32(b, r + 12) & 0xFFFFFFFFL, le32(b, r + 20) & 0xFFFFFFFFL});
+        }
+    }
+
+    // ---- BCD: hive de registro (regf 1.3) com o {bootmgr} e uma entrada do Windows
+
+    /**
+     * BCD com o {bootmgr} (bootmgfw.efi na EFI) e a entrada do Windows (winload.efi, \Windows), cada dispositivo pelos
+     * GUIDs da GPT (disco e particao). Valores: Description\Type (REG_DWORD) e Elements\<tipo>\Element.
+     */
+    private byte[] bcd(byte[] devEfi, byte[] devWin, byte[] osWin) {
+        String bm = "{9dea862c-5cdd-4e70-acc1-f32b344d4795}", win = "{" + guidAleatorio().toLowerCase() + "}";
+        Object[] objBm = bcdObjeto(bm, 0x10100002, new Object[][]{
+                {"11000001", 3, devEfi}, {"12000002", 1, bcdTexto("\\EFI\\Microsoft\\Boot\\bootmgfw.efi")},
+                {"12000004", 1, bcdTexto("Windows Boot Manager")}, {"23000003", 1, bcdTexto(win)},
+                {"24000001", 7, bcdTexto(win + "\0")}});
+        Object[] objWin = bcdObjeto(win, 0x10200003, new Object[][]{
+                {"11000001", 3, devWin}, {"12000002", 1, bcdTexto("\\Windows\\system32\\winload.efi")},
+                {"12000004", 1, bcdTexto("Windows")}, {"21000001", 3, osWin}, {"22000002", 1, bcdTexto("\\Windows")}});
+        byte[] um = {1, 0, 0, 0};
+        Object[] desc = {"Description", new Object[][]{{"KeyName", 1, bcdTexto("BCD00000000")}, {"System", 4, um}, {"TreatAsSystem", 4, um}}, new Object[0][]};
+        Object[] raiz = {"NewStoreRoot", new Object[0][], new Object[][]{desc, {"Objects", new Object[0][], new Object[][]{objBm, objWin}}}};
+        return hive(raiz);
+    }
+
+    /** Objeto do BCD: chave {guid} com Description\Type e Elements\<tipo>\Element. elementos = {tipo, tipo do valor, dados}. */
+    private Object[] bcdObjeto(String guid, int tipo, Object[][] elementos) {
+        byte[] t = new byte[4];
+        put32(t, 0, tipo);
+        Object[][] el = new Object[elementos.length][];
+        for (int i = 0; i < el.length; i++) el[i] = new Object[]{elementos[i][0], new Object[][]{{"Element", elementos[i][1], elementos[i][2]}}, new Object[0][]};
+        return new Object[]{guid, new Object[0][], new Object[][]{{"Description", new Object[][]{{"Type", 4, t}}, new Object[0][]},
+                {"Elements", new Object[0][], el}}};
+    }
+
+    /**
+     * Dispositivo "QualifiedPartition" (tipo 6) de 0x58 bytes: 16 zeros (opcoes), tipo, flags, tamanho 0x48 (do +0x10 ao
+     * fim), reservado, GUID da particao em +0x20, estilo 0 (GPT) em +0x30, GUID do disco em +0x38 (conferido num BCD
+     * do Windows 11).
+     */
+    private byte[] bcdDispositivo(String disco, String part) {
+        byte[] b = new byte[0x58];
+        put32(b, 0x10, 6);
+        put32(b, 0x18, 0x48);
+        putGuid(b, 0x20, part);
+        putGuid(b, 0x38, disco);
+        return b;
+    }
+
+    /**
+     * Boot nativo de VHDX, como o bcdedit grava o "vhd=[C:]\x.vhdx" (vale para .vhd e .vhdx; conferido byte a byte com
+     * um BCD descartavel do bcdedit, 10/10/2026): "localizar" (8) a particao que tem o caminho do elemento (12000002 no
+     * device, 22000002 no osdevice) dentro do disco virtual (0, local 6, sem GUIDs de dentro) cujo arquivo (0, local 5)
+     * e {versao 1, tamanho, tipo 5, particao fisica onde o arquivo esta, caminho UTF-16 sem a letra}.
+     */
+    private byte[] bcdDispositivoVhd(String discoHost, String partHost, String caminho, int elemento) {
+        byte[] pai = bcdDispositivo(discoHost, partHost), nome = bcdTexto(caminho);
+        int cam = 12 + (pai.length - 16) + nome.length;           // descritor do caminho
+        byte[] b = new byte[0x6A + cam];
+        put32(b, 0x10, 8);                                        // localizar
+        put32(b, 0x18, b.length - 0x10);
+        put32(b, 0x24, elemento);
+        put32(b, 0x28, 0x1E);                                     // disco virtual em +0x10+0x1E
+        put32(b, 0x36, b.length - 0x2E);
+        put32(b, 0x3E, 6);                                        // local: disco virtual
+        put32(b, 0x5E, b.length - 0x56);                          // dispositivo do arquivo
+        put32(b, 0x66, 5);                                        // local: arquivo
+        put32(b, 0x6A, 1); put32(b, 0x6E, cam); put32(b, 0x72, 5);
+        System.arraycopy(pai, 16, b, 0x76, pai.length - 16);
+        System.arraycopy(nome, 0, b, 0x76 + pai.length - 16, nome.length);
+        return b;
+    }
+
+    /** VHDX anexados no Windows (diskpart list vdisk, so leitura): numero do disco -> arquivo. */
+    private java.util.Map<Integer, String> vdisksAnexados() throws Exception {
+        var m = new java.util.HashMap<Integer, String>();
+        for (String l : diskpart("listar os VHDX anexados", "list vdisk").split("\\R")) {
+            var x = java.util.regex.Pattern.compile("^\\s*\\S+\\s+\\d+\\s+\\S+\\s+(\\d+)\\s.*?([A-Za-z]:\\\\.*\\S)\\s*$").matcher(l);
+            if (x.find()) m.put(Integer.parseInt(x.group(1)), x.group(2));
+        }
+        return m;
+    }
+
+    private byte[] bcdTexto(String s) { return (s + "\0").getBytes(java.nio.charset.StandardCharsets.UTF_16LE); }
+
+    private byte[] hvBuf;
+    private int hvLen, hvSk, hvChaves;
+
+    /**
+     * Hive de registro (regf 1.3, um hbin so) da arvore chave = {nome, valores {nome, tipo, dados}, subchaves}: bloco base
+     * de 4 KB + hbin com as celulas (nk, vk, listas lf, um sk compartilhado por todas as chaves).
+     */
+    private byte[] hive(Object[] raiz) {
+        hvBuf = new byte[65536];
+        hvLen = 32;                                               // cabecalho do hbin
+        hvChaves = 0;
+        // sk: o descritor de um BCD do Windows 11 (dono Administradores, grupo SYSTEM; DACL: Administradores leitura e
+        // WRITE_DAC/WRITE_OWNER, SYSTEM controle total)
+        byte[] sd = java.util.HexFormat.of().parseHex("0100048048000000580000000000000014000000020034000200000000001800190006000102000000000005"
+                + "200000002002000000001400" + "3f000f0001010000000000051200000001020000000000052000000020020000010100000000000512000000");
+        byte[] sk = new byte[20 + sd.length];
+        sk[0] = 's'; sk[1] = 'k';
+        put32(sk, 16, sd.length);
+        System.arraycopy(sd, 0, sk, 20, sd.length);
+        hvSk = hvCel(sk);
+        put32(hvBuf, hvSk + 4 + 4, hvSk); put32(hvBuf, hvSk + 4 + 8, hvSk);   // lista circular de um so
+        int r = hvChave(raiz, -1);
+        put32(hvBuf, hvSk + 4 + 12, hvChaves);
+        int bin = Math.ceilDiv(hvLen, 4096) * 4096;
+        if (bin > hvLen) { hvBuf = java.util.Arrays.copyOf(hvBuf, Math.max(hvBuf.length, bin)); put32(hvBuf, hvLen, bin - hvLen); }   // celula livre
+        long agora = (System.currentTimeMillis() + 11644473600000L) * 10000;
+        byte[] out = new byte[4096 + bin];
+        putAscii(out, 0, "regf");
+        put32(out, 4, 1); put32(out, 8, 1); put64(out, 12, agora);
+        put32(out, 20, 1); put32(out, 24, 3); put32(out, 28, 0); put32(out, 32, 1);
+        put32(out, 36, r); put32(out, 40, bin); put32(out, 44, 1);
+        int x = 0;
+        for (int i = 0; i < 508; i += 4) x ^= le32(out, i);
+        put32(out, 508, x == 0 ? 1 : x == -1 ? -2 : x);
+        System.arraycopy(hvBuf, 0, out, 4096, bin);
+        putAscii(out, 4096, "hbin");
+        put32(out, 4096 + 8, bin);
+        put64(out, 4096 + 20, agora);
+        return out;
+    }
+
+    /** Celula alocada (tamanho negativo, multiplo de 8) com os dados; devolve o offset dela no hbin. */
+    private int hvCel(byte[] dados) {
+        int tam = (4 + dados.length + 7) / 8 * 8, o = hvLen;
+        if (o + tam > hvBuf.length) hvBuf = java.util.Arrays.copyOf(hvBuf, Math.max(2 * hvBuf.length, o + tam));
+        put32(hvBuf, o, -tam);
+        System.arraycopy(dados, 0, hvBuf, o + 4, dados.length);
+        hvLen += tam;
+        return o;
+    }
+
+    /** Grava a chave (nk), os valores (vk + dados), a lista lf e as subchaves; devolve o offset do nk. */
+    private int hvChave(Object[] k, int pai) {
+        String nome = (String) k[0];
+        Object[][] vals = (Object[][]) k[1], subs = (Object[][]) k[2];
+        hvChaves++;
+        byte[] nk = new byte[0x4C + nome.length()];
+        nk[0] = 'n'; nk[1] = 'k';
+        put16(nk, 2, pai < 0 ? 0x2C : 0x20);                      // raiz: entrada do hive, nao apaga; nome ASCII
+        put64(nk, 4, (System.currentTimeMillis() + 11644473600000L) * 10000);
+        put32(nk, 0x10, pai < 0 ? 0 : pai);
+        put32(nk, 0x1C, -1); put32(nk, 0x20, -1); put32(nk, 0x28, -1); put32(nk, 0x30, -1);
+        put32(nk, 0x2C, hvSk);
+        put16(nk, 0x48, nome.length());
+        putAscii(nk, 0x4C, nome);
+        int o = hvCel(nk), d = o + 4;
+        if (vals.length > 0) {
+            int[] vo = new int[vals.length];
+            int maxNome = 0, maxDados = 0;
+            for (int i = 0; i < vals.length; i++) {
+                String vn = (String) vals[i][0];
+                byte[] dados = (byte[]) vals[i][2];
+                byte[] vk = new byte[0x14 + vn.length()];
+                vk[0] = 'v'; vk[1] = 'k';
+                put16(vk, 2, vn.length());
+                if (dados.length <= 4) { put32(vk, 4, 0x80000000 | dados.length); System.arraycopy(dados, 0, vk, 8, dados.length); }
+                else { put32(vk, 4, dados.length); put32(vk, 8, hvCel(dados)); }
+                put32(vk, 12, (Integer) vals[i][1]);
+                put16(vk, 16, 1);                                     // nome ASCII
+                putAscii(vk, 0x14, vn);
+                vo[i] = hvCel(vk);
+                maxNome = Math.max(maxNome, 2 * vn.length());
+                maxDados = Math.max(maxDados, dados.length);
+            }
+            byte[] lista = new byte[4 * vals.length];
+            for (int i = 0; i < vo.length; i++) put32(lista, 4 * i, vo[i]);
+            put32(hvBuf, d + 0x24, vals.length);
+            put32(hvBuf, d + 0x28, hvCel(lista));
+            put32(hvBuf, d + 0x3C, maxNome);
+            put32(hvBuf, d + 0x40, maxDados);
+        }
+        if (subs.length > 0) {
+            Object[][] ord = subs.clone();
+            java.util.Arrays.sort(ord, (x, y) -> ((String) x[0]).toUpperCase().compareTo(((String) y[0]).toUpperCase()));
+            byte[] lf = new byte[4 + 8 * ord.length];
+            lf[0] = 'l'; lf[1] = 'f';
+            put16(lf, 2, ord.length);
+            int maxSub = 0;
+            for (int i = 0; i < ord.length; i++) {
+                String sn = (String) ord[i][0];
+                put32(lf, 4 + 8 * i, hvChave(ord[i], o));
+                putAscii(lf, 8 + 8 * i, sn.substring(0, Math.min(4, sn.length())));
+                maxSub = Math.max(maxSub, 2 * sn.length());
+            }
+            put32(hvBuf, d + 0x14, ord.length);
+            put32(hvBuf, d + 0x1C, hvCel(lf));
+            put32(hvBuf, d + 0x34, maxSub);
+        }
+        return o;
+    }
+
+    // ---- gravacao de arquivos no FAT32 recem-criado (so o format_efi)
+
+    private long fwOff, fwDados;                              // offset da particao; setor do cluster 2
+    private int fwClB, fwSpc;
+    private int[] fwFat;
+    private int fwProx;                                       // proximo cluster livre (arquivos e pastas em sequencia)
+
+    /**
+     * Grava os arquivos (caminho com / -> conteudo) no FAT32 vazio do gerarFat32 em off: clusters em sequencia a partir
+     * do 3 (cada arquivo contiguo), nome longo (LFN) com nome curto 8.3 unico, as 2 FATs e o FSInfo (e a copia).
+     */
+    @SuppressWarnings("unchecked")
+    private void fat32Gravar(long off, java.util.Map<String, byte[]> arquivos) throws Exception {
+        byte[] b = new byte[3 * setor];
+        ler(off, b, 0, b.length);
+        int res = le16(b, 14);
+        long fatsz = le32(b, 36) & 0xFFFFFFFFL, tot = le32(b, 32) & 0xFFFFFFFFL;
+        fwOff = off;
+        fwSpc = b[13] & 0xFF;
+        fwClB = fwSpc * setor;
+        fwDados = res + 2 * fatsz;
+        fwFat = new int[(int) ((tot - fwDados) / fwSpc) + 2];
+        fwFat[0] = 0x0FFFFFF8; fwFat[1] = 0x0FFFFFFF; fwFat[2] = 0x0FFFFFFF;
+        fwProx = 3;
+        var raiz = new java.util.TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER);
+        for (var e : arquivos.entrySet()) {
+            String[] partes = e.getKey().split("/");
+            var d = raiz;
+            for (int i = 0; i < partes.length - 1; i++)
+                d = (java.util.TreeMap<String, Object>) d.computeIfAbsent(partes[i], k -> new java.util.TreeMap<String, Object>(String.CASE_INSENSITIVE_ORDER));
+            d.put(partes[partes.length - 1], e.getValue());
+        }
+        int k = fat32Clusters(raiz, true);                        // a raiz ja tem o cluster 2; o resto vem em seguida
+        if (k > 1) { fwFat[2] = fwProx; fat32Alocar(k - 1); }
+        fat32Pasta(raiz, 2, 0);
+        // FATs: so o comeco (ate o ultimo cluster usado); FSInfo: livres e proximo livre
+        byte[] f = new byte[Math.ceilDiv(fwProx * 4, setor) * setor];
+        for (int i = 0; i < fwProx; i++) put32(f, 4 * i, fwFat[i]);
+        for (int c = 0; c < 2; c++) gravar(off + (res + c * fatsz) * setor, f, 0, f.length);
+        put32(b, setor + 488, fwFat.length - fwProx);
+        put32(b, setor + 492, fwProx);
+        gravar(off, b, 0, b.length);
+        gravar(off + 6L * setor, b, 0, b.length);
+    }
+
+    /** Clusters da tabela da pasta: ".", ".." (menos na raiz) e, por item, as entradas LFN + a curta. */
+    private int fat32Clusters(java.util.Map<String, Object> d, boolean raiz) {
+        int n = raiz ? 0 : 2;
+        for (String s : d.keySet()) n += (s.length() + 12) / 13 + 1;
+        return Math.max(1, Math.ceilDiv(n * 32, fwClB));
+    }
+
+    /** Proximos n clusters, encadeados; devolve o primeiro. */
+    private int fat32Alocar(int n) throws Exception {
+        if (fwProx + n > fwFat.length) throw new Exception("FAT32: os arquivos nao cabem na particao.");
+        int p = fwProx;
+        for (int i = 0; i < n; i++) fwFat[p + i] = i == n - 1 ? 0x0FFFFFFF : p + i + 1;
+        fwProx += n;
+        return p;
+    }
+
+    private long fat32Off(int cluster) { return fwOff + (fwDados + (long) (cluster - 2) * fwSpc) * setor; }
+
+    /** Grava a pasta d (no cluster eu; pai = cluster da pasta mae, 0 na raiz) com seus arquivos e subpastas. */
+    @SuppressWarnings("unchecked")
+    private void fat32Pasta(java.util.TreeMap<String, Object> d, int eu, int pai) throws Exception {
+        var ldt = java.time.LocalDateTime.now();
+        int hora = ldt.getHour() << 11 | ldt.getMinute() << 5 | ldt.getSecond() / 2;
+        int data = (ldt.getYear() - 1980) << 9 | ldt.getMonthValue() << 5 | ldt.getDayOfMonth();
+        var tab = new java.io.ByteArrayOutputStream();
+        if (eu != 2) {
+            tab.writeBytes(fat32Curta(".          ", 0x10, eu, 0, hora, data));
+            tab.writeBytes(fat32Curta("..         ", 0x10, pai == 2 ? 0 : pai, 0, hora, data));
+        }
+        var usados = new java.util.HashSet<String>();
+        var subpastas = new java.util.ArrayList<Object[]>();
+        for (var e : d.entrySet()) {
+            String nome = e.getKey(), curta = fat32NomeCurto(nome, usados);
+            boolean pasta = e.getValue() instanceof java.util.TreeMap;
+            int cl;
+            long tam = 0;
+            if (pasta) {
+                cl = fat32Alocar(fat32Clusters((java.util.TreeMap<String, Object>) e.getValue(), false));
+                subpastas.add(new Object[]{e.getValue(), cl});
+            } else {
+                byte[] c = (byte[]) e.getValue();
+                tam = c.length;
+                cl = c.length == 0 ? 0 : fat32Alocar(Math.ceilDiv(c.length, fwClB));
+                if (cl != 0) gravar(fat32Off(cl), java.util.Arrays.copyOf(c, Math.ceilDiv(c.length, fwClB) * fwClB), 0, Math.ceilDiv(c.length, fwClB) * fwClB);
+            }
+            if (!(curta.substring(0, 8).strip() + (curta.substring(8).isBlank() ? "" : "." + curta.substring(8).strip())).equals(nome)) {
+                int soma = 0;                                      // LFN: 13 caracteres por entrada, da ultima para a primeira
+                for (int i = 0; i < 11; i++) soma = ((soma & 1) << 7) + ((soma & 0xFF) >> 1) + curta.charAt(i) & 0xFF;
+                char[] ch = (nome + "\0").toCharArray();
+                int qtd = (nome.length() + 12) / 13;
+                for (int s = qtd; s >= 1; s--) {
+                    byte[] l = new byte[32];
+                    l[0] = (byte) (s == qtd ? 0x40 | s : s);
+                    l[11] = 0x0F;
+                    l[13] = (byte) soma;
+                    int[] pos = {1, 3, 5, 7, 9, 14, 16, 18, 20, 22, 24, 28, 30};
+                    for (int i = 0; i < 13; i++) {
+                        int j = (s - 1) * 13 + i;
+                        put16(l, pos[i], j < ch.length ? ch[j] : 0xFFFF);
+                    }
+                    tab.writeBytes(l);
+                }
+            }
+            tab.writeBytes(fat32Curta(curta, pasta ? 0x10 : 0x20, cl, tam, hora, data));
+        }
+        // tabela nos clusters da pasta (a raiz: cluster 2 e os seguintes da cadeia)
+        byte[] t = java.util.Arrays.copyOf(tab.toByteArray(), fat32Clusters(d, eu == 2) * fwClB);
+        int c = eu;
+        for (int o = 0; o < t.length; o += fwClB, c = fwFat[c]) gravar(fat32Off(c), t, o, fwClB);
+        for (Object[] s : subpastas) fat32Pasta((java.util.TreeMap<String, Object>) s[0], (Integer) s[1], eu);
+    }
+
+    private byte[] fat32Curta(String nome11, int attr, int cluster, long tam, int hora, int data) {
+        byte[] e = new byte[32];
+        putAscii(e, 0, nome11);
+        e[11] = (byte) attr;
+        put16(e, 14, hora); put16(e, 16, data); put16(e, 18, data);
+        put16(e, 20, cluster >>> 16);
+        put16(e, 22, hora); put16(e, 24, data);
+        put16(e, 26, cluster & 0xFFFF);
+        put32(e, 28, (int) tam);
+        return e;
+    }
+
+    /** Nome curto 8.3 (11 caracteres, com espacos) unico na pasta: o proprio nome em maiusculas, se couber; senao BASE~N.EXT. */
+    private String fat32NomeCurto(String nome, java.util.Set<String> usados) {
+        String up = nome.toUpperCase(java.util.Locale.ROOT);
+        int ponto = up.lastIndexOf('.');
+        String base = ponto > 0 ? up.substring(0, ponto) : up, ext = ponto > 0 ? up.substring(ponto + 1) : "";
+        String ok = "[A-Z0-9!#$%&'()\\-@^_`{}~]";
+        String r;
+        if (base.matches(ok + "{1,8}") && ext.matches(ok + "{0,3}")) r = String.format("%-8s%-3s", base, ext);
+        else r = null;
+        if (r != null && usados.add(r)) return r;
+        String b = base.replace(" ", "").replace(".", "").replaceAll("[^A-Z0-9!#$%&'()\\-@^_`{}~]", "_");
+        String x = ext.replace(" ", "").replaceAll("[^A-Z0-9!#$%&'()\\-@^_`{}~]", "_");
+        x = x.substring(0, Math.min(3, x.length()));
+        for (int i = 1; ; i++) {
+            String s = "~" + i, bb = b.substring(0, Math.min(b.length(), 8 - s.length())) + s;
+            r = String.format("%-8s%-3s", bb, x);
+            if (usados.add(r)) return r;
+        }
     }
 
     // ---- ReFS 3.14 (cluster 4 KB). Volume = VBR (cluster 0 e ultimo setor), SUPB (cluster 30, fim-3, fim-2), 2 CHKP
@@ -47892,7 +48639,7 @@ class Particao {
             for (long[] x : parts) {
                 long ini = x[1] * MiB / setorL;
                 d.adicionarParticao((int) x[0], ini, ini + x[2] * MiB / setorL - 1, x[3] == SEM_FS ? T_MSR : T_BASICO,
-                        x[3] == SEM_FS ? 0 : 1L << 63, "Teste " + x[0]);
+                        x[3] == SEM_FS ? 0 : 1L << 63, "Teste " + x[0], null);
                 d.fsFalso(x[1] * MiB, (int) x[3], x[4] * MiB, x[0] * 1000 + x[2]);
             }
         } finally { d.fechar(); }
