@@ -49744,7 +49744,7 @@ exit 0
                 "-drive", "file=" + disco + ",if=ide" + (grava ? "" : ",snapshot=on"),
                 "-drive", "if=pflash,format=raw,readonly=on,file=" + qemu + "\\share\\edk2-x86_64-code.fd",
                 "-drive", "if=pflash,format=raw,file=" + vars.getPath() + (grava ? "" : ",snapshot=on"),
-                "-vga", "std", "-display", DISPLAY, "-nic", "user,model=e1000e,hostfwd=tcp:127.0.0.1:" + porta + "-:3389,restrict=on",
+                "-vga", "std", "-display", DISPLAY, "-nic", "user,model=e1000e,hostfwd=tcp:127.0.0.1:" + porta + "-:3389",
                 "-monitor", "tcp:127.0.0.1:" + (porta + 1) + ",server=on,wait=off", "-name", "sandbox", "-action", "shutdown=poweroff"));
         System.out.println((preparo ? "boot de preparo (gravavel)" : write ? "sandbox gravando no VHDX" : "sandbox sem gravar (snapshot)") + ": QEMU whpx, RDP 127.0.0.1:" + porta + ", monitor " + (porta + 1));
         var q = new ProcessBuilder(args).directory(new java.io.File(qemu)).inheritIO().start();
