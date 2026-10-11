@@ -2328,6 +2328,14 @@ cat buffer.log
                     new TelaBloqueio(args);
                     return;
                 }
+
+                // lock minimo || padrao
+                if ( args.length == 1 && ( args[0].equals("minimo") || args[0].equals("padrao") ) ){
+                    if ( !isWindowsAdm() )
+                        erroFatal("Erro,\nexigencia: cmd admin!");
+                    new TelaBloqueio(args);
+                    return;
+                }
                 
                 // lock de sessao // lock real
                 if ( args.length > 0 ){
