@@ -71,15 +71,36 @@ echo %* | y trataEcho -ignore "bug de "" na quantidade impar"
 if "%1" equ "printf" (
 echo %* | y trataPrintf -ignore "bug de "" na quantidade impar"
 ) else (
+goto java
+)
+)
+goto :eof
+:java
 set argc=0
 for %%x in (%*) do set /a argc+=1
-if !argc! geq 11 (
-echo ALERTA: quantidade de parametros ^(!argc!^) atingiu ou passou de 10
+if !argc! geq 19 (
+echo ALERTA: quantidade de parametros ^(!argc!^) atingiu ou passou de 18
 exit /b 1
 )
-java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\postgresql-42.7.5.jar;c:\\y\\jsch-0.1.55.jar Y %1 %2 %3 %4 %5 %6 %7 %8 %9
-)
-)
+set a1=%1
+set a2=%2
+set a3=%3
+set a4=%4
+set a5=%5
+set a6=%6
+set a7=%7
+set a8=%8
+set a9=%9
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\postgresql-42.7.5.jar;c:\\y\\jsch-0.1.55.jar Y %a1% %a2% %a3% %a4% %a5% %a6% %a7% %a8% %a9% %1 %2 %3 %4 %5 %6 %7 %8 %9
 '
 
 Set-Content c:/windows/cd0.bat '@echo off

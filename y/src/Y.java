@@ -43947,6 +43947,7 @@ class exemplo_fold {
 }
 //</editor-fold>
 
+
 //<editor-fold desc="Particao">
 class Particao {
     private final long MiB = 1L << 20;
@@ -48843,6 +48844,7 @@ class Particao {
                 # zona (fromIso): opcional %SANDBOXZONE% = "idioma, teclado, fuso do Windows"; padrao "pt-BR, ABNT2, E. South America Standard Time"
                 #   teclados: ABNT2, ABNT, US, US-INTL ou o codigo (ex: 0416:00010416); iso: usa sempre a edicao Windows Pro
                 # janela do qemu nos modoSandbox*: -hideQemu (padrao) nao mostra a tela do qemu; -showQemu mostra
+                # cpu do qemu nos modoSandbox*: -cpu <modelo> (padrao max; ex: -cpu Skylake-Client; lista: qemu-system-x86_64 -cpu help)
 
                 # modoVhdx fromIso: cria um vhdx pronto para uso, gpt efi winre "refs windows", feito pelo iso
                 #   login: so a conta base / senha base
@@ -48867,7 +48869,7 @@ class Particao {
                 """;
 
         // ---------------------------------------------------------------- parse
-        String modo = null, origem = null, tipo = null, janela = null;   // janela: -hideQemu (padrao) | -showQemu
+        String modo = null, origem = null, tipo = null, janela = null, cpu = null;   // janela: -hideQemu (padrao) | -showQemu; cpu: -cpu <modelo>
         String vhdx = null, iso = null, fromVhdx = null;              // caminhos absolutos
         String usuario = "base", senha = "";                         // sem -usuario/-senha = base sem senha
         int tamanhoGigas = 0;                                        // 0 = omitido
@@ -48875,7 +48877,7 @@ class Particao {
         for (int i = 0; i < args.length && erro == null; i++) {
             String a = args[i], v = null;
             if (a.equals("-modoVhdx") || a.equals("-fromIso") || a.equals("-fromVhdx") || a.equals("-tamanhoGigas")
-                    || a.equals("-usuario") || a.equals("-senha")) {
+                    || a.equals("-usuario") || a.equals("-senha") || a.equals("-cpu")) {
                 if (i + 1 >= args.length) { erro = "falta o valor de " + a; break; }
                 v = args[++i];
             }
@@ -48896,6 +48898,11 @@ class Particao {
                     if (tipo != null) erro = "informe um tipo so: " + tipo + " e " + a;
                     else tipo = a;
                 }
+                case "-cpu" -> {
+                    if (cpu != null) erro = "informe um -cpu so";
+                    else if (!v.matches("[A-Za-z0-9_.+,=-]+")) erro = "-cpu com valor invalido: " + v;
+                    else cpu = v;
+                }
                 case "-hideQemu", "-showQemu" -> {
                     if (janela != null) erro = "informe um so: " + janela + " e " + a;
                     else janela = a;
@@ -48915,7 +48922,9 @@ class Particao {
         if (erro == null && origem != null && tipo == null) erro = "informe o tipo: -ntfs ou -refs";
         if (erro == null && origem == null && tipo != null) erro = "sem -from* o sandbox e o ja criado: " + tipo + " nao se aplica";
         if (erro == null && janela != null && vhdx != null) erro = janela + " so vale nos modoSandbox* (o -modoVhdx nao liga o QEMU)";
+        if (erro == null && cpu != null && vhdx != null) erro = "-cpu so vale nos modoSandbox* (o -modoVhdx nao liga o QEMU)";
         DISPLAY = "-showQemu".equals(janela) ? "gtk" : "none";        // padrao: sem a tela do QEMU (pedido de 11/10/2026)
+        if (cpu != null) CPU = cpu;                                   // -cpu <modelo> (pedido de 11/10/2026; padrao max)
         if (erro == null && usuario.isEmpty()) erro = "-usuario vazio";
         if (erro == null && vhdx != null && !vhdx.toLowerCase().endsWith(".vhdx")) erro = "-modoVhdx precisa terminar em .vhdx: " + vhdx;
         if (erro == null && iso != null && !new java.io.File(iso).isFile()) erro = "ISO nao encontrada: " + iso;
@@ -49723,6 +49732,7 @@ exit 0
     // (45 min), 90 s, desliga. Regra 10: o VHDX precisa estar desanexado (abre em modo exclusivo) e T:/U: ausentes.
 
     private String DISPLAY = "none";                              // -hideQemu (padrao) = none; -showQemu = gtk (o main decide)
+    private String CPU = "max";                                   // -cpu <modelo> do QEMU (ex: Skylake-Client); padrao max
 
     private void rodar(java.io.File vhdx, boolean write, boolean preparo) throws Exception {
         String qemu = pasta("QEMU");
@@ -49738,7 +49748,7 @@ exit 0
         while (!portaLivre(porta) || !portaLivre(porta + 1)) porta += 2;
         boolean grava = write || preparo;
         var args = new java.util.ArrayList<>(java.util.List.of(qemu + "\\qemu-system-x86_64.exe",
-                "-accel", "whpx", "-machine", "q35", "-cpu", "max", "-m", "4096", "-smp", "4",
+                "-accel", "whpx", "-machine", "q35", "-cpu", CPU, "-m", "4096", "-smp", "4",
                 "-drive", "file=" + disco + ",if=ide" + (grava ? "" : ",snapshot=on"),
                 "-drive", "if=pflash,format=raw,readonly=on,file=" + qemu + "\\share\\edk2-x86_64-code.fd",
                 "-drive", "if=pflash,format=raw,file=" + vars.getPath() + (grava ? "" : ",snapshot=on"),
