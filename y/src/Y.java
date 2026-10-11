@@ -43942,6 +43942,12 @@ exemplos:
  * Disco fisico: depois use Gerenciamento de Disco > Acao > Examinar discos novamente (ou reinicie).
  */
 
+//<editor-fold desc="exemplo_fold">
+class exemplo_fold {    
+}
+//</editor-fold>
+
+//<editor-fold desc="Particao">
 class Particao {
     private final long MiB = 1L << 20;
     private final int BLOCO = 8 << 20;
@@ -43984,6 +43990,8 @@ class Particao {
     private boolean soJava;              // -test com FS falso: o clone nao chama o diskpart para crescer o FS
 
     public static void main(String[] args) {
+        // -modoVhdx / -modoSandboxRead / -modoSandboxWrite: sandbox (sandboxMain, no fim); -modo sozinho = uso dele
+        if (args.length > 0 && args[0].toLowerCase().startsWith("-modo")) { new Particao().sandboxMain(args[0].equals("-modo") ? new String[0] : args); return; }
         try {
             var app = new Particao();
             if (args.length > 0 && args[0].equalsIgnoreCase("list")) {
@@ -44045,6 +44053,8 @@ class Particao {
                         y particao format_ntfs b.vhdx#3 [MB|max] | format_fat32 b.vhdx#3 [MB|max] | format_exfat b.vhdx#3 [MB|max]
                         y particao format_ntfs 1#3 [MB|max]   (disco 1; tambem format_refs/fat32/exfat)
                         y particao format_efi b.vhdx#1 C:\\vm\\a.vhdx#3 |format_efi 1#TAIL D
+                        y particao -modoVhdx a.vhdx -fromIso C:\\x.iso -refs -tamanhoGigas 98 -usuario base -senha base   (VHDX com Windows pronto)
+                        y particao -modoSandboxRead | -modoSandboxWrite [-fromPc | -fromIso C:\\x.iso | -fromVhdx a.vhdx] [-ntfs | -refs]   (sandbox no QEMU; uso completo: y particao -modo)
                           #N     : numero da particao na GPT (na listagem pode ficar fora de ordem). Espaco livre entre particoes
                                    aparece com o numero que a particao vai receber ali; o livre do fim e o #TAIL
                           from   : D | 1#3 (disco#particao) | C:\\vm\\a.vhdx#3
@@ -48824,7 +48834,1107 @@ class Particao {
     }
 
     private String guidAleatorio() { return java.util.UUID.randomUUID().toString().toUpperCase(); }
+
+    private void sandboxMain(String[] args) {
+        final String USO = """
+                # tipos: -ntfs ou -refs (sistema do windows); sempre gpt efi winre
+                # qemu: exige a variavel de sistema %QEMU% (pasta do qemu 11 com a WinHvPlatform.dll do whpx2); sem ela, erro
+                # wimlib: exige a variavel de sistema %WIMLIB% (pasta do wimlib-imagex.exe); sem ela, erro
+                # zona (fromIso): opcional %SANDBOXZONE% = "idioma, teclado, fuso do Windows"; padrao "pt-BR, ABNT2, E. South America Standard Time"
+                #   teclados: ABNT2, ABNT, US, US-INTL ou o codigo (ex: 0416:00010416); iso: usa sempre a edicao Windows Pro
+                # janela do qemu nos modoSandbox*: -hideQemu (padrao) nao mostra a tela do qemu; -showQemu mostra
+
+                # modoVhdx fromIso: cria um vhdx pronto para uso, gpt efi winre "refs windows", feito pelo iso
+                #   login: so a conta base / senha base
+                y particao -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+
+                # modoVhdx fromPc: cria um vhdx pronto para uso, gpt efi winre "ntfs windows", copiado do windows desta maquina
+                #   login: conta base / senha base + os usuarios desta maquina, com as mesmas senhas
+                y particao -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
+
+                # modoVhdx fromVhdx: troca o tipo de um vhdx com windows ja instalado, gpt efi winre "ntfs windows" -> "refs windows"
+                #   mesmo tipo da origem: pede confirmacao (comando estranho); confirmando, segue
+                #   login: conta base / senha base + as contas que ja existem no vhdx de origem, com as mesmas senhas
+                y particao -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
+
+                # modoSandboxRead: roda o sandbox, nada fica gravado
+                #   login: o da geracao (base / base); sem -usuario/-senha = base sem senha
+                y particao -modoSandboxRead -fromPc -ntfs -usuario base -senha base
+
+                # modoSandboxWrite: roda o sandbox, o que fizer fica gravado
+                #   login: o da geracao (base / base); sem -usuario/-senha = base sem senha
+                y particao -modoSandboxWrite -fromIso C:\\tmp\\win11.iso -refs -usuario base -senha base
+                """;
+
+        // ---------------------------------------------------------------- parse
+        String modo = null, origem = null, tipo = null, janela = null;   // janela: -hideQemu (padrao) | -showQemu
+        String vhdx = null, iso = null, fromVhdx = null;              // caminhos absolutos
+        String usuario = "base", senha = "";                         // sem -usuario/-senha = base sem senha
+        int tamanhoGigas = 0;                                        // 0 = omitido
+        String erro = args.length == 0 ? "" : null;                  // "" = so o uso, sem linha de ERRO
+        for (int i = 0; i < args.length && erro == null; i++) {
+            String a = args[i], v = null;
+            if (a.equals("-modoVhdx") || a.equals("-fromIso") || a.equals("-fromVhdx") || a.equals("-tamanhoGigas")
+                    || a.equals("-usuario") || a.equals("-senha")) {
+                if (i + 1 >= args.length) { erro = "falta o valor de " + a; break; }
+                v = args[++i];
+            }
+            switch (a) {
+                case "-modoVhdx", "-modoSandboxRead", "-modoSandboxWrite" -> {
+                    if (modo != null) erro = "informe um modo so: " + modo + " e " + a;
+                    else { modo = a; if (v != null && (vhdx = caminho(v)) == null) erro = "caminho invalido: " + v; }
+                }
+                case "-fromPc", "-fromIso", "-fromVhdx" -> {
+                    if (origem != null) erro = "informe uma origem so: " + origem + " e " + a;
+                    else {
+                        origem = a;
+                        if (a.equals("-fromIso") && (iso = caminho(v)) == null) erro = "caminho invalido: " + v;
+                        if (a.equals("-fromVhdx") && (fromVhdx = caminho(v)) == null) erro = "caminho invalido: " + v;
+                    }
+                }
+                case "-ntfs", "-refs" -> {
+                    if (tipo != null) erro = "informe um tipo so: " + tipo + " e " + a;
+                    else tipo = a;
+                }
+                case "-hideQemu", "-showQemu" -> {
+                    if (janela != null) erro = "informe um so: " + janela + " e " + a;
+                    else janela = a;
+                }
+                case "-tamanhoGigas" -> {
+                    if (!v.matches("\\d{1,5}") || Integer.parseInt(v) == 0) erro = "-tamanhoGigas precisa de um numero em GB: " + v;
+                    else tamanhoGigas = Integer.parseInt(v);
+                }
+                case "-usuario" -> usuario = v;
+                case "-senha" -> senha = v;
+                default -> erro = "argumento desconhecido: " + a;
+            }
+        }
+        if (erro == null && modo == null) erro = "informe o modo: -modoVhdx <arquivo.vhdx>, -modoSandboxRead ou -modoSandboxWrite";
+        // modoSandbox* sem -from*: roda um sandbox ja criado na pasta atual (e ai -ntfs/-refs nao se aplicam)
+        if (erro == null && origem == null && vhdx != null) erro = "informe a origem: -fromPc, -fromIso <arquivo.iso> ou -fromVhdx <arquivo.vhdx>";
+        if (erro == null && origem != null && tipo == null) erro = "informe o tipo: -ntfs ou -refs";
+        if (erro == null && origem == null && tipo != null) erro = "sem -from* o sandbox e o ja criado: " + tipo + " nao se aplica";
+        if (erro == null && janela != null && vhdx != null) erro = janela + " so vale nos modoSandbox* (o -modoVhdx nao liga o QEMU)";
+        DISPLAY = "-showQemu".equals(janela) ? "gtk" : "none";        // padrao: sem a tela do QEMU (pedido de 11/10/2026)
+        if (erro == null && usuario.isEmpty()) erro = "-usuario vazio";
+        if (erro == null && vhdx != null && !vhdx.toLowerCase().endsWith(".vhdx")) erro = "-modoVhdx precisa terminar em .vhdx: " + vhdx;
+        if (erro == null && iso != null && !new java.io.File(iso).isFile()) erro = "ISO nao encontrada: " + iso;
+        if (erro == null && fromVhdx != null && !fromVhdx.toLowerCase().endsWith(".vhdx")) erro = "-fromVhdx precisa terminar em .vhdx: " + fromVhdx;
+        if (erro == null && fromVhdx != null && !new java.io.File(fromVhdx).isFile()) erro = "VHDX de origem nao encontrado: " + fromVhdx;
+        if (erro == null && fromVhdx != null && fromVhdx.equalsIgnoreCase(vhdx)) erro = "-fromVhdx e -modoVhdx nao podem ser o mesmo arquivo";
+        if (erro == null && vhdx != null && new java.io.File(vhdx).exists()) erro = vhdx + " ja existe (nada existente e apagado)";
+        if (erro == null && vhdx != null && !new java.io.File(vhdx).getParentFile().isDirectory()) erro = "pasta inexistente para " + vhdx;
+        // disco novo (fromIso/fromPc): EFI 100 + MSR 16 + WinRE 1024 + sistema (ReFS: minimo 1088 MB) cabem em 3 GB
+        if (erro == null && vhdx != null && fromVhdx == null && tamanhoGigas < 3) erro = "-modoVhdx com -fromIso/-fromPc exige -tamanhoGigas (minimo 3)";
+        // variaveis de sistema: %QEMU% so nos modos que rodam o sandbox; %WIMLIB% em todos (aplicar o Windows)
+        String qemu = pasta("QEMU"), wimlib = pasta("WIMLIB");
+        if (erro == null && !modo.equals("-modoVhdx")) erro = exigir("QEMU", qemu, "qemu-system-x86_64.exe", "WinHvPlatform.dll");
+        if (erro == null) erro = exigir("WIMLIB", wimlib, "wimlib-imagex.exe");
+        if (erro == null && iso != null) try { zona(); } catch (Exception e) { erro = e.getMessage(); }   // %SANDBOXZONE% (opcional) bem formado
+        if (erro != null) {
+            System.out.print(USO);
+            if (!erro.isEmpty()) System.out.println("\nERRO: " + erro);
+            System.exit(1);
+        }
+
+        System.out.println("modo " + modo + (vhdx != null ? " " + vhdx : "") + " | origem " + origem
+                + (iso != null ? " " + iso : fromVhdx != null ? " " + fromVhdx : "") + " | tipo " + tipo
+                + " | tamanhoGigas " + (tamanhoGigas == 0 ? "omitido" : tamanhoGigas) + " | usuario " + usuario
+                + " | " + (senha.isEmpty() ? "sem senha" : "com senha"));
+        System.out.println((modo.equals("-modoVhdx") ? "" : "QEMU " + qemu + " | ") + "WIMLIB " + wimlib);
+        String exe = wimlib + "\\wimlib-imagex.exe";
+        try {
+            if (vhdx != null) gerarVhdx(vhdx, origem, iso, fromVhdx, null, tipo.equals("-refs"), tamanhoGigas, usuario, senha, exe);
+            else sandbox(modo, origem, iso, fromVhdx, "-refs".equals(tipo), tamanhoGigas, usuario, senha, exe);
+        } catch (Exception e) { System.out.println("\nERRO: " + e.getMessage()); System.exit(1); }
+    }
+
+    // ------------------------------------------------------------- fromVhdx
+    // Origem = outro VHDX com Windows ja instalado (qualquer layout GPT): acha a particao do Windows e o tipo dela pelo
+    // leitor NTFS/ReFS do Particao (sem anexar); mesmo tipo pedido = confirma ("comando estranho") e segue (regra 6).
+    // Copia: anexa a origem (T na particao do Windows, U na de recuperacao se houver), wimlib capture para
+    // <novo>.wim (so lixo excluido) e o Winre.wim para <novo>.winre.wim; desanexa. Depois o fluxo normal: disco novo
+    // do tipo pedido, apply, WinRE, Registro como no clone (init.cmd cria a conta -usuario), EFI.
+
+    /** {numero da particao do Windows, ReFS?, build} do VHDX; erro se nao achar \Windows\System32\ntoskrnl.exe */
+    private Object[] acharWindows(java.io.File vhdx) throws Exception {
+        var v = new Particao().dispositivo(vhdx.getPath(), false);
+        try {
+            for (int n = 1; n <= 16; n++) {
+                Object[] p;
+                try { p = v.particao(n); } catch (Exception semEssa) { continue; }
+                if (!((String) p[3]).equalsIgnoreCase("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7")) continue;   // so dados basicos
+                for (boolean refs : new boolean[]{true, false}) {
+                    try { return new Object[]{n, refs, versaoNt(lerNtoskrnl(v, (Long) p[1], refs))}; } catch (Exception outroFs) { }
+                }
+            }
+        } finally { v.fechar(); }
+        throw new Exception(vhdx + " nao tem particao GPT com \\Windows\\System32\\ntoskrnl.exe (NTFS ou ReFS)");
+    }
+
+    /** numero da particao de recuperacao (tipo DE94BBA4) do VHDX, ou 0 */
+    private int acharRecuperacao(java.io.File vhdx) throws Exception {
+        var v = new Particao().dispositivo(vhdx.getPath(), false);
+        try {
+            for (int n = 1; n <= 16; n++) {
+                Object[] p;
+                try { p = v.particao(n); } catch (Exception semEssa) { continue; }
+                if (((String) p[3]).equalsIgnoreCase("DE94BBA4-06D1-4D40-A16A-BFD50179D6AC")) return n;
+            }
+            return 0;
+        } finally { v.fechar(); }
+    }
+
+    /** anexa a origem, captura o Windows dela em wim (wimlib, sem VSS: o disco esta parado) e o Winre.wim em winre (se houver); desanexa */
+    private void capturarVhdx(String exe, java.io.File origem, int part, boolean refs, String wim, java.io.File winre) throws Exception {
+        String t = anexar(origem.getPath(), part, refs ? "ReFS" : "NTFS");
+        try {
+            System.out.println("origem anexada: Windows (#" + part + ") em " + t);
+            int rec = acharRecuperacao(origem);
+            if (rec > 0) {
+                try {
+                    String u = letra(rec, LETRA_WINRE, "NTFS");
+                    var f = new java.io.File(u, "Recovery\\WindowsRE\\Winre.wim");
+                    if (f.isFile()) { java.nio.file.Files.copy(f.toPath(), winre.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING); System.out.println("Winre.wim da origem: " + f.length() / 1048576 + " MB"); }
+                    else System.out.println("a recuperacao da origem (#" + rec + ") nao tem Winre.wim: o novo fica sem WinRE");
+                } catch (Exception e) { System.out.println("sem Winre.wim da origem (" + e.getMessage() + "): o novo fica sem WinRE"); }
+            } else System.out.println("a origem nao tem particao de recuperacao: o novo fica sem WinRE");
+            String ini = wim.substring(0, wim.length() - 4) + ".ini";
+            java.nio.file.Files.writeString(java.nio.file.Path.of(ini), "[ExclusionList]\r\n\\$Recycle.Bin\r\n\\System Volume Information\r\n\\pagefile.sys\r\n\\hiberfil.sys\r\n\\swapfile.sys\r\n\\DumpStack.log.tmp\r\n\\Windows\\Temp\\*\r\n\\Windows\\SystemTemp\\*\r\n");
+            System.out.println("wimlib: captura de " + t + " para " + wim);
+            try { wimlib(exe, "capture", t, wim, "sandbox", "--compress=none", "--config=" + ini); }
+            finally { new java.io.File(ini).delete(); }
+        } finally { desanexarVhdx(origem.getPath()); System.out.println("origem desanexada: " + origem); }
+    }
+
+    /** pergunta s/n no console; n (ou fim da entrada) = sai com 0 */
+    private void confirmar(String pergunta) throws Exception {
+        System.out.print(pergunta + " (s/n): ");
+        String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
+        if (r == null || !r.replace("﻿", "").trim().equalsIgnoreCase("s")) { System.out.println("ok, nada feito"); System.exit(0); }
+    }
+
+    // ---------------------------------------------------------------- gerar
+    /**
+     * Cria o VHDX e aplica o Windows nele. fromPc: WIM da captura ao lado do VHDX (<nome>.wim, sem compressao, uns
+     * 25 GB), apagado no fim; falhou: o VHDX incompleto (segundos para refazer) sai e o WIM (30 min) fica para a
+     * proxima execucao reaproveitar. fromIso: sources\install.wim/.esd da ISO (raizIso ja montada, ou monta aqui).
+     */
+    private void gerarVhdx(String vhdx, String origem, String iso, String fromVhdx, String raizIso, boolean refs, int gigas, String usuario, String senha, String exe) throws Exception {
+        String nome = vhdx.substring(0, vhdx.length() - 5), wim = nome + ".wim";
+        boolean doPc = origem.equals("-fromPc"), doIso = origem.equals("-fromIso"), doVhdx = origem.equals("-fromVhdx"), montouAqui = false;
+        var winreOrigem = new java.io.File(nome + ".winre.wim");          // fromVhdx: Winre.wim copiado da origem
+        try {
+            if (doVhdx) {
+                var org = new java.io.File(fromVhdx);
+                Object[] w = acharWindows(org);
+                boolean refsOrigem = (Boolean) w[1];
+                System.out.println("origem: " + org + ": Windows na #" + w[0] + ", " + (refsOrigem ? "ReFS" : "NTFS") + ", build " + w[2]);
+                if (refsOrigem == refs) confirmar("comando estranho: a origem ja e " + (refs ? "ReFS" : "NTFS") + " e o novo seria do mesmo tipo. Continuar mesmo assim?");
+                if (gigas == 0) {                                        // sem -tamanhoGigas: o tamanho da origem
+                    var v = new Particao().dispositivo(fromVhdx, false);
+                    try { gigas = (int) Math.ceilDiv(v.tamanho, 1L << 30); } finally { v.fechar(); }
+                }
+                if (new java.io.File(wim).isFile()) System.out.println("reaproveitando a captura anterior: " + wim);
+                else capturarVhdx(exe, org, (Integer) w[0], refsOrigem, wim, winreOrigem);
+            }
+            criarDisco(vhdx, refs, gigas);
+            int indice = 1;
+            if (doPc) {
+                if (new java.io.File(wim).isFile()) System.out.println("reaproveitando a captura anterior: " + wim);
+                else capturarPc(exe, wim);
+            } else if (doIso) {
+                if (raizIso == null) { raizIso = montarIso(iso); montouAqui = true; }
+                wim = installDaIso(raizIso);
+                indice = escolherImagem(exe, wim);
+            }
+            try {
+                String sis = anexar(vhdx, 4, refs ? "ReFS" : "NTFS");
+                System.out.println("anexado: sistema (#4) em " + sis);
+                boolean temWinre = false;
+                try {
+                    aplicar(exe, wim, indice, sis);
+                    if (doIso) { winRe(exe, wim, indice); temWinre = true; }   // Winre.wim da ISO na #3 (letra U); do clone nao ha fonte
+                    if (doVhdx && winreOrigem.isFile()) {
+                        var dest = new java.io.File(letra(3, LETRA_WINRE, "NTFS"), "Recovery\\WindowsRE");
+                        if (!dest.isDirectory() && !dest.mkdirs()) throw new Exception("nao consegui criar " + dest);
+                        java.nio.file.Files.copy(winreOrigem.toPath(), new java.io.File(dest, "Winre.wim").toPath());
+                        System.out.println("WinRE: " + dest + "\\Winre.wim (da origem)");
+                        temWinre = true;
+                    }
+                    editarRegistro(sis, !doIso);
+                    escreverInit(sis, usuario, senha, !doIso, temWinre);
+                    if (doIso) escreverUnattend(sis, usuario, senha);
+                }
+                finally { desanexarVhdx(vhdx); System.out.println("desanexado: " + vhdx); }
+            } finally { if (montouAqui) desmontarIso(iso); }
+            if (!doIso) new java.io.File(wim).delete();
+            winreOrigem.delete();
+            // EFI + BCD pelo format_efi do Particao (autorizado em 10/10/2026), com o VHDX desanexado: cria a EFI de 100 MB
+            // no livre #1 deste mesmo arquivo, copia o \Windows\Boot da #4 e grava o BCD apontando para ela, tudo em Java.
+            // Os dois lados sao este .vhdx (nunca um disco): o Particao nem chama o diskpart nesse caso
+            System.out.println("format_efi " + vhdx + "#1 <- Windows em #4");
+            new Particao().formatarEfi(new String[]{vhdx + "#1", vhdx + "#4"});
+        } catch (Exception e) {
+            if (new java.io.File(vhdx).delete()) System.out.println("VHDX incompleto apagado: " + vhdx);
+            if (!doIso && new java.io.File(wim).isFile()) System.out.println("captura preservada (a proxima execucao reaproveita): " + wim);
+            throw e;
+        }
+    }
+
+    // -------------------------------------------------------------- sandbox
+    // Sandboxes = sandbox-<origem>-<tipo>-<build>.vhdx na pasta atual (origem pc|iso|vhdx, tipo ntfs|refs). Com -from*
+    // e algum ja criado: mostra todas as builds (a de cada sandbox e a da origem) e pede a escolha: um existente,
+    // criar novo ou sair. Sem -from*: um so = roda ele; varios = escolher; nenhum = erro.
+
+    private final java.util.regex.Pattern NOME_SANDBOX = java.util.regex.Pattern.compile("(?i)sandbox-(pc|iso|vhdx)-(ntfs|refs)-([0-9.]+)\\.vhdx");
+
+    private void sandbox(String modo, String origem, String iso, String fromVhdx, boolean refs, int gigas, String usuario, String senha, String exe) throws Exception {
+        var pasta = new java.io.File("").getAbsoluteFile();
+        var existentes = new java.util.ArrayList<java.io.File>();
+        for (var f : filhos(pasta.getPath())) if (f.isFile() && NOME_SANDBOX.matcher(f.getName()).matches()) existentes.add(f);
+        existentes.sort(java.util.Comparator.comparing(java.io.File::getName, String.CASE_INSENSITIVE_ORDER));
+        System.out.println("build desta maquina: " + buildDoPc());
+        java.io.File alvo;
+        if (origem == null) {
+            if (existentes.isEmpty()) throw new Exception("nenhum sandbox na pasta atual (" + pasta + "); informe -fromPc ou -fromIso para criar um");
+            alvo = existentes.size() == 1 ? existentes.get(0) : escolher(existentes, null, null);
+            if (existentes.size() == 1) System.out.println("sandbox ja criado: " + descrever(alvo));
+        } else {
+            String org = origem.equals("-fromPc") ? "pc" : origem.equals("-fromIso") ? "iso" : "vhdx", raizIso = null, build;
+            if (org.equals("pc")) build = buildDoPc();
+            else if (org.equals("vhdx")) build = (String) acharWindows(new java.io.File(fromVhdx))[2];
+            else { raizIso = montarIso(iso); build = imagemPro(infoImagens(exe, installDaIso(raizIso)))[3]; }
+            try {
+                String nomeNovo = "sandbox-" + org + "-" + (refs ? "refs" : "ntfs") + "-" + build + ".vhdx";
+                var novo = new java.io.File(pasta, nomeNovo);
+                alvo = existentes.isEmpty() ? null : escolher(existentes, nomeNovo, org + ", " + (refs ? "refs" : "ntfs") + ", build " + build);
+                if (alvo == null) {
+                    if (novo.exists()) throw new Exception(novo + " ja existe (nada existente e apagado); apague-o para criar de novo");
+                    gerarVhdx(novo.getPath(), origem, iso, fromVhdx, raizIso, refs, gigas == 0 && !org.equals("vhdx") ? 64 : gigas, usuario, senha, exe);   // sem -tamanhoGigas: 64 GB (fromVhdx: o da origem)
+                    // boot de preparo (gravavel, decisao de 10/10/2026): PnP do hardware do QEMU, init.cmd e OOBE ficam
+                    // gravados; sem isso o -modoSandboxRead refaria o 1o boot (uns 20 min) a cada execucao
+                    try { rodar(novo, true, true); }
+                    catch (Exception e) { throw new Exception(e.getMessage() + "\n" + novo + " ficou sem o boot de preparo; apague-o para gerar de novo"); }
+                    alvo = novo;
+                }
+            } finally { if (raizIso != null) desmontarIso(iso); }
+        }
+        boolean write = modo.equals("-modoSandboxWrite");
+        System.out.println("sandbox: " + alvo + (write ? " (grava no vhdx)" : " (nada fica gravado)"));
+        rodar(alvo, write, false);
+    }
+
+    /** nome + origem, tipo e build: a do nome e, se for outra, a que esta dentro (espiada no ntoskrnl.exe do sandbox) */
+    private String descrever(java.io.File f) {
+        var m = NOME_SANDBOX.matcher(f.getName());
+        m.matches();
+        String build;
+        try {
+            String dentro = buildDoVhdx(f, m.group(2).equalsIgnoreCase("refs"));
+            build = dentro.equals(m.group(3)) ? "build " + dentro : "build " + dentro + " DENTRO (o nome diz " + m.group(3) + ": Windows Update?)";
+        } catch (Exception e) { build = "build " + m.group(3) + " no nome; nao consegui ler dentro (" + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()) + ")"; }
+        return f.getName() + " (" + m.group(1).toLowerCase() + ", " + m.group(2).toLowerCase() + ", " + build + ")";
+    }
+
+    /** menu: existentes numerados, "criar novo" (se nomeNovo != null) e "sair"; devolve o existente, null = novo */
+    private java.io.File escolher(java.util.List<java.io.File> existentes, String nomeNovo, String descNovo) throws Exception {
+        System.out.println("ja existe sandbox na pasta atual:");
+        int n = existentes.size();
+        for (int i = 0; i < n; i++) System.out.println("  " + (i + 1) + ") usar " + descrever(existentes.get(i)));
+        if (nomeNovo != null) System.out.println("  " + (n + 1) + ") criar novo: " + nomeNovo + " (" + descNovo + ")");
+        int sair = nomeNovo != null ? n + 2 : n + 1;
+        System.out.println("  " + sair + ") sair");
+        var in = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
+        while (true) {
+            System.out.print("digite o numero: ");
+            String r = in.readLine();
+            if (r == null) { System.out.println(); System.exit(0); }
+            r = r.replace("﻿", "").trim();                             // BOM que o PowerShell manda pelo pipe
+            if (!r.matches("\\d+")) { System.out.println("opcao invalida"); continue; }
+            int k = Integer.parseInt(r);
+            if (k == sair) System.exit(0);
+            if (k >= 1 && k <= n) return existentes.get(k - 1);
+            if (nomeNovo != null && k == n + 1) return null;
+            System.out.println("opcao invalida");
+        }
+    }
+
+    /**
+     * Build desta maquina ("26100.9457") pela versao do ntoskrnl.exe (VS_FIXEDFILEINFO no PE: dwFileVersionMS 10.0,
+     * dwFileVersionLS = build.UBR), lida em Java; o Registro (CurrentBuild/UBR) exigiria utilitario do Windows.
+     * O UBR do kernel pode ficar um pouco atras do UBR do Registro numa LCU que nao troca o kernel.
+     */
+    private String buildDoPc() throws Exception {
+        return versaoNt(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(System.getenv("SystemRoot"), "System32", "ntoskrnl.exe")));
+    }
+
+    private String versaoNt(byte[] b) throws Exception {
+        for (int i = 0; i + 16 <= b.length; i++)
+            if (b[i] == (byte) 0xBD && b[i + 1] == 4 && b[i + 2] == (byte) 0xEF && b[i + 3] == (byte) 0xFE) {
+                int ms = le32(b, i + 8), ls = le32(b, i + 12);
+                if (ms == 0x000A0000) return (ls >>> 16) + "." + (ls & 0xFFFF);
+            }
+        throw new Exception("nao achei a versao no ntoskrnl.exe");
+    }
+
+    /**
+     * Build do Windows que esta DENTRO do sandbox (o Windows Update de um -modoSandboxWrite pode ter mudado): le o
+     * \Windows\System32\ntoskrnl.exe da #4 pelo leitor NTFS/ReFS do Particao, sem anexar (funcoes de leitura
+     * autorizadas em 10/10/2026: dispositivo, particao, ntfsAbrir/ntfsAchar/ntfsAtributos/ntfsConteudo,
+     * refsAbrirLeitura/refsAchar/refsArquivo, fechar). O tipo vem do nome do arquivo.
+     */
+    private String buildDoVhdx(java.io.File f, boolean refs) throws Exception {
+        var v = new Particao().dispositivo(f.getPath(), false);
+        try { return versaoNt(lerNtoskrnl(v, (Long) v.particao(4)[1], refs)); }
+        finally { v.fechar(); }
+    }
+
+    /** \Windows\System32\ntoskrnl.exe da particao em off (NTFS ou ReFS), pelo leitor do Particao */
+    private byte[] lerNtoskrnl(Particao v, long off, boolean refs) throws Exception {
+        String caminho = "Windows/System32/ntoskrnl.exe";
+        if (refs) {
+            v.refsAbrirLeitura(off);
+            Object[] r = v.refsAchar(caminho);
+            if (r == null || (Integer) r[0] != 1) throw new Exception("sem \\Windows\\System32\\ntoskrnl.exe no ReFS");
+            return v.refsArquivo((byte[]) r[1], "ntoskrnl.exe");
+        }
+        v.ntfsAbrir(off);
+        long[] r = v.ntfsAchar(caminho);
+        if (r == null || r[1] != 0) throw new Exception("sem \\Windows\\System32\\ntoskrnl.exe no NTFS");
+        byte[] exe = v.ntfsConteudo(v.ntfsAtributos(r[0]), 0x80, "");
+        if (exe == null) throw new Exception("ntoskrnl.exe sem $DATA");
+        return exe;
+    }
+
+
+    // ------------------------------------------------------------------ disco
+    // So com o proprio ClonaParticao (novoVhdx, dispositivo, criarGpt, adicionarParticao, gerarNtfs, gerarRefs, fechar;
+    // autorizados em 10/10/2026), gravando so no VHDX novo; nada de diskpart/format do Windows.
+    // GPT: #1 livre de 101 MB para o format_efi (EFI 100 MB), #2 MSR 16 MB, #3 WinRE 1024 MB NTFS, #4 sistema ate o fim.
+
+    private void criarDisco(String arq, boolean refs, int gigas) throws Exception {
+        final long setor = 512;
+        var f = new java.io.File(arq);
+        var app = new Particao();
+        app.dirTeste = f.getParentFile();
+        String c = app.novoVhdx(f.getName(), gigas * 1024L, (int) setor, 32L);
+        var d = app.dispositivo(c, true);
+        try {
+            d.criarGpt();
+            long msr = 101 * MiB, rec = msr + 16 * MiB, sis = rec + 1024 * MiB;
+            long fim = (d.gptUltimo + 1) * setor / MiB * MiB;      // fim do sistema alinhado a 1 MB
+            if (fim - sis < (refs ? 1088 : 16) * MiB) throw new Exception("disco pequeno demais para o sistema");
+            d.adicionarParticao(2, msr / setor, rec / setor - 1, d.T_MSR, 0L, "Microsoft reserved partition", null);
+            d.gerarNtfs(rec, 1024 * MiB);
+            d.adicionarParticao(3, rec / setor, sis / setor - 1, d.T_RECUP, 0x8000000000000001L, "Basic data partition", null);
+            if (refs) d.gerarRefs(sis, (fim - sis) / 4096 / d.REFS_BANDA * d.REFS_BANDA);
+            else d.gerarNtfs(sis, fim - sis);
+            d.adicionarParticao(4, sis / setor, fim / setor - 1, d.T_BASICO, 0L, "Basic data partition", null);
+        } finally { d.fechar(); }
+        System.out.println("VHDX criado: " + arq + " (" + gigas + " GB, GPT): #1 livre 101 MB (EFI), #2 MSR 16 MB, #3 WinRE 1024 MB NTFS, #4 sistema "
+                + (refs ? "ReFS" : "NTFS"));
+    }
+
+    // ----------------------------------------------------------------- wimlib
+    // fromPc: wimlib captura o C: pela sombra VSS dele (--snapshot), WIM sem compressao e nao pipable (no pipe ele le
+    // cada arquivo duas vezes e parece travado), so com o que e do Windows (exclusoes), e depois aplica na T:.
+    // A varredura inicial pelo snapshot e lenta (uns 15 min); a captura toda uns 30 min (24 GB).
+
+    private void capturarPc(String exe, String wim) throws Exception {
+        String ini = wim.substring(0, wim.length() - 4) + ".ini";
+        int n = exclusoes(ini);
+        System.out.println("wimlib: snapshot do C: + captura so do que importa (" + n + " exclusoes) para " + wim);
+        try { wimlib(exe, "capture", "C:\\", wim, "sandbox", "--snapshot", "--compress=none", "--config=" + ini); }
+        finally { new java.io.File(ini).delete(); }
+        System.out.println("WIM: " + new java.io.File(wim).length() / (1L << 30) + " GB");
+    }
+
+    private void aplicar(String exe, String wim, int indice, String raiz) throws Exception {
+        System.out.println("wimlib apply para " + raiz);
+        wimlib(exe, "apply", wim, String.valueOf(indice), raiz);
+        var r = new java.io.File(raiz);
+        System.out.println("aplicado: " + (r.getTotalSpace() - r.getFreeSpace()) / (1L << 30) + " GB em " + raiz);
+    }
+
+    // ---------------------------------------------------------- registro
+    // Edita os arquivos do Registro do Windows que esta dentro do VHDX (T:\Windows\System32\config\SYSTEM e SOFTWARE),
+    // com o VHDX anexado, pela offreg.dll (biblioteca do Windows para isso) chamada pelo PowerShell (liberado em
+    // 10/10/2026, "com cuidado"): RDP ligado sem NLA, TermService automatico, discos do QEMU boot-start, nome SANDBOX,
+    // Windows Update desligado, VBS/HVCI desligados e, no clone, o init.cmd do 1o boot (Setup\CmdLine). Regra 10: o
+    // script confere que os hives sao os do sandbox (nao os desta maquina) antes de tocar em qualquer coisa.
+
+    private void editarRegistro(String raiz, boolean doPc) throws Exception {
+        String cfg = raiz + "Windows\\System32\\config";
+        String sistema = System.getenv("SystemRoot");
+        if (raiz.length() != 3 || raiz.equals(LETRA + ":\\") == false) throw new Exception("raiz inesperada do sandbox: " + raiz);
+        if (sistema == null || sistema.substring(0, 3).equalsIgnoreCase(raiz)) throw new Exception(raiz + " e o Windows desta maquina: nada feito");
+        for (String h : new String[]{"SYSTEM", "SOFTWARE"})
+            if (!new java.io.File(cfg, h).isFile()) throw new Exception("hive " + h + " nao encontrado em " + cfg + ": o Windows nao foi aplicado?");
+        System.out.println("Registro do sandbox (" + cfg + "): RDP, TermService, nome SANDBOX, sem Windows Update, VBS off" + (doPc ? ", init.cmd no 1o boot" : ""));
+        powershellScript(REGISTRO.replace("@@CFG@@", cfg).replace("@@FABRICA@@", doPc ? "$false" : "$true"), "editar o Registro do sandbox");
+    }
+
+    /**
+     * init.cmd do 1o boot, em <raiz>sandbox\init.cmd (lido em OEM 850 por causa dos acentos). Clone: o Windows roda o
+     * Setup\CmdLine como SYSTEM antes do logon; cria a conta (net user; grupos pelo nome em pt-BR e en-US, o que nao
+     * existir so falha no log), senhas sem expirar, registra o WinRE (-refs com ISO) e, no fim, zera Setup\SetupType e
+     * CmdLine (sem isso o init rodaria a cada boot). De fabrica: a conta vem do unattend.xml; o init so faz o resto.
+     */
+    private void escreverInit(String raiz, String usuario, String senha, boolean doPc, boolean winre) throws Exception {
+        var linhas = new java.util.ArrayList<>(java.util.List.of("@echo off", "set LOG=C:\\sandbox\\init.log", "echo %DATE% %TIME% inicio>>%LOG%"));
+        if (doPc) {
+            linhas.add("net user " + usuario + (senha.isEmpty() ? "" : " \"" + senha + "\"") + " /add /y >>%LOG% 2>&1");
+            linhas.add("net user " + usuario + " /expires:never >>%LOG% 2>&1");
+            for (String g : new String[]{"Administradores", "Administrators", "\"Usuários da Área de Trabalho Remota\"", "\"Remote Desktop Users\""})
+                linhas.add("net localgroup " + g + " " + usuario + " /add >>%LOG% 2>&1");
+        }
+        linhas.add("net accounts /maxpwage:unlimited >>%LOG% 2>&1");
+        if (winre) {
+            linhas.add("reagentc /setreimage /path \\\\?\\GLOBALROOT\\device\\harddisk0\\partition3\\Recovery\\WindowsRE /target C:\\Windows >>%LOG% 2>&1");
+            linhas.add("reagentc /enable >>%LOG% 2>&1");
+        }
+        if (doPc) {
+            linhas.add("reg add HKLM\\SYSTEM\\Setup /v SetupType /t REG_DWORD /d 0 /f >>%LOG% 2>&1");
+            linhas.add("reg add HKLM\\SYSTEM\\Setup /v CmdLine /t REG_SZ /d \"\" /f >>%LOG% 2>&1");
+        }
+        linhas.add("echo %DATE% %TIME% fim>>%LOG%");
+        var pasta = new java.io.File(raiz, "sandbox");
+        if (!pasta.isDirectory() && !pasta.mkdir()) throw new Exception("nao consegui criar " + pasta);
+        java.nio.file.Files.write(new java.io.File(pasta, "init.cmd").toPath(), (String.join("\r\n", linhas) + "\r\n").getBytes(java.nio.charset.Charset.forName("IBM850")));
+        System.out.println("init.cmd: " + pasta + "\\init.cmd (conta " + usuario + (senha.isEmpty() ? " sem senha" : " com senha") + (winre ? ", WinRE" : "") + ")");
+    }
+
+    // ----------------------------------------------------------- unattend
+    // fromIso: Windows/Panther/unattend.xml (o Setup acha sozinho no 1o boot). specialize: nome SANDBOX, fuso, init.cmd
+    // como SYSTEM; oobeSystem: idioma/teclado, telas do OOBE escondidas, conta local (Administrators; Remote Desktop
+    // Users). Idioma, teclado e fuso vem do %SANDBOXZONE% (opcional, decisao de 10/10/2026): "idioma, teclado, fuso do
+    // Windows", padrao "pt-BR, ABNT2, E. South America Standard Time"; o Java nao le isso do host sem o Registro.
+
+    private final String ZONA_PADRAO = "pt-BR, ABNT2, E. South America Standard Time";
+    private final java.util.Map<String, String> TECLADOS = java.util.Map.of(
+            "ABNT2", "0416:00010416", "ABNT", "0416:00000416", "US", "0409:00000409", "US-INTL", "0409:00020409");
+
+    /** {idioma, InputLocale, fuso} lidos do %SANDBOXZONE% (ou do padrao); formato errado = erro */
+    private String[] zona() throws Exception {
+        String v = System.getenv("SANDBOXZONE");
+        if (v == null || v.isBlank()) v = ZONA_PADRAO;
+        String[] c = v.replace("\"", "").split(",");
+        if (c.length != 3) throw new Exception("%SANDBOXZONE% precisa de 3 campos \"idioma, teclado, fuso do Windows\" (ex: \"" + ZONA_PADRAO + "\"): " + v);
+        for (int i = 0; i < 3; i++) c[i] = c[i].trim();
+        if (!c[0].matches("[a-z]{2,3}(-[A-Za-z0-9]{2,8})*")) throw new Exception("%SANDBOXZONE%: idioma invalido (ex: pt-BR): " + c[0]);
+        String kbd = c[1].matches("[0-9A-Fa-f]{4}:[0-9A-Fa-f]{8}") ? c[1] : TECLADOS.get(c[1].toUpperCase());
+        if (kbd == null) throw new Exception("%SANDBOXZONE%: teclado desconhecido: " + c[1] + " (use " + String.join(", ", new java.util.TreeSet<>(TECLADOS.keySet())) + " ou o codigo, ex: 0416:00010416)");
+        if (c[2].isEmpty()) throw new Exception("%SANDBOXZONE%: fuso vazio (ex: E. South America Standard Time)");
+        return new String[]{c[0], kbd, c[2]};
+    }
+
+    private void escreverUnattend(String raiz, String usuario, String senha) throws Exception {
+        String[] z = zona();
+        var vals = java.util.Map.of("TZ", z[2], "KBD", z[1], "LANG", z[0], "USUARIO", usuario, "SENHA", senha);
+        String xml = UNATTEND;
+        for (var e : vals.entrySet()) xml = xml.replace("@" + e.getKey() + "@", escapeXml(e.getValue()));
+        var pasta = new java.io.File(raiz, "Windows\\Panther");
+        if (!pasta.isDirectory() && !pasta.mkdirs()) throw new Exception("nao consegui criar " + pasta);
+        java.nio.file.Files.writeString(new java.io.File(pasta, "unattend.xml").toPath(), xml.replace("\n", "\r\n"));
+        System.out.println("unattend.xml: SANDBOX, " + z[2] + ", " + z[0] + ", teclado " + z[1] + ", conta " + usuario + (senha.isEmpty() ? " sem senha" : " com senha"));
+    }
+
+    private String escapeXml(String s) { return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;"); }
+
+    private final String UNATTEND = """
+<?xml version="1.0" encoding="utf-8"?>
+<unattend xmlns="urn:schemas-microsoft-com:unattend" xmlns:wcm="http://schemas.microsoft.com/WMIConfig/2002/State">
+  <settings pass="specialize">
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <ComputerName>SANDBOX</ComputerName>
+      <TimeZone>@TZ@</TimeZone>
+    </component>
+    <component name="Microsoft-Windows-Deployment" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <RunSynchronous>
+        <RunSynchronousCommand wcm:action="add"><Order>1</Order><Description>sandbox init</Description><Path>cmd.exe /c C:\\sandbox\\init.cmd</Path></RunSynchronousCommand>
+      </RunSynchronous>
+    </component>
+  </settings>
+  <settings pass="oobeSystem">
+    <component name="Microsoft-Windows-International-Core" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <InputLocale>@KBD@</InputLocale>
+      <SystemLocale>@LANG@</SystemLocale>
+      <UILanguage>@LANG@</UILanguage>
+      <UserLocale>@LANG@</UserLocale>
+    </component>
+    <component name="Microsoft-Windows-Shell-Setup" processorArchitecture="amd64" publicKeyToken="31bf3856ad364e35" language="neutral" versionScope="nonSxS">
+      <OOBE>
+        <HideEULAPage>true</HideEULAPage>
+        <HideOEMRegistrationScreen>true</HideOEMRegistrationScreen>
+        <HideOnlineAccountScreens>true</HideOnlineAccountScreens>
+        <HideWirelessSetupInOOBE>true</HideWirelessSetupInOOBE>
+        <ProtectYourPC>3</ProtectYourPC>
+      </OOBE>
+      <UserAccounts>
+        <LocalAccounts>
+          <LocalAccount wcm:action="add">
+            <Name>@USUARIO@</Name>
+            <DisplayName>@USUARIO@</DisplayName>
+            <Group>Administrators;Remote Desktop Users</Group>
+            <Password><Value>@SENHA@</Value><PlainText>true</PlainText></Password>
+          </LocalAccount>
+        </LocalAccounts>
+      </UserAccounts>
+    </component>
+  </settings>
+</unattend>
+""";
+
+    /** script PowerShell pelo stdin de 'powershell -Command -' (nenhum .ps1 gravado); o "\n\n" final e obrigatorio: sem linha em branco o ultimo bloco e descartado em silencio (achado de 04/10) */
+    private void powershellScript(String script, String passo) throws Exception {
+        var p = new ProcessBuilder("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "-").redirectErrorStream(true).start();
+        try (var w = new java.io.OutputStreamWriter(p.getOutputStream(), java.nio.charset.StandardCharsets.US_ASCII)) { w.write(script + "\n\n"); }
+        catch (java.io.IOException saiuAntes) { }                       // o script faz exit no guarda antes de ler o resto: pipe fechado, normal
+        String saida = new String(p.getInputStream().readAllBytes(), java.nio.charset.Charset.forName(System.getProperty("native.encoding"))).strip();
+        if (!saida.isEmpty()) System.out.println(saida);
+        if (p.waitFor() != 0) throw new Exception("nao consegui " + passo + " (PowerShell/offreg)");
+    }
+
+    // so ASCII (vai pelo stdin). Formato: abre o hive, edita, salva em <hive>.sb e substitui o original; os .LOG1/.LOG2
+    // antigos saem (o hive salvo e limpo). Portado do Sandbox.java (Sb-Preparar/Or-*), 04/10/2026
+    private final String REGISTRO = """
+$ErrorActionPreference = 'Stop'
+$cfg = '@@CFG@@'
+$Fabrica = @@FABRICA@@
+function Falha([string]$msg) { Write-Host "ERRO: $msg"; exit 1 }
+# regra 10: so os hives do sandbox (unidade T:, nunca a do Windows desta maquina)
+if ($cfg.Substring(0, 3) -ne 'T:\\') { Falha "pasta inesperada: $cfg" }
+if ($cfg.Substring(0, 3) -ieq $env:SystemRoot.Substring(0, 3)) { Falha "$cfg e o Windows desta maquina" }
+foreach ($h in 'SYSTEM', 'SOFTWARE') { if (-not (Test-Path "$cfg\\$h")) { Falha "hive $h nao encontrado em $cfg" } }
+Add-Type -Namespace Sb -Name OffReg -MemberDefinition @'
+[DllImport("offreg.dll", CharSet = CharSet.Unicode)] public static extern uint OROpenHive(string path, out IntPtr hive);
+[DllImport("offreg.dll", CharSet = CharSet.Unicode)] public static extern uint ORCloseHive(IntPtr hive);
+[DllImport("offreg.dll", CharSet = CharSet.Unicode)] public static extern uint ORSaveHive(IntPtr hive, string path, uint major, uint minor);
+[DllImport("offreg.dll", CharSet = CharSet.Unicode)] public static extern uint OROpenKey(IntPtr key, string sub, out IntPtr result);
+[DllImport("offreg.dll", CharSet = CharSet.Unicode)] public static extern uint ORCreateKey(IntPtr key, string sub, string cls, uint options, IntPtr sd, out IntPtr result, out uint disposition);
+[DllImport("offreg.dll", CharSet = CharSet.Unicode)] public static extern uint ORCloseKey(IntPtr key);
+[DllImport("offreg.dll", CharSet = CharSet.Unicode)] public static extern uint ORSetValue(IntPtr key, string name, uint type, byte[] data, uint cb);
+[DllImport("offreg.dll", CharSet = CharSet.Unicode)] public static extern uint ORGetValue(IntPtr key, string sub, string name, out uint type, byte[] data, ref uint cb);
+'@
+
+function Or-Chave([IntPtr]$hive, [string]$caminho) {
+    $atual = $hive
+    foreach ($parte in $caminho.Split('\\')) {
+        $prox = [IntPtr]::Zero; $disp = [uint32]0
+        $rc = [Sb.OffReg]::OROpenKey($atual, $parte, [ref]$prox)
+        if ($rc -ne 0) {
+            $rc = [Sb.OffReg]::ORCreateKey($atual, $parte, $null, 0, [IntPtr]::Zero, [ref]$prox, [ref]$disp)
+            if ($rc -ne 0) { Falha "ORCreateKey $caminho ($parte) rc=$rc" }
+        }
+        if ($atual -ne $hive) { [void][Sb.OffReg]::ORCloseKey($atual) }
+        $atual = $prox
+    }
+    return $atual
 }
+
+function Or-Existe([IntPtr]$hive, [string]$caminho) {
+    $k = [IntPtr]::Zero
+    if ([Sb.OffReg]::OROpenKey($hive, $caminho, [ref]$k) -ne 0) { return $false }
+    [void][Sb.OffReg]::ORCloseKey($k); return $true
+}
+
+function Or-Set([IntPtr]$hive, [string]$caminho, [string]$nome, [uint32]$tipo, [byte[]]$dados) {
+    $k = Or-Chave $hive $caminho
+    $rc = [Sb.OffReg]::ORSetValue($k, $nome, $tipo, $dados, $dados.Length)
+    [void][Sb.OffReg]::ORCloseKey($k)
+    if ($rc -ne 0) { Falha "ORSetValue $caminho\\$nome rc=$rc" }
+}
+
+function Or-Dword([IntPtr]$hive, [string]$caminho, [string]$nome, [int]$valor) { Or-Set $hive $caminho $nome 4 ([BitConverter]::GetBytes($valor)) }
+
+function Or-String([IntPtr]$hive, [string]$caminho, [string]$nome, [string]$valor) { Or-Set $hive $caminho $nome 1 ([Text.Encoding]::Unicode.GetBytes($valor + "`0")) }
+
+function Or-LerDword([IntPtr]$hive, [string]$caminho, [string]$nome) {
+    $buf = New-Object byte[] 4; $cb = [uint32]4; $t = [uint32]0
+    $rc = [Sb.OffReg]::ORGetValue($hive, $caminho, $nome, [ref]$t, $buf, [ref]$cb)
+    if ($rc -ne 0) { Falha "ORGetValue $caminho\\$nome rc=$rc" }
+    return [BitConverter]::ToInt32($buf, 0)
+}
+
+function Or-Editar([string]$arquivo, [scriptblock]$edicao) {
+    $h = [IntPtr]::Zero
+    $rc = [Sb.OffReg]::OROpenHive($arquivo, [ref]$h)
+    if ($rc -ne 0) { Falha "OROpenHive $arquivo rc=$rc" }
+    $novo = "$arquivo.sb"
+    try {
+        & $edicao $h
+        if (Test-Path $novo) { Remove-Item $novo -Force }
+        $rc = [Sb.OffReg]::ORSaveHive($h, $novo, 10, 0)
+        if ($rc -ne 0) { Falha "ORSaveHive $novo rc=$rc" }
+    } finally { [void][Sb.OffReg]::ORCloseHive($h) }
+    Remove-Item $arquivo -Force
+    Move-Item $novo $arquivo
+    Remove-Item "$arquivo.LOG1", "$arquivo.LOG2" -Force -ErrorAction SilentlyContinue
+    Write-Host "editado: $arquivo"
+}
+
+Or-Editar "$cfg\\SYSTEM" {
+    param($h)
+    $cs = 'ControlSet{0:d3}' -f (Or-LerDword $h 'Select' 'Current')
+    foreach ($svc in @('storahci', 'stornvme')) { Or-Dword $h "$cs\\Services\\$svc" Start 0 }
+    foreach ($svc in @('wuauserv', 'UsoSvc', 'WaaSMedicSvc')) { if (Or-Existe $h "$cs\\Services\\$svc") { Or-Dword $h "$cs\\Services\\$svc" Start 4 } }
+    Or-Dword $h "$cs\\Services\\TermService" Start 2
+    Or-Dword $h "$cs\\Control\\Terminal Server" fDenyTSConnections 0
+    Or-Dword $h "$cs\\Control\\Terminal Server\\WinStations\\RDP-Tcp" UserAuthentication 0
+    Or-Dword $h "$cs\\Control\\Terminal Server\\WinStations\\RDP-Tcp" SecurityLayer 0
+    Or-Dword $h "$cs\\Control\\Lsa" LimitBlankPasswordUse 0
+    Or-String $h "$cs\\Services\\SharedAccess\\Parameters\\FirewallPolicy\\FirewallRules" 'whpx2-sandbox-rdp' 'v2.33|Action=Allow|Active=TRUE|Dir=In|Protocol=6|LPort=3389|Name=whpx2 sandbox RDP|'
+    foreach ($k in @("$cs\\Control\\ComputerName\\ComputerName", "$cs\\Control\\ComputerName\\ActiveComputerName")) { Or-String $h $k ComputerName 'SANDBOX' }
+    Or-String $h "$cs\\Services\\Tcpip\\Parameters" Hostname 'SANDBOX'
+    Or-String $h "$cs\\Services\\Tcpip\\Parameters" 'NV Hostname' 'SANDBOX'
+    Or-Dword $h "$cs\\Control\\DeviceGuard" EnableVirtualizationBasedSecurity 0
+    Or-Dword $h "$cs\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity" Enabled 0
+    if (-not $Fabrica) {
+        Or-Dword $h 'Setup' SetupType 2
+        Or-String $h 'Setup' CmdLine 'cmd.exe /c C:\\sandbox\\init.cmd'
+    }
+}
+
+Or-Editar "$cfg\\SOFTWARE" { param($h); Or-Dword $h 'Policies\\Microsoft\\Windows\\WindowsUpdate\\AU' NoAutoUpdate 1 }
+
+exit 0
+""";
+
+    // ------------------------------------------------------------------- ISO
+    // Monta a ISO pelo PowerShell (Mount-DiskImage; liberado em 10/10/2026) e acha a letra em Java: a raiz nova que
+    // tem sources\install.wim ou .esd. Desmonta no fim (Dismount-DiskImage), mesmo com erro.
+
+    private String montarIso(String iso) throws Exception {
+        var antes = java.util.Arrays.asList(java.io.File.listRoots());
+        powershell("montar", "Mount-DiskImage -ImagePath '" + iso.replace("'", "''") + "' -StorageType ISO", iso);
+        for (int t = 0; t < 40; t++) {
+            for (var r : java.io.File.listRoots())
+                if (!antes.contains(r) && new java.io.File(r, "sources").isDirectory()) return r.getPath();
+            Thread.sleep(500);
+        }
+        desmontarIso(iso);
+        throw new Exception(iso + " montada, mas nenhuma unidade nova com a pasta sources apareceu em 20 s (desmontada de novo)");
+    }
+
+    private void desmontarIso(String iso) throws Exception {
+        powershell("desmontar", "Dismount-DiskImage -ImagePath '" + iso.replace("'", "''") + "'", iso);
+        System.out.println("ISO desmontada: " + iso);
+    }
+
+    /** sources\install.wim ou install.esd da ISO montada */
+    private String installDaIso(String raiz) throws Exception {
+        for (String n : new String[]{"install.wim", "install.esd"}) {
+            var f = new java.io.File(raiz + "sources\\" + n);
+            if (f.isFile()) return f.getPath();
+        }
+        throw new Exception("a ISO nao tem sources\\install.wim nem install.esd (" + raiz + ")");
+    }
+
+    /**
+     * Imagem do install.wim: a unica, se so ha uma; com varias, a imagem 1 (escolher pela edicao do host exige ler
+     * EditionID no Registro, que o Java nao le sem utilitario do Windows). Lista as edicoes (wimlib info).
+     */
+    private int escolherImagem(String exe, String wim) throws Exception {
+        var imagens = infoImagens(exe, wim);
+        System.out.println("imagens em " + wim + ":");
+        for (String[] i : imagens) System.out.println("  " + i[0] + ": " + i[1] + " (" + i[2] + ", build " + i[3] + ")");
+        String[] pro = imagemPro(imagens);
+        System.out.println("usando a imagem " + pro[0] + " (" + pro[1] + ")");
+        return Integer.parseInt(pro[0]);
+    }
+
+    /** sempre o Windows Pro (Edition ID Professional; decisao de 10/10/2026); sem ele na ISO, erro */
+    private String[] imagemPro(java.util.List<String[]> imagens) throws Exception {
+        for (String[] i : imagens) if (i[2].equalsIgnoreCase("Professional")) return i;
+        var nomes = new java.util.ArrayList<String>();
+        for (String[] i : imagens) nomes.add(i[1] + " (" + i[2] + ")");
+        throw new Exception("a ISO nao tem o Windows Pro (Edition ID Professional); tem: " + String.join(", ", nomes));
+    }
+
+    /** imagens do install.wim pelo wimlib info: {indice, nome, Edition ID, build (Build.Service Pack Build)} */
+    private java.util.List<String[]> infoImagens(String exe, String wim) throws Exception {
+        var lista = new java.util.ArrayList<String[]>();
+        String[] atual = null;
+        String build = "", spb = "";
+        for (String l : wimlibSaida(exe, "info", wim).split("\\R")) {
+            if (l.startsWith("Index:")) { if (atual != null) { atual[3] = build + "." + spb; lista.add(atual); } atual = new String[]{valor(l), "", "", ""}; build = spb = ""; }
+            else if (atual == null) continue;
+            else if (l.startsWith("Name:")) atual[1] = valor(l);
+            else if (l.startsWith("Edition ID:")) atual[2] = valor(l);
+            else if (l.startsWith("Build:")) build = valor(l);
+            else if (l.startsWith("Service Pack Build:")) spb = valor(l);
+        }
+        if (atual != null) { atual[3] = build + "." + spb; lista.add(atual); }
+        if (lista.isEmpty()) throw new Exception("wimlib info nao listou imagens em " + wim);
+        return lista;
+    }
+
+    private String valor(String linha) { return linha.substring(linha.indexOf(':') + 1).trim(); }
+
+    /** roda o wimlib-imagex e devolve a saida (info); erro se o codigo nao for 0 */
+    private String wimlibSaida(String exe, String... a) throws Exception {
+        var cmd = new java.util.ArrayList<String>();
+        cmd.add(exe);
+        cmd.addAll(java.util.List.of(a));
+        var p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+        String saida = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+        if (p.waitFor() != 0) throw new Exception("wimlib " + a[0] + " falhou:\n" + saida.strip());
+        return saida;
+    }
+
+    /** roda o wimlib-imagex com a saida no console (progresso); erro se o codigo nao for 0 */
+    private void wimlib(String exe, String... a) throws Exception {
+        var cmd = new java.util.ArrayList<String>();
+        cmd.add(exe);
+        cmd.addAll(java.util.List.of(a));
+        int rc = new ProcessBuilder(cmd).inheritIO().start().waitFor();
+        if (rc != 0) throw new Exception("wimlib " + a[0] + " falhou (" + rc + ")");
+    }
+
+    /**
+     * Config do wimlib (formato do WimScript.ini do DISM): o que NAO vai. Raiz em lista branca (so o que e do Windows
+     * + C:\y quando existe), lixo, perfis de usuario (so Default e Public; as contas ficam no SAM), ProgramData so o
+     * do Windows, Program Files so o do Windows + WindowsApps. Devolve quantas linhas.
+     */
+    private int exclusoes(String ini) throws Exception {
+        var lista = new java.util.ArrayList<>(java.util.List.of(
+            "\\$Recycle.Bin", "\\System Volume Information", "\\pagefile.sys", "\\hiberfil.sys", "\\swapfile.sys",
+            "\\DumpStack.log.tmp", "\\Recovery", "\\PerfLogs", "\\OneDriveTemp",
+            "\\Windows\\Temp\\*", "\\Windows\\SystemTemp\\*", "\\Windows\\Logs\\*", "\\Windows\\Installer\\*",
+            "\\Windows\\SoftwareDistribution\\*", "\\Windows\\WinSxS\\Backup\\*", "\\Windows\\WinSxS\\ManifestCache\\*",
+            "\\Windows\\WinSxS\\Temp\\*", "\\Windows\\Prefetch\\*", "\\Windows\\LiveKernelReports\\*", "\\Windows\\Minidump\\*",
+            "\\Windows\\MEMORY.DMP", "\\Windows\\servicing\\LCU\\*", "\\Windows\\CbsTemp\\*", "\\Windows\\Panther\\*",
+            "\\Windows\\System32\\LogFiles\\*", "\\Windows\\System32\\SleepStudy\\*", "\\Windows\\System32\\config\\RegBack\\*",
+            "\\ProgramData\\Package Cache\\*", "\\ProgramData\\Microsoft\\Windows\\WER\\*", "\\ProgramData\\Microsoft\\Search\\Data\\*",
+            "\\ProgramData\\Microsoft\\Diagnosis\\*", "\\ProgramData\\Microsoft\\Windows Defender\\Scans\\History\\*",
+            // camadas de conteiner, cache de arquivos offline, WinRE (vai para a particao de recuperacao): nao importam
+            "\\ProgramData\\Microsoft\\Windows\\Containers", "\\ProgramData\\Docker", "\\Windows\\CSC", "\\Windows\\System32\\Recovery\\*",
+            // produtos que moram em ProgramData\Microsoft mas nao sao do Windows (VS, pacote do Office, cache do DO)
+            "\\ProgramData\\Microsoft\\VisualStudio", "\\ProgramData\\Microsoft\\ClickToRun", "\\ProgramData\\Microsoft\\AndroidNDK*",
+            "\\ProgramData\\Microsoft\\Windows\\DeliveryOptimization\\Cache\\*", "\\ProgramData\\Microsoft\\Windows\\RetailDemo"));
+        var raizOk = java.util.Set.of("windows", "program files", "program files (x86)", "programdata", "users", "documents and settings", "y");
+        var pdOk = java.util.Set.of("microsoft", "softwaredistribution", "usoprivate", "usoshared", "ssh", "regid.1991-06.com.microsoft", "packages");
+        var pfOk = java.util.Set.of("windows defender", "common files", "windowspowershell", "internet explorer", "windowsapps");
+        var usersOk = java.util.Set.of("default", "public");
+        var jaNaLista = new java.util.HashSet<String>();
+        for (String x : lista) jaNaLista.add(x.substring(1).toLowerCase());
+        for (var f : filhos("C:\\")) if (!raizOk.contains(f.getName().toLowerCase()) && !jaNaLista.contains(f.getName().toLowerCase())) lista.add("\\" + f.getName());
+        for (var f : filhos("C:\\ProgramData")) if (!pdOk.contains(f.getName().toLowerCase()) && !reparse(f)) lista.add("\\ProgramData\\" + f.getName());
+        for (var f : filhos("C:\\Users")) if (f.isDirectory() && !usersOk.contains(f.getName().toLowerCase()) && !reparse(f)) lista.add("\\Users\\" + f.getName());
+        for (String pf : new String[]{"Program Files", "Program Files (x86)"})
+            for (var f : filhos("C:\\" + pf)) if (f.isDirectory() && !pfOk.contains(f.getName().toLowerCase())) lista.add("\\" + pf + "\\" + f.getName());
+        java.nio.file.Files.writeString(java.nio.file.Path.of(ini), "[ExclusionList]\r\n" + String.join("\r\n", lista) + "\r\n");
+        return lista.size();
+    }
+
+    private java.io.File[] filhos(String pasta) {
+        var f = new java.io.File(pasta).listFiles();
+        return f == null ? new java.io.File[0] : f;
+    }
+
+    /** junction/symlink (o wimlib guarda o reparse point; nao desce nele) */
+    private boolean reparse(java.io.File f) {
+        try { return java.nio.file.Files.readAttributes(f.toPath(), java.nio.file.attribute.BasicFileAttributes.class, java.nio.file.LinkOption.NOFOLLOW_LINKS).isOther(); }
+        catch (java.io.IOException e) { return false; }
+    }
+
+    private final String LETRA = "T";                         // letra do sistema (#4) enquanto anexado (pedido do Renato)
+
+    /**
+     * Anexa o VHDX pelo PowerShell sem letra (Mount-DiskImage -NoDriveLetter) e poe a T no sistema (#4) com
+     * Set-Partition; PowerShell so para anexar/desanexar/Set-Partition, liberado em 10/10/2026. O numero do disco anexado
+     * vem do Particao (discoAnexado: mesmo tamanho e GUIDs; autorizado em 10/10/2026, com dispositivo/particao/guidStr/
+     * fechar, so leitura). O Windows numera so as entradas ocupadas da GPT: antes do format_efi (#1 livre) a #4 e a
+     * particao 3 para ele; depois (EFI na #1) e a 4. Conta as entradas ocupadas antes da #4 (15:23 de 10/10: o 3 fixo
+     * deu a letra ao WinRE e o guarda do FS barrou). Devolve "T:\" depois de conferir em Java que ela tem o FS
+     * pedido; falhou depois do attach: desanexa.
+     */
+    private String anexar(String arq, int gpt, String fsNome) throws Exception {
+        var raiz = new java.io.File(LETRA + ":\\");
+        if (raiz.exists()) throw new Exception("a letra " + LETRA + ": ja esta em uso; libere-a antes");
+        var app = new Particao();
+        var v = app.dispositivo(arq, false);
+        long tam, off, tamPart;
+        String guidDisco, guidPart;
+        try {
+            Object[] p = v.particao(gpt);          // {num, offset, tamanho, tipo, nome, atributos}
+            tam = v.tamanho;
+            off = (Long) p[1];
+            tamPart = (Long) p[2];
+            byte[] ent = v.gptEnt;
+            int tamEnt = v.gptTamEnt;
+            guidDisco = v.guidStr(v.gptCab, 56);
+            guidPart = v.guidStr(ent, (gpt - 1) * tamEnt + 16);
+            // numero de cada entrada da GPT para o Windows: ele so conta as ocupadas (#1 livre -> #2, #3, #4 = 1, 2, 3)
+            numWin = new int[16];
+            for (int i = 0, n = 0; i < 16 && (i + 1) * tamEnt <= ent.length; i++) { boolean vazia = true; for (int b = 0; b < 16; b++) vazia &= ent[i * tamEnt + b] == 0; numWin[i] = vazia ? 0 : ++n; }
+        } finally { v.fechar(); }
+        powershell("anexar", "Mount-DiskImage -ImagePath '" + arq.replace("'", "''") + "' -StorageType VHDX -NoDriveLetter", arq);
+        try {
+            vhdxAtual = arq;
+            discoAtual = app.discoAnexado(tam, off, tamPart, guidDisco, guidPart);
+            return letra(gpt, LETRA, fsNome);
+        } catch (Exception e) {                                          // ja anexado: desanexa antes de sair
+            try { desanexarVhdx(arq); } catch (Exception naoAnexado) { }
+            throw e;
+        }
+    }
+
+    private String vhdxAtual;                                     // VHDX anexado
+    private int discoAtual;                                       // disco do Windows para ele
+    private int[] numWin;                                         // numero no Windows de cada entrada #1..#4 da GPT (0 = vazia)
+
+    /** da a letra a #gpt do VHDX anexado (Set-Partition) e confere em Java que ela aparece com o FS pedido; devolve "X:\" */
+    private String letra(int gpt, String letra, String fsNome) throws Exception {
+        var raiz = new java.io.File(letra + ":\\");
+        if (raiz.exists()) throw new Exception("a letra " + letra + ": ja esta em uso; libere-a antes");
+        powershell("dar a letra " + letra + " ao", "Set-Partition -DiskNumber " + discoAtual + " -PartitionNumber " + numWin[gpt - 1] + " -NewDriveLetter " + letra, vhdxAtual);
+        String erro = null;
+        for (int t = 0; t < 40; t++) {                                   // a letra aparece logo depois do Set-Partition
+            try {
+                String fs = java.nio.file.Files.getFileStore(raiz.toPath()).type();
+                if (fs.equalsIgnoreCase(fsNome)) return raiz.getPath();
+                erro = letra + ": ficou com " + fs + ", esperado " + fsNome;
+                break;
+            } catch (java.io.IOException ainda) { erro = letra + ": nao apareceu em 20 s"; }   // volume ainda montando
+            Thread.sleep(500);
+        }
+        throw new Exception(vhdxAtual + " anexado, mas " + erro);
+    }
+
+    private final String LETRA_WINRE = "U";                       // letra da #3 (WinRE) enquanto anexado (pedido do Renato, 10/10)
+
+    /** Winre.wim da imagem da ISO para a #3 (U:\Recovery\WindowsRE); o init.cmd registra com reagentc no 1o boot */
+    private void winRe(String exe, String wim, int indice) throws Exception {
+        String u = letra(3, LETRA_WINRE, "NTFS");
+        var dest = new java.io.File(u, "Recovery\\WindowsRE");
+        if (!dest.isDirectory() && !dest.mkdirs()) throw new Exception("nao consegui criar " + dest);
+        wimlib(exe, "extract", wim, String.valueOf(indice), "/Windows/System32/Recovery/Winre.wim", "--dest-dir=" + dest, "--no-acls");
+        var f = new java.io.File(dest, "Winre.wim");
+        if (!f.isFile()) throw new Exception("Winre.wim nao saiu em " + dest);
+        System.out.println("WinRE: " + f + " (" + f.length() / 1048576 + " MB)");
+    }
+
+    // ----------------------------------------------------------------- QEMU
+    // Roda o sandbox no QEMU 11 (%QEMU%) com -accel whpx (WinHvPlatform.dll do whpx2; o servico whpx2 precisa estar de
+    // pe), UEFI pelo OVMF do proprio QEMU (share\edk2-x86_64-code.fd + copia da edk2-i386-vars.fd ao lado do VHDX), o
+    // VHDX direto (format=vhdx), 4096 MB, 4 vCPUs, janela gtk a vista, rede isolada so com o RDP entrando por
+    // 127.0.0.1:<porta> (3392 ou o proximo par livre; monitor em porta+1). read: snapshot=on (nada fica); write: grava
+    // no VHDX e, ao fechar o mstsc, desliga por ACPI antes do quit. preparo: 1o boot gravavel ate o RDP responder
+    // (45 min), 90 s, desliga. Regra 10: o VHDX precisa estar desanexado (abre em modo exclusivo) e T:/U: ausentes.
+
+    private String DISPLAY = "none";                              // -hideQemu (padrao) = none; -showQemu = gtk (o main decide)
+
+    private void rodar(java.io.File vhdx, boolean write, boolean preparo) throws Exception {
+        String qemu = pasta("QEMU");
+        String erro = exigir("QEMU", qemu, "qemu-system-x86_64.exe", "qemu-img.exe", "WinHvPlatform.dll", "share\\edk2-x86_64-code.fd", "share\\edk2-i386-vars.fd");
+        if (erro != null) throw new Exception(erro);
+        try { new java.io.RandomAccessFile(vhdx, "rw").close(); } catch (java.io.IOException e) { throw new Exception(vhdx + " esta anexado ou aberto por outro programa; nao vou ligar a VM"); }
+        for (String l : new String[]{LETRA, LETRA_WINRE}) if (new java.io.File(l + ":\\").exists()) throw new Exception("a letra " + l + ": existe: algum VHDX ainda anexado? nao vou ligar a VM");
+        String nome = vhdx.getPath().substring(0, vhdx.getPath().length() - 5);
+        String disco = overlay(vhdx, qemu).getPath() + ",format=qcow2";   // o QEMU nunca escreve no VHDX
+        var vars = new java.io.File(nome + "_vars.fd");                  // NVRAM do OVMF deste sandbox
+        if (!vars.isFile()) java.nio.file.Files.copy(java.nio.file.Path.of(qemu, "share", "edk2-i386-vars.fd"), vars.toPath());
+        int porta = 3392;
+        while (!portaLivre(porta) || !portaLivre(porta + 1)) porta += 2;
+        boolean grava = write || preparo;
+        var args = new java.util.ArrayList<>(java.util.List.of(qemu + "\\qemu-system-x86_64.exe",
+                "-accel", "whpx", "-machine", "q35", "-cpu", "max", "-m", "4096", "-smp", "4",
+                "-drive", "file=" + disco + ",if=ide" + (grava ? "" : ",snapshot=on"),
+                "-drive", "if=pflash,format=raw,readonly=on,file=" + qemu + "\\share\\edk2-x86_64-code.fd",
+                "-drive", "if=pflash,format=raw,file=" + vars.getPath() + (grava ? "" : ",snapshot=on"),
+                "-vga", "std", "-display", DISPLAY, "-nic", "user,model=e1000e,hostfwd=tcp:127.0.0.1:" + porta + "-:3389,restrict=on",
+                "-monitor", "tcp:127.0.0.1:" + (porta + 1) + ",server=on,wait=off", "-name", "sandbox", "-action", "shutdown=poweroff"));
+        System.out.println((preparo ? "boot de preparo (gravavel)" : write ? "sandbox gravando no VHDX" : "sandbox sem gravar (snapshot)") + ": QEMU whpx, RDP 127.0.0.1:" + porta + ", monitor " + (porta + 1));
+        var q = new ProcessBuilder(args).directory(new java.io.File(qemu)).inheritIO().start();
+        try {
+            if (!esperarRdp(q, porta, preparo ? 2700 : 600)) {
+                if (q.isAlive()) monitor(porta + 1, "quit");
+                throw new Exception("o convidado nao respondeu RDP em " + (preparo ? "45" : "10") + " min (veja a janela do QEMU)");
+            }
+            if (preparo) {
+                System.out.println("RDP respondeu; 90 s para o init terminar, depois desligo (system_powerdown)");
+                Thread.sleep(90_000);
+                desligar(q, porta + 1, 10);
+                q.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+                consolidar(vhdx, qemu);
+                System.out.println("boot de preparo concluido: " + vhdx);
+                return;
+            }
+            var rdp = java.io.File.createTempFile("sandbox-", ".rdp");
+            java.nio.file.Files.write(rdp.toPath(), String.join("\r\n", "full address:s:127.0.0.1:" + porta, "prompt for credentials:i:0", "authentication level:i:0",
+                    "redirectclipboard:i:1", "screen mode id:i:1", "smart sizing:i:1", "desktopwidth:i:1280", "desktopheight:i:800", "").getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+            // a sondagem do RDP (X.224) ocupa por instantes a unica conexao remota do Windows Pro: abrir o mstsc logo
+            // depois dela da "o numero de conexoes e limitado" (maquina fisica, 10/10 20:20). Espera um pouco e, se o
+            // mstsc fechar em menos de 30 s com a VM viva (recusado), reabre, ate 3 vezes
+            Thread.sleep(8000);
+            System.out.println("abrindo o mstsc (conta da geracao; sem senha: Enter). Fechar o mstsc encerra o sandbox.");
+            for (int tentativa = 1; ; tentativa++) {
+                long t0 = System.currentTimeMillis();
+                var m = new ProcessBuilder("mstsc", rdp.getPath()).start();
+                while (m.isAlive() && q.isAlive()) Thread.sleep(2000);
+                if (!q.isAlive() || System.currentTimeMillis() - t0 > 30_000 || tentativa >= 3) break;
+                System.out.println("mstsc fechou em menos de 30 s (conexao recusada?): tentando de novo em 10 s (" + tentativa + "/3)");
+                Thread.sleep(10_000);
+            }
+            rdp.delete();
+            if (write && q.isAlive()) { System.out.println("mstsc fechado: desligando o convidado para gravar limpo"); desligar(q, porta + 1, 5); }
+            if (write) { q.waitFor(10, java.util.concurrent.TimeUnit.SECONDS); consolidar(vhdx, qemu); }
+            System.out.println(write ? "sandbox encerrado (alteracoes gravadas em " + vhdx + ")" : "sandbox encerrado (nada ficou gravado)");
+        } finally {
+            if (q.isAlive()) { monitor(porta + 1, "quit"); q.waitFor(5, java.util.concurrent.TimeUnit.SECONDS); }
+            if (q.isAlive()) q.destroy();
+        }
+    }
+
+    // Estado do sandbox (decisao de 10/10/2026, depois do teste em que o QEMU gravando direto no VHDX travou e
+    // corrompeu a imagem): o QEMU so escreve no overlay <nome>.qcow2 (backing = o VHDX, so leitura). Read = overlay +
+    // snapshot=on; Write e preparo = gravam no overlay e, no fim, o VHDX e regravado a partir dele (qemu-img convert)
+    // e o overlay recomeca vazio: o VHDX continua o unico artefato e a espiada da build le o que foi gravado.
+
+    private java.io.File overlay(java.io.File vhdx, String qemu) throws Exception {
+        var o = new java.io.File(vhdx.getPath().substring(0, vhdx.getPath().length() - 5) + ".qcow2");
+        if (!o.isFile()) {
+            System.out.println("overlay do sandbox: " + o.getName());
+            qemuImg(qemu, "create", "-q", "-f", "qcow2", "-b", vhdx.getPath(), "-F", "vhdx", o.getPath());
+        }
+        return o;
+    }
+
+    private void consolidar(java.io.File vhdx, String qemu) throws Exception {
+        var o = overlay(vhdx, qemu);
+        var novo = new java.io.File(vhdx.getPath().substring(0, vhdx.getPath().length() - 5) + ".novo.vhdx");
+        if (novo.exists() && !novo.delete()) throw new Exception("nao consegui apagar o resto " + novo);
+        System.out.println("regravando o VHDX a partir do overlay (qemu-img convert, alguns minutos)...");
+        qemuImg(qemu, "convert", "-p", "-O", "vhdx", "-o", "subformat=dynamic", o.getPath(), novo.getPath());
+        desesparsar(novo);
+        new Particao().listar(novo.getPath());                // o Particao le o VHDX novo? (list, autorizado) senao nada e trocado
+        if (!vhdx.delete()) throw new Exception("nao consegui substituir " + vhdx + " (o novo ficou em " + novo + ")");
+        if (!novo.renameTo(vhdx)) throw new Exception("nao consegui renomear " + novo + " para " + vhdx);
+        if (!o.delete()) throw new Exception("nao consegui apagar o overlay antigo " + o);
+        overlay(vhdx, qemu);
+        System.out.println("VHDX regravado: " + vhdx + " (" + vhdx.length() / (1L << 30) + " GB); overlay novo vazio");
+    }
+
+    /**
+     * O qemu-img grava o VHDX como arquivo esparso do NTFS, e o Windows recusa anexar VHDX esparso (0xc03a001a,
+     * teste de 10/10 18:04). Regrava o arquivo por copia comum (o Files.copy manteria o atributo) e troca.
+     */
+    private void desesparsar(java.io.File f) throws Exception {
+        if (!ehEsparso(f)) return;
+        var plano = new java.io.File(f.getPath() + ".plano");
+        System.out.println("tirando o esparso de " + f.getName() + " (copia comum)...");
+        try (var in = new java.io.FileInputStream(f); var out = new java.io.FileOutputStream(plano)) { in.transferTo(out); }
+        if (plano.length() != f.length()) throw new Exception("copia incompleta de " + f);
+        if (!f.delete() || !plano.renameTo(f)) throw new Exception("nao consegui trocar " + f + " pela copia " + plano);
+    }
+
+    /** FILE_ATTRIBUTE_SPARSE_FILE (0x200) pelo atributo bruto do DOS, que o Java expoe no "attributes" do dos: view */
+    private boolean ehEsparso(java.io.File f) throws Exception {
+        Object a = java.nio.file.Files.getAttribute(f.toPath(), "dos:attributes");
+        return a instanceof Integer i && (i & 0x200) != 0;
+    }
+
+    /** qemu-img do %QEMU% (ferramenta do QEMU, nao do Windows), saida no console; erro se o codigo nao for 0 */
+    private void qemuImg(String qemu, String... a) throws Exception {
+        var cmd = new java.util.ArrayList<String>();
+        cmd.add(qemu + "\\qemu-img.exe");
+        cmd.addAll(java.util.List.of(a));
+        int rc = new ProcessBuilder(cmd).inheritIO().start().waitFor();
+        if (rc != 0) throw new Exception("qemu-img " + a[0] + " falhou (" + rc + ")");
+    }
+
+    /** system_powerdown pelo monitor ate o QEMU sair (ou minutos); depois quit */
+    private void desligar(Process q, int portaMon, int minutos) throws Exception {
+        long fim = System.currentTimeMillis() + minutos * 60_000L;
+        while (q.isAlive() && System.currentTimeMillis() < fim) { monitor(portaMon, "system_powerdown"); Thread.sleep(15_000); }
+        if (q.isAlive()) { System.out.println("o convidado nao desligou em " + minutos + " min: quit"); monitor(portaMon, "quit"); Thread.sleep(3000); }
+    }
+
+    private boolean portaLivre(int p) {
+        try (var s = new java.net.ServerSocket()) { s.bind(new java.net.InetSocketAddress("127.0.0.1", p)); return true; } catch (java.io.IOException e) { return false; }
+    }
+
+    private boolean esperarRdp(Process q, int porta, int segundos) throws Exception {
+        long fim = System.currentTimeMillis() + segundos * 1000L;
+        while (System.currentTimeMillis() < fim) {
+            if (!q.isAlive()) return false;
+            if (rdpResponde(porta)) return true;
+            Thread.sleep(5000);
+        }
+        return false;
+    }
+
+    /** handshake X.224 do RDP: o hostfwd aceita o TCP mesmo com o convidado desligado, so vale se o RDP responder */
+    private boolean rdpResponde(int porta) {
+        try (var c = new java.net.Socket()) {
+            c.connect(new java.net.InetSocketAddress("127.0.0.1", porta), 1000);
+            c.setSoTimeout(3000);
+            c.getOutputStream().write(new byte[]{3, 0, 0, 19, 14, (byte) 224, 0, 0, 0, 0, 0, 1, 0, 8, 0, 3, 0, 0, 0});
+            byte[] b = new byte[64];
+            int n = c.getInputStream().read(b);
+            return n >= 4 && b[0] == 3;
+        } catch (java.io.IOException e) { return false; }
+    }
+
+    /** manda um comando ao monitor do QEMU e mostra o que ele respondeu (16:48 de 10/10: o system_powerdown nao desligou o convidado; a resposta diz se o comando chegou) */
+    private void monitor(int porta, String cmd) {
+        try (var c = new java.net.Socket("127.0.0.1", porta)) {
+            c.setSoTimeout(1500);
+            var in = c.getInputStream();
+            byte[] b = new byte[4096];
+            try { in.read(b); } catch (java.io.IOException banner) { }     // "QEMU x.y monitor - type 'help'..." + prompt
+            c.getOutputStream().write((cmd + "\n").getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            c.getOutputStream().flush();
+            var resp = new StringBuilder();
+            try { for (int n; (n = in.read(b)) > 0; ) resp.append(new String(b, 0, n, java.nio.charset.StandardCharsets.US_ASCII)); } catch (java.io.IOException fim) { }
+            // o monitor ecoa o que digitamos com sequencias de edicao (ESC[K, ESC[D): tira o eco e sobra so a resposta
+            String r = resp.toString().replaceAll("\u001b\\[[0-9;]*[A-Za-z]", "").replace("\r", "").replace("(qemu)", "").strip();
+            for (int i = cmd.length(); i >= 1; i--) r = r.replace(cmd.substring(0, i), "");   // o eco vem em pedacos crescentes (s, sy, sys...)
+            r = r.strip();
+            System.out.println("monitor " + cmd + (r.isEmpty() ? ": ok" : ": " + r));
+        } catch (Exception e) { System.out.println("monitor " + cmd + ": sem resposta (" + e.getMessage() + ")"); }
+    }
+
+    /** Desanexa o VHDX pelo PowerShell (Dismount-DiskImage; liberado em 10/10/2026). */
+    private void desanexarVhdx(String arq) throws Exception {
+        powershell("desanexar", "Dismount-DiskImage -ImagePath '" + arq.replace("'", "''") + "'", arq);
+    }
+
+    /** PowerShell so para anexar/desanexar; erro com a saida dele se falhar */
+    private void powershell(String passo, String comando, String arq) throws Exception {
+        var p = new ProcessBuilder("powershell", "-NoProfile", "-Command", "$ErrorActionPreference = 'Stop'; " + comando + " | Out-Null")
+                .redirectErrorStream(true).start();
+        String saida = new String(p.getInputStream().readAllBytes(), java.nio.charset.Charset.forName(System.getProperty("native.encoding"))).strip();
+        if (p.waitFor() != 0)
+            throw new Exception(saida.contains("0x80070522") ? passo + " o VHDX precisa de Administrador: abra o prompt como Administrador."   // privilegio ausente
+                    : "nao consegui " + passo + " " + arq + (saida.isEmpty() ? "" : ":\n" + saida));
+    }
+
+
+    /** pasta da variavel de sistema (sem aspas); null se nao definida */
+    private String pasta(String var) {
+        String v = System.getenv(var);
+        return v == null || v.isBlank() ? null : v.replace("\"", "").trim();
+    }
+
+    /** null se a pasta existe e tem os arquivos; senao a mensagem de erro */
+    private String exigir(String var, String pasta, String... arquivos) {
+        if (pasta == null) return "defina a variavel de sistema %" + var + "% (pasta)";
+        if (!new java.io.File(pasta).isDirectory()) return "%" + var + "% nao e uma pasta: " + pasta;
+        for (String a : arquivos)
+            if (!new java.io.File(pasta, a).isFile()) return "%" + var + "% sem " + a + ": " + pasta;
+        return null;
+    }
+
+    /** caminho absoluto e normalizado; null se o Windows nao aceita o nome */
+    private String caminho(String v) {
+        try { return java.nio.file.Path.of(v).toAbsolutePath().normalize().toString(); }
+        catch (java.nio.file.InvalidPathException e) { return null; }
+    }
+}
+//</editor-fold>
 
 /* class BannerFiglet */ class BannerFiglet { private static final int WIDTH = 80; private static final char HB = '$'; private static final int H = 6; private static final int RULES = 15; private static final String[][] FONT = { { " ", " $", " $", " $", " $", " $", " $" }, { "!", "  _ ", " | |", " | |", " |_|", " (_)", "    " }, { "\"", "  _ _ ", " ( | )", "  V V ", "   $  ", "   $  ", "      " }, { "#", "    _  _   ", "  _| || |_ ", " |_  ..  _|", " |_      _|", "   |_||_|  ", "           " }, { "$", "   _  ", "  | | ", " / __)", " \\__ \\", " (   /", "  |_| " }, { "%", "  _  __", " (_)/ /", "   / / ", "  / /_ ", " /_/(_)", "       " }, { "&", "   ___   ", "  ( _ )  ", "  / _ \\/\\", " | (_>  <", "  \\___/\\/", "         " }, { "'", "  _ ", " ( )", " |/ ", "  $ ", "  $ ", "    " }, { "(", "   __", "  / /", " | | ", " | | ", " | | ", "  \\_\\" }, { ")", " __  ", " \\ \\ ", "  | |", "  | |", "  | |", " /_/ " }, { "*", "       ", " __/\\__", " \\    /", " /_  _\\", "   \\/  ", "       " }, { "+", "        ", "    _   ", "  _| |_ ", " |_   _|", "   |_|  ", "        " }, { ",", "    ", "    ", "    ", "  _ ", " ( )", " |/ " }, { "-", "        ", "        ", "  _____ ", " |_____|", "    $   ", "        " }, { ".", "    ", "    ", "    ", "  _ ", " (_)", "    " }, { "/", "     __", "    / /", "   / / ", "  / /  ", " /_/   ", "       " }, { "0", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "1", "  _ ", " / |", " | |", " | |", " |_|", "    " }, { "2", "  ____  ", " |___ \\ ", "   __) |", "  / __/ ", " |_____|", "        " }, { "3", "  _____ ", " |___ / ", "   |_ \\ ", "  ___) |", " |____/ ", "        " }, { "4", "  _  _   ", " | || |  ", " | || |_ ", " |__   _|", "    |_|  ", "         " }, { "5", "  ____  ", " | ___| ", " |___ \\ ", "  ___) |", " |____/ ", "        " }, { "6", "   __   ", "  / /_  ", " | '_ \\ ", " | (_) |", "  \\___/ ", "        " }, { "7", "  _____ ", " |___  |", "    / / ", "   / /  ", "  /_/   ", "        " }, { "8", "   ___  ", "  ( _ ) ", "  / _ \\ ", " | (_) |", "  \\___/ ", "        " }, { "9", "   ___  ", "  / _ \\ ", " | (_) |", "  \\__, |", "    /_/ ", "        " }, { ":", "    ", "  _ ", " (_)", "  _ ", " (_)", "    " }, { ";", "    ", "  _ ", " (_)", "  _ ", " ( )", " |/ " }, { "<", "   __", "  / /", " / / ", " \\ \\ ", "  \\_\\", "     " }, { "=", "        ", "  _____ ", " |_____|", " |_____|", "    $   ", "        " }, { ">", " __  ", " \\ \\ ", "  \\ \\", "  / /", " /_/ ", "     " }, { "?", "  ___ ", " |__ \\", "   / /", "  |_| ", "  (_) ", "      " }, { "@", "    ____  ", "   / __ \\ ", "  / / _` |", " | | (_| |", "  \\ \\__,_|", "   \\____/ " }, { "A", "     _    ", "    / \\   ", "   / _ \\  ", "  / ___ \\ ", " /_/   \\_\\", "          " }, { "B", "  ____  ", " | __ ) ", " |  _ \\ ", " | |_) |", " |____/ ", "        " }, { "C", "   ____ ", "  / ___|", " | |    ", " | |___ ", "  \\____|", "        " }, { "D", "  ____  ", " |  _ \\ ", " | | | |", " | |_| |", " |____/ ", "        " }, { "E", "  _____ ", " | ____|", " |  _|  ", " | |___ ", " |_____|", "        " }, { "F", "  _____ ", " |  ___|", " | |_   ", " |  _|  ", " |_|    ", "        " }, { "G", "   ____ ", "  / ___|", " | |  _ ", " | |_| |", "  \\____|", "        " }, { "H", "  _   _ ", " | | | |", " | |_| |", " |  _  |", " |_| |_|", "        " }, { "I", "  ___ ", " |_ _|", "  | | ", "  | | ", " |___|", "      " }, { "J", "      _ ", "     | |", "  _  | |", " | |_| |", "  \\___/ ", "        " }, { "K", "  _  __", " | |/ /", " | ' / ", " | . \\ ", " |_|\\_\\", "       " }, { "L", "  _     ", " | |    ", " | |    ", " | |___ ", " |_____|", "        " }, { "M", "  __  __ ", " |  \\/  |", " | |\\/| |", " | |  | |", " |_|  |_|", "         " }, { "N", "  _   _ ", " | \\ | |", " |  \\| |", " | |\\  |",
 /* class BannerFiglet */ " |_| \\_|", "        " }, { "O", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "P", "  ____  ", " |  _ \\ ", " | |_) |", " |  __/ ", " |_|    ", "        " }, { "Q", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\__\\_\\", "        " }, { "R", "  ____  ", " |  _ \\ ", " | |_) |", " |  _ < ", " |_| \\_\\", "        " }, { "S", "  ____  ", " / ___| ", " \\___ \\ ", "  ___) |", " |____/ ", "        " }, { "T", "  _____ ", " |_   _|", "   | |  ", "   | |  ", "   |_|  ", "        " }, { "U", "  _   _ ", " | | | |", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "V", " __     __", " \\ \\   / /", "  \\ \\ / / ", "   \\ V /  ", "    \\_/   ", "          " }, { "W", " __        __", " \\ \\      / /", "  \\ \\ /\\ / / ", "   \\ V  V /  ", "    \\_/\\_/   ", "             " }, { "X", " __  __", " \\ \\/ /", "  \\  / ", "  /  \\ ", " /_/\\_\\", "       " }, { "Y", " __   __", " \\ \\ / /", "  \\ V / ", "   | |  ", "   |_|  ", "        " }, { "Z", "  _____", " |__  /", "   / / ", "  / /_ ", " /____|", "       " }, { "[", "  __ ", " | _|", " | | ", " | | ", " | | ", " |__|" }, { "\\", " __    ", " \\ \\   ", "  \\ \\  ", "   \\ \\ ", "    \\_\\", "       " }, { "]", "  __ ", " |_ |", "  | |", "  | |", "  | |", " |__|" }, { "^", "  /\\ ", " |/\\|", "   $ ", "   $ ", "   $ ", "     " }, { "_", "        ", "        ", "        ", "        ", "  _____ ", " |_____|" }, { "`", "  _ ", " ( )", "  \\|", "  $ ", "  $ ", "    " }, { "a", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__,_|", "        " }, { "b", "  _     ", " | |__  ", " | '_ \\ ", " | |_) |", " |_.__/ ", "        " }, { "c", "       ", "   ___ ", "  / __|", " | (__ ", "  \\___|", "       " }, { "d", "      _ ", "   __| |", "  / _` |", " | (_| |", "  \\__,_|", "        " }, { "e", "       ", "   ___ ", "  / _ \\", " |  __/", "  \\___|", "       " }, { "f", "   __ ", "  / _|", " | |_ ", " |  _|", " |_|  ", "      " }, { "g", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__, |", "  |___/ " }, { "h", "  _     ", " | |__  ", " | '_ \\ ", " | | | |", " |_| |_|", "        " }, { "i", "  _ ", " (_)", " | |", " | |", " |_|", "    " }, { "j", "    _ ", "   (_)", "   | |", "   | |", "  _/ |", " |__/ " }, { "k", "  _    ", " | | __", " | |/ /", " |   < ", " |_|\\_\\", "       " }, { "l", "  _ ", " | |", " | |", " | |", " |_|", "    " }, { "m", "            ", "  _ __ ___  ", " | '_ ` _ \\ ", " | | | | | |", " |_| |_| |_|", "            " }, { "n", "        ", "  _ __  ", " | '_ \\ ", " | | | |", " |_| |_|", "        " }, { "o", "        ", "   ___  ", "  / _ \\ ", " | (_) |", "  \\___/ ", "        " }, { "p", "        ", "  _ __  ", " | '_ \\ ", " | |_) |", " | .__/ ", " |_|    " }, { "q", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__, |", "     |_|" }, { "r", "       ", "  _ __ ", " | '__|", " | |   ", " |_|   ", "       " }, { "s", "      ", "  ___ ", " / __|", " \\__ \\", " |___/", "      " }, { "t", "  _   ", " | |_ ", " | __|", " | |_ ", "  \\__|", "      " }, { "u", "        ", "  _   _ ", " | | | |", " | |_| |", "  \\__,_|", "        " }, { "v", "        ", " __   __", " \\ \\ / /", "  \\ V / ", "   \\_/  ", "        " }, { "w", "           ", " __      __", " \\ \\ /\\ / /", "  \\ V  V / ", "   \\_/\\_/  ", "           " }, { "x", "       ", " __  __", " \\ \\/ /", "  >  < ", " /_/\\_\\", "       " }, { "y", "        ", "  _   _ ", " | | | |", " | |_| |", "  \\__, |", "  |___/ " }, { "z", "      ", "  ____", " |_  /", "  / / ", " /___|", "      " }, { "{", "    __", "   / /", "  | | ", " < <  ", "  | | ", "   \\_\\" }, { "|", "  _ ", " | |", " | |", " | |", " | |", " |_|" }, { "}", " __   ", " \\ \\  ", "  | | ", "   > >", "  | | ", " /_/  " }, { "~", "  /\\/|", " |/\\/ ", "   $  ", "   $  ",
