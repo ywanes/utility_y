@@ -49261,8 +49261,9 @@ class Particao {
     // Edita os arquivos do Registro do Windows que esta dentro do VHDX (T:\Windows\System32\config\SYSTEM e SOFTWARE),
     // com o VHDX anexado, pela offreg.dll (biblioteca do Windows para isso) chamada pelo PowerShell (liberado em
     // 10/10/2026, "com cuidado"): RDP ligado sem NLA, TermService automatico, discos do QEMU boot-start, nome SANDBOX,
-    // Windows Update desligado, VBS/HVCI desligados e, no clone, o init.cmd do 1o boot (Setup\CmdLine). Regra 10: o
-    // script confere que os hives sao os do sandbox (nao os desta maquina) antes de tocar em qualquer coisa.
+    // VBS/HVCI desligados e, no clone, o init.cmd do 1o boot (Setup\CmdLine). O Windows Update fica LIGADO (decisao de
+    // 11/10/2026: o desenho antigo o desligava e a pagina de Configuracoes quebrava; a espiada da build conta com ele).
+    // Regra 10: o script confere que os hives sao os do sandbox (nao os desta maquina) antes de tocar em qualquer coisa.
 
     private void editarRegistro(String raiz, boolean doPc) throws Exception {
         String cfg = raiz + "Windows\\System32\\config";
@@ -49271,7 +49272,7 @@ class Particao {
         if (sistema == null || sistema.substring(0, 3).equalsIgnoreCase(raiz)) throw new Exception(raiz + " e o Windows desta maquina: nada feito");
         for (String h : new String[]{"SYSTEM", "SOFTWARE"})
             if (!new java.io.File(cfg, h).isFile()) throw new Exception("hive " + h + " nao encontrado em " + cfg + ": o Windows nao foi aplicado?");
-        System.out.println("Registro do sandbox (" + cfg + "): RDP, TermService, nome SANDBOX, sem Windows Update, VBS off" + (doPc ? ", init.cmd no 1o boot" : ""));
+        System.out.println("Registro do sandbox (" + cfg + "): RDP, TermService, nome SANDBOX, VBS off" + (doPc ? ", init.cmd no 1o boot" : ""));
         powershellScript(REGISTRO.replace("@@CFG@@", cfg).replace("@@FABRICA@@", doPc ? "$false" : "$true"), "editar o Registro do sandbox");
     }
 
@@ -49478,7 +49479,6 @@ Or-Editar "$cfg\\SYSTEM" {
     param($h)
     $cs = 'ControlSet{0:d3}' -f (Or-LerDword $h 'Select' 'Current')
     foreach ($svc in @('storahci', 'stornvme')) { Or-Dword $h "$cs\\Services\\$svc" Start 0 }
-    foreach ($svc in @('wuauserv', 'UsoSvc', 'WaaSMedicSvc')) { if (Or-Existe $h "$cs\\Services\\$svc") { Or-Dword $h "$cs\\Services\\$svc" Start 4 } }
     Or-Dword $h "$cs\\Services\\TermService" Start 2
     Or-Dword $h "$cs\\Control\\Terminal Server" fDenyTSConnections 0
     Or-Dword $h "$cs\\Control\\Terminal Server\\WinStations\\RDP-Tcp" UserAuthentication 0
@@ -49495,8 +49495,6 @@ Or-Editar "$cfg\\SYSTEM" {
         Or-String $h 'Setup' CmdLine 'cmd.exe /c C:\\sandbox\\init.cmd'
     }
 }
-
-Or-Editar "$cfg\\SOFTWARE" { param($h); Or-Dword $h 'Policies\\Microsoft\\Windows\\WindowsUpdate\\AU' NoAutoUpdate 1 }
 
 exit 0
 """;
