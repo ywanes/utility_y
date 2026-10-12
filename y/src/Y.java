@@ -43978,6 +43978,7 @@ class Particao {
                         #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
                         #                                                wimlib-imagex capture D:\\ C:\temp.wim --compress=none
                         #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
+                        #                                                opcao com compressao extra: --solid --compress=LZMS:100 --solid-chunk-size=256M
                     # sandbox        
                         y particao -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
                         y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
@@ -53447,6 +53448,7 @@ Exemplos...
             #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
             #                                                wimlib-imagex capture D:\\ C:\\temp.wim --compress=none
             #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
+            #                                                opcao com compressao extra: --solid --compress=LZMS:100 --solid-chunk-size=256M
         # sandbox        
             y particao -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
             y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
