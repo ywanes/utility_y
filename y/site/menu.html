@@ -489,6 +489,7 @@ function load(a){
               <a href="javascript:void(0);" class="gray" onclick="load('cmd')">cmd</a>
               <a href="javascript:void(0);" class="gray" onclick="load('dota2')">dota2</a>
               <a href="javascript:void(0);" class="gray" onclick="load('netbeans')">netbeans</a>
+			  <a href="javascript:void(0);" class="gray" onclick="load('mine client')">mine client</a>
               ` + mostraVolumeControle() + `
             </div>		
             `;
@@ -499,6 +500,7 @@ function load(a){
         if ( a == '/Menu/kill/cmd' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'taskkill /im cmd.exe /f' ) ); return; }
         if ( a == '/Menu/kill/dota2' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'taskkill /im dota2.exe /f' ) ); return; }
         if ( a == '/Menu/kill/netbeans' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y kill text -Dnetbeans netbeans' ) ); return; }
+		if ( a == '/Menu/kill/mine client' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y kill text -D.mmiinnee' ) ); return; } /* javaw @args.txt -D.mmiinnee */
         if ( a == '/Menu/Rabisco' ){
             document.getElementById('bloco2').innerHTML=`
             <div class="header">/Menu/Rabisco</div>

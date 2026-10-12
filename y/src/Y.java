@@ -43850,105 +43850,6 @@ class LockSession{
     }
 }
 
-/**
-exemplos:
-    y particao 1G_winre_refs.vhdx#2 E:\new.vhdx#TAIL
-    y particao 1G_winre_refs.vhdx#3 E:\new.vhdx#TAIL
-    y particao 1G_winre_refs.vhdx#2 E:\new.vhdx#TAIL 2000
-    y particao 1G_winre_refs.vhdx#3 E:\new.vhdx#5 --verify
-    y particao D 2#5
-    y particao 1#3 2#4 max
-    y particao maximum E:\new.vhdx#1 3000
-    y particao list [showFreeUsage] [disk | letter | file.vhdx]
-    y particao <from> <to> [size] [--verify]
-    y particao -test [a.vhdx]
-    y particao maximum a.vhdx MB | maximum a.vhdx#N MB | maximum a.vhdx#N max | maximum 1#3 MB|max
-    y particao compare <partition> <partition>
-    y particao create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
-    y particao detach b.vhdx
-    y particao delete b.vhdx#6 | delete 1#3
-    y particao format_refs b.vhdx#3 | format_refs b.vhdx#3 2000 | format_refs b.vhdx#3 max
-    y particao format_ntfs b.vhdx#3 [MB|max] | format_fat32 b.vhdx#3 [MB|max] | format_exfat b.vhdx#3 [MB|max]
-    y particao format_ntfs 1#3 [MB|max]   (disco 1; tambem format_refs/fat32/exfat)
-      #N     : numero da particao na GPT (na listagem pode ficar fora de ordem). Espaco livre entre particoes
-               aparece com o numero que a particao vai receber ali; o livre do fim e o #TAIL
-      from   : D | 1#3 (disco#particao) | C:\\vm\\a.vhdx#3
-      to     : 2#5 | E:\b.vhdx#5 | E:\b.vhdx#TAIL (um espaco livre; #N ou #TAIL obrigatorio). Nada e
-               renumerado, para nao comprometer um possivel boot
-      size   : (omitido) = mesmo tamanho do from | max = todo esse espaco livre | valor em MB. Maior que o FS:
-               NTFS/ReFS, como Administrador, o FS cresce junto (diskpart extend, como o maximum)
-      compare: diz se o FS das duas particoes e identico byte a byte (so le; cada uma como no from)
-      showFreeUsage: espaco livre dentro do FS; experimental no ReFS
-      delete : tira a particao da GPT, mesmo protegida (em Java; nada e renumerado; os dados ficam no livre).
-               Disco: particao com letra ou EFI pede para digitar 4 numeros aleatorios
-      maximum a.vhdx MB menor que o atual: diminui o VHDX em Java; experimental
-      format_*: formata em Java (o que havia se perde). #N existente: MB/max mudam o tamanho antes;
-               #N livre ou #TAIL: cria a particao (sem tamanho = todo o livre). Minimo: ReFS 1088 MB, NTFS 16 MB,
-               FAT32 36 MB (ate 2 TB), exFAT 16 MB. Disco: particao com letra recusa (tire a letra); EFI pede
-               para digitar 4 numeros aleatorios
-
- * ClonaParticao - clona UMA particao NTFS, ReFS, FAT32 ou exFAT, em JAVA PURO (sem PowerShell, diskpart ou
- * qualquer outro programa; so o "maximum", o "detach" e o clone maior que o FS (NTFS/ReFS em VHDX) usam o diskpart; o "create_by_template_*" e o "-test" sem a.vhdx usam o %RAR%).
- * Java 21, 1 classe, sem import, 1 static.
- *
- * Comandos do Windows: usa SOMENTE expand, extend, shrink, attach, detach e rescan.
- *
- * Rode num prompt de ADMINISTRADOR:
- *
- *   y particao  list                todos os discos numa tabela so (numero do disco na 1a coluna)
- *   y particao  list 2              so o disco 2
- *   y particao  list C              o disco inteiro onde esta o C:
- *   y particao  list E:\b.vhdx      so um VHDX (desmontado)
- *   y particao  list showFreeUsage E:\b.vhdx   + coluna FreeUsage: espaco livre DENTRO do FS, lido do
- *                    mapa de uso dele (NTFS $Bitmap, FAT32 FAT, exFAT bitmap; ReFS: EXPERIMENTAL)
- *   y particao  <from> <to> [tamanho] [--verify]
- *   y particao  -test [a.vhdx]      testes VHDX -> VHDX e do maximum em arquivos temporarios (a.vhdx
- *                                               so e lido; o maximum roda em clones e copias dele, como Administrador).
- *                                               Sem a.vhdx: baixa o 1G_winre_refs.rar do GitHub e extrai com o
- *                                               %RAR% (caminho do UnRAR.exe/Rar.exe ou da pasta deles)
- *   y particao  maximum a.vhdx 3000       muda SO o VHDX para 3000 MB: aumenta com diskpart expand vdisk;
- *                    diminui em Java, no proprio arquivo, ate o fim da ultima particao
- *   y particao  maximum a.vhdx#2 2000     muda SO a particao 2 e o FS para 2000 MB (diskpart attach vdisk,
- *                    extend size= ou shrink, detach vdisk). Aumentar: NTFS/ReFS, no espaco livre logo depois dela.
- *                    Diminuir: so NTFS (ReFS nao reduz). max no lugar do tamanho: todo o livre logo depois dela.
- *   y particao  create_by_template_1G_vazio 1G_vazio.vhdx  (e create_by_template_1G_refs, create_by_template_1G_winre_refs) baixa o .rar do
- *                    modelo do GitHub (utils_discos) e extrai com o %RAR%; o destino nao pode existir.
- *                    O .rar fica em cache em c:\tmp_cache\ (vale tambem para o -test) e nao e baixado de novo.
- *   y particao  delete b.vhdx#6    tira a entrada 6 da GPT (primaria e backup, com CRC), em Java, mesmo
- *                    particao protegida (recuperacao); nada e renumerado e os dados ficam no espaco livre.
- *                    delete 1#3 = disco 1: particao com letra (montada) ou EFI pede para digitar 4 numeros aleatorios
- *   y particao  detach b.vhdx      desanexa o VHDX (diskpart detach vdisk), ex: depois de um duplo
- *                    clique que anexou e deu erro
- *   y particao  compare a.vhdx#2 b.vhdx#1    o sistema de arquivos das duas e identico byte a byte? (so le;
- *                    cada particao como a origem: D | 1#3 | a.vhdx#N)
- *   y particao  format_refs b.vhdx#3 [MB|max]   formata a particao 3 em ReFS 3.14, em Java (sem o format
- *                    do Windows; format_ntfs, format_fat32 e format_exfat iguais: NTFS 3.1 minimo 16 MB, FAT32 36 MB ate 2 TB,
- *                    exFAT 16 MB; cluster e layout como o format do Windows 11). Existente: MB/max mudam so a entrada da GPT antes (max = ate o livre logo depois);
- *                    #N livre ou #TAIL: cria a particao ali (sem tamanho = todo o livre). FS = particao arredondada para 
- *
- *   #N = numero da particao na GPT; livre entre particoes = numero que a particao vai receber; livre do fim = #TAIL.
- *   origem  D                 particao com letra
- *            1#3               disco 1, particao 3
- *            C:\vm\a.vhdx#3    particao 3 de um VHDX desmontado (sem #N: a unica com FS suportado)
- *   destino  2#5               disco 2 (GPT, pode ter outras particoes): o #5 precisa ser um espaco livre
- *            2#TAIL            disco 2, espaco livre do fim (a particao recebe o proximo numero livre da GPT)
- *            E:\b.vhdx#5       VHDX existente e desmontado (pode ter outras particoes; vazio: cria a GPT e o
- *                              livre e o #TAIL). #N ou #TAIL obrigatorio; #N vira a entrada N da GPT. Nada e
- *                              renumerado, para nao comprometer um possivel boot.
- *   tamanho  (omitido)         mesmo tamanho da particao de origem
- *            max               ocupa TODO o espaco livre do #N
- *            500000            tamanho em MB (MiB): maior OU menor que a origem
- *
- * Maior: NTFS/ReFS em VHDX, como Administrador: clona do tamanho do FS e o maximum (diskpart attach, extend,
- *   detach) cresce particao e FS juntos. FAT32/exFAT, disco fisico ou sem Administrador: so a particao fica maior.
- * Menor: funciona se o sistema de arquivos couber. O programa le o tamanho REAL do FS no
- *   setor de boot e copia so ele. Para ir abaixo disso, reduza a origem antes no Windows
- *   (NTFS: Gerenciamento de Disco > Reduzir volume). ReFS, FAT32 e exFAT o Windows nao reduz.
- *
- * Seguranca: copia para espaco livre e SO NO FINAL grava a entrada na GPT (primaria e backup,
- * com CRC32). Se algo falhar no meio, a tabela de particoes nao muda. Nada existente e apagado.
- * Disco fisico: depois use Gerenciamento de Disco > Acao > Examinar discos novamente (ou reinicie).
- */
 
 //<editor-fold desc="exemplo_fold">
 class exemplo_fold {    
@@ -44041,50 +43942,59 @@ class Particao {
         if (pos.size() == 1) throw new Exception("comando desconhecido: " + pos.get(0));
         if (pos.size() < 2 || pos.size() > 3) {
             System.out.print("""
-                    ClonaParticao - clones one NTFS, ReFS, FAT32 or exFAT partition (pure Java)
-                    exemplos:
-                        y particao 1G_winre_refs.vhdx#2 E:\\new.vhdx#TAIL
-                        y particao 1G_winre_refs.vhdx#3 E:\\new.vhdx#TAIL
-                        y particao 1G_winre_refs.vhdx#2 E:\\new.vhdx#TAIL 2000
-                        y particao 1G_winre_refs.vhdx#3 E:\\new.vhdx#5 --verify
+                exemplos:
+                    # list discos
+                        y particao list
+                        y particao list showFreeUsage        
+                        y particao list c:
+                    # cria particao ou formata
+                        y particao format_refs a.vhdx#3
+                        y particao format_refs 1#3
+                        y particao format_refs 1#TAIL
+                        y particao format_refs a.vhdx#3 2000
+                        y particao format_refs a.vhdx#3 max
+                        opcoes: format_refs, format_ntfs, format_fat32 e format_exfat
+                        detalhe: 1#3 significa disco 1 particao 3
+                        detalhe2: olhe list para ver o que é TAIL
+                    # copia particao
                         y particao D 2#5
-                        y particao 1#3 2#4 max
-                        y particao maximum E:\\new.vhdx#1 3000
-                        y particao list [showFreeUsage] [disk | letter | file.vhdx]
-                        y particao <from> <to> [size] [--verify]
-                        y particao -test [a.vhdx]
-                        y particao maximum a.vhdx MB | maximum a.vhdx#N MB | maximum a.vhdx#N max | maximum 1#3 MB|max
-                        y particao compare <partition> <partition>
-                        y particao create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
-                        y particao detach b.vhdx
-                        y particao delete b.vhdx#6 | delete 1#3
-                        y particao format_refs b.vhdx#3 | format_refs b.vhdx#3 2000 | format_refs b.vhdx#3 max
-                        y particao format_ntfs b.vhdx#3 [MB|max] | format_fat32 b.vhdx#3 [MB|max] | format_exfat b.vhdx#3 [MB|max]
-                        y particao format_ntfs 1#3 [MB|max]   (disco 1; tambem format_refs/fat32/exfat)
-                        y particao format_efi b.vhdx#1 C:\\vm\\a.vhdx#3 |format_efi 1#TAIL D
-                        y particao -modoVhdx a.vhdx -fromIso C:\\x.iso -refs -tamanhoGigas 98 -usuario base -senha base   (VHDX com Windows pronto)
-                        y particao -modoSandboxRead | -modoSandboxWrite [-fromPc | -fromIso C:\\x.iso | -fromVhdx a.vhdx] [-ntfs | -refs]   (sandbox no QEMU; uso completo: y particao -modo)
-                          #N     : numero da particao na GPT (na listagem pode ficar fora de ordem). Espaco livre entre particoes
-                                   aparece com o numero que a particao vai receber ali; o livre do fim e o #TAIL
-                          from   : D | 1#3 (disco#particao) | C:\\vm\\a.vhdx#3
-                          to     : 2#5 | E:\\b.vhdx#5 | E:\\b.vhdx#TAIL (um espaco livre; #N ou #TAIL obrigatorio). Nada e
-                                   renumerado, para nao comprometer um possivel boot
-                          size   : (omitido) = mesmo tamanho do from | max = todo esse espaco livre | valor em MB. Maior que o FS:
-                                   NTFS/ReFS, como Administrador, o FS cresce junto (diskpart extend, como o maximum)
-                          compare: diz se o FS das duas particoes e identico byte a byte (so le; cada uma como no from)
-                          showFreeUsage: espaco livre dentro do FS; experimental no ReFS
-                          delete : tira a particao da GPT, mesmo protegida (em Java; nada e renumerado; os dados ficam no livre).
-                                   Particao EFI (disco ou VHDX) pede para digitar 4 numeros aleatorios
-                          maximum a.vhdx MB menor que o atual: diminui o VHDX em Java; experimental
-                          format_*: formata em Java (o que havia se perde). #N existente: MB/max mudam o tamanho antes;
-                                   #N livre ou #TAIL: cria a particao (sem tamanho = todo o livre). Minimo: ReFS 1088 MB, NTFS 16 MB,
-                                   FAT32 36 MB (ate 2 TB), exFAT 16 MB. Disco: particao com letra recusa (tire a letra); EFI pede
-                                   para digitar 4 numeros aleatorios
-                          format_efi: cria no espaco livre (#N livre ou #TAIL; nunca uma particao existente) a EFI de
-                                   100 MB (FAT32) que da boot no Windows da particao indicada (D | 1#3 | a.vhdx#3; NTFS ou ReFS):
-                                   copia o \\Windows\\Boot dela como o bcdboot e grava o BCD apontando para ela. EFI num
-                                   disco e Windows num .vhdx: boot nativo do VHDX (o BCD aponta para o arquivo). Disco que
-                                   e um VHDX montado (ex: o Windows rodando de um VHDX): recusa. Setor diferente de 512: recusa
+                        y particao 2#5 2#TAIL
+                    # cria particao efi
+                        y format_efi a.vhdx#1 a.vhdx#3
+                        y format_efi 1#1 1#3
+                        obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
+                    # delete particao
+                        delete a.vhdx#6 | delete 1#3
+                    # cria particao pelo template
+                        y create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
+                    # desataxa vhdx
+                        y particao detach a.vhdx
+                    # teste automatico
+                        y particao -test
+                    # altera tamanho particao
+                        y particao maximum a.vhdx#1 3000    
+                        y particao maximum a.vhdx#1 max
+                        # detalhe: refs nao aceita diminuicao de particao,
+                        #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
+                        #                                                wimlib-imagex capture D:\\ C:\temp.wim --compress=none
+                        #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
+                    # sandbox        
+                        y particao -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+                        y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
+                        y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
+                        y particao -modoSandboxRead
+                        y particao -modoSandboxWrite -showQemu
+                        obs: sistemas de arquivos: -refs e -ntfs
+                        modos: -modoSandboxRead e -modoSandboxWrite
+                        show: -showQemu e -hideQemu(padrao)
+                        tamanho exemplo: -tamanhoGigas 98
+                        fechar o mstsc provoca encerrar tudo, no caso do Write ele trata o delta file e junta tudo para a proxima vez
+                        para windows update, deixe a tela mstsc com a msg disconnected para deixar o qemu trabalhando de fundo ainda
+                    # install windows para vhdx
+                        y particao -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+                        y particao -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
+                        y particao -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
+                    # detalhe use sempre GPT nos discos
                     """);
             return;
         }
@@ -53501,40 +53411,59 @@ Exemplos...
     ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
     somente informativo -> y help qemu
 [y particao]
-    y particao 1G_winre_refs.vhdx#2 E:\new.vhdx#TAIL
-    y particao 1G_winre_refs.vhdx#3 E:\new.vhdx#TAIL
-    y particao 1G_winre_refs.vhdx#2 E:\new.vhdx#TAIL 2000
-    y particao 1G_winre_refs.vhdx#3 E:\new.vhdx#5 --verify
-    y particao D 2#5
-    y particao 1#3 2#4 max
-    y particao maximum E:\new.vhdx#1 3000
-    y particao list [showFreeUsage] [disk | letter | file.vhdx]
-    y particao <from> <to> [size] [--verify]
-    y particao -test [a.vhdx]
-    y particao maximum a.vhdx MB | maximum a.vhdx#N MB | maximum a.vhdx#N max | maximum 1#3 MB|max
-    y particao compare <partition> <partition>
-    y particao create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
-    y particao detach b.vhdx
-    y particao delete b.vhdx#6 | delete 1#3
-    y particao format_refs b.vhdx#3 | format_refs b.vhdx#3 2000 | format_refs b.vhdx#3 max
-    y particao format_ntfs b.vhdx#3 [MB|max] | format_fat32 b.vhdx#3 [MB|max] | format_exfat b.vhdx#3 [MB|max]
-    y particao format_ntfs 1#3 [MB|max]   (disco 1; tambem format_refs/fat32/exfat)
-      #N     : numero da particao na GPT (na listagem pode ficar fora de ordem). Espaco livre entre particoes
-               aparece com o numero que a particao vai receber ali; o livre do fim e o #TAIL
-      from   : D | 1#3 (disco#particao) | C:\\vm\\a.vhdx#3
-      to     : 2#5 | E:\b.vhdx#5 | E:\b.vhdx#TAIL (um espaco livre; #N ou #TAIL obrigatorio). Nada e
-               renumerado, para nao comprometer um possivel boot
-      size   : (omitido) = mesmo tamanho do from | max = todo esse espaco livre | valor em MB. Maior que o FS:
-               NTFS/ReFS, como Administrador, o FS cresce junto (diskpart extend, como o maximum)
-      compare: diz se o FS das duas particoes e identico byte a byte (so le; cada uma como no from)
-      showFreeUsage: espaco livre dentro do FS; experimental no ReFS
-      delete : tira a particao da GPT, mesmo protegida (em Java; nada e renumerado; os dados ficam no livre).
-               Disco: particao com letra ou EFI pede para digitar 4 numeros aleatorios
-      maximum a.vhdx MB menor que o atual: diminui o VHDX em Java; experimental
-      format_*: formata em Java (o que havia se perde). #N existente: MB/max mudam o tamanho antes;
-               #N livre ou #TAIL: cria a particao (sem tamanho = todo o livre). Minimo: ReFS 1088 MB, NTFS 16 MB,
-               FAT32 36 MB (ate 2 TB), exFAT 16 MB. Disco: particao com letra recusa (tire a letra); EFI pede
-               para digitar 4 numeros aleatorios
+    exemplos:
+        # list discos
+            y particao list
+            y particao list showFreeUsage        
+            y particao list c:
+        # cria particao ou formata
+            y particao format_refs a.vhdx#3
+            y particao format_refs 1#3
+            y particao format_refs 1#TAIL
+            y particao format_refs a.vhdx#3 2000
+            y particao format_refs a.vhdx#3 max
+            opcoes: format_refs, format_ntfs, format_fat32 e format_exfat
+            detalhe: 1#3 significa disco 1 particao 3
+            detalhe2: olhe list para ver o que é TAIL
+        # copia particao
+            y particao D 2#5
+            y particao 2#5 2#TAIL
+        # cria particao efi
+            y format_efi a.vhdx#1 a.vhdx#3
+            y format_efi 1#1 1#3
+            obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
+        # delete particao
+            delete a.vhdx#6 | delete 1#3
+        # cria particao pelo template
+            y create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
+        # desataxa vhdx
+            y particao detach a.vhdx
+        # teste automatico
+            y particao -test
+        # altera tamanho particao
+            y particao maximum a.vhdx#1 3000    
+            y particao maximum a.vhdx#1 max
+            # detalhe: refs nao aceita diminuicao de particao,
+            #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
+            #                                                wimlib-imagex capture D:\\ C:\\temp.wim --compress=none
+            #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
+        # sandbox        
+            y particao -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+            y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
+            y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
+            y particao -modoSandboxRead
+            y particao -modoSandboxWrite -showQemu
+            obs: sistemas de arquivos: -refs e -ntfs
+            modos: -modoSandboxRead e -modoSandboxWrite
+            show: -showQemu e -hideQemu(padrao)
+            tamanho exemplo: -tamanhoGigas 98
+            fechar o mstsc provoca encerrar tudo, no caso do Write ele trata o delta file e junta tudo para a proxima vez
+            para windows update, deixe a tela mstsc com a msg disconnected para deixar o qemu trabalhando de fundo ainda
+        # install windows para vhdx
+            y particao -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+            y particao -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
+            y particao -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
+        # detalhe use sempre GPT nos discos
 [y validaDisco]
     y validaDisco win11.vhdx
         formatos suportados: vhdx, qcow2, vmdk, vdi, raw
