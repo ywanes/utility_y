@@ -42950,6 +42950,7 @@ class Texto_longo extends Util{
     }
 }
 
+///////////////////
 class TelaBloqueio {
     private static final String PASTA_BASE = "C:\\ProgramData\\TelaBloqueioMinima";
     private static final String ARQ_IMAGEM = PASTA_BASE + "\\preto.png";
@@ -43123,7 +43124,13 @@ class TelaBloqueio {
         executarComando("netsh", "advfirewall", "firewall", "set", "rule",
             "group=remote desktop", "new", "enable=Yes");
         System.out.println();
-        System.out.println("[15/21] Instalando e habilitando o servidor OpenSSH (auto start)...");
+        System.out.println("[15/21] Instalando e habilitando o servidor OpenSSH (auto start)..."
+                + "Get-WindowsCapability -Online | ? Name -like 'OpenSSH*'\n" +
+                "# instala versao\n" +
+                "Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0\n" +
+                "apos reiniciar o pc, verificar se ficou habilitado em:\n" +
+                "services.msc\n" +
+                "olhar \"OpenSSH SSH Server\"");
         executarPowerShell("OpenSSH.Server instalado",
             "Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0 -ErrorAction Stop | Out-Null");
         executarPowerShell("Servico sshd em inicializacao automatica",
@@ -43153,7 +43160,8 @@ class TelaBloqueio {
         executarPowerShell("Senha do usuario sem expiracao",
             "Set-LocalUser -Name $env:USERNAME -PasswordNeverExpires $true -ErrorAction Stop");
         System.out.println();
-        System.out.println("[19/21] Instalando o WMIC (script remoto)...");
+        System.out.println("[19/21] Instalando o WMIC (script remoto)..."
+                + "irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/wmic.ps1 | iex");
         // baixa e executa o instalador/restaurador do WMIC (restaura o WMIC original da
         // Microsoft a partir do WinSxS/Windows.old/DISM). Saida mostrada ao vivo pois o
         // script e verboso e pode ser interativo. Requer internet no momento de rodar.
