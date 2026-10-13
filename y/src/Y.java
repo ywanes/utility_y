@@ -48771,9 +48771,10 @@ class Particao {
                 #   teclados: ABNT2, ABNT, US, US-INTL ou o codigo (ex: 0416:00010416); iso: usa sempre a edicao Windows Pro
                 # janela do qemu nos modoSandbox*: -hideQemu (padrao) nao mostra a tela do qemu; -showQemu mostra
                 # cpu do qemu nos modoSandbox*: -cpu <modelo> (padrao max; ex: -cpu Skylake-Client; lista: qemu-system-x86_64 -cpu help)
-                # windows update: -wuguard open|partial|blocked|none (padrao partial = atualizacoes sim, upgrade de versao nao;
-                #   none = nao instala o WUGuard). O init.cmd do 1o boot instala em C:\\ProgramData\\WUGuard; na VM: wuguard status
-                #   blacklist de KBs (nunca instalados): na VM, wuguard blacklist add KB5034441
+                # windows update: -wuguard open|partial|blocked|none (padrao partial = atualizacoes pequenas sim, com o Windows
+                #   avisando e esperando o clique para baixar; cumulativas acima de 1024 MB e previas escondidas; upgrade de
+                #   versao nao; none = nao instala o WUGuard). O init.cmd do 1o boot instala em C:\\ProgramData\\WUGuard;
+                #   na VM: wuguard status. Blacklist de KBs (nunca instalados): na VM, wuguard blacklist add KB5034441
 
                 # modoVhdx fromIso: cria um vhdx pronto para uso, gpt efi winre "refs windows", feito pelo iso
                 #   login: so a conta base / senha base
@@ -49240,7 +49241,10 @@ class Particao {
         // WUGuard (12/10/2026): instala como SYSTEM no 1o boot. O bloqueio do Windows Update ja foi gravado no hive
         // antes do boot (editarRegistro), entao a tela "procurando atualizacoes" do OOBE nao aparece. O Install.ps1 cria
         // o watchdog e guarda o modo, mas NAO abre o portao durante o OOBE (ele detecta SystemSetupInProgress); o modo
-        // real so e aplicado no 1o logon, depois do OOBE, por um RunOnce (open/none ai liberam; partial/blocked seguem).
+        // real so e aplicado no 1o logon, depois do OOBE, por um RunOnce. Nos modos open/partial o RunOnce so libera o
+        // acesso aos servidores: o portao (NoAutoUpdate) fica fechado ate o 1o filtro de tamanho/blacklist rodar com rede,
+        // o que so acontece no boot real, pelo watchdog (13/10/2026: antes disso o USO enfileirava a cumulativa no 1o boot
+        // real antes de o WUGuard a esconder). none libera tudo logo apos o OOBE.
         if (!WUGUARD.equals("none")) {
             linhas.add("powershell -NoProfile -ExecutionPolicy Bypass -File C:\\sandbox\\WUGuard\\Install.ps1 -Mode " + WUGUARD + " >>%LOG% 2>&1");
             linhas.add("reg add HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce /v WUGuard /t REG_SZ /d "
@@ -49249,7 +49253,8 @@ class Particao {
             // none: nada de WUGuard; o bloqueio pre-boot do OOBE e so temporario, entao um RunOnce o remove apos o OOBE
             linhas.add("reg add HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce /v WUGuardLimpar /t REG_SZ /d "
                     + "\"cmd /c reg delete \\\"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\\\" /v NoAutoUpdate /f & "
-                    + "reg delete \\\"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\\" /v DoNotConnectToWindowsUpdateInternetLocations /f\" /f >>%LOG% 2>&1");
+                    + "reg delete \\\"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\\" /v DoNotConnectToWindowsUpdateInternetLocations /f & "
+                    + "reg delete \\\"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\\" /v SetDisableUXWUAccess /f\" /f >>%LOG% 2>&1");
         }
         if (PREPARO) {
             // boot de preparo (sandbox): tarefa SYSTEM de 1 em 1 min que, quando o OOBE acaba (SystemSetupInProgress=0),
@@ -49294,6 +49299,12 @@ class Particao {
     // agendada (watchdog, boot + 5 em 5 min) que reaplica o modo escolhido mesmo depois de um upgrade de versao.
     // Modos: open (tudo), partial (padrao: atualizacoes sim, upgrade de versao nao), blocked (nada), none (nao instala).
     // Blacklist de KBs (wuguard blacklist add KB...): escondidos pela API do Windows Update, nunca instalados.
+    // 13/10/2026: nos modos open/partial o portao (NoAutoUpdate) so abre depois do 1o filtro (maxsize 1024 MB/blacklist)
+    // rodar com rede; no partial fica AUOptions=2 (avisa, so baixa com clique). As buscas cobrem Installation e
+    // OptionalInstallation (previas). Verificado num sandbox 24H2: a LCU e a previa somem e "Voce esta atualizado".
+    // 13/10/2026: nos modos open/partial o portao (NoAutoUpdate) so abre depois do 1o filtro (maxsize 1024 MB/blacklist)
+    // rodar com rede; no partial fica AUOptions=2 (avisa, so baixa com clique). As buscas cobrem Installation e
+    // OptionalInstallation (previas). Verificado num sandbox 24H2: a LCU e a previa somem e "Voce esta atualizado".
     // Na VM: wuguard status | open | partial | blocked | release 30 | blacklist add KB5034441. Scripts ASCII, sem BOM.
 
     private String WUGUARD = "partial";                           // -wuguard open|partial|blocked|none (o main decide)
@@ -49315,7 +49326,8 @@ class Particao {
 
   Modos:
     open     : tudo liberado (comportamento padrao do Windows)
-    partial  : atualizacoes normais liberadas, upgrade de versao (ex: 24H2 -> 25H2) bloqueado
+    partial  : atualizacoes normais liberadas (o Windows avisa e espera o seu clique para baixar), upgrade de versao
+               (ex: 24H2 -> 25H2) bloqueado
     blocked  : nada passa (servicos desativados, politicas de bloqueio, tarefas agendadas desligadas)
     release N: libera por N minutos (modo partial) e volta sozinho ao modo anterior. Use -Full para liberar tudo.
     status   : mostra o estado atual
@@ -49327,6 +49339,11 @@ class Particao {
                  wuguard blacklist clear
     maxsize N: esconde automaticamente qualquer atualizacao maior que N MB (padrao 1024; 0 desliga). Vale nos modos
                  open e partial: cumulativas de 5 GB ficam de fora, as pequenas passam. wuguard maxsize 1024
+
+  Portao: nos modos open/partial o Windows Update so e liberado depois que o 1o filtro (blacklist/maxsize) rodou com
+  sucesso, o que exige rede. Ate la ficam NoAutoUpdate=1 (nada automatico) e SetDisableUXWUAccess=1 (a pagina de
+  Configuracoes nao escaneia nem baixa: so abrir a pagina ja disparava um scan interativo que baixava a cumulativa
+  antes de o WUGuard a esconder, visto em 13/10/2026). A API do WUGuard continua escaneando com as duas politicas.
 
   Uso: wuguard <open|partial|blocked|release|status|enforce|blacklist|maxsize> [args] [-Full]
 #>
@@ -49373,6 +49390,7 @@ function Get-State {
     BlacklistDirty = [int]$p.BlacklistDirty
     BlacklistTick = $p.BlacklistTick
     MaxMB         = if ($null -ne $p.MaxMB) { [int]$p.MaxMB } else { 1024 }     # limite de tamanho (MB); 0 = sem limite
+    PortaoAvisado = [int]$p.PortaoAvisado                                       # 1 = ja logou "portao fechado" (evita repetir a cada 5 min)
   }
 }
 function Set-State([string]$Name, $Value) {
@@ -49444,19 +49462,43 @@ function Setup-Em-Progresso {
   $reais = Get-ChildItem $users -Directory -ErrorAction SilentlyContinue | Where-Object { $ignorar -notcontains $_.Name -and (Test-Path (Join-Path $_.FullName 'NTUSER.DAT')) }
   return -not $reais
 }
+# Portao do Windows Update ainda fechado? Com filtro configurado (maxsize > 0 ou blacklist), so abre depois do 1o
+# Enforce-Blacklist bem-sucedido (BlacklistTick gravado). Sem filtro, abre na hora.
+function Filtro-Pendente {
+  $st = Get-State
+  return (($st.MaxMB -gt 0 -or $st.Blacklist.Count -gt 0) -and -not $st.BlacklistTick)
+}
 function Set-Policy([string]$Mode) {
   foreach ($k in @($Pol, $AU)) { if (-not (Test-Path $k)) { New-Item -Path $k -Force | Out-Null } }
   if ($Mode -eq 'blocked') {
     Set-ItemProperty $AU  -Name NoAutoUpdate -Value 1 -Type DWord
+    Remove-ItemProperty $AU -Name AUOptions -ErrorAction SilentlyContinue
     Set-ItemProperty $Pol -Name DoNotConnectToWindowsUpdateInternetLocations -Value 1 -Type DWord
     Set-ItemProperty $Pol -Name SetDisableUXWUAccess -Value 1 -Type DWord
-  } elseif (Setup-Em-Progresso) {
-    Log "setup em andamento: mantendo o bloqueio do Windows Update ate o OOBE terminar (modo $Mode sera aplicado depois)"
-  } else {
-    Remove-ItemProperty $AU  -Name NoAutoUpdate -ErrorAction SilentlyContinue
-    Remove-ItemProperty $Pol -Name DoNotConnectToWindowsUpdateInternetLocations -ErrorAction SilentlyContinue
-    Remove-ItemProperty $Pol -Name SetDisableUXWUAccess -ErrorAction SilentlyContinue
+    return
   }
+  if (Setup-Em-Progresso) {
+    Log "setup em andamento: mantendo o bloqueio do Windows Update ate o OOBE terminar (modo $Mode sera aplicado depois)"
+    return
+  }
+  # OOBE acabou: libera o acesso aos servidores (o filtro precisa escanear), mas o portao so abre depois do 1o filtro
+  # bem-sucedido. Ate la: NoAutoUpdate=1 (nada automatico) e SetDisableUXWUAccess=1 (a pagina de Configuracoes nao
+  # escaneia nem baixa; 13/10/2026: so com NoAutoUpdate, abrir a pagina disparava um scan interativo que enfileirava a
+  # cumulativa antes de o WUGuard a esconder). A API usada aqui continua escaneando com as duas (testado em 13/10/2026).
+  Remove-ItemProperty $Pol -Name DoNotConnectToWindowsUpdateInternetLocations -ErrorAction SilentlyContinue
+  if (Filtro-Pendente) {
+    if ((Get-ItemProperty $AU -ErrorAction SilentlyContinue).NoAutoUpdate -ne 1) { Set-ItemProperty $AU -Name NoAutoUpdate -Value 1 -Type DWord }
+    if ((Get-ItemProperty $Pol -ErrorAction SilentlyContinue).SetDisableUXWUAccess -ne 1) { Set-ItemProperty $Pol -Name SetDisableUXWUAccess -Value 1 -Type DWord }
+    if ((Get-State).PortaoAvisado -ne 1) { Log "portao do Windows Update fechado ate o 1o filtro (blacklist/maxsize) rodar com sucesso (modo $Mode; precisa de rede; pagina de Configuracoes bloqueada)"; Set-State 'PortaoAvisado' 1 }
+    return
+  }
+  Remove-ItemProperty $AU -Name NoAutoUpdate -ErrorAction SilentlyContinue
+  Remove-ItemProperty $Pol -Name SetDisableUXWUAccess -ErrorAction SilentlyContinue
+  Set-State 'PortaoAvisado' $null
+  # partial: AUOptions=2 = o Windows escaneia e avisa, mas so baixa quando voce clicar; assim uma cumulativa nova nunca
+  # entra na fila entre duas conferencias do filtro. open: padrao do Windows (baixa e instala sozinho)
+  if ($Mode -eq 'partial') { Set-ItemProperty $AU -Name AUOptions -Value 2 -Type DWord }
+  else { Remove-ItemProperty $AU -Name AUOptions -ErrorAction SilentlyContinue }
 }
 function Set-VersionLock([bool]$On) {
   if (-not (Test-Path $Pol)) { New-Item -Path $Pol -Force | Out-Null }
@@ -49477,8 +49519,9 @@ function Disable-UpdateTasks {
   $disabled = [System.Collections.Generic.List[string]]::new()
   foreach ($f in $TaskFolders) {
     Get-ScheduledTask -TaskPath $f -ErrorAction SilentlyContinue | Where-Object { $_.State -ne 'Disabled' } | ForEach-Object {
-      try { $_ | Disable-ScheduledTask -ErrorAction Stop | Out-Null; $disabled.Add("$($_.TaskPath)$($_.TaskName)"); Log "tarefa desativada: $($_.TaskPath)$($_.TaskName)" }
-      catch { Log "nao consegui desativar $($_.TaskPath)$($_.TaskName): $($_.Exception.Message)" }
+      $t = $_                                              # no catch, $_ e o erro, nao a tarefa
+      try { $t | Disable-ScheduledTask -ErrorAction Stop | Out-Null; $disabled.Add("$($t.TaskPath)$($t.TaskName)"); Log "tarefa desativada: $($t.TaskPath)$($t.TaskName)" }
+      catch { Log "nao consegui desativar $($t.TaskPath)$($t.TaskName): $($_.Exception.Message.Trim())" }
     }
   }
   $old = (Get-State).DisabledTasks
@@ -49543,7 +49586,8 @@ function Norma-Kb([string]$s) {
 # no modo blocked (nada passa mesmo) e exige rede. Chamado pelo watchdog com throttle; imediato no add/remove.
 # Um update deve ficar escondido? Por KB na blacklist ou por tamanho (MaxDownloadSize da API, em bytes) acima do limite.
 function Deve-Esconder($u, [string[]]$kbs, [int]$maxMB) {
-  foreach ($kb in $u.KBArticleIDs) { if ($kbs -contains $kb) { return "blacklist KB$kb" } }
+  # pelo KBArticleIDs e tambem pelo titulo (alguns pacotes agrupados vem com KBArticleIDs vazio)
+  foreach ($kb in $kbs) { if ($u.KBArticleIDs -contains $kb -or $u.Title -match "(?i)\\bKB$kb\\b") { return "blacklist KB$kb" } }
   if ($maxMB -gt 0 -and $u.MaxDownloadSize -gt ($maxMB * 1MB)) { return ("{0:N0} MB > limite {1} MB" -f ($u.MaxDownloadSize / 1MB), $maxMB) }
   return $null
 }
@@ -49557,22 +49601,31 @@ function Enforce-Blacklist([switch]$Force) {
   $horas = if ($maxMB -gt 0) { 1 } else { 6 }
   $precisa = $Force -or $st.BlacklistDirty -eq 1 -or -not $st.BlacklistTick -or ((Get-Date) - [datetime]::Parse($st.BlacklistTick)).TotalHours -ge $horas
   if (-not $precisa) { return }
+  $pendente = Filtro-Pendente
   try {
     $session = New-Object -ComObject Microsoft.Update.Session
     $searcher = $session.CreateUpdateSearcher()
+    # duas buscas: sem DeploymentAction a API so devolve as 'Installation'; as previas opcionais (ex: "2026-09 Atualizacao
+    # Previa KB5124010", 92 GB pela API) sao 'OptionalInstallation' e ficariam invisiveis (confirmado em 13/10/2026)
+    $acoes = @("DeploymentAction='Installation'", "DeploymentAction='OptionalInstallation'")
     # esconde o que deve ficar escondido (KB na lista ou tamanho acima do limite)
-    $r = $searcher.Search("IsInstalled=0 and IsHidden=0")
-    foreach ($u in $r.Updates) {
-      $motivo = Deve-Esconder $u $kbs $maxMB
-      if ($motivo) { try { $u.IsHidden = $true; Log "escondido ($motivo): $($u.Title)" } catch { Log "falha ao esconder $($u.Title): $($_.Exception.Message)" } }
+    foreach ($acao in $acoes) {
+      $r = $searcher.Search("IsInstalled=0 and IsHidden=0 and $acao")
+      foreach ($u in $r.Updates) {
+        $motivo = Deve-Esconder $u $kbs $maxMB
+        if ($motivo) { try { $u.IsHidden = $true; Log "escondido ($motivo): $($u.Title)" } catch { Log "falha ao esconder $($u.Title): $($_.Exception.Message)" } }
+      }
     }
     # o que esta escondido e nao precisa mais (saiu da lista, ou o limite subiu) volta a aparecer
-    $r2 = $searcher.Search("IsHidden=1")
-    foreach ($u in $r2.Updates) {
-      if (-not (Deve-Esconder $u $kbs $maxMB)) { try { $u.IsHidden = $false; Log "reexibido: $($u.Title)" } catch { } }
+    foreach ($acao in $acoes) {
+      $r2 = $searcher.Search("IsHidden=1 and $acao")
+      foreach ($u in $r2.Updates) {
+        if (-not (Deve-Esconder $u $kbs $maxMB)) { try { $u.IsHidden = $false; Log "reexibido: $($u.Title)" } catch { } }
+      }
     }
     Set-State 'BlacklistTick' ((Get-Date).ToString('o'))
     Set-State 'BlacklistDirty' 0
+    if ($pendente) { Log "1o filtro concluido: abrindo o portao do Windows Update (modo $($st.Mode))"; Set-Policy $st.Mode }
   } catch {
     Log "blacklist: scan do Windows Update falhou (sem rede ou WU ocupado): $($_.Exception.Message)"
   }
@@ -49620,7 +49673,8 @@ function Show-Status {
   }
   $p = Get-ItemProperty $Pol -ErrorAction SilentlyContinue
   $a = Get-ItemProperty $AU  -ErrorAction SilentlyContinue
-  Write-Host ("  NoAutoUpdate={0}  BloqueioServidores={1}  TravaVersao={2}" -f ([int]$a.NoAutoUpdate), ([int]$p.DoNotConnectToWindowsUpdateInternetLocations), $(if ($p.TargetReleaseVersion) { $p.TargetReleaseVersionInfo } else { 'nao' }))
+  Write-Host ("  NoAutoUpdate={0}  AUOptions={1}  BloqueioServidores={2}  TravaVersao={3}" -f ([int]$a.NoAutoUpdate), $(if ($a.AUOptions) { $a.AUOptions } else { '-' }), ([int]$p.DoNotConnectToWindowsUpdateInternetLocations), $(if ($p.TargetReleaseVersion) { $p.TargetReleaseVersionInfo } else { 'nao' }))
+  if ($st.Mode -ne 'blocked' -and (Filtro-Pendente)) { Write-Host "  Portao: FECHADO ate o 1o filtro (blacklist/maxsize) rodar com sucesso (precisa de rede; pagina de Configuracoes bloqueada)" }
   $wd = Get-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Watchdog' -ErrorAction SilentlyContinue
   Write-Host ("  Watchdog: {0}" -f $(if ($wd) { $wd.State } else { 'NAO INSTALADO (rode Install.ps1)' }))
   if ($st.Blacklist.Count -gt 0) { Write-Host ("  Blacklist: {0}" -f (($st.Blacklist | ForEach-Object { "KB$_" }) -join ', ')) }
@@ -49706,7 +49760,8 @@ $act = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -
 $t1 = New-ScheduledTaskTrigger -AtStartup
 $t2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
 $t3 = New-ScheduledTaskTrigger -AtLogOn        # qualquer logon: reaplica o modo na hora (o OOBE faz um logon automatico antes de concluir)
-$set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
+# limite de 30 min: o 1o scan online do Windows Update numa instalacao limpa passa de 5 min e era morto antes de esconder
+$set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 30) -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Watchdog' -Action $act -Trigger @($t1, $t2, $t3) -Settings $set -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
 
 # PATH do sistema
@@ -49751,7 +49806,7 @@ O Windows Update so faz o que voce permitir.
 | comando | efeito |
 |---|---|
 | `wuguard open` | tudo liberado (padrao do Windows) |
-| `wuguard partial` | atualizacoes normais sim; upgrade de versao (24H2 -> 25H2) bloqueado |
+| `wuguard partial` | atualizacoes normais sim (o Windows avisa e espera o seu clique para baixar); upgrade de versao (24H2 -> 25H2) bloqueado |
 | `wuguard blocked` | nada passa: servicos desativados, politicas de bloqueio, tarefas agendadas desligadas |
 | `wuguard release 30` | libera (partial) por 30 min e volta sozinho ao modo anterior; `-Full` libera tudo |
 | `wuguard status` | mostra o estado atual |
@@ -49763,14 +49818,25 @@ O Windows Update so faz o que voce permitir.
 ### Limite de tamanho (maxsize)
 
 No `open` e no `partial`, atualizacoes maiores que o limite (padrao 1024 MB) sao escondidas automaticamente, pelo
-`MaxDownloadSize` que a API do Windows Update informa. Assim a cumulativa de 5 GB nao entra, e as pequenas (Defender,
-.NET, drivers, cumulativas incrementais) continuam. O WUGuard confere de hora em hora; se o Windows ja tiver comecado a
-baixar algo grande antes da proxima conferencia, o `blacklist add` do KB resolve na hora. `wuguard maxsize 0` desliga.
+`MaxDownloadSize` que a API do Windows Update informa (a cumulativa do 24H2 aparece como ~92 GB, soma dos pacotes UUP;
+a previa opcional do mes tambem). Assim a cumulativa nao entra, e as pequenas (Defender, Ferramenta de Remocao, Security
+platform, drivers) continuam. O WUGuard confere de hora em hora. `wuguard maxsize 0` desliga.
+
+### Portao (open/partial)
+
+O Windows Update so e liberado depois que o 1o filtro (blacklist/maxsize) rodou com sucesso, o que exige rede: ate la
+ficam `NoAutoUpdate=1` (nada automatico) e `SetDisableUXWUAccess=1` (a pagina de Configuracoes diz "gerenciado pela
+organizacao" e nao escaneia nem baixa; `wuguard status` mostra "Portao: FECHADO"). Sem isso o Windows enfileirava a
+cumulativa no 1o boot antes de o WUGuard a esconder: o scan automatico, e tambem o interativo, que so abrir a pagina ja
+dispara. A API do WUGuard continua escaneando com as duas politicas. No `partial`, depois de aberto,
+fica `AUOptions=2`: o Windows escaneia e avisa, mas so baixa quando voce clica em "Baixar e instalar". Como os KBs
+escondidos nao aparecem na lista, "Baixar e instalar tudo" e seguro. No `open` o Windows volta ao padrao (baixa sozinho).
 
 ### Blacklist
 
 Esconde os KBs pela API oficial do Windows Update (`IsHidden`), o mesmo mecanismo do WuMgr: enquanto o KB estiver
-na lista, o Windows nao o oferece nem instala. So impede dali pra frente -- se o KB ja tinha sido instalado antes,
+na lista, o Windows nao o oferece nem instala. O KB e reconhecido pelo `KBArticleIDs` e tambem pelo titulo. As buscas
+cobrem as atualizacoes normais e as opcionais (`DeploymentAction='OptionalInstallation'`, onde ficam as previas). So impede dali pra frente -- se o KB ja tinha sido instalado antes,
 ele continua instalado (nao desinstala). Aceita `KB5034441`, `5034441` e varios de uma vez. O esconder roda na hora
 do `add` e e reaplicado pelo watchdog (no boot e, por seguranca contra upgrades, a cada 6 h), entao sobrevive a um
 upgrade de versao que limpe o cache do Windows Update. Precisa de rede para escanear; no modo `blocked` nao faz nada
@@ -49783,7 +49849,7 @@ Prompt como administrador, na pasta destes arquivos:
     powershell -ExecutionPolicy Bypass -File Install.ps1            (modo inicial partial)
     powershell -ExecutionPolicy Bypass -File Install.ps1 -Mode blocked
 
-Instala em `C:\\ProgramData\\WUGuard`, cria a tarefa `\\WUGuard\\Watchdog` (SYSTEM, no boot e a cada 5 min)
+Instala em `C:\\ProgramData\\WUGuard`, cria a tarefa `\\WUGuard\\Watchdog` (SYSTEM, no boot e a cada 5 min, ate 30 min por execucao)
 que reaplica o modo gravado, e poe a pasta no PATH. Abra um novo prompt admin para usar `wuguard`.
 
 Rodar `Install.ps1` de novo e seguro e repara a instalacao (ex: depois de um upgrade de versao do Windows).
@@ -49798,6 +49864,9 @@ Rodar `Install.ps1` de novo e seguro e repara a instalacao (ex: depois de um upg
   e a busca de drivers pelo Windows. Use `release` quando precisar deles.
 - O watchdog e o que resiste a upgrades: mesmo que o Windows religue `wuauserv`/`WaaSMedicSvc`, em ate 5 min
   ele volta ao modo definido. Log em `C:\\ProgramData\\WUGuard\\wuguard.log`.
+- A pagina de Configuracoes mostra a lista em cache do orquestrador (USO); um KB recem-escondido so some dela no proximo
+  scan (`usoclient StartInteractiveScan` ou "Verificar se ha atualizacoes"). Download ja enfileirado nao e cancelado
+  pelo esconder: `sc stop UsoSvc & sc stop wuauserv` limpa a fila.
 - Sandbox do Particao.java: o `init.cmd` do 1o boot instala o WUGuard automaticamente (`-wuguard <modo>`, padrao partial).
 """;
 
@@ -50010,15 +50079,17 @@ Or-Editar "$cfg\\SYSTEM" {
 
 # WUGuard pre-boot: grava a politica do Windows Update no hive SOFTWARE, antes do 1o boot. Objetivos: (1) a tela
 # "procurando atualizacoes" do OOBE nunca aparece -- por isso NoAutoUpdate=1 e DoNotConnect=1 sao gravados em TODOS os
-# modos (inclusive open/none), como bloqueio temporario que o RunOnce do init remove depois do OOBE; (2) nos modos
-# partial/blocked, trava a versao (nunca upgrade); (3) no blocked, bloqueia o acesso aos servidores do WU de vez.
+# modos (inclusive open/none), com SetDisableUXWUAccess=1, como bloqueio temporario: no none o RunOnce do init remove os
+# tres depois do OOBE; no open/partial o WUGuard remove o DoNotConnect depois do OOBE e os outros dois so depois do 1o
+# filtro com rede (portao; 13/10/2026: so abrir a pagina de Configuracoes ja disparava um scan que baixava a cumulativa);
+# (2) nos modos partial/blocked, trava a versao (nunca upgrade); (3) no blocked, bloqueia o acesso aos servidores de vez.
 # (os servicos wuauserv/UsoSvc/WaaSMedicSvc ja sao desativados no hive SYSTEM quando blocked, acima.)
 Or-Editar "$cfg\\SOFTWARE" {
     param($h)
     $pol = 'Policies\\Microsoft\\Windows\\WindowsUpdate'
     Or-Dword $h "$pol\\AU" NoAutoUpdate 1                      # supressao do OOBE (todos os modos; RunOnce limpa no open/none)
     Or-Dword $h $pol DoNotConnectToWindowsUpdateInternetLocations 1
-    if ($Wu -eq 'blocked') { Or-Dword $h $pol SetDisableUXWUAccess 1 }
+    Or-Dword $h $pol SetDisableUXWUAccess 1                   # pagina de Configuracoes sem scan/download ate o portao abrir (ou RunOnce no none)
     if ($Wu -eq 'partial' -or $Wu -eq 'blocked') {            # trava a versao: nunca upgrade (24H2 -> 25H2)
         $cv = 'Microsoft\\Windows NT\\CurrentVersion'
         $ver = Or-LerString $h $cv 'DisplayVersion'
