@@ -43856,7 +43856,6 @@ class exemplo_fold {
 }
 //</editor-fold>
 
-
 //<editor-fold desc="Particao">
 class Particao {
     private final long MiB = 1L << 20;
@@ -48764,6 +48763,9 @@ class Particao {
                 #   teclados: ABNT2, ABNT, US, US-INTL ou o codigo (ex: 0416:00010416); iso: usa sempre a edicao Windows Pro
                 # janela do qemu nos modoSandbox*: -hideQemu (padrao) nao mostra a tela do qemu; -showQemu mostra
                 # cpu do qemu nos modoSandbox*: -cpu <modelo> (padrao max; ex: -cpu Skylake-Client; lista: qemu-system-x86_64 -cpu help)
+                # windows update: -wuguard open|partial|blocked|none (padrao partial = atualizacoes sim, upgrade de versao nao;
+                #   none = nao instala o WUGuard). O init.cmd do 1o boot instala em C:\\ProgramData\\WUGuard; na VM: wuguard status
+                #   blacklist de KBs (nunca instalados): na VM, wuguard blacklist add KB5034441
 
                 # modoVhdx fromIso: cria um vhdx pronto para uso, gpt efi winre "refs windows", feito pelo iso
                 #   login: so a conta base / senha base
@@ -48796,7 +48798,7 @@ class Particao {
         for (int i = 0; i < args.length && erro == null; i++) {
             String a = args[i], v = null;
             if (a.equals("-modoVhdx") || a.equals("-fromIso") || a.equals("-fromVhdx") || a.equals("-tamanhoGigas")
-                    || a.equals("-usuario") || a.equals("-senha") || a.equals("-cpu")) {
+                    || a.equals("-usuario") || a.equals("-senha") || a.equals("-cpu") || a.equals("-wuguard")) {
                 if (i + 1 >= args.length) { erro = "falta o valor de " + a; break; }
                 v = args[++i];
             }
@@ -48822,6 +48824,10 @@ class Particao {
                     else if (!v.matches("[A-Za-z0-9_.+,=-]+")) erro = "-cpu com valor invalido: " + v;
                     else cpu = v;
                 }
+                case "-wuguard" -> {
+                    if (!v.matches("open|partial|blocked|none")) erro = "-wuguard precisa de open, partial, blocked ou none: " + v;
+                    else WUGUARD = v;
+                }
                 case "-hideQemu", "-showQemu" -> {
                     if (janela != null) erro = "informe um so: " + janela + " e " + a;
                     else janela = a;
@@ -48844,6 +48850,7 @@ class Particao {
         if (erro == null && cpu != null && vhdx != null) erro = "-cpu so vale nos modoSandbox* (o -modoVhdx nao liga o QEMU)";
         DISPLAY = "-showQemu".equals(janela) ? "gtk" : "none";        // padrao: sem a tela do QEMU (pedido de 11/10/2026)
         if (cpu != null) CPU = cpu;                                   // -cpu <modelo> (pedido de 11/10/2026; padrao max)
+        if (erro == null && !WUGUARD.equals("partial") && origem == null) erro = "-wuguard so vale ao criar o sandbox (com -from*)";
         if (erro == null && usuario.isEmpty()) erro = "-usuario vazio";
         if (erro == null && vhdx != null && !vhdx.toLowerCase().endsWith(".vhdx")) erro = "-modoVhdx precisa terminar em .vhdx: " + vhdx;
         if (erro == null && iso != null && !new java.io.File(iso).isFile()) erro = "ISO nao encontrada: " + iso;
@@ -48868,7 +48875,7 @@ class Particao {
         System.out.println("modo " + modo + (vhdx != null ? " " + vhdx : "") + " | origem " + origem
                 + (iso != null ? " " + iso : fromVhdx != null ? " " + fromVhdx : "") + " | tipo " + tipo
                 + " | tamanhoGigas " + (tamanhoGigas == 0 ? "omitido" : tamanhoGigas) + " | usuario " + usuario
-                + " | " + (senha.isEmpty() ? "sem senha" : "com senha"));
+                + " | " + (senha.isEmpty() ? "sem senha" : "com senha") + " | wuguard " + WUGUARD);
         System.out.println((modo.equals("-modoVhdx") ? "" : "QEMU " + qemu + " | ") + "WIMLIB " + wimlib);
         String exe = wimlib + "\\wimlib-imagex.exe";
         try {
@@ -49039,6 +49046,7 @@ class Particao {
                 alvo = existentes.isEmpty() ? null : escolher(existentes, nomeNovo, org + ", " + (refs ? "refs" : "ntfs") + ", build " + build);
                 if (alvo == null) {
                     if (novo.exists()) throw new Exception(novo + " ja existe (nada existente e apagado); apague-o para criar de novo");
+                    PREPARO = true;                                      // o init.cmd ganha a tarefa que desliga ao fim do OOBE
                     gerarVhdx(novo.getPath(), origem, iso, fromVhdx, raizIso, refs, gigas == 0 && !org.equals("vhdx") ? 64 : gigas, usuario, senha, exe);   // sem -tamanhoGigas: 64 GB (fromVhdx: o da origem)
                     // boot de preparo (gravavel, decisao de 10/10/2026): PnP do hardware do QEMU, init.cmd e OOBE ficam
                     // gravados; sem isso o -modoSandboxRead refaria o 1o boot (uns 20 min) a cada execucao
@@ -49200,8 +49208,10 @@ class Particao {
         if (sistema == null || sistema.substring(0, 3).equalsIgnoreCase(raiz)) throw new Exception(raiz + " e o Windows desta maquina: nada feito");
         for (String h : new String[]{"SYSTEM", "SOFTWARE"})
             if (!new java.io.File(cfg, h).isFile()) throw new Exception("hive " + h + " nao encontrado em " + cfg + ": o Windows nao foi aplicado?");
-        System.out.println("Registro do sandbox (" + cfg + "): RDP, TermService, nome SANDBOX, VBS off" + (doPc ? ", init.cmd no 1o boot" : ""));
-        powershellScript(REGISTRO.replace("@@CFG@@", cfg).replace("@@FABRICA@@", doPc ? "$false" : "$true"), "editar o Registro do sandbox");
+        System.out.println("Registro do sandbox (" + cfg + "): RDP, TermService, nome SANDBOX, VBS off"
+                + (doPc ? ", init.cmd no 1o boot" : "") + (WUGUARD.equals("open") ? "" : ", WindowsUpdate=" + WUGUARD + " pre-boot"));
+        powershellScript(REGISTRO.replace("@@CFG@@", cfg).replace("@@FABRICA@@", doPc ? "$false" : "$true")
+                .replace("@@WU@@", WUGUARD), "editar o Registro do sandbox");
     }
 
     /**
@@ -49219,6 +49229,27 @@ class Particao {
                 linhas.add("net localgroup " + g + " " + usuario + " /add >>%LOG% 2>&1");
         }
         linhas.add("net accounts /maxpwage:unlimited >>%LOG% 2>&1");
+        // WUGuard (12/10/2026): instala como SYSTEM no 1o boot. O bloqueio do Windows Update ja foi gravado no hive
+        // antes do boot (editarRegistro), entao a tela "procurando atualizacoes" do OOBE nao aparece. O Install.ps1 cria
+        // o watchdog e guarda o modo, mas NAO abre o portao durante o OOBE (ele detecta SystemSetupInProgress); o modo
+        // real so e aplicado no 1o logon, depois do OOBE, por um RunOnce (open/none ai liberam; partial/blocked seguem).
+        if (!WUGUARD.equals("none")) {
+            linhas.add("powershell -NoProfile -ExecutionPolicy Bypass -File C:\\sandbox\\WUGuard\\Install.ps1 -Mode " + WUGUARD + " >>%LOG% 2>&1");
+            linhas.add("reg add HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce /v WUGuard /t REG_SZ /d "
+                    + "\"powershell -NoProfile -ExecutionPolicy Bypass -File C:\\ProgramData\\WUGuard\\WUGuard.ps1 " + WUGUARD + "\" /f >>%LOG% 2>&1");
+        } else {
+            // none: nada de WUGuard; o bloqueio pre-boot do OOBE e so temporario, entao um RunOnce o remove apos o OOBE
+            linhas.add("reg add HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\RunOnce /v WUGuardLimpar /t REG_SZ /d "
+                    + "\"cmd /c reg delete \\\"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\AU\\\" /v NoAutoUpdate /f & "
+                    + "reg delete \\\"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate\\\" /v DoNotConnectToWindowsUpdateInternetLocations /f\" /f >>%LOG% 2>&1");
+        }
+        if (PREPARO) {
+            // boot de preparo (sandbox): tarefa SYSTEM de 1 em 1 min que, quando o OOBE acaba (SystemSetupInProgress=0),
+            // apaga a si mesma e desliga; o host (rodar) espera o QEMU sair. A flag preparo.flag e a trava: sem ela a
+            // tarefa nao faz nada (se a exclusao falhar, o sandbox real nunca se desliga sozinho)
+            linhas.add("echo preparo>C:\\sandbox\\preparo.flag");
+            linhas.add("schtasks /create /f /sc minute /mo 1 /ru SYSTEM /rl highest /tn SandboxPreparo /tr \"C:\\sandbox\\preparo.cmd\" >>%LOG% 2>&1");
+        }
         if (winre) {
             linhas.add("reagentc /setreimage /path \\\\?\\GLOBALROOT\\device\\harddisk0\\partition3\\Recovery\\WindowsRE /target C:\\Windows >>%LOG% 2>&1");
             linhas.add("reagentc /enable >>%LOG% 2>&1");
@@ -49231,8 +49262,536 @@ class Particao {
         var pasta = new java.io.File(raiz, "sandbox");
         if (!pasta.isDirectory() && !pasta.mkdir()) throw new Exception("nao consegui criar " + pasta);
         java.nio.file.Files.write(new java.io.File(pasta, "init.cmd").toPath(), (String.join("\r\n", linhas) + "\r\n").getBytes(java.nio.charset.Charset.forName("IBM850")));
+        if (!WUGUARD.equals("none")) escreverWuguard(pasta);
+        if (PREPARO) java.nio.file.Files.write(new java.io.File(pasta, "preparo.cmd").toPath(), String.join("\r\n",
+                "@echo off",
+                "if not exist C:\\sandbox\\preparo.flag exit /b 0",
+                "rem OOBE acabou = existe o perfil do usuario criado (C:\\Users\\<usuario>\\NTUSER.DAT), que so nasce no 1o logon dele,",
+                "rem ultima etapa do OOBE. SystemSetupInProgress/OOBEInProgress ja estao em 0 na parte interativa e o",
+                "rem OOBECompleteTimestamp nem sempre e gravado (conferido no 24H2 em 12/10/2026)",
+                "if not exist \"C:\\Users\\" + usuario + "\\NTUSER.DAT\" (echo %DATE% %TIME% preparo: OOBE ainda em andamento, sem perfil " + usuario + ">>C:\\sandbox\\init.log & exit /b 0)",
+                "for /f \"tokens=3\" %%a in ('reg query HKLM\\SYSTEM\\Setup /v SystemSetupInProgress ^| find /i \"SystemSetupInProgress\"') do set V=%%a",
+                "if not \"%V%\"==\"0x0\" exit /b 0",
+                "echo %DATE% %TIME% OOBE concluido: desligando (boot de preparo)>>C:\\sandbox\\init.log",
+                "del C:\\sandbox\\preparo.flag",
+                "schtasks /delete /tn SandboxPreparo /f >>C:\\sandbox\\init.log 2>&1",
+                "shutdown /s /t 10 /f",
+                "").getBytes(java.nio.charset.Charset.forName("IBM850")));
         System.out.println("init.cmd: " + pasta + "\\init.cmd (conta " + usuario + (senha.isEmpty() ? " sem senha" : " com senha") + (winre ? ", WinRE" : "") + ")");
     }
+
+    // ------------------------------------------------------------ WUGuard
+    // Controle do Windows Update dentro do sandbox (pedido de 12/10/2026): scripts PowerShell gravados em
+    // <raiz>sandbox\WUGuard e instalados pelo init.cmd (SYSTEM, 1o boot) em C:\ProgramData\WUGuard, com uma tarefa
+    // agendada (watchdog, boot + 5 em 5 min) que reaplica o modo escolhido mesmo depois de um upgrade de versao.
+    // Modos: open (tudo), partial (padrao: atualizacoes sim, upgrade de versao nao), blocked (nada), none (nao instala).
+    // Blacklist de KBs (wuguard blacklist add KB...): escondidos pela API do Windows Update, nunca instalados.
+    // Na VM: wuguard status | open | partial | blocked | release 30 | blacklist add KB5034441. Scripts ASCII, sem BOM.
+
+    private String WUGUARD = "partial";                           // -wuguard open|partial|blocked|none (o main decide)
+
+    private void escreverWuguard(java.io.File sandbox) throws Exception {
+        var pasta = new java.io.File(sandbox, "WUGuard");
+        if (!pasta.isDirectory() && !pasta.mkdir()) throw new Exception("nao consegui criar " + pasta);
+        var arquivos = java.util.Map.of("WUGuard.ps1", WUGUARD_WUGUARD, "Install.ps1", WUGUARD_INSTALL, "Uninstall.ps1", WUGUARD_UNINSTALL,
+                "wuguard.cmd", WUGUARD_WUGUARD_CMD, "README.md", WUGUARD_README);
+        for (var e : arquivos.entrySet())
+            java.nio.file.Files.writeString(new java.io.File(pasta, e.getKey()).toPath(), e.getValue().replace("\n", "\r\n"), java.nio.charset.StandardCharsets.US_ASCII);
+        System.out.println("WUGuard: " + pasta + " (modo " + WUGUARD + ", instalado pelo init.cmd no 1o boot)");
+    }
+
+    private final String WUGUARD_WUGUARD = """
+#Requires -RunAsAdministrator
+<#
+  WUGuard - o Windows Update so faz o que voce permitir.
+
+  Modos:
+    open     : tudo liberado (comportamento padrao do Windows)
+    partial  : atualizacoes normais liberadas, upgrade de versao (ex: 24H2 -> 25H2) bloqueado
+    blocked  : nada passa (servicos desativados, politicas de bloqueio, tarefas agendadas desligadas)
+    release N: libera por N minutos (modo partial) e volta sozinho ao modo anterior. Use -Full para liberar tudo.
+    status   : mostra o estado atual
+    enforce  : reaplica o modo gravado (usado pelo watchdog a cada 5 min e no boot)
+    blacklist: KBs que nunca serao instalados enquanto estiverem na lista (o Windows os esconde)
+                 wuguard blacklist add KB5034441      (aceita KB5034441, 5034441; varios de uma vez)
+                 wuguard blacklist remove KB5034441   (volta a aparecer)
+                 wuguard blacklist list
+                 wuguard blacklist clear
+    maxsize N: esconde automaticamente qualquer atualizacao maior que N MB (padrao 1024; 0 desliga). Vale nos modos
+                 open e partial: cumulativas de 5 GB ficam de fora, as pequenas passam. wuguard maxsize 1024
+
+  Uso: wuguard <open|partial|blocked|release|status|enforce|blacklist|maxsize> [args] [-Full]
+#>
+param(
+  [Parameter(Position = 0)]
+  [ValidateSet('open', 'partial', 'blocked', 'release', 'status', 'enforce', 'blacklist', 'maxsize', 'help')]
+  [string]$Command = 'status',
+  [Parameter(Position = 1)]
+  [string]$Arg,
+  [Parameter(Position = 2, ValueFromRemainingArguments = $true)]
+  [string[]]$Rest,
+  [switch]$Full
+)
+# release usa o 1o argumento como minutos
+$Minutes = 30
+if ($Command -eq 'release' -and $Arg -match '^\\d+$') { $Minutes = [int]$Arg }
+
+$ErrorActionPreference = 'Continue'
+$Base   = 'HKLM:\\SOFTWARE\\WUGuard'
+$Pol    = 'HKLM:\\SOFTWARE\\Policies\\Microsoft\\Windows\\WindowsUpdate'
+$AU     = "$Pol\\AU"
+$LogDir = Join-Path $env:ProgramData 'WUGuard'
+$Log    = Join-Path $LogDir 'wuguard.log'
+$TaskFolders = @('\\Microsoft\\Windows\\UpdateOrchestrator\\', '\\Microsoft\\Windows\\WindowsUpdate\\', '\\Microsoft\\Windows\\WaaSMedic\\')
+# Valores padrao de Start de cada servico (2=Automatico, 3=Manual, 4=Desativado)
+$ServiceDefaults = [ordered]@{ wuauserv = 3; UsoSvc = 2; WaaSMedicSvc = 3 }
+
+# ---------- utilitarios ----------
+function Log([string]$m) {
+  if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir -Force | Out-Null }
+  $line = "{0:yyyy-MM-dd HH:mm:ss} {1}" -f (Get-Date), $m
+  Add-Content -Path $Log -Value $line -ErrorAction SilentlyContinue
+  Write-Host $line
+}
+function Get-State {
+  if (-not (Test-Path $Base)) { New-Item -Path $Base -Force | Out-Null }
+  $p = Get-ItemProperty -Path $Base -ErrorAction SilentlyContinue
+  [pscustomobject]@{
+    Mode          = if ($p.Mode) { $p.Mode } else { 'open' }
+    PreviousMode  = $p.PreviousMode
+    ReleaseUntil  = $p.ReleaseUntil
+    DisabledTasks = if ($p.DisabledTasks) { $p.DisabledTasks -split '\\|' } else { @() }
+    Blacklist     = if ($p.Blacklist) { @($p.Blacklist -split '\\|' | Where-Object { $_ }) } else { @() }
+    BlacklistDirty = [int]$p.BlacklistDirty
+    BlacklistTick = $p.BlacklistTick
+    MaxMB         = if ($null -ne $p.MaxMB) { [int]$p.MaxMB } else { 1024 }     # limite de tamanho (MB); 0 = sem limite
+  }
+}
+function Set-State([string]$Name, $Value) {
+  if (-not (Test-Path $Base)) { New-Item -Path $Base -Force | Out-Null }
+  # cuidado: em PowerShell 0 -eq '' e verdadeiro; so apaga quando for nulo ou string vazia de fato
+  if ($null -eq $Value -or ($Value -is [string] -and $Value -eq '')) { Remove-ItemProperty -Path $Base -Name $Name -ErrorAction SilentlyContinue }
+  else { Set-ItemProperty -Path $Base -Name $Name -Value $Value }
+}
+
+# Habilita privilegios para tomar posse de chaves protegidas (WaaSMedicSvc pertence ao TrustedInstaller)
+if (-not ('WUGuardPriv' -as [type])) {
+  Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+public class WUGuardPriv {
+  [DllImport("advapi32.dll", SetLastError=true)] static extern bool OpenProcessToken(IntPtr h, uint acc, out IntPtr tok);
+  [DllImport("advapi32.dll", SetLastError=true)] static extern bool LookupPrivilegeValue(string s, string n, out long luid);
+  [DllImport("advapi32.dll", SetLastError=true)] static extern bool AdjustTokenPrivileges(IntPtr tok, bool dis, ref TP np, int len, IntPtr prev, IntPtr ret);
+  [StructLayout(LayoutKind.Sequential)] struct TP { public int Count; public long Luid; public int Attr; }
+  public static bool Enable(string name) {
+    IntPtr tok;
+    if (!OpenProcessToken(System.Diagnostics.Process.GetCurrentProcess().Handle, 0x28, out tok)) return false;
+    TP tp = new TP(); tp.Count = 1; tp.Attr = 2;
+    if (!LookupPrivilegeValue(null, name, out tp.Luid)) return false;
+    return AdjustTokenPrivileges(tok, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
+  }
+}
+'@
+}
+function Grant-KeyAccess([string]$SubKey) {
+  [WUGuardPriv]::Enable('SeTakeOwnershipPrivilege') | Out-Null
+  [WUGuardPriv]::Enable('SeRestorePrivilege') | Out-Null
+  $admins = [System.Security.Principal.SecurityIdentifier]'S-1-5-32-544'
+  $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($SubKey,
+        [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,
+        [System.Security.AccessControl.RegistryRights]::TakeOwnership)
+  $acl = $k.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Owner)
+  $acl.SetOwner($admins); $k.SetAccessControl($acl); $k.Close()
+  $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($SubKey,
+        [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree,
+        [System.Security.AccessControl.RegistryRights]::ChangePermissions)
+  $acl = $k.GetAccessControl()
+  $rule = New-Object System.Security.AccessControl.RegistryAccessRule($admins, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
+  $acl.AddAccessRule($rule); $k.SetAccessControl($acl); $k.Close()
+}
+
+# ---------- acoes ----------
+function Set-ServiceStart([string]$Name, [int]$Start) {
+  $sub = "SYSTEM\\CurrentControlSet\\Services\\$Name"
+  $cur = (Get-ItemProperty "HKLM:\\$sub" -ErrorAction SilentlyContinue).Start
+  if ($cur -ne $Start) {
+    try { Set-ItemProperty "HKLM:\\$sub" -Name Start -Value $Start -ErrorAction Stop }
+    catch { Grant-KeyAccess $sub; Set-ItemProperty "HKLM:\\$sub" -Name Start -Value $Start }
+    Log "servico $Name : Start $cur -> $Start"
+  }
+  if ($Start -eq 4) { Stop-Service $Name -Force -ErrorAction SilentlyContinue }
+}
+# Instalacao/OOBE em andamento. As chaves HKLM:\\SYSTEM\\Setup\\SystemSetupInProgress e OOBEInProgress so cobrem o
+# processamento do unattend e ja estao em 0 durante a parte interativa do OOBE; o OOBECompleteTimestamp nem sempre e
+# gravado (conferido no 24H2 em 12/10/2026). O criterio que funciona: a parte interativa do OOBE roda como a conta
+# temporaria defaultuser0, e o perfil de um usuario de verdade (C:\\Users\\<nome>\\NTUSER.DAT) so nasce no 1o logon dele,
+# que e a ultima etapa do OOBE, bem depois da tela de atualizacoes. Enquanto nao houver perfil real, o WUGuard NAO
+# abre o portao do Windows Update (nao remove NoAutoUpdate/DoNotConnect).
+function Setup-Em-Progresso {
+  $s = Get-ItemProperty 'HKLM:\\SYSTEM\\Setup' -ErrorAction SilentlyContinue
+  if (($s.SystemSetupInProgress -eq 1) -or ($s.OOBEInProgress -eq 1)) { return $true }
+  $ignorar = 'Public', 'Default', 'Default User', 'All Users', 'defaultuser0', 'defaultuser1', 'WDAGUtilityAccount'
+  $users = Join-Path $env:SystemDrive 'Users'
+  $reais = Get-ChildItem $users -Directory -ErrorAction SilentlyContinue | Where-Object { $ignorar -notcontains $_.Name -and (Test-Path (Join-Path $_.FullName 'NTUSER.DAT')) }
+  return -not $reais
+}
+function Set-Policy([string]$Mode) {
+  foreach ($k in @($Pol, $AU)) { if (-not (Test-Path $k)) { New-Item -Path $k -Force | Out-Null } }
+  if ($Mode -eq 'blocked') {
+    Set-ItemProperty $AU  -Name NoAutoUpdate -Value 1 -Type DWord
+    Set-ItemProperty $Pol -Name DoNotConnectToWindowsUpdateInternetLocations -Value 1 -Type DWord
+    Set-ItemProperty $Pol -Name SetDisableUXWUAccess -Value 1 -Type DWord
+  } elseif (Setup-Em-Progresso) {
+    Log "setup em andamento: mantendo o bloqueio do Windows Update ate o OOBE terminar (modo $Mode sera aplicado depois)"
+  } else {
+    Remove-ItemProperty $AU  -Name NoAutoUpdate -ErrorAction SilentlyContinue
+    Remove-ItemProperty $Pol -Name DoNotConnectToWindowsUpdateInternetLocations -ErrorAction SilentlyContinue
+    Remove-ItemProperty $Pol -Name SetDisableUXWUAccess -ErrorAction SilentlyContinue
+  }
+}
+function Set-VersionLock([bool]$On) {
+  if (-not (Test-Path $Pol)) { New-Item -Path $Pol -Force | Out-Null }
+  if ($On) {
+    $cv = Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'
+    $ver = if ($cv.DisplayVersion) { $cv.DisplayVersion } else { $cv.ReleaseId }
+    $prod = if ([int]$cv.CurrentBuild -ge 22000) { 'Windows 11' } else { 'Windows 10' }
+    Set-ItemProperty $Pol -Name TargetReleaseVersion -Value 1 -Type DWord
+    Set-ItemProperty $Pol -Name TargetReleaseVersionInfo -Value $ver -Type String
+    Set-ItemProperty $Pol -Name ProductVersion -Value $prod -Type String
+  } else {
+    foreach ($n in 'TargetReleaseVersion', 'TargetReleaseVersionInfo', 'ProductVersion') {
+      Remove-ItemProperty $Pol -Name $n -ErrorAction SilentlyContinue
+    }
+  }
+}
+function Disable-UpdateTasks {
+  $disabled = [System.Collections.Generic.List[string]]::new()
+  foreach ($f in $TaskFolders) {
+    Get-ScheduledTask -TaskPath $f -ErrorAction SilentlyContinue | Where-Object { $_.State -ne 'Disabled' } | ForEach-Object {
+      try { $_ | Disable-ScheduledTask -ErrorAction Stop | Out-Null; $disabled.Add("$($_.TaskPath)$($_.TaskName)"); Log "tarefa desativada: $($_.TaskPath)$($_.TaskName)" }
+      catch { Log "nao consegui desativar $($_.TaskPath)$($_.TaskName): $($_.Exception.Message)" }
+    }
+  }
+  $old = (Get-State).DisabledTasks
+  Set-State 'DisabledTasks' (($old + $disabled | Select-Object -Unique) -join '|')
+}
+function Enable-UpdateTasks {
+  foreach ($t in (Get-State).DisabledTasks) {
+    $path = Split-Path $t -Parent; $name = Split-Path $t -Leaf
+    if ($path -notmatch '\\\\$') { $path += '\\' }
+    try { Enable-ScheduledTask -TaskPath $path -TaskName $name -ErrorAction Stop | Out-Null; Log "tarefa reativada: $t" } catch {}
+  }
+  Set-State 'DisabledTasks' $null
+}
+
+function Apply-Mode([string]$Mode) {
+  switch ($Mode) {
+    'open' {
+      Set-Policy 'open'; Set-VersionLock $false
+      foreach ($s in $ServiceDefaults.Keys) { Set-ServiceStart $s $ServiceDefaults[$s] }
+      Enable-UpdateTasks
+    }
+    'partial' {
+      Set-Policy 'partial'; Set-VersionLock $true
+      foreach ($s in $ServiceDefaults.Keys) { Set-ServiceStart $s $ServiceDefaults[$s] }
+      Enable-UpdateTasks
+    }
+    'blocked' {
+      Set-Policy 'blocked'; Set-VersionLock $true
+      foreach ($s in $ServiceDefaults.Keys) { Set-ServiceStart $s 4 }
+      Disable-UpdateTasks
+    }
+  }
+  Set-State 'Mode' $Mode
+}
+
+function Invoke-Enforce {
+  $st = Get-State
+  if ($st.ReleaseUntil) {
+    if ((Get-Date) -ge [datetime]::Parse($st.ReleaseUntil)) {
+      $back = if ($st.PreviousMode) { $st.PreviousMode } else { 'partial' }
+      Log "liberacao temporaria expirou, voltando para '$back'"
+      Set-State 'ReleaseUntil' $null; Set-State 'PreviousMode' $null
+      Unregister-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Restore' -Confirm:$false -ErrorAction SilentlyContinue
+      Apply-Mode $back
+      return
+    }
+    Apply-Mode (Get-State).Mode  # ainda liberado: garante que continua liberado
+    Enforce-Blacklist
+    return
+  }
+  Apply-Mode $st.Mode
+  Enforce-Blacklist
+}
+
+# ---------- blacklist (API do Windows Update: esconde o KB; o Windows nunca o oferece nem instala) ----------
+function Norma-Kb([string]$s) {
+  $d = ($s -replace '(?i)^kb', '') -replace '\\D', ''
+  return $d
+}
+
+# Esconde os KBs da lista (e tira o oculto dos que sairam dela). Precisa que o WU consiga escanear, entao nao roda
+# no modo blocked (nada passa mesmo) e exige rede. Chamado pelo watchdog com throttle; imediato no add/remove.
+# Um update deve ficar escondido? Por KB na blacklist ou por tamanho (MaxDownloadSize da API, em bytes) acima do limite.
+function Deve-Esconder($u, [string[]]$kbs, [int]$maxMB) {
+  foreach ($kb in $u.KBArticleIDs) { if ($kbs -contains $kb) { return "blacklist KB$kb" } }
+  if ($maxMB -gt 0 -and $u.MaxDownloadSize -gt ($maxMB * 1MB)) { return ("{0:N0} MB > limite {1} MB" -f ($u.MaxDownloadSize / 1MB), $maxMB) }
+  return $null
+}
+function Enforce-Blacklist([switch]$Force) {
+  $st = Get-State
+  if (Setup-Em-Progresso) { return }                     # durante o OOBE nao escaneia o WU (evita lentidao na instalacao)
+  if ($st.Mode -eq 'blocked') { return }                 # no blocked nada chega; esconder e redundante
+  $kbs = $st.Blacklist; $maxMB = $st.MaxMB
+  if ($kbs.Count -eq 0 -and $maxMB -le 0 -and -not $Force) { return }   # nada a esconder, nada escondido por nos
+  # com limite de tamanho, confere de hora em hora (um update grande novo pode aparecer a qualquer momento)
+  $horas = if ($maxMB -gt 0) { 1 } else { 6 }
+  $precisa = $Force -or $st.BlacklistDirty -eq 1 -or -not $st.BlacklistTick -or ((Get-Date) - [datetime]::Parse($st.BlacklistTick)).TotalHours -ge $horas
+  if (-not $precisa) { return }
+  try {
+    $session = New-Object -ComObject Microsoft.Update.Session
+    $searcher = $session.CreateUpdateSearcher()
+    # esconde o que deve ficar escondido (KB na lista ou tamanho acima do limite)
+    $r = $searcher.Search("IsInstalled=0 and IsHidden=0")
+    foreach ($u in $r.Updates) {
+      $motivo = Deve-Esconder $u $kbs $maxMB
+      if ($motivo) { try { $u.IsHidden = $true; Log "escondido ($motivo): $($u.Title)" } catch { Log "falha ao esconder $($u.Title): $($_.Exception.Message)" } }
+    }
+    # o que esta escondido e nao precisa mais (saiu da lista, ou o limite subiu) volta a aparecer
+    $r2 = $searcher.Search("IsHidden=1")
+    foreach ($u in $r2.Updates) {
+      if (-not (Deve-Esconder $u $kbs $maxMB)) { try { $u.IsHidden = $false; Log "reexibido: $($u.Title)" } catch { } }
+    }
+    Set-State 'BlacklistTick' ((Get-Date).ToString('o'))
+    Set-State 'BlacklistDirty' 0
+  } catch {
+    Log "blacklist: scan do Windows Update falhou (sem rede ou WU ocupado): $($_.Exception.Message)"
+  }
+}
+
+function Comando-Blacklist([string]$acao, [string[]]$kbsEntrada) {
+  $st = Get-State
+  $lista = [System.Collections.Generic.List[string]]::new()
+  foreach ($x in $st.Blacklist) { $lista.Add($x) }
+  switch ($acao) {
+    'add' {
+      if (-not $kbsEntrada) { throw "use: wuguard blacklist add KB5034441 [KB...]" }
+      foreach ($k in $kbsEntrada) { $n = Norma-Kb $k; if ($n -and -not $lista.Contains($n)) { $lista.Add($n); Log "blacklist: + KB$n" } }
+      Set-State 'Blacklist' ($lista -join '|'); Set-State 'BlacklistDirty' 1
+      Enforce-Blacklist -Force
+    }
+    'remove' {
+      if (-not $kbsEntrada) { throw "use: wuguard blacklist remove KB5034441 [KB...]" }
+      foreach ($k in $kbsEntrada) { $n = Norma-Kb $k; if ($lista.Remove($n)) { Log "blacklist: - KB$n" } }
+      Set-State 'Blacklist' ($lista -join '|'); Set-State 'BlacklistDirty' 1
+      Enforce-Blacklist -Force
+    }
+    'clear' {
+      Set-State 'Blacklist' $null; Set-State 'BlacklistDirty' 1
+      Enforce-Blacklist -Force
+      Log "blacklist: limpa"
+    }
+    default {
+      if ($lista.Count -eq 0) { Write-Host "blacklist vazia" }
+      else { Write-Host "blacklist:"; foreach ($n in $lista) { Write-Host "  KB$n" } }
+    }
+  }
+}
+
+function Show-Status {
+  $st = Get-State
+  Write-Host ""
+  Write-Host "WUGuard  modo atual: $($st.Mode.ToUpper())"
+  if ($st.ReleaseUntil) { Write-Host "  liberado ate $([datetime]::Parse($st.ReleaseUntil).ToString('HH:mm:ss dd/MM')) e depois volta para '$($st.PreviousMode)'" }
+  $names = @{2 = 'Automatico'; 3 = 'Manual'; 4 = 'DESATIVADO' }
+  foreach ($s in $ServiceDefaults.Keys) {
+    $start = (Get-ItemProperty "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\$s" -ErrorAction SilentlyContinue).Start
+    $svc = Get-Service $s -ErrorAction SilentlyContinue
+    Write-Host ("  {0,-13} inicio={1,-11} estado={2}" -f $s, $names[[int]$start], $svc.Status)
+  }
+  $p = Get-ItemProperty $Pol -ErrorAction SilentlyContinue
+  $a = Get-ItemProperty $AU  -ErrorAction SilentlyContinue
+  Write-Host ("  NoAutoUpdate={0}  BloqueioServidores={1}  TravaVersao={2}" -f ([int]$a.NoAutoUpdate), ([int]$p.DoNotConnectToWindowsUpdateInternetLocations), $(if ($p.TargetReleaseVersion) { $p.TargetReleaseVersionInfo } else { 'nao' }))
+  $wd = Get-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Watchdog' -ErrorAction SilentlyContinue
+  Write-Host ("  Watchdog: {0}" -f $(if ($wd) { $wd.State } else { 'NAO INSTALADO (rode Install.ps1)' }))
+  if ($st.Blacklist.Count -gt 0) { Write-Host ("  Blacklist: {0}" -f (($st.Blacklist | ForEach-Object { "KB$_" }) -join ', ')) }
+  else { Write-Host "  Blacklist: (vazia)" }
+  Write-Host ("  MaxSize: {0}" -f $(if ($st.MaxMB -gt 0) { "$($st.MaxMB) MB (maiores ficam escondidas)" } else { "desligado" }))
+  Write-Host ""
+}
+
+# ---------- main ----------
+switch ($Command) {
+  'help'    { Get-Help $MyInvocation.MyCommand.Path }
+  'status'  { Show-Status }
+  'enforce' { Invoke-Enforce }
+  'maxsize' {
+    if ($Arg -match '^\\d+$') {
+      Set-State 'MaxMB' ([int]$Arg); Set-State 'BlacklistDirty' 1
+      Log "limite de tamanho: $(if ([int]$Arg -gt 0) { "$Arg MB" } else { 'desligado' })"
+      Enforce-Blacklist -Force
+    }
+    $m = (Get-State).MaxMB
+    Write-Host ("limite de tamanho: {0}" -f $(if ($m -gt 0) { "$m MB (maiores ficam escondidas)" } else { "desligado" }))
+  }
+  'blacklist' {
+    $kbs = @(); if ($Arg -and $Arg -notin 'add', 'remove', 'list', 'clear') { $kbs += $Arg }   # "blacklist KB..." = add implicito
+    if ($Rest) { $kbs += $Rest }
+    $acao = if ($Arg -in 'add', 'remove', 'list', 'clear') { $Arg } elseif ($kbs) { 'add' } else { 'list' }
+    Comando-Blacklist $acao $kbs
+  }
+  'release' {
+    $st = Get-State
+    $prev = if ($st.ReleaseUntil -and $st.PreviousMode) { $st.PreviousMode } else { $st.Mode }
+    $until = (Get-Date).AddMinutes($Minutes)
+    Set-State 'PreviousMode' $prev
+    Set-State 'ReleaseUntil' $until.ToString('o')
+    $target = if ($Full) { 'open' } else { 'partial' }
+    Log "liberando ($target) por $Minutes min, volta para '$prev' as $($until.ToString('HH:mm'))"
+    Apply-Mode $target
+    # tarefa unica para restaurar na hora certa (o watchdog de 5 min e a garantia)
+    $self = $MyInvocation.MyCommand.Path
+    $act = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$self`" enforce"
+    $trg = New-ScheduledTaskTrigger -Once -At $until.AddSeconds(5)
+    Register-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Restore' -Action $act -Trigger $trg -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
+    Show-Status
+  }
+  default {
+    # open / partial / blocked: define o modo permanente e cancela liberacao temporaria
+    Set-State 'ReleaseUntil' $null; Set-State 'PreviousMode' $null
+    Unregister-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Restore' -Confirm:$false -ErrorAction SilentlyContinue
+    Log "modo definido: $Command"
+    Apply-Mode $Command
+    Enforce-Blacklist                                   # esconde na hora o que a blacklist/maxsize mandam (open/partial)
+    Show-Status
+  }
+}
+""";
+
+    private final String WUGUARD_INSTALL = """
+#Requires -RunAsAdministrator
+<#
+  Instala o WUGuard:
+    - copia os arquivos para C:\\ProgramData\\WUGuard
+    - cria a tarefa \\WUGuard\\Watchdog (SYSTEM): roda no boot e a cada 5 min, reaplicando o modo
+    - adiciona a pasta ao PATH do sistema para voce digitar "wuguard <modo>" em qualquer prompt admin
+    - aplica o modo inicial (padrao: partial)
+
+  Uso: .\\Install.ps1 [-Mode open|partial|blocked]
+  Pode rodar de novo a qualquer momento (ex: depois de um upgrade de versao) para reparar.
+#>
+param([ValidateSet('open', 'partial', 'blocked')][string]$Mode = 'partial')
+
+$ErrorActionPreference = 'Stop'
+$Dest = Join-Path $env:ProgramData 'WUGuard'
+$Src  = Split-Path -Parent $MyInvocation.MyCommand.Path
+
+New-Item -ItemType Directory -Path $Dest -Force | Out-Null
+foreach ($f in 'WUGuard.ps1', 'Uninstall.ps1', 'wuguard.cmd', 'README.md') {
+  if (Test-Path (Join-Path $Src $f)) { Copy-Item (Join-Path $Src $f) $Dest -Force }
+}
+
+# Watchdog: boot + a cada 5 minutos, como SYSTEM, oculto
+$script = Join-Path $Dest 'WUGuard.ps1'
+$act = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$script`" enforce"
+$t1 = New-ScheduledTaskTrigger -AtStartup
+$t2 = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
+$t3 = New-ScheduledTaskTrigger -AtLogOn        # qualquer logon: reaplica o modo na hora (o OOBE faz um logon automatico antes de concluir)
+$set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 5) -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Watchdog' -Action $act -Trigger @($t1, $t2, $t3) -Settings $set -User 'SYSTEM' -RunLevel Highest -Force | Out-Null
+
+# PATH do sistema
+$path = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+if ($path -notlike "*$Dest*") { [Environment]::SetEnvironmentVariable('Path', "$path;$Dest", 'Machine') }
+
+# modo inicial
+& $script $Mode
+
+Write-Host "WUGuard instalado em $Dest"
+Write-Host "Abra um NOVO prompt como administrador e use: wuguard open | partial | blocked | release 30 | status"
+""";
+
+    private final String WUGUARD_UNINSTALL = """
+#Requires -RunAsAdministrator
+# Desinstala o WUGuard: volta o Windows Update ao padrao (modo open), remove as tarefas, o PATH e a chave do registro.
+$ErrorActionPreference = 'Continue'
+$Dest = Join-Path $env:ProgramData 'WUGuard'
+$script = Join-Path $Dest 'WUGuard.ps1'
+if (Test-Path $script) { & $script open }
+Unregister-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Watchdog' -Confirm:$false -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskPath '\\WUGuard\\' -TaskName 'Restore'  -Confirm:$false -ErrorAction SilentlyContinue
+$path = [Environment]::GetEnvironmentVariable('Path', 'Machine')
+[Environment]::SetEnvironmentVariable('Path', (($path -split ';' | Where-Object { $_ -and $_ -ne $Dest }) -join ';'), 'Machine')
+Remove-Item 'HKLM:\\SOFTWARE\\WUGuard' -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item $Dest -Recurse -Force -ErrorAction SilentlyContinue
+Write-Host "WUGuard removido; Windows Update de volta ao padrao."
+""";
+
+    private final String WUGUARD_WUGUARD_CMD = """
+@echo off
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%ProgramData%\\WUGuard\\WUGuard.ps1" %*
+""";
+
+    private final String WUGUARD_README = """
+# WUGuard
+
+O Windows Update so faz o que voce permitir.
+
+## Modos
+
+| comando | efeito |
+|---|---|
+| `wuguard open` | tudo liberado (padrao do Windows) |
+| `wuguard partial` | atualizacoes normais sim; upgrade de versao (24H2 -> 25H2) bloqueado |
+| `wuguard blocked` | nada passa: servicos desativados, politicas de bloqueio, tarefas agendadas desligadas |
+| `wuguard release 30` | libera (partial) por 30 min e volta sozinho ao modo anterior; `-Full` libera tudo |
+| `wuguard status` | mostra o estado atual |
+| `wuguard blacklist add KB5034441` | KB nunca sera instalado enquanto estiver na lista (o Windows o esconde) |
+| `wuguard blacklist remove KB5034441` | tira da lista; o KB volta a aparecer |
+| `wuguard blacklist list` / `clear` | mostra ou esvazia a lista |
+| `wuguard maxsize 1024` | esconde automaticamente qualquer atualizacao maior que 1024 MB (padrao); `0` desliga |
+
+### Limite de tamanho (maxsize)
+
+No `open` e no `partial`, atualizacoes maiores que o limite (padrao 1024 MB) sao escondidas automaticamente, pelo
+`MaxDownloadSize` que a API do Windows Update informa. Assim a cumulativa de 5 GB nao entra, e as pequenas (Defender,
+.NET, drivers, cumulativas incrementais) continuam. O WUGuard confere de hora em hora; se o Windows ja tiver comecado a
+baixar algo grande antes da proxima conferencia, o `blacklist add` do KB resolve na hora. `wuguard maxsize 0` desliga.
+
+### Blacklist
+
+Esconde os KBs pela API oficial do Windows Update (`IsHidden`), o mesmo mecanismo do WuMgr: enquanto o KB estiver
+na lista, o Windows nao o oferece nem instala. So impede dali pra frente -- se o KB ja tinha sido instalado antes,
+ele continua instalado (nao desinstala). Aceita `KB5034441`, `5034441` e varios de uma vez. O esconder roda na hora
+do `add` e e reaplicado pelo watchdog (no boot e, por seguranca contra upgrades, a cada 6 h), entao sobrevive a um
+upgrade de versao que limpe o cache do Windows Update. Precisa de rede para escanear; no modo `blocked` nao faz nada
+(ali nada passa de qualquer forma).
+
+## Instalar
+
+Prompt como administrador, na pasta destes arquivos:
+
+    powershell -ExecutionPolicy Bypass -File Install.ps1            (modo inicial partial)
+    powershell -ExecutionPolicy Bypass -File Install.ps1 -Mode blocked
+
+Instala em `C:\\ProgramData\\WUGuard`, cria a tarefa `\\WUGuard\\Watchdog` (SYSTEM, no boot e a cada 5 min)
+que reaplica o modo gravado, e poe a pasta no PATH. Abra um novo prompt admin para usar `wuguard`.
+
+Rodar `Install.ps1` de novo e seguro e repara a instalacao (ex: depois de um upgrade de versao do Windows).
+
+## Desinstalar
+
+    powershell -ExecutionPolicy Bypass -File C:\\ProgramData\\WUGuard\\Uninstall.ps1
+
+## Observacoes
+
+- No modo `blocked`, a politica `DoNotConnectToWindowsUpdateInternetLocations` tambem impede a Microsoft Store
+  e a busca de drivers pelo Windows. Use `release` quando precisar deles.
+- O watchdog e o que resiste a upgrades: mesmo que o Windows religue `wuauserv`/`WaaSMedicSvc`, em ate 5 min
+  ele volta ao modo definido. Log em `C:\\ProgramData\\WUGuard\\wuguard.log`.
+- Sandbox do Particao.java: o `init.cmd` do 1o boot instala o WUGuard automaticamente (`-wuguard <modo>`, padrao partial).
+""";
 
     // ----------------------------------------------------------- unattend
     // fromIso: Windows/Panther/unattend.xml (o Setup acha sozinho no 1o boot). specialize: nome SANDBOX, fuso, init.cmd
@@ -49331,6 +49890,7 @@ class Particao {
 $ErrorActionPreference = 'Stop'
 $cfg = '@@CFG@@'
 $Fabrica = @@FABRICA@@
+$Wu = '@@WU@@'   # WUGuard pre-boot: open|partial|blocked|none (modo gravado no hive antes do 1o boot)
 function Falha([string]$msg) { Write-Host "ERRO: $msg"; exit 1 }
 # regra 10: so os hives do sandbox (unidade T:, nunca a do Windows desta maquina)
 if ($cfg.Substring(0, 3) -ne 'T:\\') { Falha "pasta inesperada: $cfg" }
@@ -49386,6 +49946,20 @@ function Or-LerDword([IntPtr]$hive, [string]$caminho, [string]$nome) {
     return [BitConverter]::ToInt32($buf, 0)
 }
 
+function Or-LerString([IntPtr]$hive, [string]$caminho, [string]$nome) {
+    $cb = [uint32]0; $t = [uint32]0
+    if ([Sb.OffReg]::ORGetValue($hive, $caminho, $nome, [ref]$t, $null, [ref]$cb) -ne 0 -or $cb -eq 0) { return $null }
+    $buf = New-Object byte[] $cb
+    if ([Sb.OffReg]::ORGetValue($hive, $caminho, $nome, [ref]$t, $buf, [ref]$cb) -ne 0) { return $null }
+    return [Text.Encoding]::Unicode.GetString($buf, 0, $cb).TrimEnd("`0")
+}
+
+function Or-LerDword2([IntPtr]$hive, [string]$caminho, [string]$nome) {
+    $buf = New-Object byte[] 4; $cb = [uint32]4; $t = [uint32]0
+    if ([Sb.OffReg]::ORGetValue($hive, $caminho, $nome, [ref]$t, $buf, [ref]$cb) -ne 0) { return -1 }
+    return [BitConverter]::ToInt32($buf, 0)
+}
+
 function Or-Editar([string]$arquivo, [scriptblock]$edicao) {
     $h = [IntPtr]::Zero
     $rc = [Sb.OffReg]::OROpenHive($arquivo, [ref]$h)
@@ -49418,9 +49992,35 @@ Or-Editar "$cfg\\SYSTEM" {
     Or-String $h "$cs\\Services\\Tcpip\\Parameters" 'NV Hostname' 'SANDBOX'
     Or-Dword $h "$cs\\Control\\DeviceGuard" EnableVirtualizationBasedSecurity 0
     Or-Dword $h "$cs\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity" Enabled 0
+    # WUGuard pre-boot: no modo blocked, ja nasce com os servicos do Windows Update desativados (Start=4)
+    if ($Wu -eq 'blocked') { foreach ($svc in @('wuauserv', 'UsoSvc', 'WaaSMedicSvc')) { Or-Dword $h "$cs\\Services\\$svc" Start 4 } }
     if (-not $Fabrica) {
         Or-Dword $h 'Setup' SetupType 2
         Or-String $h 'Setup' CmdLine 'cmd.exe /c C:\\sandbox\\init.cmd'
+    }
+}
+
+# WUGuard pre-boot: grava a politica do Windows Update no hive SOFTWARE, antes do 1o boot. Objetivos: (1) a tela
+# "procurando atualizacoes" do OOBE nunca aparece -- por isso NoAutoUpdate=1 e DoNotConnect=1 sao gravados em TODOS os
+# modos (inclusive open/none), como bloqueio temporario que o RunOnce do init remove depois do OOBE; (2) nos modos
+# partial/blocked, trava a versao (nunca upgrade); (3) no blocked, bloqueia o acesso aos servidores do WU de vez.
+# (os servicos wuauserv/UsoSvc/WaaSMedicSvc ja sao desativados no hive SYSTEM quando blocked, acima.)
+Or-Editar "$cfg\\SOFTWARE" {
+    param($h)
+    $pol = 'Policies\\Microsoft\\Windows\\WindowsUpdate'
+    Or-Dword $h "$pol\\AU" NoAutoUpdate 1                      # supressao do OOBE (todos os modos; RunOnce limpa no open/none)
+    Or-Dword $h $pol DoNotConnectToWindowsUpdateInternetLocations 1
+    if ($Wu -eq 'blocked') { Or-Dword $h $pol SetDisableUXWUAccess 1 }
+    if ($Wu -eq 'partial' -or $Wu -eq 'blocked') {            # trava a versao: nunca upgrade (24H2 -> 25H2)
+        $cv = 'Microsoft\\Windows NT\\CurrentVersion'
+        $ver = Or-LerString $h $cv 'DisplayVersion'
+        if (-not $ver) { $ver = Or-LerString $h $cv 'ReleaseId' }
+        $build = [int](Or-LerString $h $cv 'CurrentBuildNumber')
+        if ($ver) {
+            Or-Dword $h $pol TargetReleaseVersion 1
+            Or-String $h $pol TargetReleaseVersionInfo $ver
+            Or-String $h $pol ProductVersion $(if ($build -ge 22000) { 'Windows 11' } else { 'Windows 10' })
+        }
     }
 }
 
@@ -49647,9 +50247,12 @@ exit 0
     // pe), UEFI pelo OVMF do proprio QEMU (share\edk2-x86_64-code.fd + copia da edk2-i386-vars.fd ao lado do VHDX), o
     // VHDX direto (format=vhdx), 4096 MB, 4 vCPUs, janela gtk a vista, rede isolada so com o RDP entrando por
     // 127.0.0.1:<porta> (3392 ou o proximo par livre; monitor em porta+1). read: snapshot=on (nada fica); write: grava
-    // no VHDX e, ao fechar o mstsc, desliga por ACPI antes do quit. preparo: 1o boot gravavel ate o RDP responder
-    // (45 min), 90 s, desliga. Regra 10: o VHDX precisa estar desanexado (abre em modo exclusivo) e T:/U: ausentes.
+    // no VHDX e, ao fechar o mstsc, desliga por ACPI antes do quit. preparo: 1o boot gravavel SEM internet (restrict=on,
+    // para o OOBE nem mostrar a tela de atualizacoes) ate o RDP responder (45 min) e depois ate o convidado se desligar
+    // sozinho ao fim do OOBE (tarefa SandboxPreparo do init.cmd; ate 45 min, senao ACPI). Regra 10: o VHDX precisa estar
+    // desanexado (abre em modo exclusivo) e T:/U: ausentes.
 
+    private boolean PREPARO;                                      // sandbox(): o VHDX novo vai passar pelo boot de preparo (OOBE sem internet)
     private String DISPLAY = "none";                              // -hideQemu (padrao) = none; -showQemu = gtk (o main decide)
     private String CPU = "max";                                   // -cpu <modelo> do QEMU (ex: Skylake-Client); padrao max
 
@@ -49671,7 +50274,9 @@ exit 0
                 "-drive", "file=" + disco + ",if=ide" + (grava ? "" : ",snapshot=on"),
                 "-drive", "if=pflash,format=raw,readonly=on,file=" + qemu + "\\share\\edk2-x86_64-code.fd",
                 "-drive", "if=pflash,format=raw,file=" + vars.getPath() + (grava ? "" : ",snapshot=on"),
-                "-vga", "std", "-display", DISPLAY, "-nic", "user,model=e1000e,hostfwd=tcp:127.0.0.1:" + porta + "-:3389",
+                // preparo: restrict=on = sem internet (o OOBE ve "sem conexao" e nem mostra a tela de atualizacoes, pedido de
+                // 12/10/2026); o hostfwd do RDP continua funcionando. Nos outros boots a rede e normal.
+                "-vga", "std", "-display", DISPLAY, "-nic", "user,model=e1000e," + (preparo ? "restrict=on," : "") + "hostfwd=tcp:127.0.0.1:" + porta + "-:3389",
                 "-monitor", "tcp:127.0.0.1:" + (porta + 1) + ",server=on,wait=off", "-name", "sandbox", "-action", "shutdown=poweroff"));
         System.out.println((preparo ? "boot de preparo (gravavel)" : write ? "sandbox gravando no VHDX" : "sandbox sem gravar (snapshot)") + ": QEMU whpx, RDP 127.0.0.1:" + porta + ", monitor " + (porta + 1));
         var q = new ProcessBuilder(args).directory(new java.io.File(qemu)).inheritIO().start();
@@ -49681,9 +50286,12 @@ exit 0
                 throw new Exception("o convidado nao respondeu RDP em " + (preparo ? "45" : "10") + " min (veja a janela do QEMU)");
             }
             if (preparo) {
-                System.out.println("RDP respondeu; 90 s para o init terminar, depois desligo (system_powerdown)");
-                Thread.sleep(90_000);
-                desligar(q, porta + 1, 10);
+                // o init.cmd registrou a tarefa SandboxPreparo: quando o OOBE termina (SystemSetupInProgress=0) o convidado
+                // se desliga sozinho e o QEMU sai (-action shutdown=poweroff). Espera ate 45 min; se nao, desliga por ACPI
+                System.out.println("RDP respondeu; esperando o OOBE terminar e o convidado se desligar (ate 45 min)...");
+                long fim = System.currentTimeMillis() + 45 * 60_000L;
+                while (q.isAlive() && System.currentTimeMillis() < fim) Thread.sleep(5000);
+                if (q.isAlive()) { System.out.println("o convidado nao se desligou sozinho; desligando por ACPI"); desligar(q, porta + 1, 10); }
                 q.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
                 consolidar(vhdx, qemu);
                 System.out.println("boot de preparo concluido: " + vhdx);
