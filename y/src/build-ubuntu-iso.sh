@@ -530,7 +530,11 @@ DBSTAGE="$APTCACHE/.staging-debootstrap"
 rm -rf "$DBSTAGE"; mkdir -p "$DBSTAGE"
 cp -al "$APTCACHE"/*.deb "$DBSTAGE/" 2>/dev/null \
   || cp -an "$APTCACHE"/*.deb "$DBSTAGE/" 2>/dev/null || true
-debootstrap --arch="$ARCH" --variant=minbase \
+# IPv4 só p/ o debootstrap: ele baixa com wget, que tenta IPv6 primeiro e trava
+# (Connection timed out) em redes com IPv6 quebrado. O WGETRC vale apenas para
+# este comando; não mexe no /etc/wgetrc nem na rede da máquina.
+echo 'inet4_only = on' > "$WORK/wgetrc4"
+WGETRC="$WORK/wgetrc4" debootstrap --arch="$ARCH" --variant=minbase \
   ${GPG_FLAG} \
   --cache-dir="$DBSTAGE" \
   --components=main \
