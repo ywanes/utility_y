@@ -127,8 +127,9 @@ echo "" > /opt/.u_c
     if [ "$(whoami)" == "root" ] && [ -e /etc/os-release ]
     then
       # ultimas atualizacoes:
-      #    2025-10-17
+      #    2025-10-17 mostrando disponivel
       #    2026-06-07 espectativa era 2026-04-20
+      #    2026-10-15 mostrando indisponivel
       v1=$(cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk '{ print $2 }')
       v2=$(curl --max-time 5 https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk '{ print $2 }')
       v3=$(curl --max-time 5 http://changelogs.ubuntu.com/meta-release-development 2>/dev/null | grep "Version: " | tail -1 | awk '{ print $2 }')
