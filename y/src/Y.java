@@ -43913,7 +43913,7 @@ class Posicao{
                 @{ Processo = 'WindowsTerminal';   X = 2513;   Y = 122;     L = 1281;  A = 806  },
                 @{ Processo = 'Discord';           X = 2614;   Y = 80;      L = 1224;  A = 881  },
                 @{ Processo = 'steamwebhelper';    X = -526;   Y = 124;     L = 300;   A = 805  },
-                @{ Processo = 'opera';             X = -32000; Y = -32000;  L = 160;   A = 28   },
+                @{ Processo = 'opera';             X = -1928;  Y = -8;      L = 1936;  A = 1096 },
                 @{ Processo = 'MenuApp';           X = -499;   Y = 86;      L = 410;   A = 863  }
             )
 
