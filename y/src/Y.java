@@ -43891,7 +43891,7 @@ class Posicao{
                 list                                    lista todas as janelas abertas
                 pega_posicao                            mostra a posicao do WhatsApp, Terminal e Discord
                 seta_posicao                            move os 3 para as posicoes fixas
-                set <processo> <x> <y> [<larg> <alt>]   move uma janela pelo nome do processo
+                set <processo> <x> <y> [<larg> <alt>]   move as janelas pelo nome do processo
             '@
             if ($argv.Count -eq 0) { Write-Output $uso; exit }
             $cmd = $argv[0]
@@ -43909,9 +43909,12 @@ class Posicao{
             }
 
             $apps = @(
-                @{ Processo = 'WhatsApp.Root';   X = 2448; Y = 189; L = 1193; A = 636 },
-                @{ Processo = 'WindowsTerminal'; X = 2513; Y = 122; L = 1281; A = 806 },
-                @{ Processo = 'Discord';         X = 2614; Y = 80;  L = 1224; A = 881 }
+                @{ Processo = 'WhatsApp.Root';     X = 2448;   Y = 189;     L = 1193;  A = 636  },
+                @{ Processo = 'WindowsTerminal';   X = 2513;   Y = 122;     L = 1281;  A = 806  },
+                @{ Processo = 'Discord';           X = 2614;   Y = 80;      L = 1224;  A = 881  },
+                @{ Processo = 'steamwebhelper';    X = -526;   Y = 124;     L = 300;   A = 805  },
+                @{ Processo = 'opera';             X = -32000; Y = -32000;  L = 160;   A = 28   },
+                @{ Processo = 'MenuApp';           X = -499;   Y = 86;      L = 410;   A = 863  }
             )
 
             Add-Type @"
@@ -43975,20 +43978,23 @@ class Posicao{
             }
 
             foreach ($app in $alvos) {
-                $j = $janelas | Where-Object { $_.Processo -eq $app.Processo } | Select-Object -First 1
-                if (-not $j) {
+                $encontradas = @($janelas | Where-Object { $_.Processo -eq $app.Processo })
+                if ($encontradas.Count -eq 0) {
                     if ($cmd -ne 'seta_posicao') { Write-Output "$($app.Processo): nao esta aberto" }
                     continue
                 }
-                if ($cmd -eq 'pega_posicao') {
-                    Write-Output ("{0}`tX={1}`tY={2}`tL={3}`tA={4}" -f $app.Processo, $j.X, $j.Y, $j.L, $j.A)
-                } else {
-                    $l = if ($null -ne $app.L) { $app.L } else { $j.L }
-                    $a = if ($null -ne $app.A) { $app.A } else { $j.A }
-                    [void][W]::ShowWindow([IntPtr]$j.Handle, 9)
-                    [void][W]::MoveWindow([IntPtr]$j.Handle, $app.X, $app.Y, $l, $a, $true)
-                    if ($cmd -eq 'set') {
-                        Write-Output ("{0}`t-> X={1}`tY={2}`tL={3}`tA={4}" -f $app.Processo, $app.X, $app.Y, $l, $a)
+                foreach ($j in $encontradas) {
+                    $nome = if ($encontradas.Count -gt 1) { "$($app.Processo) [$($j.Titulo)]" } else { $app.Processo }
+                    if ($cmd -eq 'pega_posicao') {
+                        Write-Output ("{0}`tX={1}`tY={2}`tL={3}`tA={4}" -f $nome, $j.X, $j.Y, $j.L, $j.A)
+                    } else {
+                        $l = if ($null -ne $app.L) { $app.L } else { $j.L }
+                        $a = if ($null -ne $app.A) { $app.A } else { $j.A }
+                        [void][W]::ShowWindow([IntPtr]$j.Handle, 9)
+                        [void][W]::MoveWindow([IntPtr]$j.Handle, $app.X, $app.Y, $l, $a, $true)
+                        if ($cmd -eq 'set') {
+                            Write-Output ("{0}`t-> X={1}`tY={2}`tL={3}`tA={4}" -f $nome, $app.X, $app.Y, $l, $a)
+                        }
                     }
                 }
             }
