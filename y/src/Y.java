@@ -1059,6 +1059,15 @@ cat buffer.log
             iso(args);
             return;
         }
+        if ( args[0].equals("artcraft") ){
+            try{
+                args=removeParm(0, args);
+                new ArtCraft().main(args);
+            }catch(Exception e){
+                erroFatal(e);
+            }
+            return;
+        }
         if ( args[0].equals("posicao") ){
             try{
                 if ( ! isWindows() )
@@ -43994,6 +44003,73 @@ class Posicao{
     }
 }
 
+class ArtCraft {
+    public static void main(String[] args) throws Exception {
+        String script = """
+            $ProgressPreference = 'SilentlyContinue'
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+            $base = 'https://getartcraft.com'
+
+            $html = (Invoke-WebRequest "$base/apps" -UseBasicParsing).Content
+            $slugs = [regex]::Matches($html, 'href="[^"]*/apps/([a-z0-9-]+)"') |
+                ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+
+            $resultado = foreach ($slug in $slugs) {
+                $nome = $slug
+                $categoria = '?'
+                $implementa = '?'
+                $versao = '?'
+                $portable = '?'
+
+                $pagina = (Invoke-WebRequest "$base/apps/$slug" -UseBasicParsing).Content
+                $repos = [regex]::Matches($pagina, 'github\\.com/storytold/([A-Za-z0-9_.-]+)"') |
+                    ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+                $repo = if ($repos -contains $slug) { $slug } else {
+                    $repos | Where-Object { $_ -notin 'craft-launcher', 'artcraft' } | Select-Object -First 1
+                }
+
+                if ($repo) {
+                    $readme = $null
+                    foreach ($branch in 'main', 'master') {
+                        try {
+                            $readme = (Invoke-WebRequest "https://raw.githubusercontent.com/storytold/$repo/$branch/README.md" -UseBasicParsing).Content
+                            break
+                        } catch {}
+                    }
+                    if ($readme) {
+                        $n = [regex]::Match($readme, '<h1[^>]*>([^<]+)</h1>')
+                        if ($n.Success) { $nome = $n.Groups[1].Value.Trim() }
+                        $m = [regex]::Match($readme, '<b>([^;<]+);[^<]*?reimplementation of ([^,<]+)')
+                        if ($m.Success) {
+                            $categoria = $m.Groups[1].Value.Trim()
+                            $implementa = $m.Groups[2].Value.Trim()
+                        }
+                    }
+
+                    try {
+                        $r = Invoke-WebRequest "https://github.com/storytold/$repo/releases/latest" -UseBasicParsing
+                        $final = if ($r.BaseResponse.ResponseUri) { $r.BaseResponse.ResponseUri.AbsoluteUri }
+                                 else { $r.BaseResponse.RequestMessage.RequestUri.AbsoluteUri }
+                        if ($final -match '/releases/tag/([^/?#]+)') {
+                            $versao = $Matches[1]
+                            $assets = (Invoke-WebRequest "https://github.com/storytold/$repo/releases/expanded_assets/$versao" -UseBasicParsing).Content
+                            $a = [regex]::Match($assets, 'href="([^"]*windows-x64-portable\\.zip)"')
+                            if ($a.Success) { $portable = 'https://github.com' + $a.Groups[1].Value }
+                        }
+                    } catch {}
+                }
+
+                [pscustomobject]@{ Nome = $nome; Categoria = $categoria; Implementa = $implementa; Versao = $versao; Portable = $portable }
+            }
+
+            $resultado | Format-Table -AutoSize | Out-String -Width 4096 | Write-Output
+            Write-Output "Total: $(@($resultado).Count) aplicativos"
+            """;
+        String codigo = java.util.Base64.getEncoder().encodeToString(script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        System.exit(new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-OutputFormat", "Text", "-EncodedCommand", codigo).inheritIO().start().waitFor());
+    }
+}
+
 //<editor-fold desc="exemplo_fold">
 class exemplo_fold {    
 }
@@ -53878,6 +53954,7 @@ usage:
   [y sorte
   [y iso]
   [y qemu]
+  [y artcraft]
   [y posicao]
   [y particao]
   [y validaDisco]
@@ -54234,6 +54311,8 @@ Exemplos...
     # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao
     ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
     somente informativo -> y help qemu
+[y artcraft]
+    y artcraft
 [y posicao]
     Exemplos:
         y posicao list
