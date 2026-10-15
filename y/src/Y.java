@@ -1059,6 +1059,17 @@ cat buffer.log
             iso(args);
             return;
         }
+        if ( args[0].equals("posicao") ){
+            try{
+                if ( ! isWindows() )
+                    erroFatal("implementado só para windows!");
+                args=removeParm(0, args);
+                new Posicao().main(args);
+            }catch(Exception e){
+                erroFatal(e);
+            }
+            return;
+        }
         if ( args[0].equals("particao") ){
             if ( ! isWindows() )
                 erroFatal("implementado só para windows!");
@@ -43858,6 +43869,130 @@ class LockSession{
     }
 }
 
+class Posicao{
+    public static void main(String[] args) throws Exception {
+        String script = """
+            $uso = @'
+            Exemplos:
+                y posicao list
+                y posicao pega_posicao
+                y posicao seta_posicao
+                y posicao set Discord 100 100 1224 881
+            Regra: y posicao <comando>
+                list                                    lista todas as janelas abertas
+                pega_posicao                            mostra a posicao do WhatsApp, Terminal e Discord
+                seta_posicao                            move os 3 para as posicoes fixas
+                set <processo> <x> <y> [<larg> <alt>]   move uma janela pelo nome do processo
+            '@
+            if ($argv.Count -eq 0) { Write-Output $uso; exit }
+            $cmd = $argv[0]
+            if ($cmd -notin 'list', 'pega_posicao', 'seta_posicao', 'set') {
+                Write-Output "Comando invalido: $cmd"
+                Write-Output $uso
+                exit
+            }
+            if ($cmd -eq 'set') {
+                if ($argv.Count -ne 4 -and $argv.Count -ne 6) { Write-Output $uso; exit }
+                foreach ($v in $argv[2..($argv.Count - 1)]) {
+                    $n = 0
+                    if (-not [int]::TryParse($v, [ref]$n)) { Write-Output "Numero invalido: $v"; Write-Output $uso; exit }
+                }
+            }
+
+            $apps = @(
+                @{ Processo = 'WhatsApp.Root';   X = 2448; Y = 189; L = 1193; A = 636 },
+                @{ Processo = 'WindowsTerminal'; X = 2513; Y = 122; L = 1281; A = 806 },
+                @{ Processo = 'Discord';         X = 2614; Y = 80;  L = 1224; A = 881 }
+            )
+
+            Add-Type @"
+            using System;
+            using System.Text;
+            using System.Runtime.InteropServices;
+            public class W {
+              public delegate bool EnumProc(IntPtr hWnd, IntPtr lParam);
+              [DllImport("user32.dll")] public static extern bool EnumWindows(EnumProc cb, IntPtr lParam);
+              [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr hWnd);
+              [DllImport("user32.dll", CharSet=CharSet.Unicode)] public static extern int GetWindowText(IntPtr hWnd, StringBuilder s, int n);
+              [DllImport("user32.dll")] public static extern int GetWindowTextLength(IntPtr hWnd);
+              [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr hWnd, out RECT r);
+              [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+              [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int x, int y, int w, int h, bool repaint);
+              [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int cmd);
+              [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr h, int attr, out int val, int size);
+              [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+            }
+            "@
+
+            $procs = @{}
+            Get-Process | ForEach-Object { $procs[[uint32]$_.Id] = $_.ProcessName }
+            $janelas = New-Object System.Collections.Generic.List[object]
+            $cb = [W+EnumProc]{
+                param($h, $l)
+                $len = [W]::GetWindowTextLength($h)
+                $cloaked = 0
+                [void][W]::DwmGetWindowAttribute($h, 14, [ref]$cloaked, 4)
+                if ([W]::IsWindowVisible($h) -and $len -gt 0 -and $cloaked -eq 0) {
+                    $sb = New-Object System.Text.StringBuilder ($len + 1)
+                    [void][W]::GetWindowText($h, $sb, $sb.Capacity)
+                    $r = New-Object W+RECT
+                    [void][W]::GetWindowRect($h, [ref]$r)
+                    $procId = [uint32]0
+                    [void][W]::GetWindowThreadProcessId($h, [ref]$procId)
+                    $janelas.Add([pscustomobject]@{
+                        Handle = [int64]$h; Processo = $procs[$procId]; Titulo = $sb.ToString()
+                        X = $r.Left; Y = $r.Top; L = $r.Right - $r.Left; A = $r.Bottom - $r.Top
+                    })
+                }
+                return $true
+            }
+            [void][W]::EnumWindows($cb, [IntPtr]::Zero)
+
+            if ($cmd -eq 'list') {
+                foreach ($j in $janelas) {
+                    Write-Output ("{0}`t{1}`tX={2}`tY={3}`tL={4}`tA={5}" -f $j.Processo, $j.Titulo, $j.X, $j.Y, $j.L, $j.A)
+                }
+                exit
+            }
+
+            if ($cmd -eq 'set') {
+                $alvos = @(@{
+                    Processo = $argv[1]; X = [int]$argv[2]; Y = [int]$argv[3]
+                    L = $(if ($argv.Count -eq 6) { [int]$argv[4] } else { $null })
+                    A = $(if ($argv.Count -eq 6) { [int]$argv[5] } else { $null })
+                })
+            } else {
+                $alvos = $apps
+            }
+
+            foreach ($app in $alvos) {
+                $j = $janelas | Where-Object { $_.Processo -eq $app.Processo } | Select-Object -First 1
+                if (-not $j) {
+                    if ($cmd -ne 'seta_posicao') { Write-Output "$($app.Processo): nao esta aberto" }
+                    continue
+                }
+                if ($cmd -eq 'pega_posicao') {
+                    Write-Output ("{0}`tX={1}`tY={2}`tL={3}`tA={4}" -f $app.Processo, $j.X, $j.Y, $j.L, $j.A)
+                } else {
+                    $l = if ($null -ne $app.L) { $app.L } else { $j.L }
+                    $a = if ($null -ne $app.A) { $app.A } else { $j.A }
+                    [void][W]::ShowWindow([IntPtr]$j.Handle, 9)
+                    [void][W]::MoveWindow([IntPtr]$j.Handle, $app.X, $app.Y, $l, $a, $true)
+                    if ($cmd -eq 'set') {
+                        Write-Output ("{0}`t-> X={1}`tY={2}`tL={3}`tA={4}" -f $app.Processo, $app.X, $app.Y, $l, $a)
+                    }
+                }
+            }
+            """;
+        StringBuilder argv = new StringBuilder("$ProgressPreference = 'SilentlyContinue'\n$argv = @(");
+        for (int i = 0; i < args.length; i++) {
+            argv.append(i > 0 ? "," : "").append("'").append(args[i].replace("'", "''")).append("'");
+        }
+        argv.append(")\n");
+        String codigo = java.util.Base64.getEncoder().encodeToString((argv + script).getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        System.exit(new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-OutputFormat", "Text", "-EncodedCommand", codigo).inheritIO().start().waitFor());
+    }
+}
 
 //<editor-fold desc="exemplo_fold">
 class exemplo_fold {    
@@ -53743,7 +53878,8 @@ usage:
   [y sorte
   [y iso]
   [y qemu]
-  [y parcicao]
+  [y posicao]
+  [y particao]
   [y validaDisco]
   [y [juros|emprestimo]]
   [y cmdUser]
@@ -54098,6 +54234,17 @@ Exemplos...
     # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao
     ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
     somente informativo -> y help qemu
+[y posicao]
+    Exemplos:
+        y posicao list
+        y posicao pega_posicao
+        y posicao seta_posicao
+        y posicao set Discord 100 100 1224 881
+    Regra: y posicao <comando>
+        list                                    lista todas as janelas abertas
+        pega_posicao                            mostra a posicao do WhatsApp, Terminal e Discord
+        seta_posicao                            move os 3 para as posicoes fixas
+        set <processo> <x> <y> [<larg> <alt>]   move uma janela pelo nome do processo
 [y particao]
     exemplos:
         # list discos

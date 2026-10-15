@@ -347,7 +347,7 @@ function load(a){
               <a href="/idle.html" class="pink">idle</a>
               <a href="/merge.html" class="pink">merge</a>
               <a href="" class="pink"></a>
-              <a href="" class="pink"></a>
+              <a href="javascript:void(0);" class="red" onclick="load('posicao')">posicao</a>
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 2')">printScreen 2</a>
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 99')">printScreen 99</a>
               <a href="javascript:void(0);" class="purple" onclick="load('printScreen 0')">printScreen 0</a>
@@ -364,7 +364,9 @@ function load(a){
             </div>		
             `;
             return;
-        }
+        }		
+		// monitor on wrapper
+		if ( a == '/Menu/y monitor on' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y monitor on\ny sleep 2\ny posicao seta_posicao') ); return; } // monitor on wrapper
         if ( a == '/Menu/y lock -1' ){ 
 			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1') ); 
 			return; 
@@ -387,8 +389,9 @@ function load(a){
 		if ( a == '/Menu/y lock lock' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'rundll32.exe user32.dll,LockWorkStation') ); return; }				
 		if ( a.indexOf('/Menu/y lock ') == 0 ){ getBinary('/cmd_user,' + text_to_base64( get_senha_storage() + '\n' + 'y lock ' + a.substr('/Menu/y lock '.length) ) ); return; }
         if ( a == '/Menu/atualiza ipv6' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_ipv6\\sc0.bat') ); return; }		
-        if ( a == '/Menu/Dota' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll') ); return; }
+        if ( a == '/Menu/Dota' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll') ); return; }		
         if ( a == '/Menu/DotaNoOCR' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y dotaMutandoAll -nicks no_ocr') ); return; }
+		if ( a == '/Menu/posicao' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y posicao seta_posicao') ); return; }
         if ( a == '/Menu/printScreen 0' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 0') ); return; }	// D:\ProgramFiles\screens
         if ( a == '/Menu/printScreen 1' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 1') ); return; }	// D:\ProgramFiles\screens
         if ( a == '/Menu/printScreen 2' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y printScreen 2') ); return; }	// D:\ProgramFiles\screens
