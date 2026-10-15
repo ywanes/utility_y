@@ -54313,6 +54313,23 @@ Exemplos...
     somente informativo -> y help qemu
 [y artcraft]
     y artcraft
+    publicacao atual:
+    Nome        Categoria                           Implementa           Versao  Portable                                                    
+    ----        ---------                           ----------           ------  --------                                                    
+    PhotoCraft  Image editing                       Adobe Photoshop      v0.9.0  https://github.com/storytold/photocraft/releases/download/v0.9.0/photocraft-0.9.0-windows-x64-portable.zip
+    VectorCraft Vector illustration                 Adobe Illustrator    v0.11.0 https://github.com/storytold/vectorcraft/releases/download/v0.11.0/vectorcraft-0.11.0-windows-x64-portable.zip
+    FilmCraft   Video editing, color and sound      Adobe Premiere Pro   v0.8.0  https://github.com/storytold/filmcraft/releases/download/v0.8.0/filmcraft-0.8.0-windows-x64-portable.zip
+    LightCraft  Photo library and raw development   Adobe Lightroom      v0.8.0  https://github.com/storytold/lightcraft/releases/download/v0.8.0/lightcraft-0.8.0-windows-x64-portable.zip
+    PdfCraft    The PDF workbench                   Adobe Acrobat        v0.8.0  https://github.com/storytold/pdfcraft/releases/download/v0.8.0/pdfcraft-0.8.0-windows-x64-portable.zip
+    EffectCraft Motion graphics and visual effects  Adobe After Effects  v0.10.0 https://github.com/storytold/effectcraft/releases/download/v0.10.0/effectcraft-0.10.0-windows-x64-portable.zip
+    DesignCraft Page layout and publishing          Adobe InDesign       v0.8.0  https://github.com/storytold/designcraft/releases/download/v0.8.0/designcraft-0.8.0-windows-x64-portable.zip
+    FigCraft    Interface design                    Figma                v0.6.0  https://github.com/storytold/figcraft/releases/download/v0.6.0/figcraft-0.6.0-windows-x64-portable.zip
+    WordCraft   Writing and document design         Microsoft Word       v0.7.0  https://github.com/storytold/wordcraft/releases/download/v0.7.0/wordcraft-0.7.0-windows-x64-portable.zip
+    SoundCraft  Recording, editing and mixing audio Avid Pro Tools       v0.7.0  https://github.com/storytold/soundcraft/releases/download/v0.7.0/soundcraft-0.7.0-windows-x64-portable.zip
+    DeckCraft   Presentations and slide shows       Microsoft PowerPoint v0.7.0  https://github.com/storytold/deckcraft/releases/download/v0.7.0/deckcraft-0.7.0-windows-x64-portable.zip
+    CADCraft    Computer-aided design and drafting  Autodesk AutoCAD     v0.7.0  https://github.com/storytold/cadcraft/releases/download/v0.7.0/cadcraft-0.7.0-windows-x64-portable.zip
+    GridCraft   Spreadsheets and data               Microsoft Excel      v0.7.0  https://github.com/storytold/gridcraft/releases/download/v0.7.0/gridcraft-0.7.0-windows-x64-portable.zip
+    Total: 13 aplicativos
 [y posicao]
     Exemplos:
         y posicao list
@@ -54986,6 +55003,7 @@ Exemplos...
     y cat fileA | y split --lines=22
     y cat fileA | y split --bytes=22
     y split --lines=22 --prefix=AA fileA # AAxxa
+""").append("""
 [y regua]
     y regua
     y regua 90
