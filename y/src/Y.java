@@ -44009,30 +44009,111 @@ class ArtCraft {
             $ProgressPreference = 'SilentlyContinue'
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             $base = 'https://getartcraft.com'
+            $cache = 'C:\\tmp\\artcraft'
+            if ($null -eq $argv) { $argv = @($args) }
 
-            $html = (Invoke-WebRequest "$base/apps" -UseBasicParsing).Content
-            $slugs = [regex]::Matches($html, 'href="[^"]*/apps/([a-z0-9-]+)"') |
-                ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+            function Get-Slugs {
+                $html = (Invoke-WebRequest "$base/apps" -UseBasicParsing).Content
+                [regex]::Matches($html, 'href="[^"]*/apps/([a-z0-9-]+)"') |
+                    ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
+            }
 
-            $resultado = foreach ($slug in $slugs) {
-                $nome = $slug
-                $categoria = '?'
-                $implementa = '?'
-                $versao = '?'
-                $portable = '?'
-
+            function Get-App($slug) {
                 $pagina = (Invoke-WebRequest "$base/apps/$slug" -UseBasicParsing).Content
                 $repos = [regex]::Matches($pagina, 'github\\.com/storytold/([A-Za-z0-9_.-]+)"') |
                     ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique
                 $repo = if ($repos -contains $slug) { $slug } else {
                     $repos | Where-Object { $_ -notin 'craft-launcher', 'artcraft' } | Select-Object -First 1
                 }
+                $t = [regex]::Match($pagina, '<title>\\s*([^:<|]+)')
+                $nome = if ($t.Success) { $t.Groups[1].Value.Trim() } else { $slug }
+                [pscustomobject]@{ Slug = $slug; Nome = $nome; Repo = $repo }
+            }
 
-                if ($repo) {
+            function Get-Release($repo) {
+                $r = Invoke-WebRequest "https://github.com/storytold/$repo/releases/latest" -UseBasicParsing
+                $final = if ($r.BaseResponse.ResponseUri) { $r.BaseResponse.ResponseUri.AbsoluteUri }
+                         else { $r.BaseResponse.RequestMessage.RequestUri.AbsoluteUri }
+                if ($final -notmatch '/releases/tag/([^/?#]+)') { return $null }
+                $tag = $Matches[1]
+                $assets = (Invoke-WebRequest "https://github.com/storytold/$repo/releases/expanded_assets/$tag" -UseBasicParsing).Content
+                $a = [regex]::Match($assets, 'href="([^"]*windows-x64-portable\\.zip)"')
+                if (-not $a.Success) { return $null }
+                [pscustomobject]@{ Versao = $tag; Url = 'https://github.com' + $a.Groups[1].Value }
+            }
+
+            if ($argv.Count -gt 0) {
+                $alvo = $argv[0].ToLower()
+                $slug = $null
+                $app = $null
+                $rel = $null
+                try {
+                    $slugs = @(Get-Slugs)
+                    $cand = @($slugs | Where-Object { $_ -eq $alvo -or $_ -eq "${alvo}craft" })
+                    if ($cand.Count -eq 0) { $cand = @($slugs | Where-Object { $_ -like "*$alvo*" }) }
+                    if ($cand.Count -eq 0) { Write-Output "Nenhum app encontrado para '$alvo'. Disponiveis: $($slugs -join ', ')"; exit 1 }
+                    if ($cand.Count -gt 1) { Write-Output "Mais de um app para '$alvo': $($cand -join ', ')"; exit 1 }
+                    $slug = $cand[0]
+                    $app = Get-App $slug
+                    $rel = Get-Release $app.Repo
+                } catch {}
+
+                if ($rel) {
+                    $pasta = Join-Path $cache $app.Nome
+                    $nomeZip = [IO.Path]::GetFileNameWithoutExtension(($rel.Url -split '/')[-1])
+                    $destino = Join-Path $pasta $nomeZip
+                    if (-not (Test-Path -LiteralPath $destino)) {
+                        Write-Output "Baixando $($app.Nome) $($rel.Versao)..."
+                        New-Item -ItemType Directory -Force -Path $pasta | Out-Null
+                        $zip = Join-Path $pasta "$nomeZip.zip"
+                        $tmp = Join-Path $pasta '.extraindo'
+                        if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Recurse -Force }
+                        Invoke-WebRequest $rel.Url -OutFile $zip -UseBasicParsing
+                        Write-Output "Extraindo..."
+                        Add-Type -AssemblyName System.IO.Compression.FileSystem
+                        [IO.Compression.ZipFile]::ExtractToDirectory($zip, $tmp)
+                        $itens = @(Get-ChildItem -LiteralPath $tmp -Force)
+                        if ($itens.Count -eq 1 -and $itens[0].PSIsContainer) {
+                            Move-Item -LiteralPath $itens[0].FullName -Destination $destino
+                            Remove-Item -LiteralPath $tmp -Recurse -Force
+                        } else {
+                            Move-Item -LiteralPath $tmp -Destination $destino
+                        }
+                        Remove-Item -LiteralPath $zip -Force
+                    }
+                } else {
+                    $destino = Get-ChildItem -LiteralPath $cache -Directory -ErrorAction SilentlyContinue |
+                        ForEach-Object { Get-ChildItem -LiteralPath $_.FullName -Directory -Filter "*$alvo*-windows-x64-portable" } |
+                        Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName
+                    if (-not $destino) { Write-Output "Sem conexao e sem cache para '$alvo'"; exit 1 }
+                    Write-Output "Sem conexao, usando o cache: $destino"
+                }
+
+                $exes = @(Get-ChildItem -LiteralPath $destino -Recurse -Filter *.exe)
+                $exe = $exes | Where-Object { $slug -and $_.BaseName -eq $slug } | Select-Object -First 1
+                if (-not $exe) {
+                    $exe = $exes | Where-Object { $_.BaseName -notmatch 'cli|uninst|crash|helper|update' } |
+                        Sort-Object Length -Descending | Select-Object -First 1
+                }
+                if (-not $exe) { Write-Output "Nenhum .exe encontrado em $destino"; exit 1 }
+                Write-Output "Abrindo $($exe.FullName)"
+                Start-Process -FilePath $exe.FullName -WorkingDirectory $exe.DirectoryName
+                exit
+            }
+
+            $resultado = foreach ($slug in Get-Slugs) {
+                $nome = $slug
+                $categoria = '?'
+                $implementa = '?'
+                $versao = '?'
+                $portable = '?'
+
+                $app = Get-App $slug
+                if ($app.Repo) {
                     $readme = $null
                     foreach ($branch in 'main', 'master') {
                         try {
-                            $readme = (Invoke-WebRequest "https://raw.githubusercontent.com/storytold/$repo/$branch/README.md" -UseBasicParsing).Content
+                            $readme = (Invoke-WebRequest "https://raw.githubusercontent.com/storytold/$($app.Repo)/$branch/README.md" -UseBasicParsing).Content
                             break
                         } catch {}
                     }
@@ -44045,27 +44126,25 @@ class ArtCraft {
                             $implementa = $m.Groups[2].Value.Trim()
                         }
                     }
-
                     try {
-                        $r = Invoke-WebRequest "https://github.com/storytold/$repo/releases/latest" -UseBasicParsing
-                        $final = if ($r.BaseResponse.ResponseUri) { $r.BaseResponse.ResponseUri.AbsoluteUri }
-                                 else { $r.BaseResponse.RequestMessage.RequestUri.AbsoluteUri }
-                        if ($final -match '/releases/tag/([^/?#]+)') {
-                            $versao = $Matches[1]
-                            $assets = (Invoke-WebRequest "https://github.com/storytold/$repo/releases/expanded_assets/$versao" -UseBasicParsing).Content
-                            $a = [regex]::Match($assets, 'href="([^"]*windows-x64-portable\\.zip)"')
-                            if ($a.Success) { $portable = 'https://github.com' + $a.Groups[1].Value }
-                        }
+                        $rel = Get-Release $app.Repo
+                        if ($rel) { $versao = $rel.Versao; $portable = $rel.Url }
                     } catch {}
                 }
 
-                [pscustomobject]@{ Nome = $nome; Categoria = $categoria; Implementa = $implementa; Versao = $versao; Portable = $portable }
+                [pscustomobject]@{ Comando = "y artcraft $($slug -replace 'craft$', '')"; Nome = $nome; Categoria = $categoria; Implementa = $implementa; Versao = $versao; Portable = $portable }
             }
 
             $resultado | Format-Table -AutoSize | Out-String -Width 4096 | Write-Output
             Write-Output "Total: $(@($resultado).Count) aplicativos"
+            Write-Output "Para abrir um app: y artcraft <nome>   (ex.: y artcraft pdf)"
             """;
-        String codigo = java.util.Base64.getEncoder().encodeToString(script.getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        StringBuilder argv = new StringBuilder("$argv = @(");
+        for (int i = 0; i < args.length; i++) {
+            argv.append(i > 0 ? "," : "").append("'").append(args[i].replace("'", "''")).append("'");
+        }
+        argv.append(")\n");
+        String codigo = java.util.Base64.getEncoder().encodeToString((argv + script).getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
         System.exit(new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-OutputFormat", "Text", "-EncodedCommand", codigo).inheritIO().start().waitFor());
     }
 }
@@ -54313,6 +54392,7 @@ Exemplos...
     somente informativo -> y help qemu
 [y artcraft]
     y artcraft
+    y artcraft pdf
     publicacao atual:
     Nome        Categoria                           Implementa           Versao  Portable                                                    
     ----        ---------                           ----------           ------  --------                                                    
