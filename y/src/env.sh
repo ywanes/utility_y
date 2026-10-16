@@ -55,10 +55,8 @@ if ! command -v javac >/dev/null 2>&1; then
     $SUDO rm -rf "$GRAAL_HOME"
     $SUDO mv "$INNER" "$GRAAL_HOME"
 
-    $SUDO tee /etc/profile.d/graalvm.sh >/dev/null <<-EOF
-    export JAVA_HOME=$GRAAL_HOME
-    export PATH="\$JAVA_HOME/bin:\$PATH"
-    EOF
+    printf 'export JAVA_HOME=%s\nexport PATH="$JAVA_HOME/bin:$PATH"\n' "$GRAAL_HOME" \
+      | $SUDO tee /etc/profile.d/graalvm.sh >/dev/null
 
     export JAVA_HOME="$GRAAL_HOME"
     export PATH="$GRAAL_HOME/bin:$PATH"
