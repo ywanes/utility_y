@@ -383,7 +383,7 @@ function load(a){
 		}
         if ( a == '/Menu/y lock w 2' ){ 
 			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w 2') ); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w 2') );
 			return; 
 		}
 		if ( a == '/Menu/y lock lock' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'rundll32.exe user32.dll,LockWorkStation') ); return; }				
