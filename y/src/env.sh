@@ -9,6 +9,11 @@
 #
 # ultimo graalvm -> https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_linux-x64_bin.tar.gz
 #                   https://download.oracle.com/graalvm/25/latest/graalvm-jdk-25_windows-x64_bin.zip
+#
+# fix path java
+# sudo update-alternatives --install /usr/bin/java java /opt/graalvm-jdk-21/bin/java 100
+# sudo update-alternatives --install /usr/bin/javac javac /opt/graalvm-jdk-21/bin/javac 100
+#
 
 if [ `whoami` != "root" ]
 then
