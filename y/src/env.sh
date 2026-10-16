@@ -1,9 +1,9 @@
 # setup env/maquina
-# curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
+# curl -fsSL "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh?$(date +%s)" | bash
 # test
 # docker run -itd --name test node
 # docker exec -it test bash
-# curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh | bash
+# curl -fsSL "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/env.sh?$(date +%s)" | bash
 # docker stop test
 # docker rm test
 #
