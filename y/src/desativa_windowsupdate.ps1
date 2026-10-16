@@ -1,3 +1,5 @@
+# existe um novo projeto de controle de windows update, considere utilizar ele ao invés dessa trava forte aqui
+# 
 # powershell adm
 # irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/desativa_windowsupdate.ps1 | iex
 # & ([scriptblock]::Create((irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/desativa_windowsupdate.ps1))) -Restaurar
