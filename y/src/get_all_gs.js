@@ -1,3 +1,5 @@
+// nova politicas no spps script foram aplicadas
+// cole todo o script na mao
 // fetch('https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/get_all_gs.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
 // acima esta para https, caso precise de http use o comando abaixo no dominio 203
 // fetch('http://203/get_all_gs.js?t='+Date.now()).then(r=>r.text()).then(t=>(0,eval)(t))
