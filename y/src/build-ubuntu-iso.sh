@@ -100,7 +100,9 @@ case "${1:-}" in
         fi
         _name=""
         [ -r "$_csv" ] && _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
-        printf '  %-11s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "$_stat"
+        # '—' tem 3 bytes e o printf conta bytes, não colunas: +2 na largura p/ alinhar
+        _w=20; [ -z "$_name" ] && { _name="—"; _w=22; }
+        printf '  %-11s %-*s %-10s %s\n' "${_ver:-?}" "$_w" "$_name" "$_s" "$_stat"
       done
       # --- old-releases: EOL (número/codinome do CSV; pula o que já está no archive) ---
       for _s in $_old; do
@@ -110,7 +112,9 @@ case "${1:-}" in
           _ver="$(awk -F, -v s="$_s" '$3==s{print $1; exit}' "$_csv")"
           _name="$(awk -F, -v s="$_s" '$3==s{print $2; exit}' "$_csv")"
         fi
-        printf '  %-11s %-20s %-10s %s\n' "${_ver:-?}" "${_name:-—}" "$_s" "disponível"
+        # '—' tem 3 bytes e o printf conta bytes, não colunas: +2 na largura p/ alinhar
+        _w=20; [ -z "$_name" ] && { _name="—"; _w=22; }
+        printf '  %-11s %-*s %-10s %s\n' "${_ver:-?}" "$_w" "$_name" "$_s" "disponível"
       done
     } | sort -V
     echo
