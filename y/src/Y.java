@@ -43712,15 +43712,30 @@ class TelaBloqueio {
     private static final long HWND_BROADCAST   = 0xFFFF;
     private static final int  MOUSEEVENTF_MOVE = 0x0001;
 
-    // desliga (standby) todos os monitores
+    // --- TV Android (TCL) via ADB: controle de energia por Wi-Fi ---
+    // Requer na TV: Opcoes do desenvolvedor > Depuracao USB ligada e
+    // "Standby de rede" ligado (mantem o Wi-Fi vivo dormindo). Sem esse
+    // standby a TV sai da rede ao dormir e o wake por rede nao chega.
+    private static final String TV_IP   = "192.168.0.199:5555";
+    // caminho preferencial do adb; se nao existir, cai para "adb" do PATH
+    private static final String ADB_PATH = "D:\\ProgramFiles\\adb\\adb.exe";
+    private static final int    TV_KEY_SLEEP = 223; // KEYCODE_SLEEP  (absoluto: dorme)
+    private static final int    TV_KEY_WAKE  = 224; // KEYCODE_WAKEUP (absoluto: acorda)
+    // o ping mostrou uma janela curta de timeouts logo apos dormir; o wake
+    // reenvia algumas vezes para cobrir esse buraco sem depender da sorte
+    private static final int    TV_RETRIES   = 5;
+    private static final long   TV_RETRY_MS  = 700L;
+
+    // desliga (standby) todos os monitores + coloca a TV Android para dormir
     private static void monitorDesligar() throws Exception {
         Object[] j = monInit();
         Thread.sleep(500); // evita o soltar do Enter/clique religar a tela na hora
         monSinal(j, 2);
         System.out.println("  [ok]     monitor off");
+        tvEnergia(TV_KEY_SLEEP, "off", 1);
     }
 
-    // liga os monitores novamente
+    // liga os monitores novamente + acorda a TV Android
     private static void monitorLigar() throws Exception {
         Object[] j = monInit();
         monSinal(j, -1);
@@ -43729,6 +43744,45 @@ class TelaBloqueio {
         monCall(j, fMouse, MOUSEEVENTF_MOVE,  1, 0, 0, monSizeT(j, 0));
         monCall(j, fMouse, MOUSEEVENTF_MOVE, -1, 0, 0, monSizeT(j, 0));
         System.out.println("  [ok]     monitor on");
+        // acordar tenta algumas vezes por causa da janela de timeouts no standby
+        tvEnergia(TV_KEY_WAKE, "on", TV_RETRIES);
+    }
+
+    // resolve o executavel do adb: usa ADB_PATH se existir, senao "adb" (PATH)
+    private static String adbExe() {
+        java.io.File f = new java.io.File(ADB_PATH);
+        return f.isFile() ? f.getAbsolutePath() : "adb";
+    }
+
+    // envia um keyevent de energia para a TV via ADB, com reconnect + retry.
+    // tentativas=1 para dormir (nao precisa insistir); varias para acordar,
+    // pois a TV some da rede por alguns instantes ao entrar/sair do sono.
+    // Qualquer falha e apenas avisada: nao interrompe o controle dos monitores.
+    private static void tvEnergia(int keyevent, String rotulo, int tentativas) {
+        String adb = adbExe();
+        for (int i = 1; i <= tentativas; i++) {
+            try {
+                // reconecta a cada tentativa: cobre o "error: closed" de quando
+                // a sessao cai no buraco de timeouts do standby
+                executarSilencioso(java.util.Arrays.asList(adb, "connect", TV_IP));
+                int rc = executarSilencioso(java.util.Arrays.asList(
+                    adb, "-s", TV_IP, "shell", "input", "keyevent",
+                    Integer.toString(keyevent)));
+                if (rc == 0) {
+                    System.out.println("  [ok]     TV " + rotulo + " (" + TV_IP
+                            + (i > 1 ? ", tentativa " + i : "") + ")");
+                    return;
+                }
+            } catch (Exception e) {
+                // ignora e tenta de novo; so avisa no fim se esgotar
+            }
+            if (i < tentativas) {
+                try { Thread.sleep(TV_RETRY_MS); }
+                catch (InterruptedException ie) { Thread.currentThread().interrupt(); return; }
+            }
+        }
+        System.out.println("  [aviso]  TV nao respondeu ao " + rotulo + " (" + TV_IP
+                + ") apos " + tentativas + " tentativa(s) - verifique a depuracao e o standby de rede");
     }
 
     // envia WM_SYSCOMMAND/SC_MONITORPOWER por broadcast (PostMessage, nao SendMessage)
