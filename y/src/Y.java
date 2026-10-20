@@ -42970,7 +42970,8 @@ class Texto_longo extends Util{
     }
 }
 
-///////////////////
+// minimo
+//<editor-fold desc="TelaBloqueio">
 class TelaBloqueio {
     private static final String PASTA_BASE = "C:\\ProgramData\\TelaBloqueioMinima";
     private static final String ARQ_IMAGEM = PASTA_BASE + "\\preto.png";
@@ -43158,9 +43159,11 @@ class TelaBloqueio {
         executarPowerShell("Servico sshd iniciado",
             "Start-Service -Name sshd -ErrorAction Stop");
         System.out.println();
-        System.out.println("[16/21] Removendo o som de inicializacao do Windows...");
-        // 1 = nao tocar o som de inicializacao (logon)
+        System.out.println("[16/21] Removendo o som de inicializacao e os sons do sistema...");
+        // 1 = nao tocar o som de inicializacao (boot/logon)
         definirDword(BOOT, "DisableStartupSound", 1);
+        // esquema de sons = "Sem sons": zera o som de cada evento do sistema
+        desativarSonsDoWindows();
         System.out.println();
         System.out.println("[17/21] Configurando a Lixeira para guardar o maximo possivel...");
         // MaxCapacity (MB) = tamanho do disco de cada volume, para reter o maximo possivel
@@ -43396,6 +43399,20 @@ class TelaBloqueio {
         definirTexto(rtf + "\\ShellNew", "Data", "{\\rtf1}");
         // limpa o cache do menu Novo
         removerChave(CACHE_NOVO);
+    }
+    // Define o Esquema de Sons como "Sem sons": zera o som padrao de cada
+    // evento do sistema (inclui logon/logoff da sessao). O som de boot em si
+    // fica a cargo de DisableStartupSound, ja aplicado no passo [16/21].
+    // Vale por usuario (HKCU); nao exige reinicio.
+    private static void desativarSonsDoWindows() throws java.io.IOException {
+        executarPowerShell("Esquema de sons definido como Sem Sons",
+            "Set-ItemProperty -Path 'HKCU:\\AppEvents\\Schemes' -Name '(Default)' -Value '.None'; "
+            + "$apps='HKCU:\\AppEvents\\Schemes\\Apps'; "
+            + "Get-ChildItem $apps | ForEach-Object { "
+            + "Get-ChildItem $_.PSPath | ForEach-Object { "
+            + "$cur = Join-Path $_.PSPath '.Current'; "
+            + "if (-not (Test-Path $cur)) { New-Item -Path $_.PSPath -Name '.Current' -Force | Out-Null }; "
+            + "Set-ItemProperty -Path $cur -Name '(Default)' -Value '' } }");
     }
     // desativa o "Localizar Meu Mouse" (Find My Mouse) do PowerToys, o circulo
     // que aparece ao tocar Ctrl duas vezes. Fecha o PowerToys para que ele nao
@@ -43877,6 +43894,7 @@ class LockSession{
         return saida;
     }
 }
+//</editor-fold>
 
 class Posicao{
     public static void main(String[] args) throws Exception {
