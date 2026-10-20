@@ -55330,6 +55330,9 @@ Exemplos...
     altera aparencia lock real(exige cmd admin):
         y lock minimo # deixa as configuracoes de windows L com aparencias mais simples e escura
         y lock padrao # volta de fabrica a aparencia do windows L
+    processos pesados y lock minimo
+        Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+        irm https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/wmic.ps1 | iex
 [y monitor]
     y monitor cpu
     y monitor cpu oneLine
