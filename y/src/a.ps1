@@ -218,6 +218,7 @@ if ($DELETE_DISK -and (Test-Path $DISK)) {
 if (!(Test-Path $DISK)) {
     Write-Host "Criando novo disco virtual de 900GB..." -ForegroundColor Cyan
     # qemu-img create define o formato (qcow2) e o tamanho máximo (dinâmico)
+    # -o subformat=fixed
     & $QEMU_IMG create -f qcow2 $DISK 900G
 }
 
