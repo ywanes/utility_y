@@ -1079,10 +1079,22 @@ cat buffer.log
             }
             return;
         }
-        if ( args[0].equals("particao") ){
+        if ( args[0].equals("particao") || args[0].equals("par") ){            
+            Boolean sbr_or_w=false;
+            if ( args.length > 1 ){
+                if ( args[1].equals("-modoSandboxRead") || args[1].equals("sb") || args[1].equals("sbr") ){
+                    args[1]="-modoSandboxRead";
+                    sbr_or_w=true;
+                }else{
+                    if ( args[1].equals("sbw") ){
+                        args[1]="-modoSandboxWrite";
+                        sbr_or_w=true;
+                    }
+                }
+            }
             if ( ! isWindows() )
                 erroFatal("implementado só para windows!");
-            if ( ! isWindowsAdm() )
+            if ( ! isWindowsAdm() && !sbr_or_w )
                 erroFatal("você precisa estar no cmd adm!");
             args=removeParm(0, args);
             new Particao().main(args);
@@ -44359,6 +44371,7 @@ class Particao {
                         y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
                         y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
                         y particao -modoSandboxRead
+                        y par sb|sbr|sbw # respectivamente -modoSandboxRead -modoSandboxRead -modoSandboxWrite
                         y particao -modoSandboxWrite -showQemu
                         obs: sistemas de arquivos: -refs e -ntfs
                         modos: -modoSandboxRead e -modoSandboxWrite
@@ -54113,7 +54126,7 @@ usage:
   [y qemu]
   [y artcraft]
   [y posicao]
-  [y particao]
+  [y particao|par]
   [y validaDisco]
   [y [juros|emprestimo]]
   [y cmdUser]
@@ -54499,7 +54512,7 @@ Exemplos...
         pega_posicao                            mostra a posicao do WhatsApp, Terminal e Discord
         seta_posicao                            move os 3 para as posicoes fixas
         set <processo> <x> <y> [<larg> <alt>]   move uma janela pelo nome do processo
-[y particao]
+[y particao|par]
     exemplos:
         # list discos
             y particao list
@@ -54542,6 +54555,7 @@ Exemplos...
             y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
             y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
             y particao -modoSandboxRead
+            y par sb|sbr|sbw # respectivamente -modoSandboxRead -modoSandboxRead -modoSandboxWrite
             y particao -modoSandboxWrite -showQemu
             obs: sistemas de arquivos: -refs e -ntfs
             modos: -modoSandboxRead e -modoSandboxWrite
