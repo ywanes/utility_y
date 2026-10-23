@@ -44305,6 +44305,8 @@ class Particao {
             else if (args.length > 0 && args[0].equalsIgnoreCase("compare")) app.comparar(java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].equalsIgnoreCase("format_efi")) app.formatarEfi(java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].toLowerCase().matches("format_(refs|ntfs|fat32|exfat)")) app.formatar(args[0].substring(7).toLowerCase(), java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].equalsIgnoreCase("reguid")) app.reguid(java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].equalsIgnoreCase("reserie")) app.reserie(java.util.Arrays.copyOfRange(args, 1, args.length));
             else app.clonar(args);
         } catch (Exception e) {
             System.err.println();
@@ -44352,6 +44354,16 @@ class Particao {
                         obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
                     # delete particao
                         delete a.vhdx#6 | delete 1#3
+                    # regera guid
+                        y particao reguid a.vhdx
+                        y particao reguid a.vhdx#3
+                        y particao reguid a.vhdx#3 [GUID]
+                        y particao reguid a.vhdx#DISK # o guid do disco e nao da particao
+                        obs: o BCD acha o windows pelos GUIDs
+                    # regera numero de serie
+                        y particao reserie a.vhdx
+                        y particao reserie a.vhdx#3
+                        y particao reserie a.vhdx#3 XXXX-XXXX
                     # cria particao pelo template
                         y create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
                     # desataxa vhdx
@@ -45343,6 +45355,7 @@ class Particao {
             put64(b, 72, gptAlt - gptEnt.length / setor);
         }
         put32(b, 88, crcEnt);
+        System.arraycopy(gptCab, 56, b, 56, 16);              // GUID do disco: o backup acompanha a primaria (reguid)
         selarGpt(b);
         gravar(le64(b, 72) * setor, gptEnt, 0, gptEnt.length);
         gravar(gptAlt * setor, b, 0, setor);
@@ -45657,17 +45670,213 @@ class Particao {
         try {
             if (!d.temGpt) throw new Exception(d.nome + " nao tem GPT.");
             Object[] p = d.particao(num);
-            if (pTipo(p).equals(T_EFI)) {                      // EFI (disco ou VHDX): so com os 4 numeros
-                String n = String.valueOf(1000 + new java.util.Random().nextInt(9000));
-                System.out.println("ATENCAO, esse comando e muito grave, cuidado, digite os numeros " + n + " e de enter para prosseguir");
-                String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
-                if (r == null || !r.trim().equals(n)) throw new Exception("confirmacao errada; nada foi feito.");
-            }
+            if (pTipo(p).equals(T_EFI)) confirmarGrave(null);  // EFI (disco ou VHDX): so com os 4 numeros
             int o = (pNum(p) - 1) * d.gptTamEnt;
             java.util.Arrays.fill(d.gptEnt, o, o + d.gptTamEnt, (byte) 0);
             d.escreverGpt();
         } finally { d.fechar(); }
         if (disco) diskpart("reexaminar os discos", "rescan");   // o Windows passa a ver a GPT nova
+    }
+
+    // ============================================================= REGUID / RESERIE
+
+    /**
+     * reguid a.vhdx|1                    GUID novo no disco e em todas as particoes (como um clone recem-criado)
+     * reguid a.vhdx#N|1#N [GUID]         GUID novo (ou o informado) so na particao N
+     * reguid a.vhdx#DISK|1#DISK [GUID]   GUID novo (ou o informado) so no disco
+     * So a GPT muda (primaria e backup, com CRC); dados, posicoes e numeros nao. O BCD acha o Windows pelos GUIDs da
+     * GPT (disco e particao) e o Windows guarda a letra de particao GPT pelo GUID dela (MountedDevices): por isso, em
+     * disco fisico ou em disco com EFI, so com a confirmacao dos 4 numeros.
+     */
+    private void reguid(String[] args) throws Exception {
+        String uso = "use: reguid a.vhdx|1  |  reguid a.vhdx#N|1#N [GUID]  |  reguid a.vhdx#DISK|1#DISK [GUID]";
+        if (args.length < 1 || args.length > 2) throw new Exception(uso);
+        String alvo = args[0], sufixo = "";
+        int h = alvo.lastIndexOf('#');
+        if (h > 0) { sufixo = alvo.substring(h + 1); alvo = alvo.substring(0, h); }
+        boolean tudo = sufixo.isEmpty(), soDisco = sufixo.equalsIgnoreCase("DISK");
+        if (!tudo && !soDisco && !sufixo.matches("\\d+")) throw new Exception(uso);
+        int num = sufixo.matches("\\d+") ? Integer.parseInt(sufixo) : 0;
+        if (!tudo && !soDisco && num < 1) throw new Exception("numero de particao invalido: #" + num);
+        String pedido = null;
+        if (args.length == 2) {
+            if (tudo) throw new Exception("GUID informado so com #N ou #DISK (sem # todos os GUIDs saem aleatorios).\n" + uso);
+            pedido = args[1].replaceAll("[{}]", "").toUpperCase();
+            if (!pedido.matches("[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}")) throw new Exception("GUID invalido: " + args[1]);
+            if (pedido.equals("00000000-0000-0000-0000-000000000000")) throw new Exception("GUID zero marca entrada vazia na GPT: nao vale.");
+        }
+        boolean disco = alvo.matches("\\d+");
+        if (!disco && (!alvo.toLowerCase().endsWith(".vhdx") || !new java.io.File(alvo).isFile())) throw new Exception("VHDX nao encontrado: " + alvo);
+        if (!disco) exigirDesanexado(alvo);
+        var d = dispositivo(alvo, true);
+        var linhas = new java.util.ArrayList<String>();
+        try {
+            if (!d.temGpt) throw new Exception(d.nome + " nao tem GPT.");
+            var parts = d.particoes();
+            if (num > 0) d.particao(num);                         // erro se nao existe ou se e espaco livre
+            if (pedido != null) {                                 // GUID repetido no disco confunde o Windows e o BCD
+                if (!soDisco && guidStr(d.gptCab, 56).equals(pedido))
+                    throw new Exception("o GUID " + pedido + " ja e usado em " + d.nome + " (GUID do disco).");
+                for (Object[] p : parts)
+                    if ((soDisco || pNum(p) != num) && guidStr(d.gptEnt, (pNum(p) - 1) * d.gptTamEnt + 16).equals(pedido))
+                        throw new Exception("o GUID " + pedido + " ja e usado em " + d.nome + " (particao #" + pNum(p) + ").");
+                String atual = soDisco ? guidStr(d.gptCab, 56) : guidStr(d.gptEnt, (num - 1) * d.gptTamEnt + 16);
+                if (atual.equals(pedido)) throw new Exception((soDisco ? d.nome : "a particao #" + num) + " ja tem o GUID " + pedido + ".");
+            }
+            boolean temEfi = false;
+            for (Object[] p : parts) if (pTipo(p).equals(T_EFI)) temEfi = true;
+            if (disco || temEfi)
+                confirmarGrave("o BCD acha o Windows pelos GUIDs da GPT (disco e particao): trocar pode deixar " + d.nome
+                        + " sem boot (refaca com format_efi ou bcdboot)." + (disco ? " O Windows guarda a letra pelo GUID da particao: a letra pode mudar." : ""));
+            if (tudo || soDisco) {
+                String novo = pedido != null ? pedido : guidAleatorio();
+                linhas.add("disco: " + guidStr(d.gptCab, 56) + " -> " + novo);
+                putGuid(d.gptCab, 56, novo);
+            }
+            for (Object[] p : parts) {
+                if (soDisco || !tudo && pNum(p) != num) continue;
+                int o = (pNum(p) - 1) * d.gptTamEnt + 16;
+                String novo = pedido != null ? pedido : guidAleatorio();
+                linhas.add(String.format("#%-4d %s -> %s", pNum(p), guidStr(d.gptEnt, o), novo));
+                putGuid(d.gptEnt, o, novo);
+            }
+            d.escreverGpt();
+        } finally { d.fechar(); }
+        System.out.println();
+        for (String l : linhas) System.out.println("  " + l);
+        if (disco) diskpart("reexaminar os discos", "rescan");    // o Windows passa a ver a GPT nova
+    }
+
+    /**
+     * reserie a.vhdx#N|1#N [XXXX-XXXX]: numero de serie novo (aleatorio ou o informado, em hexadecimal como o "vol" mostra)
+     * no FS da particao, no setor de boot e na copia dele. NTFS: 0x48 (8 bytes; os 32 de cima aleatorios), copia no
+     * ultimo setor do FS. ReFS: VBR 0x38 + checksum (+22), copia no ultimo setor do FS. FAT32: 0x43, copia no setor do
+     * BPB 0x32. exFAT: 0x64 + checksum da regiao de boot (setor 11), copia nos setores 12-23. Cada copia e alterada em
+     * separado (so a serie e o checksum); copia que nao tem a assinatura do FS: NTFS recebe a do setor 0 (como o clone),
+     * os outros ficam como estao. Montada (com ou sem letra) o Windows nao deixa gravar: tire a letra antes.
+     */
+    private void reserie(String[] args) throws Exception {
+        String uso = "use: reserie a.vhdx#N [XXXX-XXXX] | reserie 1#N [XXXX-XXXX]";
+        if (args.length < 1 || args.length > 2) throw new Exception(uso);
+        int h = args[0].lastIndexOf('#');
+        if (h <= 0 || !args[0].substring(h + 1).matches("\\d+")) throw new Exception(uso);
+        int num = Integer.parseInt(args[0].substring(h + 1));
+        String arq = args[0].substring(0, h);
+        if (num < 1) throw new Exception("numero de particao invalido: #" + num);
+        long pedido = -1;
+        if (args.length == 2) {
+            String s = args[1].toUpperCase().replace("-", "");
+            if (!s.matches("[0-9A-F]{8}")) throw new Exception("serie invalida: " + args[1] + " (use XXXX-XXXX em hexadecimal, como o vol mostra)");
+            pedido = Long.parseLong(s, 16);
+        }
+        boolean disco = arq.matches("\\d+");
+        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+        if (!disco) exigirDesanexado(arq);
+        var letras = disco ? letrasMontadas() : new java.util.TreeMap<Character, byte[]>();
+        var d = dispositivo(arq, true);
+        String fsNome, antes, depois;
+        try {
+            Object[] p = d.particao(num), fs = d.fsInfo(p);
+            if (fs == null) throw new Exception("a particao #" + num + " nao e NTFS, ReFS, FAT32 nem exFAT.");
+            fsNome = (String) fs[0];
+            int bps = (Integer) fs[2];
+            if (bps == 0) throw new Exception("o setor de boot do " + fsNome + " da #" + num + " nao confere com a particao: nada foi feito.");
+            if (disco) d.exigirGravavel(p, num, letras);
+            long atual = (Long) fs[3] & 0xFFFFFFFFL;
+            if (pedido == atual) throw new Exception("a #" + num + " ja tem a serie " + serieStr(atual) + ".");
+            var rnd = new java.security.SecureRandom();
+            long nova = pedido;
+            while (nova < 0 || nova == atual) nova = rnd.nextInt() & 0xFFFFFFFFL;
+            long alto = rnd.nextLong() & 0xFFFFFFFF00000000L;     // NTFS/ReFS: 64 bits, o vol so mostra os 32 de baixo
+            long off = pOff(p), fsBytes = (Long) fs[1];
+            switch (fsNome) {
+                case "NTFS" -> {
+                    byte[] b = new byte[bps];
+                    d.ler(off, b, 0, bps);
+                    put64(b, 0x48, alto | nova);
+                    byte[] c = new byte[bps];
+                    d.ler(off + fsBytes - bps, c, 0, bps);
+                    if (ascii(c, 3, 8).equals("NTFS    ")) put64(c, 0x48, alto | nova);
+                    else c = b;                                   // sem backup valido: vai a copia do setor 0
+                    d.gravar(off + fsBytes - bps, c, 0, bps);
+                    d.gravar(off, b, 0, bps);
+                }
+                case "ReFS" -> {
+                    for (long o : new long[]{off + fsBytes - bps, off}) {   // copia do fim primeiro, setor 0 por ultimo
+                        byte[] b = new byte[bps];
+                        d.ler(o, b, 0, bps);
+                        if (!ascii(b, 3, 4).equals("ReFS") || !ascii(b, 0x10, 4).equals("FSRS")) continue;
+                        put64(b, 0x38, alto | nova);
+                        int cs = 0;
+                        for (int i = 0; i < 512; i++) if (i != 22 && i != 23) cs = (((cs & 1) != 0 ? 0x8000 : 0) + (cs >>> 1) + (b[i] & 0xFF)) & 0xFFFF;
+                        put16(b, 22, cs);
+                        d.gravar(o, b, 0, bps);
+                    }
+                }
+                case "FAT32" -> {
+                    byte[] b = new byte[bps];
+                    d.ler(off, b, 0, bps);
+                    int bk = le16(b, 0x32), res = le16(b, 0x0E);
+                    if (bk > 0 && bk < res) {
+                        byte[] c = new byte[bps];
+                        d.ler(off + (long) bk * bps, c, 0, bps);
+                        if (ascii(c, 0x52, 8).equals("FAT32   ")) { put32(c, 0x43, (int) nova); d.gravar(off + (long) bk * bps, c, 0, bps); }
+                    }
+                    put32(b, 0x43, (int) nova);
+                    d.gravar(off, b, 0, bps);
+                }
+                default -> {                                      // exFAT: regiao de 12 setores com checksum, copia logo depois
+                    for (long o : new long[]{off + 12L * bps, off}) {
+                        byte[] r = new byte[12 * bps];
+                        d.ler(o, r, 0, r.length);
+                        if (!ascii(r, 3, 8).equals("EXFAT   ")) continue;
+                        put32(r, 0x64, (int) nova);
+                        int cs = 0;
+                        for (int i = 0; i < 11 * bps; i++)
+                            if (i != 106 && i != 107 && i != 112) cs = (((cs & 1) != 0 ? 0x80000000 : 0) + (cs >>> 1) + (r[i] & 0xFF));
+                        for (int i = 11 * bps; i < 12 * bps; i += 4) put32(r, i, cs);
+                        d.gravar(o, r, 0, r.length);
+                    }
+                }
+            }
+            antes = serieStr(atual);
+            depois = serieStr(nova);
+        } finally { d.fechar(); }
+        System.out.println();
+        System.out.println("  #" + num + "  " + fsNome + "  serie " + antes + " -> " + depois);
+        if (disco) diskpart("reexaminar os discos", "rescan");
+    }
+
+    /** Serie como o "vol" mostra (32 bits baixos). */
+    private String serieStr(long s) { return String.format("%04X-%04X", (s >>> 16) & 0xFFFF, s & 0xFFFF); }
+
+    /** Pede os 4 numeros aleatorios (comando grave); errado ou sem entrada = erro, nada feito. */
+    private void confirmarGrave(String aviso) throws Exception {
+        if (aviso != null) System.out.println("AVISO: " + aviso);
+        String n = String.valueOf(1000 + new java.util.Random().nextInt(9000));
+        System.out.println("ATENCAO, esse comando e muito grave, cuidado, digite os numeros " + n + " e de enter para prosseguir");
+        String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
+        if (r == null || !r.trim().equals(n)) throw new Exception("confirmacao errada; nada foi feito.");
+    }
+
+    /**
+     * Disco fisico: a particao nao pode estar montada (o Windows nao deixa gravar no volume). Com letra: compara o 1o
+     * bloco com o de cada letra; sem letra: tenta regravar o 1o setor com ele mesmo, antes de mudar qualquer coisa.
+     */
+    private void exigirGravavel(Object[] p, int num, java.util.Map<Character, byte[]> letras) throws Exception {
+        byte[] b = new byte[4096];
+        if (pTam(p) >= 4096) ler(pOff(p), b, 0, 4096);
+        for (var e : letras.entrySet())
+            if (java.util.Arrays.equals(e.getValue(), b))
+                throw new Exception("a particao #" + num + " esta montada como " + e.getKey() + ": e o Windows nao deixa gravar nela; tire a letra antes"
+                        + " (Gerenciamento de Disco > Alterar letra da unidade e caminho > Remover).");
+        byte[] t = new byte[setor];
+        ler(pOff(p), t, 0, setor);
+        try { gravar(pOff(p), t, 0, setor); }
+        catch (java.io.IOException e) {
+            throw new Exception("o Windows nao deixa gravar na particao #" + num + " (" + e.getMessage() + "): o volume dela esta montado,"
+                    + " mesmo sem letra. Nada foi feito.");
+        }
     }
 
     /** detach a.vhdx: desanexa o VHDX (diskpart detach vdisk). */
@@ -45843,25 +46052,8 @@ class Particao {
                     + " Particoes:\n" + d.descreverParticoes());
             Object[] p = (Object[]) x[0];
             if (disco && p != null) {                          // disco: montada nao (o Windows nao deixa gravar); EFI so com os 4 numeros
-                byte[] b = new byte[4096];
-                if (pTam(p) >= 4096) d.ler(pOff(p), b, 0, 4096);
-                for (var e : letras.entrySet())
-                    if (java.util.Arrays.equals(e.getValue(), b))
-                        throw new Exception("a particao #" + num + " esta montada como " + e.getKey() + ": e o Windows nao deixa gravar nela; tire a letra antes"
-                                + " (Gerenciamento de Disco > Alterar letra da unidade e caminho > Remover).");
-                byte[] t = new byte[d.setor];                  // montada sem letra: o Windows tambem nega; testa antes da GPT
-                d.ler(pOff(p), t, 0, d.setor);
-                try { d.gravar(pOff(p), t, 0, d.setor); }
-                catch (java.io.IOException e) {
-                    throw new Exception("o Windows nao deixa gravar na particao #" + num + " (" + e.getMessage() + "): o volume dela esta montado,"
-                            + " mesmo sem letra. Nada foi feito.");
-                }
-                if (pTipo(p).equals(T_EFI)) {
-                    String n = String.valueOf(1000 + new java.util.Random().nextInt(9000));
-                    System.out.println("ATENCAO, esse comando e muito grave, cuidado, digite os numeros " + n + " e de enter para prosseguir");
-                    String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
-                    if (r == null || !r.trim().equals(n)) throw new Exception("confirmacao errada; nada foi feito.");
-                }
+                d.exigirGravavel(p, num, letras);
+                if (pTipo(p).equals(T_EFI)) confirmarGrave(null);
             }
             long ini, max, novo;
             if (p != null) {                                   // existente: pode crescer ate a proxima particao ou o fim
@@ -48700,7 +48892,7 @@ class Particao {
 
     private void checa(boolean ok, String msg) throws Exception { if (!ok) throw new Exception(msg); }
 
-    /** Roda o clone (ou o maximum/detach/compare, se a[0] for um deles) de verdade, sem a saida dele. */
+    /** Roda o clone (ou o maximum/detach/compare/delete/format, se a[0] for um deles) de verdade, sem a saida dele. */
     private void roda(String... a) throws Exception {
         String[] args = a;
         var out = System.out;
@@ -49336,7 +49528,7 @@ class Particao {
     private void confirmar(String pergunta) throws Exception {
         System.out.print(pergunta + " (s/n): ");
         String r = new java.io.BufferedReader(new java.io.InputStreamReader(System.in)).readLine();
-        if (r == null || !r.replace("﻿", "").trim().equalsIgnoreCase("s")) { System.out.println("ok, nada feito"); System.exit(0); }
+        if (r == null || !r.replace("\uFEFF", "").trim().equalsIgnoreCase("s")) { System.out.println("ok, nada feito"); System.exit(0); }
     }
 
     // ---------------------------------------------------------------- gerar
@@ -49476,7 +49668,7 @@ class Particao {
             System.out.print("digite o numero: ");
             String r = in.readLine();
             if (r == null) { System.out.println(); System.exit(0); }
-            r = r.replace("﻿", "").trim();                             // BOM que o PowerShell manda pelo pipe
+            r = r.replace("\uFEFF", "").trim();                             // BOM que o PowerShell manda pelo pipe
             if (!r.matches("\\d+")) { System.out.println("opcao invalida"); continue; }
             int k = Integer.parseInt(r);
             if (k == sair) System.exit(0);
@@ -54536,6 +54728,16 @@ Exemplos...
             obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
         # delete particao
             delete a.vhdx#6 | delete 1#3
+        # regera guid
+            y particao reguid a.vhdx
+            y particao reguid a.vhdx#3
+            y particao reguid a.vhdx#3 [GUID]
+            y particao reguid a.vhdx#DISK # o guid do disco e nao da particao
+            obs: o BCD acha o windows pelos GUIDs
+        # regera numero de serie
+            y particao reserie a.vhdx
+            y particao reserie a.vhdx#3
+            y particao reserie a.vhdx#3 XXXX-XXXX
         # cria particao pelo template
             y create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
         # desataxa vhdx
