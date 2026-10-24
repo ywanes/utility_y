@@ -1080,21 +1080,25 @@ cat buffer.log
             return;
         }
         if ( args[0].equals("particao") || args[0].equals("par") ){            
-            Boolean sbr_or_w=false;
+            Boolean precisa_adm=true;
             if ( args.length > 1 ){
                 if ( args[1].equals("-modoSandboxRead") || args[1].equals("sb") || args[1].equals("sbr") ){
                     args[1]="-modoSandboxRead";
-                    sbr_or_w=true;
+                    precisa_adm=false;
                 }else{
                     if ( args[1].equals("sbw") ){
                         args[1]="-modoSandboxWrite";
-                        sbr_or_w=true;
+                        precisa_adm=false;
                     }
                 }
             }
+            if ( precisa_adm && findParm(args, "-fromIsoManual", true) > -1 )
+                precisa_adm=false;
+            if ( precisa_adm && args.length == 1 )
+                precisa_adm=false;
             if ( ! isWindows() )
                 erroFatal("implementado só para windows!");
-            if ( ! isWindowsAdm() && !sbr_or_w )
+            if ( precisa_adm && !isWindowsAdm() )
                 erroFatal("você precisa estar no cmd adm!");
             args=removeParm(0, args);
             new Particao().main(args);
