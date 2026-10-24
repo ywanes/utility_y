@@ -44097,6 +44097,7 @@ class Posicao{
     }
 }
 
+//<editor-fold desc="ArtCraft">
 class ArtCraft {
     public static void main(String[] args) throws Exception {
         String script = """
@@ -44105,6 +44106,32 @@ class ArtCraft {
             $base = 'https://getartcraft.com'
             $cache = 'C:\\tmp\\artcraft'
             if ($null -eq $argv) { $argv = @($args) }
+
+            # o que cada app reimplementa, caso o README atual e o historico dele nao digam (os READMEs deixaram de citar
+            # o produto original em out/2026; estes valores sao os que os READMEs diziam antes)
+            $conhecidos = @{
+                photocraft = 'Adobe Photoshop'; vectorcraft = 'Adobe Illustrator'; filmcraft = 'Adobe Premiere Pro'
+                lightcraft = 'Adobe Lightroom'; pdfcraft = 'Adobe Acrobat'; effectcraft = 'Adobe After Effects'
+                designcraft = 'Adobe InDesign'; wordcraft = 'Microsoft Word'; gridcraft = 'Microsoft Excel'
+                deckcraft = 'Microsoft PowerPoint'; soundcraft = 'Avid Pro Tools'; cadcraft = 'Autodesk AutoCAD'; figcraft = 'Figma'
+            }
+
+            # de-para da categoria (texto do README em ingles -> portugues); categoria nova, fora daqui, fica em ingles
+            $categoriaPt = @{
+                'Image editing'                       = 'Edição de imagens'
+                'Vector illustration'                 = 'Ilustração vetorial'
+                'Video editing, color and sound'      = 'Edição de vídeo, cor e som'
+                'Photo library and raw development'   = 'Biblioteca de fotos e revelação RAW'
+                'The PDF workbench'                   = 'Bancada de PDF'
+                'Motion graphics and visual effects'  = 'Motion graphics e efeitos visuais'
+                'Page layout and publishing'          = 'Diagramação e publicação'
+                'Interface design and prototyping'    = 'Design de interfaces e prototipagem'
+                'Writing and document design'         = 'Escrita e design de documentos'
+                'Recording, editing and mixing audio' = 'Gravação, edição e mixagem de áudio'
+                'Presentations and slide shows'       = 'Apresentações e slides'
+                'Computer-aided design and drafting'  = 'Desenho e projeto assistido por computador (CAD)'
+                'Spreadsheets and data'               = 'Planilhas e dados'
+            }
 
             function Get-Slugs {
                 $html = (Invoke-WebRequest "$base/apps" -UseBasicParsing).Content
@@ -44134,6 +44161,37 @@ class ArtCraft {
                 $a = [regex]::Match($assets, 'href="([^"]*windows-x64-portable\\.zip)"')
                 if (-not $a.Success) { return $null }
                 [pscustomobject]@{ Versao = $tag; Url = 'https://github.com' + $a.Groups[1].Value }
+            }
+
+            # o produto que o app reimplementa, quando o README atual nao diz: procura a frase "reimplementation of" nas
+            # versoes antigas do README (do commit mais novo para o mais velho), senao usa $conhecidos. O que achar fica
+            # guardado em C:\\tmp\\artcraft\\implementa.txt e nao e buscado de novo.
+            function Get-Implementa($slug, $repo, $branch) {
+                $arq = Join-Path $cache 'implementa.txt'
+                if (Test-Path -LiteralPath $arq) {
+                    foreach ($l in Get-Content -LiteralPath $arq) {
+                        $p = $l -split '=', 2
+                        if ($p.Count -eq 2 -and $p[0] -eq $slug) { return $p[1] }
+                    }
+                }
+                $achado = $null
+                try {
+                    $hist = (Invoke-WebRequest "https://github.com/storytold/$repo/commits/$branch/README.md" -UseBasicParsing).Content
+                    $shas = [regex]::Matches($hist, "/storytold/$([regex]::Escape($repo))/commit/([0-9a-f]{40})") |
+                        ForEach-Object { $_.Groups[1].Value } | Select-Object -Unique | Select-Object -First 40
+                    foreach ($s in $shas) {
+                        try {
+                            $antigo = (Invoke-WebRequest "https://raw.githubusercontent.com/storytold/$repo/$s/README.md" -UseBasicParsing).Content
+                            $m = [regex]::Match($antigo, 'reimplementation of ([^,<]+)')
+                            if ($m.Success) { $achado = $m.Groups[1].Value.Trim(); break }
+                        } catch {}
+                    }
+                } catch {}
+                if (-not $achado -and $conhecidos.ContainsKey($slug)) { $achado = $conhecidos[$slug] }
+                if (-not $achado) { return '?' }
+                New-Item -ItemType Directory -Force -Path $cache | Out-Null
+                Add-Content -LiteralPath $arq -Value "$slug=$achado"
+                return $achado
             }
 
             if ($argv.Count -gt 0) {
@@ -44205,21 +44263,28 @@ class ArtCraft {
                 $app = Get-App $slug
                 if ($app.Repo) {
                     $readme = $null
+                    $branchOk = 'main'
                     foreach ($branch in 'main', 'master') {
                         try {
                             $readme = (Invoke-WebRequest "https://raw.githubusercontent.com/storytold/$($app.Repo)/$branch/README.md" -UseBasicParsing).Content
+                            $branchOk = $branch
                             break
                         } catch {}
                     }
                     if ($readme) {
                         $n = [regex]::Match($readme, '<h1[^>]*>([^<]+)</h1>')
                         if ($n.Success) { $nome = $n.Groups[1].Value.Trim() }
-                        $m = [regex]::Match($readme, '<b>([^;<]+);[^<]*?reimplementation of ([^,<]+)')
-                        if ($m.Success) {
-                            $categoria = $m.Groups[1].Value.Trim()
-                            $implementa = $m.Groups[2].Value.Trim()
+                        # categoria: o comeco da frase em negrito, ate o ';' ou ':'
+                        # (ex.: <b>Image editing; ...</b> ou <b>Interface design and prototyping: ...</b>)
+                        $c = [regex]::Match($readme, '<b>([^;:<]+)[;:]')
+                        if ($c.Success) {
+                            $categoria = $c.Groups[1].Value.Trim()
+                            if ($categoriaPt.ContainsKey($categoria)) { $categoria = $categoriaPt[$categoria] }
                         }
+                        $m = [regex]::Match($readme, 'reimplementation of ([^,<]+)')
+                        if ($m.Success) { $implementa = $m.Groups[1].Value.Trim() }
                     }
+                    if ($implementa -eq '?') { $implementa = Get-Implementa $slug $app.Repo $branchOk }
                     try {
                         $rel = Get-Release $app.Repo
                         if ($rel) { $versao = $rel.Versao; $portable = $rel.Url }
@@ -44229,7 +44294,22 @@ class ArtCraft {
                 [pscustomobject]@{ Comando = "y artcraft $($slug -replace 'craft$', '')"; Nome = $nome; Categoria = $categoria; Implementa = $implementa; Versao = $versao; Portable = $portable }
             }
 
-            $resultado | Format-Table -AutoSize | Out-String -Width 4096 | Write-Output
+            # tabela: Comando, Categoria, Implementa e Download (largura de cada coluna = o maior valor, 2 espacos entre elas)
+            $colunas = 'Comando', 'Categoria', 'Implementa', 'Download'
+            $linhas = foreach ($r in $resultado) {
+                , @($r.Comando, $r.Categoria, $r.Implementa, $(if ($r.Portable -ne '?') { $r.Portable } else { '(sem portable para Windows)' }))
+            }
+            $largura = foreach ($k in 0..($colunas.Count - 1)) {
+                (@($colunas[$k].Length) + @($linhas | ForEach-Object { "$($_[$k])".Length }) | Measure-Object -Maximum).Maximum
+            }
+            function Format-Linha($valores) {
+                ((0..($colunas.Count - 1) | ForEach-Object { "$($valores[$_])".PadRight($largura[$_]) }) -join '  ').TrimEnd()
+            }
+            Write-Output ''
+            Write-Output (Format-Linha $colunas)
+            Write-Output (Format-Linha ($colunas | ForEach-Object { '-' * $_.Length }))
+            foreach ($l in $linhas) { Write-Output (Format-Linha $l) }
+            Write-Output ''
             Write-Output "Total: $(@($resultado).Count) aplicativos"
             Write-Output "Para abrir um app: y artcraft <nome>   (ex.: y artcraft pdf)"
             """;
@@ -44242,6 +44322,7 @@ class ArtCraft {
         System.exit(new ProcessBuilder("powershell", "-NoProfile", "-NonInteractive", "-OutputFormat", "Text", "-EncodedCommand", codigo).inheritIO().start().waitFor());
     }
 }
+//</editor-fold>
 
 //<editor-fold desc="exemplo_fold">
 class exemplo_fold {    
@@ -55053,21 +55134,21 @@ Exemplos...
     y artcraft
     y artcraft pdf
     publicacao atual:
-    Nome        Categoria                           Implementa           Versao  Portable                                                    
-    ----        ---------                           ----------           ------  --------                                                    
-    PhotoCraft  Image editing                       Adobe Photoshop      v0.9.0  https://github.com/storytold/photocraft/releases/download/v0.9.0/photocraft-0.9.0-windows-x64-portable.zip
-    VectorCraft Vector illustration                 Adobe Illustrator    v0.11.0 https://github.com/storytold/vectorcraft/releases/download/v0.11.0/vectorcraft-0.11.0-windows-x64-portable.zip
-    FilmCraft   Video editing, color and sound      Adobe Premiere Pro   v0.8.0  https://github.com/storytold/filmcraft/releases/download/v0.8.0/filmcraft-0.8.0-windows-x64-portable.zip
-    LightCraft  Photo library and raw development   Adobe Lightroom      v0.8.0  https://github.com/storytold/lightcraft/releases/download/v0.8.0/lightcraft-0.8.0-windows-x64-portable.zip
-    PdfCraft    The PDF workbench                   Adobe Acrobat        v0.8.0  https://github.com/storytold/pdfcraft/releases/download/v0.8.0/pdfcraft-0.8.0-windows-x64-portable.zip
-    EffectCraft Motion graphics and visual effects  Adobe After Effects  v0.10.0 https://github.com/storytold/effectcraft/releases/download/v0.10.0/effectcraft-0.10.0-windows-x64-portable.zip
-    DesignCraft Page layout and publishing          Adobe InDesign       v0.8.0  https://github.com/storytold/designcraft/releases/download/v0.8.0/designcraft-0.8.0-windows-x64-portable.zip
-    FigCraft    Interface design                    Figma                v0.6.0  https://github.com/storytold/figcraft/releases/download/v0.6.0/figcraft-0.6.0-windows-x64-portable.zip
-    WordCraft   Writing and document design         Microsoft Word       v0.7.0  https://github.com/storytold/wordcraft/releases/download/v0.7.0/wordcraft-0.7.0-windows-x64-portable.zip
-    SoundCraft  Recording, editing and mixing audio Avid Pro Tools       v0.7.0  https://github.com/storytold/soundcraft/releases/download/v0.7.0/soundcraft-0.7.0-windows-x64-portable.zip
-    DeckCraft   Presentations and slide shows       Microsoft PowerPoint v0.7.0  https://github.com/storytold/deckcraft/releases/download/v0.7.0/deckcraft-0.7.0-windows-x64-portable.zip
-    CADCraft    Computer-aided design and drafting  Autodesk AutoCAD     v0.7.0  https://github.com/storytold/cadcraft/releases/download/v0.7.0/cadcraft-0.7.0-windows-x64-portable.zip
-    GridCraft   Spreadsheets and data               Microsoft Excel      v0.7.0  https://github.com/storytold/gridcraft/releases/download/v0.7.0/gridcraft-0.7.0-windows-x64-portable.zip
+    Comando            Categoria                                         Implementa            Download
+    -------            ---------                                         ----------            --------
+    y artcraft photo   Edição de imagens                                 Adobe Photoshop       https://github.com/storytold/photocraft/releases/download/v0.15.1/photocraft-0.15.1-windows-x64-portable.zip
+    y artcraft vector  Ilustração vetorial                               Adobe Illustrator     https://github.com/storytold/vectorcraft/releases/download/v0.16.0/vectorcraft-0.16.0-windows-x64-portable.zip
+    y artcraft film    Edição de vídeo, cor e som                        Adobe Premiere Pro    https://github.com/storytold/filmcraft/releases/download/v0.12.0/filmcraft-0.12.0-windows-x64-portable.zip
+    y artcraft light   Biblioteca de fotos e revelação RAW               Adobe Lightroom       https://github.com/storytold/lightcraft/releases/download/v0.13.0/lightcraft-0.13.0-windows-x64-portable.zip
+    y artcraft pdf     Bancada de PDF                                    Adobe Acrobat         https://github.com/storytold/pdfcraft/releases/download/v0.13.0/pdfcraft-0.13.0-windows-x64-portable.zip
+    y artcraft effect  Motion graphics e efeitos visuais                 Adobe After Effects   https://github.com/storytold/effectcraft/releases/download/v0.16.0/effectcraft-0.16.0-windows-x64-portable.zip
+    y artcraft design  Diagramação e publicação                          Adobe InDesign        https://github.com/storytold/designcraft/releases/download/v0.12.0/designcraft-0.12.0-windows-x64-portable.zip
+    y artcraft fig     Design de interfaces e prototipagem               Figma                 https://github.com/storytold/figcraft/releases/download/v0.10.0/figcraft-0.10.0-windows-x64-portable.zip
+    y artcraft word    Escrita e design de documentos                    Microsoft Word        https://github.com/storytold/wordcraft/releases/download/v0.10.0/wordcraft-0.10.0-windows-x64-portable.zip
+    y artcraft sound   Gravação, edição e mixagem de áudio               Avid Pro Tools        https://github.com/storytold/soundcraft/releases/download/v0.12.1/soundcraft-0.12.1-windows-x64-portable.zip
+    y artcraft deck    Apresentações e slides                            Microsoft PowerPoint  https://github.com/storytold/deckcraft/releases/download/v0.10.0/deckcraft-0.10.0-windows-x64-portable.zip
+    y artcraft cad     Desenho e projeto assistido por computador (CAD)  Autodesk AutoCAD      https://github.com/storytold/cadcraft/releases/download/v0.12.0/cadcraft-0.12.0-windows-x64-portable.zip
+    y artcraft grid    Planilhas e dados                                 Microsoft Excel       https://github.com/storytold/gridcraft/releases/download/v0.11.1/gridcraft-0.11.1-windows-x64-portable.zip
     Total: 13 aplicativos
 [y posicao]
     Exemplos:
