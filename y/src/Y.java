@@ -44383,6 +44383,8 @@ class Particao {
                         y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
                         y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
                         y particao -modoSandboxRead
+                        y particao -modoSandboxRead -name sb1
+                        y particao -modoSandboxWrite -fromIsoManual C:\\iso\\ubuntu.iso -tamanhoGigas 40 -usuario base -senha base # instalacao na mao
                         y par sb|sbr|sbw # respectivamente -modoSandboxRead -modoSandboxRead -modoSandboxWrite
                         y particao -modoSandboxWrite -showQemu
                         obs: sistemas de arquivos: -refs e -ntfs
@@ -47076,7 +47078,10 @@ class Particao {
         var todos = registrosRefs(p7);
         todos.addAll(novosC);
         int h7 = noRefs(p7);
-        boolean cabe = todos.size() * 180 <= 16384 - h7 - 40;
+        // cabe num no so? os registros da ESPEC tem chave e valor sobrepostos (176 bytes + 4 de offset), mas os novos
+        // do acrescentarRefs tem a chave separada: 16 + 16 + 160 + 4 = 196 bytes cada. Com 180 por registro o teste
+        // aceitava 82-87 containers (~5,2-5,6 GB) e o acrescentarRefs estourava "no cheio" no meio do format (24/10/2026)
+        boolean cabe = le32(p7, h7 + 4) + novosC.size() * (16 + 16 + 160 + 4) <= le32(p7, h7 + 16);
         int folhas = cabe ? 0 : Math.ceilDiv(todos.size(), REFS_POR_FOLHA);
         if (folhas > (16384 - h7 - 40) / 84) throw new Exception("ReFS: containers demais (" + todos.size() + "); o maximo e perto de 1 TB.");
         for (int t : new int[]{7, 8}) {
@@ -48623,6 +48628,12 @@ class Particao {
                 confereRefs(d, 2, 1200, 1152);
                 return null;
             });
+            teste("format_refs #TAIL de 5398 MB (84 containers): nao cabe num no so, vai para 2 niveis", () -> {
+                String d = disco("f04b.vhdx", 5500, 512, 32, p(1, 1, 100, NTFS, 100));
+                roda("format_refs", d + "#TAIL");
+                confereRefs(d, 2, 5398, 5376);
+                return null;
+            });
             teste("format_ntfs #1 existente e 2000; #TAIL criando; setor 4096; 20 MB: NTFS conferido", () -> {
                 String d = disco("n01.vhdx", 2100, 512, 32, p(1, 1, 1100, REFS, 1100));
                 roda("format_ntfs", d + "#1");
@@ -49366,21 +49377,35 @@ class Particao {
                 #   login: o da geracao (base / base); sem -usuario/-senha = base sem senha
                 y particao -modoSandboxRead -fromPc -ntfs -usuario base -senha base
 
+                # sandbox ja criado, pelo nome (com ou sem .vhdx; pode ser caminho): -name
+                y particao -modoSandboxRead -name sb1
+
                 # modoSandboxWrite: roda o sandbox, o que fizer fica gravado
                 #   login: o da geracao (base / base); sem -usuario/-senha = base sem senha
                 y particao -modoSandboxWrite -fromIso C:\\tmp\\win11.iso -refs -usuario base -senha base
+
+                # fromIsoManual: VHDX vazio + a ISO na janela do QEMU; voce instala na mao (Ubuntu, Debian, Fedora, Windows ou outra)
+                #   a ISO e reconhecida pelo conteudo (nao pelo nome); -ntfs/-refs e -wuguard nao se aplicam; sem -tamanhoGigas: 64 GB
+                #   -usuario/-senha (opcional): o usuario que voce vai criar no instalador, para o mstsc entrar sozinho
+                #   com um servidor RDP no sistema (xrdp no Linux, Area de Trabalho Remota no Windows Pro) o mstsc abre sozinho;
+                #   sem ele, o sandbox roda na janela do QEMU
+                y particao -modoSandboxWrite -fromIsoManual C:\\iso\\ubuntu-24.04.1-desktop-amd64.iso -tamanhoGigas 40 -usuario base -senha base
+                y particao -modoSandboxRead -name sandbox-isomanual-ubuntu-24.04.1
                 """;
 
         // ---------------------------------------------------------------- parse
         String modo = null, origem = null, tipo = null, janela = null, cpu = null;   // janela: -hideQemu (padrao) | -showQemu; cpu: -cpu <modelo>
         String vhdx = null, iso = null, fromVhdx = null;              // caminhos absolutos
         String usuario = "base", senha = "";                         // sem -usuario/-senha = base sem senha
+        String nomeSandbox = null;                                   // -name: sandbox ja criado, pelo nome
+        boolean credDada = false, wuguardDado = false;               // -usuario/-senha e -wuguard vieram na linha de comando?
         int tamanhoGigas = 0;                                        // 0 = omitido
         String erro = args.length == 0 ? "" : null;                  // "" = so o uso, sem linha de ERRO
         for (int i = 0; i < args.length && erro == null; i++) {
             String a = args[i], v = null;
             if (a.equals("-modoVhdx") || a.equals("-fromIso") || a.equals("-fromVhdx") || a.equals("-tamanhoGigas")
-                    || a.equals("-usuario") || a.equals("-senha") || a.equals("-cpu") || a.equals("-wuguard")) {
+                    || a.equals("-usuario") || a.equals("-senha") || a.equals("-cpu") || a.equals("-wuguard") || a.equals("-name")
+                    || a.equals("-fromIsoManual")) {
                 if (i + 1 >= args.length) { erro = "falta o valor de " + a; break; }
                 v = args[++i];
             }
@@ -49389,11 +49414,11 @@ class Particao {
                     if (modo != null) erro = "informe um modo so: " + modo + " e " + a;
                     else { modo = a; if (v != null && (vhdx = caminho(v)) == null) erro = "caminho invalido: " + v; }
                 }
-                case "-fromPc", "-fromIso", "-fromVhdx" -> {
+                case "-fromPc", "-fromIso", "-fromVhdx", "-fromIsoManual" -> {
                     if (origem != null) erro = "informe uma origem so: " + origem + " e " + a;
                     else {
                         origem = a;
-                        if (a.equals("-fromIso") && (iso = caminho(v)) == null) erro = "caminho invalido: " + v;
+                        if ((a.equals("-fromIso") || a.equals("-fromIsoManual")) && (iso = caminho(v)) == null) erro = "caminho invalido: " + v;
                         if (a.equals("-fromVhdx") && (fromVhdx = caminho(v)) == null) erro = "caminho invalido: " + v;
                     }
                 }
@@ -49408,7 +49433,7 @@ class Particao {
                 }
                 case "-wuguard" -> {
                     if (!v.matches("open|partial|blocked|none")) erro = "-wuguard precisa de open, partial, blocked ou none: " + v;
-                    else WUGUARD = v;
+                    else { WUGUARD = v; wuguardDado = true; }
                 }
                 case "-hideQemu", "-showQemu" -> {
                     if (janela != null) erro = "informe um so: " + janela + " e " + a;
@@ -49418,15 +49443,36 @@ class Particao {
                     if (!v.matches("\\d{1,5}") || Integer.parseInt(v) == 0) erro = "-tamanhoGigas precisa de um numero em GB: " + v;
                     else tamanhoGigas = Integer.parseInt(v);
                 }
-                case "-usuario" -> usuario = v;
-                case "-senha" -> senha = v;
+                case "-name" -> {
+                    if (nomeSandbox != null) erro = "informe um -name so";
+                    else nomeSandbox = v;
+                }
+                case "-usuario" -> { usuario = v; credDada = true; }
+                case "-senha" -> { senha = v; credDada = true; }
                 default -> erro = "argumento desconhecido: " + a;
             }
         }
         if (erro == null && modo == null) erro = "informe o modo: -modoVhdx <arquivo.vhdx>, -modoSandboxRead ou -modoSandboxWrite";
+        // -name: roda um sandbox ja criado, pelo nome (com ou sem .vhdx; pode ser caminho); sem ele, a pasta atual decide
+        java.io.File escolhido = null;
+        if (erro == null && nomeSandbox != null && vhdx != null) erro = "-name so vale nos modoSandbox* (no -modoVhdx o nome e o proprio arquivo)";
+        if (erro == null && nomeSandbox != null && origem != null) erro = "-name roda um sandbox ja criado: nao combina com " + origem;
+        if (erro == null && nomeSandbox != null) {
+            String c = caminho(nomeSandbox.toLowerCase().endsWith(".vhdx") ? nomeSandbox : nomeSandbox + ".vhdx");
+            if (c == null) erro = "-name invalido: " + nomeSandbox;
+            else if (!NOME_SANDBOX.matcher(new java.io.File(c).getName()).matches() && !NOME_MANUAL.matcher(new java.io.File(c).getName()).matches())
+                erro = "-name precisa ser sandbox-<pc|iso|vhdx>-<ntfs|refs>-<build> (ex: sb1): " + nomeSandbox;
+            else if (!new java.io.File(c).isFile()) erro = "sandbox nao encontrado: " + c;
+            else escolhido = new java.io.File(c);
+        }
+        // -fromIsoManual: instalacao na mao na janela do QEMU; o instalador escolhe o FS e o Particao nao mexe no sistema
+        boolean manual = "-fromIsoManual".equals(origem);
+        if (erro == null && manual && vhdx != null) erro = "-fromIsoManual so vale nos modoSandbox* (a instalacao na mao roda na janela do QEMU)";
+        if (erro == null && manual && tipo != null) erro = "-fromIsoManual: quem escolhe o sistema de arquivos e o instalador; tire o " + tipo;
+        if (erro == null && manual && wuguardDado) erro = "-wuguard nao se aplica ao -fromIsoManual (o Particao nao mexe no sistema instalado na mao)";
         // modoSandbox* sem -from*: roda um sandbox ja criado na pasta atual (e ai -ntfs/-refs nao se aplicam)
         if (erro == null && origem == null && vhdx != null) erro = "informe a origem: -fromPc, -fromIso <arquivo.iso> ou -fromVhdx <arquivo.vhdx>";
-        if (erro == null && origem != null && tipo == null) erro = "informe o tipo: -ntfs ou -refs";
+        if (erro == null && origem != null && !manual && tipo == null) erro = "informe o tipo: -ntfs ou -refs";
         if (erro == null && origem == null && tipo != null) erro = "sem -from* o sandbox e o ja criado: " + tipo + " nao se aplica";
         if (erro == null && janela != null && vhdx != null) erro = janela + " so vale nos modoSandbox* (o -modoVhdx nao liga o QEMU)";
         if (erro == null && cpu != null && vhdx != null) erro = "-cpu so vale nos modoSandbox* (o -modoVhdx nao liga o QEMU)";
@@ -49446,8 +49492,8 @@ class Particao {
         // variaveis de sistema: %QEMU% so nos modos que rodam o sandbox; %WIMLIB% em todos (aplicar o Windows)
         String qemu = pasta("QEMU"), wimlib = pasta("WIMLIB");
         if (erro == null && !modo.equals("-modoVhdx")) erro = exigir("QEMU", qemu, "qemu-system-x86_64.exe", "WinHvPlatform.dll");
-        if (erro == null) erro = exigir("WIMLIB", wimlib, "wimlib-imagex.exe");
-        if (erro == null && iso != null) try { zona(); } catch (Exception e) { erro = e.getMessage(); }   // %SANDBOXZONE% (opcional) bem formado
+        if (erro == null && !manual) erro = exigir("WIMLIB", wimlib, "wimlib-imagex.exe");     // fromIsoManual: so para ler a build de ISO Windows, se houver
+        if (erro == null && iso != null && !manual) try { zona(); } catch (Exception e) { erro = e.getMessage(); }   // %SANDBOXZONE% (opcional) bem formado
         if (erro != null) {
             System.out.print(USO);
             if (!erro.isEmpty()) System.out.println("\nERRO: " + erro);
@@ -49457,12 +49503,13 @@ class Particao {
         System.out.println("modo " + modo + (vhdx != null ? " " + vhdx : "") + " | origem " + origem
                 + (iso != null ? " " + iso : fromVhdx != null ? " " + fromVhdx : "") + " | tipo " + tipo
                 + " | tamanhoGigas " + (tamanhoGigas == 0 ? "omitido" : tamanhoGigas) + " | usuario " + usuario
-                + " | " + (senha.isEmpty() ? "sem senha" : "com senha") + " | wuguard " + WUGUARD);
+                + " | " + (senha.isEmpty() ? "sem senha" : "com senha") + " | wuguard " + WUGUARD
+                + (escolhido != null ? " | name " + escolhido.getName() : ""));
         System.out.println((modo.equals("-modoVhdx") ? "" : "QEMU " + qemu + " | ") + "WIMLIB " + wimlib);
         String exe = wimlib + "\\wimlib-imagex.exe";
         try {
             if (vhdx != null) gerarVhdx(vhdx, origem, iso, fromVhdx, null, tipo.equals("-refs"), tamanhoGigas, usuario, senha, exe);
-            else sandbox(modo, origem, iso, fromVhdx, "-refs".equals(tipo), tamanhoGigas, usuario, senha, exe);
+            else sandbox(modo, origem, iso, fromVhdx, "-refs".equals(tipo), tamanhoGigas, usuario, senha, exe, escolhido, credDada);
         } catch (Exception e) { System.out.println("\nERRO: " + e.getMessage()); System.exit(1); }
     }
 
@@ -49606,17 +49653,37 @@ class Particao {
 
     private final java.util.regex.Pattern NOME_SANDBOX = java.util.regex.Pattern.compile("(?i)sandbox-(pc|iso|vhdx)-(ntfs|refs)-([0-9.]+)\\.vhdx");
 
-    private void sandbox(String modo, String origem, String iso, String fromVhdx, boolean refs, int gigas, String usuario, String senha, String exe) throws Exception {
+    private void sandbox(String modo, String origem, String iso, String fromVhdx, boolean refs, int gigas, String usuario, String senha, String exe,
+                         java.io.File escolhido, boolean credDada) throws Exception {
+        boolean write = modo.equals("-modoSandboxWrite");
+        if (escolhido != null) {                                     // -name: direto, sem olhar a pasta nem mostrar menu
+            System.out.println("sandbox (-name): " + descrever(escolhido) + (write ? " (grava no vhdx)" : " (nada fica gravado)"));
+            if (ehManual(escolhido)) rodarManual(escolhido, write, null, usuario, senha, credDada);
+            else rodar(escolhido, write, false);
+            return;
+        }
         var pasta = new java.io.File("").getAbsoluteFile();
         var existentes = new java.util.ArrayList<java.io.File>();
-        for (var f : filhos(pasta.getPath())) if (f.isFile() && NOME_SANDBOX.matcher(f.getName()).matches()) existentes.add(f);
+        for (var f : filhos(pasta.getPath())) if (f.isFile() && (NOME_SANDBOX.matcher(f.getName()).matches() || ehManual(f))) existentes.add(f);
         existentes.sort(java.util.Comparator.comparing(java.io.File::getName, String.CASE_INSENSITIVE_ORDER));
         System.out.println("build desta maquina: " + buildDoPc());
         java.io.File alvo;
         if (origem == null) {
-            if (existentes.isEmpty()) throw new Exception("nenhum sandbox na pasta atual (" + pasta + "); informe -fromPc ou -fromIso para criar um");
+            if (existentes.isEmpty()) throw new Exception("nenhum sandbox na pasta atual (" + pasta + "); informe -fromPc, -fromIso ou -fromIsoManual para criar um");
             alvo = existentes.size() == 1 ? existentes.get(0) : escolher(existentes, null, null);
             if (existentes.size() == 1) System.out.println("sandbox ja criado: " + descrever(alvo));
+        } else if (origem.equals("-fromIsoManual")) {
+            String[] det = detectarIso(iso, exe);                    // {familia, nome, descricao}
+            System.out.println("ISO: " + det[2] + " (" + det[0] + ")");
+            String nomeNovo = "sandbox-isomanual-" + det[1] + ".vhdx";
+            var novo = new java.io.File(pasta, nomeNovo);
+            alvo = existentes.isEmpty() ? null : escolher(existentes, nomeNovo, "instalacao na mao: " + det[2]);
+            if (alvo == null) {
+                if (novo.exists()) throw new Exception(novo + " ja existe (nada existente e apagado); use -name " + nomeNovo.substring(0, nomeNovo.length() - 5) + " ou apague-o para instalar de novo");
+                criarManual(novo, det, gigas == 0 ? 64 : gigas);
+                rodarManual(novo, true, iso, usuario, senha, credDada);
+                return;
+            }
         } else {
             String org = origem.equals("-fromPc") ? "pc" : origem.equals("-fromIso") ? "iso" : "vhdx", raizIso = null, build;
             if (org.equals("pc")) build = buildDoPc();
@@ -49638,13 +49705,14 @@ class Particao {
                 }
             } finally { if (raizIso != null) desmontarIso(iso); }
         }
-        boolean write = modo.equals("-modoSandboxWrite");
         System.out.println("sandbox: " + alvo + (write ? " (grava no vhdx)" : " (nada fica gravado)"));
-        rodar(alvo, write, false);
+        if (ehManual(alvo)) rodarManual(alvo, write, null, usuario, senha, credDada);
+        else rodar(alvo, write, false);
     }
 
     /** nome + origem, tipo e build: a do nome e, se for outra, a que esta dentro (espiada no ntoskrnl.exe do sandbox) */
     private String descrever(java.io.File f) {
+        if (ehManual(f)) return descreverManual(f);
         var m = NOME_SANDBOX.matcher(f.getName());
         m.matches();
         String build;
@@ -50687,12 +50755,12 @@ exit 0
         var antes = java.util.Arrays.asList(java.io.File.listRoots());
         powershell("montar", "Mount-DiskImage -ImagePath '" + iso.replace("'", "''") + "' -StorageType ISO", iso);
         for (int t = 0; t < 40; t++) {
-            for (var r : java.io.File.listRoots())
-                if (!antes.contains(r) && new java.io.File(r, "sources").isDirectory()) return r.getPath();
+            for (var r : java.io.File.listRoots())                    // qualquer ISO (Windows, Linux...): a unidade nova
+                if (!antes.contains(r) && r.isDirectory()) return r.getPath();
             Thread.sleep(500);
         }
         desmontarIso(iso);
-        throw new Exception(iso + " montada, mas nenhuma unidade nova com a pasta sources apareceu em 20 s (desmontada de novo)");
+        throw new Exception(iso + " montada, mas nenhuma unidade nova apareceu em 20 s (desmontada de novo)");
     }
 
     private void desmontarIso(String iso) throws Exception {
@@ -50706,7 +50774,10 @@ exit 0
             var f = new java.io.File(raiz + "sources\\" + n);
             if (f.isFile()) return f.getPath();
         }
-        throw new Exception("a ISO nao tem sources\\install.wim nem install.esd (" + raiz + ")");
+        String dica = new java.io.File(raiz, ".disk").isDirectory() || new java.io.File(raiz, "casper").isDirectory() || new java.io.File(raiz, "LiveOS").isDirectory()
+                ? ": e uma ISO Linux; a instalacao automatica e so para Windows, use -fromIsoManual (instalacao na mao)"
+                : ": nao e uma ISO do Windows? para instalar na mao use -fromIsoManual";
+        throw new Exception("a ISO nao tem sources\\install.wim nem install.esd (" + raiz + ")" + dica);
     }
 
     /**
@@ -50973,6 +51044,307 @@ exit 0
             if (q.isAlive()) { monitor(porta + 1, "quit"); q.waitFor(5, java.util.concurrent.TimeUnit.SECONDS); }
             if (q.isAlive()) q.destroy();
         }
+    }
+
+    // -------------------------------------------------------- fromIsoManual
+    // Instalacao na mao (pedido de 24/10/2026): VHDX vazio + QEMU com a ISO no drive de CD e a janela a vista; quem
+    // instala e voce, e o Particao nao mexe no sistema instalado. A familia sai do CONTEUDO da ISO (montada so para
+    // olhar, nunca pelo nome do arquivo): Windows (sources\install.wim/esd), Ubuntu e derivadas (casper + .disk\info),
+    // Debian (.disk\info), Fedora (LiveOS ou .treeinfo); o resto e generico. Linux: virtio-vga, usb-tablet e o agente da
+    // area de transferencia (se o QEMU tiver). A porta 3389 e sempre encaminhada e testada: quando um servidor RDP
+    // responde (xrdp, Area de Trabalho Remota do Windows), o mstsc abre sozinho e o <nome>.manual guarda rdp=1; dai em
+    // diante o sandbox roda como os outros (QEMU escondido, fechar o mstsc encerra). Sem RDP: janela do QEMU, e o
+    // sandbox acaba quando o sistema desligar. Usuario e senha do mstsc no <nome>.manual (senha protegida pelo Windows,
+    // DPAPI, no formato "password 51" do .rdp: so o mesmo usuario do Windows consegue usar).
+
+    private final java.util.regex.Pattern NOME_MANUAL = java.util.regex.Pattern.compile("(?i)sandbox-isomanual-([a-z0-9._-]+)\\.vhdx");
+
+    private boolean ehManual(java.io.File f) { return NOME_MANUAL.matcher(f.getName()).matches(); }
+
+    private java.io.File arqMeta(java.io.File vhdx) { return new java.io.File(vhdx.getPath().substring(0, vhdx.getPath().length() - 5) + ".manual"); }
+
+    private java.util.Properties lerMeta(java.io.File vhdx) throws Exception {
+        var p = new java.util.Properties();
+        var f = arqMeta(vhdx);
+        if (f.isFile()) try (var in = new java.io.FileInputStream(f)) { p.load(in); }
+        return p;
+    }
+
+    private void salvarMeta(java.io.File vhdx, java.util.Properties p) throws Exception {
+        try (var out = new java.io.FileOutputStream(arqMeta(vhdx))) { p.store(out, "sandbox -fromIsoManual (senha51 = senha protegida pelo DPAPI do usuario do Windows)"); }
+    }
+
+    private String descreverManual(java.io.File f) {
+        try {
+            var p = lerMeta(f);
+            return f.getName() + " (instalado na mao: " + p.getProperty("descricao", "?") + ", "
+                    + ("1".equals(p.getProperty("rdp")) ? "pelo mstsc" : "na janela do QEMU") + ")";
+        } catch (Exception e) { return f.getName() + " (instalado na mao)"; }
+    }
+
+    /** {familia (windows|ubuntu|debian|fedora|generico), nome para o arquivo, descricao}, pelo conteudo da ISO */
+    private String[] detectarIso(String iso, String exe) throws Exception {
+        String raiz = montarIso(iso);
+        try {
+            var r = new java.io.File(raiz);
+            for (String n : new String[]{"install.wim", "install.esd"}) {
+                var w = new java.io.File(r, "sources\\" + n);
+                if (!w.isFile()) continue;
+                String build = null, img = null;
+                if (exe != null && new java.io.File(exe).isFile())        // %WIMLIB% e opcional aqui: so para a build
+                    try { String[] i = infoImagens(exe, w.getPath()).get(0); build = i[3]; img = i[1]; } catch (Exception semBuild) { }
+                return new String[]{"windows", build != null ? "windows-" + build : slugArquivo(iso),
+                        img != null ? img + " (build " + build + ")" : "Windows"};
+            }
+            var info = new java.io.File(r, ".disk\\info");
+            if (info.isFile()) {                                         // ex: Ubuntu 24.04.1 LTS "Noble Numbat" - Release amd64 (20240827)
+                String txt = java.nio.file.Files.readString(info.toPath(), java.nio.charset.StandardCharsets.ISO_8859_1).strip();
+                int c = txt.indexOf(" - ");
+                String desc = (c > 0 ? txt.substring(0, c) : txt).replace("\"", "").strip(), s = slugDistro(desc);
+                return new String[]{new java.io.File(r, "casper").isDirectory() ? "ubuntu" : "debian", s != null ? s : slugArquivo(iso), desc};
+            }
+            if (new java.io.File(r, "LiveOS").isDirectory() || new java.io.File(r, ".treeinfo").isFile())
+                return new String[]{"fedora", slugArquivo(iso), "Fedora/RHEL (" + new java.io.File(iso).getName() + ")"};
+            return new String[]{"generico", slugArquivo(iso), new java.io.File(iso).getName()};
+        } finally { desmontarIso(iso); }
+    }
+
+    /** "Ubuntu 24.04.1 LTS Noble Numbat" -> ubuntu-24.04.1; "Linux Mint 22 Wilma" -> linuxmint-22; null se nao der */
+    private String slugDistro(String desc) {
+        var nome = new StringBuilder();
+        String ver = null;
+        for (String w : desc.replaceAll("(?i)gnu/linux", " ").trim().split("\\s+")) {
+            String x = w.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9._]", "");
+            if (x.isEmpty() || x.equals("lts")) continue;
+            if (x.matches("\\d[0-9.]*")) { ver = x.replaceAll("\\.+$", ""); break; }
+            nome.append(x.replace(".", ""));
+        }
+        return nome.length() == 0 ? null : nome + (ver != null ? "-" + ver : "");
+    }
+
+    /** nome do arquivo da ISO, so com a-z 0-9 . _ - (quando o conteudo nao diz nada melhor) */
+    private String slugArquivo(String iso) {
+        String n = new java.io.File(iso).getName().replaceAll("(?i)\\.iso$", "").toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9._-]+", "-").replaceAll("^-+|-+$", "");
+        if (n.length() > 60) n = n.substring(0, 60);
+        return n.isEmpty() ? "iso" : n;
+    }
+
+    /** VHDX vazio (sem tabela: o instalador particiona) e o <nome>.manual com a familia */
+    private void criarManual(java.io.File novo, String[] det, int gigas) throws Exception {
+        var app = new Particao();
+        app.dirTeste = novo.getAbsoluteFile().getParentFile();
+        app.novoVhdx(novo.getName(), gigas * 1024L, 512, 32L);
+        var p = new java.util.Properties();
+        p.setProperty("familia", det[0]);
+        p.setProperty("descricao", det[2]);
+        p.setProperty("rdp", "0");
+        salvarMeta(novo, p);
+        System.out.println("VHDX vazio criado: " + novo + " (" + gigas + " GB) para instalar " + det[2] + " na mao");
+    }
+
+    /** senha protegida pelo DPAPI do usuario do Windows, em hex: o formato do "password 51:b:" do .rdp (via PowerShell, pelo stdin) */
+    private String dpapi(String senha) throws Exception {
+        String b64 = java.util.Base64.getEncoder().encodeToString(senha.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var p = new ProcessBuilder("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "-").redirectErrorStream(true).start();
+        try (var w = new java.io.OutputStreamWriter(p.getOutputStream(), java.nio.charset.StandardCharsets.US_ASCII)) {
+            w.write("$t = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + b64 + "'))\n"
+                    + "ConvertTo-SecureString $t -AsPlainText -Force | ConvertFrom-SecureString\n\n");
+        }
+        String s = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.US_ASCII).strip();
+        s = s.lines().map(String::strip).filter(x -> !x.isEmpty()).reduce((a, b) -> b).orElse("");
+        if (p.waitFor() != 0 || !s.matches("[0-9a-fA-F]{32,}")) throw new Exception("nao consegui proteger a senha com DPAPI (PowerShell): " + s);
+        return s;
+    }
+
+    /** RDP respondeu e nao ha usuario guardado: pergunta no terminal (Enter = o mstsc pergunta) */
+    private void perguntarCred(java.io.File vhdx, java.util.Properties meta) {
+        var con = System.console();
+        if (con == null) { System.out.println("(sem console para perguntar: o mstsc vai pedir usuario e senha)"); return; }
+        String u = con.readLine("usuario para o mstsc (Enter = perguntar no proprio mstsc): ");
+        if (u == null || u.isBlank()) return;
+        char[] s = con.readPassword("senha de %s: ", u.strip());
+        try {
+            meta.setProperty("usuario", u.strip());
+            if (s != null && s.length > 0) meta.setProperty("senha51", dpapi(new String(s)));
+            salvarMeta(vhdx, meta);
+            System.out.println("guardado em " + arqMeta(vhdx).getName() + " (senha protegida pelo Windows/DPAPI)");
+        } catch (Exception e) { System.out.println("nao consegui guardar: " + e.getMessage()); }
+    }
+
+    /** .rdp temporario com o usuario e a senha (DPAPI) guardados, se houver */
+    private java.io.File arquivoRdp(int porta, java.util.Properties meta) throws Exception {
+        var l = new java.util.ArrayList<>(java.util.List.of("full address:s:127.0.0.1:" + porta, "prompt for credentials:i:0", "authentication level:i:0",
+                "redirectclipboard:i:1", "screen mode id:i:1", "smart sizing:i:1", "desktopwidth:i:1280", "desktopheight:i:800"));
+        if (meta.getProperty("usuario") != null) l.add("username:s:" + meta.getProperty("usuario"));
+        if (meta.getProperty("senha51") != null) l.add("password 51:b:" + meta.getProperty("senha51"));
+        var rdp = java.io.File.createTempFile("sandbox-", ".rdp");
+        rdp.deleteOnExit();
+        java.nio.file.Files.write(rdp.toPath(), (String.join("\r\n", l) + "\r\n").getBytes(java.nio.charset.StandardCharsets.UTF_16LE));
+        return rdp;
+    }
+
+    /** o QEMU tem o chardev qemu-vdagent (area de transferencia com o convidado Linux)? */
+    private boolean temVdagent(String qemu) {
+        try {
+            var p = new ProcessBuilder(qemu + "\\qemu-system-x86_64.exe", "-chardev", "help").redirectErrorStream(true).start();
+            String s = new String(p.getInputStream().readAllBytes(), java.nio.charset.StandardCharsets.ISO_8859_1);
+            p.waitFor();
+            return s.contains("qemu-vdagent");
+        } catch (Exception e) { return false; }
+    }
+
+    /** como ter o mstsc em cada familia */
+    private String dicaRdp(String familia) {
+        return switch (familia) {
+            case "ubuntu", "debian" -> "sudo apt install -y xrdp";
+            case "fedora" -> "sudo dnf install -y xrdp && sudo systemctl enable --now xrdp && sudo firewall-cmd --permanent --add-port=3389/tcp && sudo firewall-cmd --reload";
+            case "windows" -> "Configuracoes > Sistema > Area de Trabalho Remota > ativar (so na edicao Pro)";
+            default -> "instale um servidor RDP no sistema (ex: xrdp)";
+        };
+    }
+
+    /**
+     * Roda um sandbox -fromIsoManual. iso != null = instalacao (grava, com a ISO no drive de CD, sempre na janela).
+     * Sem RDP conhecido: janela do QEMU e o fim e quando o sistema desligar (ou a janela fechar). Com RDP (rdp=1):
+     * como os outros sandboxes (QEMU escondido, salvo -showQemu; fechar o mstsc encerra).
+     */
+    private void rodarManual(java.io.File vhdx, boolean write, String iso, String usuario, String senha, boolean credDada) throws Exception {
+        String qemu = pasta("QEMU");
+        String erro = exigir("QEMU", qemu, "qemu-system-x86_64.exe", "qemu-img.exe", "WinHvPlatform.dll", "share\\edk2-x86_64-code.fd", "share\\edk2-i386-vars.fd");
+        if (erro != null) throw new Exception(erro);
+        try { new java.io.RandomAccessFile(vhdx, "rw").close(); } catch (java.io.IOException e) { throw new Exception(vhdx + " esta anexado ou aberto por outro programa; nao vou ligar a VM"); }
+        var meta = lerMeta(vhdx);
+        String familia = meta.getProperty("familia", "generico");
+        boolean windows = familia.equals("windows"), instalar = iso != null, grava = write || instalar;
+        boolean viaRdp = !instalar && "1".equals(meta.getProperty("rdp"));
+        if (credDada) {                                                  // -usuario/-senha: guarda (ou troca) o login do mstsc
+            meta.setProperty("usuario", usuario);
+            if (senha.isEmpty()) meta.remove("senha51"); else meta.setProperty("senha51", dpapi(senha));
+            salvarMeta(vhdx, meta);
+            if (senha.isEmpty() && !windows) System.out.println("AVISO: o xrdp nao aceita senha vazia; crie o usuario com senha (e passe -senha)");
+        }
+        String nome = vhdx.getPath().substring(0, vhdx.getPath().length() - 5);
+        String disco = overlay(vhdx, qemu).getPath() + ",format=qcow2";   // o QEMU nunca escreve no VHDX
+        var vars = new java.io.File(nome + "_vars.fd");
+        if (!vars.isFile()) java.nio.file.Files.copy(java.nio.file.Path.of(qemu, "share", "edk2-i386-vars.fd"), vars.toPath());
+        int porta = 3392;                                                // RDP; +1 monitor; +2 SSH (Linux)
+        while (!portaLivre(porta) || !portaLivre(porta + 1) || !portaLivre(porta + 2)) porta += 3;
+        String display = viaRdp ? DISPLAY : "gtk";
+        boolean extras = !windows && temVdagent(qemu);
+
+        System.out.println();
+        if (instalar) {
+            System.out.println("instalacao na mao na janela do QEMU: " + meta.getProperty("descricao", iso));
+            if (credDada) System.out.println("  crie no instalador o usuario " + usuario + (senha.isEmpty() ? " (sem senha)" : " com a senha passada em -senha") + ": e o login do mstsc");
+            if (windows) {
+                System.out.println("  - logo que a janela abrir, aperte uma tecla nela quando aparecer \"Press any key to boot from CD or DVD\" (sao poucos segundos)");
+                System.out.println("  - \"este PC nao atende aos requisitos\" (TPM/Secure Boot): Shift+F10, regedit, crie a chave HKLM\\SYSTEM\\Setup\\LabConfig");
+                System.out.println("    com os DWORD BypassTPMCheck=1 e BypassSecureBootCheck=1, feche o regedit e volte um passo no instalador");
+                System.out.println("  - nesta instalacao a VM fica sem internet (conta local fica mais facil); se o OOBE insistir em conta Microsoft:");
+                System.out.println("    Shift+F10 e \"start ms-cxh:localonly\" (builds recentes) ou \"OOBE\\BYPASSNRO\" (antigas). Na proxima execucao a rede volta");
+            }
+            System.out.println("  - ao terminar, desligue pelo proprio sistema: fechar a janela do QEMU e como tirar da tomada");
+        }
+        if (viaRdp) System.out.println("RDP 127.0.0.1:" + porta + ": esperando o servidor RDP do sistema responder para abrir o mstsc...");
+        else {
+            System.out.println("opcional: para usar o mstsc, no sistema instalado: " + dicaRdp(familia));
+            System.out.println("  assim que o RDP responder, o mstsc abre sozinho (e das proximas vezes o sandbox ja roda por ele)");
+            if (!windows) System.out.println("  terminal: instale o openssh-server e use  ssh -p " + (porta + 2) + " <usuario>@127.0.0.1");
+        }
+
+        Process q = null;
+        for (int tentativa = 0; tentativa < 2 && q == null; tentativa++) {
+            var args = new java.util.ArrayList<>(java.util.List.of(qemu + "\\qemu-system-x86_64.exe",
+                    "-accel", "whpx", "-machine", "q35", "-cpu", CPU, "-m", "4096", "-smp", "4",
+                    "-drive", "file=" + disco + ",if=ide" + (grava ? "" : ",snapshot=on"),
+                    "-drive", "if=pflash,format=raw,readonly=on,file=" + qemu + "\\share\\edk2-x86_64-code.fd",
+                    "-drive", "if=pflash,format=raw,file=" + vars.getPath() + (grava ? "" : ",snapshot=on"),
+                    "-vga", windows ? "std" : "virtio", "-display", display, "-device", "qemu-xhci", "-device", "usb-tablet",
+                    "-nic", "user,model=e1000e," + (instalar && windows ? "restrict=on," : "") + "hostfwd=tcp:127.0.0.1:" + porta + "-:3389"
+                            + (windows ? "" : ",hostfwd=tcp:127.0.0.1:" + (porta + 2) + "-:22"),
+                    "-monitor", "tcp:127.0.0.1:" + (porta + 1) + ",server=on,wait=off", "-name", vhdx.getName(), "-action", "shutdown=poweroff"));
+            if (instalar) { args.add("-drive"); args.add("file=" + iso.replace(",", ",,") + ",media=cdrom,readonly=on,if=ide,index=2"); }
+            if (extras) args.addAll(java.util.List.of("-chardev", "qemu-vdagent,id=vda,name=vdagent,clipboard=on", "-device", "virtio-serial-pci",
+                    "-device", "virtserialport,chardev=vda,name=com.redhat.spice.0"));
+            var p = new ProcessBuilder(args).directory(new java.io.File(qemu)).inheritIO().start();
+            if (extras && p.waitFor(3, java.util.concurrent.TimeUnit.SECONDS) && p.exitValue() != 0) {
+                System.out.println("o QEMU nao aceitou o agente da area de transferencia; ligando sem ele (pelo mstsc o copiar/colar funciona)");
+                extras = false;
+                continue;
+            }
+            q = p;
+        }
+        final Process qf = q;
+        var gancho = new Thread(() -> { if (qf.isAlive()) qf.destroy(); });   // Ctrl+C no terminal: nao deixa o QEMU orfao
+        Runtime.getRuntime().addShutdownHook(gancho);
+        try {
+            boolean rdpVisto = false, avisou = false;
+            long t0 = System.currentTimeMillis();
+            while (q.isAlive()) {
+                if (!rdpVisto && rdpResponde(porta)) {
+                    rdpVisto = true;
+                    if (!"1".equals(meta.getProperty("rdp"))) {
+                        meta.setProperty("rdp", "1");
+                        salvarMeta(vhdx, meta);
+                        System.out.println("\nservidor RDP detectado: das proximas vezes este sandbox roda pelo mstsc (QEMU escondido; -showQemu mostra)");
+                        if (!windows) System.out.println("se voce esta logado com o mesmo usuario na janela do QEMU, faca logout nela antes de entrar pelo mstsc"
+                                + " (o GNOME nao abre duas sessoes do mesmo usuario: da tela preta)");
+                    }
+                    if (meta.getProperty("usuario") == null) perguntarCred(vhdx, meta);
+                    Thread.sleep(8000);                                  // a sondagem ocupa a conexao por instantes (ver rodar)
+                    var rdp = arquivoRdp(porta, meta);
+                    if (viaRdp) {
+                        System.out.println("abrindo o mstsc. Fechar o mstsc encerra o sandbox.");
+                        for (int tentativa = 1; ; tentativa++) {
+                            long t1 = System.currentTimeMillis();
+                            var m = new ProcessBuilder("mstsc", rdp.getPath()).start();
+                            while (m.isAlive() && q.isAlive()) Thread.sleep(2000);
+                            if (!q.isAlive() || System.currentTimeMillis() - t1 > 30_000 || tentativa >= 3) break;
+                            System.out.println("mstsc fechou em menos de 30 s (conexao recusada?): tentando de novo em 10 s (" + tentativa + "/3)");
+                            Thread.sleep(10_000);
+                        }
+                        rdp.delete();
+                        if (q.isAlive()) {
+                            if (grava) { System.out.println("mstsc fechado: desligando o convidado para gravar limpo"); desligar(q, porta + 1, 5); }
+                            else monitor(porta + 1, "quit");
+                        }
+                        break;
+                    }
+                    System.out.println("abrindo o mstsc (a janela do QEMU continua; o sandbox acaba quando o sistema desligar)");
+                    new ProcessBuilder("mstsc", rdp.getPath()).start();
+                }
+                if (viaRdp && !rdpVisto && !avisou && System.currentTimeMillis() - t0 > 180_000) {
+                    avisou = true;
+                    System.out.println("o RDP ainda nao respondeu (3 min). Se o sistema nao subiu, Ctrl+C e rode de novo com -showQemu para ver a tela");
+                }
+                Thread.sleep(5000);
+            }
+            q.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+            if (!q.isAlive() && q.exitValue() != 0 && System.currentTimeMillis() - t0 < 15_000)
+                System.out.println("o QEMU saiu com erro logo ao ligar (codigo " + q.exitValue() + "; veja a mensagem dele acima)");
+            if (grava) consolidar(vhdx, qemu);
+            if (instalar && discoVazio(vhdx)) {
+                for (var f : new java.io.File[]{vhdx, new java.io.File(nome + ".qcow2"), vars, arqMeta(vhdx)}) f.delete();
+                System.out.println("o disco continuou vazio (nada foi instalado): " + vhdx.getName() + " e os arquivos dele foram apagados");
+                return;
+            }
+            if (instalar) System.out.println("instalado: " + vhdx + "\npara usar: y particao -modoSandboxRead -name " + vhdx.getName().substring(0, vhdx.getName().length() - 5)
+                    + "   (-modoSandboxWrite para gravar)");
+            else System.out.println(grava ? "sandbox encerrado (alteracoes gravadas em " + vhdx + ")" : "sandbox encerrado (nada ficou gravado)");
+        } finally {
+            if (q.isAlive()) { monitor(porta + 1, "quit"); q.waitFor(5, java.util.concurrent.TimeUnit.SECONDS); }
+            if (q.isAlive()) q.destroy();
+            try { Runtime.getRuntime().removeShutdownHook(gancho); } catch (IllegalStateException jaSaindo) { }
+        }
+    }
+
+    /** VHDX sem tabela de particoes (a instalacao na mao nao aconteceu) */
+    private boolean discoVazio(java.io.File vhdx) {
+        try {
+            var d = new Particao().dispositivo(vhdx.getPath(), false);
+            try { return !d.temGpt && d.particoes().isEmpty(); } finally { d.fechar(); }
+        } catch (Exception e) { return false; }
     }
 
     // Estado do sandbox (decisao de 10/10/2026, depois do teste em que o QEMU gravando direto no VHDX travou e
@@ -54708,7 +55080,7 @@ Exemplos...
     exemplos:
         # list discos
             y particao list
-            y particao list showFreeUsage        
+            y particao list showFreeUsage
             y particao list c:
         # cria particao ou formata
             y particao format_refs a.vhdx#3
@@ -54745,18 +55117,20 @@ Exemplos...
         # teste automatico
             y particao -test
         # altera tamanho particao
-            y particao maximum a.vhdx#1 3000    
+            y particao maximum a.vhdx#1 3000
             y particao maximum a.vhdx#1 max
             # detalhe: refs nao aceita diminuicao de particao,
             #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
-            #                                                wimlib-imagex capture D:\\ C:\\temp.wim --compress=none
+            #                                                wimlib-imagex capture D:\\ C:   emp.wim --compress=none
             #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
             #                                                opcao com compressao extra: --solid --compress=LZMS:100 --solid-chunk-size=256M
-        # sandbox        
+        # sandbox
             y particao -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
             y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
             y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
             y particao -modoSandboxRead
+            y particao -modoSandboxRead -name sb1
+            y particao -modoSandboxWrite -fromIsoManual C:\\iso\\ubuntu.iso -tamanhoGigas 40 -usuario base -senha base # instalacao na mao
             y par sb|sbr|sbw # respectivamente -modoSandboxRead -modoSandboxRead -modoSandboxWrite
             y particao -modoSandboxWrite -showQemu
             obs: sistemas de arquivos: -refs e -ntfs
