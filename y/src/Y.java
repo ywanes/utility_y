@@ -49463,6 +49463,7 @@ class Particao {
                 y particao -modoSandboxRead -fromPc -ntfs -usuario base -senha base
 
                 # sandbox ja criado, por qualquer nome (com ou sem .vhdx; pode ser caminho): -name ou --name
+                #   com -from*, o -name e o nome do sandbox novo: y particao sbw -name linux2704 -fromIsoManual C:\\iso\\ubuntu.iso
                 #   renomeie juntos o .vhdx, o .qcow2, o _vars.fd e (instalado na mao) o .manual: sb1.vhdx, sb1.qcow2, sb1_vars.fd, sb1.manual
                 y particao -modoSandboxRead -name sb1
 
@@ -49540,12 +49541,21 @@ class Particao {
         }
         if (erro == null && modo == null) erro = "informe o modo: -modoVhdx <arquivo.vhdx>, -modoSandboxRead ou -modoSandboxWrite";
         // -name: roda um sandbox ja criado, pelo nome (com ou sem .vhdx; pode ser caminho); sem ele, a pasta atual decide
-        java.io.File escolhido = null;
+        // -name sozinho: roda o sandbox ja criado com esse nome; -name com -from*: e o nome do sandbox NOVO (sem o menu)
+        java.io.File escolhido = null, novoNome = null;
         if (erro == null && nomeSandbox != null && vhdx != null) erro = "-name so vale nos modoSandbox* (no -modoVhdx o nome e o proprio arquivo)";
-        if (erro == null && nomeSandbox != null && origem != null) erro = "-name roda um sandbox ja criado: nao combina com " + origem;
         if (erro == null && nomeSandbox != null) {                   // qualquer nome (ex: aaa): o tipo e lido do proprio sandbox
             String c = caminho(nomeSandbox.toLowerCase().endsWith(".vhdx") ? nomeSandbox : nomeSandbox + ".vhdx");
             if (c == null) erro = "-name invalido: " + nomeSandbox;
+            else if (origem != null) {
+                var f = new java.io.File(c);
+                String base = c.substring(0, c.length() - 5);
+                if (f.exists()) erro = f + " ja existe (nada existente e apagado); para usar: -modoSandboxRead|-modoSandboxWrite -name " + nomeSandbox;
+                else if (!f.getParentFile().isDirectory()) erro = "pasta inexistente para " + f;
+                else for (String sobra : new String[]{base + ".qcow2", base + "_vars.fd", base + ".manual"})   // restos de um sandbox apagado
+                    if (erro == null && new java.io.File(sobra).exists()) erro = "sobrou " + sobra + " de um sandbox antigo com esse nome; apague-o antes";
+                if (erro == null) novoNome = f;
+            }
             else if (!new java.io.File(c).isFile()) erro = "sandbox nao encontrado: " + c;
             else escolhido = new java.io.File(c);
         }
@@ -49588,12 +49598,12 @@ class Particao {
                 + (iso != null ? " " + iso : fromVhdx != null ? " " + fromVhdx : "") + " | tipo " + tipo
                 + " | tamanhoGigas " + (tamanhoGigas == 0 ? "omitido" : tamanhoGigas) + " | usuario " + usuario
                 + " | " + (senha.isEmpty() ? "sem senha" : "com senha") + " | wuguard " + WUGUARD
-                + (escolhido != null ? " | name " + escolhido.getName() : ""));
+                + (escolhido != null ? " | name " + escolhido.getName() : novoNome != null ? " | novo " + novoNome.getName() : ""));
         System.out.println((modo.equals("-modoVhdx") ? "" : "QEMU " + qemu + " | ") + "WIMLIB " + wimlib);
         String exe = wimlib + "\\wimlib-imagex.exe";
         try {
             if (vhdx != null) gerarVhdx(vhdx, origem, iso, fromVhdx, null, tipo.equals("-refs"), tamanhoGigas, usuario, senha, exe);
-            else sandbox(modo, origem, iso, fromVhdx, "-refs".equals(tipo), tamanhoGigas, usuario, senha, exe, escolhido, credDada);
+            else sandbox(modo, origem, iso, fromVhdx, "-refs".equals(tipo), tamanhoGigas, usuario, senha, exe, escolhido, credDada, novoNome);
         } catch (Exception e) { System.out.println("\nERRO: " + e.getMessage()); System.exit(1); }
     }
 
@@ -49738,7 +49748,7 @@ class Particao {
     private final java.util.regex.Pattern NOME_SANDBOX = java.util.regex.Pattern.compile("(?i)sandbox-(pc|iso|vhdx)-(ntfs|refs)-([0-9.]+)\\.vhdx");
 
     private void sandbox(String modo, String origem, String iso, String fromVhdx, boolean refs, int gigas, String usuario, String senha, String exe,
-                         java.io.File escolhido, boolean credDada) throws Exception {
+                         java.io.File escolhido, boolean credDada, java.io.File novoNome) throws Exception {
         boolean write = modo.equals("-modoSandboxWrite");
         if (escolhido != null) {                                     // -name: direto, sem olhar a pasta nem mostrar menu
             System.out.println("sandbox (-name): " + descrever(escolhido) + (write ? " (grava no vhdx)" : " (nada fica gravado)"));
@@ -49759,9 +49769,9 @@ class Particao {
         } else if (origem.equals("-fromIsoManual")) {
             String[] det = detectarIso(iso, exe);                    // {familia, nome, descricao}
             System.out.println("ISO: " + det[2] + " (" + det[0] + ")");
-            String nomeNovo = "sandbox-isomanual-" + det[1] + ".vhdx";
-            var novo = new java.io.File(pasta, nomeNovo);
-            alvo = existentes.isEmpty() ? null : escolher(existentes, nomeNovo, "instalacao na mao: " + det[2]);
+            String nomeNovo = novoNome != null ? novoNome.getName() : "sandbox-isomanual-" + det[1] + ".vhdx";
+            var novo = novoNome != null ? novoNome : new java.io.File(pasta, nomeNovo);
+            alvo = existentes.isEmpty() || novoNome != null ? null : escolher(existentes, nomeNovo, "instalacao na mao: " + det[2]);
             if (alvo == null) {
                 if (novo.exists()) throw new Exception(novo + " ja existe (nada existente e apagado); use -name " + nomeNovo.substring(0, nomeNovo.length() - 5) + " ou apague-o para instalar de novo");
                 criarManual(novo, det, gigas == 0 ? 64 : gigas);
@@ -49774,9 +49784,9 @@ class Particao {
             else if (org.equals("vhdx")) build = (String) acharWindows(new java.io.File(fromVhdx))[2];
             else { raizIso = montarIso(iso); build = imagemPro(infoImagens(exe, installDaIso(raizIso)))[3]; }
             try {
-                String nomeNovo = "sandbox-" + org + "-" + (refs ? "refs" : "ntfs") + "-" + build + ".vhdx";
-                var novo = new java.io.File(pasta, nomeNovo);
-                alvo = existentes.isEmpty() ? null : escolher(existentes, nomeNovo, org + ", " + (refs ? "refs" : "ntfs") + ", build " + build);
+                String nomeNovo = novoNome != null ? novoNome.getName() : "sandbox-" + org + "-" + (refs ? "refs" : "ntfs") + "-" + build + ".vhdx";
+                var novo = novoNome != null ? novoNome : new java.io.File(pasta, nomeNovo);
+                alvo = existentes.isEmpty() || novoNome != null ? null : escolher(existentes, nomeNovo, org + ", " + (refs ? "refs" : "ntfs") + ", build " + build);
                 if (alvo == null) {
                     if (novo.exists()) throw new Exception(novo + " ja existe (nada existente e apagado); apague-o para criar de novo");
                     PREPARO = true;                                      // o init.cmd ganha a tarefa que desliga ao fim do OOBE
