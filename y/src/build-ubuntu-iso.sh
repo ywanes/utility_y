@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 27.04'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) list'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) listFast'
-#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10 listapt'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 27.04 listapt'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) listapt'
-#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 26.10 getapt'
+#   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 27.04 getapt'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) getapt'
 #   ou
 #   chmod +x build-ubuntu-iso.sh
@@ -24,6 +24,9 @@
 #          # o /dev/sda vai ser apagado no processo
 # obs2: essa iso suporta cidata, mas nao suporta Subiquity
 # obs3: iso fica uns 2 gigas e o sistema instalado uns 4.5 gigas
+# obs5: o install-to-disk.sh cria disco GPT que da boot em BIOS e em UEFI (bios_grub + EFI + raiz ext4)
+# obs6: tela e serial ttyS0 na ISO (menu do GRUB, gui e nogui) e no sistema instalado: serve para o
+#       qemu -nographic -serial mon:stdio (na entrada nogui e no modo nogui a serial e o console principal)
 # obs4: versoes muito antigas pode nao funcionar, depende do repositorio
 set -euo pipefail
 
@@ -276,7 +279,8 @@ if [ "$PROFILE" = "desktop" ]; then
               xserver-xorg xserver-xorg-core xserver-xorg-video-vmware xserver-xorg-input-libinput \
               rsync \
               network-manager open-vm-tools open-vm-tools-desktop \
-              openssh-server cloud-init squashfs-tools qemu-guest-agent"
+              openssh-server cloud-init squashfs-tools qemu-guest-agent \
+              parted dosfstools"
   # Recommends LIGADO no desktop: o GNOME "completo" mora em boa parte nos Recommends.
   # Fica maior (~1,5 GB a mais), mas vem completo e evita o jogo de gato e rato.
   # Para tentar a versão enxuta, troque para: NO_RECO="--no-install-recommends"
@@ -286,7 +290,8 @@ elif [ "$PROFILE" = "nogui" ]; then
   #   openssh-server = acesso remoto à live; open-vm-tools (sem -desktop) = integração VMware;
   #   cloud-init     = consome um seed NoCloud de um volume EXTERNO rotulado CIDATA;
   #   squashfs-tools = traz o 'unsquashfs', exigido pelo install-to-disk.sh na hora de instalar.
-  EXTRA_PKGS="network-manager openssh-server open-vm-tools cloud-init squashfs-tools qemu-guest-agent"
+  EXTRA_PKGS="network-manager openssh-server open-vm-tools cloud-init squashfs-tools qemu-guest-agent \
+              parted dosfstools"
   NO_RECO="--no-install-recommends"
 else
   echo "ERRO: PROFILE inválido ('$PROFILE'). Use 'desktop' ou 'nogui'."
@@ -675,6 +680,14 @@ cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<'AUTOLOGIN'
 ExecStart=
 ExecStart=-/sbin/agetty --autologin ubuntu --noclear %I $TERM
 AUTOLOGIN
+# mesmo autologin na serial (ttyS0), para a live no qemu -nographic -serial mon:stdio; o
+# install-to-disk.sh tambem remove este do sistema instalado
+mkdir -p /etc/systemd/system/serial-getty@ttyS0.service.d
+cat > /etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf <<'AUTOLOGIN'
+[Service]
+ExecStart=
+ExecStart=-/sbin/agetty --autologin ubuntu --keep-baud 115200,57600,38400,9600 %I vt220
+AUTOLOGIN
 
 # --- não travar o boot esperando a rede ficar "online" ----------------------
 # O 'systemd-networkd-wait-online' (e o equivalente do NetworkManager) bloqueiam
@@ -722,7 +735,10 @@ echo ">> Embutindo /usr/local/bin/install-to-disk.sh na imagem..."
 mkdir -p "$CHROOT/usr/local/bin"
 cat > "$CHROOT/usr/local/bin/install-to-disk.sh" <<'INSTALLER_EOF'
 #!/usr/bin/env bash
-# Instala este Ubuntu (da live) no disco, sem calamares. BIOS/MBR.
+# Instala este Ubuntu (da live) no disco, sem calamares. BIOS + UEFI no MESMO disco:
+# GPT com 3 particoes -> #1 bios_grub (1 MB, GRUB do BIOS), #2 EFI (512 MB, FAT32), #3 raiz (ext4).
+# O GRUB vai nos dois: no MBR (BIOS: VMware BIOS, SeaBIOS) e em \EFI\BOOT\BOOTX64.EFI (UEFI: VMware
+# UEFI, QEMU/OVMF). O caminho \EFI\BOOT e o "removivel": o firmware acha sozinho, sem entrada na NVRAM.
 # Uso:  sudo USERNAME=base USERPASS=base install-to-disk.sh /dev/sda
 set -euo pipefail
 [ "$(id -u)" -eq 0 ] || { echo "ERRO: rode com sudo."; exit 1; }
@@ -736,27 +752,41 @@ for c in /cdrom/casper/filesystem.squashfs /run/live/medium/casper/filesystem.sq
   [ -f "$c" ] && { SQUASH="$c"; break; }
 done
 [ -n "$SQUASH" ] || { echo "ERRO: squashfs não encontrado."; exit 1; }
+for b in parted mkfs.vfat mkfs.ext4 unsquashfs; do
+  command -v "$b" >/dev/null 2>&1 || { echo "ERRO: falta o comando '$b' na live (pacotes parted/dosfstools/e2fsprogs/squashfs-tools)."; exit 1; }
+done
 echo "Disco: $DISK  | usuário: $USERNAME  | TUDO no disco será APAGADO."
 echo "Ctrl+C em 6s para abortar..."; sleep 6
 swapoff -a 2>/dev/null || true
 umount -R "$TARGET" 2>/dev/null || true
 wipefs -a "$DISK"
-parted -s "$DISK" mklabel msdos
-parted -s "$DISK" mkpart primary ext4 1MiB 100%
-parted -s "$DISK" set 1 boot on
+parted -s "$DISK" mklabel gpt
+parted -s "$DISK" mkpart bios 1MiB 2MiB
+parted -s "$DISK" set 1 bios_grub on
+parted -s "$DISK" mkpart EFI fat32 2MiB 514MiB
+parted -s "$DISK" set 2 esp on
+parted -s "$DISK" mkpart root ext4 514MiB 100%
 partprobe "$DISK"; sleep 2
-PART="$(lsblk -lnpo NAME "$DISK" | sed -n '2p')"
-[ -b "$PART" ] || { echo "ERRO: partição não criada."; exit 1; }
+# nome das particoes: /dev/sda -> /dev/sda2 ; /dev/nvme0n1 ou /dev/loop0 -> /dev/nvme0n1p2
+P="$DISK"; case "$DISK" in *[0-9]) P="${DISK}p" ;; esac
+EFIPART="${P}2"; PART="${P}3"
+[ -b "$EFIPART" ] && [ -b "$PART" ] || { echo "ERRO: partições não criadas ($EFIPART, $PART)."; exit 1; }
+mkfs.vfat -F 32 -n EFI "$EFIPART"
 mkfs.ext4 -F "$PART"
 mkdir -p "$TARGET"; mount "$PART" "$TARGET"
 echo ">> Extraindo o sistema (unsquashfs)..."
 unsquashfs -f -d "$TARGET" "$SQUASH"
 KVER="$(ls "$TARGET/lib/modules" | head -1)"
 [ -n "$KVER" ] || { echo "ERRO: /lib/modules vazio."; exit 1; }
-mkdir -p "$TARGET/boot"
+mkdir -p "$TARGET/boot/efi"
+mount "$EFIPART" "$TARGET/boot/efi"
 cp /cdrom/casper/vmlinuz "$TARGET/boot/vmlinuz-$KVER"
 ROOT_UUID="$(blkid -s UUID -o value "$PART")"
-echo "UUID=$ROOT_UUID  /  ext4  defaults,noatime  0 1" > "$TARGET/etc/fstab"
+EFI_UUID="$(blkid -s UUID -o value "$EFIPART")"
+{
+  echo "UUID=$ROOT_UUID  /          ext4  defaults,noatime  0 1"
+  echo "UUID=$EFI_UUID   /boot/efi  vfat  umask=0077        0 1"
+} > "$TARGET/etc/fstab"
 for fs in /dev /dev/pts /proc /sys /run; do mount --bind "$fs" "$TARGET$fs"; done
 cp /etc/resolv.conf "$TARGET/etc/resolv.conf" 2>/dev/null || true
 echo "$HOSTNAME_INST" > "$TARGET/etc/hostname"
@@ -772,11 +802,27 @@ else
   INSTALL_MODE=nogui
 fi
 echo ">> Modo de instalação: $INSTALL_MODE"
+# console do sistema instalado: tela (tty0) e serial (ttyS0) nos dois modos; o ULTIMO console= e o principal
+# (/dev/console, onde o systemd escreve o boot): gui -> a tela; nogui -> a serial (qemu -nographic)
+if [ "$INSTALL_MODE" = "nogui" ]; then SERIAL_CMDLINE="console=tty0 console=ttyS0,115200"
+else SERIAL_CMDLINE="console=ttyS0,115200 console=tty0"; fi
 chroot "$TARGET" /bin/bash -e <<CHROOT
 export DEBIAN_FRONTEND=noninteractive
 apt-get purge -y casper ubiquity ubiquity-frontend-gtk ubiquity-casper calamares 2>/dev/null || true
+# BIOS: GRUB no MBR, com o core na particao bios_grub (#1)
 grub-install --target=i386-pc --recheck "$DISK"
+# UEFI: GRUB (via shim, se houver) em \EFI\BOOT\BOOTX64.EFI na particao EFI; --no-nvram porque a
+# live pode nem ter dado boot em UEFI (sem efivars) e o caminho removivel dispensa a NVRAM
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --no-nvram --recheck
 update-initramfs -c -k "$KVER" 2>/dev/null || update-initramfs -u 2>/dev/null || true
+# console serial (ttyS0) ALEM da tela, em gui e nogui: o menu do GRUB, as mensagens do kernel e o login
+# aparecem nos dois (QEMU -nographic -serial mon:stdio usa a serial; o sandbox e o VMware usam a tela).
+# A ordem dos console= vem do modo (SERIAL_CMDLINE, calculado fora do chroot).
+[ -f /etc/default/grub ] || touch /etc/default/grub
+sed -i -e '/^GRUB_TERMINAL=/d' -e '/^GRUB_SERIAL_COMMAND=/d' -e '/^GRUB_CMDLINE_LINUX=/d' /etc/default/grub
+echo 'GRUB_CMDLINE_LINUX="${SERIAL_CMDLINE}"' >> /etc/default/grub
+echo 'GRUB_TERMINAL="console serial"' >> /etc/default/grub
+echo 'GRUB_SERIAL_COMMAND="serial --speed=115200 --unit=0 --word=8 --parity=no --stop=1"' >> /etc/default/grub
 update-grub
 id "$USERNAME" >/dev/null 2>&1 || useradd -m -s /bin/bash -G sudo,adm,cdrom,dip,plugdev,lpadmin "$USERNAME"
 # Define a senha e garante a conta DESTRAVADA na hora da instalacao. O '|| true' e
@@ -818,11 +864,14 @@ rmdir "/home/$USERNAME/Desktop" "/home/$USERNAME/Área de Trabalho" 2>/dev/null 
 # remove para o sistema instalado nao ficar tentando autologar um usuario ausente.
 rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf 2>/dev/null || true
 rmdir /etc/systemd/system/getty@tty1.service.d 2>/dev/null || true
+rm -f /etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf 2>/dev/null || true
+rmdir /etc/systemd/system/serial-getty@ttyS0.service.d 2>/dev/null || true
 CHROOT
+[ -f "$TARGET/boot/efi/EFI/BOOT/BOOTX64.EFI" ] || echo "AVISO: \\EFI\\BOOT\\BOOTX64.EFI não foi criado: o disco só vai dar boot em BIOS." >&2
 sync
 for fs in /run /sys /proc /dev/pts /dev; do umount -lf "$TARGET$fs" 2>/dev/null || true; done
 umount -R "$TARGET" 2>/dev/null || true
-echo ">> CONCLUÍDO. Desligue, remova a ISO do CD e ligue. Login: $USERNAME"
+echo ">> CONCLUÍDO (boot em BIOS e em UEFI; tela e console serial). Desligue, remova a ISO do CD e ligue. Login: $USERNAME"
 INSTALLER_EOF
 chmod +x "$CHROOT/usr/local/bin/install-to-disk.sh"
 
@@ -963,6 +1012,11 @@ set default=0
 # errada e dá "error: file '/casper/vmlinuz' not found".
 search --no-floppy --set=root --file /casper/vmlinuz
 
+# menu na tela E na serial (qemu -nographic -serial mon:stdio)
+serial --unit=0 --speed=115200 --word=8 --parity=no --stop=1
+terminal_input console serial
+terminal_output console serial
+
 EOF
 
 if [ "$PROFILE" = "desktop" ]; then
@@ -970,11 +1024,11 @@ if [ "$PROFILE" = "desktop" ]; then
   # e marca 'xinstall=nogui' (o instalador lê isso p/ instalar em modo console).
   cat >> "$IMAGE/boot/grub/grub.cfg" <<EOF
 menuentry "Ubuntu ${VERSION} (${SUITE}) - Live GUI / Instalar GUI" {
-    linux /casper/vmlinuz boot=casper ---
+    linux /casper/vmlinuz boot=casper console=ttyS0,115200 console=tty0 ---
     initrd /casper/initrd
 }
 menuentry "Ubuntu ${VERSION} (${SUITE}) - Live nogui / Instalar nogui" {
-    linux /casper/vmlinuz boot=casper systemd.unit=multi-user.target xinstall=nogui ---
+    linux /casper/vmlinuz boot=casper systemd.unit=multi-user.target xinstall=nogui console=tty0 console=ttyS0,115200 ---
     initrd /casper/initrd
 }
 EOF
@@ -982,7 +1036,7 @@ else
   # Imagem nogui enxuta: console direto (sem entrada de GUI, que não existe nela).
   cat >> "$IMAGE/boot/grub/grub.cfg" <<EOF
 menuentry "Ubuntu ${VERSION} (${SUITE}) - Live nogui / Instalar nogui" {
-    linux /casper/vmlinuz boot=casper ---
+    linux /casper/vmlinuz boot=casper console=tty0 console=ttyS0,115200 ---
     initrd /casper/initrd
 }
 EOF
@@ -993,7 +1047,7 @@ echo ">> Montando bootloader UEFI..."
 grub-mkstandalone \
   --format=x86_64-efi \
   --output="$WORK/bootx64.efi" \
-  --modules="part_gpt part_msdos fat iso9660 normal linux search search_fs_file search_label echo all_video" \
+  --modules="part_gpt part_msdos fat iso9660 normal linux search search_fs_file search_label echo all_video serial terminal" \
   --locales="" --fonts="" \
   "boot/grub/grub.cfg=$IMAGE/boot/grub/grub.cfg"
 
@@ -1010,8 +1064,8 @@ cp "$WORK/bootx64.efi" "$IMAGE/EFI/boot/BOOTX64.EFI"
 grub-mkstandalone \
   --format=i386-pc \
   --output="$WORK/core.img" \
-  --install-modules="linux normal iso9660 biosdisk memdisk search search_fs_file search_label tar ls" \
-  --modules="linux normal iso9660 biosdisk search search_fs_file" \
+  --install-modules="linux normal iso9660 biosdisk memdisk search search_fs_file search_label tar ls serial terminal" \
+  --modules="linux normal iso9660 biosdisk search search_fs_file serial terminal" \
   --locales="" --fonts="" \
   "boot/grub/grub.cfg=$IMAGE/boot/grub/grub.cfg"
 cat /usr/lib/grub/i386-pc/cdboot.img "$WORK/core.img" > "$WORK/bios.img"

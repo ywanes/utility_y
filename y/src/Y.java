@@ -49541,14 +49541,13 @@ class Particao {
         // -name: roda um sandbox ja criado, pelo nome (com ou sem .vhdx; pode ser caminho); sem ele, a pasta atual decide
         java.io.File escolhido = null;
         if (erro == null && nomeSandbox != null && vhdx != null) erro = "-name so vale nos modoSandbox* (no -modoVhdx o nome e o proprio arquivo)";
-        //if (erro == null && nomeSandbox != null && origem != null) erro = "-name roda um sandbox ja criado: nao combina com " + origem;
+        if (erro == null && nomeSandbox != null && origem != null) erro = "-name roda um sandbox ja criado: nao combina com " + origem;
         if (erro == null && nomeSandbox != null) {
             String c = caminho(nomeSandbox.toLowerCase().endsWith(".vhdx") ? nomeSandbox : nomeSandbox + ".vhdx");
-            if (c == null){
-                erro = "-name invalido: " + nomeSandbox;
-            //}else if (!NOME_SANDBOX.matcher(new java.io.File(c).getName()).matches() && !NOME_MANUAL.matcher(new java.io.File(c).getName()).matches()){
-            //    erro = "-name precisa ser sandbox-<pc|iso|vhdx>-<ntfs|refs>-<build> (ex: sb1): " + nomeSandbox;
-            }else if (!new java.io.File(c).isFile()) erro = "sandbox nao encontrado: " + c;
+            if (c == null) erro = "-name invalido: " + nomeSandbox;
+            else if (!NOME_SANDBOX.matcher(new java.io.File(c).getName()).matches() && !NOME_MANUAL.matcher(new java.io.File(c).getName()).matches())
+                erro = "-name precisa ser sandbox-<pc|iso|vhdx>-<ntfs|refs>-<build> (ex: sb1): " + nomeSandbox;
+            else if (!new java.io.File(c).isFile()) erro = "sandbox nao encontrado: " + c;
             else escolhido = new java.io.File(c);
         }
         // -fromIsoManual: instalacao na mao na janela do QEMU; o instalador escolhe o FS e o Particao nao mexe no sistema
