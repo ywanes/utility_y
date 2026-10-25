@@ -839,13 +839,10 @@ cat > "$CHROOT/etc/skel/LEIA-ME-INSTALAR.txt" <<'README_EOF'
 
 Esta e uma imagem LIVE (esta rodando da ISO, ainda nao instalada).
 
-Para instalar no disco, abra um terminal e rode:
-
-    sudo install-to-disk.sh /dev/sda
-
-Opcional: defina usuario e senha (padrao = ubuntu / ubuntu):
-
-    sudo USERNAME=meuuser USERPASS=minhasenha install-to-disk.sh /dev/sda
+# install! - install-to-disk.sh ja esta visivel no ambiente!
+# sudo USERNAME=meuuser USERPASS=minhasenha install-to-disk.sh /dev/sda
+# ou
+# sudo install-to-disk.sh /dev/sda
 
 ATENCAO: isso APAGA TODO o disco indicado (/dev/sda). Confira qual e o disco
 com 'lsblk' ANTES de rodar. Apos o comando voce tem 6 segundos para abortar
