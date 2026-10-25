@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#
+##
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) 27.04'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) list'
 #   sudo bash -c 'bash <(curl -fsSL https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/build-ubuntu-iso.sh) listFast'
@@ -811,8 +811,12 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get purge -y casper ubiquity ubiquity-frontend-gtk ubiquity-casper calamares 2>/dev/null || true
 # BIOS: GRUB no MBR, com o core na particao bios_grub (#1)
 grub-install --target=i386-pc --recheck "$DISK"
-# UEFI: GRUB (via shim, se houver) em \EFI\BOOT\BOOTX64.EFI na particao EFI; --no-nvram porque a
-# live pode nem ter dado boot em UEFI (sem efivars) e o caminho removivel dispensa a NVRAM
+# UEFI, em 2 instalacoes (o GRUB 2.14 nao tem mais o --force-extra-removable, que fazia as duas de uma vez):
+#  1) normal, em \EFI\ubuntu: grava o grub.cfg que o grubx64.efi assinado do Ubuntu procura ali (caminho fixo);
+#     so com a removivel ele nao achava a configuracao e caia no prompt grub> (visto no sandbox, 25/10/2026)
+#  2) removivel, em \EFI\BOOT\BOOTX64.EFI: o firmware acha sozinho, sem entrada na NVRAM
+# --no-nvram nas duas: a live pode nem ter dado boot em UEFI (sem efivars) e o caminho removivel dispensa a NVRAM
+grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --no-nvram --recheck
 grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --no-nvram --recheck
 update-initramfs -c -k "$KVER" 2>/dev/null || update-initramfs -u 2>/dev/null || true
 # console serial (ttyS0) ALEM da tela, em gui e nogui: o menu do GRUB, as mensagens do kernel e o login
@@ -868,6 +872,7 @@ rm -f /etc/systemd/system/serial-getty@ttyS0.service.d/autologin.conf 2>/dev/nul
 rmdir /etc/systemd/system/serial-getty@ttyS0.service.d 2>/dev/null || true
 CHROOT
 [ -f "$TARGET/boot/efi/EFI/BOOT/BOOTX64.EFI" ] || echo "AVISO: \\EFI\\BOOT\\BOOTX64.EFI não foi criado: o disco só vai dar boot em BIOS." >&2
+[ -f "$TARGET/boot/efi/EFI/ubuntu/grub.cfg" ] || echo "AVISO: \\EFI\\ubuntu\\grub.cfg não foi criado: em UEFI o GRUB pode parar no prompt grub>." >&2
 sync
 for fs in /run /sys /proc /dev/pts /dev; do umount -lf "$TARGET$fs" 2>/dev/null || true; done
 umount -R "$TARGET" 2>/dev/null || true
