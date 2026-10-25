@@ -44469,7 +44469,7 @@ class Particao {
                         y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
                         y particao -modoSandboxRead
                         y particao -modoSandboxRead -name sb1
-                        y particao -modoSandboxWrite -fromIsoManual C:\\iso\\ubuntu.iso -tamanhoGigas 40 -usuario base -senha base # instalacao na mao
+                        y par sbw -name ubuntu2704 -fromIsoManual C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso -tamanhoGigas 120 -usuario base -senha base -showQemu
                         y par sb|sbr|sbw # respectivamente -modoSandboxRead -modoSandboxRead -modoSandboxWrite
                         y particao -modoSandboxWrite -showQemu
                         obs: sistemas de arquivos: -refs e -ntfs
@@ -51295,7 +51295,7 @@ exit 0
     /** como ter o mstsc em cada familia */
     private String dicaRdp(String familia) {
         return switch (familia) {
-            case "ubuntu", "debian" -> "sudo apt install -y xrdp";
+            case "ubuntu", "debian" -> "sudo apt install -y xrdp && sudo apt install -y --no-install-recommends xfce4 && echo startxfce4 > ~/.xsession";
             case "fedora" -> "sudo dnf install -y xrdp && sudo systemctl enable --now xrdp && sudo firewall-cmd --permanent --add-port=3389/tcp && sudo firewall-cmd --reload";
             case "windows" -> "Configuracoes > Sistema > Area de Trabalho Remota > ativar (so na edicao Pro)";
             default -> "instale um servidor RDP no sistema (ex: xrdp)";
@@ -55229,7 +55229,7 @@ Exemplos...
             y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
             y particao -modoSandboxRead
             y particao -modoSandboxRead -name sb1
-            y particao -modoSandboxWrite -fromIsoManual C:\\iso\\ubuntu.iso -tamanhoGigas 40 -usuario base -senha base # instalacao na mao
+            y par sbw -name ubuntu2704 -fromIsoManual C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso -tamanhoGigas 120 -usuario base -senha base -showQemu
             y par sb|sbr|sbw # respectivamente -modoSandboxRead -modoSandboxRead -modoSandboxWrite
             y particao -modoSandboxWrite -showQemu
             obs: sistemas de arquivos: -refs e -ntfs
