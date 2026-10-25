@@ -44373,7 +44373,7 @@ class Particao {
 
     public static void main(String[] args) {
         // -modoVhdx / -modoSandboxRead / -modoSandboxWrite: sandbox (sandboxMain, no fim); -modo sozinho = uso dele
-        if (args.length > 0 && args[0].toLowerCase().startsWith("-modo")) { new Particao().sandboxMain(args[0].equals("-modo") ? new String[0] : args); return; }
+        if (args.length > 0 && args[0].toLowerCase().replaceFirst("^--", "-").startsWith("-modo")) { new Particao().sandboxMain(args[0].replaceFirst("^--", "-").equals("-modo") ? new String[0] : args); return; }
         try {
             var app = new Particao();
             if (args.length > 0 && args[0].equalsIgnoreCase("list")) {
@@ -49462,7 +49462,8 @@ class Particao {
                 #   login: o da geracao (base / base); sem -usuario/-senha = base sem senha
                 y particao -modoSandboxRead -fromPc -ntfs -usuario base -senha base
 
-                # sandbox ja criado, pelo nome (com ou sem .vhdx; pode ser caminho): -name
+                # sandbox ja criado, por qualquer nome (com ou sem .vhdx; pode ser caminho): -name ou --name
+                #   renomeie juntos o .vhdx, o .qcow2, o _vars.fd e (instalado na mao) o .manual: sb1.vhdx, sb1.qcow2, sb1_vars.fd, sb1.manual
                 y particao -modoSandboxRead -name sb1
 
                 # modoSandboxWrite: roda o sandbox, o que fizer fica gravado
@@ -49487,7 +49488,7 @@ class Particao {
         int tamanhoGigas = 0;                                        // 0 = omitido
         String erro = args.length == 0 ? "" : null;                  // "" = so o uso, sem linha de ERRO
         for (int i = 0; i < args.length && erro == null; i++) {
-            String a = args[i], v = null;
+            String a = args[i].startsWith("--") ? args[i].substring(1) : args[i], v = null;   // --name = -name (vale para todas as opcoes)
             if (a.equals("-modoVhdx") || a.equals("-fromIso") || a.equals("-fromVhdx") || a.equals("-tamanhoGigas")
                     || a.equals("-usuario") || a.equals("-senha") || a.equals("-cpu") || a.equals("-wuguard") || a.equals("-name")
                     || a.equals("-fromIsoManual")) {
@@ -49542,11 +49543,9 @@ class Particao {
         java.io.File escolhido = null;
         if (erro == null && nomeSandbox != null && vhdx != null) erro = "-name so vale nos modoSandbox* (no -modoVhdx o nome e o proprio arquivo)";
         if (erro == null && nomeSandbox != null && origem != null) erro = "-name roda um sandbox ja criado: nao combina com " + origem;
-        if (erro == null && nomeSandbox != null) {
+        if (erro == null && nomeSandbox != null) {                   // qualquer nome (ex: aaa): o tipo e lido do proprio sandbox
             String c = caminho(nomeSandbox.toLowerCase().endsWith(".vhdx") ? nomeSandbox : nomeSandbox + ".vhdx");
             if (c == null) erro = "-name invalido: " + nomeSandbox;
-            else if (!NOME_SANDBOX.matcher(new java.io.File(c).getName()).matches() && !NOME_MANUAL.matcher(new java.io.File(c).getName()).matches())
-                erro = "-name precisa ser sandbox-<pc|iso|vhdx>-<ntfs|refs>-<build> (ex: sb1): " + nomeSandbox;
             else if (!new java.io.File(c).isFile()) erro = "sandbox nao encontrado: " + c;
             else escolhido = new java.io.File(c);
         }
@@ -49577,7 +49576,7 @@ class Particao {
         // variaveis de sistema: %QEMU% so nos modos que rodam o sandbox; %WIMLIB% em todos (aplicar o Windows)
         String qemu = pasta("QEMU"), wimlib = pasta("WIMLIB");
         if (erro == null && !modo.equals("-modoVhdx")) erro = exigir("QEMU", qemu, "qemu-system-x86_64.exe", "WinHvPlatform.dll");
-        if (erro == null && !manual) erro = exigir("WIMLIB", wimlib, "wimlib-imagex.exe");     // fromIsoManual: so para ler a build de ISO Windows, se houver
+        if (erro == null && (vhdx != null || origem != null && !manual)) erro = exigir("WIMLIB", wimlib, "wimlib-imagex.exe");   // so para criar (rodar um sandbox pronto nao usa)     // fromIsoManual: so para ler a build de ISO Windows, se houver
         if (erro == null && iso != null && !manual) try { zona(); } catch (Exception e) { erro = e.getMessage(); }   // %SANDBOXZONE% (opcional) bem formado
         if (erro != null) {
             System.out.print(USO);
@@ -49799,7 +49798,10 @@ class Particao {
     private String descrever(java.io.File f) {
         if (ehManual(f)) return descreverManual(f);
         var m = NOME_SANDBOX.matcher(f.getName());
-        m.matches();
+        if (!m.matches()) {                                       // nome livre (ex: -name aaa): tipo e build lidos de dentro
+            try { Object[] w = acharWindows(f); return f.getName() + " (" + ((Boolean) w[1] ? "refs" : "ntfs") + ", build " + w[2] + ")"; }
+            catch (Exception e) { return f.getName() + " (nao consegui ler o Windows dentro: " + e.getMessage() + ")"; }
+        }
         String build;
         try {
             String dentro = buildDoVhdx(f, m.group(2).equalsIgnoreCase("refs"));
@@ -51144,7 +51146,8 @@ exit 0
 
     private final java.util.regex.Pattern NOME_MANUAL = java.util.regex.Pattern.compile("(?i)sandbox-isomanual-([a-z0-9._-]+)\\.vhdx");
 
-    private boolean ehManual(java.io.File f) { return NOME_MANUAL.matcher(f.getName()).matches(); }
+    /** sandbox -fromIsoManual: pelo nome padrao ou, com nome livre (ex: -name aaa), pelo <nome>.manual ao lado */
+    private boolean ehManual(java.io.File f) { return NOME_MANUAL.matcher(f.getName()).matches() || arqMeta(f).isFile(); }
 
     private java.io.File arqMeta(java.io.File vhdx) { return new java.io.File(vhdx.getPath().substring(0, vhdx.getPath().length() - 5) + ".manual"); }
 
@@ -51442,7 +51445,8 @@ exit 0
         if (!o.isFile()) {
             System.out.println("overlay do sandbox: " + o.getName());
             qemuImg(qemu, "create", "-q", "-f", "qcow2", "-b", vhdx.getPath(), "-F", "vhdx", o.getPath());
-        }
+        } else    // o overlay guarda o caminho do VHDX: sandbox renomeado ou movido (ex: aaa.vhdx) -> aponta de novo, so o cabecalho
+            qemuImg(qemu, "rebase", "-u", "-q", "-b", vhdx.getPath(), "-F", "vhdx", o.getPath());
         return o;
     }
 
