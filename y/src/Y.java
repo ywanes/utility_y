@@ -1059,6 +1059,10 @@ cat buffer.log
             iso(args);
             return;
         }
+        if ( args[0].equals("cidata") ){
+            cidata(args);
+            return;
+        }
         if ( args[0].equals("artcraft") ){
             try{
                 args=removeParm(0, args);
@@ -10024,6 +10028,109 @@ bind 'set enable-bracketed-paste off'
             erroFatal(e);
         }
     }    
+    
+    public void cidata(String [] args){
+        System.out.print(
+                """
+#cloud-config
+# =====================================================================================
+# codigo cidata de user-data. meta-data deixa em branco
+# aqui contem disco GPT UEFI, user e senha base base, ssh configurado pronto para receber uma conexao de sshgen senha init, tap0 f100::200, ping crontab f100::100
+# pronto para iso gui(desktop) e server(nogui)
+# =====================================================================================
+autoinstall:
+  version: 1
+
+  # nao baixa uma versao nova do instalador no inicio (mais rapido e previsivel)
+  refresh-installer: {update: false}
+
+  # durante a instalacao, aplica so as atualizacoes de seguranca
+  updates: security
+
+  # teclado ABNT2 e fuso de Sao Paulo
+  keyboard: {layout: br}
+  timezone: America/Sao_Paulo
+
+  # usuario base/base com sudo: o campo password exige a senha JA criptografada (hash $6$), nunca o texto
+  # este hash e da senha "base"; para trocar, gere outro com: openssl passwd -6 NOVASENHA
+  identity:
+    hostname: ubuntu
+    username: base
+    password: "$6$baseSandbox$Q3oFpDVIJFHn8aXljl7l48pCvMXqBG2fZv/PZdmwa2Lqo.F3HPv30hxAeZ4h3hHp.C.6wNVlFKzkltr4rRebq0"
+
+  # SSH instalado e ligado, aceitando senha e a chave abaixo (vai para ~base/.ssh/authorized_keys)
+  # (o Desktop normalmente nao vem com o servidor SSH; aqui vem)
+  # fonte da chave (cria id_ed25519_local, a privada, e id_ed25519_local.pub, a publica):
+  #   y sshgen ed25519 id_ed25519_local -pass "init" -C "base@local"
+  # aqui entra so o conteudo do id_ed25519_local.pub; a privada fica no Windows e nunca vem para ca
+  # conectando pelo Windows, com a porta 2222 do host encaminhada para a 22 da VM (pede a senha da chave, "init"):
+  #   ssh -i id_ed25519_local -p 2222 base@127.0.0.1
+  # sem a chave, com a senha do usuario (base):
+  #   ssh -p 2222 base@127.0.0.1
+  ssh:
+    install-server: true
+    allow-pw: true
+    authorized-keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPPfeMieTMaASakrABuk61juO3YKLmC3EFKi0Xy3u0co base@local
+
+  # rede: sem bloco network de proposito
+  #   cada instalador liga o DHCP sozinho, com o seu gerenciador (networkd no Server, NetworkManager no Desktop);
+  #   o IPv6 fixo da 2a placa e gravado nos late-commands com o gerenciador que o sistema instalado tiver
+
+  # disco GPT hibrido: da boot em BIOS (SeaBIOS) e em UEFI (OVMF)
+  storage:
+    config:
+      # o maior disco (nao os CDs da ISO e do cidata); apaga o que houver nele
+      # grub_device: o GRUB de BIOS vai para o inicio deste disco
+      - {type: disk, id: disk0, match: {size: largest}, ptable: gpt, wipe: superblock-recursive, preserve: false, grub_device: true}
+      # #1 bios_grub 1 MB: onde o GRUB de BIOS se instala num disco GPT (sem sistema de arquivos)
+      - {type: partition, id: p-bios, device: disk0, number: 1, size: 1M, flag: bios_grub, preserve: false}
+      # #2 EFI 512 MB: o firmware UEFI so da boot a partir dela
+      - {type: partition, id: p-efi, device: disk0, number: 2, size: 512M, flag: boot, preserve: false}
+      # #3 raiz: o resto do disco (size -1)
+      - {type: partition, id: p-root, device: disk0, number: 3, size: -1, preserve: false}
+      - {type: format, id: f-efi, volume: p-efi, fstype: fat32, preserve: false}
+      - {type: format, id: f-root, volume: p-root, fstype: ext4, preserve: false}
+      - {type: mount, id: m-root, device: f-root, path: /}
+      - {type: mount, id: m-efi, device: f-efi, path: /boot/efi}
+
+  # comandos no fim da instalacao, com o sistema novo montado em /target
+  # curtin in-target = roda dentro do sistema novo, com /dev, /proc e /sys prontos (o grub-install precisa deles)
+  late-commands:
+    # console serial: GRUB e kernel na tela E na serial (ttyS0), para VMs sem tela (QEMU -nographic -serial mon:stdio)
+    # com tela continua tudo igual, porque vale para os dois (tty0 e ttyS0)
+    - curtin in-target --target=/target -- sed -i 's|^GRUB_CMDLINE_LINUX=.*|GRUB_CMDLINE_LINUX="console=tty0 console=ttyS0,115200n8"|' /etc/default/grub
+    - curtin in-target --target=/target -- sed -i '$aGRUB_TERMINAL="console serial"' /etc/default/grub
+    - curtin in-target --target=/target -- sed -i '$aGRUB_SERIAL_COMMAND="serial --unit=0 --speed=115200"' /etc/default/grub
+
+    # GRUB de UEFI (instalando em BIOS, o instalador so poe o de BIOS), em 2 caminhos da particao EFI:
+    #   /EFI/ubuntu: com o grub.cfg que o grubx64.efi assinado do Ubuntu procura ali (sem ele: prompt grub>)
+    #   /EFI/BOOT/BOOTX64.EFI: o caminho que o firmware acha sozinho, sem entrada na NVRAM
+    # no Desktop esses pacotes geralmente ja vem instalados, e o apt-get so confirma
+    - curtin in-target --target=/target -- apt-get install -y grub-efi-amd64-bin grub-efi-amd64-signed shim-signed
+    - curtin in-target --target=/target -- grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --no-nvram --recheck
+    - curtin in-target --target=/target -- grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --no-nvram --recheck
+    # regrava o grub.cfg com o console serial acima
+    - curtin in-target --target=/target -- update-grub
+
+    # IPv6 fixo na 2a placa de rede (ens4, a ligada no tap0 do Windows); o Windows fica em f100::100
+    #   se a ordem das placas da VM mudar, confira o nome com: ip -br link
+    #   renderer: NetworkManager se o sistema tiver (Desktop), senao networkd (Server)
+    #   optional: sem essa placa o boot nao fica esperando por ela
+    - |
+      curtin in-target --target=/target -- sh -c 'R=networkd; [ -x /usr/sbin/NetworkManager ] && R=NetworkManager; F=/etc/netplan/60-tap0.yaml; echo "network:" > $F; echo "  version: 2" >> $F; echo "  renderer: $R" >> $F; echo "  ethernets:" >> $F; echo "    ens4:" >> $F; echo "      dhcp4: false" >> $F; echo "      dhcp6: false" >> $F; echo "      accept-ra: false" >> $F; echo "      addresses:" >> $F; echo "        - f100::200/64" >> $F; echo "      optional: true" >> $F; chmod 600 $F'
+
+    # ping ao Windows pela 2a placa a cada 30 min: mantem a vizinhanca IPv6 viva (os dois lados continuam se vendo)
+    - curtin in-target --target=/target -- sh -c 'echo "*/30 * * * * root ping -6 -c 1 f100::100 >/dev/null 2>&1" > /etc/cron.d/ping-tap0'
+
+    # libera a porta 22 no firewall (o ufw vem desligado; a regra so vale se um dia ativar com: sudo ufw enable)
+    - curtin in-target --target=/target -- ufw allow 22/tcp
+
+    # desliga no fim da instalacao (em vez de reiniciar e voltar a dar boot pelo CD)
+    - shutdown -h now
+        """);
+    }
+
     public void juros(String [] args){
         Object [] objs=get_parms_modelo_valor_jurosAM_jurosAA_parcelas(args);
         if ( objs == null )
@@ -54786,6 +54893,7 @@ usage:
   [y sort]
   [y sorte
   [y iso]
+  [y cidata]
   [y qemu]
   [y artcraft]
   [y posicao]
@@ -55131,6 +55239,9 @@ Exemplos...
             | map(select(.arch=="amd64" and (.title | startswith("Windows 11, version"))))
             | max_by(.build | split(".") | map(tonumber))
             | "\\(.title)\\nbuild: \\(.build)\\nlink:  https://uupdump.net/selectlang.php?id=\\(.uuid)"'
+[y cidata]
+    y cidata
+    # mostra template avançado de cidata ubuntu configurado
 [y qemu]
     qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx
     opcoes: vhdx, qcow2, vmdk, vdi, raw
