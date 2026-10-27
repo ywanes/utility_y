@@ -1108,6 +1108,16 @@ cat buffer.log
             new Particao().main(args);
             return;
         }        
+        if ( args[0].equals("qemu") ){
+            if ( !isWindows() )
+                erroFatal("implementado só para windows!");
+            try{
+                args=removeParm(0, args);
+                new Qemu().main(args);
+            }catch(Exception e){
+                erroFatal(e);
+            }
+        }
         if ( args[0].equals("validaDisco") && args.length == 2 ){
             try{
                 validaDisco(args[1]);
@@ -51701,6 +51711,298 @@ exit 0
 }
 //</editor-fold>
 
+//<editor-fold desc="Qemu">
+class Qemu {
+    public static void main(String[] args) throws Exception {
+        String USAGE =
+            "EXEMPLOS\n" +
+            "    # whpx\n" +
+            "        y qemu rodando\n" +
+            "        y qemu rodando -linux -accel whpx -cpu max -dir_qemu \"C:\\qemu11\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0\n" +
+            "        y qemu instalando -linux -accel whpx -cpu max -dir_qemu \"C:\\qemu11\" -dir_7z \"C:\\ProgramFiles\\7-Zip\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -file_iso \"C:\\qemu_isos\\ubuntu-27.04-live-server-amd64.iso\" -file_cidata \"C:\\qemu_hax\\cidata.iso\" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0\n" +
+            "    # hax\n" +
+            "        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\"\n" +
+            "        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0\n" +
+            "        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\" -dir_7z \"C:\\ProgramFiles\\7-Zip\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -file_iso \"C:\\qemu_isos\\ubuntu-27.04-live-server-amd64.iso\" -file_cidata \"C:\\qemu_hax\\cidata.iso\" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0\n" +
+            "USO\n" +
+            "    y qemu rodando     [-linux|-windows] [flags...]   # sobe a VM do disco existente\n" +
+            "    y qemu instalando  [-linux|-windows] [flags...]   # instala o SO do zero (apaga o disco)\n" +
+            "PADROES\n" +
+            "    Comuns:  -dir_qemu C:\\qemu11   -m 10G   -smp 3   -accel whpx   -cpu max   -size 120G\n" +
+            "             tela -nogui\n" +
+            "    -linux:\n" +
+            "        -file        C:\\qemu_hax\\ubuntu_disk.qcow2        (disco if=virtio,discard=unmap)\n" +
+            "        -file_iso    ubuntu server (-nogui) / desktop (-gui)\n" +
+            "        -dir_7z      C:\\ProgramFiles\\7-Zip   (usa <dir_7z>\\7z.exe)\n" +
+            "        -port_ssh    2222 -> guest:22\n" +
+            "        -rede        tap0\n" +
+            "        -nogui       = -nographic -serial mon:stdio\n" +
+            "        instalando   = ISO + cidata + autoinstall      (MODE/AUTO/DELETE = 1/1/1)\n" +
+            "    -windows:\n" +
+            "        -file        C:\\qemu_hax\\windows_disk.qcow2       (disco if=ide + UEFI q35)\n" +
+            "        -file_iso    C:\\qemu_isos\\win11_pro_ptbr_26200.9539_oficial_com_script_anti_tpm_e_refs.iso\n" +
+            "        -port_rdp    3395 -> guest:3389\n" +
+            "        -rede        normal\n" +
+            "        -nogui       = -display none\n" +
+            "        firmware     <disco>.code.fd + <disco>.vars.fd (ao lado do disco; de <dir_qemu>\\share)\n" +
+            "        instalando   = so ISO + boot d, SEM cidata/autoinstall   (MODE/AUTO/DELETE = 1/0/1)\n" +
+            "FLAGS  (todas opcionais; default entre colchetes)\n" +
+            "    Perfil\n" +
+            "        -linux               perfil Ubuntu                                   [default]\n" +
+            "        -windows             perfil Windows\n" +
+            "    Maquina\n" +
+            "        -dir_qemu <pasta>    pasta do qemu-system-x86_64.exe / qemu-img.exe  [C:\\qemu11]\n" +
+            "        -dir_7z   <pasta>    pasta do 7-Zip (so -linux)         [C:\\ProgramFiles\\7-Zip]\n" +
+            "        -m        <tam>      memoria RAM                                     [10G]\n" +
+            "        -smp      <n>        numero de vCPUs                                 [3]\n" +
+            "        -accel    <accel>    acelerador: whpx | hax (hax checa o servico)   [whpx]\n" +
+            "        -cpu      <modelo>   modelo de CPU: max | core2duo | ...            [max]\n" +
+            "        -file     <disco>    caminho do disco .qcow2   [linux: ubuntu_disk / win: windows_disk]\n" +
+            "    Tela / rede\n" +
+            "        -nogui               sem janela (serial no linux, display none no win) [ligado]\n" +
+            "        -gui                 com interface grafica (VGA + tablet)\n" +
+            "        -port_ssh <porta>    (so -linux)   host:porta -> guest:22            [2222]\n" +
+            "        -port_rdp <porta>    (so -windows) host:porta -> guest:3389          [3395]\n" +
+            "        -rede     <modo>     normal (so NAT) | tap0 (NAT+TAP)  [linux: tap0 / win: normal]\n" +
+            "    Instalacao\n" +
+            "        -file_iso    <arquivo>  ISO do SO (so no 'instalando')\n" +
+            "        -file_cidata <arquivo>  (so -linux) ISO cloud-init     [C:\\qemu_hax\\cidata.iso]\n" +
+            "        -size        <tam>      tamanho ao criar disco novo                  [120G]\n" +
+            "    # conversoes\n" +
+            "        qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx\n" +
+            "        opcoes: vhdx, qcow2, vmdk, vdi, raw\n" +
+            "        qemu-img resize c:\\tmp\\a.vhdx 100G\n" +
+            "        qemu-img info c:\\tmp\\a.vhdx\n" +
+            "        # compactando espaco livre. converter para ele mesmo\n" +
+            "            qemu-img convert -f vhdx -O vhdx c:\\tmp\\a.vhdx c:\\tmp\\a.vhdx\n" +
+            "        # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink. tem que diminuir internamente com https://gparted.org/download.php\n" +
+            "        # para forcar destino fisico: -o \"preallocation=full\"\n" +
+            "        # para mostrar progress em %: -p\n" +
+            "        # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao\n" +
+            "        ATENCAO, ligar qemu com vhdx e muito estavel e grande risco de corromper o disco por apontamento sobreposto\n" +
+            "        somente informativo -> y help qemu\n";
+        String mode = (args.length > 0) ? args[0].toLowerCase() : "";
+        if (!mode.equals("rodando") && !mode.equals("instalando")) {
+            System.out.println(USAGE);
+            System.exit(2);
+            return;
+        }
+        boolean MODE_INSTALL = mode.equals("instalando");
+        boolean DELETE_DISK  = mode.equals("instalando");
+        boolean windows = false;         // -linux e o padrao
+        String dirQemu  = "C:\\qemu11";
+        String dir7z = "C:\\ProgramFiles\\7-Zip";   // pasta; 7z.exe montado depois
+        String isosDir  = "C:\\qemu_isos";
+        String ram = "10G", smp = "3", accel = "whpx", cpu = "max";
+        String size = "120G";
+        String rede = null;              // default por perfil: linux=tap0, windows=normal
+        boolean gui = false;             // -nogui e o padrao
+        String file = null;              // default depende do perfil
+        String ssh  = "2222";            // linux
+        String rdp  = "3395";            // windows
+        String iso    = null;            // -file_iso explicito vence o automatico
+        String cidata = "C:\\qemu_hax\\cidata.iso";  // linux, fixo
+
+        // ===== Parse das flags (a partir do indice 1) =====
+        int i = 1;
+        while (i < args.length) {
+            String a   = args[i];
+            String key = (a.startsWith("-") ? a.substring(1) : a).toLowerCase();
+
+            // booleanas (sem valor)
+            if (key.equals("linux"))   { windows = false; i += 1; continue; }
+            if (key.equals("windows")) { windows = true;  i += 1; continue; }
+            if (key.equals("nogui"))   { gui = false;     i += 1; continue; }
+            if (key.equals("gui"))     { gui = true;      i += 1; continue; }
+
+            // com valor
+            String val = (i + 1 < args.length) ? args[i + 1] : "";
+            if      (key.equals("dir_qemu"))    dirQemu  = val;
+            else if (key.equals("dir_7z"))      dir7z    = val;
+            else if (key.equals("m"))           ram      = val;
+            else if (key.equals("smp"))         smp      = val;
+            else if (key.equals("accel"))       accel    = val;
+            else if (key.equals("cpu"))         cpu      = val;
+            else if (key.equals("file"))        file     = val;
+            else if (key.equals("port_ssh"))    ssh      = val;
+            else if (key.equals("port_rdp"))    rdp      = val;
+            else if (key.equals("rede"))        rede     = val;
+            else if (key.equals("file_iso"))    iso      = val;
+            else if (key.equals("file_cidata")) cidata   = val;
+            else if (key.equals("size"))        size     = val;
+            else System.out.println("AVISO: parametro desconhecido ignorado: " + a);
+            i += 2;
+        }
+
+        boolean AUTO_INSTALL = MODE_INSTALL && !windows;   // autoinstall so no linux
+        if (rede == null) rede = windows ? "normal" : "tap0";
+        boolean tap = rede.equalsIgnoreCase("tap0");
+
+        // ===== Derivados =====
+        if (file == null) file = windows ? "C:\\qemu_hax\\windows_disk.qcow2"
+                                         : "C:\\qemu_hax\\ubuntu_disk.qcow2";
+
+        String BIN      = dirQemu + "\\qemu-system-x86_64.exe";
+        String QEMU_IMG = dirQemu + "\\qemu-img.exe";
+        String sevenZip = dir7z   + "\\7z.exe";
+
+        java.io.File fileF  = new java.io.File(file);
+        java.io.File parent = fileF.getParentFile();
+        String workDir = (parent != null) ? parent.getPath() : ".";
+        java.io.File WORKDIR = new java.io.File(workDir);
+
+        String diskBase = fileF.getName();
+        if (diskBase.toLowerCase().endsWith(".qcow2"))
+            diskBase = diskBase.substring(0, diskBase.length() - 6);
+
+        // ISO (linux: server/desktop por tela; windows: win11 default)
+        String isoLinux = isosDir + (gui ? "\\ubuntu-27.04-desktop-amd64.iso"
+                                         : "\\ubuntu-27.04-live-server-amd64.iso");
+        String isoWin   = isosDir + "\\win11_pro_ptbr_26200.9539_oficial_com_script_anti_tpm_e_refs.iso";
+        String useIso   = (iso != null) ? iso : (windows ? isoWin : isoLinux);
+
+        // kernel/initrd (linux autoinstall) - descartaveis, nome aleatorio em C:\tmp
+        // (random no nome evita colisao se houver outro 'y qemu' rodando ao mesmo tempo)
+        long rnd = (long)(Math.random() * 1000000000L);
+        String tmpQemu = "C:\\tmp\\tmp_qemu";
+        String kernel = tmpQemu + "\\vmlinuz_" + rnd;
+        String initrd = tmpQemu + "\\initrd_"  + rnd;
+
+        // ===== 1. (LINUX) kernel/initrd via 7z (saida -so -> arquivo), so no instalando =====
+        if (AUTO_INSTALL) {
+            java.nio.file.Files.createDirectories(java.nio.file.Paths.get(tmpQemu));
+            new ProcessBuilder(sevenZip, "e", useIso, "casper/vmlinuz", "-so")
+                    .directory(WORKDIR).redirectOutput(new java.io.File(kernel)).start().waitFor();
+            new ProcessBuilder(sevenZip, "e", useIso, "casper/initrd", "-so")
+                    .directory(WORKDIR).redirectOutput(new java.io.File(initrd)).start().waitFor();
+        }
+
+        // ===== 1b. (WINDOWS) firmware UEFI ao lado do disco, como sufixos =====
+        //   <pasta do disco>\<disco>.code.fd   e   <disco>.vars.fd
+        String codeFw = null, varsFw = null;
+        if (windows) {
+            String codeSrc = dirQemu + "\\share\\edk2-x86_64-code.fd";
+            String varsSrc = dirQemu + "\\share\\edk2-x86_64-vars.fd";
+            codeFw = workDir + "\\" + diskBase + ".code.fd";
+            varsFw = workDir + "\\" + diskBase + ".vars.fd";
+            // CODE: sempre atualiza (read-only)
+            java.nio.file.Files.copy(java.nio.file.Paths.get(codeSrc),
+                    java.nio.file.Paths.get(codeFw),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            // VARS: recria no instalando; no rodando reusa (se nao existir, copia do template)
+            if (MODE_INSTALL || !new java.io.File(varsFw).exists()) {
+                java.nio.file.Files.copy(java.nio.file.Paths.get(varsSrc),
+                        java.nio.file.Paths.get(varsFw),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+
+        // ===== 2. Monta os argumentos do QEMU =====
+        java.util.ArrayList<String> A = new java.util.ArrayList<String>();
+
+        A.add("-name"); A.add(windows ? "windows" : "DAEMONlinux_principal.bat");
+        if (windows) { A.add("-machine"); A.add("q35"); }
+        A.add("-m");    A.add(ram);
+        A.add("-smp");  A.add(smp);
+        A.add("-accel");A.add(accel);
+        A.add("-cpu");  A.add(cpu);
+
+        // Disco
+        if (windows) {
+            A.add("-drive"); A.add("file=" + file + ",format=qcow2,if=ide");
+        } else {
+            A.add("-drive"); A.add("file=" + file + ",if=virtio,discard=unmap");
+        }
+
+        // Firmware UEFI (windows)
+        if (windows) {
+            A.add("-drive"); A.add("if=pflash,format=raw,readonly=on,file=" + codeFw);
+            A.add("-drive"); A.add("if=pflash,format=raw,file=" + varsFw);
+        }
+
+        // Tela
+        if (gui) {
+            A.add("-vga");    A.add("std");
+            A.add("-device"); A.add("usb-ehci,id=usb,bus=pci.0,addr=0x7");
+            A.add("-device"); A.add("usb-tablet");
+        } else if (windows) {
+            A.add("-display"); A.add("none");
+            A.add("-vga");     A.add("std");
+        } else {
+            A.add("-nographic");
+            A.add("-serial"); A.add("mon:stdio");
+        }
+
+        // Rede 1: NAT + redirecionamento (SSH no linux, RDP no windows)
+        if (windows) {
+            A.add("-nic"); A.add("user,model=e1000e,hostfwd=tcp::" + rdp + "-:3389");
+        } else {
+            A.add("-netdev"); A.add("user,id=net0,hostfwd=tcp::" + ssh + "-:22");
+            A.add("-device"); A.add("virtio-net-pci,netdev=net0");
+        }
+
+        // Rede 2: TAP (tap0)
+        if (tap) {
+            A.add("-netdev"); A.add("tap,id=net1,ifname=tap0");
+            A.add("-device"); A.add(windows ? "e1000e,netdev=net1" : "virtio-net-pci,netdev=net1");
+        }
+
+        // Instalacao
+        if (MODE_INSTALL) {
+            A.add("-drive"); A.add("file=" + useIso + ",media=cdrom,readonly=on");
+            if (!windows) {
+                A.add("-drive"); A.add("file=" + cidata + ",media=cdrom,readonly=on");
+            }
+            A.add("-boot"); A.add("d");
+            if (AUTO_INSTALL) {
+                if (new java.io.File(kernel).exists() && new java.io.File(initrd).exists()) {
+                    A.add("-kernel"); A.add(kernel);
+                    A.add("-initrd"); A.add(initrd);
+                    A.add("-append"); A.add("console=ttyS0,115200n8 autoinstall ds=nocloud");
+                } else {
+                    System.out.println("AVISO: vmlinuz/initrd nao gerados em " + tmpQemu
+                            + ". Autoinstall pode falhar no console.");
+                }
+            }
+        }
+
+        // Apaga disco
+        if (DELETE_DISK && new java.io.File(file).exists()) {
+            System.out.println("Removendo disco existente...");
+            new java.io.File(file).delete();
+        }
+
+        // Cria disco
+        if (!new java.io.File(file).exists()) {
+            System.out.println("Criando novo disco virtual de " + size + "...");
+            new ProcessBuilder(QEMU_IMG, "create", "-f", "qcow2", file, size)
+                    .directory(WORKDIR).inheritIO().start().waitFor();
+        }
+
+        // ===== 3. Execucao =====
+        java.util.ArrayList<String> full = new java.util.ArrayList<String>();
+        full.add(BIN);
+        full.addAll(A);
+
+        System.out.println("comandos usados:");
+        System.out.println(String.join(" ", full));
+        System.out.println("Iniciando QEMU (" + (windows ? "windows" : "linux") + ", " + mode + ")...");
+
+        int rc = new ProcessBuilder(full).directory(WORKDIR).inheritIO().start().waitFor();
+
+        // Limpeza dos descartaveis do linux (kernel/initrd)
+        if (AUTO_INSTALL) {
+            try {
+                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(kernel));
+                java.nio.file.Files.deleteIfExists(java.nio.file.Paths.get(initrd));
+            } catch (Exception ignore) { }
+        }
+
+        System.exit(rc);
+    }
+}
+//</editor-fold>
+
 /* class BannerFiglet */ class BannerFiglet { private static final int WIDTH = 80; private static final char HB = '$'; private static final int H = 6; private static final int RULES = 15; private static final String[][] FONT = { { " ", " $", " $", " $", " $", " $", " $" }, { "!", "  _ ", " | |", " | |", " |_|", " (_)", "    " }, { "\"", "  _ _ ", " ( | )", "  V V ", "   $  ", "   $  ", "      " }, { "#", "    _  _   ", "  _| || |_ ", " |_  ..  _|", " |_      _|", "   |_||_|  ", "           " }, { "$", "   _  ", "  | | ", " / __)", " \\__ \\", " (   /", "  |_| " }, { "%", "  _  __", " (_)/ /", "   / / ", "  / /_ ", " /_/(_)", "       " }, { "&", "   ___   ", "  ( _ )  ", "  / _ \\/\\", " | (_>  <", "  \\___/\\/", "         " }, { "'", "  _ ", " ( )", " |/ ", "  $ ", "  $ ", "    " }, { "(", "   __", "  / /", " | | ", " | | ", " | | ", "  \\_\\" }, { ")", " __  ", " \\ \\ ", "  | |", "  | |", "  | |", " /_/ " }, { "*", "       ", " __/\\__", " \\    /", " /_  _\\", "   \\/  ", "       " }, { "+", "        ", "    _   ", "  _| |_ ", " |_   _|", "   |_|  ", "        " }, { ",", "    ", "    ", "    ", "  _ ", " ( )", " |/ " }, { "-", "        ", "        ", "  _____ ", " |_____|", "    $   ", "        " }, { ".", "    ", "    ", "    ", "  _ ", " (_)", "    " }, { "/", "     __", "    / /", "   / / ", "  / /  ", " /_/   ", "       " }, { "0", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "1", "  _ ", " / |", " | |", " | |", " |_|", "    " }, { "2", "  ____  ", " |___ \\ ", "   __) |", "  / __/ ", " |_____|", "        " }, { "3", "  _____ ", " |___ / ", "   |_ \\ ", "  ___) |", " |____/ ", "        " }, { "4", "  _  _   ", " | || |  ", " | || |_ ", " |__   _|", "    |_|  ", "         " }, { "5", "  ____  ", " | ___| ", " |___ \\ ", "  ___) |", " |____/ ", "        " }, { "6", "   __   ", "  / /_  ", " | '_ \\ ", " | (_) |", "  \\___/ ", "        " }, { "7", "  _____ ", " |___  |", "    / / ", "   / /  ", "  /_/   ", "        " }, { "8", "   ___  ", "  ( _ ) ", "  / _ \\ ", " | (_) |", "  \\___/ ", "        " }, { "9", "   ___  ", "  / _ \\ ", " | (_) |", "  \\__, |", "    /_/ ", "        " }, { ":", "    ", "  _ ", " (_)", "  _ ", " (_)", "    " }, { ";", "    ", "  _ ", " (_)", "  _ ", " ( )", " |/ " }, { "<", "   __", "  / /", " / / ", " \\ \\ ", "  \\_\\", "     " }, { "=", "        ", "  _____ ", " |_____|", " |_____|", "    $   ", "        " }, { ">", " __  ", " \\ \\ ", "  \\ \\", "  / /", " /_/ ", "     " }, { "?", "  ___ ", " |__ \\", "   / /", "  |_| ", "  (_) ", "      " }, { "@", "    ____  ", "   / __ \\ ", "  / / _` |", " | | (_| |", "  \\ \\__,_|", "   \\____/ " }, { "A", "     _    ", "    / \\   ", "   / _ \\  ", "  / ___ \\ ", " /_/   \\_\\", "          " }, { "B", "  ____  ", " | __ ) ", " |  _ \\ ", " | |_) |", " |____/ ", "        " }, { "C", "   ____ ", "  / ___|", " | |    ", " | |___ ", "  \\____|", "        " }, { "D", "  ____  ", " |  _ \\ ", " | | | |", " | |_| |", " |____/ ", "        " }, { "E", "  _____ ", " | ____|", " |  _|  ", " | |___ ", " |_____|", "        " }, { "F", "  _____ ", " |  ___|", " | |_   ", " |  _|  ", " |_|    ", "        " }, { "G", "   ____ ", "  / ___|", " | |  _ ", " | |_| |", "  \\____|", "        " }, { "H", "  _   _ ", " | | | |", " | |_| |", " |  _  |", " |_| |_|", "        " }, { "I", "  ___ ", " |_ _|", "  | | ", "  | | ", " |___|", "      " }, { "J", "      _ ", "     | |", "  _  | |", " | |_| |", "  \\___/ ", "        " }, { "K", "  _  __", " | |/ /", " | ' / ", " | . \\ ", " |_|\\_\\", "       " }, { "L", "  _     ", " | |    ", " | |    ", " | |___ ", " |_____|", "        " }, { "M", "  __  __ ", " |  \\/  |", " | |\\/| |", " | |  | |", " |_|  |_|", "         " }, { "N", "  _   _ ", " | \\ | |", " |  \\| |", " | |\\  |",
 /* class BannerFiglet */ " |_| \\_|", "        " }, { "O", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "P", "  ____  ", " |  _ \\ ", " | |_) |", " |  __/ ", " |_|    ", "        " }, { "Q", "   ___  ", "  / _ \\ ", " | | | |", " | |_| |", "  \\__\\_\\", "        " }, { "R", "  ____  ", " |  _ \\ ", " | |_) |", " |  _ < ", " |_| \\_\\", "        " }, { "S", "  ____  ", " / ___| ", " \\___ \\ ", "  ___) |", " |____/ ", "        " }, { "T", "  _____ ", " |_   _|", "   | |  ", "   | |  ", "   |_|  ", "        " }, { "U", "  _   _ ", " | | | |", " | | | |", " | |_| |", "  \\___/ ", "        " }, { "V", " __     __", " \\ \\   / /", "  \\ \\ / / ", "   \\ V /  ", "    \\_/   ", "          " }, { "W", " __        __", " \\ \\      / /", "  \\ \\ /\\ / / ", "   \\ V  V /  ", "    \\_/\\_/   ", "             " }, { "X", " __  __", " \\ \\/ /", "  \\  / ", "  /  \\ ", " /_/\\_\\", "       " }, { "Y", " __   __", " \\ \\ / /", "  \\ V / ", "   | |  ", "   |_|  ", "        " }, { "Z", "  _____", " |__  /", "   / / ", "  / /_ ", " /____|", "       " }, { "[", "  __ ", " | _|", " | | ", " | | ", " | | ", " |__|" }, { "\\", " __    ", " \\ \\   ", "  \\ \\  ", "   \\ \\ ", "    \\_\\", "       " }, { "]", "  __ ", " |_ |", "  | |", "  | |", "  | |", " |__|" }, { "^", "  /\\ ", " |/\\|", "   $ ", "   $ ", "   $ ", "     " }, { "_", "        ", "        ", "        ", "        ", "  _____ ", " |_____|" }, { "`", "  _ ", " ( )", "  \\|", "  $ ", "  $ ", "    " }, { "a", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__,_|", "        " }, { "b", "  _     ", " | |__  ", " | '_ \\ ", " | |_) |", " |_.__/ ", "        " }, { "c", "       ", "   ___ ", "  / __|", " | (__ ", "  \\___|", "       " }, { "d", "      _ ", "   __| |", "  / _` |", " | (_| |", "  \\__,_|", "        " }, { "e", "       ", "   ___ ", "  / _ \\", " |  __/", "  \\___|", "       " }, { "f", "   __ ", "  / _|", " | |_ ", " |  _|", " |_|  ", "      " }, { "g", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__, |", "  |___/ " }, { "h", "  _     ", " | |__  ", " | '_ \\ ", " | | | |", " |_| |_|", "        " }, { "i", "  _ ", " (_)", " | |", " | |", " |_|", "    " }, { "j", "    _ ", "   (_)", "   | |", "   | |", "  _/ |", " |__/ " }, { "k", "  _    ", " | | __", " | |/ /", " |   < ", " |_|\\_\\", "       " }, { "l", "  _ ", " | |", " | |", " | |", " |_|", "    " }, { "m", "            ", "  _ __ ___  ", " | '_ ` _ \\ ", " | | | | | |", " |_| |_| |_|", "            " }, { "n", "        ", "  _ __  ", " | '_ \\ ", " | | | |", " |_| |_|", "        " }, { "o", "        ", "   ___  ", "  / _ \\ ", " | (_) |", "  \\___/ ", "        " }, { "p", "        ", "  _ __  ", " | '_ \\ ", " | |_) |", " | .__/ ", " |_|    " }, { "q", "        ", "   __ _ ", "  / _` |", " | (_| |", "  \\__, |", "     |_|" }, { "r", "       ", "  _ __ ", " | '__|", " | |   ", " |_|   ", "       " }, { "s", "      ", "  ___ ", " / __|", " \\__ \\", " |___/", "      " }, { "t", "  _   ", " | |_ ", " | __|", " | |_ ", "  \\__|", "      " }, { "u", "        ", "  _   _ ", " | | | |", " | |_| |", "  \\__,_|", "        " }, { "v", "        ", " __   __", " \\ \\ / /", "  \\ V / ", "   \\_/  ", "        " }, { "w", "           ", " __      __", " \\ \\ /\\ / /", "  \\ V  V / ", "   \\_/\\_/  ", "           " }, { "x", "       ", " __  __", " \\ \\/ /", "  >  < ", " /_/\\_\\", "       " }, { "y", "        ", "  _   _ ", " | | | |", " | |_| |", "  \\__, |", "  |___/ " }, { "z", "      ", "  ____", " |_  /", "  / / ", " /___|", "      " }, { "{", "    __", "   / /", "  | | ", " < <  ", "  | | ", "   \\_\\" }, { "|", "  _ ", " | |", " | |", " | |", " | |", " |_|" }, { "}", " __   ", " \\ \\  ", "  | | ", "   > >", "  | | ", " /_/  " }, { "~", "  /\\/|", " |/\\/ ", "   $  ", "   $  ",
 /* class BannerFiglet */ "   $  ", "      " }, { "\u00a0", " $", " $", " $", " $", " $", " $" }, { "\u00a1", "  _ ", " (_)", " | |", " | |", " |_|", "    " }, { "\u00a2", "    _  ", "   | | ", "  / __)", " | (__ ", "  \\   )", "   |_| " }, { "\u00a3", "    ___  ", "   / ,_\\ ", " _| |_   ", "  | |___ ", " (_,____|", "         " }, { "\u00a4", " /\\___/\\", " \\  _  /", " | (_) |", " / ___ \\", " \\/   \\/", "        " }, { "\u00a5", "  __ __ ", "  \\ V / ", " |__ __|", " |__ __|", "   |_|  ", "        " }, { "\u00a6", "  _ ", " | |", " |_|", "  _ ", " | |", " |_|" }, { "\u00a7", "    __ ", "  _/ _)", " / \\ \\ ", " \\ \\\\ \\", "  \\ \\_/", " (__/  " }, { "\u00a8", "  _   _ ", " (_) (_)", "  $   $ ", "  $   $ ", "  $   $ ", "        " }, { "\u00a9", "    _____   ", "   / ___ \\  ", "  / / __| \\ ", " | | (__   |", "  \\ \\___| / ", "   \\_____/  " }, { "\u00aa", "  __ _ ", " / _` |", " \\__,_|", " |____|", "    $  ", "       " }, { "\u00ab", "   ____", "  / / /", " / / / ", " \\ \\ \\ ", "  \\_\\_\\", "       " }, { "\u00ac", "        ", "  _____ ", " |___  |", "     |_|", "    $   ", "        " }, { "\u00ad", "       ", "       ", "  ____ ", " |____|", "    $  ", "       " }, { "\u00ae", "    _____   ", "   / ___ \\  ", "  / | _ \\ \\ ", " |  |   /  |", "  \\ |_|_\\ / ", "   \\_____/  " }, { "\u00af", "  _____ ", " |_____|", "    $   ", "    $   ", "    $   ", "        " }, { "\u00b0", "   __  ", "  /  \\ ", " | () |", "  \\__/ ", "    $  ", "       " }, { "\u00b1", "    _   ", "  _| |_ ", " |_   _|", "  _|_|_ ", " |_____|", "        " }, { "\u00b2", "  ___ ", " |_  )", "  / / ", " /___|", "   $  ", "      " }, { "\u00b3", "  ____", " |__ /", "  |_ \\", " |___/", "   $  ", "      " }, { "\u00b4", "  __", " /_/", "  $ ", "  $ ", "  $ ", "    " }, { "\u00b5", "        ", "  _   _ ", " | | | |", " | |_| |", " | ._,_|", " |_|    " }, { "\u00b6", "   _____ ", "  /     |", " | (| | |", "  \\__ | |", "    |_|_|", "         " }, { "\u00b7", "    ", "  _ ", " (_)", "  $ ", "  $ ", "    " }, { "\u00b8", "    ", "    ", "    ", "    ", "  _ ", " )_)" }, { "\u00b9", "  _ ", " / |", " | |", " |_|", "  $ ", "    " }, { "\u00ba", "  ___ ", " / _ \\", " \\___/", " |___|", "   $  ", "      " }, { "\u00bb", " ____  ", " \\ \\ \\ ", "  \\ \\ \\", "  / / /", " /_/_/ ", "       " }, { "\u00bc", "  _   __    ", " / | / / _  ", " | |/ / | | ", " |_/ /|_  _|", "  /_/   |_| ", "            " }, { "\u00bd", "  _   __   ", " / | / /__ ", " | |/ /_  )", " |_/ / / / ", "  /_/ /___|", "           " }, { "\u00be", "  ____  __    ", " |__ / / / _  ", "  |_ \\/ / | | ", " |___/ /|_  _|", "    /_/   |_| ", "              " }, { "\u00bf", "   _  ", "  (_) ", "  | | ", " / /_ ", " \\___|", "      " }, { "\u00c0", "   __   ", "   \\_\\  ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c1", "    __  ", "   /_/  ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c2", "   //\\  ", "  |/_\\| ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c3", "   /\\/| ", "  |/\\/  ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c4", "  _   _ ", " (_)_(_)", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c5", "    _   ", "   (o)  ", "   /_\\  ", "  / _ \\ ", " /_/ \\_\\", "        " }, { "\u00c6", "     ______ ", "    /  ____|", "   / _  _|  ", "  / __ |___ ", " /_/ |_____|", "            " }, { "\u00c7", "   ____ ", "  / ___|", " | |    ", " | |___ ", "  \\____|", "    )_) " }, { "\u00c8", "   __   ", "  _\\_\\_ ", " | ____|", " |  _|_ ", " |_____|", "        " }, { "\u00c9", "    __  ", "  _/_/_ ", " | ____|", " |  _|_ ", " |_____|", "        " }, { "\u00ca", "   //\\  ", "  |/_\\| ", " | ____|", " |  _|_ ", " |_____|", "        " }, { "\u00cb", "  _   _ ", " (_)_(_)", " | ____|", " |  _|_ ", " |_____|",
@@ -54894,10 +55196,10 @@ usage:
   [y sorte
   [y iso]
   [y cidata]
-  [y qemu]
   [y artcraft]
   [y posicao]
   [y particao|par]
+  [y qemu]
   [y validaDisco]
   [y [juros|emprestimo]]
   [y cmdUser]
@@ -55242,19 +55544,6 @@ Exemplos...
 [y cidata]
     y cidata
     # mostra template avançado de cidata ubuntu configurado
-[y qemu]
-    qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx
-    opcoes: vhdx, qcow2, vmdk, vdi, raw
-    qemu-img resize c:\\tmp\\a.vhdx 100G
-    qemu-img info c:\\tmp\\a.vhdx 
-    # compactando espaço livre. converter para ele mesmo
-        qemu-img convert -f vhdx -O vhdx c:\\tmp\\a.vhdx c:\\tmp\\a.vhdx
-    # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink. tem que diminuir internamente com https://gparted.org/download.php
-    # para forçar destino fisico: -o "preallocation=full"
-    # para mostrar progress em %: -p
-    # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao
-    ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
-    somente informativo -> y help qemu
 [y artcraft]
     y artcraft
     y artcraft pdf
@@ -55354,6 +55643,29 @@ Exemplos...
             y particao -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
             y particao -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
         # detalhe use sempre GPT nos discos
+[y qemu]
+    y qemu
+    # whpx
+        y qemu rodando
+        y qemu rodando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-live-server-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+    # hax
+        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu"
+        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-live-server-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+    # conversoes
+        qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx
+        opcoes: vhdx, qcow2, vmdk, vdi, raw
+        qemu-img resize c:\\tmp\\a.vhdx 100G
+        qemu-img info c:\\tmp\\a.vhdx 
+        # compactando espaço livre. converter para ele mesmo
+            qemu-img convert -f vhdx -O vhdx c:\\tmp\\a.vhdx c:\\tmp\\a.vhdx
+        # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink. tem que diminuir internamente com https://gparted.org/download.php
+        # para forçar destino fisico: -o "preallocation=full"
+        # para mostrar progress em %: -p
+        # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao
+        ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
+        somente informativo -> y help qemu
 [y validaDisco]
     y validaDisco win11.vhdx
         formatos suportados: vhdx, qcow2, vmdk, vdi, raw
