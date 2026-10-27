@@ -51781,6 +51781,8 @@ class Qemu {
             "        # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao\n" +
             "        ATENCAO, ligar qemu com vhdx e muito estavel e grande risco de corromper o disco por apontamento sobreposto\n" +
             "        somente informativo -> y help qemu\n";
+
+        // ===== Modo (1o argumento posicional) =====
         String mode = (args.length > 0) ? args[0].toLowerCase() : "";
         if (!mode.equals("rodando") && !mode.equals("instalando")) {
             System.out.println(USAGE);
@@ -51789,6 +51791,8 @@ class Qemu {
         }
         boolean MODE_INSTALL = mode.equals("instalando");
         boolean DELETE_DISK  = mode.equals("instalando");
+
+        // ===== Defaults comuns =====
         boolean windows = false;         // -linux e o padrao
         String dirQemu  = "C:\\qemu11";
         String dir7z = "C:\\ProgramFiles\\7-Zip";   // pasta; 7z.exe montado depois
@@ -51845,6 +51849,16 @@ class Qemu {
         String BIN      = dirQemu + "\\qemu-system-x86_64.exe";
         String QEMU_IMG = dirQemu + "\\qemu-img.exe";
         String sevenZip = dir7z   + "\\7z.exe";
+
+        // Usando a pasta qemu11 (build WHPX): exige o WinHvPlatform.dll, senao aborta
+        if (new java.io.File(dirQemu).getName().equalsIgnoreCase("qemu11")) {
+            String whp = dirQemu + "\\WinHvPlatform.dll";
+            if (!new java.io.File(whp).exists()) {
+                System.err.println("ERRO: nao encontrado " + whp + " (necessario para o qemu11/WHPX). Abortando.");
+                System.exit(1);
+                return;
+            }
+        }
 
         java.io.File fileF  = new java.io.File(file);
         java.io.File parent = fileF.getParentFile();
