@@ -78,8 +78,8 @@ goto :eof
 :java
 set argc=0
 for %%x in (%*) do set /a argc+=1
-if !argc! geq 19 (
-echo ALERTA: quantidade de parametros ^(!argc!^) atingiu ou passou de 18
+if !argc! geq 41 (
+echo ALERTA: quantidade de parametros ^(!argc!^) passou de 40
 exit /b 1
 )
 set a1=%1
@@ -100,7 +100,65 @@ shift
 shift
 shift
 shift
-java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\postgresql-42.7.5.jar;c:\\y\\jsch-0.1.55.jar Y %a1% %a2% %a3% %a4% %a5% %a6% %a7% %a8% %a9% %1 %2 %3 %4 %5 %6 %7 %8 %9
+set a10=%1
+set a11=%2
+set a12=%3
+set a13=%4
+set a14=%5
+set a15=%6
+set a16=%7
+set a17=%8
+set a18=%9
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+set a19=%1
+set a20=%2
+set a21=%3
+set a22=%4
+set a23=%5
+set a24=%6
+set a25=%7
+set a26=%8
+set a27=%9
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+set a28=%1
+set a29=%2
+set a30=%3
+set a31=%4
+set a32=%5
+set a33=%6
+set a34=%7
+set a35=%8
+set a36=%9
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+shift
+set a37=%1
+set a38=%2
+set a39=%3
+set a40=%4
+java -Dfile.encoding=UTF-8 -Dline.separator=%\n% -cp c:\\y;c:\\y\\ojdbc6.jar;c:\\y\\sqljdbc4-3.0.jar;c:\\y\\mysql-connector-java-8.0.26.jar;c:\\y\\postgresql-42.7.5.jar;c:\\y\\jsch-0.1.55.jar Y %a1% %a2% %a3% %a4% %a5% %a6% %a7% %a8% %a9% %a10% %a11% %a12% %a13% %a14% %a15% %a16% %a17% %a18% %a19% %a20% %a21% %a22% %a23% %a24% %a25% %a26% %a27% %a28% %a29% %a30% %a31% %a32% %a33% %a34% %a35% %a36% %a37% %a38% %a39% %a40%
 '
 
 Set-Content c:/windows/cd0.bat '@echo off
