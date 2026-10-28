@@ -22,6 +22,7 @@
 #          sudo install-to-disk.sh /dev/sda 
 #          sudo USERNAME=meuuser USERPASS=minhasenha install-to-disk.sh /dev/sda
 #          # o /dev/sda vai ser apagado no processo
+#          # as vezes vem com /dev/vda
 # obs2: essa iso suporta cidata, mas nao suporta Subiquity
 # obs3: iso fica uns 2 gigas e o sistema instalado uns 4.5 gigas
 # obs5: o install-to-disk.sh cria disco GPT que da boot em BIOS e em UEFI (bios_grub + EFI + raiz ext4)
@@ -897,6 +898,7 @@ Esta e uma imagem LIVE (esta rodando da ISO, ainda nao instalada).
 # sudo USERNAME=meuuser USERPASS=minhasenha install-to-disk.sh /dev/sda
 # ou
 # sudo install-to-disk.sh /dev/sda
+# as vezes vem com /dev/vda
 
 ATENCAO: isso APAGA TODO o disco indicado (/dev/sda). Confira qual e o disco
 com 'lsblk' ANTES de rodar. Apos o comando voce tem 6 segundos para abortar
