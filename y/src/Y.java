@@ -51913,7 +51913,7 @@ class Qemu {
         // ===== 2. Monta os argumentos do QEMU =====
         java.util.ArrayList<String> A = new java.util.ArrayList<String>();
 
-        A.add("-name"); A.add(windows ? "windows" : "DAEMONlinux_principal.bat");
+        A.add("-name"); A.add(windows ? "windows" : "linux");
         // -machine q35 nos dois: q35 nao tem controlador de disquete (evita 'I/O error, dev fd0')
         A.add("-machine"); A.add("q35");
         A.add("-m");    A.add(ram);
