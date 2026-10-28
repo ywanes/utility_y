@@ -51763,7 +51763,7 @@ class Qemu {
             "        -gui                 com interface grafica (VGA + tablet)\n" +
             "        -port_ssh <porta>    (so -linux)   host:porta -> guest:22            [2222]\n" +
             "        -port_rdp <porta>    (so -windows) host:porta -> guest:3389          [3395]\n" +
-            "        -rede     <modo>     normal (so NAT) | tap0 (NAT+TAP)  [linux: tap0 / win: normal]\n" +
+            "        -rede     <modo>     off (sem rede) | normal (so NAT) | tap0 (NAT+TAP)  [linux: tap0 / win: normal]\n" +
             "    Instalacao\n" +
             "        -file_iso    <arquivo>  ISO do SO (so no 'instalando')\n" +
             "        -file_cidata <arquivo>  (so -linux) ISO cloud-init     [C:\\qemu_hax\\cidata.iso]\n" +
@@ -51840,6 +51840,7 @@ class Qemu {
 
         boolean AUTO_INSTALL = MODE_INSTALL && !windows;   // autoinstall so no linux
         if (rede == null) rede = windows ? "normal" : "tap0";
+        boolean noNet = rede.equalsIgnoreCase("off") || rede.equalsIgnoreCase("none");
         boolean tap = rede.equalsIgnoreCase("tap0");
 
         // ===== Derivados =====
@@ -51947,18 +51948,23 @@ class Qemu {
             A.add("-serial"); A.add("mon:stdio");
         }
 
-        // Rede 1: NAT + redirecionamento (SSH no linux, RDP no windows)
-        if (windows) {
-            A.add("-nic"); A.add("user,model=e1000e,hostfwd=tcp::" + rdp + "-:3389");
+        // Rede
+        if (noNet) {
+            // sem rede nenhuma
+            A.add("-nic"); A.add("none");
         } else {
-            A.add("-netdev"); A.add("user,id=net0,hostfwd=tcp::" + ssh + "-:22");
-            A.add("-device"); A.add("virtio-net-pci,netdev=net0");
-        }
-
-        // Rede 2: TAP (tap0)
-        if (tap) {
-            A.add("-netdev"); A.add("tap,id=net1,ifname=tap0");
-            A.add("-device"); A.add(windows ? "e1000e,netdev=net1" : "virtio-net-pci,netdev=net1");
+            // Rede 1: NAT + redirecionamento (SSH no linux, RDP no windows)
+            if (windows) {
+                A.add("-nic"); A.add("user,model=e1000e,hostfwd=tcp::" + rdp + "-:3389");
+            } else {
+                A.add("-netdev"); A.add("user,id=net0,hostfwd=tcp::" + ssh + "-:22");
+                A.add("-device"); A.add("virtio-net-pci,netdev=net0");
+            }
+            // Rede 2: TAP (tap0)
+            if (tap) {
+                A.add("-netdev"); A.add("tap,id=net1,ifname=tap0");
+                A.add("-device"); A.add(windows ? "e1000e,netdev=net1" : "virtio-net-pci,netdev=net1");
+            }
         }
 
         // Instalacao
