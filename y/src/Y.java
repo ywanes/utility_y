@@ -51719,11 +51719,11 @@ class Qemu {
             "    # whpx\n" +
             "        y qemu rodando\n" +
             "        y qemu rodando -linux -accel whpx -cpu max -dir_qemu \"C:\\qemu11\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0\n" +
-            "        y qemu instalando -linux -accel whpx -cpu max -dir_qemu \"C:\\qemu11\" -dir_7z \"C:\\ProgramFiles\\7-Zip\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -file_iso \"C:\\qemu_isos\\ubuntu-27.04-live-server-amd64.iso\" -file_cidata \"C:\\qemu_hax\\cidata.iso\" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0\n" +
+            "        y qemu instalando -linux -accel whpx -cpu max -dir_qemu \"C:\\qemu11\" -dir_7z \"C:\\ProgramFiles\\7-Zip\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -file_iso \"C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso\" -file_cidata \"C:\\qemu_hax\\cidata.iso\" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0\n" +
             "    # hax\n" +
             "        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\"\n" +
             "        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0\n" +
-            "        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\" -dir_7z \"C:\\ProgramFiles\\7-Zip\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -file_iso \"C:\\qemu_isos\\ubuntu-27.04-live-server-amd64.iso\" -file_cidata \"C:\\qemu_hax\\cidata.iso\" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0\n" +
+            "        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\" -dir_7z \"C:\\ProgramFiles\\7-Zip\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -file_iso \"C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso\" -file_cidata \"C:\\qemu_hax\\cidata.iso\" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0\n" +
             "USO\n" +
             "    y qemu rodando     [-linux|-windows] [flags...]   # sobe a VM do disco existente\n" +
             "    y qemu instalando  [-linux|-windows] [flags...]   # instala o SO do zero (apaga o disco)\n" +
@@ -55662,11 +55662,11 @@ Exemplos...
     # whpx
         y qemu rodando
         y qemu rodando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
-        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-live-server-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
     # hax
         y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu"
         y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
-        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-live-server-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
     # conversoes
         qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx
         opcoes: vhdx, qcow2, vmdk, vdi, raw
