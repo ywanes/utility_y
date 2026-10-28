@@ -51914,9 +51914,8 @@ class Qemu {
         java.util.ArrayList<String> A = new java.util.ArrayList<String>();
 
         A.add("-name"); A.add(windows ? "windows" : "DAEMONlinux_principal.bat");
-        // remove o controlador de disquete (evita 'I/O error, dev fd0')
-        A.add("-global"); A.add("isa-fdc.driveA=");
-        if (windows) { A.add("-machine"); A.add("q35"); }
+        // -machine: q35 no windows; no linux usa pc com floppy desligado (evita 'I/O error, dev fd0')
+        A.add("-machine"); A.add(windows ? "q35" : "pc,floppy=off");
         A.add("-m");    A.add(ram);
         A.add("-smp");  A.add(smp);
         A.add("-accel");A.add(accel);
