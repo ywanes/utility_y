@@ -56317,6 +56317,13 @@ Exemplos...
     trocando senha user: net user usuario1 senha1
     verificando se o usuario expira: wmic useraccount where name='%username%' get PasswordExpires
     setando para nao expirar: wmic useraccount where name='%username%' set PasswordExpires=FALSE
+    testsigning(cmd admin):
+        liga:
+            bcdedit testsignin on
+        desliga:
+            bcdedit testsignin off
+        consulta:
+            bcdedit /enum {current} | findstr /i /r "testsigning.*yes" >nul && echo Ligado || echo Desligado
     consultando ultima iso:
         curl -s "https://api.uupdump.net/listid.php?search=windows%2011" \\
             | jq -r '.response.builds 
