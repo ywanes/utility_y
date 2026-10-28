@@ -51895,7 +51895,7 @@ class Qemu {
         String codeFw = null, varsFw = null;
         if (windows) {
             String codeSrc = dirQemu + "\\share\\edk2-x86_64-code.fd";
-            String varsSrc = dirQemu + "\\share\\edk2-x86_64-vars.fd";
+            String varsSrc = dirQemu + "\\share\\edk2-i386-vars.fd";
             codeFw = workDir + "\\" + diskBase + ".code.fd";
             varsFw = workDir + "\\" + diskBase + ".vars.fd";
             // CODE: sempre atualiza (read-only)
