@@ -9990,14 +9990,14 @@ bind 'set enable-bracketed-paste off'
                     erroFatal("Pasta não encontrada:" + source);
                 if ( !new File(source).isDirectory() )
                     erroFatal("Esse caminho não é uma pasta:" + source);
-                if (    !check_util("D:/ProgramFiles/iso/efisys.bin") 
-                     || !check_util("D:/ProgramFiles/iso/etfsboot.com") 
-                     || !check_util("D:/ProgramFiles/iso/oscdimg.exe") 
-                )
-                    erroFatal("Erro no carregamento!");        
                 String dir="D:/ProgramFiles/iso";
                 if ( !new File(dir).exists() )
                     dir="C:/ProgramFiles/iso";
+                if (    !check_util(dir+"/efisys.bin") 
+                     || !check_util(dir+"/etfsboot.com") 
+                     || !check_util(dir+"/oscdimg.exe") 
+                )
+                    erroFatal("Erro no carregamento! - nao foi possivel encontrar os 3 utilitarios oscdimg.exe na pasta " + dir);
                 String etfsboot=dir+"/etfsboot.com";
                 String etfsboot_try=new File(source).getCanonicalPath()+"\\boot\\etfsboot.com";
                 String efisys=dir+"/efisys.bin";
