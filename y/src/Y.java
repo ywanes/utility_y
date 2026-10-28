@@ -51937,8 +51937,8 @@ class Qemu {
         // Tela
         if (gui) {
             A.add("-vga");    A.add("std");
-            A.add("-device"); A.add("usb-ehci,id=usb,bus=pci.0,addr=0x7");
-            A.add("-device"); A.add("usb-tablet");
+            A.add("-device"); A.add("usb-ehci,id=usb");
+            A.add("-device"); A.add("usb-tablet,bus=usb.0");
         } else if (windows) {
             A.add("-display"); A.add("none");
             A.add("-vga");     A.add("std");
