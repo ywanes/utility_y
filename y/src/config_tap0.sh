@@ -139,7 +139,7 @@ EOF
   msg "pronto"
   echo "    usuario da chave: $USUARIO"
   echo "    IPv6: $IP_VM em $IFACE (Windows em $IP_WIN)"
-  echo "    teste no Windows: ssh -i id_ed25519_local -p 2222 $USUARIO@127.0.0.1"
+  echo "    teste no Windows: ssh -i id_ed25519_local -p 2222 base@127.0.0.1"
 }
 
 main "$@"
