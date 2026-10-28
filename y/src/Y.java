@@ -51732,7 +51732,7 @@ class Qemu {
             "             tela -nogui\n" +
             "    -linux:\n" +
             "        -file        C:\\qemu_hax\\ubuntu_disk.qcow2        (disco if=virtio,discard=unmap)\n" +
-            "        -file_iso    ubuntu server (-nogui) / desktop (-gui)\n" +
+            "        -file_iso    ubuntu desktop\n" +
             "        -dir_7z      C:\\ProgramFiles\\7-Zip   (usa <dir_7z>\\7z.exe)\n" +
             "        -port_ssh    2222 -> guest:22\n" +
             "        -rede        tap0\n" +
@@ -51869,9 +51869,8 @@ class Qemu {
         if (diskBase.toLowerCase().endsWith(".qcow2"))
             diskBase = diskBase.substring(0, diskBase.length() - 6);
 
-        // ISO (linux: server/desktop por tela; windows: win11 default)
-        String isoLinux = isosDir + (gui ? "\\ubuntu-27.04-desktop-amd64.iso"
-                                         : "\\ubuntu-27.04-live-server-amd64.iso");
+        // ISO (linux: desktop; windows: win11 default)
+        String isoLinux = isosDir + "\\ubuntu-27.04-desktop-amd64.iso";
         String isoWin   = isosDir + "\\win11_pro_ptbr_26200.9539_oficial_com_script_anti_tpm_e_refs.iso";
         String useIso   = (iso != null) ? iso : (windows ? isoWin : isoLinux);
 
@@ -51972,7 +51971,7 @@ class Qemu {
                 if (new java.io.File(kernel).exists() && new java.io.File(initrd).exists()) {
                     A.add("-kernel"); A.add(kernel);
                     A.add("-initrd"); A.add(initrd);
-                    A.add("-append"); A.add("console=ttyS0,115200n8 autoinstall ds=nocloud");
+                    A.add("-append"); A.add("boot=casper console=ttyS0,115200n8 autoinstall ds=nocloud");
                 } else {
                     System.out.println("AVISO: vmlinuz/initrd nao gerados em " + tmpQemu
                             + ". Autoinstall pode falhar no console.");
