@@ -55668,11 +55668,17 @@ Exemplos...
     # whpx
         y qemu rodando
         y qemu rodando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
-        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
     # hax
         y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu"
         y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
-        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+    # config de apoio para linux tap0 -nogui usuario base
+        curl -fsSL "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/config_tap0.sh?$(date +%s)" | bash
+    # opcional cidata
+        -file_cidata "C:\\qemu_hax\\cidata.iso"
+    # opções de -rede
+        off|normal|tap0
     # conversoes
         qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx
         opcoes: vhdx, qcow2, vmdk, vdi, raw
