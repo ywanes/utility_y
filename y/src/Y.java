@@ -3696,8 +3696,9 @@ cat buffer.log
             s+="\"";
         return s;
     }
-    
-    
+        
+    //<editor-fold desc="take">
+    private final int take_PIPE_BUFFER = 64 * 1024;
     private boolean take(String [] args){
         Object [] objs=get_parm_ip_port_server_send_pass_paths(args);
         if ( objs == null )
@@ -3709,7 +3710,7 @@ cat buffer.log
         String pass=(String)objs[4];
         String [] paths=(String [])objs[5];
         String print_after=null;
-        
+
         if ( send ){
             valida_paths(paths);
             if ( paths.length == 1 && paths[0].equals(".") ){
@@ -3717,7 +3718,7 @@ cat buffer.log
                 if ( f_.listFiles().length == 0 ){
                     System.err.println("Diretorio vazio!");
                     System.exit(1);
-                }                
+                }
             }
         }
         if ( server ){
@@ -3730,7 +3731,7 @@ cat buffer.log
         if ( ip == null ){
             System.err.println("Nenhum ip foi encontrado!");
             System.exit(1);
-        }                
+        }
         if ( port == -1 )
             port = 222;
         if ( pass == null ){
@@ -3742,119 +3743,136 @@ cat buffer.log
                 print_after="# cliente command:\n# y take -client -ip " + ip + " -port " + port + " -pass " + pass + " -send";
             else
                 print_after="# cliente command:\n# y take -client -ip " + ip + " -port " + port + " -pass " + pass;
-       
+
         take(ip, port, server, send, pass, print_after, paths);
         return true;
     }
-    
-    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer, String [] paths){                
-        try{        
-            final PipedOutputStream pos1=new PipedOutputStream();
-            final PipedInputStream pis1=new PipedInputStream();
-            final PipedOutputStream pos2=new PipedOutputStream();
-            final PipedInputStream pis2=new PipedInputStream();
+
+    private void take(String ip, int port, boolean server, boolean send, String pass, String print_afer, String [] paths){
+        try{
+            final java.util.concurrent.CountDownLatch conectado = new java.util.concurrent.CountDownLatch(1);
+
+            final PipedOutputStream pos1 = new PipedOutputStream();
+            final PipedInputStream pis1 = new PipedInputStream(take_PIPE_BUFFER);
+            final PipedOutputStream pos2 = new PipedOutputStream();
+            // No modo send, o socket so le o pis2 depois que a conexao existe.
+            // A primeira leitura dispara o sinal e libera o zip para comecar.
+            final PipedInputStream pis2 = send
+                    ? new PipedInputStreamComSinal(take_PIPE_BUFFER, conectado)
+                    : new PipedInputStream(take_PIPE_BUFFER);
             Thread step1 = null;
             Thread step2 = null;
             Thread step3 = null;
-            
+
             pis1.connect(pos1);
             pis2.connect(pos2);
 
-            if ( send ){            
-                step1=new Thread(new Runnable() {
-                    public void run() {
-                        try{
-                            Boolean flag_aceita_falha=false;
-                            zip_add_router(paths, "", 0, pos1, "enviando - ", null, flag_aceita_falha, null);
-                            pos1.flush();
-                            pos1.close();
-                        }catch(Exception e){
-                            System.err.println("Erro zip - " + e.toString());
-                            System.exit(1);
-                        }
+            if ( send ){
+                step1 = new Thread(() -> {
+                    try{
+                        conectado.await(); // so le os arquivos depois da conexao
+                        Boolean flag_aceita_falha = false;
+                        zip_add_router(paths, "", 0, pos1, "enviando - ", null, flag_aceita_falha, null);
+                        pos1.flush();
+                        pos1.close();
+                    }catch(Exception e){
+                        System.err.println("Erro zip - " + e);
+                        System.exit(1);
                     }
                 });
 
-                step2=new Thread(new Runnable() {
-                    public void run() {
-                        try{
-                            new AES().encrypt(pis1,pos2, pass, null,null);
-                            pos2.flush();
-                            pos2.close();
-                        }catch(Exception e){                            
-                            System.err.println("Erro aes - " + e.toString());
-                            System.exit(1);
-                        }
+                step2 = new Thread(() -> {
+                    try{
+                        new AES().encrypt(pis1, pos2, pass, null, null);
+                        pos2.flush();
+                        pos2.close();
+                    }catch(Exception e){
+                        System.err.println("Erro aes - " + e);
+                        System.exit(1);
                     }
                 });
 
-                step3=new Thread(new Runnable() {
-                    public void run() {
-                        socket_1_file(ip, port, server, send, pis2, null, print_afer);                        
-                    }
+                step3 = new Thread(() -> {
+                    socket_1_file(ip, port, server, send, pis2, null, print_afer);
                 });
             }
             if ( !send ){
-                step3=new Thread(new Runnable() {
-                    public void run() {
-                        try{
-                            socket_1_file(ip, port, server, send, null, pos1, print_afer);
-                            pos1.flush();
-                            pos1.close();
-                        }catch(Exception e){
-                            System.err.println("Erro socket_1_file - " + e.toString());
-                            System.exit(1);
-                        }                            
+                step3 = new Thread(() -> {
+                    try{
+                        socket_1_file(ip, port, server, send, null, pos1, print_afer);
+                        pos1.flush();
+                        pos1.close();
+                    }catch(Exception e){
+                        System.err.println("Erro socket_1_file - " + e);
+                        System.exit(1);
                     }
                 });
 
-                step2=new Thread(new Runnable() {
-                    public void run() {
-                        try{
-                            new AES().decrypt(pis1,pos2, pass,null);
-                            pos2.flush();
-                            pos2.close();
-                        }catch(Exception e){                                     
-                            if ( e.toString().equals("java.io.IOException: Read end dead") ){
-                                if ( !copiaByStream_count_print_on ){
-                                    System.err.println("Senha invalida!");
-                                    System.exit(1);
-                                }
-                            }else{
-                                System.err.println("Erro aes - " + e.toString());
+                step2 = new Thread(() -> {
+                    try{
+                        new AES().decrypt(pis1, pos2, pass, null);
+                        pos2.flush();
+                        pos2.close();
+                    }catch(Exception e){
+                        if ( e.toString().equals("java.io.IOException: Read end dead") ){
+                            if ( !copiaByStream_count_print_on ){
+                                System.err.println("Senha invalida!");
                                 System.exit(1);
                             }
-                            
+                        }else{
+                            System.err.println("Erro aes - " + e);
+                            System.exit(1);
                         }
                     }
                 });
 
-                step1=new Thread(new Runnable() {
-                    public void run() {
-                        try{
-                            zip_extract(pis2, null, null, null, null);                            
-                            System.out.println("");
-                        }catch(Exception e){
-                            System.err.println("Erro extract zip - " + e.toString());
-                            System.exit(1);
-                        }
+                step1 = new Thread(() -> {
+                    try{
+                        zip_extract(pis2, null, null, null, null);
+                        System.out.println("");
+                    }catch(Exception e){
+                        System.err.println("Erro extract zip - " + e);
+                        System.exit(1);
                     }
                 });
             }
-            
+
             step1.start();
             step2.start();
             step3.start();
 
             step1.join();
             step2.join();
-            step3.join();            
+            step3.join();
             print_cursor_speed(0, null, "\nFim!", false, null);
         }catch(Exception e){
-            System.err.println("Erro, "+e.toString());
+            System.err.println("Erro, " + e);
             System.exit(1);
-        }            
+        }
     }
+
+    // PipedInputStream que avisa (uma vez) quando alguem comeca a ler.
+    private static class PipedInputStreamComSinal extends PipedInputStream {
+        private final java.util.concurrent.CountDownLatch sinal;
+
+        PipedInputStreamComSinal(int size, java.util.concurrent.CountDownLatch sinal){
+            super(size);
+            this.sinal = sinal;
+        }
+
+        @Override
+        public int read() throws IOException {
+            sinal.countDown();
+            return super.read();
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            sinal.countDown();
+            return super.read(b, off, len);
+        }
+    }
+    //</editor-fold>
     
     public String [] getConnAppParm(String [] args){
         
