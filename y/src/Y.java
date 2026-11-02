@@ -44524,6 +44524,7 @@ class Particao {
                 app.criarModelo("1G_" + args[0].substring(22).toLowerCase(), java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].equalsIgnoreCase("compare")) app.comparar(java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].equalsIgnoreCase("format_efi")) app.formatarEfi(java.util.Arrays.copyOfRange(args, 1, args.length));
+            else if (args.length > 0 && args[0].equalsIgnoreCase("format_efi_ybootloader")) app.formatarEfiYbootloader(java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].toLowerCase().matches("format_(refs|ntfs|fat32|exfat)")) app.formatar(args[0].substring(7).toLowerCase(), java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].equalsIgnoreCase("reguid")) app.reguid(java.util.Arrays.copyOfRange(args, 1, args.length));
             else if (args.length > 0 && args[0].equalsIgnoreCase("reserie")) app.reserie(java.util.Arrays.copyOfRange(args, 1, args.length));
@@ -44572,6 +44573,11 @@ class Particao {
                         y format_efi a.vhdx#1 a.vhdx#3
                         y format_efi 1#1 1#3
                         obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
+                    # instala o ybootloader (baixa o ybootloader.efi do GitHub; nao precisa do windows)
+                        y format_efi_ybootloader 1 | y format_efi_ybootloader a.vhdx          # grava na ESP existente
+                        y format_efi_ybootloader 1#N | y format_efi_ybootloader a.vhdx#TAIL   # cria a ESP no espaco livre
+                        y format_efi_ybootloader 1 -seconds 10                                 # timeout do menu (padrao 5; re-rodar atualiza)
+                        obs: o ybootloader acha os .vhd/.vhdx sozinho a cada boot, na RAIZ da particao NTFS ou na pasta \\vhdxs (unico instalador; o loader nao se autoinstala)
                     # delete particao
                         delete a.vhdx#6 | delete 1#3
                     # regera guid
@@ -46400,6 +46406,198 @@ class Particao {
             d.adicionarParticao((Integer) x[3], ini / d.setor, (ini + tam) / d.setor - 1, T_EFI, 0, "EFI system partition", guidEfi);
         } finally { d.fechar(); }
         if (disco) diskpart("reexaminar os discos", "rescan");   // o Windows passa a ver a particao nova
+    }
+
+    /**
+     * format_efi_ybootloader <disco>|a.vhdx : grava o ybootloader.efi na ESP JA EXISTENTE do disco (caso "Windows ja
+     * instalado") — monta a ESP com uma letra livre pelo diskpart (driver FAT do proprio Windows, nunca escrita raw na ESP
+     * do Windows), copia para \EFI\ybootloader\ybootloader.efi SEM tocar no resto (nao mexe no \EFI\Microsoft nem no
+     * \EFI\Boot\BOOTX64.EFI do Windows), e registra a entrada do firmware em primeiro na ordem (bcdedit).
+     * format_efi_ybootloader <disco>#N|#TAIL|a.vhdx#N : cria a ESP de 100 MB FAT32 no ESPACO LIVRE (so livre; nada
+     * existente e apagado), no MESMO padrao do format_efi mas SEM o argumento do Windows e SEM BCD (o ybootloader acha os
+     * .vhd/.vhdx sozinho a cada boot); grava EFI\ybootloader\ybootloader.efi + o fallback EFI\Boot\BOOTX64.EFI. O
+     * ybootloader.efi e baixado do GitHub do projeto (URL_MODELOS) para o CACHE, como o create_by_template.
+     *
+     * Este e o UNICO instalador do ybootloader: o loader nao se autoinstala mais (o instalar/reparar/desinstalar do menu
+     * M12 foi removido). PRELIMINAR: o ybootloader.efi ainda nao esta publicado em URL_MODELOS; a entrada do firmware
+     * (instalarNaEsp/bcdedit, com device explicito) precisa ser validada em Windows real; gravar na ESP de um .vhdx OFFLINE ainda nao e
+     * suportado (so disco fisico; num .vhdx use a forma com #N para criar a ESP).
+     */
+    private void formatarEfiYbootloader(String[] args) throws Exception {
+        String uso = "use: format_efi_ybootloader <disco>|a.vhdx [-seconds N]  (grava na ESP existente)"
+                + "  |  format_efi_ybootloader <disco>#N|#TAIL|a.vhdx#N [-seconds N]  (cria a ESP no espaco livre)";
+        String alvo = null;
+        int segundos = 5;                                        // timeout do menu -> \EFI\ybootloader\timeout
+        for (int i = 0; i < args.length; i++) {
+            if (args[i].equalsIgnoreCase("-seconds")) {
+                if (i + 1 >= args.length || !args[i + 1].matches("\\d+")) throw new Exception("-seconds precisa de um numero (ex.: -seconds 10)");
+                segundos = Integer.parseInt(args[++i]);
+                if (segundos > 300) throw new Exception("-seconds no maximo 300");
+            } else if (alvo == null) {
+                alvo = args[i];
+            } else {
+                throw new Exception(uso);
+            }
+        }
+        if (alvo == null) throw new Exception(uso);
+        int h = alvo.lastIndexOf('#');
+        boolean criar = h > 0;                                    // com #N: cria no espaco livre; sem #: grava na ESP existente
+        String arq = criar ? alvo.substring(0, h) : alvo;
+        boolean tail = false;
+        int num = 0;
+        if (criar) {
+            String sufixo = alvo.substring(h + 1);
+            tail = sufixo.equalsIgnoreCase("TAIL");
+            if (!tail && !sufixo.matches("\\d+")) throw new Exception(uso);
+            num = tail ? 0 : Integer.parseInt(sufixo);
+            if (!tail && num < 1) throw new Exception("numero de particao invalido: #" + num);
+        }
+        boolean disco = arq.matches("\\d+");
+        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+
+        byte[] efi = baixarYbootloaderEfi();                      // baixado antes de abrir o destino para escrita
+
+        if (!disco) exigirDesanexado(arq);
+        var d = dispositivo(arq, true);
+        Object[] esp = null;
+        int espPartDp = 0, novoPartDp = 0;                        // numero do "select partition" (diskpart) da ESP alvo
+        try {
+            if (!d.temGpt && !d.particoes().isEmpty()) throw new Exception(d.nome + " usa MBR. Este programa so grava em discos GPT.");
+            for (Object[] p : d.particoes()) if (pTipo(p).equals(T_EFI)) esp = p;
+            if (esp != null) {                                    // o Windows numera as entradas OCUPADAS da GPT, em ordem
+                espPartDp = 1;
+                for (int i = 0; i < pNum(esp) - 1; i++) if (!zero(d.gptEnt, i * d.gptTamEnt, 16)) espPartDp++;
+            }
+
+            if (!criar) {
+                // ---------- gravar na ESP JA existente (caso "Windows ja instalado") ----------
+                if (esp == null) throw new Exception(d.nome + " nao tem ESP. Para criar uma, use '" + arq + "#N' (num espaco livre)."
+                        + " Particoes:\n" + d.descreverParticoes());
+                if (!disco) throw new Exception("gravar na ESP de um .vhdx offline ainda nao e suportado; use '" + arq + "#N' para criar a ESP"
+                        + " no vhdx, ou aponte o disco fisico onde a ESP esta.");
+                // a gravacao acontece depois de fechar o d (o Windows vai montar a particao com uma letra)
+            } else {
+                // ---------- criar a ESP no espaco livre ----------
+                if (esp != null) throw new Exception(d.nome + " ja tem uma ESP (particao " + pNum(esp) + "). Para gravar o ybootloader NELA,"
+                        + " use '" + arq + "' (sem #). Particoes:\n" + d.descreverParticoes());
+                if (!d.temGpt && !d.vhdx) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
+                if (d.setor != 512)                              // o FAT32 da EFI de 100 MB precisa de setor de 512
+                    throw new Exception(d.nome + " tem setor de " + d.setor + " bytes: a EFI de " + EFI_MB + " MB nao chega aos 65525 clusters"
+                            + " que o FAT32 exige. Nada foi feito.");
+                Object[] x = null;
+                for (Object[] e : d.espacos()) if (tail ? e[0] == null && (Boolean) e[4] : (Integer) e[3] == num) x = e;
+                if (x == null) throw new Exception(d.nome + (tail ? " nao tem espaco livre no fim (#TAIL)." : " nao tem o #" + num + " livre.")
+                        + " Particoes:\n" + d.descreverParticoes());
+                if (x[0] != null) throw new Exception("o #" + num + " de " + d.nome + " e uma particao; o format_efi_ybootloader so cria em espaco livre"
+                        + " (nada existente e apagado). Particoes:\n" + d.descreverParticoes());
+                if ((Integer) x[3] == 0) throw new Exception(d.nome + ": tabela GPT cheia.");
+                long ini = (Long) x[1] * d.setor, livre = ((Long) x[2] - (Long) x[1] + 1) * d.setor, tam = EFI_MB * MiB;
+                if (tam > livre) throw new Exception("nao cabe: a EFI tem " + EFI_MB + " MB, mas o livre " + (tail ? "#TAIL" : "#" + num)
+                        + " de " + d.nome + " tem " + livre / MiB + " MB.");
+                if (!d.temGpt) d.criarGpt();
+                String guidEfi = guidAleatorio();
+                var arquivos = new java.util.TreeMap<String, byte[]>(String.CASE_INSENSITIVE_ORDER);
+                arquivos.put("EFI/ybootloader/ybootloader.efi", efi);       // o arquivo do produto
+                arquivos.put("EFI/Boot/BOOTX64.EFI", efi);                  // fallback (ESP nova num disco que nao tinha nenhuma)
+                arquivos.put("EFI/ybootloader/timeout", String.valueOf(segundos).getBytes(java.nio.charset.StandardCharsets.US_ASCII)); // timeout do menu
+                arquivos.put("EFI/ybootloader/quiet", new byte[0]);          // boot limpo: diagnostico no console so em caso de falha
+                d.gerarFat32(ini, tam);
+                d.fat32Gravar(ini, arquivos);
+                d.adicionarParticao((Integer) x[3], ini / d.setor, (ini + tam) / d.setor - 1, T_EFI, 0, "EFI system partition", guidEfi);
+                novoPartDp = 1;                                  // posicao da ESP nova entre as particoes ocupadas (diskpart)
+                for (int i = 0; i < (Integer) x[3] - 1; i++) if (!zero(d.gptEnt, i * d.gptTamEnt, 16)) novoPartDp++;
+            }
+        } finally { d.fechar(); }
+
+        if (!criar) {                                                // ESP existente (disco fisico): grava o .efi + timeout + firmware
+            instalarNaEsp(Integer.parseInt(arq), espPartDp, efi, segundos);
+        } else if (disco) {                                          // ESP nova num disco fisico: .efi+timeout ja gravados, so o firmware
+            diskpart("reexaminar os discos", "rescan");             // o Windows passa a ver a particao nova
+            instalarNaEsp(Integer.parseInt(arq), novoPartDp, null, segundos);
+        } else {                                                    // vhdx: sem entrada de firmware automatica
+            System.out.println("ESP com o ybootloader criada em " + arq + ". Para dar boot pelo firmware, registre a entrada"
+                    + " apontando para \\EFI\\ybootloader\\ybootloader.efi (num disco fisico isto e automatico).");
+        }
+    }
+
+    /** Instala a entrada do firmware do ybootloader apontando para a ESP (disco, partDp): monta a ESP com uma letra livre
+     *  pelo diskpart (driver FAT do Windows, nunca escrita raw), [copia o ybootloader.efi se efiParaCopiar != null, no caso
+     *  da ESP existente], roda o bcdedit (device = ESSA ESP + path + em primeiro na ordem) e remove a letra. Disco fisico.
+     *  O `device` explicito conserta o caso "disco novo": a ESP do ybootloader fica em OUTRO disco que nao a do Windows, e
+     *  so copiar o {bootmgr} herdaria o device errado (a ESP do Windows). */
+    private void instalarNaEsp(int disco, int partDp, byte[] efiParaCopiar, int segundos) throws Exception {
+        char L = letraLivre();
+        String sel = "select disk " + disco + "\r\nselect partition " + partDp;
+        diskpart("montar a ESP", sel, "assign letter=" + L);
+        try {
+            var dir = java.nio.file.Path.of(L + ":\\", "EFI", "ybootloader");
+            if (efiParaCopiar != null) {                          // ESP existente: grava sem tocar no resto
+                java.io.IOException ult = null;                   // a letra pode levar um instante para aparecer
+                for (int i = 0; i < 25; i++) {
+                    try { java.nio.file.Files.createDirectories(dir); ult = null; break; }
+                    catch (java.io.IOException e) { ult = e; Thread.sleep(200); }
+                }
+                if (ult != null) throw new Exception("nao consegui acessar a ESP montada em " + L + ": (" + ult.getMessage() + ")");
+                java.nio.file.Files.write(dir.resolve("ybootloader.efi"), efiParaCopiar);
+                System.out.println("ybootloader.efi gravado na ESP (" + L + ":\\EFI\\ybootloader\\).");
+            }
+            // timeout do menu (lido pelo loader a cada boot); dir ja existe (ESP existente copiou; ESP nova veio do fat32Gravar)
+            java.nio.file.Files.createDirectories(dir);
+            java.nio.file.Files.write(dir.resolve("timeout"), String.valueOf(segundos).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+            java.nio.file.Files.write(dir.resolve("quiet"), new byte[0]);  // boot limpo: diagnostico no console so em caso de falha
+            System.out.println("timeout do menu = " + segundos + "s; boot limpo (quiet) — diagnostico no console so se houver falha.");
+            String copia = bcdedit("/copy", "{bootmgr}", "/d", "ybootloader");
+            var m = java.util.regex.Pattern.compile("\\{[0-9a-fA-F-]{36}\\}").matcher(copia);
+            if (!m.find()) throw new Exception("nao consegui ler o GUID da entrada criada pelo bcdedit (saida: " + copia.strip() + ")");
+            String guid = m.group();
+            bcdedit("/set", guid, "device", "partition=" + L + ":");          // device = a ESP onde o ybootloader.efi esta
+            bcdedit("/set", guid, "path", "\\EFI\\ybootloader\\ybootloader.efi");
+            bcdedit("/set", "{fwbootmgr}", "displayorder", guid, "/addfirst");
+            System.out.println("entrada de boot do ybootloader criada (" + guid + ") e em primeiro na ordem.");
+        } finally {
+            try { diskpart("desmontar a ESP", sel, "remove letter=" + L); } catch (Exception ig) {}
+        }
+    }
+
+    /** Primeira letra de unidade livre (evita A/B/C e Y, que ja pendurou no Mount Manager). */
+    private char letraLivre() throws Exception {
+        for (char c : "QPRTUVXWZNOMLKJIHGFED".toCharArray())
+            if (!new java.io.File(c + ":\\").exists()) return c;
+        throw new Exception("nenhuma letra de unidade livre para montar a ESP.");
+    }
+
+    /** Baixa o ybootloader.efi do GitHub do projeto para o CACHE (como o create_by_template) e devolve o conteudo. */
+    private byte[] baixarYbootloaderEfi() throws Exception {
+        var arq = new java.io.File(CACHE + "ybootloader.efi");
+        if (!arq.isFile()) {
+            // baixa num .parcial e so renomeia no fim: download interrompido nao fica no cache
+            var parcial = new java.io.File(CACHE + "ybootloader.efi.parcial");
+            if (!new java.io.File(CACHE).isDirectory() && !new java.io.File(CACHE).mkdirs()) throw new Exception("nao consegui criar " + CACHE);
+            try (var in = java.net.URI.create(URL_MODELOS + "ybootloader.efi").toURL().openStream()) {
+                java.nio.file.Files.copy(in, parcial.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.io.IOException e) {
+                parcial.delete();
+                throw new Exception("nao consegui baixar " + URL_MODELOS + "ybootloader.efi (" + e.getMessage() + ")");
+            }
+            java.nio.file.Files.move(parcial.toPath(), arq.toPath());
+        }
+        return java.nio.file.Files.readAllBytes(arq.toPath());
+    }
+
+    /** Roda o bcdedit (precisa de Administrador) e devolve a saida; erro com a mensagem do bcdedit se falhar. */
+    private String bcdedit(String... args) throws Exception {
+        var cmd = new java.util.ArrayList<String>();
+        cmd.add("bcdedit");
+        cmd.addAll(java.util.Arrays.asList(args));
+        Process pr;
+        try { pr = new ProcessBuilder(cmd).redirectErrorStream(true).start(); }
+        catch (java.io.IOException e) {
+            throw new Exception(String.valueOf(e.getMessage()).contains("error=740") ? "o bcdedit precisa de Administrador: abra o prompt como Administrador."
+                    : "nao consegui rodar o bcdedit (" + e.getMessage() + ").");
+        }
+        String saida = new String(pr.getInputStream().readAllBytes(), java.nio.charset.Charset.forName(System.getProperty("native.encoding")));
+        if (pr.waitFor() != 0) throw new Exception("bcdedit falhou: " + saida.strip());
+        return saida;
     }
 
     /**
