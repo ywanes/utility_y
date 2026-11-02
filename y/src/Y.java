@@ -44597,8 +44597,9 @@ class Particao {
                     # teste automatico
                         y particao -test
                     # altera tamanho particao
-                        y particao maximum a.vhdx#1 3000    
-                        y particao maximum a.vhdx#1 max
+                        y par maximum a.vhdx#1 3000    
+                        y par maximum a.vhdx#1 max
+                        y par maximum a.vhdx 3000
                         # detalhe: refs nao aceita diminuicao de particao,
                         #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
                         #                                                wimlib-imagex capture D:\\ C:\temp.wim --compress=none
@@ -55857,8 +55858,9 @@ Exemplos...
         # teste automatico
             y particao -test
         # altera tamanho particao
-            y particao maximum a.vhdx#1 3000
-            y particao maximum a.vhdx#1 max
+            y par maximum a.vhdx#1 3000
+            y par maximum a.vhdx#1 max
+            y par maximum a.vhdx 3000 
             # detalhe: refs nao aceita diminuicao de particao,
             #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
             #                                                wimlib-imagex capture D:\\ C:   emp.wim --compress=none
