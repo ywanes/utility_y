@@ -44570,18 +44570,14 @@ class Particao {
                         y particao D 2#5
                         y particao 2#5 2#TAIL
                     # cria particao efi
-                        y format_efi a.vhdx#1 a.vhdx#3
+                        y format_efi a.vhdx#1 a.vhdx#3                        
                         y format_efi 1#1 1#3
                         obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
                     # cria particao efi ybootloader
                         y format_efi_ybootloader a.vhdx#1 a.vhdx#3
-                        obs: só aceita vhdx windows e vhd ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
+                        y format_efi_ybootloader a.vhdx#1 a.vhdx#3 -seconds 5
+                        obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
                         obs2: para abrir com y qemu, use -windows                             
-                    # instala o ybootloader (baixa o ybootloader.efi do GitHub; nao precisa do windows)
-                        y format_efi_ybootloader 1 | y format_efi_ybootloader a.vhdx          # grava na ESP existente
-                        y format_efi_ybootloader 1#N | y format_efi_ybootloader a.vhdx#TAIL   # cria a ESP no espaco livre
-                        y format_efi_ybootloader 1 -seconds 10                                 # timeout do menu (padrao 5; re-rodar atualiza)
-                        obs: o ybootloader acha os .vhd/.vhdx sozinho a cada boot, na RAIZ da particao NTFS ou na pasta \\vhdxs (unico instalador; o loader nao se autoinstala)
                     # delete particao
                         delete a.vhdx#6 | delete 1#3
                     # regera guid
@@ -55839,7 +55835,8 @@ Exemplos...
             obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
         # cria particao efi ybootloader
             y format_efi_ybootloader a.vhdx#1 a.vhdx#3
-            obs: só aceita vhdx windows e vhd ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
+            y format_efi_ybootloader a.vhdx#1 a.vhdx#3 -seconds 5
+            obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
             obs2: para abrir com y qemu, use -windows
         # delete particao
             delete a.vhdx#6 | delete 1#3
@@ -55904,17 +55901,25 @@ Exemplos...
     # opções de -rede
         off|normal|tap0
     # conversoes
-        qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx
-        opcoes: vhdx, qcow2, vmdk, vdi, raw
+        qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\tmp\\a.vhdx
+        opcoes: vhdx, vpc (vhd), qcow2, vmdk, vdi, raw
+        # vhd fixo (o "vhd" no qemu se chama vpc; sem subformat sai dinamico)
+            qemu-img convert -f vmdk -O vpc -o subformat=fixed,force_size=on c:\\tmp\\a.vmdk c:\tmp\\a.vhd
         qemu-img resize c:\\tmp\\a.vhdx 100G
-        qemu-img info c:\\tmp\\a.vhdx 
-        # compactando espaço livre. converter para ele mesmo
-            qemu-img convert -f vhdx -O vhdx c:\\tmp\\a.vhdx c:\\tmp\\a.vhdx
-        # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink. tem que diminuir internamente com https://gparted.org/download.php
-        # para forçar destino fisico: -o "preallocation=full"
+        qemu-img info c:\\tmp\\a.vhdx
+        # compactando espaço livre: converter para um arquivo NOVO e depois trocar (nunca o mesmo arquivo como origem e destino, destroi o disco)
+            qemu-img convert -f vhdx -O vhdx c:\\tmp\\a.vhdx c:\\tmp\\a_novo.vhdx
+        # para resize diminuindo o disco (raw e qcow2) coloca a autorizacao: --shrink. tem que diminuir internamente antes com https://gparted.org/download.php
+        # para forçar destino fisico (espaço todo reservado):
+            raw e qcow2: -o "preallocation=full"
+            vhdx:        -o subformat=fixed
+            vpc:         -o subformat=fixed,force_size=on
+            vdi:         -o static=on
+            vmdk:        -o subformat=monolithicFlat
+        # vpc: force_size=on mantem o tamanho exato (sem ele o qemu-img arredonda pela geometria antiga do vhd)
         # para mostrar progress em %: -p
         # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao
-        ATENCAO, ligar qemu com vhdx é muito estavel e grande risco de corromper o disco por apontamento sobreposto
+        ATENCAO, ligar qemu com vhdx é muito instavel e grande risco de corromper o disco por apontamento sobreposto
         somente informativo -> y help qemu
 [y validaDisco]
     y validaDisco win11.vhdx
