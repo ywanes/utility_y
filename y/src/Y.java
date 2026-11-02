@@ -44591,7 +44591,7 @@ class Particao {
                         y particao reserie a.vhdx#3
                         y particao reserie a.vhdx#3 XXXX-XXXX
                     # cria particao pelo template
-                        y create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
+                        y par create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
                     # desataxa vhdx
                         y particao detach a.vhdx
                     # teste automatico
@@ -55851,7 +55851,7 @@ Exemplos...
             y particao reserie a.vhdx#3
             y particao reserie a.vhdx#3 XXXX-XXXX
         # cria particao pelo template
-            y create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
+            y par create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
         # desataxa vhdx
             y particao detach a.vhdx
         # teste automatico
