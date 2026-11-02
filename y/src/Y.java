@@ -46575,11 +46575,19 @@ class Particao {
             // baixa num .parcial e so renomeia no fim: download interrompido nao fica no cache
             var parcial = new java.io.File(CACHE + "ybootloader.efi.parcial");
             if (!new java.io.File(CACHE).isDirectory() && !new java.io.File(CACHE).mkdirs()) throw new Exception("nao consegui criar " + CACHE);
+            // o Y.java forca https.protocols=TLSv1.1 no arranque, e o Java moderno
+            // desabilita o TLSv1.1 -> openStream falha com "No appropriate protocol".
+            // Forco TLS 1.2/1.3 so durante este download e restauro o valor anterior.
+            String tlsAnterior = System.getProperty("https.protocols");
+            System.setProperty("https.protocols", "TLSv1.2,TLSv1.3");
             try (var in = java.net.URI.create(URL_MODELOS + "ybootloader.efi").toURL().openStream()) {
                 java.nio.file.Files.copy(in, parcial.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
             } catch (java.io.IOException e) {
                 parcial.delete();
                 throw new Exception("nao consegui baixar " + URL_MODELOS + "ybootloader.efi (" + e.getMessage() + ")");
+            } finally {
+                if (tlsAnterior == null) System.clearProperty("https.protocols");
+                else System.setProperty("https.protocols", tlsAnterior);
             }
             java.nio.file.Files.move(parcial.toPath(), arq.toPath());
         }
