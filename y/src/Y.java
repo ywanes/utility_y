@@ -55831,8 +55831,13 @@ Exemplos...
             y particao 2#5 2#TAIL
         # cria particao efi
             y format_efi a.vhdx#1 a.vhdx#3
+            y format_efi_ybootloader a.vhdx#1 a.vhdx#3
             y format_efi 1#1 1#3
             obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
+        # cria particao efi ybootloader
+            y format_efi_ybootloader a.vhdx#1 a.vhdx#3
+            obs: só aceita vhdx windows e vhd ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
+            para abrir com y qemu, use -windows
         # delete particao
             delete a.vhdx#6 | delete 1#3
         # regera guid
