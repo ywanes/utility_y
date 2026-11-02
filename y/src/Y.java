@@ -44554,9 +44554,10 @@ class Particao {
             System.out.print("""
                 exemplos:
                     # list discos
-                        y particao list
-                        y particao list showFreeUsage        
-                        y particao list c:
+                        y par list
+                        y par list showFreeUsage        
+                        y par list c:
+                        y par list a.vhdx
                     # cria particao ou formata
                         y particao format_refs a.vhdx#3
                         y particao format_refs 1#3
@@ -55815,9 +55816,10 @@ Exemplos...
 [y particao|par]
     exemplos:
         # list discos
-            y particao list
-            y particao list showFreeUsage
-            y particao list c:
+            y par list
+            y par list showFreeUsage
+            y par list c:
+            y par list a.vhdx
         # cria particao ou formata
             y particao format_refs a.vhdx#3
             y particao format_refs 1#3
