@@ -46517,8 +46517,7 @@ class Particao {
             diskpart("reexaminar os discos", "rescan");             // o Windows passa a ver a particao nova
             instalarNaEsp(Integer.parseInt(arq), novoPartDp, null, segundos);
         } else {                                                    // vhdx: sem entrada de firmware automatica
-            System.out.println("ESP com o ybootloader criada em " + arq + ". Para dar boot pelo firmware, registre a entrada"
-                    + " apontando para \\EFI\\ybootloader\\ybootloader.efi (num disco fisico isto e automatico).");
+            System.out.println("ESP com o ybootloader criada.");
         }
     }
 
