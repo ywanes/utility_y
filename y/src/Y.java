@@ -46175,7 +46175,7 @@ class Particao {
         if (!new java.io.File(arq).canWrite()) return;
         try { new java.io.RandomAccessFile(arq, "rw").close(); }
         catch (java.io.IOException e) {
-            throw new Exception("voce precisa desanexar o " + arq + " primeiro\nuse o parametro detach " + arq + " ou ejete o drive");
+            throw new Exception("voce precisa desanexar o " + arq + " primeiro\nuse o parametro y par detach " + arq + " ou ejete o drive");
         }
     }
 
