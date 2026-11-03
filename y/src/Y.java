@@ -44574,10 +44574,11 @@ class Particao {
                         y format_efi a.vhdx#1 a.vhdx#3                        
                         y format_efi 1#1 1#3
                         obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
-                    # cria particao efi ybootloader
-                        y format_efi_ybootloader a.vhdx#1 a.vhdx#3
-                        y format_efi_ybootloader a.vhdx#1 a.vhdx#3 -seconds 5
-                        obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
+                    # instala o ybootloader na ESP (1 arg so: a ESP; o loader acha os vhd/vhdx E o bootmgfw sozinho)
+                        y format_efi_ybootloader 1 | y format_efi_ybootloader a.vhdx          # grava na ESP existente
+                        y format_efi_ybootloader 1#TAIL | y format_efi_ybootloader a.vhdx#1   # cria a ESP no espaco livre
+                        y format_efi_ybootloader 1 -seconds 5                                 # timeout do menu (padrao 5)
+                        obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs (na raiz ou na pasta vhdxs); o ybootloader extrai o bootmgfw do proprio vhdx a cada boot (dinamico)
                         obs2: para abrir com y qemu, use -windows                             
                     # delete particao
                         delete a.vhdx#6 | delete 1#3
@@ -46175,7 +46176,7 @@ class Particao {
         if (!new java.io.File(arq).canWrite()) return;
         try { new java.io.RandomAccessFile(arq, "rw").close(); }
         catch (java.io.IOException e) {
-            throw new Exception("voce precisa desanexar o " + arq + " primeiro\nuse o parametro y par detach " + arq + " ou ejete o drive");
+            throw new Exception("voce precisa desanexar o " + arq + " primeiro\nuse o parametro detach " + arq + " ou ejete o drive");
         }
     }
 
