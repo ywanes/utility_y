@@ -44581,7 +44581,7 @@ class Particao {
                         obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs (na raiz ou na pasta vhdxs); o ybootloader extrai o bootmgfw do proprio vhdx a cada boot (dinamico)
                         obs2: para abrir com y qemu, use -windows                             
                     # delete particao
-                        delete a.vhdx#6 | delete 1#3
+                        y par delete a.vhdx#6 | delete 1#3
                     # regera guid
                         y particao reguid a.vhdx
                         y particao reguid a.vhdx#3
@@ -55850,7 +55850,7 @@ Exemplos...
             obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
             obs2: para abrir com y qemu, use -windows
         # delete particao
-            delete a.vhdx#6 | delete 1#3
+            y par delete a.vhdx#6 | delete 1#3
         # regera guid
             y particao reguid a.vhdx
             y particao reguid a.vhdx#3
