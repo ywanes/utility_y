@@ -51941,72 +51941,74 @@ exit 0
 class Qemu {
     public static void main(String[] args) throws Exception {
         String USAGE =
-            "EXEMPLOS\n" +
-            "    # whpx\n" +
-            "        y qemu rodando\n" +
-            "        y qemu rodando -linux -accel whpx -cpu max -dir_qemu \"C:\\qemu11\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0\n" +
-            "        y qemu instalando -linux -accel whpx -cpu max -dir_qemu \"C:\\qemu11\" -dir_7z \"C:\\ProgramFiles\\7-Zip\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -file_iso \"C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso\" -file_cidata \"C:\\qemu_hax\\cidata.iso\" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0\n" +
-            "    # hax\n" +
-            "        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\"\n" +
-            "        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0\n" +
-            "        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu \"C:\\qemu\" -dir_7z \"C:\\ProgramFiles\\7-Zip\" -file \"C:\\qemu_hax\\ubuntu_disk.qcow2\" -file_iso \"C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso\" -file_cidata \"C:\\qemu_hax\\cidata.iso\" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0\n" +
-            "USO\n" +
-            "    y qemu rodando     [-linux|-windows] [flags...]   # sobe a VM do disco existente\n" +
-            "    y qemu instalando  [-linux|-windows] [flags...]   # instala o SO do zero (apaga o disco)\n" +
-            "PADROES\n" +
-            "    Comuns:  -dir_qemu C:\\qemu11   -m 10G   -smp 3   -accel whpx   -cpu max   -size 120G\n" +
-            "             tela -nogui\n" +
-            "    -linux:\n" +
-            "        -file        C:\\qemu_hax\\ubuntu_disk.qcow2        (disco if=virtio,discard=unmap)\n" +
-            "        -file_iso    ubuntu desktop\n" +
-            "        -dir_7z      C:\\ProgramFiles\\7-Zip   (usa <dir_7z>\\7z.exe)\n" +
-            "        -port_ssh    2222 -> guest:22\n" +
-            "        -rede        tap0\n" +
-            "        -nogui       = -nographic -serial mon:stdio\n" +
-            "        instalando   = ISO + cidata + autoinstall      (MODE/AUTO/DELETE = 1/1/1)\n" +
-            "    -windows:\n" +
-            "        -file        C:\\qemu_hax\\windows_disk.qcow2       (disco if=ide + UEFI q35)\n" +
-            "        -file_iso    C:\\qemu_isos\\win11_pro_ptbr_26200.9539_oficial_com_script_anti_tpm_e_refs.iso\n" +
-            "        -port_rdp    3395 -> guest:3389\n" +
-            "        -rede        normal\n" +
-            "        -nogui       = -display none\n" +
-            "        firmware     <disco>.code.fd + <disco>.vars.fd (ao lado do disco; de <dir_qemu>\\share)\n" +
-            "        instalando   = so ISO + boot d, SEM cidata/autoinstall   (MODE/AUTO/DELETE = 1/0/1)\n" +
-            "FLAGS  (todas opcionais; default entre colchetes)\n" +
-            "    Perfil\n" +
-            "        -linux               perfil Ubuntu                                   [default]\n" +
-            "        -windows             perfil Windows\n" +
-            "    Maquina\n" +
-            "        -dir_qemu <pasta>    pasta do qemu-system-x86_64.exe / qemu-img.exe  [C:\\qemu11]\n" +
-            "        -dir_7z   <pasta>    pasta do 7-Zip (so -linux)         [C:\\ProgramFiles\\7-Zip]\n" +
-            "        -m        <tam>      memoria RAM                                     [10G]\n" +
-            "        -smp      <n>        numero de vCPUs                                 [3]\n" +
-            "        -accel    <accel>    acelerador: whpx | hax (hax checa o servico)   [whpx]\n" +
-            "        -cpu      <modelo>   modelo de CPU: max | core2duo | ...            [max]\n" +
-            "        -file     <disco>    caminho do disco .qcow2   [linux: ubuntu_disk / win: windows_disk]\n" +
-            "    Tela / rede\n" +
-            "        -nogui               sem janela (serial no linux, display none no win) [ligado]\n" +
-            "        -gui                 com interface grafica (VGA + tablet)\n" +
-            "        -port_ssh <porta>    (so -linux)   host:porta -> guest:22            [2222]\n" +
-            "        -port_rdp <porta>    (so -windows) host:porta -> guest:3389          [3395]\n" +
-            "        -rede     <modo>     off (sem rede) | normal (so NAT) | tap0 (NAT+TAP)  [linux: tap0 / win: normal]\n" +
-            "    Instalacao\n" +
-            "        -file_iso    <arquivo>  ISO do SO (so no 'instalando')\n" +
-            "        -file_cidata <arquivo>  (so -linux) ISO cloud-init     [C:\\qemu_hax\\cidata.iso]\n" +
-            "        -size        <tam>      tamanho ao criar disco novo                  [120G]\n" +
-            "    # conversoes\n" +
-            "        qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx\n" +
-            "        opcoes: vhdx, qcow2, vmdk, vdi, raw\n" +
-            "        qemu-img resize c:\\tmp\\a.vhdx 100G\n" +
-            "        qemu-img info c:\\tmp\\a.vhdx\n" +
-            "        # compactando espaco livre. converter para ele mesmo\n" +
-            "            qemu-img convert -f vhdx -O vhdx c:\\tmp\\a.vhdx c:\\tmp\\a.vhdx\n" +
-            "        # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink. tem que diminuir internamente com https://gparted.org/download.php\n" +
-            "        # para forcar destino fisico: -o \"preallocation=full\"\n" +
-            "        # para mostrar progress em %: -p\n" +
-            "        # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao\n" +
-            "        ATENCAO, ligar qemu com vhdx e muito estavel e grande risco de corromper o disco por apontamento sobreposto\n" +
-            "        somente informativo -> y help qemu\n";
+                """
+EXEMPLOS
+    # whpx
+        y qemu rodando
+        y qemu rodando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+    # hax
+        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu"
+        y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+USO
+    y qemu rodando     [-linux|-windows] [flags...]   # sobe a VM do disco existente
+    y qemu instalando  [-linux|-windows] [flags...]   # instala o SO do zero (apaga o disco)
+PADROES
+    Comuns:  -dir_qemu C:\\qemu11   -m 10G   -smp 3   -accel whpx   -cpu max   -size 120G
+             tela -nogui
+    -linux:
+        -file        C:\\qemu_hax\\ubuntu_disk.qcow2        (disco if=virtio,discard=unmap)
+        -file_iso    ubuntu desktop
+        -dir_7z      C:\\ProgramFiles\\7-Zip   (usa <dir_7z>\\7z.exe)
+        -port_ssh    2222 -> guest:22
+        -rede        tap0
+        -nogui       = -nographic -serial mon:stdio
+        instalando   = ISO + cidata + autoinstall      (MODE/AUTO/DELETE = 1/1/1)
+    -windows:
+        -file        C:\\qemu_hax\\windows_disk.qcow2       (disco if=ide + UEFI q35)
+        -file_iso    C:\\qemu_isos\\win11_pro_ptbr_26200.9539_oficial_com_script_anti_tpm_e_refs.iso
+        -port_rdp    3395 -> guest:3389
+        -rede        normal
+        -nogui       = -display none
+        firmware     <disco>.code.fd + <disco>.vars.fd (ao lado do disco; de <dir_qemu>\\share)
+        instalando   = so ISO + boot d, SEM cidata/autoinstall   (MODE/AUTO/DELETE = 1/0/1)
+FLAGS  (todas opcionais; default entre colchetes)
+    Perfil
+        -linux               perfil Ubuntu                                   [default]
+        -windows             perfil Windows
+    Maquina
+        -dir_qemu <pasta>    pasta do qemu-system-x86_64.exe / qemu-img.exe  [C:\\qemu11]
+        -dir_7z   <pasta>    pasta do 7-Zip (so -linux)         [C:\\ProgramFiles\\7-Zip]
+        -m        <tam>      memoria RAM                                     [10G]
+        -smp      <n>        numero de vCPUs                                 [3]
+        -accel    <accel>    acelerador: whpx | hax (hax checa o servico)   [whpx]
+        -cpu      <modelo>   modelo de CPU: max | core2duo | ...            [max]
+        -file     <disco>    caminho do disco .qcow2   [linux: ubuntu_disk / win: windows_disk]
+    Tela / rede
+        -nogui               sem janela (serial no linux, display none no win) [ligado]
+        -gui                 com interface grafica (VGA + tablet)
+        -port_ssh <porta>    (so -linux)   host:porta -> guest:22            [2222]
+        -port_rdp <porta>    (so -windows) host:porta -> guest:3389          [3395]
+        -rede     <modo>     off (sem rede) | normal (so NAT) | tap0 (NAT+TAP)  [linux: tap0 / win: normal]
+    Instalacao
+        -file_iso    <arquivo>  ISO do SO (so no 'instalando')
+        -file_cidata <arquivo>  (so -linux) ISO cloud-init     [C:\\qemu_hax\\cidata.iso]
+        -size        <tam>      tamanho ao criar disco novo                  [120G]
+    # conversoes
+        qemu-img convert -f vmdk -O vhdx c:\\tmp\\a.vmdk c:\\tmp\\a.vhdx
+        opcoes: vhdx, qcow2, vmdk, vdi, raw
+        qemu-img resize c:\\tmp\\a.vhdx 100G
+        qemu-img info c:\\tmp\\a.vhdx
+        # compactando espaco livre. converter para ele mesmo
+            qemu-img convert -f vhdx -O vhdx c:\\tmp\\a.vhdx c:\\tmp\\a.vhdx
+        # para resize diminuindo o disco qcow2 coloca a autorizacao: --shrink. tem que diminuir internamente com https://gparted.org/download.php
+        # para forcar destino fisico: -o "preallocation=full"
+        # para mostrar progress em %: -p
+        # evite alterar a ordem dos parametros, deixe file1 e file2 por ultimo, esta assim na documentacao
+        ATENCAO, ligar qemu com vhdx e muito estavel e grande risco de corromper o disco por apontamento sobreposto
+        somente informativo -> y help qemu                
+                """;
 
         // ===== Modo (1o argumento posicional) =====
         String mode = (args.length > 0) ? args[0].toLowerCase() : "";
