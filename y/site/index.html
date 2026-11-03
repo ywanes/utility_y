@@ -1753,7 +1753,7 @@ function load_music(parm, elements){
                     &nbsp;&nbsp;&nbsp;<a style="display: inline-block; cursor: pointer; font-size: 40px; font-family: Franklin Gothic Medium;" onclick="troca_de_faixa_anterior()">&#9194;</a>
                     <a style="display: inline-block; cursor: pointer; font-size: 40px; font-family: Franklin Gothic Medium;" onclick="troca_de_faixa()">&#9193;</a>
                     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                    <input type="button" value="FULL_SCREEN" onclick="Fullscreen(true);" style="color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
+                    <input type="button" value="onlymusic" onclick="onlymusic();" style="color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
                     <input type="button" value="VIDEO_BG" onclick="Fullscreen(true);" style="display: none; color: #333; font-size: 18px; font-family: Franklin Gothic Medium; background-color: rgb(0, 0, 0);">
                     <a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="A_mais()">A+</a>
                     <a style="display: inline-block; cursor: pointer; color: #333; font-size: 24px; font-family: Franklin Gothic Medium;" onclick="A_menos()">A-</a>
@@ -2200,6 +2200,16 @@ function load_music(parm, elements){
                       document.getElementById("f11").setAttribute("ocorr","2");
                     if ( document.getElementById("f11").getAttribute("ocorr") == "0" )
                       document.getElementById("f11").setAttribute("ocorr","1");
+                  }
+                }
+                onlymusic=function(){
+                  let a=document.getElementById('tablebase');
+                  let len=10000;
+                  while ( a.children[0].children.length > 1 && len-->0 ){
+                    if ( a.children[0].children[0].children[0].getAttribute('style').indexOf('rgb(153, 153, 153)') > -1 )
+                      a.children[0].children[1].remove();
+                    else
+                      a.children[0].children[0].remove();		
                   }
                 }
                 function check_fullscreen(){
