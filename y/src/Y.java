@@ -46590,7 +46590,9 @@ class Particao {
                 else System.setProperty("https.protocols", tlsAnterior);
             }
             java.nio.file.Files.move(parcial.toPath(), arq.toPath());
-        }
+            System.out.append("ESP baixado!");
+        }else
+            System.out.append("ESP pego do cache!");
         return java.nio.file.Files.readAllBytes(arq.toPath());
     }
 
