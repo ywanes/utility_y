@@ -138,8 +138,6 @@ echo "" > /opt/.u_c
       #    2026-06-07 espectativa era 2026-04-20
       #    2026-10-15 mostrando indisponivel no list. no mesmo dia ficou disponivel para gerar iso. ainda aguardando para do-release-upgrade -d
       #    2026-11-04 liberado para do-release-upgrade -d
-      # se enrroscar pause o ipv6
-      #    sysctl -w net.ipv6.conf.all.disable_ipv6=1; sysctl -w net.ipv6.conf.default.disable_ipv6=1;
       # se ao retomar tiver travado aperta r para resurrect window 
       v1=$(cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk '{ print $2 }')
       v2=$(curl --max-time 5 https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk '{ print $2 }')
