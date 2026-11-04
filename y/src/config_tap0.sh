@@ -3,7 +3,8 @@
 # usuario base
 # rodar com o usuario base (outro usuario da erro)
 # ssh configurado pronto para receber uma conexao de sshgen senha init, tap0 f100::200, ping crontab f100::100
-#                 e teclado ABNT2, fuso de Sao Paulo, porta 22 no ufw
+#                 e teclado ABNT2, fuso de Sao Paulo, porta 22 no ufw,
+#                 IPv6 saindo com o endereco da propria placa (use_oif_addrs_only)
 
 main() {
   set -eu
@@ -122,6 +123,23 @@ EOF
   fi
 
   # ---------------------------------------------------------------------------------
+  # IPv6 de origem: cada placa so usa os proprios enderecos para sair
+  #   sem isso, o IP_VM (escopo global) da 2a placa vira origem dos pacotes que saem pela
+  #   1a placa (no QEMU user ela so tem fec0::, site-local) e a resposta nunca volta:
+  #   conexoes IPv6 para a internet ficam penduradas ate dar timeout (apt, do-release-upgrade...)
+  #   o glob (*) vale tambem para placas que aparecerem depois (o udev aplica quando surgem)
+  msg "IPv6: origem pela placa de saida (use_oif_addrs_only)"
+  $S tee /etc/sysctl.d/60-ipv6-oif-src.conf >/dev/null <<'EOF'
+net.ipv6.conf.default.use_oif_addrs_only = 1
+net.ipv6.conf.*.use_oif_addrs_only = 1
+EOF
+  $S systemctl restart systemd-sysctl >/dev/null 2>&1 || true
+  # aplica agora nas placas que ja existem (garante mesmo se o systemd-sysctl nao rodou)
+  for f in /proc/sys/net/ipv6/conf/*/use_oif_addrs_only; do
+    echo 1 | $S tee "$f" >/dev/null 2>&1 || true
+  done
+
+  # ---------------------------------------------------------------------------------
   # ping ao Windows pela 2a placa a cada 30 min
   msg "cron: ping $IP_WIN a cada 30 min"
   instala cron iputils-ping
@@ -139,6 +157,7 @@ EOF
   msg "pronto"
   echo "    usuario da chave: $USUARIO"
   echo "    IPv6: $IP_VM em $IFACE (Windows em $IP_WIN)"
+  echo "    IPv6 de origem pela placa de saida: /etc/sysctl.d/60-ipv6-oif-src.conf"
   echo "    teste no Windows: ssh -i id_ed25519_local -p 2222 base@127.0.0.1"
 }
 
