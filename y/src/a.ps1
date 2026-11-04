@@ -293,6 +293,14 @@ Write-Host "Iniciando QEMU com as configuracoes definidas..." -ForegroundColor G
 # mapear na mao
 # \\f100--200.ipv6-literal.net\share
 
+# corrigindo ipv6 linux
+# verificando problema
+# curl -6 -I --max-time 5 http://archive.ubuntu.com/ubuntu/dists/tenacious/Release
+# verificando como ficará com a solucao:
+# curl -6 -I --max-time 5 --interface "$(ip -6 -o addr show dev "$(ip -6 route show default | awk '{for(i=1;i<NF;i++) if($i=="dev"){print $(i+1); exit}}')" | awk '$4 !~ /^fe80/ {sub("/.*","",$4); print $4; exit}')" http://archive.ubuntu.com/ubuntu/dists/tenacious/Release
+# corrigindo na mao:
+# printf '%s\n' 'net.ipv6.conf.default.use_oif_addrs_only = 1' 'net.ipv6.conf.*.use_oif_addrs_only = 1' | sudo tee /etc/sysctl.d/60-ipv6-oif-src.conf >/dev/null && sudo systemctl restart systemd-sysctl
+
 # linux live-server para terminal
 # https://releases.ubuntu.com/25.10/ubuntu-25.10-live-server-amd64.iso
 # linux gui
