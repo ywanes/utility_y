@@ -297,8 +297,8 @@ Write-Host "Iniciando QEMU com as configuracoes definidas..." -ForegroundColor G
 # verificando problema
 # curl -6 -I --max-time 5 http://archive.ubuntu.com/ubuntu/dists/tenacious/Release
 # verificando como ficará com a solucao:
-# curl -6 -I --max-time 5 --interface "$(ip -6 -o addr show dev "$(ip -6 route show default | awk '{for(i=1;i<NF;i++) if($i=="dev"){print $(i+1); exit}}')" | awk '$4 !~ /^fe80/ {sub("/.*","",$4); print $4; exit}')" http://archive.ubuntu.com/ubuntu/dists/tenacious/Release
-# corrigindo na mao:
+# D=$(ip route show default | awk '{for(i=1;i<NF;i++) if($i=="dev"){print $(i+1); exit}}'); A=$([ -n "$D" ] && ip -6 -o addr show dev "$D" | awk '$4 !~ /^fe80/ {sub("/.*","",$4); print $4; exit}'); if [ -z "$D" ]; then echo "sem rota padrao: maquina sem internet"; elif [ -z "$A" ]; then echo "placa $D sem IPv6 (so fe80): esta maquina nao tem IPv6 para a internet"; else echo "placa: $D  origem: $A"; curl -6 -I --max-time 5 --interface "$A" http://archive.ubuntu.com/ubuntu/dists/tenacious/Release; fi
+# corrigindo na mao: # aplique só se o comando acima funcionar
 # printf '%s\n' 'net.ipv6.conf.default.use_oif_addrs_only = 1' 'net.ipv6.conf.*.use_oif_addrs_only = 1' | sudo tee /etc/sysctl.d/60-ipv6-oif-src.conf >/dev/null && sudo systemctl restart systemd-sysctl
 
 # linux live-server para terminal
