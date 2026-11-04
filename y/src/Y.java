@@ -44261,11 +44261,14 @@ class ArtCraft {
                 'Motion graphics and visual effects'  = 'Motion graphics e efeitos visuais'
                 'Page layout and publishing'          = 'Diagramação e publicação'
                 'Interface design and prototyping'    = 'Design de interfaces e prototipagem'
+                '3D texture painting'                 = 'Pintura de texturas 3D'
+                'Procedural materials'                = 'Materiais procedurais'
                 'Writing and document design'         = 'Escrita e design de documentos'
                 'Recording, editing and mixing audio' = 'Gravação, edição e mixagem de áudio'
                 'Presentations and slide shows'       = 'Apresentações e slides'
                 'Computer-aided design and drafting'  = 'Desenho e projeto assistido por computador (CAD)'
                 'Spreadsheets and data'               = 'Planilhas e dados'
+                'See how any website, app or game works, then have AI build your own version' = 'Desenvolvimento com IA'
             }
 
             function Get-Slugs {
