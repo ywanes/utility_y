@@ -36992,9 +36992,11 @@ class Util{
     
     public String runtimeExecError = "";
     public byte[] runtimeExecOutBytes = null;
+    public int runtimeExecExitCode = -2; // -2 para resetado
     public boolean flag_real_time_output = false;
     public String runtimeExec(String line_commands, String[] commands, File file_path, byte[] std_in, Boolean flag_charset_windows) {
         try {
+            runtimeExecExitCode = -2;
             final String charset = (flag_charset_windows != null && flag_charset_windows) ? "ISO-8859-1" : "UTF-8";
 
             if (commands == null)
@@ -37009,11 +37011,12 @@ class Util{
             }
             Process proc = pb.start();
 
-            // finalizando filhos
+            // finalizando filhos (o hook e removido quando o processo termina)
             ProcessHandle processHandle = proc.toHandle();
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            Thread hook = new Thread(() -> {
                 destroyProcessTree(processHandle);
-            }));
+            });
+            Runtime.getRuntime().addShutdownHook(hook);
             
             Thread ok0 = new Thread() {
                 public void run() {
@@ -37023,6 +37026,9 @@ class Util{
                             os.write(std_in);
                             os.flush();
                             os.close();
+                        } else {
+                            // sem entrada: fecha o stdin para o processo nao ficar esperando teclado
+                            proc.getOutputStream().close();
                         }
                     } catch (Exception e1) {
                         runtimeExecError = "Erro interno 210 - " + e1.toString();
@@ -37076,10 +37082,13 @@ class Util{
             };
             nok.start();
 
+            // primeiro drena stdin/stdout/stderr, depois espera o processo sair
             ok0.join();
             ok.join();
             nok.join();
-
+            runtimeExecExitCode = proc.waitFor();
+            try { Runtime.getRuntime().removeShutdownHook(hook); } catch (IllegalStateException e) {}
+            
             runtimeExecOutBytes = baos.toByteArray();
             String s = baos.toString(charset).replace("\r\n", "\n");
             String[] linhas = s.split("\n");
@@ -37099,7 +37108,7 @@ class Util{
         }
         return null;
     }
-
+    
     private void destroyProcessTree(ProcessHandle root) {
         root.descendants().forEach(descendant -> {
             descendant.destroy();
