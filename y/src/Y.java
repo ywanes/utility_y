@@ -46199,7 +46199,7 @@ class Particao {
     private final String URL_MODELOS = "https://raw.githubusercontent.com/ywanes/utility_y/master/y/utils_discos/";
     private final String CACHE = "c:\\tmp_cache\\";                    // .rar baixados ficam aqui e nao sao baixados de novo
 
-    /** create_by_template_1G_vazio | create_by_template_1G_refs | create_by_template_1G_winre_refs destino.vhdx: baixa o .rar do GitHub e extrai com %RAR%. */
+    /** create_by_template_1G_vazio | create_by_template_1G_refs | create_by_template_1G_winre_refs destino.vhdx: baixa o .rar do GitHub e extrai com o 7-Zip (check_util). */
     private void criarModelo(String modelo, String[] args) throws Exception {
         if (args.length != 1 || !args[0].toLowerCase().endsWith(".vhdx")) throw new Exception("use: create_by_template_" + modelo + " destino.vhdx");
         var destino = new java.io.File(args[0]).getAbsoluteFile();
@@ -46215,19 +46215,14 @@ class Particao {
     }
 
     /**
-     * Extrai CACHE + modelo + ".rar" para dir com %RAR% (UnRAR.exe/Rar.exe ou a pasta deles); devolve o .vhdx.
+     * Extrai CACHE + modelo + ".rar" para dir com o 7-Zip (baixado/validado pelo check_util); devolve o .vhdx.
      * Se o .rar nao estiver no cache, baixa antes de URL_MODELOS.
      */
     private String baixar(String modelo, java.io.File dir) throws Exception {
-        String rar = System.getenv("RAR");
-        if (rar == null || rar.isBlank()) throw new Exception("defina %RAR% (caminho do UnRAR.exe/Rar.exe ou da pasta deles).");
-        rar = rar.replace("\"", "");
-        var exe = new java.io.File(rar);
-        if (exe.isDirectory()) {
-            var u = new java.io.File(exe, "UnRAR.exe");
-            exe = u.isFile() ? u : new java.io.File(exe, "Rar.exe");
-        }
-        if (!exe.isFile()) throw new Exception("%RAR% nao aponta para o UnRAR.exe/Rar.exe: " + rar);
+        Y y7z = new Y();
+        if (!y7z.check_util("C:/ProgramFiles/7z/7z.exe") || !y7z.check_util("C:/ProgramFiles/7z/7z.dll"))
+            throw new Exception("nao foi possivel obter o 7-Zip em C:/ProgramFiles/7z");
+        var exe = new java.io.File("C:\\ProgramFiles\\7z\\7z.exe");
         var arq = new java.io.File(CACHE + modelo + ".rar");
         if (!arq.isFile()) {
             // baixa num .parcial e so renomeia no fim: download interrompido nao fica no cache
@@ -46241,7 +46236,7 @@ class Particao {
             }
             java.nio.file.Files.move(parcial.toPath(), arq.toPath());
         }
-        var pr = new ProcessBuilder(exe.getPath(), "x", "-o+", "-inul", arq.getPath(), dir.getPath() + "\\").redirectErrorStream(true).start();
+        var pr = new ProcessBuilder(exe.getPath(), "x", "-y", "-o" + dir.getPath(), arq.getPath()).redirectErrorStream(true).start();
         pr.getInputStream().readAllBytes();
         int rc = pr.waitFor();
         var vhdx = new java.io.File(dir, modelo + ".vhdx");
@@ -48600,8 +48595,6 @@ class Particao {
     private void testar(String real) throws Exception {
         if (real != null && (!real.toLowerCase().endsWith(".vhdx") || !new java.io.File(real).isFile()))
             throw new Exception("VHDX nao encontrado: " + real);
-        if (real == null && (System.getenv("RAR") == null || System.getenv("RAR").isBlank()))
-            throw new Exception("defina %RAR% (caminho do UnRAR.exe/Rar.exe ou da pasta deles) para baixar o VHDX de teste, ou use -test a.vhdx.");
         dirTeste = java.nio.file.Files.createTempDirectory("clona-test").toFile();
         soJava = true;                                         // testes com FS falso: o diskpart nao cresceria o FS
         System.out.println("Testes VHDX -> VHDX em " + dirTeste);
@@ -49108,11 +49101,11 @@ class Particao {
                 return null;
             });
 
-            // sem a.vhdx: baixa o VHDX de teste do GitHub e extrai com o programa de %RAR%
+            // sem a.vhdx: baixa o VHDX de teste do GitHub e extrai com o 7-Zip (check_util)
             String alvo = real;
             if (alvo == null) {
                 String[] baixado = new String[1];
-                teste("baixar 1G_winre_refs.rar do GitHub e extrair com %RAR%", () -> {
+                teste("baixar 1G_winre_refs.rar do GitHub e extrair com o 7-Zip", () -> {
                     baixado[0] = baixar("1G_winre_refs", dirTeste);
                     return null;
                 });
