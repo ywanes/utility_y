@@ -49,8 +49,8 @@ Obs:
 doskey grep=y grep nao funciona porque doskey nao funciona apos |
 
 install daemon(cmd adm) // http://nssm.cc/download
-y echo "y d -server" > D:\ProgramFiles\yd.bat
-nssm install yd D:\ProgramFiles\yd.bat
+y echo "y d -server" > C:\ProgramFiles\yd.bat
+nssm install yd C:\ProgramFiles\yd.bat
 nssm start yd
 nssm status yd
 nssm stop yd
@@ -1440,11 +1440,11 @@ cat buffer.log
             return;
         }  
         if ( args[0].equals("yt") ){
-            System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(title)s.%(ext)s\" http...");
-            System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(album)s.%(title)s.%(ext)s\" http...");
-            System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist)s.%(playlist_index)03d.%(title)s.%(ext)s\" http...");
-            System.out.println("cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(title)s.%(ext)s\" --extract-audio --audio-format mp3 \"http...");
-            System.out.println("cd \"D:\\ProgramFiles\\site\\series\\Raphael Ghanem\" && python3 D:/ProgramFiles/yt-dlp/yt_dlp/__main__.py -o \"%(playlist)s.%(upload_date)s.%(title)s.%(ext)s\" https://www.youtube.com/@raphaelghanem");
+            System.out.println("cd C:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(title)s.%(ext)s\" http...");
+            System.out.println("cd C:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(album)s.%(title)s.%(ext)s\" http...");
+            System.out.println("cd C:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist)s.%(playlist_index)03d.%(title)s.%(ext)s\" http...");
+            System.out.println("cd C:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py -o \"%(playlist_index)03d.%(title)s.%(ext)s\" --extract-audio --audio-format mp3 \"http...");
+            System.out.println("cd \"C:\\ProgramFiles\\site\\series\\Raphael Ghanem\" && python3 C:/ProgramFiles/yt-dlp/yt_dlp/__main__.py -o \"%(playlist)s.%(upload_date)s.%(title)s.%(ext)s\" https://www.youtube.com/@raphaelghanem");
             return;
         }
         if ( args[0].equals("curl") ){
@@ -3025,8 +3025,8 @@ cat buffer.log
                                         /* 
                                         define proc cry
                                         d:
-                                        cd D:\ProgramFiles\musicas
-                                        y playlist renato 8888 -log_ips d:/ProgramFiles/log_ips/log_8888.txt
+                                        cd C:\ProgramFiles\musicas
+                                        y playlist renato 8888 -log_ips C:/ProgramFiles/log_ips/log_8888.txt
                                         EOF
                                         */
                                         int p_EOF=s.indexOf("EOF"); // EOF nao pode trim
@@ -9567,7 +9567,7 @@ cat buffer.log
     
     public void sorte(){
         // ref. https://privatekeyfinder.io/bitcoin-puzzle/
-        // D:\ProgramFiles\cuBitCrack
+        // C:\ProgramFiles\cuBitCrack
         // cuBitCrack.exe --keyspace 4:7 -c 19ZewH8Kk1PDbSNdJ97FP4EiCjTRaZMZQA
         // iniciar randomicamente o inicio do range caso o rango for maior e 1 milhao, essa parte é muito importante
         // consulta se premio ja foi resgatado https://blockchain.info/balance?active=19ZewH8Kk1PDbSNdJ97FP4EiCjTRaZMZQA
@@ -10008,9 +10008,7 @@ bind 'set enable-bracketed-paste off'
                     erroFatal("Pasta não encontrada:" + source);
                 if ( !new File(source).isDirectory() )
                     erroFatal("Esse caminho não é uma pasta:" + source);
-                String dir="D:/ProgramFiles/iso";
-                if ( !new File(dir).exists() )
-                    dir="C:/ProgramFiles/iso";
+                String dir="C:/ProgramFiles/iso";
                 if (    !check_util(dir+"/efisys.bin") 
                      || !check_util(dir+"/etfsboot.com") 
                      || !check_util(dir+"/oscdimg.exe") 
@@ -10041,11 +10039,9 @@ bind 'set enable-bracketed-paste off'
                     if ( !new File(source).mkdir() )
                         erroFatal("Não foi possível criar a pasta: " + source);
                 }            
-                if ( !check_util("D:/ProgramFiles/7z/7z.exe") || !check_util("D:/ProgramFiles/7z/7z.dll") )
-                    erroFatal("Erro no carregamento!");
-                String dir="D:/ProgramFiles/7z";
-                if ( !new File(dir).exists() )
-                    dir="C:/ProgramFiles/7z";
+                String dir="C:/ProgramFiles/7z";
+                if ( !check_util(dir+"/7z.exe") || !check_util(dir+"/7z.dll") )
+                    erroFatal("Erro no carregamento do 7-Zip em " + dir);
                 runtimeExec(null, new String[]{"cmd", "/c", dir+"/7z", "x", "-y", "-o"+source, iso}, null, null, false);
                 if ( runtimeExecError != null && !runtimeExecError.equals("") )
                     System.err.println(runtimeExecError);
@@ -10914,7 +10910,7 @@ autoinstall:
         String titulo="";
         String resolucao="";
         String tryresolucao="";
-        String dir="D:\\ProgramFiles\\site\\filmes\\";
+        String dir="C:\\ProgramFiles\\site\\filmes\\";
         String filme="";
         // check ffmpeg
         if ( !isFfmpeg() )
@@ -11351,7 +11347,7 @@ autoinstall:
                     if ( titulo_serie != null ){
                         String extensao_presumida=".mp4";
                         String titulo_presumido=titulo_serie + " S" + lpad(temporada_S, 2, "0") + "E" + lpad(temporada_E, 2, "0") + extensao_presumida;
-                        String dir_presumido="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
+                        String dir_presumido="C:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
                         String out_presumido=dir_presumido+titulo_presumido;
                         File f_presumido=new File(out_presumido);
                         boolean needDownload_presumido = !f_presumido.exists() || f_presumido.length() < 1024*1024;
@@ -11484,11 +11480,11 @@ autoinstall:
                 overflix_error+="Erro, titulo não encontrado na url: " + url+"\n";
                 return;
             }
-            String dir="D:\\ProgramFiles\\site\\filmes\\";
+            String dir="C:\\ProgramFiles\\site\\filmes\\";
             if ( cam != null && cam )
                 titulo="cam-"+titulo;
             if ( titulo_serie != null ){
-                dir="D:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
+                dir="C:\\ProgramFiles\\site\\series\\"+titulo_serie+"\\";
                 detect_changed_struct_folder(dir, titulo);
             }
             String out=dir+titulo;
@@ -12449,7 +12445,7 @@ autoinstall:
                 "Japanses/ja",
                 "Korean/ko"
             };
-            String dir_modelo="D:/ProgramFiles/IA-vosk-model/";
+            String dir_modelo="C:/ProgramFiles/IA-vosk-model/";
             if ( tts ){ // textToSpeech
                 if ( list ){                        
                     java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("<option[\\s\\S]*?</option>").matcher(curl_string("https://ttsmp3.com/"));
@@ -12613,9 +12609,7 @@ while True:
                 erroFatal("Erro, Texto em branco!");
             String dir="/ProgramFiles";
             if ( isWindows() ){
-                dir="d:/ProgramFiles";
-                if ( !new File(dir).exists() || !new File(dir).isDirectory() )
-                    dir="c:/ProgramFiles";
+                dir="C:/ProgramFiles";
                 if ( !new File(dir).exists() || !new File(dir).isDirectory() )
                     new File(dir).mkdir();
             }
@@ -19103,11 +19097,11 @@ while True:
         try{
             if ( !new File("d:/").exists() )
                 erroFatal("drive d:/ nao encontrado!");                
-            if ( !new File("d:/ProgramFiles").exists() )
-                new File("d:/ProgramFiles").mkdir();
-            if ( !new File("d:/ProgramFiles/screens").exists() )
-                new File("d:/ProgramFiles/screens").mkdir();
-            String s="d:/ProgramFiles/screens/sc_"+date_("+%Y%m%d_%H%M%S_%N", null, null, null) + "_" + random(1000,9999)+".bmp";                    
+            if ( !new File("C:/ProgramFiles").exists() )
+                new File("C:/ProgramFiles").mkdir();
+            if ( !new File("C:/ProgramFiles/screens").exists() )
+                new File("C:/ProgramFiles/screens").mkdir();
+            String s="C:/ProgramFiles/screens/sc_"+date_("+%Y%m%d_%H%M%S_%N", null, null, null) + "_" + random(1000,9999)+".bmp";                    
             javax.imageio.ImageIO.write(robotGetImgScreen(a), "bmp", new File(s));
             System.out.println("printScreen: " + s);
         }catch(Exception e){
@@ -34730,12 +34724,12 @@ class Util{
     }
 
     public String [] check_util_list=new String[]{
-        "D:/ProgramFiles/iso/manual.txt,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/manual.txt,e7574cf7b22bf7ffa180921f0706a43e",
-        "D:/ProgramFiles/iso/efisys.bin,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/efisys.bin,65602bb5e3c7c39a88a973c73e896765",
-        "D:/ProgramFiles/iso/etfsboot.com,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/etfsboot.com,d4befebf3cef129ac087422b9e912788",
-        "D:/ProgramFiles/iso/oscdimg.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/oscdimg.exe,5107d2b7f13da005e5ea6d5b805be7fe",
-        "D:/ProgramFiles/7z/7z.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.exe,b6d5860f368b28caa9dd14a51666a5cd",
-        "D:/ProgramFiles/7z/7z.dll,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.dll,c4aabd70dc28c9516809b775a30fdd3f",
+        "C:/ProgramFiles/iso/manual.txt,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/manual.txt,e7574cf7b22bf7ffa180921f0706a43e",
+        "C:/ProgramFiles/iso/efisys.bin,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/efisys.bin,65602bb5e3c7c39a88a973c73e896765",
+        "C:/ProgramFiles/iso/etfsboot.com,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/etfsboot.com,d4befebf3cef129ac087422b9e912788",
+        "C:/ProgramFiles/iso/oscdimg.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/iso/oscdimg.exe,5107d2b7f13da005e5ea6d5b805be7fe",
+        "C:/ProgramFiles/7z/7z.exe,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.exe,b6d5860f368b28caa9dd14a51666a5cd",
+        "C:/ProgramFiles/7z/7z.dll,https://github.com/ywanes/utility_y/blob/master/y/utils_exe/7z/7z.dll,c4aabd70dc28c9516809b775a30fdd3f",
     };
     
     public String hex_string="0123456789ABCDEF";
@@ -35470,8 +35464,6 @@ class Util{
                 String path=partes[0];
                 String host=partes[1].replace("https://github.com/", "https://raw.githubusercontent.com/").replace("/blob/", "/refs/heads/");
                 String hash=partes[2];
-                if ( !new File("D:/ProgramFiles").exists() )
-                    path=path.replace("D:/ProgramFiles", "C:/ProgramFiles");
                 if ( !path.equals(a) )
                     continue;
                 Y y=new Y();
@@ -35914,7 +35906,7 @@ class Util{
         return null;        
     }    
     public void ocr(byte [] input, OutputStream os) throws Exception{
-        String s=runtimeExec(null, new String[]{"D:\\ProgramFiles\\Tesseract-OCR\\tesseract.exe", "-", "-"}, null, input, null);
+        String s=runtimeExec(null, new String[]{"C:\\ProgramFiles\\Tesseract-OCR\\tesseract.exe", "-", "-"}, null, input, null);
         if ( !runtimeExecError.equals("") && !runtimeExecError.contains("Detected") && !runtimeExecError.contains("Estimating") )
             erroFatal("Erro: " + runtimeExecError);
         os.write(s.getBytes());
@@ -41322,7 +41314,7 @@ class PlaylistServer extends Util{
             return get_mixer(" TV ");
         }
         if ( a.equals("list") ){
-            String _f="D:\\ProgramFiles\\site\\musicas";
+            String _f="C:\\ProgramFiles\\site\\musicas";
             File f=new File(_f);
             if ( !f.exists() )
                 return "Erro: Não foi possível encontrar a pasta " + _f;
@@ -41442,10 +41434,10 @@ class PlaylistServer extends Util{
             worker_loop yes
             device {0.0.0.00000000}.{8eee1bfc-5bb7-47ce-ab43-2fb54956292e}
             n_faixas 4
-            faixa 0 D:\ProgramFiles\site\musicas\classicas\12 Continent - The Journey.mkv
-            faixa 1 D:\ProgramFiles\site\musicas\classicas\End Credits (From 'Pirates of the Caribbean - On Stranger Tides'_Score).mkv
-            faixa 2 D:\ProgramFiles\site\musicas\classicas\Rhapsody In Blue - Gershwin.webm
-            faixa 3 D:\ProgramFiles\site\musicas\classicas\Adagio for Strings, Op. 11.mkv
+            faixa 0 C:\ProgramFiles\site\musicas\classicas\12 Continent - The Journey.mkv
+            faixa 1 C:\ProgramFiles\site\musicas\classicas\End Credits (From 'Pirates of the Caribbean - On Stranger Tides'_Score).mkv
+            faixa 2 C:\ProgramFiles\site\musicas\classicas\Rhapsody In Blue - Gershwin.webm
+            faixa 3 C:\ProgramFiles\site\musicas\classicas\Adagio for Strings, Op. 11.mkv
             vol worker 0.01
             cfg faixa 0 1 0
             cfg faixa 1 1 0
@@ -43878,7 +43870,7 @@ class TelaBloqueio {
     // standby a TV sai da rede ao dormir e o wake por rede nao chega.
     private static final String TV_IP   = "192.168.0.199:5555";
     // caminho preferencial do adb; se nao existir, cai para "adb" do PATH
-    private static final String ADB_PATH = "D:\\ProgramFiles\\adb\\adb.exe";
+    private static final String ADB_PATH = "C:\\ProgramFiles\\adb\\adb.exe";
     private static final int    TV_KEY_SLEEP = 223; // KEYCODE_SLEEP  (absoluto: dorme)
     private static final int    TV_KEY_WAKE  = 224; // KEYCODE_WAKEUP (absoluto: acorda)
     // o ping mostrou uma janela curta de timeouts logo apos dormir; o wake
@@ -51960,11 +51952,11 @@ EXEMPLOS
     # whpx
         y qemu rodando
         y qemu rodando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
-        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
     # hax
         y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu"
         y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
-        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -file_cidata "C:\\qemu_hax\\cidata.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
 USO
     y qemu rodando     [-linux|-windows] [flags...]   # sobe a VM do disco existente
     y qemu instalando  [-linux|-windows] [flags...]   # instala o SO do zero (apaga o disco)
@@ -51974,7 +51966,7 @@ PADROES
     -linux:
         -file        C:\\qemu_hax\\ubuntu_disk.qcow2        (disco if=virtio,discard=unmap)
         -file_iso    ubuntu desktop
-        -dir_7z      C:\\ProgramFiles\\7-Zip   (usa <dir_7z>\\7z.exe)
+        7-Zip        C:\\ProgramFiles\\7z   (baixado/validado pelo check_util)
         -port_ssh    2222 -> guest:22
         -rede        tap0
         -nogui       = -nographic -serial mon:stdio
@@ -51993,7 +51985,6 @@ FLAGS  (todas opcionais; default entre colchetes)
         -windows             perfil Windows
     Maquina
         -dir_qemu <pasta>    pasta do qemu-system-x86_64.exe / qemu-img.exe  [C:\\qemu11]
-        -dir_7z   <pasta>    pasta do 7-Zip (so -linux)         [C:\\ProgramFiles\\7-Zip]
         -m        <tam>      memoria RAM                                     [10G]
         -smp      <n>        numero de vCPUs                                 [3]
         -accel    <accel>    acelerador: whpx | hax (hax checa o servico)   [whpx]
@@ -52037,7 +52028,6 @@ FLAGS  (todas opcionais; default entre colchetes)
         // ===== Defaults comuns =====
         boolean windows = false;         // -linux e o padrao
         String dirQemu  = "C:\\qemu11";
-        String dir7z = "C:\\ProgramFiles\\7-Zip";   // pasta; 7z.exe montado depois
         String isosDir  = "C:\\qemu_isos";
         String ram = "10G", smp = "3", accel = "whpx", cpu = "max";
         String size = "120G";
@@ -52064,7 +52054,6 @@ FLAGS  (todas opcionais; default entre colchetes)
             // com valor
             String val = (i + 1 < args.length) ? args[i + 1] : "";
             if      (key.equals("dir_qemu"))    dirQemu  = val;
-            else if (key.equals("dir_7z"))      dir7z    = val;
             else if (key.equals("m"))           ram      = val;
             else if (key.equals("smp"))         smp      = val;
             else if (key.equals("accel"))       accel    = val;
@@ -52091,7 +52080,11 @@ FLAGS  (todas opcionais; default entre colchetes)
 
         String BIN      = dirQemu + "\\qemu-system-x86_64.exe";
         String QEMU_IMG = dirQemu + "\\qemu-img.exe";
-        String sevenZip = dir7z   + "\\7z.exe";
+        // 7-Zip baixado/validado pelo check_util (mesma pasta do y iso)
+        Y y7z = new Y();
+        if ( !y7z.check_util("C:/ProgramFiles/7z/7z.exe") || !y7z.check_util("C:/ProgramFiles/7z/7z.dll") )
+            Y.erroFatal("Nao foi possivel obter o 7-Zip em C:/ProgramFiles/7z");
+        String sevenZip = "C:\\ProgramFiles\\7z\\7z.exe";
 
         // Usando a pasta qemu11 (build WHPX): exige o WinHvPlatform.dll, senao aborta
         if (new java.io.File(dirQemu).getName().equalsIgnoreCase("qemu11")) {
@@ -53287,7 +53280,7 @@ calc.exe</textarea>
             return;
         }
         if ( uri.equals("/duolingo") ){            
-            File f=new File("D:\\ProgramFiles\\log_duolingo\\logs");            
+            File f=new File("C:\\ProgramFiles\\log_duolingo\\logs");            
             if ( f.exists() ){
                 File [] items=f.listFiles();
                 for ( int i=0;i<items.length;i++ ){
@@ -55917,11 +55910,11 @@ Exemplos...
     # whpx
         y qemu rodando
         y qemu rodando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
-        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel whpx -cpu max -dir_qemu "C:\\qemu11" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
     # hax
         y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu"
         y qemu rodando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -m 10G -smp 3 -nogui -port_ssh 2222 -rede tap0
-        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -dir_7z "C:\\ProgramFiles\\7-Zip" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
+        y qemu instalando -linux -accel hax -cpu core2duo -dir_qemu "C:\\qemu" -file "C:\\qemu_hax\\ubuntu_disk.qcow2" -file_iso "C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso" -m 10G -smp 3 -size 120G -nogui -port_ssh 2222 -rede tap0
     # config de apoio para linux tap0 -nogui usuario base
         curl -fsSL "https://raw.githubusercontent.com/ywanes/utility_y/master/y/src/config_tap0.sh?$(date +%s)" | bash
     # opcional cidata
@@ -56114,7 +56107,7 @@ Exemplos...
 [y yt]
     y yt
     obs: irá exibir a msg:
-    cd D:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py http...
+    cd C:\\ProgramFiles && python3 yt-dlp/yt_dlp/__main__.py http...
 [y curl]
     echo '{"id":1}' | y curl \
         -H "Content-Type: application/json" \
@@ -56398,8 +56391,8 @@ Exemplos...
     y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlySend
     y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showOnlyReceive
     y serverRouter 192.168.0.100 8080 127.0.0.1 9090 showSimple
-    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt
-    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips d:/ProgramFiles/log_ips/log_8080.txt -noLogLocal
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips C:/ProgramFiles/log_ips/log_8080.txt
+    y serverRouter 192.168.0.100 8080 127.0.0.1 9090 -log_ips C:/ProgramFiles/log_ips/log_8080.txt -noLogLocal
     y serverRouter 127.0.0.1 8080 127.0.0.1 9090
     y serverRouter 127.0.0.1 8080 127.0.0.1 9090 show
     y serverRouter 127.0.0.1 8080 127.0.0.1 9090 showOnlySend
@@ -56417,12 +56410,12 @@ Exemplos...
         -xor 100
 [y [httpServer|hs]]
     y httpServer
-    set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" && y var
-    set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" "-noLogLocal" && y var
-    set var="httpServer" "-mode" "playlistmovie" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "d:/ProgramFiles/log_ips/log_8888.txt" && y var
-    set var="httpServer" "-mode" "playlistserver" "-host" "192.168.0.100" "-port" "8888" "-cfg" "d:/ProgramFiles/playlistserver.cfg" && y var
+    set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "C:/ProgramFiles/log_ips/log_8888.txt" && y var
+    set var="httpServer" "-mode" "playlist" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "C:/ProgramFiles/log_ips/log_8888.txt" "-noLogLocal" && y var
+    set var="httpServer" "-mode" "playlistmovie" "-host" "192.168.0.100" "-port" "8888" "-log_ips" "C:/ProgramFiles/log_ips/log_8888.txt" && y var
+    set var="httpServer" "-mode" "playlistserver" "-host" "192.168.0.100" "-port" "8888" "-cfg" "C:/ProgramFiles/playlistserver.cfg" && y var
     set var="httpServer" "-mode" "webdav" "-port" "8888" "-pass" "admin,admin123,user,user123" && y var
-    set var="httpServer" "-host" "192.168.0.100" "-port" "8100" "-redisDir" "D:\\ProgramFiles\redis" "-redisSeconds" "60" "-redisAll" "[ALL]" && y var
+    set var="httpServer" "-host" "192.168.0.100" "-port" "8100" "-redisDir" "C:\\ProgramFiles\redis" "-redisSeconds" "60" "-redisAll" "[ALL]" && y var
     windows:
     set var="httpServer" "-host" "127.0.0.1" "-port" "8888" "-titulo_url_token" "" "-titulo" "titulo" "-dir" "." "-endsWith" "" "-ips_banidos" "" "-log_ips" "" && y var
     linux:
@@ -56682,7 +56675,7 @@ Exemplos...
       d:
       cd D:\\daemon\\scripts_geral
       set tmp=audio.wav
-      y mixer " TV " | y xargs echo "cmd /c \\"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe\\" --mmdevice-audio-device={} --start-time=0 --gain=0.50 -Incurse --play-and-exit --no-video D:\\ProgramFiles\\musicas_soundPad_custom\\%tmp%" > steam_flag_2.bat
+      y mixer " TV " | y xargs echo "cmd /c \\"C:\\Program Files\\VideoLAN\\VLC\\vlc.exe\\" --mmdevice-audio-device={} --start-time=0 --gain=0.50 -Incurse --play-and-exit --no-video C:\\ProgramFiles\\musicas_soundPad_custom\\%tmp%" > steam_flag_2.bat
       call steam_flag_2.bat
 [y clear]
     y clear
@@ -56766,8 +56759,8 @@ Exemplos...
     y kill -9 3434 3435
     y kill -2 3434 3435
     y kill text -Dnetbeans netbeans
-    y kill "D:\\ProgramFiles\\site\\musicas\\cry"
-    y kill "D:\\ProgramFiles\\site\\musicas\\cry\\Thomas Bergersen - Cry (Sun).mkv"
+    y kill "C:\\ProgramFiles\\site\\musicas\\cry"
+    y kill "C:\\ProgramFiles\\site\\musicas\\cry\\Thomas Bergersen - Cry (Sun).mkv"
     obs: o kill de path só foi implementado para o windows
     veja tambem o y locksmith
 [y locksmith]
@@ -56815,14 +56808,14 @@ Exemplos...
     y printScreen 0
     y printScreen 2
     y printScreen 99 -> uma unica imagem completa com todos os monitores
-    obs: pasta padrão: d:/ProgramFiles/screens
+    obs: pasta padrão: C:/ProgramFiles/screens
     alternativa: SnippingTool.exe
 [y ocr]
-    y ocr D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp
-    y cat D:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp | y ocr
+    y ocr C:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp
+    y cat C:\\ProgramFiles\\screens\\sc_20250307_223317_533_3950.bmp | y ocr
     obs: é preciso instalar o programa tesseract
     download: https://github.com/tesseract-ocr/tesseract/releases/
-    pasta instalado: "D:\\ProgramFiles\\Tesseract-OCR"
+    pasta instalado: "C:\\ProgramFiles\\Tesseract-OCR"
 [y paste]
     y paste file1 file2
 [y mkv]
@@ -56836,7 +56829,7 @@ Exemplos...
     dica rmvb para mp4: y ls | y grep .rmvb | y xargs echo "y echo 1 | ffmpeg -i {} -qscale 0 -max_muxing_queue_size 1024 {}Z" | y tr "rmvb\"Z" "mp4\""
     aviso: "Audio: ac3 (ac-3" de mp4 não funciona na web
     checando:
-    cd d:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep "Input #0" "(por): Audio: ac3"
+    cd C:\\ProgramFiles\\site\\series && y find | y grep mp4 | y grep -v png | y xargs ffmpeg -i | y grep "Input #0" "(por): Audio: ac3"
 [y ffmpeg]
     y ffmpeg desktop.mp4
     y ffmpeg
@@ -56883,7 +56876,7 @@ Exemplos...
     y talk -speechToText list
     y talk oi
     y talk -lang Brazilian_Portuguese_Ricardo -msg oi
-    y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "d:/ProgramFiles/musicas_ia/talk.wav"
+    y talk -lang Brazilian_Portuguese_Vitoria -msg "desliga esse computador, agora!" -o "C:/ProgramFiles/musicas_ia/talk.wav"
     y echo oi | y talk
     y talk -stt
     y talk -stt -lang English
@@ -56911,7 +56904,7 @@ Exemplos...
     y overflix -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"
     y overflix -onlyPreLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/"    
     y overflix -v -onlyLink "https://overflix.bar/assistir-rick-e-morty-dublado-online-3296/?temporada=2"
-    y overflix "https://encontrei.me/assistir-ruptura-2x4-dublado-online-46643/" -outPath "D:\\ProgramFiles\\site\\series\\Ruptura"
+    y overflix "https://encontrei.me/assistir-ruptura-2x4-dublado-online-46643/" -outPath "C:\\ProgramFiles\\site\\series\\Ruptura"
     y overflix "https://encontrei.me/assistir-anne-com-um-e-dublado-online-49039/" "getScriptRenameBySkip,7,10,10"
     obs: getScriptRenameBySkip só interpreta comandos skip, caso contrario baixa
     obs2: -vToken => mostra iexplorer.exe e não fecha.
