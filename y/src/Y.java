@@ -1111,6 +1111,8 @@ cat buffer.log
         if ( args[0].equals("qemu") ){
             if ( !isWindows() )
                 erroFatal("implementado só para windows!");
+            if ( args.length > 1 && args[1].equalsIgnoreCase("instalando") && !isWindowsAdm() )
+                erroFatal("você precisa estar no cmd adm!");            
             try{
                 args=removeParm(0, args);
                 new Qemu().main(args);
