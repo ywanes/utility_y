@@ -44581,9 +44581,9 @@ class Particao {
                         y format_efi 1#1 1#3
                         obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
                     # instala o ybootloader na ESP (1 arg so: a ESP; o loader acha os vhd/vhdx E o bootmgfw sozinho)
-                        y format_efi_ybootloader 1 | y format_efi_ybootloader a.vhdx          # grava na ESP existente
-                        y format_efi_ybootloader 1#TAIL | y format_efi_ybootloader a.vhdx#1   # cria a ESP no espaco livre
-                        y format_efi_ybootloader 1 -seconds 5                                 # timeout do menu (padrao 5)
+                        y par format_efi_ybootloader 1 | y par format_efi_ybootloader a.vhdx          # grava na ESP existente
+                        y par format_efi_ybootloader 1#TAIL | y par format_efi_ybootloader a.vhdx#1   # cria a ESP no espaco livre
+                        y par format_efi_ybootloader 1 -seconds 5                                     # timeout do menu (padrao 5)
                         obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs (na raiz ou na pasta vhdxs); o ybootloader extrai o bootmgfw do proprio vhdx a cada boot (dinamico)
                         obs2: para abrir com y qemu, use -windows                             
                     # delete particao
@@ -46436,6 +46436,7 @@ class Particao {
             if (args[i].equalsIgnoreCase("-seconds")) {
                 if (i + 1 >= args.length || !args[i + 1].matches("\\d+")) throw new Exception("-seconds precisa de um numero (ex.: -seconds 10)");
                 segundos = Integer.parseInt(args[++i]);
+                if (segundos < 1) throw new Exception("-seconds menor que 1 nao é permitido!");
                 if (segundos > 300) throw new Exception("-seconds no maximo 300");
             } else if (alvo == null) {
                 alvo = args[i];
@@ -55845,12 +55846,12 @@ Exemplos...
             y particao D 2#5
             y particao 2#5 2#TAIL
         # cria particao efi
-            y format_efi a.vhdx#1 a.vhdx#3
-            y format_efi 1#1 1#3
+            y par format_efi a.vhdx#1 a.vhdx#3
+            y par format_efi 1#1 1#3
             obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
         # cria particao efi ybootloader
-            y format_efi_ybootloader a.vhdx#1 a.vhdx#3
-            y format_efi_ybootloader a.vhdx#1 a.vhdx#3 -seconds 5
+            y par format_efi_ybootloader a.vhdx#1 a.vhdx#3
+            y par format_efi_ybootloader a.vhdx#1 a.vhdx#3 -seconds 5
             obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
             obs2: para abrir com y qemu, use -windows
         # delete particao
