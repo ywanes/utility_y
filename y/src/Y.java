@@ -44565,17 +44565,17 @@ class Particao {
                         y par list c:
                         y par list a.vhdx
                     # cria particao ou formata
-                        y particao format_refs a.vhdx#3
-                        y particao format_refs 1#3
-                        y particao format_refs 1#TAIL
-                        y particao format_refs a.vhdx#3 2000
-                        y particao format_refs a.vhdx#3 max
+                        y par format_refs a.vhdx#3
+                        y par format_refs 1#3
+                        y par format_refs 1#TAIL
+                        y par format_refs a.vhdx#3 2000
+                        y par format_refs a.vhdx#3 max
                         opcoes: format_refs, format_ntfs, format_fat32 e format_exfat
                         detalhe: 1#3 significa disco 1 particao 3
                         detalhe2: olhe list para ver o que é TAIL
                     # copia particao
-                        y particao D 2#5
-                        y particao 2#5 2#TAIL
+                        y par D 2#5
+                        y par 2#5 2#TAIL
                     # cria particao efi
                         y format_efi a.vhdx#1 a.vhdx#3                        
                         y format_efi 1#1 1#3
@@ -44589,21 +44589,21 @@ class Particao {
                     # delete particao
                         y par delete a.vhdx#6 | delete 1#3
                     # regera guid
-                        y particao reguid a.vhdx
-                        y particao reguid a.vhdx#3
-                        y particao reguid a.vhdx#3 [GUID]
-                        y particao reguid a.vhdx#DISK # o guid do disco e nao da particao
+                        y par reguid a.vhdx
+                        y par reguid a.vhdx#3
+                        y par reguid a.vhdx#3 [GUID]
+                        y par reguid a.vhdx#DISK # o guid do disco e nao da particao
                         obs: o BCD acha o windows pelos GUIDs
                     # regera numero de serie
-                        y particao reserie a.vhdx
-                        y particao reserie a.vhdx#3
-                        y particao reserie a.vhdx#3 XXXX-XXXX
+                        y par reserie a.vhdx
+                        y par reserie a.vhdx#3
+                        y par reserie a.vhdx#3 XXXX-XXXX
                     # cria particao pelo template
                         y par create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
                     # desataxa vhdx
-                        y particao detach a.vhdx
+                        y par detach a.vhdx
                     # teste automatico
-                        y particao -test
+                        y par -test
                     # altera tamanho particao
                         y par maximum a.vhdx#1 3000    
                         y par maximum a.vhdx#1 max
@@ -44614,14 +44614,14 @@ class Particao {
                         #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
                         #                                                opcao com compressao extra: --solid --compress=LZMS:100 --solid-chunk-size=256M
                     # sandbox        
-                        y particao -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
-                        y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
-                        y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
-                        y particao -modoSandboxRead
-                        y particao -modoSandboxRead -name sb1
+                        y par -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+                        y par -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
+                        y par -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
+                        y par -modoSandboxRead
+                        y par -modoSandboxRead -name sb1
                         y par sbw -name ubuntu2704 -fromIsoManual C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso -tamanhoGigas 120 -usuario base -senha base -showQemu
                         y par sb|sbr|sbw # respectivamente -modoSandboxRead -modoSandboxRead -modoSandboxWrite
-                        y particao -modoSandboxWrite -showQemu
+                        y par -modoSandboxWrite -showQemu
                         obs: sistemas de arquivos: -refs e -ntfs
                         modos: -modoSandboxRead e -modoSandboxWrite
                         show: -showQemu e -hideQemu(padrao)
@@ -44629,9 +44629,9 @@ class Particao {
                         fechar o mstsc provoca encerrar tudo, no caso do Write ele trata o delta file e junta tudo para a proxima vez
                         para windows update, deixe a tela mstsc com a msg disconnected para deixar o qemu trabalhando de fundo ainda
                     # install windows para vhdx
-                        y particao -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
-                        y particao -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
-                        y particao -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
+                        y par -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+                        y par -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
+                        y par -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
                     # detalhe use sempre GPT nos discos
                     """);
             return;
@@ -49792,37 +49792,37 @@ class Particao {
 
                 # modoVhdx fromIso: cria um vhdx pronto para uso, gpt efi winre "refs windows", feito pelo iso
                 #   login: so a conta base / senha base
-                y particao -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+                y par -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
 
                 # modoVhdx fromPc: cria um vhdx pronto para uso, gpt efi winre "ntfs windows", copiado do windows desta maquina
                 #   login: conta base / senha base + os usuarios desta maquina, com as mesmas senhas
-                y particao -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
+                y par -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
 
                 # modoVhdx fromVhdx: troca o tipo de um vhdx com windows ja instalado, gpt efi winre "ntfs windows" -> "refs windows"
                 #   mesmo tipo da origem: pede confirmacao (comando estranho); confirmando, segue
                 #   login: conta base / senha base + as contas que ja existem no vhdx de origem, com as mesmas senhas
-                y particao -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
+                y par -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
 
                 # modoSandboxRead: roda o sandbox, nada fica gravado
                 #   login: o da geracao (base / base); sem -usuario/-senha = base sem senha
-                y particao -modoSandboxRead -fromPc -ntfs -usuario base -senha base
+                y par -modoSandboxRead -fromPc -ntfs -usuario base -senha base
 
                 # sandbox ja criado, por qualquer nome (com ou sem .vhdx; pode ser caminho): -name ou --name
-                #   com -from*, o -name e o nome do sandbox novo: y particao sbw -name linux2704 -fromIsoManual C:\\iso\\ubuntu.iso
+                #   com -from*, o -name e o nome do sandbox novo: y par sbw -name linux2704 -fromIsoManual C:\\iso\\ubuntu.iso
                 #   renomeie juntos o .vhdx, o .qcow2, o _vars.fd e (instalado na mao) o .manual: sb1.vhdx, sb1.qcow2, sb1_vars.fd, sb1.manual
-                y particao -modoSandboxRead -name sb1
+                y par -modoSandboxRead -name sb1
 
                 # modoSandboxWrite: roda o sandbox, o que fizer fica gravado
                 #   login: o da geracao (base / base); sem -usuario/-senha = base sem senha
-                y particao -modoSandboxWrite -fromIso C:\\tmp\\win11.iso -refs -usuario base -senha base
+                y par -modoSandboxWrite -fromIso C:\\tmp\\win11.iso -refs -usuario base -senha base
 
                 # fromIsoManual: VHDX vazio + a ISO na janela do QEMU; voce instala na mao (Ubuntu, Debian, Fedora, Windows ou outra)
                 #   a ISO e reconhecida pelo conteudo (nao pelo nome); -ntfs/-refs e -wuguard nao se aplicam; sem -tamanhoGigas: 64 GB
                 #   -usuario/-senha (opcional): o usuario que voce vai criar no instalador, para o mstsc entrar sozinho
                 #   com um servidor RDP no sistema (xrdp no Linux, Area de Trabalho Remota no Windows Pro) o mstsc abre sozinho;
                 #   sem ele, o sandbox roda na janela do QEMU
-                y particao -modoSandboxWrite -fromIsoManual C:\\iso\\ubuntu-24.04.1-desktop-amd64.iso -tamanhoGigas 40 -usuario base -senha base
-                y particao -modoSandboxRead -name sandbox-isomanual-ubuntu-24.04.1
+                y par -modoSandboxWrite -fromIsoManual C:\\iso\\ubuntu-24.04.1-desktop-amd64.iso -tamanhoGigas 40 -usuario base -senha base
+                y par -modoSandboxRead -name sandbox-isomanual-ubuntu-24.04.1
                 """;
 
         // ---------------------------------------------------------------- parse
@@ -51772,7 +51772,7 @@ exit 0
                 System.out.println("o disco continuou vazio (nada foi instalado): " + vhdx.getName() + " e os arquivos dele foram apagados");
                 return;
             }
-            if (instalar) System.out.println("instalado: " + vhdx + "\npara usar: y particao -modoSandboxRead -name " + vhdx.getName().substring(0, vhdx.getName().length() - 5)
+            if (instalar) System.out.println("instalado: " + vhdx + "\npara usar: y par -modoSandboxRead -name " + vhdx.getName().substring(0, vhdx.getName().length() - 5)
                     + "   (-modoSandboxWrite para gravar)");
             else System.out.println(grava ? "sandbox encerrado (alteracoes gravadas em " + vhdx + ")" : "sandbox encerrado (nada ficou gravado)");
         } finally {
@@ -55834,17 +55834,17 @@ Exemplos...
             y par list c:
             y par list a.vhdx
         # cria particao ou formata
-            y particao format_refs a.vhdx#3
-            y particao format_refs 1#3
-            y particao format_refs 1#TAIL
-            y particao format_refs a.vhdx#3 2000
-            y particao format_refs a.vhdx#3 max
+            y par format_refs a.vhdx#3
+            y par format_refs 1#3
+            y par format_refs 1#TAIL
+            y par format_refs a.vhdx#3 2000
+            y par format_refs a.vhdx#3 max
             opcoes: format_refs, format_ntfs, format_fat32 e format_exfat
             detalhe: 1#3 significa disco 1 particao 3
             detalhe2: olhe list para ver o que é TAIL
         # copia particao
-            y particao D 2#5
-            y particao 2#5 2#TAIL
+            y par D 2#5
+            y par 2#5 2#TAIL
         # cria particao efi
             y par format_efi a.vhdx#1 a.vhdx#3
             y par format_efi 1#1 1#3
@@ -55857,21 +55857,21 @@ Exemplos...
         # delete particao
             y par delete a.vhdx#6 | delete 1#3
         # regera guid
-            y particao reguid a.vhdx
-            y particao reguid a.vhdx#3
-            y particao reguid a.vhdx#3 [GUID]
-            y particao reguid a.vhdx#DISK # o guid do disco e nao da particao
+            y par reguid a.vhdx
+            y par reguid a.vhdx#3
+            y par reguid a.vhdx#3 [GUID]
+            y par reguid a.vhdx#DISK # o guid do disco e nao da particao
             obs: o BCD acha o windows pelos GUIDs
         # regera numero de serie
-            y particao reserie a.vhdx
-            y particao reserie a.vhdx#3
-            y particao reserie a.vhdx#3 XXXX-XXXX
+            y par reserie a.vhdx
+            y par reserie a.vhdx#3
+            y par reserie a.vhdx#3 XXXX-XXXX
         # cria particao pelo template
             y par create_by_template_1G_vazio 1G_vazio.vhdx | create_by_template_1G_refs 1G_refs.vhdx | create_by_template_1G_winre_refs 1G_winre_refs.vhdx
         # desataxa vhdx
-            y particao detach a.vhdx
+            y par detach a.vhdx
         # teste automatico
-            y particao -test
+            y par -test
         # altera tamanho particao
             y par maximum a.vhdx#1 3000
             y par maximum a.vhdx#1 max
@@ -55882,14 +55882,14 @@ Exemplos...
             #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
             #                                                opcao com compressao extra: --solid --compress=LZMS:100 --solid-chunk-size=256M
         # sandbox
-            y particao -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
-            y particao -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
-            y particao -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
-            y particao -modoSandboxRead
-            y particao -modoSandboxRead -name sb1
+            y par -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+            y par -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
+            y par -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
+            y par -modoSandboxRead
+            y par -modoSandboxRead -name sb1
             y par sbw -name ubuntu2704 -fromIsoManual C:\\qemu_isos\\ubuntu-27.04-desktop-amd64.iso -tamanhoGigas 120 -usuario base -senha base -showQemu
             y par sb|sbr|sbw # respectivamente -modoSandboxRead -modoSandboxRead -modoSandboxWrite
-            y particao -modoSandboxWrite -showQemu
+            y par -modoSandboxWrite -showQemu
             obs: sistemas de arquivos: -refs e -ntfs
             modos: -modoSandboxRead e -modoSandboxWrite
             show: -showQemu e -hideQemu(padrao)
@@ -55897,9 +55897,9 @@ Exemplos...
             fechar o mstsc provoca encerrar tudo, no caso do Write ele trata o delta file e junta tudo para a proxima vez
             para windows update, deixe a tela mstsc com a msg disconnected para deixar o qemu trabalhando de fundo ainda
         # install windows para vhdx
-            y particao -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
-            y particao -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
-            y particao -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
+            y par -modoVhdx win11_98G.vhdx -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
+            y par -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
+            y par -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
         # detalhe use sempre GPT nos discos
 [y qemu]
     y qemu
