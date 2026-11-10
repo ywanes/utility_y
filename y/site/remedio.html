@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meses</title>
+<style>
+  :root {
+    --fundo: #e9eef5;
+    --cartao: #ffffff;
+    --tinta: #1b2a41;
+    --tinta-suave: #4d5d75;
+    --linha: #c9d3e1;
+    --c1: #2a6fdb;  --c1-texto: #ffffff;
+    --c2: #f2b705;  --c2-texto: #1b2a41;
+    --c3: #c8243a;  --c3-texto: #ffffff;
+    --foco: #2a6fdb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --fundo: #131a24;
+      --cartao: #1c2533;
+      --tinta: #e8edf4;
+      --tinta-suave: #a6b3c6;
+      --linha: #34425a;
+      --c1: #5b93f0;  --c1-texto: #0d1420;
+      --c2: #f5c63a;  --c2-texto: #0d1420;
+      --c3: #ec5a6e;  --c3-texto: #0d1420;
+      --foco: #8cb4ff;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--fundo);
+    color: var(--tinta);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    line-height: 1.4;
+  }
+  main { max-width: 1180px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: end; justify-content: space-between; margin-bottom: 20px; }
+  h1 { font-size: 1.6rem; margin: 0; letter-spacing: -0.01em; }
+  .legenda { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 0; padding: 0; list-style: none; color: var(--tinta-suave); font-size: 0.95rem; }
+  .legenda li { display: flex; align-items: center; gap: 6px; }
+  .amostra { width: 22px; height: 22px; border-radius: 6px; display: inline-grid; place-items: center; font-size: 0.75rem; font-weight: 700; border: 1px solid var(--linha); background: var(--cartao); color: var(--tinta); }
+  .amostra[data-e="1"] { background: var(--c1); color: var(--c1-texto); border-color: transparent; }
+  .amostra[data-e="2"] { background: var(--c2); color: var(--c2-texto); border-color: transparent; }
+  .amostra[data-e="3"] { background: var(--c3); color: var(--c3-texto); border-color: transparent; }
+
+  .config { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 0 0 20px; padding: 14px 16px; background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px; }
+  .config label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 600; color: var(--tinta-suave); }
+  .config select, .config input { font: inherit; font-size: 1rem; color: var(--tinta); background: var(--fundo); border: 1px solid var(--linha); border-radius: 8px; padding: 6px 10px; }
+  .config input { width: 6.5em; font-variant-numeric: tabular-nums; }
+  .config select:focus-visible, .config input:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+  .grades { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  section { background: var(--cartao); border: 1px solid var(--linha); border-radius: 14px; padding: 16px; }
+  .topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  h2 { font-size: 1.1rem; margin: 0; }
+  .contagem { color: var(--tinta-suave); font-size: 0.9rem; font-variant-numeric: tabular-nums; margin: 0 0 12px; }
+
+  .numeros { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .num {
+    position: relative;
+    aspect-ratio: 1;
+    border: 1px solid var(--linha);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--tinta);
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.08s ease;
+  }
+  .num:active { transform: scale(0.94); }
+  .semana { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 6px; }
+  .semana span { text-align: center; font-size: 0.8rem; font-weight: 600; color: var(--tinta-suave); }
+  .vazio { aspect-ratio: 1; }
+  .num.hoje { box-shadow: inset 0 0 0 2px var(--tinta); }
+  .num:focus-visible, button:focus-visible { outline: 3px solid var(--foco); outline-offset: 2px; }
+  .num[data-e="1"] { background: var(--c1); color: var(--c1-texto); border-color: transparent; }
+  .num[data-e="2"] { background: var(--c2); color: var(--c2-texto); border-color: transparent; }
+  .num[data-e="3"] { background: var(--c3); color: var(--c3-texto); border-color: transparent; }
+  .num[data-e]:not([data-e="0"])::after {
+    content: attr(data-e);
+    position: absolute; top: 3px; right: 5px;
+    font-size: 0.62rem; font-weight: 700; opacity: 0.85;
+  }
+
+  .botao {
+    border: 1px solid var(--linha);
+    background: transparent;
+    color: var(--tinta);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .botao:hover { border-color: var(--tinta-suave); }
+  .aviso { margin: 16px 0 0; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--c2); color: var(--tinta); font-size: 0.92rem; }
+  .aviso[hidden] { display: none; }
+  @media (prefers-reduced-motion: reduce) { .num { transition: none; } .num:active { transform: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1 id="titulo">Meses</h1>
+    <ul class="legenda" aria-label="Legenda dos cliques">
+      <li><span class="amostra" data-e="1">1</span> 1 clique</li>
+      <li><span class="amostra" data-e="2">2</span> 2 clique</li>
+      <li><span class="amostra" data-e="3">3</span> 3 clique</li>
+      <li><span class="amostra" data-e="0"></span> 4 clique volta ao normal</li>
+    </ul>
+    <button class="botao" id="limparTudo" type="button">Limpar tudo</button>
+  </header>
+
+  <form class="config" id="config" aria-label="Primeiro ms exibido" onsubmit="return false">
+    <label>Ms do primeiro calendrio
+      <select id="mesInicial"></select>
+    </label>
+    <label>Ano
+      <input id="anoInicial" type="number" min="1900" max="2999" step="1" inputmode="numeric">
+    </label>
+    <button class="botao" id="mesAtual" type="button">Voltar ao ms atual</button>
+  </form>
+
+  <div class="grades" id="grades"></div>
+  <p class="aviso" id="aviso" hidden>O navegador bloqueou o salvamento nesta pgina (comum em pginas abertas por URL base64). As marcaes valem s at fechar a aba; no seu domnio elas sero salvas normalmente.</p>
+</main>
+
+<script>
+  const CHAVE = "meses-marcacoes:v1";
+  const CHAVE_CONFIG = "meses-config:v1";
+  const TOTAL_GRADES = 2;
+  const NOMES_MES = ["Janeiro", "Fevereiro", "Maro", "Abril", "Maio", "Junho", "Julho",
+    "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+  const DIAS_SEMANA = ["D", "S", "T", "Q", "Q", "S", "S"];
+  const hoje = new Date();
+
+  // Primeiro ms exibido: o escolhido na configurao ou, se nada foi escolhido, o ms atual
+  function lerConfig() {
+    try {
+      const c = JSON.parse(localStorage.getItem(CHAVE_CONFIG) || "null");
+      if (c && Number.isInteger(c.ano) && Number.isInteger(c.mes) && c.mes >= 0 && c.mes <= 11) return c;
+    } catch (erro) {}
+    return null;
+  }
+  function gravarConfig(c) {
+    try {
+      if (c) localStorage.setItem(CHAVE_CONFIG, JSON.stringify(c));
+      else localStorage.removeItem(CHAVE_CONFIG);
+    } catch (erro) {}
+  }
+  let inicio = lerConfig() || { ano: hoje.getFullYear(), mes: hoje.getMonth() };
+
+  function calcularMeses() {
+    return Array.from({ length: TOTAL_GRADES }, (_, k) => {
+      const d = new Date(inicio.ano, inicio.mes + k, 1);
+      const ano = d.getFullYear(), mes = d.getMonth();
+      return {
+        chave: ano + "-" + String(mes + 1).padStart(2, "0"),
+        nome: NOMES_MES[mes] + " de " + ano,
+        dias: new Date(ano, mes + 1, 0).getDate(),
+        inicioSemana: d.getDay(),
+        ehMesDeHoje: ano === hoje.getFullYear() && mes === hoje.getMonth()
+      };
+    });
+  }
+  let MESES = calcularMeses();
+
+  let armazenamentoOk = true;
+
+  function carregar() {
+    let dados = {};
+    try {
+      const salvo = localStorage.getItem(CHAVE);
+      if (salvo) {
+        const lido = JSON.parse(salvo);
+        if (lido && typeof lido === "object" && !Array.isArray(lido)) dados = lido;
+      }
+    } catch (erro) {
+      armazenamentoOk = false;
+    }
+    return dados;
+  }
+
+  // Garante uma lista vlida para cada ms exibido, sem apagar os outros meses salvos
+  function prepararMeses() {
+    MESES.forEach(m => {
+      const lista = Array.isArray(estado[m.chave]) ? estado[m.chave] : [];
+      estado[m.chave] = Array.from({ length: m.dias }, (_, i) => {
+        const v = lista[i];
+        return v >= 0 && v <= 3 ? v : 0;
+      });
+    });
+  }
+
+  function salvar() {
+    if (!armazenamentoOk) return;
+    try {
+      localStorage.setItem(CHAVE, JSON.stringify(estado));
+    } catch (erro) {
+      armazenamentoOk = false;
+      document.getElementById("aviso").hidden = false;
+    }
+  }
+
+  let estado = carregar();
+  prepararMeses();
+  if (!armazenamentoOk) document.getElementById("aviso").hidden = false;
+
+  const NOMES_ESTADO = ["normal", "1 clique", "2 clique", "3 clique"];
+
+  function atualizarBotao(botao, valor, dia) {
+    botao.dataset.e = valor;
+    botao.setAttribute("aria-label", "Dia " + dia + ", " + NOMES_ESTADO[valor]);
+  }
+
+  function atualizarContagem(g) {
+    const conta = [0, 0, 0, 0];
+    estado[MESES[g].chave].forEach(v => conta[v]++);
+    document.getElementById("contagem-" + g).textContent =
+      "1: " + conta[1] + "   2: " + conta[2] + "   3: " + conta[3];
+  }
+
+  function montar() {
+    const area = document.getElementById("grades");
+    area.innerHTML = "";
+    MESES.forEach((m, g) => {
+      const secao = document.createElement("section");
+      secao.innerHTML =
+        '<div class="topo"><h2>' + m.nome + '</h2>' +
+        '<button class="botao" type="button" data-limpar="' + g + '">Limpar</button></div>' +
+        '<p class="contagem" id="contagem-' + g + '"></p>' +
+        '<div class="semana" aria-hidden="true">' + DIAS_SEMANA.map(d => "<span>" + d + "</span>").join("") + '</div>' +
+        '<div class="numeros" role="group" aria-label="' + m.nome + '"></div>';
+      const grade = secao.querySelector(".numeros");
+      for (let i = 0; i < m.inicioSemana; i++) {
+        const vazio = document.createElement("span");
+        vazio.className = "vazio";
+        grade.appendChild(vazio);
+      }
+      for (let dia = 1; dia <= m.dias; dia++) {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "num" + (m.ehMesDeHoje && dia === hoje.getDate() ? " hoje" : "");
+        botao.textContent = dia;
+        botao.dataset.grade = g;
+        botao.dataset.indice = dia - 1;
+        atualizarBotao(botao, estado[m.chave][dia - 1], dia);
+        grade.appendChild(botao);
+      }
+      area.appendChild(secao);
+      atualizarContagem(g);
+    });
+  }
+
+  document.getElementById("grades").addEventListener("click", evento => {
+    const num = evento.target.closest(".num");
+    if (num) {
+      const g = Number(num.dataset.grade);
+      const i = Number(num.dataset.indice);
+      const lista = estado[MESES[g].chave];
+      lista[i] = (lista[i] + 1) % 4; // 0  1  2  3  0
+      atualizarBotao(num, lista[i], i + 1);
+      atualizarContagem(g);
+      salvar();
+      return;
+    }
+    const limpar = evento.target.closest("[data-limpar]");
+    if (limpar) {
+      const g = Number(limpar.dataset.limpar);
+      estado[MESES[g].chave] = Array(MESES[g].dias).fill(0);
+      montar();
+      salvar();
+    }
+  });
+
+  document.getElementById("limparTudo").addEventListener("click", () => {
+    if (!confirm("Limpar as marcaes dos dois meses exibidos?")) return;
+    MESES.forEach(m => { estado[m.chave] = Array(m.dias).fill(0); });
+    montar();
+    salvar();
+  });
+
+  // Mantm vrias abas do mesmo domnio sincronizadas
+  window.addEventListener("storage", evento => {
+    if (evento.key === CHAVE) { estado = carregar(); prepararMeses(); montar(); }
+  });
+
+  // Configurao do primeiro ms
+  const campoMes = document.getElementById("mesInicial");
+  const campoAno = document.getElementById("anoInicial");
+  NOMES_MES.forEach((nome, i) => {
+    const op = document.createElement("option");
+    op.value = i;
+    op.textContent = nome;
+    campoMes.appendChild(op);
+  });
+
+  function mostrarConfig() {
+    campoMes.value = inicio.mes;
+    campoAno.value = inicio.ano;
+    const [a, b] = MESES;
+    const mesmoAno = a.chave.slice(0, 4) === b.chave.slice(0, 4);
+    document.getElementById("titulo").textContent = mesmoAno
+      ? a.nome.split(" de ")[0] + " e " + b.nome.toLowerCase()
+      : a.nome + " e " + b.nome.charAt(0).toLowerCase() + b.nome.slice(1);
+  }
+
+  function aplicarInicio(novo, salvarEscolha) {
+    inicio = novo;
+    gravarConfig(salvarEscolha ? novo : null);
+    MESES = calcularMeses();
+    prepararMeses();
+    mostrarConfig();
+    montar();
+  }
+
+  campoMes.addEventListener("change", () => {
+    aplicarInicio({ ano: inicio.ano, mes: Number(campoMes.value) }, true);
+  });
+  campoAno.addEventListener("change", () => {
+    const ano = Number(campoAno.value);
+    if (!Number.isInteger(ano) || ano < 1900 || ano > 2999) { campoAno.value = inicio.ano; return; }
+    aplicarInicio({ ano, mes: inicio.mes }, true);
+  });
+  document.getElementById("mesAtual").addEventListener("click", () => {
+    aplicarInicio({ ano: hoje.getFullYear(), mes: hoje.getMonth() }, false);
+  });
+
+  mostrarConfig();
+  montar();
+</script>
+</body>
+</html>
