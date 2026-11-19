@@ -97,13 +97,13 @@ alias uu='/opt/.u_c'
 echo "" > /opt/.u_c
 
 ( (
-  if [ `whoami` == "root" ] && [ `apt upgrade 2>/dev/null < /dev/null | grep -e "Not Upgrading:" -e "Não atualizando" -e "não são mais requeridos" | wc -l` -ge 1 ]
+  if [ "$(whoami)" == "root" ]
   then
     (
-      if [ `script -qc "apt update" /dev/null < /dev/null | grep -e "apt modernize-sources" | wc -l` -eq 1 ]
+      if grep -qsE '^[[:space:]]*deb(-src)?[[:space:]]' /etc/apt/sources.list /etc/apt/sources.list.d/*.list
       then
         echo 'apt modernize-sources'
-      elif [ `apt upgrade 2>/dev/null < /dev/null | grep -e "apt autoremove" | wc -l` -eq 1 ]
+      elif [ "$(apt-get -s autoremove 2>/dev/null | grep -c '^Remv')" -ge 1 ]
       then
         echo 'apt autoremove'
       else
@@ -138,7 +138,6 @@ echo "" > /opt/.u_c
       #    2026-06-07 espectativa era 2026-04-20
       #    2026-10-15 mostrando indisponivel no list. no mesmo dia ficou disponivel para gerar iso. ainda aguardando para do-release-upgrade -d
       #    2026-11-04 liberado para do-release-upgrade -d
-      # se ao retomar tiver travado aperta r para resurrect window 
       v1=$(cat /etc/os-release | tr '"' ' ' | grep VERSION_ID | awk '{ print $2 }')
       v2=$(curl --max-time 5 https://cdimage.ubuntu.com/daily-live/current/ 2>/dev/null | grep title | head -1 | awk '{ print $2 }')
       v3=$(curl --max-time 5 http://changelogs.ubuntu.com/meta-release-development 2>/dev/null | grep "Version: " | tail -1 | awk '{ print $2 }')
