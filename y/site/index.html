@@ -1501,9 +1501,10 @@ function load_movie(parm, table_click, streamURL){
             let _digest = b['digest']; // aux
             let epochMili = b['epochMili'];
 			// ja assistido
-            if ( currentTime > (duration-120) )
-                document.getElementById('video').currentTime = 0;      
-            else
+			// comantado porque para load_station1 nao faz sentido
+            //if ( currentTime > (duration-120) )
+            //    document.getElementById('video').currentTime = 0;      
+            //else
                 document.getElementById('video').currentTime = currentTime;      
           }catch(err){}
         }
@@ -2374,6 +2375,7 @@ function prepara_principal(){
     document.getElementById('principal').innerHTML='';
 }
 
+////////// flag_diretoMesmoQueForNoFim
 function load_playlist(parm, table_click, type, type_action_block_verify_buttom_reload){
     if ( type == 'movie' && get_nick_name() == null ){ // logado?
 		alert('Você precisa estar logado!');
