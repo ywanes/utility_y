@@ -44584,7 +44584,7 @@ class Particao {
                         y par format_efi_ybootloader 1 | y par format_efi_ybootloader a.vhdx          # grava na ESP existente
                         y par format_efi_ybootloader 1#TAIL | y par format_efi_ybootloader a.vhdx#1   # cria a ESP no espaco livre
                         y par format_efi_ybootloader 1 -seconds 5                                     # timeout do menu (padrao 5)
-                        obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs (na raiz ou na pasta vhdxs); o ybootloader extrai o bootmgfw do proprio vhdx a cada boot (dinamico)
+                        obs: so aceita vhdx windows e vhd-fixo linux (ubuntu, alpine) no ntfs, nas pastas vhds e vhdxs (a raiz nao e varrida); o ybootloader extrai o bootmgfw do proprio vhdx a cada boot (dinamico)
                         obs2: para abrir com y qemu, use -windows                             
                     # delete particao
                         y par delete a.vhdx#6 | delete 1#3
@@ -44610,7 +44610,7 @@ class Particao {
                         y par maximum a.vhdx 3000
                         # detalhe: refs nao aceita diminuicao de particao,
                         #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
-                        #                                                wimlib-imagex capture D:\\ C:\temp.wim --compress=none
+                        #                                                wimlib-imagex capture D:\\ C:\\temp.wim --compress=none
                         #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
                         #                                                opcao com compressao extra: --solid --compress=LZMS:100 --solid-chunk-size=256M
                     # sandbox        
@@ -55830,7 +55830,7 @@ Exemplos...
     exemplos:
         # list discos
             y par list
-            y par list showFreeUsage
+            y par list showFreeUsage        
             y par list c:
             y par list a.vhdx
         # cria particao ou formata
@@ -55846,14 +55846,15 @@ Exemplos...
             y par D 2#5
             y par 2#5 2#TAIL
         # cria particao efi
-            y par format_efi a.vhdx#1 a.vhdx#3
-            y par format_efi 1#1 1#3
+            y format_efi a.vhdx#1 a.vhdx#3                        
+            y format_efi 1#1 1#3
             obs: informar onde esta o windows para ele pegar os arquivos pertinentes na criacao
-        # cria particao efi ybootloader
-            y par format_efi_ybootloader a.vhdx#1 a.vhdx#3
-            y par format_efi_ybootloader a.vhdx#1 a.vhdx#3 -seconds 5
-            obs: só aceita vhdx windows e vhd-fixo ubuntu no ntfs(podendo usar a pasta vhdxs ou na pasta raiz)
-            obs2: para abrir com y qemu, use -windows
+        # instala o ybootloader na ESP (1 arg so: a ESP; o loader acha os vhd/vhdx E o bootmgfw sozinho)
+            y par format_efi_ybootloader 1 | y par format_efi_ybootloader a.vhdx          # grava na ESP existente
+            y par format_efi_ybootloader 1#TAIL | y par format_efi_ybootloader a.vhdx#1   # cria a ESP no espaco livre
+            y par format_efi_ybootloader 1 -seconds 5                                     # timeout do menu (padrao 5)
+            obs: so aceita vhdx windows e vhd-fixo linux (ubuntu, alpine) no ntfs, nas pastas vhds e vhdxs (a raiz nao e varrida); o ybootloader extrai o bootmgfw do proprio vhdx a cada boot (dinamico)
+            obs2: para abrir com y qemu, use -windows                             
         # delete particao
             y par delete a.vhdx#6 | delete 1#3
         # regera guid
@@ -55873,15 +55874,15 @@ Exemplos...
         # teste automatico
             y par -test
         # altera tamanho particao
-            y par maximum a.vhdx#1 3000
+            y par maximum a.vhdx#1 3000    
             y par maximum a.vhdx#1 max
-            y par maximum a.vhdx 3000 
+            y par maximum a.vhdx 3000
             # detalhe: refs nao aceita diminuicao de particao,
             #                                      nesses casos faça a copia com wimlib(ele consegue copiar o windows corretamente)
-            #                                                wimlib-imagex capture D:\\ C:   emp.wim --compress=none
+            #                                                wimlib-imagex capture D:\\ C:\\temp.wim --compress=none
             #                                                wimlib-imagex apply C:\\temp.wim 1 W:\\
             #                                                opcao com compressao extra: --solid --compress=LZMS:100 --solid-chunk-size=256M
-        # sandbox
+        # sandbox        
             y par -modoSandboxRead -fromIso C:\\tmp\\win11.iso -refs -tamanhoGigas 98 -usuario base -senha base
             y par -modoSandboxRead -fromPc -refs -tamanhoGigas 98 -usuario base -senha base
             y par -modoSandboxRead -fromVhdx a.vhdx -refs -tamanhoGigas 98 -usuario base -senha base
