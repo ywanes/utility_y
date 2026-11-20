@@ -1070,6 +1070,7 @@ function retry(){
 			if ( _resume != null ){
 				let _resume_tmp=_resume['onclick'];
 				if ( document.getElementsByClassName('time-remaining')[0].innerHTML.indexOf(error_NaN_load) >= 0 ){
+					// fix
 					if ( document.getElementById('video').duration != null && (document.getElementById('video').duration-document.getElementById('video').currentTime) < 25 )
 						document.getElementById('video').currentTime=document.getElementById('video').duration-25;
 					document.getElementById('video').src=document.getElementById('video').src;
@@ -1499,7 +1500,8 @@ function load_movie(parm, table_click, streamURL){
             let duration = b['duration'];
             let _digest = b['digest']; // aux
             let epochMili = b['epochMili'];
-            if ( currentTime > (duration-10) )
+			// ja assistido
+            if ( currentTime > (duration-120) )
                 document.getElementById('video').currentTime = 0;      
             else
                 document.getElementById('video').currentTime = currentTime;      
@@ -1690,7 +1692,7 @@ function update_aovivo(){
 	hist_seconds_aovivo[0]=hist_seconds_aovivo[1];
 	hist_seconds_aovivo[1]=currentTime;	
 	
-	// update status
+	// update status ao vivo
     if ( (duration-currentTime) > 40 ){
 		_aovivo.setAttribute('title', parseInt(duration-currentTime) + ' segundos atrasados');
 		_aovivo.setAttribute('flag_aovivo', 'false');
