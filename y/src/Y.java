@@ -44140,7 +44140,8 @@ class Posicao{
                 @{ Processo = 'Discord';           X = 2614;   Y = 80;      L = 1224;  A = 881  },
                 @{ Processo = 'steamwebhelper';    X = -526;   Y = 124;     L = 300;   A = 805  },
                 @{ Processo = 'opera';             X = -1928;  Y = -8;      L = 1936;  A = 1096 },
-                @{ Processo = 'MenuApp';           X = -499;   Y = 86;      L = 410;   A = 863  }
+                @{ Processo = 'MenuApp';           X = -499;   Y = 86;      L = 410;   A = 863  },
+                @{ Processo = 'dota2';             X = 0;      Y = 0;       L = 1920;  A = 1080 }
             )
 
             Add-Type @"
@@ -44188,7 +44189,7 @@ class Posicao{
 
             if ($cmd -eq 'list') {
                 foreach ($j in $janelas) {
-                    Write-Output ("{0}`t{1}`tX={2}`tY={3}`tL={4}`tA={5}" -f $j.Processo, $j.Titulo, $j.X, $j.Y, $j.L, $j.A)
+                    Write-Output ("y posicao {0} {2} {3} {4} {5} ### {1}" -f $j.Processo, $j.Titulo, $j.X, $j.Y, $j.L, $j.A)
                 }
                 exit
             }
@@ -44212,14 +44213,14 @@ class Posicao{
                 foreach ($j in $encontradas) {
                     $nome = if ($encontradas.Count -gt 1) { "$($app.Processo) [$($j.Titulo)]" } else { $app.Processo }
                     if ($cmd -eq 'pega_posicao') {
-                        Write-Output ("{0}`tX={1}`tY={2}`tL={3}`tA={4}" -f $nome, $j.X, $j.Y, $j.L, $j.A)
+                        Write-Output ("y posicao {0} {1} {2} {3} {4}" -f $nome, $j.X, $j.Y, $j.L, $j.A)
                     } else {
                         $l = if ($null -ne $app.L) { $app.L } else { $j.L }
                         $a = if ($null -ne $app.A) { $app.A } else { $j.A }
                         [void][W]::ShowWindow([IntPtr]$j.Handle, 9)
                         [void][W]::MoveWindow([IntPtr]$j.Handle, $app.X, $app.Y, $l, $a, $true)
                         if ($cmd -eq 'set') {
-                            Write-Output ("{0}`t-> X={1}`tY={2}`tL={3}`tA={4}" -f $nome, $app.X, $app.Y, $l, $a)
+                            Write-Output ("y posicao {0} {1} {2} {3} {4}" -f $nome, $app.X, $app.Y, $l, $a)
                         }
                     }
                 }
