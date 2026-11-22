@@ -44586,7 +44586,9 @@ class Particao {
                         y par format_efi_ybootloader 1#TAIL | y par format_efi_ybootloader a.vhdx#1   # cria a ESP no espaco livre
                         y par format_efi_ybootloader 1 -seconds 5                                     # timeout do menu (padrao 5)
                         obs: so aceita vhdx windows e vhd-fixo linux (ubuntu, alpine) no ntfs, nas pastas vhds e vhdxs (a raiz nao e varrida); o ybootloader extrai o bootmgfw do proprio vhdx a cada boot (dinamico)
-                        obs2: para abrir com y qemu, use -windows                             
+                        obs2: para abrir com y qemu, use -windows
+                        obs3: alterando o tempo depois(cmd admin - sem o arquivo timeout ele fica padrao 5 seconds):
+                            echo 1 > W:\\EFI\\ybootloader\\timeout
                     # delete particao
                         y par delete a.vhdx#6 | delete 1#3
                     # regera guid
@@ -55856,6 +55858,8 @@ Exemplos...
             y par format_efi_ybootloader 1 -seconds 5                                     # timeout do menu (padrao 5)
             obs: so aceita vhdx windows e vhd-fixo linux (ubuntu, alpine) no ntfs, nas pastas vhds e vhdxs (a raiz nao e varrida); o ybootloader extrai o bootmgfw do proprio vhdx a cada boot (dinamico)
             obs2: para abrir com y qemu, use -windows                             
+            obs3: alterando o tempo depois(cmd admin - sem o arquivo timeout ele fica padrao 5 seconds):
+                echo 1 > W:\\EFI\\ybootloader\\timeout
         # delete particao
             y par delete a.vhdx#6 | delete 1#3
         # regera guid
