@@ -368,22 +368,22 @@ function load(a){
 		// monitor on wrapper
 		if ( a == '/Menu/y monitor on' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'y monitor on\ny sleep 2\ny posicao seta_posicao') ); return; } // monitor on wrapper
         if ( a == '/Menu/y lock -1' ){ 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1') ); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net10.0-windows\\win-x64\\LanternaApp.exe -1') ); 
 			return; 
 		}
         if ( a == '/Menu/y lock' ){ 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe') ); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net10.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net10.0-windows\\win-x64\\LanternaApp.exe') ); 
 			return; 
 		}
         if ( a == '/Menu/y lock w' ){ 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w') ); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net10.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net10.0-windows\\win-x64\\LanternaApp.exe w') ); 
 			return; 
 		}
         if ( a == '/Menu/y lock w 2' ){ 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
-			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net8.0-windows\\win-x64\\LanternaApp.exe w 2') );
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net10.0-windows\\win-x64\\LanternaApp.exe -1'), false); 
+			getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'D:\\daemon\\scripts_geral\\LanternaApp\\bin\\Release\\net10.0-windows\\win-x64\\LanternaApp.exe w XXX9221-00010000') );
 			return; 
 		}
 		if ( a == '/Menu/y lock lock' ){ getBinary('/cmd_user,' + text_to_base64(get_senha_storage() + '\n' + 'rundll32.exe user32.dll,LockWorkStation') ); return; }				
