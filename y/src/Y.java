@@ -55954,6 +55954,7 @@ Exemplos...
             y par -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
             y par -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
         # detalhe use sempre GPT nos discos
+        # detalhe2: onde vale a.vhdx vale tambem a.vhd (sempre VHD fixo), menos no create_by_template, no -test e no sandbox/-modoVhdx
 [y qemu]
     y qemu
     # whpx
