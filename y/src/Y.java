@@ -44493,13 +44493,13 @@ class Particao {
     private final String M_SETOR_FIS = "CDA348C7-445D-4471-9CC9-E9885251C556";
 
     // ------------------------------------------------------- estado de DISPOSITIVO
-    // Uma instancia desta mesma classe representa um disco fisico ou um VHDX.
+    // Uma instancia desta mesma classe representa um disco fisico, um VHDX ou um VHD (sempre tratado como fixo).
     private java.io.RandomAccessFile raf;
     // disco fisico para gravar: o RandomAccessFile "rw" pede "abrir ou criar" e o Windows recusa (Parametro incorreto);
     // o FileChannel abre so o que existe, pelo caminho GLOBALROOT (o \\.\PhysicalDriveN o NIO trata como rede)
     private java.nio.channels.FileChannel canal;
     private String nome = "";
-    private boolean vhdx, fisico, escrita, cabAtualizado, temGpt;
+    private boolean vhdx, vhd, fisico, escrita, cabAtualizado, temGpt;
     private long tamanho;
     private int setor = 512;
     private long batOffset, blocoVhdx, chunkRatio, tamanhoOff, fimRegioes;
@@ -44636,6 +44636,7 @@ class Particao {
                         y par -modoVhdx clone.vhdx -fromPc -ntfs -tamanhoGigas 98 -usuario base -senha base
                         y par -modoVhdx win11_refs.vhdx -fromVhdx win11_ntfs.vhdx -refs -usuario base -senha base
                     # detalhe use sempre GPT nos discos
+                    # detalhe2: onde vale a.vhdx vale tambem a.vhd (sempre VHD fixo), menos no create_by_template, no -test e no sandbox/-modoVhdx
                     """);
             return;
         }
@@ -44681,8 +44682,8 @@ class Particao {
             }
             if (vaga == 0 && !tail) throw new Exception("informe o destino com #N ou #TAIL (ex: 2#5 ou E:\\b.vhdx#TAIL): " + d);
             String dl = d.toLowerCase();
-            boolean ehArquivo = dl.endsWith(".vhdx") || dl.endsWith(".img");
-            if (!ehArquivo && !d.matches("\\d+")) throw new Exception("destino deve ser o numero do disco (2) ou um .vhdx existente: " + d);
+            boolean ehArquivo = vdisk(d) || dl.endsWith(".img");
+            if (!ehArquivo && !d.matches("\\d+")) throw new Exception("destino deve ser o numero do disco (2) ou um .vhdx/.vhd existente: " + d);
             if (ehArquivo && !new java.io.File(d).isFile()) throw new Exception("VHDX de destino nao encontrado: " + d);
             boolean mesmoArq = ehArquivo && arqOrigem != null
                     && new java.io.File(d).getCanonicalPath().equalsIgnoreCase(new java.io.File(arqOrigem).getCanonicalPath());
@@ -44693,7 +44694,7 @@ class Particao {
             if (mesmoArq) { src = dst; po = dst.particao(pNum(po)); }    // mesmo VHDX: um dispositivo so (uma BAT so)
             if (!dst.temGpt) {
                 if (!dst.particoes().isEmpty()) throw new Exception(dst.nome + " usa MBR. Este programa so grava em discos GPT.");
-                if (!dst.vhdx) throw new Exception(dst.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
+                if (!dst.vhdx && !dst.vhd) throw new Exception(dst.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
             }
             for (Object[] p : dst.particoes())
                 if (pTipo(p).equals(T_LDM_META) || pTipo(p).equals(T_LDM_DADOS) || pTipo(p).equals(T_SPACES))
@@ -44760,7 +44761,7 @@ class Particao {
             }
             String tipo = pTipo(po).startsWith("MBR") ? T_BASICO : pTipo(po);
             dst.adicionarParticao(vaga, ini, fim, tipo, pAttr(po), pNome(po).isEmpty() ? "Clone" : pNome(po), null);
-            if (crescer) { crescerArq = dst.vhdx ? new java.io.File(d).getCanonicalPath() : d; crescerNum = vaga; crescerMb = desejado / MiB; }
+            if (crescer) { crescerArq = dst.vhdx || dst.vhd ? new java.io.File(d).getCanonicalPath() : d; crescerNum = vaga; crescerMb = desejado / MiB; }
             if (dst.fisico && !crescer) rescanFisico = true;      // o crescer ja faz o rescan
         } finally {
             if (src != null) src.fechar();
@@ -44794,8 +44795,8 @@ class Particao {
             num = Integer.parseInt(o.substring(h + 1));
             arq = o.substring(0, h);
         }
-        if (!arq.toLowerCase().endsWith(".vhdx") && !arq.toLowerCase().endsWith(".img"))
-            throw new Exception("particao deve ser uma letra (D), disco#particao (1#3) ou um .vhdx: " + o);
+        if (!vdisk(arq) && !arq.toLowerCase().endsWith(".img"))
+            throw new Exception("particao deve ser uma letra (D), disco#particao (1#3) ou um .vhdx/.vhd: " + o);
         var d = dispositivo(arq, false);
         try {
             Object[] p = num > 0 ? d.particao(num) : d.unicaComFs();
@@ -44946,7 +44947,7 @@ class Particao {
      */
     private void linhas(Particao d, java.util.Map<Character, byte[]> letras, String disco) throws Exception {
         if (!d.temGpt && d.particoes().isEmpty()) {
-            System.out.println("  " + disco + (d.vhdx ? "(vazio) -- aceito como destino: sera criada uma GPT."
+            System.out.println("  " + disco + (d.vhdx || d.vhd ? "(vazio) -- aceito como destino: sera criada uma GPT."
                     : "(vazio) -- inicialize como GPT no Gerenciamento de Disco para usar como destino."));
             return;
         }
@@ -45227,6 +45228,7 @@ class Particao {
             d.fisico = spec.matches("\\d+");
             if (d.fisico) d.abrirBruto("\\\\.\\PhysicalDrive" + spec, "Disco " + spec, w);
             else if (s.endsWith(".vhdx")) d.abrirVhdx(spec, w);
+            else if (s.endsWith(".vhd")) d.abrirVhd(spec, w);
             else if (s.endsWith(".img")) d.abrirBruto(spec, spec, w);
             else throw new Exception("dispositivo invalido: " + spec);
             d.lerTabela();
@@ -45444,6 +45446,46 @@ class Particao {
         return b;
     }
 
+    // ==================================================================== VHD FIXO
+
+    /** Arquivo de disco virtual pelo nome: .vhdx ou .vhd. */
+    private boolean vdisk(String arq) { return arq.toLowerCase().endsWith(".vhdx") || arq.toLowerCase().endsWith(".vhd"); }
+
+    /** VHD sempre como fixo: o disco cru e, logo depois, o rodape "conectix" de 512 bytes (campos em big-endian). */
+    private void abrirVhd(String c, boolean w) throws Exception {
+        nome = c;
+        escrita = w;
+        vhd = true;
+        if (!new java.io.File(c).isFile()) throw new Exception("VHD nao encontrado: " + c);
+        raf = new java.io.RandomAccessFile(c, w ? "rw" : "r");
+        long len = raf.length();
+        var r = java.nio.ByteBuffer.wrap(len < 1024 ? new byte[512] : lerArq(len - 512, 512));
+        if (!ascii(r.array(), 0, 8).equals("conectix")) throw new Exception(c + " nao e um VHD valido.");
+        if (r.getInt(60) != 2) throw new Exception(c + " nao e um VHD fixo: VHD dinamico ou diferencial nao e suportado.");
+        tamanho = r.getLong(48);
+        if (tamanho <= 0 || tamanho % 512 != 0 || tamanho + 512 != len) throw new Exception(c + ": o tamanho no rodape do VHD nao confere com o arquivo.");
+    }
+
+    /** maximum a.vhd MB menor: rodape com o tamanho, a geometria (conta da especificacao do VHD) e o checksum novos logo depois do novo fim, e o arquivo encurtado ali. */
+    private void encurtarVhd(long novo) throws java.io.IOException {
+        var r = java.nio.ByteBuffer.wrap(lerArq(tamanho, 512));
+        long s = Math.min(novo / 512, 65535L * 16 * 255), spt = 17, cabecas = 16, ct = s / spt;
+        if (s >= 65535L * 16 * 63) { spt = 255; ct = s / spt; }
+        else {
+            cabecas = Math.max(4, (ct + 1023) / 1024);
+            if (ct >= cabecas * 1024 || cabecas > 16) { spt = 31; cabecas = 16; ct = s / spt; }
+            if (ct >= cabecas * 1024) { spt = 63; cabecas = 16; ct = s / spt; }
+        }
+        r.putLong(48, novo).putShort(56, (short) (ct / cabecas)).put(58, (byte) cabecas).put(59, (byte) spt).putInt(64, 0);
+        int soma = 0;
+        for (byte x : r.array()) soma += x & 0xFF;
+        r.putInt(64, ~soma);
+        raf.seek(novo);
+        raf.write(r.array());
+        raf.setLength(novo + 512);
+        tamanho = novo;
+    }
+
     // ========================================================================= GPT
 
     private void lerTabela() throws Exception {
@@ -45528,7 +45570,7 @@ class Particao {
             if (n <= max) usados.add(n); else n = 0;
             lista.add(new Object[]{null, c[0], c[1], n, tail});
         };
-        if (!temGpt && parts.isEmpty() && vhdx) {
+        if (!temGpt && parts.isEmpty() && (vhdx || vhd)) {
             long[] c = livreAposInicializar();
             if (c != null) livre.accept(c, true);
         }
@@ -45694,7 +45736,7 @@ class Particao {
         }
         boolean disco = arq.matches("\\d+");                        // maximum 1#3: particao de disco fisico
         if (disco && num == 0) throw new Exception("disco fisico so por particao: maximum 1#3 MB|max");
-        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+        if (!disco && (!vdisk(arq) || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
         if (!disco) exigirDesanexado(arq);
         boolean usarMax = pos.get(1).equalsIgnoreCase("max");                  // so na particao: todo o livre logo depois dela
         if (usarMax && num == 0) throw new Exception("max so vale para particao: maximum a.vhdx#N max");
@@ -45740,6 +45782,11 @@ class Particao {
             long minimo = Math.max(1, Math.ceilDiv(fim + (v.temGpt ? v.gptEnt.length + v.setor : 0), MiB));
             if (max < minimo) throw new Exception(rotulo + " tem particoes; o minimo possivel eh " + minimo + " MB");
             long novo = max * MiB;
+            if (v.vhd) {                                         // VHD fixo: GPT de backup no novo fim, rodape logo depois dela
+                if (v.temGpt) v.moverGptParaFim(novo);
+                v.encurtarVhd(novo);
+                return;
+            }
             long blocos = Math.ceilDiv(novo, v.blocoVhdx), total = blocos + (blocos - 1) / v.chunkRatio;
             int ultimo = (int) (blocos - 1 + (blocos - 1) / v.chunkRatio);
             byte[] z = new byte[(int) MiB];
@@ -45904,7 +45951,7 @@ class Particao {
         int num = Integer.parseInt(alvo.substring(h + 1));
         alvo = alvo.substring(0, h);
         boolean disco = alvo.matches("\\d+");
-        if (!disco && (!alvo.toLowerCase().endsWith(".vhdx") || !new java.io.File(alvo).isFile())) throw new Exception("VHDX nao encontrado: " + alvo);
+        if (!disco && (!vdisk(alvo) || !new java.io.File(alvo).isFile())) throw new Exception("VHDX nao encontrado: " + alvo);
         if (!disco) exigirDesanexado(alvo);
         var d = dispositivo(alvo, true);
         try {
@@ -45946,7 +45993,7 @@ class Particao {
             if (pedido.equals("00000000-0000-0000-0000-000000000000")) throw new Exception("GUID zero marca entrada vazia na GPT: nao vale.");
         }
         boolean disco = alvo.matches("\\d+");
-        if (!disco && (!alvo.toLowerCase().endsWith(".vhdx") || !new java.io.File(alvo).isFile())) throw new Exception("VHDX nao encontrado: " + alvo);
+        if (!disco && (!vdisk(alvo) || !new java.io.File(alvo).isFile())) throw new Exception("VHDX nao encontrado: " + alvo);
         if (!disco) exigirDesanexado(alvo);
         var d = dispositivo(alvo, true);
         var linhas = new java.util.ArrayList<String>();
@@ -46010,7 +46057,7 @@ class Particao {
             pedido = Long.parseLong(s, 16);
         }
         boolean disco = arq.matches("\\d+");
-        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+        if (!disco && (!vdisk(arq) || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
         if (!disco) exigirDesanexado(arq);
         var letras = disco ? letrasMontadas() : new java.util.TreeMap<Character, byte[]>();
         var d = dispositivo(arq, true);
@@ -46122,7 +46169,7 @@ class Particao {
     /** detach a.vhdx: desanexa o VHDX (diskpart detach vdisk). */
     private void desanexar(String[] args) throws Exception {
         if (args.length != 1) throw new Exception("use: detach a.vhdx");
-        if (!args[0].toLowerCase().endsWith(".vhdx") || !new java.io.File(args[0]).isFile()) throw new Exception("VHDX nao encontrado: " + args[0]);
+        if (!vdisk(args[0]) || !new java.io.File(args[0]).isFile()) throw new Exception("VHDX nao encontrado: " + args[0]);
         String caminho = new java.io.File(args[0]).getCanonicalPath();
         diskpart("desanexar o VHDX", "select vdisk file=\"" + caminho + "\"", "detach vdisk");
     }
@@ -46270,7 +46317,7 @@ class Particao {
         int num = tail ? 0 : Integer.parseInt(sufixo);
         if (!tail && num < 1) throw new Exception("numero de particao invalido: #" + num);
         boolean disco = arq.matches("\\d+");
-        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+        if (!disco && (!vdisk(arq) || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
         String tam = args.length == 2 ? args[1].toLowerCase() : "";
         boolean usarMax = tam.equals("max");
         if (!tam.isEmpty() && !usarMax && !tam.matches("\\d{1,9}(mb|m)?")) throw new Exception("tamanho invalido: " + args[1] + " (tamanho final em MB ou max)");
@@ -46280,7 +46327,7 @@ class Particao {
         var d = dispositivo(arq, true);
         try {
             if (!d.temGpt && !d.particoes().isEmpty()) throw new Exception(d.nome + " usa MBR. Este programa so grava em discos GPT.");
-            if (!d.temGpt && !d.vhdx) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
+            if (!d.temGpt && !d.vhdx && !d.vhd) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
             Object[] x = null;                                // particao existente ou espaco livre com esse numero
             for (Object[] e : d.espacos()) if (tail ? e[0] == null && (Boolean) e[4] : (Integer) e[3] == num) x = e;
             if (x == null) throw new Exception(d.nome + (tail ? " nao tem espaco livre no fim (#TAIL)." : " nao tem particao nem livre #" + num + ".")
@@ -46349,7 +46396,7 @@ class Particao {
         int num = tail ? 0 : Integer.parseInt(sufixo);
         if (!tail && num < 1) throw new Exception("numero de particao invalido: #" + num);
         boolean disco = arq.matches("\\d+");
-        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+        if (!disco && (!vdisk(arq) || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
 
         // Windows: GUIDs da GPT e arquivos de boot. Num disco: o disco nao pode ser um VHDX montado (ex: o Windows rodando
         // de um VHDX). Num .vhdx desmontado com a EFI num disco fisico = boot nativo: o BCD aponta para o arquivo .vhdx
@@ -46391,7 +46438,7 @@ class Particao {
         var d = dispositivo(arq, true);
         try {
             if (!d.temGpt && !d.particoes().isEmpty()) throw new Exception(d.nome + " usa MBR. Este programa so grava em discos GPT.");
-            if (!d.temGpt && !d.vhdx) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
+            if (!d.temGpt && !d.vhdx && !d.vhd) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
             if (d.setor != 512)                                  // raro (o padrao e 512): cluster minimo de 4 KB
                 throw new Exception(d.nome + " tem setor de " + d.setor + " bytes: a EFI de " + EFI_MB + " MB nao chega aos 65525 clusters"
                         + " que o FAT32 exige. Nada foi feito.");
@@ -46461,7 +46508,7 @@ class Particao {
             if (!tail && num < 1) throw new Exception("numero de particao invalido: #" + num);
         }
         boolean disco = arq.matches("\\d+");
-        if (!disco && (!arq.toLowerCase().endsWith(".vhdx") || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
+        if (!disco && (!vdisk(arq) || !new java.io.File(arq).isFile())) throw new Exception("VHDX nao encontrado: " + arq);
 
         byte[] efi = baixarYbootloaderEfi();                      // baixado antes de abrir o destino para escrita
 
@@ -46488,7 +46535,7 @@ class Particao {
                 // ---------- criar a ESP no espaco livre ----------
                 if (esp != null) throw new Exception(d.nome + " ja tem uma ESP (particao " + pNum(esp) + "). Para gravar o ybootloader NELA,"
                         + " use '" + arq + "' (sem #). Particoes:\n" + d.descreverParticoes());
-                if (!d.temGpt && !d.vhdx) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
+                if (!d.temGpt && !d.vhdx && !d.vhd) throw new Exception(d.nome + " nao tem tabela de particoes. Inicialize-o como GPT no Gerenciamento de Disco.");
                 if (d.setor != 512)                              // o FAT32 da EFI de 100 MB precisa de setor de 512
                     throw new Exception(d.nome + " tem setor de " + d.setor + " bytes: a EFI de " + EFI_MB + " MB nao chega aos 65525 clusters"
                             + " que o FAT32 exige. Nada foi feito.");
