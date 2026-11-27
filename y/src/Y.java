@@ -44189,7 +44189,7 @@ class Posicao{
 
             if ($cmd -eq 'list') {
                 foreach ($j in $janelas) {
-                    Write-Output ("y posicao {0} {2} {3} {4} {5} ### {1}" -f $j.Processo, $j.Titulo, $j.X, $j.Y, $j.L, $j.A)
+                    Write-Output ("y posicao set {0} {2} {3} {4} {5} ### {1}" -f $j.Processo, $j.Titulo, $j.X, $j.Y, $j.L, $j.A)
                 }
                 exit
             }
@@ -44213,14 +44213,14 @@ class Posicao{
                 foreach ($j in $encontradas) {
                     $nome = if ($encontradas.Count -gt 1) { "$($app.Processo) [$($j.Titulo)]" } else { $app.Processo }
                     if ($cmd -eq 'pega_posicao') {
-                        Write-Output ("y posicao {0} {1} {2} {3} {4}" -f $nome, $j.X, $j.Y, $j.L, $j.A)
+                        Write-Output ("y posicao set {0} {1} {2} {3} {4}" -f $nome, $j.X, $j.Y, $j.L, $j.A)
                     } else {
                         $l = if ($null -ne $app.L) { $app.L } else { $j.L }
                         $a = if ($null -ne $app.A) { $app.A } else { $j.A }
                         [void][W]::ShowWindow([IntPtr]$j.Handle, 9)
                         [void][W]::MoveWindow([IntPtr]$j.Handle, $app.X, $app.Y, $l, $a, $true)
                         if ($cmd -eq 'set') {
-                            Write-Output ("y posicao {0} {1} {2} {3} {4}" -f $nome, $app.X, $app.Y, $l, $a)
+                            Write-Output ("y posicao set {0} {1} {2} {3} {4}" -f $nome, $app.X, $app.Y, $l, $a)
                         }
                     }
                 }
