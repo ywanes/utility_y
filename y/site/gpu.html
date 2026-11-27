@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Minerador SHAllenge</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F6F7F9; --ink:#1A2130; --muted:#5E6878; --line:#D9DDE4; --field:#FFFFFF;
+  --accent:#2C55E0; --accent-ink:#FFFFFF; --gold:#B57D0C; --dim:#A3ABB8; --err:#C2362B;
+  --sans:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121722; --ink:#E7EAF0; --muted:#98A2B3; --line:#2A3242; --field:#1A2030;
+    --accent:#7D9BFF; --accent-ink:#0E1320; --gold:#F2C14E; --dim:#4D5768; --err:#FF7B6E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121722; --ink:#E7EAF0; --muted:#98A2B3; --line:#2A3242; --field:#1A2030;
+  --accent:#7D9BFF; --accent-ink:#0E1320; --gold:#F2C14E; --dim:#4D5768; --err:#FF7B6E;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5}
+main{max-width:760px;margin:0 auto;padding:28px 20px 56px}
+h1{font-size:1.6rem;font-weight:800;letter-spacing:-.01em;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 24px;max-width:62ch}
+form{display:grid;grid-template-columns:1fr auto;gap:12px 16px;align-items:end;padding-bottom:20px;border-bottom:1px solid var(--line)}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px}
+input[type=text],input[type=number]{width:100%;font:inherit;font-family:var(--mono);color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+input:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opts{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center}
+.opts label{display:flex;align-items:center;gap:8px;margin:0;color:var(--ink);font-size:.95rem}
+.opts select{font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+button{font:inherit;font-weight:700;border:0;border-radius:8px;padding:11px 22px;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+button.stop{background:var(--ink);color:var(--bg)}
+button.ghost{background:none;color:var(--accent);padding:4px 0;font-weight:500}
+.status{min-height:1.5em;margin:14px 0 0;color:var(--muted);font-size:.92rem}
+.status{white-space:pre-line}
+.status.err{color:var(--err)}
+.manual{margin:10px 0 0;font-family:var(--mono);font-size:.82rem;color:var(--muted);white-space:pre-wrap;word-break:break-all}
+.gpuinfo{margin:8px 0 0;font-size:.92rem;color:var(--muted)}
+.gpuinfo strong{color:var(--ink)}
+.gpuinfo .tag{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;border:1px solid var(--line);color:var(--ink);font-size:.82rem}
+.gpuinfo .tag.d{border-color:var(--gold);color:var(--gold)}
+.hero{padding:30px 0 26px;border-bottom:1px solid var(--line)}
+.hash{font-family:var(--mono);font-size:clamp(1.05rem,4.2vw,1.7rem);line-height:1.35;word-break:break-all;color:var(--dim);margin:0}
+.hash .z{color:var(--gold);font-weight:700}
+.hash .r{color:var(--ink)}
+.hero .meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:14px;color:var(--muted)}
+.hero .meta strong{color:var(--ink)}
+.str{margin-top:14px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.str code{font-family:var(--mono);font-size:.95rem;word-break:break-all;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:6px 10px;flex:1 1 280px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:22px 0;border-bottom:1px solid var(--line)}
+.stats div span{display:block;font-size:.82rem;color:var(--muted)}
+.stats div b{font-size:1.25rem;font-weight:700;font-variant-numeric:tabular-nums}
+h2{font-size:1.05rem;font-weight:700;margin:26px 0 8px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+td{padding:7px 10px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+td.m{font-family:var(--mono);word-break:break-all}
+td.n{white-space:nowrap;color:var(--muted);font-variant-numeric:tabular-nums}
+.empty{color:var(--muted)}
+.note{color:var(--muted);font-size:.88rem;margin-top:28px;max-width:66ch}
+a{color:var(--accent)}
+@media (max-width:560px){
+  form{grid-template-columns:1fr}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>Minerador SHAllenge</h1>
+  <p class="sub">Procura o menor SHA-256 no formato <code>nick/nonce</code>, usando todos os núcleos do processador e a placa de vídeo, sem travar a página.</p>
+
+  <form id="f" onsubmit="return false">
+    <div>
+      <label for="user">Seu nick</label>
+      <input type="text" id="user" maxlength="32" value="ywanes" placeholder="seu nick" autocomplete="off" spellcheck="false">
+    </div>
+    <button type="button" id="go">Começar</button>
+    <div style="grid-column:1/-1">
+      <label for="msg">Mensagem no nonce (opcional, aceita + e /)</label>
+      <input type="text" id="msg" maxlength="40" value="2+4GHs/1xRTX3060" placeholder="ex.: 2+4GHs/1xRTX3060" autocomplete="off" spellcheck="false">
+    </div>
+    <div class="opts">
+      <label><input type="checkbox" id="useCpu"> Processador</label>
+      <select id="threads" aria-label="Núcleos do processador"></select>
+      <label><input type="checkbox" id="useGpu" checked> Placa de vídeo (WebGPU)</label>
+    </div>
+  </form>
+  <p class="status" id="status" role="status"></p>
+  <p class="gpuinfo" id="gpuInfo">Detectando a placa de vídeo…</p>
+  <pre class="manual" id="manual"></pre>
+
+  <section class="hero" aria-live="polite">
+    <p class="hash" id="bestHash">ainda sem resultado</p>
+    <div class="meta" id="bestMeta"></div>
+    <div class="str" id="bestStrWrap" hidden>
+      <code id="bestStr"></code>
+      <button type="button" class="ghost" id="copy">Copiar</button>
+      <a href="https://shallenge.quirino.net/" target="_blank" rel="noopener">Abrir pagina de envio SHAllenge</a>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div><span>Processador</span><b id="rCpu">—</b></div>
+    <div><span>Placa de vídeo</span><b id="rGpu">—</b></div>
+    <div><span>Hashes testados</span><b id="tot">0</b></div>
+    <div><span>Próximo zero em</span><b id="eta">—</b></div>
+  </section>
+
+  <h2>Recordes desta sessão</h2>
+  <div class="scroll">
+    <table><tbody id="rec"><tr><td class="empty">Os novos recordes aparecem aqui.</td></tr></tbody></table>
+  </div>
+
+  <p class="note">Cada parte do minerador usa um trecho aleatório próprio no nonce, então nada é testado duas vezes e não é preciso anotar onde parou. O melhor resultado de cada nick fica salvo neste navegador e aparece ao abrir a página; uma nova busca continua a partir dele. Todo hash encontrado é conferido de novo antes de aparecer.</p>
+</main>
+
+<script>
+function minerCore(){
+  const B64="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  const BC=new Uint8Array(64);for(let i=0;i<64;i++)BC[i]=B64.charCodeAt(i);
+  const K=new Int32Array([0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+  return function makeMiner(prefix){
+    const pb=new TextEncoder().encode(prefix),P=pb.length,L=P+8;
+    const T=new Int32Array(16);
+    for(let i=0;i<P;i++)T[i>>2]|=pb[i]<<((3-(i&3))*8);
+    T[L>>2]|=0x80<<((3-(L&3))*8);T[15]=L*8;
+    const W=new Int32Array(64),ch=new Uint8Array(8);
+    let lo=0,hi=0,bH0=0xffffffff,bH1=0xffffffff;
+    function step(n){
+      const improved=[];
+      for(let done=0;done<n;done++){
+        ch[0]=BC[lo&63];ch[1]=BC[(lo>>>6)&63];ch[2]=BC[(lo>>>12)&63];ch[3]=BC[(lo>>>18)&63];
+        ch[4]=BC[hi&63];ch[5]=BC[(hi>>>6)&63];ch[6]=BC[(hi>>>12)&63];ch[7]=BC[(hi>>>18)&63];
+        for(let k=0;k<16;k++)W[k]=T[k];
+        for(let k=0;k<8;k++){const p=P+k;W[p>>2]|=ch[k]<<((3-(p&3))*8);}
+        for(let t=16;t<64;t++){const x=W[t-15],y=W[t-2];
+          W[t]=(W[t-16]+(((x>>>7)|(x<<25))^((x>>>18)|(x<<14))^(x>>>3))+W[t-7]+(((y>>>17)|(y<<15))^((y>>>19)|(y<<13))^(y>>>10)))|0;}
+        let a=0x6a09e667|0,b=0xbb67ae85|0,c=0x3c6ef372|0,d=0xa54ff53a|0,e=0x510e527f|0,f=0x9b05688c|0,g=0x1f83d9ab|0,h=0x5be0cd19|0;
+        for(let t=0;t<64;t++){
+          const t1=(h+(((e>>>6)|(e<<26))^((e>>>11)|(e<<21))^((e>>>25)|(e<<7)))+((e&f)^(~e&g))+K[t]+W[t])|0;
+          const t2=((((a>>>2)|(a<<30))^((a>>>13)|(a<<19))^((a>>>22)|(a<<10)))+((a&b)^(a&c)^(b&c)))|0;
+          h=g;g=f;f=e;e=(d+t1)|0;d=c;c=b;b=a;a=(t1+t2)|0;}
+        const h0=((a+0x6a09e667)|0)>>>0,h1=((b+0xbb67ae85)|0)>>>0;
+        if(h0<bH0||(h0===bH0&&h1<bH1)){bH0=h0;bH1=h1;improved.push({str:prefix+String.fromCharCode(...ch),h0,h1});}
+        lo++;if(lo===16777216){lo=0;hi++;}
+      }
+      return {done:n,improved};
+    }
+    return {step};
+  };
+}
+
+const WGSL = `
+struct Params { tmpl: array<vec4<u32>, 4>, plen: u32, batch: u32, loops: u32, threshold: u32, };
+struct Out { count: atomic<u32>, p1: u32, p2: u32, p3: u32, data: array<vec4<u32>, 1024>, };
+@group(0) @binding(0) var<uniform> prm: Params;
+@group(0) @binding(1) var<storage, read_write> outb: Out;
+var<private> K: array<u32, 64> = array<u32, 64>(
+0x428a2f98u,0x71374491u,0xb5c0fbcfu,0xe9b5dba5u,0x3956c25bu,0x59f111f1u,0x923f82a4u,0xab1c5ed5u,
+0xd807aa98u,0x12835b01u,0x243185beu,0x550c7dc3u,0x72be5d74u,0x80deb1feu,0x9bdc06a7u,0xc19bf174u,
+0xe49b69c1u,0xefbe4786u,0x0fc19dc6u,0x240ca1ccu,0x2de92c6fu,0x4a7484aau,0x5cb0a9dcu,0x76f988dau,
+0x983e5152u,0xa831c66du,0xb00327c8u,0xbf597fc7u,0xc6e00bf3u,0xd5a79147u,0x06ca6351u,0x14292967u,
+0x27b70a85u,0x2e1b2138u,0x4d2c6dfcu,0x53380d13u,0x650a7354u,0x766a0abbu,0x81c2c92eu,0x92722c85u,
+0xa2bfe8a1u,0xa81a664bu,0xc24b8b70u,0xc76c51a3u,0xd192e819u,0xd6990624u,0xf40e3585u,0x106aa070u,
+0x19a4c116u,0x1e376c08u,0x2748774cu,0x34b0bcb5u,0x391c0cb3u,0x4ed8aa4au,0x5b9cca4fu,0x682e6ff3u,
+0x748f82eeu,0x78a5636fu,0x84c87814u,0x8cc70208u,0x90befffau,0xa4506cebu,0xbef9a3f7u,0xc67178f2u);
+fn rotr(x: u32, n: u32) -> u32 { return (x >> n) | (x << (32u - n)); }
+fn b64(v: u32) -> u32 {
+  if (v < 26u) { return 65u + v; }
+  if (v < 52u) { return 71u + v; }
+  if (v < 62u) { return v - 4u; }
+  if (v == 62u) { return 43u; }
+  return 47u;
+}
+fn setb(w: ptr<function, array<u32, 16>>, pos: u32, c: u32) {
+  let wi = pos >> 2u;
+  (*w)[wi] = (*w)[wi] | (c << ((3u - (pos & 3u)) * 8u));
+}
+@compute @workgroup_size(256)
+fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
+  let i = gid.y * 65536u + gid.x;
+  var base: array<u32, 16>;
+  for (var k = 0u; k < 16u; k = k + 1u) { base[k] = prm.tmpl[k >> 2u][k & 3u]; }
+  let p = prm.plen;
+  setb(&base, p, b64(i & 63u));
+  setb(&base, p + 1u, b64((i >> 6u) & 63u));
+  setb(&base, p + 2u, b64((i >> 12u) & 63u));
+  setb(&base, p + 3u, b64((i >> 18u) & 63u));
+  setb(&base, p + 5u, b64(prm.batch & 63u));
+  setb(&base, p + 6u, b64((prm.batch >> 6u) & 63u));
+  setb(&base, p + 7u, b64((prm.batch >> 12u) & 63u));
+  let jp = p + 4u;
+  let jw = jp >> 2u;
+  let js = (3u - (jp & 3u)) * 8u;
+  for (var j = 0u; j < prm.loops; j = j + 1u) {
+    var w: array<u32, 64>;
+    for (var k = 0u; k < 16u; k = k + 1u) { w[k] = base[k]; }
+    w[jw] = w[jw] | (b64(j) << js);
+    for (var t = 16u; t < 64u; t = t + 1u) {
+      let x = w[t - 15u];
+      let y = w[t - 2u];
+      w[t] = w[t - 16u] + (rotr(x, 7u) ^ rotr(x, 18u) ^ (x >> 3u)) + w[t - 7u] + (rotr(y, 17u) ^ rotr(y, 19u) ^ (y >> 10u));
+    }
+    var a = 0x6a09e667u; var b = 0xbb67ae85u; var c = 0x3c6ef372u; var d = 0xa54ff53au;
+    var e = 0x510e527fu; var f = 0x9b05688cu; var g = 0x1f83d9abu; var h = 0x5be0cd19u;
+    for (var t = 0u; t < 64u; t = t + 1u) {
+      let t1 = h + (rotr(e, 6u) ^ rotr(e, 11u) ^ rotr(e, 25u)) + ((e & f) ^ (~e & g)) + K[t] + w[t];
+      let t2 = (rotr(a, 2u) ^ rotr(a, 13u) ^ rotr(a, 22u)) + ((a & b) ^ (a & c) ^ (b & c));
+      h = g; g = f; f = e; e = d + t1; d = c; c = b; b = a; a = t1 + t2;
+    }
+    let h0 = a + 0x6a09e667u;
+    if (h0 <= prm.threshold) {
+      let idx = atomicAdd(&outb.count, 1u);
+      if (idx < 1024u) { outb.data[idx] = vec4<u32>(i, j, h0, b + 0xbb67ae85u); }
+    }
+  }
+}`;
+
+const makeMiner = minerCore();
+const B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+const $ = id => document.getElementById(id);
+const hc = navigator.hardwareConcurrency || 4;
+$("threads").innerHTML = '<option value="all">Todos os núcleos (' + hc + ')</option>' +
+  Array.from({ length: hc }, (_, i) => '<option value="' + (i + 1) + '">' + (i + 1) + (i ? ' núcleos' : ' núcleo') + '</option>').join("");
+
+let running = false, workers = [], fallbackTimers = [], gpuStop = null;
+let cpuCount = 0, gpuCount = 0, total = 0, lastCpu = 0, lastGpu = 0, rateCpu = 0, rateGpu = 0;
+let best = null, records = [], rateTimer = null, user = "", pre = "";
+
+function seed(){ const r = crypto.getRandomValues(new Uint8Array(8)); return Array.from(r, v => B64[v & 63]).join(""); }
+function zeros(hex){ let n = 0; while (n < hex.length && hex[n] === "0") n++; return n; }
+function fmtRate(r){ if (!r) return "—"; const u = ["H/s","kH/s","MH/s","GH/s","TH/s"]; let i = 0; while (r >= 1000 && i < 4){ r /= 1000; i++; } return r.toFixed(r < 10 ? 2 : 1) + " " + u[i]; }
+function fmtBig(n){ return n < 1e6 ? n.toLocaleString("pt-BR") : n < 1e9 ? (n/1e6).toFixed(1).replace(".", ",") + " mi" : n < 1e12 ? (n/1e9).toFixed(1).replace(".", ",") + " bi" : (n/1e12).toFixed(1).replace(".", ",") + " tri"; }
+function fmtTime(s){ if (!isFinite(s)) return "—"; if (s < 60) return Math.ceil(s) + " s"; if (s < 3600) return Math.round(s/60) + " min"; if (s < 86400) return (s/3600).toFixed(1).replace(".", ",") + " h"; if (s < 31557600) return Math.round(s/86400) + " dias"; return (s/31557600).toFixed(1).replace(".", ",") + " anos"; }
+function setStatus(t, err){ const s = $("status"); s.textContent = t; s.className = "status" + (err ? " err" : ""); }
+
+async function sha256hex(str){
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(d), b => b.toString(16).padStart(2, "0")).join("");
+}
+
+/* ---------- memória do navegador ---------- */
+function loadSaved(nick){
+  try {
+    const s = JSON.parse(localStorage.getItem("melhor:" + nick) || "null");
+    return s && typeof s.str === "string" && typeof s.hex === "string" ? s : null;
+  } catch (e) { console.warn("localStorage indisponível:", e); return null; }
+}
+
+function saveBest(nick, str, hex, src){
+  try {
+    const old = loadSaved(nick);
+    if (!old || hex < old.hex) localStorage.setItem("melhor:" + nick, JSON.stringify({ str, hex, src, t: Date.now() }));
+  } catch (e) { console.warn("Não consegui salvar no localStorage:", e); }
+}
+
+function currentNick(){ return $("user").value.trim().split("/")[0]; }
+
+function savedText(){
+  const s = loadSaved(user);
+  return s ? " Melhor já salvo deste nick: " + zeros(s.hex) + " zeros, " + s.str + "." : "";
+}
+
+function showSaved(){
+  const s = loadSaved(currentNick());
+  if (!s){
+    best = null;
+    $("bestHash").textContent = "ainda sem resultado";
+    $("bestMeta").innerHTML = "";
+    $("bestStrWrap").hidden = true;
+    return;
+  }
+  best = { str: s.str, hex: s.hex, src: "salvo" };
+  render();
+}
+
+async function candidate(str, src){
+  const hex = await sha256hex(str);
+  if (best && hex >= best.hex) return;
+  best = { str, hex, src };
+  records.unshift({ str, hex, src, t: new Date() });
+  if (records.length > 30) records.pop();
+  saveBest(user, str, hex, src);
+  render();
+}
+
+function renderHash(hex){
+  const z = zeros(hex);
+  return '<span class="z">' + hex.slice(0, z) + '</span><span class="r">' + hex.slice(z, z + 8) + '</span>' + hex.slice(z + 8);
+}
+
+function render(){
+  if (!best) return;
+  $("bestHash").innerHTML = renderHash(best.hex);
+  const z = zeros(best.hex);
+  const bits = z * 4 + (Math.clz32(parseInt(best.hex[z] || "f", 16)) - 28);
+  const origem = best.src === "gpu" ? "achado pela placa de vídeo" : best.src === "cpu" ? "achado pela CPU" : "salvo neste navegador";
+  $("bestMeta").innerHTML = "<span><strong>" + z + "</strong> zeros hexadecimais</span><span><strong>" + bits + "</strong> bits zerados</span><span>" + origem + "</span>";
+  $("bestStr").textContent = best.str;
+  $("bestStrWrap").hidden = false;
+  if (records.length){
+    $("rec").innerHTML = records.map(r =>
+      '<tr><td class="n">' + r.t.toLocaleTimeString("pt-BR") + '</td><td class="n">' + zeros(r.hex) + ' zeros</td><td class="m">' + r.str + '</td></tr>'
+    ).join("");
+  }
+}
+
+/* ---------- CPU ---------- */
+function startCpu(n){
+  const src = "const minerCore=" + minerCore.toString() + ";const mk=minerCore();" +
+    "onmessage=e=>{const m=mk(e.data);let c=0,l=performance.now();for(;;){const r=m.step(16384);c+=r.done;" +
+    "if(r.improved.length)postMessage({b:r.improved[r.improved.length-1].str});const t=performance.now();if(t-l>250){postMessage({n:c});c=0;l=t;}}}";
+  let url;
+  try { url = URL.createObjectURL(new Blob([src], { type: "text/javascript" })); } catch (e) { return startFallback(); }
+  let failed = false;
+  for (let k = 0; k < n; k++){
+    let w;
+    try { w = new Worker(url); } catch (e) { failed = true; break; }
+    w.onmessage = e => { if (e.data.n) cpuCount += e.data.n; if (e.data.b) candidate(e.data.b, "cpu"); };
+    w.onerror = () => { if (!failed && running){ failed = true; workers.forEach(x => x.terminate()); workers = []; startFallback(); } };
+    w.postMessage(pre + seed());
+    workers.push(w);
+  }
+  if (failed){ workers.forEach(x => x.terminate()); workers = []; startFallback(); }
+}
+
+function startFallback(){
+  setStatus("O navegador não liberou núcleos extras; a CPU minera em fatias, sem travar a página.");
+  const m = makeMiner(pre + seed());
+  const tick = () => {
+    if (!running) return;
+    const t0 = performance.now();
+    while (performance.now() - t0 < 25){
+      const r = m.step(4096); cpuCount += r.done;
+      if (r.improved.length) candidate(r.improved[r.improved.length - 1].str, "cpu");
+    }
+    fallbackTimers.push(setTimeout(tick, 0));
+  };
+  tick();
+}
+
+/* ---------- qual placa está rodando ---------- */
+function webglName(){
+  try {
+    const c = document.createElement("canvas");
+    const gl = c.getContext("webgl2") || c.getContext("webgl");
+    if (!gl) return "";
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    let s = (ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) || "";
+    const lose = gl.getExtension("WEBGL_lose_context"); if (lose) lose.loseContext();
+    if (s.indexOf("ANGLE (") === 0){
+      s = s.slice(7);
+      const k = s.indexOf(", "); if (k >= 0) s = s.slice(k + 2);
+      s = s.split(/ \(0x| Direct3D| OpenGL| Vulkan|, D3D|, OpenGL|, Vulkan/)[0];
+    }
+    return s.replace(/\)+$/, "").trim();
+  } catch (e) { return ""; }
+}
+
+function guessKind(text){
+  const t = text.toLowerCase();
+  if (/nvidia|geforce|rtx|gtx|quadro/.test(t)) return "dedicada";
+  if (/intel/.test(t) && /\barc\b/.test(t)) return "dedicada";
+  if (/intel|uhd|iris/.test(t)) return "integrada";
+  if (/radeon.*\b(rx|pro w)\s?\d/.test(t)) return "dedicada";
+  if (/amd|ati|radeon/.test(t) && /graphics|vega|integrated/.test(t)) return "integrada";
+  return "";
+}
+
+async function adapterInfo(adapter){
+  if (adapter.info) return adapter.info;
+  if (adapter.requestAdapterInfo){ try { return await adapter.requestAdapterInfo(); } catch (e) {} }
+  return {};
+}
+
+function showGpu(info, running){
+  const el = $("gpuInfo");
+  const base = [info.vendor, info.architecture].filter(Boolean).join(" ");
+  const wn = webglName();
+  const v = (info.vendor || "").toLowerCase();
+  const isFirefox = /Firefox\//.test(navigator.userAgent);
+  // Só usa o nome do WebGL quando o WebGPU informou o fabricante e ele bate.
+  // O Firefox troca o nome do WebGL por um modelo genérico ("GTX 980, or similar")
+  // e o WebGL dele pode estar em outra placa, então ali o nome do WebGL é ignorado.
+  const sameVendor = !isFirefox && wn && v && (wn.toLowerCase().includes(v.split(" ")[0]) || (v === "amd" && /radeon|ati/i.test(wn)));
+  const name = info.description || (sameVendor ? wn : "") || base || "";
+  if (!name){
+    const guess = wn.replace(/,?\s*or similar$/i, "").trim();
+    const k = guessKind(guess);
+    el.innerHTML = (running ? "Placa de vídeo em uso: " : "Placa de vídeo: ") +
+      "o WebGPU deste navegador não informa o nome." +
+      (guess ? " Palpite pelo WebGL: <strong></strong>" + (k ? '<span class="tag' + (k === "dedicada" ? " d" : "") + '">' + k + "?</span>" : "") +
+        (isFirefox ? "<br>O Firefox mostra só um modelo aproximado no WebGL, e o WebGL pode estar em outra placa. Para ver o nome real, em about:config mude webgl.sanitize-unmasked-renderer para false." : "") : "") +
+      "<br>A taxa de hash é a prova mais confiável: a dedicada rende bem mais que a integrada.";
+    const s = el.querySelector("strong"); if (s) s.textContent = guess;
+    return;
+  }
+  let kind = info.isFallbackAdapter ? "software, sem placa de vídeo" : guessKind(name + " " + base);
+  const extra = base && name !== base ? " (" + base + ")" : "";
+  el.innerHTML = (running ? "Placa de vídeo em uso: " : "Placa de vídeo que o navegador vai usar: ") +
+    "<strong></strong>" + extra + (kind ? '<span class="tag' + (kind === "dedicada" ? " d" : "") + '">' + kind + "</span>" : "");
+  el.querySelector("strong").textContent = name;
+}
+
+const MANUAL = "http + webgpu nao funciona.\n" +
+  "chrome: chrome://flags/#unsafely-treat-insecure-origin-as-secure = http://dominio:porta, enabled, reiniciar\n" +
+  "chrome placa mais forte: chrome://flags/#force-high-performance-gpu = enabled";
+
+function noGpuMsg(){ return MANUAL; }
+
+
+async function detectGpu(){
+  const el = $("gpuInfo");
+  if (!navigator.gpu){ el.textContent = noGpuMsg(); return; }
+  try {
+    const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+    if (!adapter){ el.textContent = "Nenhuma placa de vídeo compatível com WebGPU foi encontrada."; return; }
+    showGpu(await adapterInfo(adapter), false);
+  } catch (e) { el.textContent = "Não consegui identificar a placa de vídeo."; }
+}
+
+/* ---------- GPU ---------- */
+async function startGpu(){
+  if (!navigator.gpu) throw new Error(noGpuMsg());
+  const adapter = await navigator.gpu.requestAdapter({ powerPreference: "high-performance" });
+  if (!adapter) throw new Error("Nenhuma placa de vídeo compatível com WebGPU foi encontrada.");
+  showGpu(await adapterInfo(adapter), true);
+  const dev = await adapter.requestDevice();
+  const mod = dev.createShaderModule({ code: WGSL });
+  const pipe = await dev.createComputePipelineAsync({ layout: "auto", compute: { module: mod, entryPoint: "main" } });
+  const ub = dev.createBuffer({ size: 80, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
+  const ob = dev.createBuffer({ size: 16400, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST });
+  const rb = dev.createBuffer({ size: 16400, usage: GPUBufferUsage.MAP_READ | GPUBufferUsage.COPY_DST });
+  const bg = dev.createBindGroup({ layout: pipe.getBindGroupLayout(0), entries: [{ binding: 0, resource: { buffer: ub } }, { binding: 1, resource: { buffer: ob } }] });
+  let stop = false;
+  gpuStop = () => { stop = true; };
+
+  const prefix = pre + seed();
+  const pb = new TextEncoder().encode(prefix), P = pb.length, L = P + 8;
+  const U = new Uint32Array(20);
+  for (let i = 0; i < P; i++) U[i >> 2] |= pb[i] << ((3 - (i & 3)) * 8);
+  U[L >> 2] |= 0x80 << ((3 - (L & 3)) * 8);
+  U[15] = L * 8; U[16] = P;
+  const zero = new Uint32Array(4);
+  let batch = 0, loops = 1;
+
+  while (!stop && running && batch < 262144){
+    const thrInit = Math.floor(4096 / loops);
+    const bestH0 = best ? parseInt(best.hex.slice(0, 8), 16) : 0xffffffff;
+    U[17] = batch; U[18] = loops; U[19] = Math.min(bestH0, thrInit) >>> 0;
+    dev.queue.writeBuffer(ub, 0, U);
+    dev.queue.writeBuffer(ob, 0, zero);
+    const enc = dev.createCommandEncoder();
+    const pass = enc.beginComputePass();
+    pass.setPipeline(pipe); pass.setBindGroup(0, bg); pass.dispatchWorkgroups(256, 256); pass.end();
+    enc.copyBufferToBuffer(ob, 0, rb, 0, 16400);
+    const t0 = performance.now();
+    dev.queue.submit([enc.finish()]);
+    await rb.mapAsync(GPUMapMode.READ);
+    const r = new Uint32Array(rb.getMappedRange().slice(0));
+    rb.unmap();
+    const ms = performance.now() - t0;
+    const n = Math.min(r[0], 1024);
+    let bi = -1, bh = 0xffffffff, bh1 = 0xffffffff;
+    for (let k = 0; k < n; k++){
+      const h0 = r[6 + k * 4], h1 = r[7 + k * 4];
+      if (h0 < bh || (h0 === bh && h1 < bh1)){ bh = h0; bh1 = h1; bi = k; }
+    }
+    if (bi >= 0){
+      const i = r[4 + bi * 4], j = r[5 + bi * 4], b = batch;
+      const s = prefix + B64[i & 63] + B64[(i >> 6) & 63] + B64[(i >> 12) & 63] + B64[(i >> 18) & 63] + B64[j] + B64[b & 63] + B64[(b >> 6) & 63] + B64[(b >> 12) & 63];
+      const hex = await sha256hex(s);
+      if (hex.slice(0, 8) !== bh.toString(16).padStart(8, "0")) throw new Error("A placa de vídeo devolveu um hash que não confere. A GPU foi desligada para evitar resultados errados.");
+      candidate(s, "gpu");
+    }
+    gpuCount += 16777216 * loops;
+    batch++;
+    loops = Math.max(1, Math.min(64, Math.round(loops * 250 / Math.max(ms, 1))));
+  }
+  dev.destroy();
+}
+
+/* ---------- controle ---------- */
+function start(){
+  user = $("user").value.trim();
+  if (user.includes("/")) {
+    const i = user.indexOf("/");
+    $("msg").value = user.slice(i + 1) + ($("msg").value ? "/" + $("msg").value : "");
+    user = user.slice(0, i);
+    $("user").value = user;
+  }
+  if (!/^[A-Za-z0-9_-]{1,32}$/.test(user)){ setStatus("O nick aceita só letras, números, _ e -, com até 32 caracteres. Sinais como + e / vão no campo de mensagem.", true); $("user").focus(); return; }
+  const msg = $("msg").value.trim();
+  if (!/^[A-Za-z0-9+\/]*$/.test(msg)){ setStatus("A mensagem aceita só letras, números, + e /. Use + no lugar do espaço.", true); $("msg").focus(); return; }
+  pre = user + "/" + (msg ? msg.replace(/\/+$/, "") + "/" : "");
+  if (pre.length + 16 > 55){ setStatus("Nick e mensagem juntos estão longos demais: a mensagem pode ter no máximo " + Math.max(0, 55 - 16 - user.length - 2) + " caracteres com esse nick.", true); $("msg").focus(); return; }
+  const useCpu = $("useCpu").checked, useGpu = $("useGpu").checked;
+  if (!useCpu && !useGpu){ setStatus("Marque o processador, a placa de vídeo ou os dois.", true); return; }
+  running = true; records = [];
+  const sv = loadSaved(user);
+  best = sv ? { str: sv.str, hex: sv.hex, src: "salvo" } : null;
+  cpuCount = gpuCount = total = lastCpu = lastGpu = rateCpu = rateGpu = 0;
+  $("rec").innerHTML = '<tr><td class="empty">Procurando…</td></tr>';
+  if (best) render();
+  else { $("bestHash").textContent = "procurando…"; $("bestMeta").innerHTML = ""; $("bestStrWrap").hidden = true; }
+  $("go").textContent = "Parar"; $("go").className = "stop";
+  $("msg").disabled = $("user").disabled = $("threads").disabled = $("useCpu").disabled = $("useGpu").disabled = true;
+  setStatus("Minerando como " + user + "." + savedText());
+  const tv = $("threads").value;
+  if (useCpu) startCpu(tv === "all" ? hc : Math.max(1, Math.min(64, parseInt(tv) || 1)));
+  if (useGpu) startGpu().catch(e => { if (running) setStatus(e.message + savedText(), true); rateGpu = 0; });
+  rateTimer = setInterval(() => {
+    rateCpu = (cpuCount - lastCpu); rateGpu = (gpuCount - lastGpu);
+    lastCpu = cpuCount; lastGpu = gpuCount; total = cpuCount + gpuCount;
+    $("rCpu").textContent = useCpu ? fmtRate(rateCpu) : "—";
+    $("rGpu").textContent = useGpu ? fmtRate(rateGpu) : "—";
+    $("tot").textContent = fmtBig(total);
+    const rate = rateCpu + rateGpu;
+    const next = best ? zeros(best.hex) + 1 : 1;
+    $("eta").textContent = rate ? fmtTime(Math.pow(16, next) / rate) : "—";
+  }, 1000);
+}
+
+function stop(){
+  running = false;
+  workers.forEach(w => w.terminate()); workers = [];
+  fallbackTimers.forEach(clearTimeout); fallbackTimers = [];
+  if (gpuStop) gpuStop();
+  clearInterval(rateTimer);
+  $("go").textContent = "Começar"; $("go").className = "";
+  $("msg").disabled = $("user").disabled = $("threads").disabled = $("useCpu").disabled = $("useGpu").disabled = false;
+  setStatus("Parado. Total testado: " + fmtBig(cpuCount + gpuCount) + " hashes." + savedText());
+}
+
+$("go").onclick = () => running ? stop() : start();
+$("user").addEventListener("keydown", e => { if (e.key === "Enter" && !running) start(); });
+$("user").addEventListener("input", () => { if (!running) showSaved(); });
+$("copy").onclick = async () => {
+  try { await navigator.clipboard.writeText(best.str); $("copy").textContent = "Copiado"; setTimeout(() => $("copy").textContent = "Copiar", 1500); }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($("bestStr")); getSelection().removeAllRanges(); getSelection().addRange(r); }
+};
+
+
+$("manual").textContent = MANUAL;
+showSaved();
+detectGpu();
+</script>
+</body>
+</html>
