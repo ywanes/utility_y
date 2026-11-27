@@ -46600,14 +46600,25 @@ class Particao {
             java.nio.file.Files.write(dir.resolve("timeout"), String.valueOf(segundos).getBytes(java.nio.charset.StandardCharsets.US_ASCII));
             java.nio.file.Files.write(dir.resolve("quiet"), new byte[0]);  // boot limpo: diagnostico no console so em caso de falha
             System.out.println("timeout do menu = " + segundos + "s; boot limpo (quiet) — diagnostico no console so se houver falha.");
-            String copia = bcdedit("/copy", "{bootmgr}", "/d", "ybootloader");
-            var m = java.util.regex.Pattern.compile("\\{[0-9a-fA-F-]{36}\\}").matcher(copia);
-            if (!m.find()) throw new Exception("nao consegui ler o GUID da entrada criada pelo bcdedit (saida: " + copia.strip() + ")");
-            String guid = m.group();
+            // entrada de firmware que ja aponta para o ybootloader NESTA ESP: reaproveita em vez de criar outra igual
+            String guid = null;
+            var pGuid = java.util.regex.Pattern.compile("\\{[0-9a-fA-F-]{36}\\}");
+            for (String bloco : bcdedit("/enum", "firmware", "/v").split("\\R\\s*\\R")) {
+                String b = bloco.toLowerCase();
+                if (!b.contains("\\efi\\ybootloader\\ybootloader.efi") || !b.contains("partition=" + Character.toLowerCase(L) + ":")) continue;
+                var mg = pGuid.matcher(bloco);
+                if (mg.find()) { guid = mg.group(); break; }
+            }
+            if (guid == null) {
+                String copia = bcdedit("/copy", "{bootmgr}", "/d", "ybootloader");
+                var m = pGuid.matcher(copia);
+                if (!m.find()) throw new Exception("nao consegui ler o GUID da entrada criada pelo bcdedit (saida: " + copia.strip() + ")");
+                guid = m.group();
+            }
             bcdedit("/set", guid, "device", "partition=" + L + ":");          // device = a ESP onde o ybootloader.efi esta
             bcdedit("/set", guid, "path", "\\EFI\\ybootloader\\ybootloader.efi");
             bcdedit("/set", "{fwbootmgr}", "displayorder", guid, "/addfirst");
-            System.out.println("entrada de boot do ybootloader criada (" + guid + ") e em primeiro na ordem.");
+            System.out.println("entrada de boot do ybootloader (" + guid + ") em primeiro na ordem.");
         } finally {
             try { diskpart("desmontar a ESP", sel, "remove letter=" + L); } catch (Exception ig) {}
         }
