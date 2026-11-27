@@ -442,6 +442,8 @@ async function startGpu(){
   if (!adapter) throw new Error("Nenhuma placa de vídeo compatível com WebGPU foi encontrada.");
   showGpu(await adapterInfo(adapter), true);
   const dev = await adapter.requestDevice();
+  let lost = false;
+  dev.lost.then(() => { lost = true; });
   const mod = dev.createShaderModule({ code: WGSL });
   const pipe = await dev.createComputePipelineAsync({ layout: "auto", compute: { module: mod, entryPoint: "main" } });
   const ub = dev.createBuffer({ size: 80, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
@@ -451,28 +453,40 @@ async function startGpu(){
   let stop = false;
   gpuStop = () => { stop = true; };
 
-  const prefix = pre + seed();
-  const pb = new TextEncoder().encode(prefix), P = pb.length, L = P + 8;
+  let prefix = "", batch = 0;
   const U = new Uint32Array(20);
-  for (let i = 0; i < P; i++) U[i >> 2] |= pb[i] << ((3 - (i & 3)) * 8);
-  U[L >> 2] |= 0x80 << ((3 - (L & 3)) * 8);
-  U[15] = L * 8; U[16] = P;
+  function newPrefix(){
+    prefix = pre + seed();
+    const pb = new TextEncoder().encode(prefix), P = pb.length, L = P + 8;
+    U.fill(0);
+    for (let i = 0; i < P; i++) U[i >> 2] |= pb[i] << ((3 - (i & 3)) * 8);
+    U[L >> 2] |= 0x80 << ((3 - (L & 3)) * 8);
+    U[15] = L * 8; U[16] = P;
+    batch = 0;
+  }
+  newPrefix();
   const zero = new Uint32Array(4);
-  let batch = 0, loops = 1;
+  let rows = 1, loops = 1;
+  const TARGET = 250;
 
-  while (!stop && running && batch < 262144){
-    const thrInit = Math.floor(4096 / loops);
+  while (!stop && running){
+    if (batch >= 262144) newPrefix();
+    const thrInit = Math.floor(1048576 / (rows * loops));
     const bestH0 = best ? parseInt(best.hex.slice(0, 8), 16) : 0xffffffff;
     U[17] = batch; U[18] = loops; U[19] = Math.min(bestH0, thrInit) >>> 0;
     dev.queue.writeBuffer(ub, 0, U);
     dev.queue.writeBuffer(ob, 0, zero);
     const enc = dev.createCommandEncoder();
     const pass = enc.beginComputePass();
-    pass.setPipeline(pipe); pass.setBindGroup(0, bg); pass.dispatchWorkgroups(256, 256); pass.end();
+    pass.setPipeline(pipe); pass.setBindGroup(0, bg); pass.dispatchWorkgroups(256, rows); pass.end();
     enc.copyBufferToBuffer(ob, 0, rb, 0, 16400);
     const t0 = performance.now();
     dev.queue.submit([enc.finish()]);
-    await rb.mapAsync(GPUMapMode.READ);
+    try { await rb.mapAsync(GPUMapMode.READ); }
+    catch (e) {
+      if (lost) throw new Error("A placa de vídeo parou de responder e o sistema a reiniciou. Clique em Começar de novo; a carga começa pequena.");
+      throw e;
+    }
     const r = new Uint32Array(rb.getMappedRange().slice(0));
     rb.unmap();
     const ms = performance.now() - t0;
@@ -489,9 +503,15 @@ async function startGpu(){
       if (hex.slice(0, 8) !== bh.toString(16).padStart(8, "0")) throw new Error("A placa de vídeo devolveu um hash que não confere. A GPU foi desligada para evitar resultados errados.");
       candidate(s, "gpu");
     }
-    gpuCount += 16777216 * loops;
+    gpuCount += 65536 * rows * loops;
     batch++;
-    loops = Math.max(1, Math.min(64, Math.round(loops * 250 / Math.max(ms, 1))));
+    if (rows < 256){
+      if (ms * 2 < TARGET) rows = Math.min(256, rows * 2);
+      else if (ms > TARGET * 2) rows = Math.max(1, rows >> 1);
+    } else {
+      loops = Math.max(1, Math.min(64, Math.round(loops * TARGET / Math.max(ms, 1))));
+      if (loops === 1 && ms > TARGET * 2) rows = 128;
+    }
   }
   dev.destroy();
 }
@@ -525,8 +545,12 @@ function start(){
   const tv = $("threads").value;
   if (useCpu) startCpu(tv === "all" ? hc : Math.max(1, Math.min(64, parseInt(tv) || 1)));
   if (useGpu) startGpu().catch(e => { if (running) setStatus(e.message + savedText(), true); rateGpu = 0; });
+  const histC = [], histG = [];
   rateTimer = setInterval(() => {
-    rateCpu = (cpuCount - lastCpu); rateGpu = (gpuCount - lastGpu);
+    histC.push(cpuCount - lastCpu); histG.push(gpuCount - lastGpu);
+    if (histC.length > 5){ histC.shift(); histG.shift(); }
+    rateCpu = histC.reduce((a, b) => a + b, 0) / histC.length;
+    rateGpu = histG.reduce((a, b) => a + b, 0) / histG.length;
     lastCpu = cpuCount; lastGpu = gpuCount; total = cpuCount + gpuCount;
     $("rCpu").textContent = useCpu ? fmtRate(rateCpu) : "—";
     $("rGpu").textContent = useGpu ? fmtRate(rateGpu) : "—";
